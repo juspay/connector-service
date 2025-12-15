@@ -185,31 +185,13 @@ pub enum Shift4PaymentStatus {
     Failed,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            Shift4PaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            Shift4PaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<Shift4PaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Match Hyperswitch status mapping logic exactly
         let status = match item.response.status {
@@ -257,21 +239,13 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // PSync response transformation - reuses Shift4PaymentsResponse and status mapping logic
-impl
-    TryFrom<
-        ResponseRouterData<
-            Shift4PaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            Shift4PaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<Shift4PaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Match Hyperswitch status mapping logic exactly
         let status = match item.response.status {
@@ -319,21 +293,13 @@ impl
 }
 
 // Capture response transformation - reuses Shift4PaymentsResponse
-impl
-    TryFrom<
-        ResponseRouterData<
-            Shift4PaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            Shift4PaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<Shift4PaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Match Hyperswitch status mapping logic exactly
         let status = match item.response.status {
@@ -421,22 +387,12 @@ pub enum Shift4RefundStatus {
     Processing,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            Shift4RefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<Shift4RefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            Shift4RefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<Shift4RefundResponse, Self>) -> Result<Self, Self::Error> {
         // CRITICAL: Explicitly check the status field from the response
         // Do NOT assume success based solely on HTTP 200 response
         let refund_status = match item.response.status {
@@ -457,22 +413,12 @@ impl
 }
 
 // RSync (Refund Sync) response transformation - reuses Shift4RefundResponse
-impl
-    TryFrom<
-        ResponseRouterData<
-            Shift4RefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<Shift4RefundResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            Shift4RefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<Shift4RefundResponse, Self>) -> Result<Self, Self::Error> {
         // CRITICAL: Explicitly check the status field from the response
         // Do NOT assume success based solely on HTTP 200 response
         let refund_status = match item.response.status {
@@ -506,14 +452,7 @@ pub struct Shift4RSyncRequest {}
 // that work with this wrapper.
 
 // PSync Request - converts from Shift4RouterData to empty request struct
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         Shift4RouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -534,14 +473,7 @@ impl<
 }
 
 // RSync Request - converts from Shift4RouterData to empty request struct
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         Shift4RouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,

@@ -43,8 +43,10 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+payme.base_url = "https://sandbox.payme.io/api/"
 barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
 airwallex.base_url = "https://api-demo.airwallex.com/api/v1"
+bambora.base_url = "https://api.na.bambora.com/v1"
 shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://sandbox.bluesnap.com"
 bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
@@ -108,6 +110,7 @@ billwerk.secondary_base_url = "https://card.reepay.com/"
 nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
 tsys.base_url = "https://stagegw.transnox.com/"
 bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
+powertranz.base_url = "https://staging.ptranz.com/api"
 
 # Generic Events Configuration
 [events]

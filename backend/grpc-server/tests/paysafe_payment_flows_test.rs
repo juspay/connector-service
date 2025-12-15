@@ -170,12 +170,9 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
     match &response.transaction_id {
         Some(id) => match id.id_type.as_ref() {
             Some(IdType::Id(id)) => id.clone(),
-            _ => panic!(
-                "Expected connector transaction ID, got response: {:#?}",
-                response
-            ),
+            _ => panic!("Expected connector transaction ID, got response: {response:#?}"),
         },
-        None => panic!("Transaction ID is None in response: {:#?}", response),
+        None => panic!("Transaction ID is None in response: {response:#?}"),
     }
 }
 
@@ -267,7 +264,10 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
+        connector_metadata: HashMap::new(),
+        setup_future_usage: None,
         encoded_data: None,
+        sync_type: None,
     }
 }
 

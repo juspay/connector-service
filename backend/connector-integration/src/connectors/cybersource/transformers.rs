@@ -68,12 +68,10 @@ pub struct CybersourceConnectorMetadataObject {
 }
 
 impl TryFrom<&Option<pii::SecretSerdeValue>> for CybersourceConnectorMetadataObject {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
         let metadata = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "metadata",
-            })?;
+            .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?;
         Ok(metadata)
     }
 }
@@ -81,12 +79,7 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for CybersourceConnectorMetadataObj
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceZeroMandateRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     processing_information: ProcessingInformation,
     payment_information: PaymentInformation<T>,
@@ -94,14 +87,7 @@ pub struct CybersourceZeroMandateRequest<
     client_reference_information: ClientReferenceInformation,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
             RouterDataV2<
@@ -221,7 +207,7 @@ impl<
                             PaymentMethodToken::ApplePayDecrypt(decrypt_data) => {
                                 let expiration_month = decrypt_data
                                     .get_expiry_month()
-                                    .change_context(errors::ConnectorError::InvalidDataFormat {
+                                    .change_context(ConnectorError::InvalidDataFormat {
                                         field_name: "expiration_month",
                                     })?;
                                 let expiration_year = decrypt_data.get_four_digit_expiry_year();
@@ -261,7 +247,7 @@ impl<
                             let apple_pay_encrypted_data = apple_pay_data
                                 .payment_data
                                 .get_encrypted_apple_pay_payment_data_mandatory()
-                                .change_context(errors::ConnectorError::MissingRequiredField {
+                                .change_context(ConnectorError::MissingRequiredField {
                                     field_name: "Apple pay encrypted data",
                                 })?;
                             (
@@ -290,7 +276,7 @@ impl<
                                                 .tokenization_data
                                                 .get_encrypted_google_pay_token()
                                                 .change_context(
-                                                    errors::ConnectorError::MissingRequiredField {
+                                                    ConnectorError::MissingRequiredField {
                                                         field_name: "gpay wallet_token",
                                                     },
                                                 )?,
@@ -337,7 +323,7 @@ impl<
                     | WalletData::CashappQr(_)
                     | WalletData::SwishQr(_)
                     | WalletData::Mifinity(_)
-                    | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+                    | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
                         domain_types::utils::get_unimplemented_payment_method_error_message(
                             "Cybersource",
                         ),
@@ -360,7 +346,7 @@ impl<
                 | PaymentMethodData::CardToken(_)
                 | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                    Err(errors::ConnectorError::NotImplemented(
+                    Err(ConnectorError::NotImplemented(
                         domain_types::utils::get_unimplemented_payment_method_error_message(
                             "Cybersource",
                         ),
@@ -389,12 +375,7 @@ impl<
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourcePaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     processing_information: ProcessingInformation,
     payment_information: PaymentInformation<T>,
@@ -437,24 +418,12 @@ pub enum CybersourceParesStatus {
 impl From<CybersourceParesStatus> for common_enums::TransactionStatus {
     fn from(status: CybersourceParesStatus) -> Self {
         match status {
-            CybersourceParesStatus::AuthenticationSuccessful => {
-                common_enums::TransactionStatus::Success
-            }
-            CybersourceParesStatus::AuthenticationAttempted => {
-                common_enums::TransactionStatus::NotVerified
-            }
-            CybersourceParesStatus::AuthenticationFailed => {
-                common_enums::TransactionStatus::Failure
-            }
-            CybersourceParesStatus::AuthenticationNotCompleted => {
-                common_enums::TransactionStatus::VerificationNotPerformed
-            }
-            CybersourceParesStatus::CardChallenged => {
-                common_enums::TransactionStatus::ChallengeRequired
-            }
-            CybersourceParesStatus::AuthenticationRejected => {
-                common_enums::TransactionStatus::Rejected
-            }
+            CybersourceParesStatus::AuthenticationSuccessful => Self::Success,
+            CybersourceParesStatus::AuthenticationAttempted => Self::NotVerified,
+            CybersourceParesStatus::AuthenticationFailed => Self::Failure,
+            CybersourceParesStatus::AuthenticationNotCompleted => Self::VerificationNotPerformed,
+            CybersourceParesStatus::CardChallenged => Self::ChallengeRequired,
+            CybersourceParesStatus::AuthenticationRejected => Self::Rejected,
         }
     }
 }
@@ -596,7 +565,7 @@ impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthI
             ucaf_collection_indicator,
         } = value;
 
-        CybersourceConsumerAuthInformation {
+        Self {
             pares_status: None,
             ucaf_collection_indicator,
             ucaf_authentication_data: cavv.clone(),
@@ -699,12 +668,7 @@ pub struct NetworkTokenPaymentInformation {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CardPaymentInformation<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     card: Card<T>,
 }
@@ -821,12 +785,7 @@ pub struct MessageExtensionAttribute {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum PaymentInformation<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Cards(Box<CardPaymentInformation<T>>),
     GooglePayToken(Box<GooglePayTokenPaymentInformation>),
@@ -844,14 +803,7 @@ pub struct CybersoucrePaymentInstrument {
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Card<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct Card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     number: RawCardNumber<T>,
     expiration_month: Secret<String>,
     expiration_year: Secret<String>,
@@ -936,14 +888,7 @@ pub struct BillTo {
     email: pii::Email,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     From<
         &CybersourceRouterData<
             RouterDataV2<
@@ -978,14 +923,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     From<
         &CybersourceRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
@@ -1010,14 +948,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     From<
         &CybersourceRouterData<
             RouterDataV2<
@@ -1052,14 +983,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -1074,7 +998,7 @@ impl<
         Option<String>,
     )> for ProcessingInformation
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         (item, solution, network): (
             &CybersourceRouterData<
@@ -1167,14 +1091,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -1188,7 +1105,7 @@ impl<
         Option<BillTo>,
     )> for OrderInformationWithBill
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         (item, bill_to): (
@@ -1231,7 +1148,7 @@ fn truncate_string(state: &Secret<String>, max_len: usize) -> Secret<String> {
 fn build_bill_to(
     address_details: Option<&Address>,
     email: pii::Email,
-) -> Result<BillTo, error_stack::Report<errors::ConnectorError>> {
+) -> Result<BillTo, error_stack::Report<ConnectorError>> {
     let default_address = BillTo {
         first_name: None,
         last_name: None,
@@ -1272,14 +1189,7 @@ impl From<common_enums::DecoupledAuthenticationType> for EffectiveAuthentication
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -1293,7 +1203,7 @@ impl<
         payment_method_data::Card<T>,
     )> for CybersourcePaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         (item, ccard): (
             &CybersourceRouterData<
@@ -1369,14 +1279,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -1390,7 +1293,7 @@ impl<
         NetworkTokenData,
     )> for CybersourcePaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         (item, token_data): (
             &CybersourceRouterData<
@@ -1456,14 +1359,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -1477,7 +1373,7 @@ impl<
         Box<PazeDecryptedData>,
     )> for CybersourcePaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         (item, paze_data): (
             &CybersourceRouterData<
@@ -1505,7 +1401,7 @@ impl<
                     .peek()
                     .split_once(' ')
                     .map(|(first, last)| (first.to_string(), last.to_string()))
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                    .ok_or(ConnectorError::MissingRequiredField {
                         field_name: "billing_address.name",
                     })?;
                 (Secret::from(first_name), Secret::from(last_name))
@@ -1530,7 +1426,7 @@ impl<
                     paze_data
                         .billing_address
                         .state
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                        .ok_or(ConnectorError::MissingRequiredField {
                             field_name: "billing_address.state",
                         })?
                         .peek(),
@@ -1573,14 +1469,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -1595,7 +1484,7 @@ impl<
         ApplePayWalletData,
     )> for CybersourcePaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         input: (
             &CybersourceRouterData<
@@ -1635,7 +1524,7 @@ impl<
         ))?;
         let client_reference_information = ClientReferenceInformation::from(item);
         let expiration_month = apple_pay_data.get_expiry_month().change_context(
-            errors::ConnectorError::InvalidDataFormat {
+            ConnectorError::InvalidDataFormat {
                 field_name: "expiration_month",
             },
         )?;
@@ -1703,14 +1592,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -1724,7 +1606,7 @@ impl<
         GooglePayWalletData,
     )> for CybersourcePaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         (item, google_pay_data): (
             &CybersourceRouterData<
@@ -1758,7 +1640,7 @@ impl<
                             google_pay_data
                                 .tokenization_data
                                 .get_encrypted_google_pay_token()
-                                .change_context(errors::ConnectorError::MissingRequiredField {
+                                .change_context(ConnectorError::MissingRequiredField {
                                     field_name: "gpay wallet_token",
                                 })?,
                         ),
@@ -1790,14 +1672,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -1812,7 +1687,7 @@ impl<
         GooglePayWalletData,
     )> for CybersourcePaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         (item, google_pay_decrypted_data, google_pay_data): (
             &CybersourceRouterData<
@@ -1854,12 +1729,12 @@ impl<
                     transaction_type,
                     expiration_year: google_pay_decrypted_data
                         .get_four_digit_expiry_year()
-                        .change_context(errors::ConnectorError::InvalidDataFormat {
+                        .change_context(ConnectorError::InvalidDataFormat {
                             field_name: "expiration_year",
                         })?,
                     expiration_month: google_pay_decrypted_data
                         .get_expiry_month()
-                        .change_context(errors::ConnectorError::InvalidDataFormat {
+                        .change_context(ConnectorError::InvalidDataFormat {
                             field_name: "expiration_month",
                         })?,
                 },
@@ -1913,14 +1788,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -1935,7 +1803,7 @@ impl<
         GooglePayWalletData,
     )> for CybersourcePaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         (item, google_pay_decrypted_data, google_pay_data): (
             &CybersourceRouterData<
@@ -2040,14 +1908,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
@@ -2061,7 +1922,7 @@ impl<
         Box<SamsungPayWalletData>,
     )> for CybersourcePaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         (item, samsung_pay_data): (
             &CybersourceRouterData<
@@ -2115,20 +1976,15 @@ impl<
 }
 
 fn get_samsung_pay_payment_information<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
-    samsung_pay_data: &payment_method_data::SamsungPayWalletData,
-) -> Result<PaymentInformation<T>, error_stack::Report<errors::ConnectorError>> {
+    samsung_pay_data: &SamsungPayWalletData,
+) -> Result<PaymentInformation<T>, error_stack::Report<ConnectorError>> {
     let samsung_pay_fluid_data_value =
         get_samsung_pay_fluid_data_value(&samsung_pay_data.payment_credential.token_data)?;
 
     let samsung_pay_fluid_data_str = serde_json::to_string(&samsung_pay_fluid_data_value)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .change_context(ConnectorError::RequestEncodingFailed)
         .attach_printable("Failed to serialize samsung pay fluid data")?;
 
     let payment_information =
@@ -2147,9 +2003,9 @@ fn get_samsung_pay_payment_information<
 
 fn get_samsung_pay_fluid_data_value(
     samsung_pay_token_data: &payment_method_data::SamsungPayTokenData,
-) -> Result<SamsungPayFluidDataValue, error_stack::Report<errors::ConnectorError>> {
+) -> Result<SamsungPayFluidDataValue, error_stack::Report<ConnectorError>> {
     let samsung_pay_header = jwt::decode_header(samsung_pay_token_data.data.clone().peek())
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .change_context(ConnectorError::RequestEncodingFailed)
         .attach_printable("Failed to decode samsung pay header")?;
 
     let samsung_pay_kid_optional = samsung_pay_header.kid;
@@ -2158,7 +2014,7 @@ fn get_samsung_pay_fluid_data_value(
         public_key_hash: Secret::new(
             samsung_pay_kid_optional
                 .get_required_value("samsung pay public_key_hash")
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?
+                .change_context(ConnectorError::RequestEncodingFailed)?
                 .to_string(),
         ),
         version: samsung_pay_token_data.version.clone(),
@@ -2167,14 +2023,7 @@ fn get_samsung_pay_fluid_data_value(
     Ok(samsung_pay_fluid_data_value)
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
             RouterDataV2<
@@ -2187,7 +2036,7 @@ impl<
         >,
     > for CybersourcePaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CybersourceRouterData<
             RouterDataV2<
@@ -2254,7 +2103,7 @@ impl<
                             let apple_pay_encrypted_data = apple_pay_data
                                 .payment_data
                                 .get_encrypted_apple_pay_payment_data_mandatory()
-                                .change_context(errors::ConnectorError::MissingRequiredField {
+                                .change_context(ConnectorError::MissingRequiredField {
                                     field_name: "Apple pay encrypted data",
                                 })?;
                             let payment_information = PaymentInformation::ApplePayToken(Box::new(
@@ -2357,7 +2206,7 @@ impl<
                         Some(PaymentMethodToken::Token(_))
                         | Some(PaymentMethodToken::ApplePayDecrypt(_))
                         | Some(PaymentMethodToken::GooglePayDecrypt(_))
-                        | None => Err(errors::ConnectorError::NotImplemented(
+                        | None => Err(ConnectorError::NotImplemented(
                             domain_types::utils::get_unimplemented_payment_method_error_message(
                                 "Cybersource",
                             ),
@@ -2391,7 +2240,7 @@ impl<
                 | WalletData::CashappQr(_)
                 | WalletData::SwishQr(_)
                 | WalletData::Mifinity(_)
-                | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+                | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Cybersource",
                     ),
@@ -2414,7 +2263,7 @@ impl<
             | PaymentMethodData::Voucher(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::CardToken(_) => Err(errors::ConnectorError::NotImplemented(
+            | PaymentMethodData::CardToken(_) => Err(ConnectorError::NotImplemented(
                 domain_types::utils::get_unimplemented_payment_method_error_message("Cybersource"),
             )
             .into()),
@@ -2425,25 +2274,13 @@ impl<
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceAuthSetupRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     payment_information: PaymentInformation<T>,
     client_reference_information: ClientReferenceInformation,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
             RouterDataV2<
@@ -2456,7 +2293,7 @@ impl<
         >,
     > for CybersourceAuthSetupRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CybersourceRouterData<
             RouterDataV2<
@@ -2473,7 +2310,7 @@ impl<
             .request
             .payment_method_data
             .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorError::MissingRequiredField {
                 field_name: "payment_method_data",
             })?;
 
@@ -2527,7 +2364,7 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Cybersource"),
                 )
                 .into())
@@ -2553,14 +2390,7 @@ pub struct CybersourcePaymentsIncrementalAuthorizationRequest {
     order_information: OrderInformationIncrementalAuthorization,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -2646,14 +2476,7 @@ pub struct ReversalInformation {
     reason: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -2677,11 +2500,26 @@ impl<
                 utils::convert_metadata_to_merchant_defined_info(connector_metadata.expose())
             });
 
-        let currency = value.router_data.request.currency.unwrap();
+        let currency =
+            value
+                .router_data
+                .request
+                .currency
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
+        let amount =
+            value
+                .router_data
+                .request
+                .amount
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                })?;
         let total_amount = value
             .connector
             .amount_converter
-            .convert(value.router_data.request.amount.unwrap(), currency)
+            .convert(amount, currency)
             .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
             client_reference_information: ClientReferenceInformation {
@@ -2703,7 +2541,7 @@ impl<
                     .request
                     .cancellation_reason
                     .clone()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                    .ok_or(ConnectorError::MissingRequiredField {
                         field_name: "Cancellation Reason",
                     })?,
             },
@@ -2719,7 +2557,7 @@ pub struct CybersourceAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for CybersourceAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         if let ConnectorAuthType::SignatureKey {
             api_key,
@@ -2733,7 +2571,7 @@ impl TryFrom<&ConnectorAuthType> for CybersourceAuthType {
                 api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(errors::ConnectorError::FailedToObtainAuthType)?
+            Err(ConnectorError::FailedToObtainAuthType)?
         }
     }
 }
@@ -2979,6 +2817,7 @@ fn get_payment_response(
                             .payment_instrument
                             .map(|payment_instrument| payment_instrument.id.expose()),
                         payment_method_id: None,
+                        connector_mandate_request_reference_id: None,
                     });
 
             Ok(PaymentsResponseData::TransactionResponse {
@@ -3003,37 +2842,13 @@ fn get_payment_response(
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            CybersourcePaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            CybersourcePaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<CybersourcePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = map_cybersource_attempt_status(
             item.response
@@ -3062,15 +2877,8 @@ impl<
     }
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<CybersourceAuthSetupResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<CybersourceAuthSetupResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -3158,12 +2966,7 @@ pub struct CybersourceConsumerAuthInformationRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceAuthEnrollmentRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     payment_information: PaymentInformation<T>,
     client_reference_information: ClientReferenceInformation,
@@ -3186,12 +2989,7 @@ pub struct CybersourceConsumerAuthInformationValidateRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceAuthValidateRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     payment_information: PaymentInformation<T>,
     client_reference_information: ClientReferenceInformation,
@@ -3199,14 +2997,7 @@ pub struct CybersourceAuthValidateRequest<
     order_information: OrderInformation,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
             RouterDataV2<
@@ -3219,7 +3010,7 @@ impl<
         >,
     > for CybersourceAuthValidateRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CybersourceRouterData<
             RouterDataV2<
@@ -3240,7 +3031,7 @@ impl<
             ),
         };
         let payment_method_data = item.router_data.request.payment_method_data.clone().ok_or(
-            errors::ConnectorError::MissingConnectorRedirectionPayload {
+            ConnectorError::MissingConnectorRedirectionPayload {
                 field_name: "payment_method_data",
             },
         )?;
@@ -3290,29 +3081,33 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Cybersource"),
                 ))
             }
         }?;
 
         let redirect_response = item.router_data.request.redirect_response.clone().ok_or(
-            errors::ConnectorError::MissingRequiredField {
+            ConnectorError::MissingRequiredField {
                 field_name: "redirect_response",
             },
         )?;
-        let total_amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.amount,
-                item.router_data.request.currency.unwrap(),
-            )
-            .change_context(ConnectorError::AmountConversionFailed)?;
+        let total_amount =
+            item.connector
+                .amount_converter
+                .convert(
+                    item.router_data.request.amount,
+                    item.router_data.request.currency.ok_or(
+                        ConnectorError::MissingRequiredField {
+                            field_name: "currency",
+                        },
+                    )?,
+                )
+                .change_context(ConnectorError::AmountConversionFailed)?;
         let amount_details = Amount {
             total_amount,
             currency: item.router_data.request.currency.ok_or(
-                errors::ConnectorError::MissingRequiredField {
+                ConnectorError::MissingRequiredField {
                     field_name: "currency",
                 },
             )?,
@@ -3320,12 +3115,12 @@ impl<
 
         let redirection_response: CybersourceRedirectionAuthResponse = redirect_response
             .payload
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorError::MissingRequiredField {
                 field_name: "request.redirect_response.payload",
             })?
             .expose()
             .parse_value("CybersourceRedirectionAuthResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
         let order_information = OrderInformation { amount_details };
 
         Ok(Self {
@@ -3347,15 +3142,8 @@ pub enum CybersourceAuthenticateResponse {
     ErrorInformation(Box<CybersourceErrorInformationResponse>),
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<CybersourceAuthenticateResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<CybersourceAuthenticateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -3474,14 +3262,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
             RouterDataV2<
@@ -3494,7 +3275,7 @@ impl<
         >,
     > for CybersourceAuthEnrollmentRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CybersourceRouterData<
             RouterDataV2<
@@ -3515,7 +3296,7 @@ impl<
             ),
         };
         let payment_method_data = item.router_data.request.payment_method_data.clone().ok_or(
-            errors::ConnectorError::MissingConnectorRedirectionPayload {
+            ConnectorError::MissingConnectorRedirectionPayload {
                 field_name: "payment_method_data",
             },
         )?;
@@ -3565,46 +3346,51 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Cybersource"),
                 ))
             }
         }?;
 
         let redirect_response = item.router_data.request.redirect_response.clone().ok_or(
-            errors::ConnectorError::MissingRequiredField {
+            ConnectorError::MissingRequiredField {
                 field_name: "redirect_response",
             },
         )?;
-        let total_amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.amount,
-                item.router_data.request.currency.unwrap(),
-            )
-            .change_context(ConnectorError::AmountConversionFailed)?;
+        let total_amount =
+            item.connector
+                .amount_converter
+                .convert(
+                    item.router_data.request.amount,
+                    item.router_data.request.currency.ok_or(
+                        ConnectorError::MissingRequiredField {
+                            field_name: "currency",
+                        },
+                    )?,
+                )
+                .change_context(ConnectorError::AmountConversionFailed)?;
         let amount_details = Amount {
             total_amount,
             currency: item.router_data.request.currency.ok_or(
-                errors::ConnectorError::MissingRequiredField {
+                ConnectorError::MissingRequiredField {
                     field_name: "currency",
                 },
             )?,
         };
 
-        let param = redirect_response.params.ok_or(
-            errors::ConnectorError::MissingConnectorRedirectionPayload {
-                field_name: "request.redirect_response.params",
-            },
-        )?;
+        let param =
+            redirect_response
+                .params
+                .ok_or(ConnectorError::MissingConnectorRedirectionPayload {
+                    field_name: "request.redirect_response.params",
+                })?;
 
         let reference_id = param
             .clone()
             .peek()
             .split('=')
             .next_back()
-            .ok_or(errors::ConnectorError::MissingConnectorRedirectionPayload {
+            .ok_or(ConnectorError::MissingConnectorRedirectionPayload {
                 field_name: "request.redirect_response.params.reference_id",
             })?
             .to_string();
@@ -3636,7 +3422,7 @@ impl<
                     .request
                     .continue_redirection_url
                     .clone()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                    .ok_or(ConnectorError::MissingRequiredField {
                         field_name: "continue_redirection_url",
                     })?
                     .to_string(),
@@ -3647,18 +3433,11 @@ impl<
     }
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<CybersourceAuthenticateResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<CybersourceAuthenticateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<CybersourceAuthenticateResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -3922,15 +3701,8 @@ impl<F> TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
 }
 
 // zero dollar response
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -3946,6 +3718,7 @@ impl<
                         .payment_instrument
                         .map(|payment_instrument| payment_instrument.id.expose()),
                     payment_method_id: None,
+                    connector_mandate_request_reference_id: None,
                 });
         let mut mandate_status = map_cybersource_attempt_status(
             item.response
@@ -4107,20 +3880,12 @@ pub struct CybersourceRefundRequest {
     client_reference_information: ClientReferenceInformation,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for CybersourceRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CybersourceRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -4519,14 +4284,7 @@ pub enum RepeatPaymentInformation {
     MandatePayment(Box<MandatePaymentInformation>),
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
@@ -4534,7 +4292,7 @@ impl<
         >,
     > for CybersourceRepeatPaymentRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CybersourceRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
@@ -4548,13 +4306,13 @@ impl<
             MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
                 connector_mandate_data
                     .get_connector_mandate_id()
-                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                    .ok_or_else(|| ConnectorError::MissingRequiredField {
                         field_name: "connector_mandate_id",
                     })?
             }
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => {
-                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                return Err(error_stack::report!(ConnectorError::NotSupported {
                     message: "Network mandate ID not supported for Cybersource repeat payments"
                         .to_string(),
                     connector: "cybersource",
@@ -4608,7 +4366,7 @@ impl<
             .as_ref()
             .map(|metadata_map| {
                 serde_json::to_value(metadata_map)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
+                    .change_context(ConnectorError::RequestEncodingFailed)
                     .map(utils::convert_metadata_to_merchant_defined_info)
             })
             .transpose()?;
@@ -4623,14 +4381,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
@@ -4639,7 +4390,7 @@ impl<
         Option<BillTo>,
     )> for OrderInformationWithBill
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         (item, bill_to): (
@@ -4673,14 +4424,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
@@ -4690,7 +4434,7 @@ impl<
         Option<String>,
     )> for ProcessingInformation
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         (item, solution, network): (
             &CybersourceRouterData<
@@ -4730,13 +4474,13 @@ impl<
             MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
                 connector_mandate_data
                     .get_connector_mandate_id()
-                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                    .ok_or_else(|| ConnectorError::MissingRequiredField {
                         field_name: "connector_mandate_id",
                     })?
             }
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => {
-                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                return Err(error_stack::report!(ConnectorError::NotSupported {
                     message: "Network mandate ID not supported for Cybersource repeat payments"
                         .to_string(),
                     connector: "cybersource",
@@ -4794,7 +4538,7 @@ impl<
                 }
                 MandateReferenceId::NetworkMandateId(_)
                 | MandateReferenceId::NetworkTokenWithNTI(_) => {
-                    return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    return Err(error_stack::report!(ConnectorError::NotSupported {
                         message: "Network mandate ID not supported for Cybersource repeat payments"
                             .to_string(),
                         connector: "cybersource",

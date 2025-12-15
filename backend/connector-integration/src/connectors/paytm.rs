@@ -92,7 +92,7 @@ macros::create_all_prerequisites!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             // First try to parse as session token error response format
             if let Ok(session_error_response) = res
                 .response
@@ -102,7 +102,7 @@ macros::create_all_prerequisites!(
                     event.set_connector_response(&session_error_response);
                 }
 
-                return Ok(domain_types::router_data::ErrorResponse {
+                return Ok(ErrorResponse {
                     code: session_error_response.body.result_info.result_code,
                     message: session_error_response.body.result_info.result_msg,
                     reason: None,
@@ -124,7 +124,7 @@ macros::create_all_prerequisites!(
                     event.set_connector_response(&callback_response);
                 }
 
-                return Ok(domain_types::router_data::ErrorResponse {
+                return Ok(ErrorResponse {
                     code: callback_response
                         .body
                         .txn_info
@@ -154,7 +154,7 @@ macros::create_all_prerequisites!(
                     event.set_connector_response(&response);
                 }
 
-                return Ok(domain_types::router_data::ErrorResponse {
+                return Ok(ErrorResponse {
                     code: response.error_code.unwrap_or_default(),
                     message: response.error_message.unwrap_or_default(),
                     reason: response.error_description,
@@ -178,7 +178,7 @@ macros::create_all_prerequisites!(
                 _ => format!("HTTP {} error", res.status_code),
             };
 
-            Ok(domain_types::router_data::ErrorResponse {
+            Ok(ErrorResponse {
                 code: res.status_code.to_string(),
                 message: error_message,
                 reason: Some(format!(
@@ -273,7 +273,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
+    verification::SourceVerification<
         VoidPC,
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
@@ -359,7 +359,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_custom_error_response(res, event_builder)
     }
 }
@@ -477,15 +477,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Paytm<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
@@ -534,7 +527,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -603,7 +596,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -643,7 +636,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -707,14 +700,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     for Paytm<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,

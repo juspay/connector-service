@@ -83,7 +83,7 @@ impl TrustpaymentsAuthType {
             &base64::engine::general_purpose::STANDARD,
             credentials.as_bytes(),
         );
-        Secret::new(format!("Basic {}", encoded))
+        Secret::new(format!("Basic {encoded}"))
     }
 }
 
@@ -310,30 +310,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== RESPONSE TRANSFORMER =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ResponseRouterData<
-            TrustpaymentsAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    TryFrom<ResponseRouterData<TrustpaymentsAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TrustpaymentsAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<TrustpaymentsAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -536,21 +519,13 @@ fn get_status_from_settlestatus(
 }
 
 // ===== PSYNC RESPONSE TRANSFORMER =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            TrustpaymentsPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TrustpaymentsPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<TrustpaymentsPSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -743,21 +718,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== CAPTURE RESPONSE TRANSFORMER =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            TrustpaymentsCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<TrustpaymentsCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TrustpaymentsCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<TrustpaymentsCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -902,21 +869,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== VOID RESPONSE TRANSFORMER =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            TrustpaymentsVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<TrustpaymentsVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TrustpaymentsVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<TrustpaymentsVoidResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -1152,21 +1111,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== RSYNC RESPONSE TRANSFORMER =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            TrustpaymentsRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TrustpaymentsRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<TrustpaymentsRSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -1238,21 +1189,13 @@ impl
 }
 
 // ===== REFUND RESPONSE TRANSFORMER =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            TrustpaymentsRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<TrustpaymentsRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TrustpaymentsRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<TrustpaymentsRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 

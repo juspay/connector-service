@@ -20,7 +20,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_address::Address,
     payment_method_data::{
         self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -36,12 +36,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BankofamericaPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     processing_information: ProcessingInformation,
     payment_information: PaymentInformation<T>,
@@ -117,12 +112,7 @@ pub struct MerchantInitiatedTransaction {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum PaymentInformation<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Cards(Box<CardPaymentInformation<T>>),
 }
@@ -130,26 +120,14 @@ pub enum PaymentInformation<
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CardPaymentInformation<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     card: Card<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Card<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct Card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     number: RawCardNumber<T>,
     expiration_month: Secret<String>,
     expiration_year: Secret<String>,
@@ -258,7 +236,7 @@ pub enum PaymentSolution {
 fn build_bill_to(
     address_details: Option<&Address>,
     email: pii::Email,
-) -> Result<BillTo, error_stack::Report<errors::ConnectorError>> {
+) -> Result<BillTo, error_stack::Report<ConnectorError>> {
     let default_address = BillTo {
         first_name: None,
         last_name: None,
@@ -494,7 +472,7 @@ fn get_error_response_if_failure(
         u16,
     ),
 ) -> Option<ErrorResponse> {
-    if domain_types::utils::is_payment_failure(status) {
+    if is_payment_failure(status) {
         Some(get_error_response(
             &info_response.error_information,
             &info_response.processor_information,
@@ -528,6 +506,7 @@ fn get_payment_response(
                             .payment_instrument
                             .map(|payment_instrument| payment_instrument.id.expose()),
                         payment_method_id: None,
+                        connector_mandate_request_reference_id: None,
                     });
 
             Ok(PaymentsResponseData::TransactionResponse {
@@ -550,14 +529,7 @@ fn get_payment_response(
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BankofamericaRouterData<
             RouterDataV2<
@@ -615,7 +587,7 @@ impl<
                 | WalletData::SwishQr(_)
                 | WalletData::Paze(_)
                 | WalletData::Mifinity(_)
-                | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+                | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Bank of America",
                     ),
@@ -639,7 +611,7 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Bank of America",
                     ),
@@ -650,14 +622,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         BankofamericaRouterData<
             RouterDataV2<
@@ -737,14 +702,7 @@ pub struct BankOfAmericaRefundRequest {
     client_reference_information: ClientReferenceInformation,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BankofamericaRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -1470,19 +1428,12 @@ impl TryFrom<&ConnectorAuthType> for BankOfAmericaAuthType {
                 api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(errors::ConnectorError::FailedToObtainAuthType)?
+            Err(ConnectorError::FailedToObtainAuthType)?
         }
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &BankofamericaRouterData<
             RouterDataV2<
@@ -1549,14 +1500,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &BankofamericaRouterData<
             RouterDataV2<
@@ -1644,25 +1588,8 @@ fn map_boa_attempt_status(
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            BankofamericaPaymentsResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     for RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -1673,15 +1600,7 @@ impl<
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BankofamericaPaymentsResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response {
             BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
@@ -1695,7 +1614,7 @@ impl<
                     map_boa_attempt_status((info_response.status.clone(), is_auto_capture));
                 let response = get_payment_response((&info_response, status, item.http_code))
                     .map_err(|err| *err);
-                Ok(RouterDataV2 {
+                Ok(Self {
                     response,
                     ..item.router_data
                 })
@@ -1765,14 +1684,7 @@ where
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BankofamericaRouterData<
             RouterDataV2<
@@ -1831,7 +1743,7 @@ impl<
                 | WalletData::CashappQr(_)
                 | WalletData::SwishQr(_)
                 | WalletData::Mifinity(_)
-                | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+                | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
                 ))?,
             },
@@ -1852,7 +1764,7 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
                 ))?
             }
@@ -1860,14 +1772,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &BankofamericaRouterData<
             RouterDataV2<
@@ -1898,7 +1803,7 @@ impl<
         ),
     ) -> Result<Self, Self::Error> {
         if item.router_data.resource_common_data.is_three_ds() {
-            Err(errors::ConnectorError::NotSupported {
+            Err(ConnectorError::NotSupported {
                 message: "Card 3DS".to_string(),
                 connector: "BankOfAmerica",
             })?
@@ -1931,14 +1836,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &BankofamericaRouterData<
             RouterDataV2<
@@ -1952,7 +1850,7 @@ impl<
         Option<BillTo>,
     )> for OrderInformationWithBill
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         (item, bill_to): (
@@ -1986,14 +1884,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         &BankofamericaRouterData<
             RouterDataV2<
@@ -2029,14 +1920,8 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<&payment_method_data::Card<T>> for PaymentInformation<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<&payment_method_data::Card<T>> for PaymentInformation<T>
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -2059,14 +1944,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &BankofamericaRouterData<
             RouterDataV2<
@@ -2132,6 +2010,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>>
                                 .payment_instrument
                                 .map(|payment_instrument| payment_instrument.id.expose()),
                             payment_method_id: None,
+                            connector_mandate_request_reference_id: None,
                         });
                 let mut mandate_status =
                     map_boa_attempt_status((info_response.status.clone(), false));
@@ -2208,15 +2087,8 @@ fn convert_to_additional_payment_method_connector_response(
     }
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -2385,14 +2257,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BankofamericaRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -2424,7 +2289,7 @@ impl<
                             item.router_data.request.minor_amount_to_capture,
                             item.router_data.request.currency,
                         )
-                        .change_context(errors::ConnectorError::AmountConversionFailed)?,
+                        .change_context(ConnectorError::AmountConversionFailed)?,
                     currency: item.router_data.request.currency,
                 },
             },
@@ -2441,14 +2306,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BankofamericaRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -2456,7 +2314,7 @@ impl<
         >,
     > for BankofamericaVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: BankofamericaRouterData<
@@ -2471,17 +2329,21 @@ impl<
             .clone()
             .map(|metadata| convert_metadata_to_merchant_defined_info(metadata.expose()));
 
-        let amount = item.router_data.request.amount.ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "Amount",
-            },
-        )?;
+        let amount =
+            item.router_data
+                .request
+                .amount
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "Amount",
+                })?;
 
-        let currency = item.router_data.request.currency.ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "Currency",
-            },
-        )?;
+        let currency =
+            item.router_data
+                .request
+                .currency
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "Currency",
+                })?;
 
         Ok(Self {
             client_reference_information: ClientReferenceInformation {
@@ -2499,11 +2361,11 @@ impl<
                         .connector
                         .amount_converter
                         .convert(amount, currency)
-                        .change_context(errors::ConnectorError::AmountConversionFailed)?,
+                        .change_context(ConnectorError::AmountConversionFailed)?,
                     currency,
                 },
                 reason: item.router_data.request.cancellation_reason.clone().ok_or(
-                    errors::ConnectorError::MissingRequiredField {
+                    ConnectorError::MissingRequiredField {
                         field_name: "Cancellation Reason",
                     },
                 )?,

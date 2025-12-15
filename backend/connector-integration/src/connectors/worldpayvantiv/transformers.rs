@@ -19,9 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::{connectors::worldpayvantiv::WorldpayvantivRouterData, types::ResponseRouterData};
 
 // Helper function to extract report group from connector metadata
-fn extract_report_group(
-    connector_meta_data: &Option<hyperswitch_masking::Secret<serde_json::Value>>,
-) -> Option<String> {
+fn extract_report_group(connector_meta_data: &Option<Secret<serde_json::Value>>) -> Option<String> {
     connector_meta_data.as_ref().and_then(|metadata| {
         let metadata_value = metadata.peek();
         if let serde_json::Value::String(metadata_str) = metadata_value {
@@ -42,7 +40,7 @@ fn extract_report_group(
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct WorldpayvantivMetadataObject {
     pub report_group: String,
-    pub merchant_config_currency: common_enums::Currency,
+    pub merchant_config_currency: Currency,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -74,14 +72,7 @@ impl<T: PaymentMethodDataTypes + Serialize> Serialize for WorldpayvantivPayments
 }
 
 // TryFrom implementations for macro integration
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WorldpayvantivRouterData<
             RouterDataV2<
@@ -249,7 +240,7 @@ impl<
             credit: None,
         };
 
-        Ok(WorldpayvantivPaymentsRequest { cnp_request })
+        Ok(Self { cnp_request })
     }
 }
 
@@ -1259,8 +1250,7 @@ fn get_payment_flow_type(
     } else {
         Err(ConnectorError::NotSupported {
             message: format!(
-                "Unable to determine payment flow type from merchant transaction ID: {}",
-                merchant_txn_id
+                "Unable to determine payment flow type from merchant transaction ID: {merchant_txn_id}"
             ),
             connector: "worldpayvantiv",
         })
@@ -1313,38 +1303,12 @@ pub enum OperationId {
 }
 
 // Step 90-93: TryFrom for Authorize response
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CnpOnlineResponse, Self>) -> Result<Self, Self::Error> {
         match (
             item.response.sale_response.as_ref(),
             item.response.authorization_response.as_ref(),
@@ -1602,7 +1566,7 @@ where
                             let expiry_year: u16 = serde_json::from_slice(&expiry_year_bytes)
                                 .change_context(ConnectorError::RequestEncodingFailed)?;
                             let formatted_year = format!("{:02}", expiry_year % 100); // Convert to 2-digit year
-                            let exp_date = format!("{}{}", expiry_month, formatted_year);
+                            let exp_date = format!("{expiry_month}{formatted_year}");
 
                             let card_number_string = google_pay_decrypted_data
                                 .payment_method_details
@@ -1656,7 +1620,7 @@ fn determine_apple_pay_card_type(
         "amex" => Ok(WorldpayvativCardType::AmericanExpress),
         "discover" => Ok(WorldpayvativCardType::Discover),
         _ => Err(ConnectorError::NotSupported {
-            message: format!("Apple Pay network: {}", network),
+            message: format!("Apple Pay network: {network}"),
             connector: "worldpayvantiv",
         }
         .into()),
@@ -1673,7 +1637,7 @@ fn determine_google_pay_card_type(
         "amex" => Ok(WorldpayvativCardType::AmericanExpress),
         "discover" => Ok(WorldpayvativCardType::Discover),
         _ => Err(ConnectorError::NotSupported {
-            message: format!("Google Pay network: {}", network),
+            message: format!("Google Pay network: {network}"),
             connector: "worldpayvantiv",
         }
         .into()),
@@ -1765,21 +1729,11 @@ fn get_valid_transaction_id(
 }
 
 // Step 94-98: TryFrom for PSync response
-impl
-    TryFrom<
-        ResponseRouterData<
-            VantivSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<VantivSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            VantivSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<VantivSyncResponse, Self>) -> Result<Self, Self::Error> {
         let status = if let Some(merchant_txn_id) = item
             .response
             .payment_detail
@@ -1832,14 +1786,7 @@ impl
 }
 
 // TryFrom for Capture request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WorldpayvantivRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -1894,19 +1841,12 @@ impl<
             credit: None,
         };
 
-        Ok(WorldpayvantivPaymentsRequest { cnp_request })
+        Ok(Self { cnp_request })
     }
 }
 
 // TryFrom for Void request (pre-capture void using AuthReversal)
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WorldpayvantivRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1962,19 +1902,12 @@ impl<
             credit: None,
         };
 
-        Ok(WorldpayvantivPaymentsRequest { cnp_request })
+        Ok(Self { cnp_request })
     }
 }
 
 // TryFrom for Refund request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WorldpayvantivRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -2024,21 +1957,14 @@ impl<
             credit: Some(credit),
         };
 
-        Ok(WorldpayvantivPaymentsRequest { cnp_request })
+        Ok(Self { cnp_request })
     }
 }
 
 // TryFrom for RSync request
 
 // TryFrom for VoidPC (VoidPostCapture) request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WorldpayvantivRouterData<
             RouterDataV2<
@@ -2102,25 +2028,15 @@ impl<
             credit: None,
         };
 
-        Ok(WorldpayvantivPaymentsRequest { cnp_request })
+        Ok(Self { cnp_request })
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CnpOnlineResponse, Self>) -> Result<Self, Self::Error> {
         if let Some(credit_response) = item.response.credit_response {
             let status = match credit_response.response {
                 WorldpayvantivResponseCode::Approved
@@ -2170,21 +2086,11 @@ impl
 }
 
 // Step 109-113: TryFrom for RSync response
-impl
-    TryFrom<
-        ResponseRouterData<
-            VantivSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<VantivSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            VantivSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<VantivSyncResponse, Self>) -> Result<Self, Self::Error> {
         let status = match item.response.payment_status {
             PaymentStatus::ProcessedSuccessfully => common_enums::RefundStatus::Success,
             PaymentStatus::TransactionDeclined => common_enums::RefundStatus::Failure,
@@ -2213,14 +2119,7 @@ impl
 }
 
 // Step 114-123: TryFrom for Capture request and response
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WorldpayvantivRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -2276,21 +2175,11 @@ impl<
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CnpOnlineResponse, Self>) -> Result<Self, Self::Error> {
         if let Some(capture_response) = item.response.capture_response {
             let status = get_attempt_status(
                 WorldpayvantivPaymentFlow::Capture,
@@ -2367,14 +2256,7 @@ impl
 }
 
 // Step 124-133: TryFrom for Void request and response
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WorldpayvantivRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -2424,21 +2306,11 @@ impl<
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CnpOnlineResponse, Self>) -> Result<Self, Self::Error> {
         // Check for AuthReversal response first (pre-capture void)
         if let Some(auth_reversal_response) = item.response.auth_reversal_response {
             let status = get_attempt_status(
@@ -2565,32 +2437,11 @@ impl
 }
 
 // TryFrom for VoidPC (VoidPostCapture) response
-impl
-    TryFrom<
-        ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<
-                VoidPC,
-                PaymentFlowData,
-                PaymentsCancelPostCaptureData,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
     for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<
-                VoidPC,
-                PaymentFlowData,
-                PaymentsCancelPostCaptureData,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CnpOnlineResponse, Self>) -> Result<Self, Self::Error> {
         if let Some(void_response) = item.response.void_response {
             let status =
                 get_attempt_status(WorldpayvantivPaymentFlow::VoidPC, void_response.response)?;

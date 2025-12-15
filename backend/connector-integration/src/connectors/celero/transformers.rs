@@ -211,14 +211,7 @@ pub struct CeleroBillingAddress {
 }
 
 // Bridge implementation for macro compatibility (CeleroRouterData is created by the macro in celero.rs)
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::CeleroRouterData<
             RouterDataV2<
@@ -325,7 +318,7 @@ impl<T: PaymentMethodDataTypes>
         }
 
         Ok(Self {
-            idempotency_key: Some(format!("{}_idempotency", reference_id)),
+            idempotency_key: Some(format!("{reference_id}_idempotency")),
             transaction_type: if is_auto_capture {
                 TransactionType::Sale
             } else {
@@ -394,31 +387,13 @@ pub struct CeleroBillingAddressResponse {
     email: Option<Secret<String>>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            CeleroPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<CeleroPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            CeleroPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<CeleroPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response.status {
             CeleroResponseStatus::Success => {
@@ -581,14 +556,7 @@ pub struct CeleroTransactionResponseDetails {
 // ===== PSYNC TRANSFORMATIONS =====
 
 // Bridge implementation for macro compatibility
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::CeleroRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -609,22 +577,12 @@ impl<
 }
 
 // Response transformation for PSync
-impl
-    TryFrom<
-        ResponseRouterData<
-            CeleroSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            CeleroSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CeleroSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -795,21 +753,13 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 }
 
 // Response transformation for Capture
-impl
-    TryFrom<
-        ResponseRouterData<
-            CeleroCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<CeleroCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            CeleroCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<CeleroCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
@@ -927,22 +877,12 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 }
 
 // Response transformation for Refund
-impl
-    TryFrom<
-        ResponseRouterData<
-            CeleroRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<CeleroRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            CeleroRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CeleroRefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -958,7 +898,7 @@ impl
 
         if response.status != CeleroResponseStatus::Success {
             return Ok(Self {
-                response: Err(domain_types::router_data::ErrorResponse {
+                response: Err(ErrorResponse {
                     code: "REFUND_ERROR".to_string(),
                     message: response.msg.clone(),
                     reason: Some(format!(
@@ -1006,14 +946,7 @@ pub type CeleroRefundSyncResponse = CeleroRefundResponse;
 // ===== REFUND SYNC TRANSFORMATIONS =====
 
 // Bridge implementation for macro compatibility
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::CeleroRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1034,21 +967,13 @@ impl<
 }
 
 // Response transformation for RSync - matches hyperswitch implementation
-impl
-    TryFrom<
-        ResponseRouterData<
-            CeleroRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<CeleroRefundSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            CeleroRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<CeleroRefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
@@ -1071,7 +996,7 @@ impl
                 })
             }
             CeleroResponseStatus::Error => Ok(Self {
-                response: Err(domain_types::router_data::ErrorResponse {
+                response: Err(ErrorResponse {
                     code: "REFUND_SYNC_FAILED".to_string(),
                     message: response.msg.clone(),
                     reason: Some(response.msg.clone()),
@@ -1135,22 +1060,12 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 }
 
 // Response transformation for Void
-impl
-    TryFrom<
-        ResponseRouterData<
-            CeleroVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<CeleroVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            CeleroVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CeleroVoidResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -1213,14 +1128,7 @@ impl
 // Additional bridge implementations for macro compatibility
 
 // Capture bridge
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::CeleroRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -1241,14 +1149,7 @@ impl<
 }
 
 // Void bridge
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::CeleroRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1269,14 +1170,7 @@ impl<
 }
 
 // Refund bridge
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::CeleroRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
