@@ -288,7 +288,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 browser_language: browser_info.language.clone(),
                                 browser_java_enabled: browser_info.java_enabled,
                                 browser_java_script_enabled: browser_info.java_script_enabled,
-                                browser_colour_depth: browser_info.color_depth.map(|d| d as u32),
+                                browser_colour_depth: browser_info.color_depth.map(u32::from),
                                 browser_screen_height: browser_info.screen_height,
                                 browser_screen_width: browser_info.screen_width,
                             }),
@@ -561,12 +561,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -575,12 +570,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn try_from(
         item: ResponseRouterData<
             responses::WorldpayxmlAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -685,7 +675,7 @@ impl
     TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
@@ -694,7 +684,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             responses::WorldpayxmlCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -762,7 +752,7 @@ impl
     TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
@@ -771,7 +761,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             responses::WorldpayxmlVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -839,7 +829,7 @@ impl
     TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlTransactionResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
@@ -848,7 +838,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             responses::WorldpayxmlTransactionResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -1038,7 +1028,7 @@ impl
     TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
@@ -1047,7 +1037,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             responses::WorldpayxmlRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1102,7 +1092,7 @@ impl
     TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlRsyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            Self,
         >,
     > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
@@ -1111,7 +1101,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             responses::WorldpayxmlRsyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
