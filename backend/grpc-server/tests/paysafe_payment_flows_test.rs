@@ -269,6 +269,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         connector_metadata: HashMap::new(),
         setup_future_usage: None,
         encoded_data: None,
+        sync_type: None,
     }
 }
 

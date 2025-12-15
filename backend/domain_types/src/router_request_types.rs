@@ -91,7 +91,7 @@ impl BrowserInformation {
 
 #[derive(Debug, Default, Clone)]
 pub enum SyncRequestType {
-    MultipleCaptureSync(Vec<String>),
+    MultipleCaptureSync,
     #[default]
     SinglePaymentSync,
 }

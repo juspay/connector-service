@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use common_enums::{
-    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentMethod,
-    PaymentMethodType,
+    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentChannel,
+    PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
     errors,
@@ -103,6 +103,7 @@ pub enum ConnectorEnum {
     Bankofamerica,
     Powertranz,
     Bambora,
+    Payme,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -169,6 +170,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
             grpc_api_types::payments::Connector::Powertranz => Ok(Self::Powertranz),
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
+            grpc_api_types::payments::Connector::Payme => Ok(Self::Payme),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -205,6 +207,7 @@ pub struct ConnectorMandateReferenceId {
     payment_method_id: Option<String>,
     update_history: Option<Vec<UpdateHistory>>,
     mandate_metadata: Option<SecretSerdeValue>,
+    connector_mandate_request_reference_id: Option<String>,
 }
 
 impl ConnectorMandateReferenceId {
@@ -213,12 +216,14 @@ impl ConnectorMandateReferenceId {
         payment_method_id: Option<String>,
         update_history: Option<Vec<UpdateHistory>>,
         mandate_metadata: Option<SecretSerdeValue>,
+        connector_mandate_request_reference_id: Option<String>,
     ) -> Self {
         Self {
             connector_mandate_id,
             payment_method_id,
             update_history,
             mandate_metadata,
+            connector_mandate_request_reference_id,
         }
     }
 
@@ -236,6 +241,10 @@ impl ConnectorMandateReferenceId {
 
     pub fn get_mandate_metadata(&self) -> Option<SecretSerdeValue> {
         self.mandate_metadata.clone()
+    }
+
+    pub fn get_connector_mandate_request_reference_id(&self) -> Option<String> {
+        self.connector_mandate_request_reference_id.clone()
     }
 }
 
@@ -1026,6 +1035,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub setup_mandate_details: Option<MandateData>,
     pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub connector_testing_data: Option<SecretSerdeValue>,
+    pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
 }
 
@@ -2153,6 +2163,8 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub customer_id: Option<CustomerId>,
     pub integrity_object: Option<SetupMandateIntegrityObject>,
     pub merchant_account_metadata: Option<SecretSerdeValue>,
+    pub payment_channel: Option<PaymentChannel>,
+    pub enable_partial_authorization: Option<bool>,
 }
 
 impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
@@ -2216,6 +2228,9 @@ pub struct RepeatPaymentData {
     pub split_payments: Option<SplitPaymentsRequest>,
     pub recurring_mandate_payment_data: Option<router_data::RecurringMandatePaymentData>,
     pub shipping_cost: Option<MinorUnit>,
+    pub mit_category: Option<common_enums::MitCategory>,
+    pub enable_partial_authorization: Option<bool>,
+    pub billing_descriptor: Option<BillingDescriptor>,
 }
 
 impl RepeatPaymentData {
@@ -2250,6 +2265,13 @@ impl RepeatPaymentData {
         self.recurring_mandate_payment_data
             .to_owned()
             .ok_or_else(missing_field_err("recurring_mandate_payment_data"))
+    }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
     }
 }
 

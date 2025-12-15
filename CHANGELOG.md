@@ -4,6 +4,22 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.15.0
+
+### Features
+
+- Enable clippy for connector integration crate ([#359](https://github.com/juspay/connector-service/pull/359)) ([`a03dfc2`](https://github.com/juspay/connector-service/commit/a03dfc285aaaf33aa13182829cdcdc548e6f1a03))
+
+### Bug Fixes
+
+- **connector:** [bluesnap] pass `connector_request_ref_id` instead of `payment_id` ([#369](https://github.com/juspay/connector-service/pull/369)) ([`c814f81`](https://github.com/juspay/connector-service/commit/c814f81c517a8741be2a3099e7fdbf72831cb349))
+- Diff check fixes for Xendit Authorize flow ([#357](https://github.com/juspay/connector-service/pull/357)) ([`82d3a1d`](https://github.com/juspay/connector-service/commit/82d3a1d9df95dddbb42de8cad18fb035a3fc8d5d))
+- Adyen brand name lower case to match hyperswitch diff ([#356](https://github.com/juspay/connector-service/pull/356)) ([`286afff`](https://github.com/juspay/connector-service/commit/286afffd4de76427ba0216fdb496521aa319eb51))
+
+**Full Changelog:** [`2025.12.12.0...2025.12.15.0`](https://github.com/juspay/connector-service/compare/2025.12.12.0...2025.12.15.0)
+
+- - -
+
 ## 2025.12.12.0
 
 ### Features

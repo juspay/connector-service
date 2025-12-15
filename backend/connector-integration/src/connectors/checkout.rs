@@ -38,7 +38,9 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     CheckoutErrorResponse, PaymentCaptureRequest, PaymentCaptureResponse, PaymentVoidRequest,
-    PaymentVoidResponse, PaymentsRequest, PaymentsResponse, PaymentsResponse as PSyncResponse,
+    PaymentVoidResponse, PaymentsRequest, PaymentsRequest as SetupMandateRequest,
+    PaymentsRequest as RepeatPaymentRequest, PaymentsResponse, PaymentsResponse as PSyncResponse,
+    PaymentsResponse as SetupMandateResponse, PaymentsResponse as RepeatPaymentResponse,
     RSyncResponse, RefundRequest, RefundResponse,
 };
 
@@ -186,6 +188,18 @@ macros::create_all_prerequisites!(
             request_body: PaymentVoidRequest,
             response_body: PaymentVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: SetupMandateRequest<T>,
+            response_body: SetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: RepeatPaymentRequest<T>,
+            response_body: RepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
@@ -345,6 +359,34 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Checkout,
+    curl_request: Json(RepeatPaymentRequest),
+    curl_response: PaymentsResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(format!("{}payments", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Checkout,
     curl_response: CheckoutPSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -365,7 +407,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             let suffix = match req.request.sync_type {
-                SyncRequestType::MultipleCaptureSync(_) => "/actions",
+                SyncRequestType::MultipleCaptureSync => "/actions",
                 SyncRequestType::SinglePaymentSync => "",
             };
             Ok(format!(
@@ -504,15 +546,33 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Checkout<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Checkout,
+    curl_request: Json(SetupMandateRequest),
+    curl_response: SetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(format!("{}payments", self.connector_base_url_payments(req)))
+        }
+    }
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -769,12 +829,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RepeatPaymentData,
         PaymentsResponseData,
     > for Checkout<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Checkout<T>
 {
 }
 

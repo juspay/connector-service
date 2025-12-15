@@ -271,6 +271,7 @@ fn create_payment_sync_request(
         merchant_account_metadata: HashMap::new(),
         connector_metadata: HashMap::new(),
         setup_future_usage: None,
+        sync_type: None,
     }
 }
 
