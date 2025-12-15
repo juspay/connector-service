@@ -79,8 +79,6 @@ struct PhonepePaymentInstrument {
     target_app: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     vpa: Option<Secret<String>>,
-    #[serde(rename = "upiSource", skip_serializing_if = "Option::is_none")]
-    upi_source: Option<String>,
 }
 
 // ===== SYNC REQUEST STRUCTURES =====
@@ -243,17 +241,15 @@ impl<
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(intent_data) => PhonepePaymentInstrument {
+                UpiData::UpiIntent(_intent_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_INTENT.to_string(),
                     target_app: None, // Could be extracted from payment method details if needed
                     vpa: None,
-                    upi_source: upi_source_to_string(intent_data.upi_source.as_ref()),
                 },
-                UpiData::UpiQr(qr_data) => PhonepePaymentInstrument {
+                UpiData::UpiQr(_qr_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
                     vpa: None,
-                    upi_source: upi_source_to_string(qr_data.upi_source.as_ref()),
                 },
                 UpiData::UpiCollect(collect_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_COLLECT.to_string(),
@@ -262,7 +258,6 @@ impl<
                         .vpa_id
                         .as_ref()
                         .map(|vpa| Secret::new(vpa.peek().to_string())),
-                    upi_source: upi_source_to_string(collect_data.upi_source.as_ref()),
                 },
             },
             _ => {
@@ -410,17 +405,15 @@ impl<
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(intent_data) => PhonepePaymentInstrument {
+                UpiData::UpiIntent(_intent_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_INTENT.to_string(),
                     target_app: None, // Could be extracted from payment method details if needed
                     vpa: None,
-                    upi_source: upi_source_to_string(intent_data.upi_source.as_ref()),
                 },
-                UpiData::UpiQr(qr_data) => PhonepePaymentInstrument {
+                UpiData::UpiQr(_qr_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
                     vpa: None,
-                    upi_source: upi_source_to_string(qr_data.upi_source.as_ref()),
                 },
                 UpiData::UpiCollect(collect_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_COLLECT.to_string(),
@@ -429,7 +422,6 @@ impl<
                         .vpa_id
                         .as_ref()
                         .map(|vpa| Secret::new(vpa.peek().to_string())),
-                    upi_source: upi_source_to_string(collect_data.upi_source.as_ref()),
                 },
             },
             _ => {
@@ -722,20 +714,7 @@ impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
 // Check if merchant ID corresponds to IRCTC (merchant-based endpoints)
 // This should be called with the merchant_id from X-MERCHANT-ID auth header
 pub fn is_irctc_merchant(merchant_id: &str) -> bool {
-    merchant_id.contains("irctc")
-}
-
-// Convert UpiSource enum to string for API
-fn upi_source_to_string(
-    upi_source: Option<&domain_types::payment_method_data::UpiSource>,
-) -> Option<String> {
-    use domain_types::payment_method_data::UpiSource;
-
-    upi_source.map(|source| match source {
-        UpiSource::UpiCc => "UPI_CC".to_string(),
-        UpiSource::UpiCl => "UPI_CL".to_string(),
-        UpiSource::UpiAccount => "UPI_ACCOUNT".to_string(),
-    })
+    merchant_id.contains("IRCTC")
 }
 
 // Determine payment mode based on UPI source
