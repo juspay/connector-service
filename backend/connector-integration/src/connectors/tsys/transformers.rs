@@ -219,14 +219,7 @@ pub struct TsysPaymentAuthSaleRequest<T: PaymentMethodDataTypes> {
 }
 
 // TryFrom for macro compatibility - owned TsysRouterData
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         TsysRouterData<
             RouterDataV2<
@@ -379,31 +372,13 @@ fn get_payments_response(connector_response: TsysResponse, http_code: u16) -> Pa
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            TsysAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TsysAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TsysAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<TsysAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let TsysAuthorizeResponse(response_data) = item.response;
         let (response, status) = match response_data {
@@ -484,22 +459,12 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // TryFrom for Capture flow
-impl
-    TryFrom<
-        ResponseRouterData<
-            TsysCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<TsysCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            TsysCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<TsysCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let TsysCaptureResponse(response_data) = item.response;
         let (response, status) = match response_data {
             TsysPaymentsResponse::CaptureResponse(resp) => match resp {
@@ -553,22 +518,12 @@ impl
 }
 
 // TryFrom for Void flow
-impl
-    TryFrom<
-        ResponseRouterData<
-            TsysVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<TsysVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            TsysVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<TsysVoidResponse, Self>) -> Result<Self, Self::Error> {
         let TsysVoidResponse(response_data) = item.response;
         let (response, status) = match response_data {
             TsysPaymentsResponse::VoidResponse(resp) => match resp {
@@ -652,14 +607,7 @@ pub struct TsysPSyncRequest(TsysSyncRequest);
 #[serde(transparent)]
 pub struct TsysPSyncResponse(TsysSyncResponse);
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         TsysRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -767,22 +715,12 @@ fn get_payments_sync_response(
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            TsysPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<TsysPSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            TsysPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<TsysPSyncResponse, Self>) -> Result<Self, Self::Error> {
         let TsysPSyncResponse(TsysSyncResponse {
             search_transaction_response,
         }) = item.response;
@@ -832,14 +770,7 @@ pub struct TsysPaymentsCaptureRequest {
 }
 
 // TryFrom for macro compatibility - owned TsysRouterData
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         TsysRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -901,14 +832,7 @@ pub struct TsysPaymentsCancelRequest {
     void: TsysCancelRequest,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         TsysRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -961,14 +885,7 @@ pub struct TsysRefundRequest {
 }
 
 // TryFrom for macro compatibility - owned TsysRouterData
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         TsysRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for TsysRefundRequest
@@ -1026,22 +943,12 @@ pub struct RefundResponse {
     return_response: TsysResponseTypes,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            RefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<RefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            RefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = match item.response.return_response {
             TsysResponseTypes::SuccessResponse(return_response) => Ok(RefundsResponseData {
                 connector_refund_id: return_response.transaction_id,
@@ -1073,14 +980,7 @@ pub struct TsysRSyncRequest(TsysSyncRequest);
 #[serde(transparent)]
 pub struct TsysRSyncResponse(TsysSyncResponse);
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         TsysRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     > for TsysRSyncRequest
@@ -1107,22 +1007,12 @@ impl<
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            TsysRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<TsysRSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            TsysRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<TsysRSyncResponse, Self>) -> Result<Self, Self::Error> {
         let TsysRSyncResponse(TsysSyncResponse {
             search_transaction_response,
         }) = item.response;
