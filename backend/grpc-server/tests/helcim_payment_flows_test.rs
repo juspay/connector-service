@@ -269,7 +269,7 @@ fn create_payment_sync_request(
         state: None,
         metadata: HashMap::new(),
         merchant_account_metadata: HashMap::new(),
-        connector_metadata: HashMap::new(),
+        connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
     }

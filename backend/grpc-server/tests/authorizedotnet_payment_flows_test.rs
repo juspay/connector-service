@@ -405,7 +405,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         state: None,
         metadata: HashMap::new(),
         merchant_account_metadata: HashMap::new(),
-        connector_metadata: HashMap::new(),
+        connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
     }
