@@ -271,10 +271,7 @@ impl<
                     transaction_amount: item_data
                         .connector
                         .amount_converter
-                        .convert(
-                            item.request.minor_amount,
-                            item.request.currency,
-                        )
+                        .convert(item.request.minor_amount, item.request.currency)
                         .change_context(errors::ConnectorError::AmountConversionFailed)?,
                     currency_code: item.request.currency,
                     card_number: card_data.card_number.clone(),
@@ -287,7 +284,8 @@ impl<
                         .clone(),
                     terminal_capability: TsysTerminalCapability::NoTerminalManual,
                     terminal_operating_environment: TsysTerminalOperatingEnvironment::NoTerminal,
-                    cardholder_authentication_method: TsysCardholderAuthenticationMethod::NotAuthenticated,
+                    cardholder_authentication_method:
+                        TsysCardholderAuthenticationMethod::NotAuthenticated,
                     developer_id: auth.developer_id,
                 };
 
@@ -785,7 +783,9 @@ impl
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let TsysPSyncResponse(TsysSyncResponse { search_transaction_response }) = item.response;
+        let TsysPSyncResponse(TsysSyncResponse {
+            search_transaction_response,
+        }) = item.response;
         let (response, status) = match search_transaction_response {
             SearchResponseTypes::SuccessResponse(search_response) => (
                 Ok(get_payments_sync_response(&search_response, item.http_code)),
@@ -871,10 +871,7 @@ impl<
             transaction_amount: item_data
                 .connector
                 .amount_converter
-                .convert(
-                    item.request.minor_amount_to_capture,
-                    item.request.currency,
-                )
+                .convert(item.request.minor_amount_to_capture, item.request.currency)
                 .change_context(errors::ConnectorError::AmountConversionFailed)?,
         };
 
@@ -993,10 +990,7 @@ impl<
             transaction_amount: item_data
                 .connector
                 .amount_converter
-                .convert(
-                    MinorUnit(item.request.refund_amount),
-                    item.request.currency,
-                )
+                .convert(MinorUnit(item.request.refund_amount), item.request.currency)
                 .change_context(errors::ConnectorError::AmountConversionFailed)?,
             transaction_id: item.request.connector_transaction_id.clone(),
         };
@@ -1129,7 +1123,9 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let TsysRSyncResponse(TsysSyncResponse { search_transaction_response }) = item.response;
+        let TsysRSyncResponse(TsysSyncResponse {
+            search_transaction_response,
+        }) = item.response;
         let response = match search_transaction_response {
             SearchResponseTypes::SuccessResponse(search_response) => Ok(RefundsResponseData {
                 connector_refund_id: search_response.transaction_details.transaction_id.clone(),
