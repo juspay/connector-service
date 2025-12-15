@@ -166,8 +166,9 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         amount,
         currency: i32::from(Currency::Usd),
         state: None,
-        connector_metadata: None,
+        connector_metadata: HashMap::new(),
         setup_future_usage: None,
+        sync_type: None,
     }
 }
 
@@ -240,6 +241,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
     let unique_amount = rng.gen_range(1000..10000); // Amount between $10.00 and $100.00
 
     let mandate_reference = MandateReference {
+        connector_mandate_request_reference_id: None,
         mandate_id: Some(mandate_id.to_string()),
         payment_method_id: None,
     };
@@ -497,8 +499,9 @@ async fn test_authorize_capture_refund_rsync() {
             amount,
             currency: i32::from(Currency::Usd),
             state: None,
-            connector_metadata: None,
+            connector_metadata: HashMap::new(),
             setup_future_usage: None,
+            sync_type: None,
         };
         let mut rsync_grpc_request = Request::new(rsync_request);
         add_payload_metadata(&mut rsync_grpc_request);
