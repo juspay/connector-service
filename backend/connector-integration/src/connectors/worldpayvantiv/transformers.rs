@@ -128,9 +128,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Some(network) => WorldpayvativCardType::try_from(network)?,
                     None => {
                         // Fallback to BIN-based card issuer detection
-                        let card_issuer = domain_types::utils::get_card_issuer(
-                            card_data.card_number.peek(),
-                        )?;
+                        let card_issuer =
+                            domain_types::utils::get_card_issuer(card_data.card_number.peek())?;
                         WorldpayvativCardType::try_from(&card_issuer)?
                     }
                 };
@@ -201,12 +200,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let sale = Sale {
                     id: format!("{}_{}", OperationId::Sale, merchant_txn_id),
                     report_group: report_group.clone(),
-                    customer_id: item
-                        .router_data
-                        .resource_common_data
-                        .get_customer_id()
-                        .ok()
-                        .map(|id| Secret::new(id.get_string_repr().to_string())),
+                    customer_id: extract_customer_id(
+                        &item.router_data.resource_common_data.customer_id,
+                    )
+                    .map(Secret::new),
                     order_id: merchant_txn_id.clone(),
                     amount,
                     order_source,
@@ -222,12 +219,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let authorization = Authorization {
                     id: format!("{}_{}", OperationId::Auth, merchant_txn_id),
                     report_group: report_group.clone(),
-                    customer_id: item
-                        .router_data
-                        .resource_common_data
-                        .get_customer_id()
-                        .ok()
-                        .map(|id| Secret::new(id.get_string_repr().to_string())),
+                    customer_id: extract_customer_id(
+                        &item.router_data.resource_common_data.customer_id,
+                    )
+                    .map(Secret::new),
                     order_id: merchant_txn_id.clone(),
                     amount,
                     order_source,
@@ -1517,9 +1512,8 @@ where
                 Some(network) => WorldpayvativCardType::try_from(network)?,
                 None => {
                     // Fallback to BIN-based card issuer detection
-                    let card_issuer = domain_types::utils::get_card_issuer(
-                        card_data.card_number.peek(),
-                    )?;
+                    let card_issuer =
+                        domain_types::utils::get_card_issuer(card_data.card_number.peek())?;
                     WorldpayvativCardType::try_from(&card_issuer)?
                 }
             };
@@ -1999,26 +1993,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .merchant_account_metadata
             .as_ref()
-            .and_then(|metadata| {
-                extract_report_group(&Some(metadata.clone()))
-            })
+            .and_then(|metadata| extract_report_group(&Some(metadata.clone())))
             .unwrap_or_else(|| "rtpGrp".to_string());
 
-        // Extract customer_id
-        // Extract customer_id using get_customer_id method
-        // Use payment_data to access customer_id for refund flow
-        // Access customer_id from RefundsData
-        let customer_id = item.router_data.request.customer_id.as_ref().and_then(|id| {
-            if id.len() <= worldpayvantiv_constants::CUSTOMER_ID_MAX_LENGTH {
-                Some(id.clone())
-            } else {
-                None
-            }
-        });
+        // Extract customer_id from RefundsData - since RefundsData stores it as String, we convert it to CustomerId to use with extract_customer_id function
+        let customer_id = item
+            .router_data
+            .request
+            .customer_id
+            .as_ref()
+            .and_then(|id_str| {
+                use std::borrow::Cow;
+                CustomerId::try_from(Cow::from(id_str.clone())).ok()
+            })
+            .as_ref()
+            .and_then(|customer_id| extract_customer_id(&Some(customer_id.clone())));
 
         let credit = RefundRequest {
-            id: format!("{}_{}", OperationId::Refund, merchant_txn_id),
             report_group,
+            id: format!("{}_{}", OperationId::Refund, merchant_txn_id),
             customer_id,
             cnp_txn_id,
             amount: item.router_data.request.minor_refund_amount,
