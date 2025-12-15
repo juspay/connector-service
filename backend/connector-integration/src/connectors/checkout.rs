@@ -550,7 +550,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Checkout,
     curl_request: Json(SetupMandateRequest),
-    curl_response: PaymentVoidResponse,
+    curl_response: SetupMandateResponse,
     flow_name: SetupMandate,
     resource_common_data: PaymentFlowData,
     flow_request: SetupMandateRequestData<T>,
@@ -569,7 +569,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(format!("{}{}", self.connector_base_url_payments(req), "payments"))
+            Ok(format!("{}payments", self.connector_base_url_payments(req)))
         }
     }
 );
