@@ -106,7 +106,6 @@ pub struct WorldpayxmlDate {
     pub year: Secret<String>,
 }
 
-
 #[derive(Debug, Serialize)]
 pub struct WorldpayxmlShopper {
     #[serde(

@@ -222,9 +222,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Get payment method
         let payment_method = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => {
-                get_worldpayxml_payment_method(&router_data.request.payment_method_data, card, billing_address.as_ref())?
-            }
+            PaymentMethodData::Card(card) => get_worldpayxml_payment_method(
+                &router_data.request.payment_method_data,
+                card,
+                billing_address.as_ref(),
+            )?,
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
                     message: "Selected payment method".to_string(),
