@@ -180,6 +180,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
     };
 
     let mandate_reference = MandateReference {
+        connector_mandate_request_reference_id: None,
         mandate_id: Some(mandate_id.to_string()),
         payment_method_id: None,
     };
@@ -402,8 +403,9 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         amount: TEST_AMOUNT,
         currency: 146, // Currency value from working grpcurl
         state: None,
-        connector_metadata: None,
+        connector_metadata: HashMap::new(),
         setup_future_usage: None,
+        sync_type: None,
     }
 }
 
