@@ -549,7 +549,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Checkout,
-    curl_request: Json(PaymentVoidRequest),
+    curl_request: Json(SetupMandateRequest),
     curl_response: PaymentVoidResponse,
     flow_name: SetupMandate,
     resource_common_data: PaymentFlowData,
