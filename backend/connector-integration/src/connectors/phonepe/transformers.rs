@@ -327,7 +327,7 @@ impl<
             mobile_number,
             payment_instrument,
             device_context,
-            payment_mode
+            payment_mode,
         };
 
         // Convert to JSON and encode
@@ -494,7 +494,7 @@ impl<
             mobile_number,
             payment_instrument,
             device_context,
-            payment_mode
+            payment_mode,
         };
 
         // Convert to JSON and encode
@@ -726,28 +726,28 @@ pub fn is_irctc_merchant(merchant_id: &str) -> bool {
 }
 
 // Convert UpiSource enum to string for API
-fn upi_source_to_string(upi_source: Option<&domain_types::payment_method_data::UpiSource>) -> Option<String> {
+fn upi_source_to_string(
+    upi_source: Option<&domain_types::payment_method_data::UpiSource>,
+) -> Option<String> {
     use domain_types::payment_method_data::UpiSource;
 
-    upi_source.map(|source| {
-        match source {
-            UpiSource::UpiCc => "UPI_CC".to_string(),
-            UpiSource::UpiCl => "UPI_CL".to_string(),
-            UpiSource::UpiAccount => "UPI_ACCOUNT".to_string(),
-        }
+    upi_source.map(|source| match source {
+        UpiSource::UpiCc => "UPI_CC".to_string(),
+        UpiSource::UpiCl => "UPI_CL".to_string(),
+        UpiSource::UpiAccount => "UPI_ACCOUNT".to_string(),
     })
 }
 
 // Determine payment mode based on UPI source
 // Maps: UPI_CC/UPI_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
-fn get_payment_mode_from_upi_source(upi_source: Option<&domain_types::payment_method_data::UpiSource>) -> Option<String> {
+fn get_payment_mode_from_upi_source(
+    upi_source: Option<&domain_types::payment_method_data::UpiSource>,
+) -> Option<String> {
     use domain_types::payment_method_data::UpiSource;
 
-    upi_source.map(|source| {
-        match source {
-            UpiSource::UpiCc | UpiSource::UpiCl => "ALL".to_string(),
-            UpiSource::UpiAccount => "ACCOUNT".to_string(),
-        }
+    upi_source.map(|source| match source {
+        UpiSource::UpiCc | UpiSource::UpiCl => "ALL".to_string(),
+        UpiSource::UpiAccount => "ACCOUNT".to_string(),
     })
 }
 
