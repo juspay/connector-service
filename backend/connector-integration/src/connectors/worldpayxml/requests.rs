@@ -1,4 +1,6 @@
 use common_utils::StringMinorUnit;
+use domain_types::errors;
+use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
@@ -11,11 +13,13 @@ pub enum WorldpayxmlAction {
     Sale,
     Cancel,
 }
-fn generate_soap_xml<T: Serialize>(request: &T) -> String {
-    format!(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
-        quick_xml::se::to_string(request).unwrap_or_default()
-    )
+fn generate_soap_xml<T: Serialize>(
+    request: &T,
+) -> Result<String, error_stack::Report<domain_types::errors::ConnectorError>> {
+    let xml_body = quick_xml::se::to_string(request)
+        .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
+
+    Ok(format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}", xml_body))
 }
 
 #[derive(Debug, Serialize)]
@@ -29,8 +33,10 @@ pub struct WorldpayxmlPaymentsRequest {
 }
 
 impl GetSoapXml for WorldpayxmlPaymentsRequest {
-    fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self)
+    fn to_soap_xml(
+        &self,
+    ) -> String {
+        generate_soap_xml(self).expect("Failed to generate SOAP XML for payment request")
     }
 }
 
@@ -43,8 +49,8 @@ pub struct WorldpayxmlSubmit {
 pub struct WorldpayxmlOrder {
     #[serde(rename = "@orderCode")]
     pub order_code: String,
-    #[serde(rename = "@captureDelay", skip_serializing_if = "Option::is_none")]
-    pub capture_delay: Option<String>,
+    #[serde(rename = "@captureDelay")]
+    pub capture_delay: String,
     pub description: String,
     pub amount: WorldpayxmlAmount,
     #[serde(rename = "paymentDetails")]
@@ -147,7 +153,7 @@ pub struct WorldpayxmlBillingAddress {
     pub address: WorldpayxmlAddress,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct WorldpayxmlAddress {
     #[serde(rename = "firstName", skip_serializing_if = "Option::is_none")]
     pub first_name: Option<Secret<String>>,
@@ -180,11 +186,10 @@ pub struct WorldpayxmlCaptureRequest {
 }
 
 impl GetSoapXml for WorldpayxmlCaptureRequest {
-    fn to_soap_xml(&self) -> String {
-        format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
-            quick_xml::se::to_string(self).unwrap_or_default()
-        )
+    fn to_soap_xml(
+        &self,
+    ) -> String {
+        generate_soap_xml(self).expect("Failed to generate SOAP XML for capture request")
     }
 }
 
@@ -217,11 +222,10 @@ pub struct WorldpayxmlVoidRequest {
 }
 
 impl GetSoapXml for WorldpayxmlVoidRequest {
-    fn to_soap_xml(&self) -> String {
-        format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
-            quick_xml::se::to_string(self).unwrap_or_default()
-        )
+    fn to_soap_xml(
+        &self,
+    ) -> String {
+        generate_soap_xml(self).expect("Failed to generate SOAP XML for void request")
     }
 }
 
@@ -254,11 +258,10 @@ pub struct WorldpayxmlRefundRequest {
 }
 
 impl GetSoapXml for WorldpayxmlRefundRequest {
-    fn to_soap_xml(&self) -> String {
-        format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
-            quick_xml::se::to_string(self).unwrap_or_default()
-        )
+    fn to_soap_xml(
+        &self,
+    ) -> String {
+        generate_soap_xml(self).expect("Failed to generate SOAP XML for refund request")
     }
 }
 
@@ -291,11 +294,10 @@ pub struct WorldpayxmlPSyncRequest {
 }
 
 impl GetSoapXml for WorldpayxmlPSyncRequest {
-    fn to_soap_xml(&self) -> String {
-        format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
-            quick_xml::se::to_string(self).unwrap_or_default()
-        )
+    fn to_soap_xml(
+        &self,
+    ) -> String {
+        generate_soap_xml(self).expect("Failed to generate SOAP XML for sync request")
     }
 }
 

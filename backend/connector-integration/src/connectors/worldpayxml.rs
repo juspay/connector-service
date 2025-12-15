@@ -881,7 +881,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     status_code: res.status_code,
                     code: error_response
                         .code
-                        .unwrap_or_else(|| common_utils::consts::NO_ERROR_CODE.to_string()),
+                        .unwrap_or(common_utils::consts::NO_ERROR_CODE.to_string()),
                     message: error_response
                         .message
                         .unwrap_or_else(|| common_utils::consts::NO_ERROR_MESSAGE.to_string()),

@@ -53,34 +53,9 @@ impl TryFrom<&ConnectorAuthType> for WorldpayxmlAuthType {
 }
 
 // Helper function to get currency exponent
-fn get_currency_exponent(currency: common_enums::Currency) -> String {
-    match currency {
-        common_enums::Currency::BHD
-        | common_enums::Currency::IQD
-        | common_enums::Currency::JOD
-        | common_enums::Currency::KWD
-        | common_enums::Currency::LYD
-        | common_enums::Currency::OMR
-        | common_enums::Currency::TND => "3",
-        common_enums::Currency::CLP
-        | common_enums::Currency::DJF
-        | common_enums::Currency::GNF
-        | common_enums::Currency::ISK
-        | common_enums::Currency::JPY
-        | common_enums::Currency::KMF
-        | common_enums::Currency::KRW
-        | common_enums::Currency::PYG
-        | common_enums::Currency::RWF
-        | common_enums::Currency::UGX
-        | common_enums::Currency::VND
-        | common_enums::Currency::VUV
-        | common_enums::Currency::XAF
-        | common_enums::Currency::XOF
-        | common_enums::Currency::XPF => "0",
-        _ => "2",
-    }
-    .to_string()
-}
+
+const DEFAULT_CARD_HOLDER_NAME: &str = "Card Holder";
+const DEFAULT_PAYMENT_DESCRIPTION: &str = "Payment";
 
 // Helper function to get payment method XML element
 fn get_worldpayxml_payment_method<T>(
@@ -122,10 +97,10 @@ where
                 if !first_name.is_empty() || !last_name.is_empty() {
                     Secret::new(format!("{} {}", first_name, last_name).trim().to_string())
                 } else {
-                    Secret::new("Card Holder".to_string())
+                    Secret::new(DEFAULT_CARD_HOLDER_NAME.to_string())
                 }
             } else {
-                Secret::new("Card Holder".to_string())
+                Secret::new(DEFAULT_CARD_HOLDER_NAME.to_string())
             };
 
             let card_data = requests::WorldpayxmlCard {
@@ -252,19 +227,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         .connector_request_reference_id
                         .clone(),
                     capture_delay: if is_manual_capture {
-                        Some("OFF".to_string())
+                        "OFF".to_string()
                     } else {
-                        Some("0".to_string())
+                        "0".to_string().to_string()
                     },
                     description: router_data
                         .resource_common_data
                         .description
                         .clone()
-                        .unwrap_or_else(|| "Payment".to_string()),
+                        .unwrap_or_else(|| DEFAULT_PAYMENT_DESCRIPTION.to_string()),
                     amount: requests::WorldpayxmlAmount {
                         value: converted_amount,
                         currency_code: router_data.request.currency,
-                        exponent: get_currency_exponent(router_data.request.currency),
+                        exponent: if router_data.request.currency.is_three_decimal_currency() {
+                            "3".to_string()
+                        } else if router_data.request.currency.is_zero_decimal_currency() {
+                            "0".to_string()
+                        } else {
+                            "2".to_string()
+                        },
                     },
                     payment_details: requests::WorldpayxmlPaymentDetails {
                         action: if is_manual_capture {
@@ -343,7 +324,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         amount: requests::WorldpayxmlAmount {
                             value: converted_amount,
                             currency_code: router_data.request.currency,
-                            exponent: get_currency_exponent(router_data.request.currency),
+                            exponent: if router_data.request.currency.is_three_decimal_currency() {
+                                "3".to_string()
+                            } else if router_data.request.currency.is_zero_decimal_currency() {
+                                "0".to_string()
+                            } else {
+                                "2".to_string()
+                            },
                         },
                     },
                 },
@@ -427,7 +414,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         amount: requests::WorldpayxmlAmount {
                             value: converted_amount,
                             currency_code: router_data.request.currency,
-                            exponent: get_currency_exponent(router_data.request.currency),
+                            exponent: if router_data.request.currency.is_three_decimal_currency() {
+                                "3".to_string()
+                            } else if router_data.request.currency.is_zero_decimal_currency() {
+                                "0".to_string()
+                            } else {
+                                "2".to_string()
+                            },
                         },
                     },
                 },
@@ -628,7 +621,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Determine if auto-capture
         let is_auto_capture = router_data.request.capture_method != Some(CaptureMethod::Manual)
-            && router_data.request.capture_method != Some(CaptureMethod::ManualMultiple);
+    && router_data.request.capture_method != Some(CaptureMethod::ManualMultiple);
 
         // Map status from lastEvent
         let status = map_worldpayxml_authorize_status(
