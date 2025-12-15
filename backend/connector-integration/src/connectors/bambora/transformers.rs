@@ -46,7 +46,7 @@ impl TryFrom<&ConnectorAuthType> for BamboraAuthType {
                     auth_string.as_bytes(),
                 );
                 Ok(Self {
-                    api_key: Secret::new(format!("Passcode {}", encoded)),
+                    api_key: Secret::new(format!("Passcode {encoded}")),
                 })
             }
             _ => Err(error_stack::report!(
@@ -362,31 +362,13 @@ impl<T: PaymentMethodDataTypes>
 
 // Response Transformation
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Status mapping using Bambora's payment_type field for robustness
         // payment_type: "P" = Payment (auto-captured), "PA" = Pre-authorization (manual)
@@ -478,21 +460,13 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Status mapping for capture completion
         // For approved captures, payment_type should be "PAC" (Pre-auth Completion)
@@ -543,21 +517,13 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 
 // PSync Response Transformation
 // The GET /payments/{transId} endpoint returns the same structure as authorization
-impl
-    TryFrom<
-        ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Status mapping using Bambora's payment_type field for accuracy
         // payment_type indicates the actual transaction state:
@@ -643,21 +609,13 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Status mapping following hyperswitch pattern
         // Only check approved field for refund
@@ -682,21 +640,13 @@ impl
 
 // Refund Sync (RSync) Implementation
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Status mapping following hyperswitch pattern
         // Only check approved field for refund sync
@@ -775,21 +725,13 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BamboraPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Status mapping following hyperswitch pattern
         // Only check approved field for void
@@ -826,14 +768,7 @@ impl
 use crate::connectors::bambora::BamboraRouterData;
 
 // Authorize - wrapper to RouterDataV2
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BamboraRouterData<
             RouterDataV2<
@@ -864,14 +799,7 @@ impl<
 }
 
 // Capture - wrapper to RouterDataV2
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BamboraRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -892,14 +820,7 @@ impl<
 }
 
 // Void - wrapper to RouterDataV2
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BamboraRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -920,14 +841,7 @@ impl<
 }
 
 // Refund - wrapper to RouterDataV2
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BamboraRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,

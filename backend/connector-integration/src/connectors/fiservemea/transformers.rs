@@ -40,10 +40,7 @@ impl FiservemeaAuthType {
         request_body: &str,
     ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
         // Raw signature: apiKey + ClientRequestId + time + requestBody
-        let raw_signature = format!(
-            "{}{}{}{}",
-            api_key, client_request_id, timestamp, request_body
-        );
+        let raw_signature = format!("{api_key}{client_request_id}{timestamp}{request_body}");
 
         // Generate HMAC-SHA256 with API Secret as key
         let signature = crypto::HmacSha256
@@ -228,14 +225,7 @@ pub type FiservemeaRefundSyncResponse = FiservemeaPaymentsResponse;
 use super::FiservemeaRouterData;
 
 // Implementations for FiservemeaRouterData - needed for the macro framework
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         FiservemeaRouterData<
             RouterDataV2<
@@ -262,7 +252,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         // Delegate to the existing TryFrom implementation
-        FiservemeaPaymentsRequest::try_from(&item.router_data)
+        Self::try_from(&item.router_data)
     }
 }
 
@@ -270,14 +260,7 @@ impl<
 // for FiservemeaPaymentsResponse since all response aliases point to it
 
 // TryFrom for Capture
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         FiservemeaRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -293,19 +276,12 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        PostAuthTransaction::try_from(&item.router_data)
+        Self::try_from(&item.router_data)
     }
 }
 
 // TryFrom for Void
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         FiservemeaRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -321,19 +297,12 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        VoidTransaction::try_from(&item.router_data)
+        Self::try_from(&item.router_data)
     }
 }
 
 // TryFrom for Refund
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         FiservemeaRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -349,7 +318,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        ReturnTransaction::try_from(&item.router_data)
+        Self::try_from(&item.router_data)
     }
 }
 
@@ -736,31 +705,13 @@ pub struct PaymentToken {
     pub decline_duplicates: Option<bool>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result and transaction type
         let status = map_status(
@@ -808,21 +759,13 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result and transaction type
         let status = map_status(
@@ -870,21 +813,13 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result and transaction type
         let status = map_status(
@@ -932,21 +867,13 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result fields
         let refund_status = map_refund_status(
@@ -965,21 +892,13 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result fields
         let refund_status = map_refund_status(
@@ -998,21 +917,13 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result and transaction type
         // The map_status function properly handles void status based on transaction_type
