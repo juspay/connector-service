@@ -464,6 +464,7 @@ pub struct AuthorizedotnetTransactionRequest<T: PaymentMethodDataTypes> {
     user_fields: Option<UserFields>,
     processing_options: Option<ProcessingOptions>,
     subsequent_auth_information: Option<SubsequentAuthInformation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     authorization_indicator_type: Option<AuthorizationIndicator>,
     ref_trans_id: Option<String>,
 }
@@ -707,12 +708,7 @@ fn create_regular_transaction_request<
         user_fields,
         processing_options: None,
         subsequent_auth_information: None,
-        authorization_indicator_type: match item.router_data.request.capture_method {
-            Some(capture_method) => Some(AuthorizationIndicator {
-                authorization_indicator: capture_method.try_into()?,
-            }),
-            None => None,
-        },
+        authorization_indicator_type: None,
         ref_trans_id: None,
     })
 }
@@ -745,6 +741,7 @@ pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
     user_fields: Option<UserFields>,
     processing_options: Option<ProcessingOptions>,
     subsequent_auth_information: Option<SubsequentAuthInformation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     authorization_indicator_type: Option<AuthorizationIndicator>,
 }
 
@@ -903,12 +900,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             user_fields,
             processing_options,
             subsequent_auth_information,
-            authorization_indicator_type: match item.router_data.request.capture_method {
-                Some(capture_method) => Some(AuthorizationIndicator {
-                    authorization_indicator: capture_method.try_into()?,
-                }),
-                None => None,
-            },
+            authorization_indicator_type: None,
         };
 
         Ok(Self {
