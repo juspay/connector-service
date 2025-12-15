@@ -58,7 +58,6 @@ pub struct PowertranzPaymentsRequest<T: PaymentMethodDataTypes> {
     pub three_d_secure: Option<bool>,
     pub source: PowertranzSource<T>,
     pub order_identifier: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub extended_data: Option<serde_json::Value>,
 }
 
@@ -71,25 +70,34 @@ pub struct PowertranzSource<T: PaymentMethodDataTypes> {
     pub card_expiration: Secret<String>,
 }
 
+// Type definition for Capture, Void, Refund Request
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct PowertranzBaseRequest {
+    pub transaction_identifier: String,
+    pub total_amount: Option<FloatMajorUnit>,
+    pub refund: Option<bool>,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzCaptureRequest {
-    pub transaction_identifier: String,
-    pub total_amount: Option<FloatMajorUnit>,
+    #[serde(flatten)]
+    pub base: PowertranzBaseRequest,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzVoidRequest {
-    pub transaction_identifier: String,
+    #[serde(flatten)]
+    pub base: PowertranzBaseRequest,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzRefundRequest {
-    pub transaction_identifier: String,
-    pub total_amount: Option<FloatMajorUnit>,
-    pub refund: Option<bool>,
+    #[serde(flatten)]
+    pub base: PowertranzBaseRequest,
 }
 
 // ============================================================================
@@ -393,11 +401,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )?;
 
         Ok(Self {
-            transaction_identifier: request_data
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
-            total_amount: Some(amount),
+            base: PowertranzBaseRequest {
+                transaction_identifier: request_data
+                    .connector_transaction_id
+                    .get_connector_transaction_id()
+                    .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
+                total_amount: Some(amount),
+                refund: None,
+            },
         })
     }
 }
@@ -429,7 +440,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            transaction_identifier: item.router_data.request.connector_transaction_id.clone(),
+            base: PowertranzBaseRequest {
+                transaction_identifier: item.router_data.request.connector_transaction_id.clone(),
+                total_amount: None,
+                refund: None,
+            },
         })
     }
 }
@@ -467,9 +482,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )?;
 
         Ok(Self {
-            transaction_identifier: request_data.connector_transaction_id.clone(),
-            total_amount: Some(amount),
-            refund: Some(true),
+            base: PowertranzBaseRequest {
+                transaction_identifier: request_data.connector_transaction_id.clone(),
+                total_amount: Some(amount),
+                refund: Some(true),
+            },
         })
     }
 }
