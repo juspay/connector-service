@@ -36,6 +36,19 @@ fn extract_report_group(connector_meta_data: &Option<Secret<serde_json::Value>>)
     })
 }
 
+use common_utils::id_type::CustomerId;
+
+fn extract_customer_id(customer_id: &Option<CustomerId>) -> Option<String> {
+    customer_id.as_ref().and_then(|id| {
+        let customer_id_str = id.get_string_repr().to_string();
+        if customer_id_str.len() <= worldpayvantiv_constants::CUSTOMER_ID_MAX_LENGTH {
+            Some(customer_id_str)
+        } else {
+            None
+        }
+    })
+}
+
 // Metadata structures for WorldpayVantiv
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct WorldpayvantivMetadataObject {
@@ -415,6 +428,8 @@ pub struct RefundRequest {
     pub id: String,
     #[serde(rename = "@reportGroup")]
     pub report_group: String,
+    #[serde(rename = "@customerId", skip_serializing_if = "Option::is_none")]
+    pub customer_id: Option<String>,
     pub cnp_txn_id: String,
     pub amount: MinorUnit,
 }
@@ -1989,9 +2004,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
             .unwrap_or_else(|| "rtpGrp".to_string());
 
+        // Extract customer_id
+        // Extract customer_id using get_customer_id method
+        // Use payment_data to access customer_id for refund flow
+        // Access customer_id from RefundsData
+        let customer_id = item.router_data.request.customer_id.as_ref().and_then(|id| {
+            if id.len() <= worldpayvantiv_constants::CUSTOMER_ID_MAX_LENGTH {
+                Some(id.clone())
+            } else {
+                None
+            }
+        });
+
         let credit = RefundRequest {
             id: format!("{}_{}", OperationId::Refund, merchant_txn_id),
             report_group,
+            customer_id,
             cnp_txn_id,
             amount: item.router_data.request.minor_refund_amount,
         };

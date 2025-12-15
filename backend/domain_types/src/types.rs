@@ -4998,6 +4998,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             refund_id: value.refund_id.to_string(),
             connector_transaction_id,
             connector_refund_id: None, // refund_id field is used as refund_id, not connector_refund_id
+            customer_id: value.customer_id.clone(),
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             payment_amount: value.payment_amount,
             reason: value.reason.clone(),
