@@ -778,25 +778,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Trustpay<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Trustpay<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -990,14 +977,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,

@@ -186,12 +186,7 @@ pub struct StripeBrowserInformation {
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct PaymentIntentRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
     pub amount: MinorUnit, //amount in cents, hence passed as integer
     pub currency: String,
@@ -254,12 +249,7 @@ pub struct StripeMetadata {
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct SetupMandateRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
     pub confirm: bool,
     pub usage: Option<common_enums::FutureUsage>,
@@ -280,14 +270,7 @@ pub struct SetupMandateRequest<
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
-pub struct StripeCardData<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct StripeCardData<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "payment_method_data[type]")]
     pub payment_method_data_type: StripePaymentMethodType,
     #[serde(rename = "payment_method_data[card][number]")]
@@ -338,14 +321,7 @@ pub struct StripePayLaterData {
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
-pub struct TokenRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct TokenRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(flatten)]
     pub token_data: StripePaymentMethodData<T>,
 }
@@ -557,12 +533,7 @@ pub struct MultibancoCreditTransferSourceRequest {
 #[derive(Debug, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum StripePaymentMethodData<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
     CardToken(StripeCardToken<T>),
     Card(StripeCardData<T>),
@@ -592,14 +563,7 @@ pub struct StripeBillingAddressCardToken {
 }
 // Struct to call the Stripe tokens API to create a PSP token for the card details provided
 #[derive(Debug, Eq, PartialEq, Serialize)]
-pub struct StripeCardToken<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct StripeCardToken<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "type")]
     pub payment_method_type: Option<StripePaymentMethodType>,
     #[serde(rename = "card[number]")]
@@ -1282,12 +1246,7 @@ pub struct PaymentRequestDetails {
 }
 
 fn create_stripe_payment_method<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 >(
     payment_method_data: &PaymentMethodData<T>,
     payment_request_details: PaymentRequestDetails,
@@ -1536,14 +1495,7 @@ fn get_stripe_card_network(card_network: common_enums::CardNetwork) -> Option<St
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &Card<T>,
         Auth3ds,
@@ -1594,14 +1546,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &WalletData,
         Option<domain_types::router_data::PaymentMethodToken>,
@@ -1705,14 +1650,8 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<&BankRedirectData> for StripePaymentMethodData<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<&BankRedirectData> for StripePaymentMethodData<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(bank_redirect_data: &BankRedirectData) -> Result<Self, Self::Error> {
@@ -1792,14 +1731,8 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<&GooglePayWalletData> for StripePaymentMethodData<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<&GooglePayWalletData> for StripePaymentMethodData<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(gpay_data: &GooglePayWalletData) -> Result<Self, Self::Error> {
@@ -1823,14 +1756,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
             RouterDataV2<
@@ -2319,7 +2245,7 @@ pub struct SepaAndBacsBankTransferInstructions {
 #[serde_with::skip_serializing_none]
 #[derive(Clone, Debug, Serialize)]
 pub struct QrCodeNextInstructions {
-    pub image_data_url: url::Url,
+    pub image_data_url: Url,
     pub display_to_timestamp: Option<i64>,
 }
 
@@ -3034,7 +2960,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
 
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
-                .change_context(errors::ConnectorError::ParsingFailed)?;
+                .change_context(ConnectorError::ParsingFailed)?;
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)?;
 
@@ -3183,7 +3109,7 @@ pub enum StripeNextActionResponse {
 }
 
 impl StripeNextActionResponse {
-    fn get_url(&self) -> Option<url::Url> {
+    fn get_url(&self) -> Option<Url> {
         match self {
             Self::RedirectToUrl(redirect_to_url) | Self::AlipayHandleRedirect(redirect_to_url) => {
                 Some(redirect_to_url.url.to_owned())
@@ -3955,14 +3881,7 @@ where
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for StripeSplitPaymentRequest
@@ -4017,23 +3936,23 @@ impl<F> TryFrom<ResponseRouterData<PaymentSyncResponse, Self>>
         match id.get_connector_transaction_id() {
             Ok(x) if x.starts_with("set") => match item.response {
                 PaymentSyncResponse::SetupMandateResponse(setup_intent_response) => {
-                    RouterDataV2::try_from(ResponseRouterData {
+                    Self::try_from(ResponseRouterData {
                         response: setup_intent_response,
                         router_data: item.router_data,
                         http_code: item.http_code,
                     })
                 }
-                _ => Err(errors::ConnectorError::ResponseDeserializationFailed)?,
+                _ => Err(ConnectorError::ResponseDeserializationFailed)?,
             },
             Ok(_) => match item.response {
                 PaymentSyncResponse::PaymentIntentSyncResponse(payment_intent_sync_response) => {
-                    RouterDataV2::try_from(ResponseRouterData {
+                    Self::try_from(ResponseRouterData {
                         response: payment_intent_sync_response,
                         router_data: item.router_data,
                         http_code: item.http_code,
                     })
                 }
-                _ => Err(errors::ConnectorError::ResponseDeserializationFailed)?,
+                _ => Err(ConnectorError::ResponseDeserializationFailed)?,
             },
             Err(err) => Err(err).change_context(ConnectorError::MissingConnectorTransactionID),
         }
@@ -4043,14 +3962,8 @@ impl<F> TryFrom<ResponseRouterData<PaymentSyncResponse, Self>>
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PaymentsAuthorizeResponse(PaymentIntentResponse);
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<PaymentsAuthorizeResponse, Self>>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PaymentsAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -4059,7 +3972,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
-                .change_context(errors::ConnectorError::ParsingFailed)?;
+                .change_context(ConnectorError::ParsingFailed)?;
 
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.0.amount, currency_enum)?;
@@ -4069,7 +3982,7 @@ impl<
             currency: currency_enum,
         };
 
-        let new_router_data = RouterDataV2::try_from(ResponseRouterData {
+        let new_router_data = Self::try_from(ResponseRouterData {
             response: item.response.0,
             router_data: item.router_data,
             http_code: item.http_code,
@@ -4095,7 +4008,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
-                .change_context(errors::ConnectorError::ParsingFailed)?;
+                .change_context(ConnectorError::ParsingFailed)?;
 
         let capture_amount_in_minor_unit = item
             .response
@@ -4110,7 +4023,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
                 currency: currency_enum,
             });
 
-        let new_router_data = RouterDataV2::try_from(ResponseRouterData {
+        let new_router_data = Self::try_from(ResponseRouterData {
             response: item.response.0,
             router_data: item.router_data,
             http_code: item.http_code,
@@ -4132,7 +4045,7 @@ impl TryFrom<ResponseRouterData<PaymentsVoidResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<PaymentsVoidResponse, Self>) -> Result<Self, Self::Error> {
-        RouterDataV2::try_from(ResponseRouterData {
+        Self::try_from(ResponseRouterData {
             response: item.response.0,
             router_data: item.router_data,
             http_code: item.http_code,
@@ -4140,14 +4053,7 @@ impl TryFrom<ResponseRouterData<PaymentsVoidResponse, Self>>
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -4168,14 +4074,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -4207,15 +4106,7 @@ pub enum StripeRefundRequest {
     ChargeRefundRequest(ChargeRefundRequest),
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<StripeRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for StripeRefundRequest
 {
@@ -4231,14 +4122,13 @@ impl<
             item.router_data.request.currency,
         )?;
         match item.router_data.request.split_refunds.as_ref() {
-            Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(_)) => {
-                Ok(StripeRefundRequest::ChargeRefundRequest(
-                    ChargeRefundRequest::try_from(&item.router_data)?,
-                ))
-            }
-            _ => Ok(StripeRefundRequest::RefundRequest(RefundRequest::try_from(
-                (&item.router_data, refund_amount),
-            )?)),
+            Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(_)) => Ok(
+                Self::ChargeRefundRequest(ChargeRefundRequest::try_from(&item.router_data)?),
+            ),
+            _ => Ok(Self::RefundRequest(RefundRequest::try_from((
+                &item.router_data,
+                refund_amount,
+            ))?)),
         }
     }
 }
@@ -4348,7 +4238,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
-                .change_context(errors::ConnectorError::ParsingFailed)?;
+                .change_context(ConnectorError::ParsingFailed)?;
 
         let refund_amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)?;
@@ -4406,14 +4296,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
             RouterDataV2<
@@ -4482,14 +4365,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &StripeRouterData<
             RouterDataV2<
@@ -4634,14 +4510,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
             RouterDataV2<
@@ -4799,7 +4668,7 @@ impl TryFrom<ResponseRouterData<PaymentsAuthorizeResponse, Self>>
     fn try_from(
         item: ResponseRouterData<PaymentsAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        RouterDataV2::try_from(ResponseRouterData {
+        Self::try_from(ResponseRouterData {
             response: item.response.0,
             router_data: item.router_data,
             http_code: item.http_code,
@@ -4807,14 +4676,7 @@ impl TryFrom<ResponseRouterData<PaymentsAuthorizeResponse, Self>>
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
@@ -5055,14 +4917,7 @@ fn get_payment_method_type_for_saved_payment_method_payment(
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
             RouterDataV2<

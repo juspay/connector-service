@@ -442,6 +442,7 @@ impl Currency {
     pub fn to_currency_base_unit_asf64(self, amount: i64) -> Result<f64, CurrencyError> {
         let exponent = self.number_of_digits_after_decimal_point()?;
         let divisor = 10_u32.pow(exponent.into());
+        #[allow(clippy::as_conversions)]
         let amount_f64 = amount as f64 / f64::from(divisor);
         Ok(amount_f64)
     }
@@ -1164,33 +1165,33 @@ impl TryFrom<u32> for AttemptStatus {
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         Ok(match value {
-            1 => AttemptStatus::Started,
-            2 => AttemptStatus::AuthenticationFailed,
-            3 => AttemptStatus::RouterDeclined,
-            4 => AttemptStatus::AuthenticationPending,
-            5 => AttemptStatus::AuthenticationSuccessful,
-            6 => AttemptStatus::Authorized,
-            7 => AttemptStatus::AuthorizationFailed,
-            8 => AttemptStatus::Charged,
-            9 => AttemptStatus::Authorizing,
-            10 => AttemptStatus::CodInitiated,
-            11 => AttemptStatus::Voided,
-            12 => AttemptStatus::VoidedPostCapture,
-            13 => AttemptStatus::VoidInitiated,
-            14 => AttemptStatus::VoidPostCaptureInitiated,
-            15 => AttemptStatus::CaptureInitiated,
-            16 => AttemptStatus::CaptureFailed,
-            17 => AttemptStatus::VoidFailed,
-            18 => AttemptStatus::AutoRefunded,
-            19 => AttemptStatus::PartialCharged,
-            20 => AttemptStatus::PartialChargedAndChargeable,
-            21 => AttemptStatus::Unresolved,
-            22 => AttemptStatus::Pending,
-            23 => AttemptStatus::Failure,
-            24 => AttemptStatus::PaymentMethodAwaited,
-            25 => AttemptStatus::ConfirmationAwaited,
-            26 => AttemptStatus::DeviceDataCollectionPending,
-            _ => AttemptStatus::Unknown,
+            1 => Self::Started,
+            2 => Self::AuthenticationFailed,
+            3 => Self::RouterDeclined,
+            4 => Self::AuthenticationPending,
+            5 => Self::AuthenticationSuccessful,
+            6 => Self::Authorized,
+            7 => Self::AuthorizationFailed,
+            8 => Self::Charged,
+            9 => Self::Authorizing,
+            10 => Self::CodInitiated,
+            11 => Self::Voided,
+            12 => Self::VoidedPostCapture,
+            13 => Self::VoidInitiated,
+            14 => Self::VoidPostCaptureInitiated,
+            15 => Self::CaptureInitiated,
+            16 => Self::CaptureFailed,
+            17 => Self::VoidFailed,
+            18 => Self::AutoRefunded,
+            19 => Self::PartialCharged,
+            20 => Self::PartialChargedAndChargeable,
+            21 => Self::Unresolved,
+            22 => Self::Pending,
+            23 => Self::Failure,
+            24 => Self::PaymentMethodAwaited,
+            25 => Self::ConfirmationAwaited,
+            26 => Self::DeviceDataCollectionPending,
+            _ => Self::Unknown,
         })
     }
 }

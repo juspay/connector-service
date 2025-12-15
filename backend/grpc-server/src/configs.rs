@@ -126,7 +126,7 @@ impl ApiTagConfig {
                 result
             },
             |pmt| {
-                let composite_key = format!("{}_{:?}", flow_str, pmt).to_lowercase();
+                let composite_key = format!("{flow_str}_{pmt:?}").to_lowercase();
                 let result = self.tags.get(&composite_key).cloned();
                 if result.is_none() {
                     tracing::debug!(

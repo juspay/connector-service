@@ -36,8 +36,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as volt, RefundResponse, VoltAuthUpdateRequest, VoltAuthUpdateResponse,
-    VoltCancelResponse, VoltPaymentsRequest, VoltPaymentsResponse, VoltPsyncRequest,
-    VoltPsyncResponse, VoltRefundRequest,
+    VoltPaymentsRequest, VoltPaymentsResponse, VoltPsyncRequest, VoltPsyncResponse,
+    VoltRefundRequest,
 };
 
 use super::macros;
@@ -225,11 +225,6 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
-            flow: Void,
-            response_body: VoltCancelResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
             flow: Refund,
             request_body: VoltRefundRequest,
             response_body: RefundResponse,
@@ -280,15 +275,6 @@ macros::create_all_prerequisites!(
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
             req.resource_common_data.connectors.volt.base_url.to_string()
-        }
-
-        pub fn connector_base_url_refunds<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> String {
-            req.resource_common_data.connectors.volt.secondary_base_url.as_ref()
-                .cloned()
-                .expect("Volt secondary_base_url must be configured in connectors config")
         }
     }
 );
@@ -445,38 +431,6 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Volt,
-    curl_response: VoltCancelResponse,
-    flow_name: Void,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentVoidData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let id = &req.request.connector_transaction_id;
-            Ok(format!(
-                "{}/payments/{}/cancel",
-                self.connector_base_url(req),
-                id
-            ))
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Volt,
     curl_request: Json(VoltRefundRequest),
     curl_response: RefundResponse,
     flow_name: Refund,
@@ -498,7 +452,10 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_refunds(req);
+            let base_url = req.resource_common_data.connectors.volt
+            .secondary_base_url
+            .as_ref()
+            .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             let connector_payment_id = req.request.connector_transaction_id.clone();
             Ok(format!(
                 "{base_url}/payments/{connector_payment_id}/request-refund",
@@ -508,38 +465,24 @@ macros::macro_connector_implementation!(
 );
 
 // Stub implementations for unsupported flows (required by macro system)
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Volt<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Volt<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Volt<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -549,51 +492,25 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Volt<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Volt<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Volt<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
@@ -603,27 +520,13 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Volt<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
@@ -633,14 +536,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateConnectorCustomer,
         PaymentFlowData,
@@ -650,14 +546,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,

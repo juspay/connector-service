@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::{
         BankRedirectData, Card, NetworkTokenData, PayLaterData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -26,7 +26,7 @@ use super::aci_result_codes::{FAILURE_CODES, PENDING_CODES, SUCCESSFUL_CODES};
 use super::AciRouterData;
 use crate::{types::ResponseRouterData, utils};
 
-type Error = error_stack::Report<errors::ConnectorError>;
+type Error = error_stack::Report<ConnectorError>;
 
 trait GetCaptureMethod {
     fn get_capture_method(&self) -> Option<common_enums::CaptureMethod>;
@@ -63,7 +63,7 @@ pub struct AciAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for AciAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: &ConnectorAuthType) -> Result<Self, Self::Error> {
         if let ConnectorAuthType::BodyKey { api_key, key1 } = item {
             Ok(Self {
@@ -71,7 +71,7 @@ impl TryFrom<&ConnectorAuthType> for AciAuthType {
                 entity_id: key1.to_owned(),
             })
         } else {
-            Err(errors::ConnectorError::FailedToObtainAuthType)?
+            Err(ConnectorError::FailedToObtainAuthType)?
         }
     }
 }
@@ -85,14 +85,8 @@ pub enum AciRecurringType {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AciPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct AciPaymentsRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+{
     #[serde(flatten)]
     pub txn_details: TransactionDetails,
     #[serde(flatten)]
@@ -123,14 +117,8 @@ pub struct AciCancelRequest {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AciMandateRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct AciMandateRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+{
     pub entity_id: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_brand: Option<PaymentBrand>,
@@ -149,14 +137,7 @@ pub struct AciMandateResponse {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
-pub enum PaymentDetails<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub enum PaymentDetails<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "card")]
     AciCard(Box<CardDetails<T>>),
     BankRedirect(Box<BankRedirectionPMData>),
@@ -166,14 +147,7 @@ pub enum PaymentDetails<
     AciNetworkToken(Box<AciNetworkTokenData>),
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &WalletData,
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -232,22 +206,15 @@ impl<
             | WalletData::ApplePayRedirect(_)
             | WalletData::GooglePayRedirect(_)
             | WalletData::Mifinity(_)
-            | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
-                "Payment method".to_string(),
-            ))?,
+            | WalletData::RevolutPay(_) => {
+                Err(ConnectorError::NotImplemented("Payment method".to_string()))?
+            }
         };
         Ok(payment_data)
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &AciRouterData<
             RouterDataV2<
@@ -336,7 +303,7 @@ impl<
                             .get_billing_country()?,
                     ),
                     bank_account_bank_name: Some(bank_name.ok_or(
-                        errors::ConnectorError::MissingRequiredField {
+                        ConnectorError::MissingRequiredField {
                             field_name: "ideal.bank_name",
                         },
                     )?),
@@ -434,9 +401,9 @@ impl<
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::OpenBankingUk { .. }
-            | BankRedirectData::OpenBanking {} => Err(errors::ConnectorError::NotImplemented(
-                "Payment method".to_string(),
-            ))?,
+            | BankRedirectData::OpenBanking {} => {
+                Err(ConnectorError::NotImplemented("Payment method".to_string()))?
+            }
         };
         Ok(payment_data)
     }
@@ -455,7 +422,7 @@ fn get_aci_payment_brand(
         Some(common_enums::CardNetwork::Discover) => Ok(PaymentBrand::Discover),
         Some(common_enums::CardNetwork::UnionPay) => Ok(PaymentBrand::UnionPay),
         Some(common_enums::CardNetwork::Maestro) => Ok(PaymentBrand::Maestro),
-        Some(unsupported_network) => Err(errors::ConnectorError::NotSupported {
+        Some(unsupported_network) => Err(ConnectorError::NotSupported {
             message: format!("Card network {unsupported_network} is not supported by ACI"),
             connector: "ACI",
         })?,
@@ -463,7 +430,7 @@ fn get_aci_payment_brand(
             if is_network_token_flow {
                 Ok(PaymentBrand::Visa)
             } else {
-                Err(errors::ConnectorError::MissingRequiredField {
+                Err(ConnectorError::MissingRequiredField {
                     field_name: "card.card_network",
                 }
                 .into())
@@ -472,14 +439,8 @@ fn get_aci_payment_brand(
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<(Card<T>, Option<Secret<String>>)> for PaymentDetails<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(Card<T>, Option<Secret<String>>)> for PaymentDetails<T>
 {
     type Error = Error;
     fn try_from(
@@ -491,7 +452,7 @@ impl<
 
         Ok(Self::AciCard(Box::new(CardDetails {
             card_number: card_data.card_number,
-            card_holder: card_holder_name.ok_or(errors::ConnectorError::MissingRequiredField {
+            card_holder: card_holder_name.ok_or(ConnectorError::MissingRequiredField {
                 field_name: "card_holder_name",
             })?,
             card_expiry_month: card_data.card_exp_month.clone(),
@@ -502,14 +463,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &AciRouterData<
             RouterDataV2<
@@ -644,14 +598,7 @@ pub enum PaymentBrand {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize)]
-pub struct CardDetails<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct CardDetails<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "card.number")]
     pub card_number: RawCardNumber<T>,
     #[serde(rename = "card.holder")]
@@ -727,14 +674,7 @@ pub enum AciPaymentType {
     Refund,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AciRouterData<
             RouterDataV2<
@@ -773,7 +713,7 @@ impl<
             }
             PaymentMethodData::MandatePayment => {
                 let mandate_id = item.router_data.request.mandate_id.clone().ok_or(
-                    errors::ConnectorError::MissingRequiredField {
+                    ConnectorError::MissingRequiredField {
                         field_name: "mandate_id",
                     },
                 )?;
@@ -792,7 +732,7 @@ impl<
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Aci"),
                 ))?
             }
@@ -800,14 +740,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &AciRouterData<
             RouterDataV2<
@@ -851,14 +784,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &AciRouterData<
             RouterDataV2<
@@ -902,14 +828,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &AciRouterData<
             RouterDataV2<
@@ -953,14 +872,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &AciRouterData<
             RouterDataV2<
@@ -1015,14 +927,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &AciRouterData<
             RouterDataV2<
@@ -1067,14 +972,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &AciRouterData<
             RouterDataV2<
@@ -1120,18 +1018,13 @@ impl<
 }
 
 fn get_transaction_details<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 >(
     item: &AciRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
     >,
-) -> Result<TransactionDetails, error_stack::Report<errors::ConnectorError>> {
+) -> Result<TransactionDetails, error_stack::Report<ConnectorError>> {
     let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
     let amount = item
         .connector
@@ -1155,12 +1048,7 @@ fn get_transaction_details<
 }
 
 fn get_instruction_details<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 >(
     item: &AciRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -1188,14 +1076,7 @@ fn get_instruction_details<
     None
 }
 
-fn get_recurring_type<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->(
+fn get_recurring_type<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>(
     item: &AciRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
@@ -1211,14 +1092,7 @@ fn get_recurring_type<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AciRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1242,14 +1116,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AciRouterData<
             RouterDataV2<
@@ -1284,7 +1151,7 @@ impl<
                     | Some(PaymentBrand::Mastercard)
                     | Some(PaymentBrand::AmericanExpress) => (),
                     Some(_) => {
-                        return Err(errors::ConnectorError::NotSupported {
+                        return Err(ConnectorError::NotSupported {
                             message: "Payment method not supported for mandate setup".to_string(),
                             connector: "ACI",
                         }
@@ -1299,7 +1166,7 @@ impl<
                     card_expiry_year: card_data.get_expiry_year_4_digit(),
                     card_cvv: card_data.card_cvc.clone(),
                     card_holder: card_data.card_holder_name.clone().ok_or(
-                        errors::ConnectorError::MissingRequiredField {
+                        ConnectorError::MissingRequiredField {
                             field_name: "card_holder_name",
                         },
                     )?,
@@ -1309,7 +1176,7 @@ impl<
                 (brand, details)
             }
             _ => {
-                return Err(errors::ConnectorError::NotSupported {
+                return Err(ConnectorError::NotSupported {
                     message: "Payment method not supported for mandate setup".to_string(),
                     connector: "ACI",
                 }
@@ -1354,7 +1221,7 @@ fn map_aci_attempt_status(
 }
 
 impl FromStr for AciPaymentStatus {
-    type Err = error_stack::Report<errors::ConnectorError>;
+    type Err = error_stack::Report<ConnectorError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if FAILURE_CODES.contains(&s) {
             Ok(Self::Failed)
@@ -1363,7 +1230,7 @@ impl FromStr for AciPaymentStatus {
         } else if SUCCESSFUL_CODES.contains(&s) {
             Ok(Self::Succeeded)
         } else {
-            Err(report!(errors::ConnectorError::UnexpectedResponseError(
+            Err(report!(ConnectorError::UnexpectedResponseError(
                 bytes::Bytes::from(s.to_owned())
             )))
         }
@@ -1529,14 +1396,7 @@ pub struct AciCaptureRequest {
     pub txn_details: TransactionDetails,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AciRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -1618,7 +1478,7 @@ pub enum AciStatus {
 }
 
 impl FromStr for AciStatus {
-    type Err = error_stack::Report<errors::ConnectorError>;
+    type Err = error_stack::Report<ConnectorError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if FAILURE_CODES.contains(&s) {
             Ok(Self::Failed)
@@ -1627,7 +1487,7 @@ impl FromStr for AciStatus {
         } else if SUCCESSFUL_CODES.contains(&s) {
             Ok(Self::Succeeded)
         } else {
-            Err(report!(errors::ConnectorError::UnexpectedResponseError(
+            Err(report!(ConnectorError::UnexpectedResponseError(
                 bytes::Bytes::from(s.to_owned())
             )))
         }
@@ -1710,7 +1570,7 @@ fn map_aci_void_status(item: AciStatus) -> common_enums::AttemptStatus {
 impl<F, T> TryFrom<ResponseRouterData<AciVoidResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<AciVoidResponse, Self>) -> Result<Self, Self::Error> {
         let status = map_aci_void_status(AciStatus::from_str(&item.response.result.code)?);
         let response = if status == common_enums::AttemptStatus::Failure {
@@ -1755,14 +1615,7 @@ pub struct AciRefundRequest {
     pub entity_id: Secret<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AciRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for AciRefundRequest
@@ -1804,7 +1657,7 @@ pub enum AciRefundStatus {
 }
 
 impl FromStr for AciRefundStatus {
-    type Err = error_stack::Report<errors::ConnectorError>;
+    type Err = error_stack::Report<ConnectorError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if FAILURE_CODES.contains(&s) {
             Ok(Self::Failed)
@@ -1813,7 +1666,7 @@ impl FromStr for AciRefundStatus {
         } else if SUCCESSFUL_CODES.contains(&s) {
             Ok(Self::Succeeded)
         } else {
-            Err(report!(errors::ConnectorError::UnexpectedResponseError(
+            Err(report!(ConnectorError::UnexpectedResponseError(
                 bytes::Bytes::from(s.to_owned())
             )))
         }
@@ -1876,15 +1729,8 @@ impl<F> TryFrom<ResponseRouterData<AciRefundResponse, Self>>
     }
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<AciMandateResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<AciMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -2028,12 +1874,7 @@ pub struct AciWebhookNotification {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AciRepeatPaymentRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
     #[serde(flatten)]
     pub txn_details: TransactionDetails,
@@ -2047,14 +1888,7 @@ pub struct AciRepeatPaymentRequest<
     pub recurring_type: Option<AciRecurringType>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AciRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,

@@ -218,7 +218,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let body_str = String::from_utf8_lossy(&request.body);
 
-        Ok(format!("{}{}", timestamp, body_str).into_bytes())
+        Ok(format!("{timestamp}{body_str}").into_bytes())
     }
 
     fn get_event_type(

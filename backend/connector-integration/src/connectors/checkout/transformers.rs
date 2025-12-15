@@ -11,7 +11,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
@@ -56,12 +56,7 @@ pub struct CheckoutAccountHolderDetails {
 
 #[derive(Debug, Serialize)]
 pub struct CardSource<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     #[serde(rename = "type")]
     pub source_type: CheckoutSourceTypes,
@@ -93,12 +88,7 @@ pub struct MandateSource {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum PaymentSource<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardSource<T>),
     Wallets(WalletSource),
@@ -224,12 +214,7 @@ pub struct CheckoutBillingDescriptor {
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 pub struct PaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub source: PaymentSource<T>,
     pub amount: MinorUnit,
@@ -289,7 +274,7 @@ pub struct CheckoutThreeDS {
 }
 
 impl TryFrom<&ConnectorAuthType> for CheckoutAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         if let ConnectorAuthType::SignatureKey {
             api_key,
@@ -303,7 +288,7 @@ impl TryFrom<&ConnectorAuthType> for CheckoutAuthType {
                 processing_channel_id: key1.to_owned(),
             })
         } else {
-            Err(errors::ConnectorError::FailedToObtainAuthType.into())
+            Err(ConnectorError::FailedToObtainAuthType.into())
         }
     }
 }
@@ -327,12 +312,7 @@ fn split_account_holder_name(
 }
 
 fn build_metadata<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     item: &CheckoutRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -364,14 +344,7 @@ fn is_metadata_empty(val: &Option<Secret<serde_json::Value>>) -> bool {
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CheckoutRouterData<
             RouterDataV2<
@@ -457,7 +430,7 @@ impl<
                     });
                     Ok((payment_source, None, Some(false), store_for_future_use))
                 }
-                _ => Err(errors::ConnectorError::NotImplemented(
+                _ => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("checkout"),
                 )),
             }?;
@@ -721,7 +694,7 @@ pub struct Balances {
 
 fn get_connector_meta(
     capture_method: common_enums::CaptureMethod,
-) -> CustomResult<serde_json::Value, errors::ConnectorError> {
+) -> CustomResult<serde_json::Value, ConnectorError> {
     match capture_method {
         common_enums::CaptureMethod::Automatic
         | common_enums::CaptureMethod::SequentialAutomatic => Ok(serde_json::json!(CheckoutMeta {
@@ -733,43 +706,17 @@ fn get_connector_meta(
             }))
         }
         common_enums::CaptureMethod::Scheduled => {
-            Err(errors::ConnectorError::CaptureMethodNotSupported.into())
+            Err(ConnectorError::CaptureMethodNotSupported.into())
         }
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            PaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            PaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let status = get_attempt_status_cap((
             item.response.status,
             item.router_data.request.capture_method,
@@ -874,25 +821,8 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            PaymentsResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PaymentsResponse, Self>>
     for RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -901,17 +831,7 @@ impl<
     >
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            PaymentsResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let connector_meta =
             get_connector_meta(item.router_data.request.capture_method.unwrap_or_default())?;
         let redirection_data = item
@@ -1144,14 +1064,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentVoidResponse, Self>>
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CheckoutRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1186,14 +1099,7 @@ pub struct PaymentCaptureRequest {
     pub reference: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CheckoutRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -1295,20 +1201,12 @@ pub struct RefundRequest {
     reference: String,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CheckoutRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for RefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CheckoutRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -1467,7 +1365,7 @@ impl<F> TryFrom<ResponseRouterData<RSyncResponse, Self>>
             .response
             .iter()
             .find(|&x| x.action_id.clone() == refund_action_id)
-            .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorError::ResponseHandlingFailed)?;
         let refund_status = common_enums::RefundStatus::from(action_response);
         Ok(Self {
             response: Ok(RefundsResponseData {

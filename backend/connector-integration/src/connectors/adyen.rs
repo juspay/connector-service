@@ -279,7 +279,7 @@ macros::create_all_prerequisites!(
 fn build_env_specific_endpoint(
     base_url: &str,
     test_mode: Option<bool>,
-    connector_metadata: &Option<common_utils::pii::SecretSerdeValue>,
+    connector_metadata: &Option<SecretSerdeValue>,
 ) -> CustomResult<String, errors::ConnectorError> {
     if test_mode.unwrap_or(true) {
         Ok(base_url.to_string())
@@ -542,7 +542,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -740,7 +740,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -757,7 +757,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -867,10 +867,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::RefundWebhookDetailsResponse,
-        error_stack::Report<errors::ConnectorError>,
-    > {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
@@ -1176,7 +1173,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static

@@ -1,11 +1,11 @@
 use common_enums::{self, AttemptStatus};
-use common_utils::{consts, request::Method, types::MinorUnit};
+use common_utils::{consts, request::Method, types::MinorUnit, CustomerId};
 use domain_types::{
-    connector_flow::{Authorize, CreateAccessToken, PSync, Void},
+    connector_flow::{Authorize, CreateAccessToken, PSync},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
-        RefundsResponseData, ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
@@ -28,14 +28,7 @@ pub type RefundsResponseRouterData<F, T> =
 #[derive(Debug, Serialize, Default)]
 pub struct VoltPsyncRequest;
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         VoltRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -127,7 +120,7 @@ pub struct OpenBankingEu {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayerDetails {
-    reference: common_utils::id_type::CustomerId,
+    reference: CustomerId,
     email: Option<common_utils::pii::Email>,
     first_name: Secret<String>,
     last_name: Secret<String>,
@@ -160,14 +153,7 @@ pub struct Link {
     link: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         VoltRouterData<
             RouterDataV2<
@@ -341,14 +327,7 @@ impl TryFrom<&ConnectorAuthType> for VoltAuthUpdateRequest {
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         VoltRouterData<
             RouterDataV2<
@@ -384,20 +363,12 @@ pub struct VoltAuthUpdateResponse {
     pub expires_in: i64,
 }
 
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            VoltAuthUpdateResponse,
-            RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
+impl<F, T> TryFrom<ResponseRouterData<VoltAuthUpdateResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            VoltAuthUpdateResponse,
-            RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>,
-        >,
+        item: ResponseRouterData<VoltAuthUpdateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
@@ -478,21 +449,11 @@ pub struct VoltRedirect {
     direct_url: Secret<url::Url>,
 }
 
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            VoltPaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            VoltPaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<VoltPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let url = item
             .response
             .payment_initiation_flow
@@ -612,20 +573,12 @@ impl<F> TryFrom<ResponseRouterData<VoltPsyncResponse, Self>>
     }
 }
 
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            VoltPaymentsResponseData,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            VoltPaymentsResponseData,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<VoltPaymentsResponseData, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response {
             VoltPaymentsResponseData::PsyncResponse(payment_response) => {
@@ -731,15 +684,8 @@ pub struct VoltRefundRequest {
     pub external_reference: String,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    > TryFrom<VoltRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<VoltRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for VoltRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -915,42 +861,4 @@ pub struct Errors {
 pub struct VoltAuthErrorResponse {
     pub code: u64,
     pub message: String,
-}
-
-#[derive(Debug, Serialize, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct VoltCancelResponse {
-    payment_id: String,
-    status: VoltPaymentStatus,
-}
-
-impl TryFrom<ResponseRouterData<VoltCancelResponse, Self>>
-    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(item: ResponseRouterData<VoltCancelResponse, Self>) -> Result<Self, Self::Error> {
-        let current_status = match &item.router_data.response {
-            Ok(_) => AttemptStatus::Pending,
-            Err(err) => err.attempt_status.unwrap_or(AttemptStatus::Pending),
-        };
-        let status = get_attempt_status((item.response.status.clone(), current_status));
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.payment_id.clone()),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: Some(item.response.payment_id),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
-    }
 }
