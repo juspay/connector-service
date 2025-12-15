@@ -558,20 +558,13 @@ fn parse_last_event(event_str: &str) -> Result<WorldpayxmlLastEvent, errors::Con
 
 // Response transformers - Authorize
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ResponseRouterData<
-            responses::WorldpayxmlAuthorizeResponse,
-            Self,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    TryFrom<ResponseRouterData<responses::WorldpayxmlAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::WorldpayxmlAuthorizeResponse,
-            Self,
-        >,
+        item: ResponseRouterData<responses::WorldpayxmlAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
@@ -671,21 +664,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Response transformers - Capture
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::WorldpayxmlCaptureResponse,
-            Self,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::WorldpayxmlCaptureResponse,
-            Self,
-        >,
+        item: ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
@@ -748,21 +733,13 @@ impl
 }
 
 // Response transformers - Void
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::WorldpayxmlVoidResponse,
-            Self,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::WorldpayxmlVoidResponse,
-            Self,
-        >,
+        item: ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
@@ -825,21 +802,13 @@ impl
 }
 
 // Response transformers - PSync
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::WorldpayxmlTransactionResponse,
-            Self,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::WorldpayxmlTransactionResponse,
-            Self,
-        >,
+        item: ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -1024,21 +993,13 @@ impl
 }
 
 // Response transformers - Refund
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::WorldpayxmlRefundResponse,
-            Self,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::WorldpayxmlRefundResponse,
-            Self,
-        >,
+        item: ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
@@ -1088,21 +1049,13 @@ impl
 }
 
 // Response transformers - RSync (REUSE PSync response structure via type alias)
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::WorldpayxmlRsyncResponse,
-            Self,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::WorldpayxmlRsyncResponse,
-            Self,
-        >,
+        item: ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
