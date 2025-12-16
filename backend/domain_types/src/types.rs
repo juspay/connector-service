@@ -4747,15 +4747,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                     _ => None,
                 })
                 .unwrap_or_default(),
-            metadata: (!value.metadata.is_empty()).then(|| {
-                Secret::new(serde_json::Value::Object(
-                    value
-                        .metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            }),
+            metadata: (!value.metadata.is_empty())
+                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.metadata))),
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
             integrity_object: None,
