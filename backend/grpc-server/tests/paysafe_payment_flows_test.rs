@@ -171,12 +171,9 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
     match &response.transaction_id {
         Some(id) => match id.id_type.as_ref() {
             Some(IdType::Id(id)) => id.clone(),
-            _ => panic!(
-                "Expected connector transaction ID, got response: {:#?}",
-                response
-            ),
+            _ => panic!("Expected connector transaction ID, got response: {response:#?}"),
         },
-        None => panic!("Transaction ID is None in response: {:#?}", response),
+        None => panic!("Transaction ID is None in response: {response:#?}"),
     }
 }
 
@@ -273,7 +270,12 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
+        metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: None,
+        setup_future_usage: None,
         encoded_data: None,
+        sync_type: None,
     }
 }
 
@@ -334,6 +336,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp_micros()))),
         }),
         browser_info: None,
+        test_mode: Some(true),
         refund_metadata: Some(Metadata {
             content: Some(
                 serde_json::from_value(serde_json::to_value(refund_metadata).unwrap()).unwrap(),
@@ -341,6 +344,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         }),
         merchant_account_metadata: None,
         state: None,
+        payment_method_type: None,
     }
 }
 

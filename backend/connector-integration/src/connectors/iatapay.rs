@@ -9,7 +9,8 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
         CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -18,9 +19,10 @@ use domain_types::{
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
@@ -52,6 +54,11 @@ pub(crate) mod headers {
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 // ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Iatapay<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Iatapay<T>
 {
@@ -218,7 +225,7 @@ macros::create_all_prerequisites!(
     member_functions: {
         pub fn build_headers_for_payments(
             &self,
-            req: &RouterDataV2<impl std::fmt::Debug, PaymentFlowData, impl std::fmt::Debug, impl std::fmt::Debug>,
+            req: &RouterDataV2<impl Debug, PaymentFlowData, impl Debug, impl Debug>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -240,7 +247,7 @@ macros::create_all_prerequisites!(
 
         pub fn build_headers_for_refunds(
             &self,
-            req: &RouterDataV2<impl std::fmt::Debug, RefundFlowData, impl std::fmt::Debug, impl std::fmt::Debug>,
+            req: &RouterDataV2<impl Debug, RefundFlowData, impl Debug, impl Debug>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -316,7 +323,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut common_utils::events::Event>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: IatapayErrorResponse = res
             .response
@@ -536,7 +543,7 @@ macros::macro_connector_implementation!(
             let client_secret = auth.client_secret.peek();
 
             // Create Basic Auth: base64(client_id:client_secret)
-            let credentials = format!("{}:{}", client_id, client_secret);
+            let credentials = format!("{client_id}:{client_secret}");
             let base64_credentials = BASE64_ENGINE.encode(credentials.as_bytes());
 
             Ok(vec![
@@ -546,7 +553,7 @@ macros::macro_connector_implementation!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Basic {}", base64_credentials).into_masked(),
+                    format!("Basic {base64_credentials}").into_masked(),
                 ),
             ])
         }
@@ -882,6 +889,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
+    > for Iatapay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Iatapay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Iatapay<T>
 {
 }

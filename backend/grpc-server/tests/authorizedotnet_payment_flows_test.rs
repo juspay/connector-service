@@ -182,6 +182,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
     };
 
     let mandate_reference = MandateReference {
+        connector_mandate_request_reference_id: None,
         mandate_id: Some(mandate_id.to_string()),
         payment_method_id: None,
     };
@@ -410,6 +411,11 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         amount: TEST_AMOUNT,
         currency: 146, // Currency value from working grpcurl
         state: None,
+        metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: None,
+        setup_future_usage: None,
+        sync_type: None,
     }
 }
 
@@ -429,6 +435,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
+        metadata: HashMap::new(),
         connector_metadata: None,
         browser_info: None,
         capture_method: None,
@@ -502,10 +509,13 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         metadata: None,
+        connector_metadata: HashMap::new(),
         refund_metadata,
         browser_info: None,
+        test_mode: Some(true),
         state: None,
         merchant_account_metadata: None,
+        payment_method_type: None,
     }
 }
 
@@ -525,9 +535,11 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         refund_id: refund_id.to_string(),
         browser_info: None,
         refund_reason: None,
+        test_mode: Some(true),
         refund_metadata: None,
         state: None,
         merchant_account_metadata: None,
+        payment_method_type: None,
     }
 }
 
