@@ -35,7 +35,7 @@ pub struct WorldpayxmlPaymentsRequest {
 impl GetSoapXml for WorldpayxmlPaymentsRequest {
     fn to_soap_xml(&self) -> String {
         generate_soap_xml(self)
-            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for payment request"))
+            .expect("Failed to generate SOAP XML for payment request")
     }
 }
 
@@ -187,7 +187,7 @@ pub struct WorldpayxmlCaptureRequest {
 impl GetSoapXml for WorldpayxmlCaptureRequest {
     fn to_soap_xml(&self) -> String {
         generate_soap_xml(self)
-            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for capture request"))
+            .expect("Failed to generate SOAP XML for capture request")
     }
 }
 
@@ -222,7 +222,7 @@ pub struct WorldpayxmlVoidRequest {
 impl GetSoapXml for WorldpayxmlVoidRequest {
     fn to_soap_xml(&self) -> String {
         generate_soap_xml(self)
-            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for void request"))
+            .expect("Failed to generate SOAP XML for void request")
     }
 }
 
@@ -257,7 +257,7 @@ pub struct WorldpayxmlRefundRequest {
 impl GetSoapXml for WorldpayxmlRefundRequest {
     fn to_soap_xml(&self) -> String {
         generate_soap_xml(self)
-            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for refund request"))
+            .expect("Failed to generate SOAP XML for refund request")
     }
 }
 
@@ -292,7 +292,7 @@ pub struct WorldpayxmlPSyncRequest {
 impl GetSoapXml for WorldpayxmlPSyncRequest {
     fn to_soap_xml(&self) -> String {
         generate_soap_xml(self)
-            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for sync request"))
+            .expect("Failed to generate SOAP XML for sync request")
     }
 }
 
