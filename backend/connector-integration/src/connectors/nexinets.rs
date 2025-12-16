@@ -409,7 +409,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let meta: nexinets::NexinetsPaymentsMetadata =
-            utils::to_connector_meta(req.request.connector_metadata.clone())?;
+            utils::to_connector_meta(req.request.metadata.clone().map(|secret| secret.expose()))?;
         let order_id = nexinets::get_order_id(&meta)?;
         let transaction_id = nexinets::get_transaction_id(&meta)?;
         Ok(format!(
@@ -521,7 +521,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let meta: nexinets::NexinetsPaymentsMetadata =
-            utils::to_connector_meta(req.request.connector_metadata.clone().map(|secret| secret.expose()))?;
+            utils::to_connector_meta(req.request.metadata.clone().map(|secret| secret.expose()))?;
         let order_id = nexinets::get_order_id(&meta)?;
         let transaction_id = nexinets::get_transaction_id(&meta)?;
         Ok(format!(

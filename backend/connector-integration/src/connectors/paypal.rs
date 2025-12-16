@@ -610,7 +610,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_metadata.clone())?;
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.metadata.clone().map(|m| m.expose()))?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
                 ConnectorError::RequestEncodingFailedWithReason(
                     "Missing Authorize id".to_string(),
@@ -660,7 +660,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            let connector_metadata_value = req.request.connector_metadata.clone().map(|secret| secret.expose());
+            let connector_metadata_value = req.request.metadata.clone().map(|secret| secret.expose());
             let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(connector_metadata_value)?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
                 ConnectorError::RequestEncodingFailedWithReason(

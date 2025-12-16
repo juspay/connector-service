@@ -51,6 +51,9 @@ fn convert_merchant_metadata_to_json(metadata: &HashMap<String, String>) -> serd
         .fold(serde_json::Map::new(), |mut map, (key, value)| {
             // Try to parse the value as JSON first, if it fails, treat it as a plain string
             let json_value = serde_json::from_str::<serde_json::Value>(value)
+                .inspect_err(|e| {
+                    tracing::debug!("Failed to parse metadata as JSON for key `{}`: {}", key, e);
+                })
                 .unwrap_or_else(|_| serde_json::Value::String(value.clone()));
             map.insert(key.clone(), json_value);
             map
@@ -3282,15 +3285,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             }
         };
 
-        let connector_metadata = (!value.connector_metadata.is_empty()).then(|| {
-            Secret::new(serde_json::Value::Object(
-                value
-                    .connector_metadata
-                    .into_iter()
-                    .map(|(k, v)| (k, serde_json::Value::String(v)))
-                    .collect(),
-            ))
-        });
+        let connector_metadata = value
+            .connector_metadata
+            .map(|metadata| serde_json::from_str(&metadata.expose()))
+            .transpose()
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID CONNECTOR METADATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Failed to parse connector metadata".to_owned(),
+                error_object: None,
+            }))?;
 
         Ok(Self {
             connector_transaction_id,
@@ -4744,20 +4748,15 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                     _ => None,
                 })
                 .unwrap_or_default(),
-            connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
-                Secret::new(serde_json::Value::Object(
-                    value
-                        .connector_metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            }),
+            metadata: (!value.metadata.is_empty())
+                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.metadata))),
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
             integrity_object: None,
             amount,
             currency,
+            connector_metadata: (!value.connector_metadata.is_empty())
+                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.connector_metadata))),
         })
     }
 }
@@ -4997,7 +4996,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
             refund_amount: value.refund_amount,
-            connector_metadata: Some(convert_merchant_metadata_to_json(&value.metadata)),
+            connector_metadata: Some(convert_merchant_metadata_to_json(&value.connector_metadata)),
             refund_connector_metadata: {
                 value.refund_metadata.get("refund_metadata").map(|json_string| {
                     Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
@@ -5368,21 +5367,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
-            connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
-                serde_json::Value::Object(
-                    value
-                        .connector_metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                )
-            }),
+            metadata: (!value.metadata.is_empty())
+                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.metadata))),
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             integrity_object: None,
             capture_method,
+            connector_metadata: (!value.connector_metadata.is_empty())
+                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.connector_metadata))),
         })
     }
 }
