@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout 22e1c1f7 -- backend/domain_types/src/types.rs)",
+      "Bash(cargo build)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
