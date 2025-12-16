@@ -3284,14 +3284,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             }
         };
 
-        let connector_metadata = value.connector_metadata.as_ref().and_then(|metadata| {
-            let exposed = metadata.clone().expose();
-            (!exposed.is_empty()).then(|| {
-                common_utils::pii::SecretSerdeValue::new(serde_json::Value::String(
-                    exposed.to_string(),
-                ))
-            })
-        });
+        let connector_metadata = value
+            .connector_metadata
+            .map(|metadata| serde_json::from_str(&metadata.expose()))
+            .transpose()
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID CONNECTOR METADATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Failed to parse connector metadata".to_owned(),
+                error_object: None,
+            }))?;
 
         Ok(Self {
             connector_transaction_id,
@@ -4759,15 +4761,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             integrity_object: None,
             amount,
             currency,
-            connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
-                Secret::new(serde_json::Value::Object(
-                    value
-                        .connector_metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            }),
+            connector_metadata: (!value.connector_metadata.is_empty())
+                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.connector_metadata))),
         })
     }
 }
@@ -5393,15 +5388,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .transpose()?,
             integrity_object: None,
             capture_method,
-            connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
-                Secret::new(serde_json::Value::Object(
-                    value
-                        .connector_metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            }),
+            connector_metadata: (!value.connector_metadata.is_empty())
+                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.connector_metadata))),
         })
     }
 }
@@ -5562,15 +5550,14 @@ impl
             return_url: None,
             connector_meta_data: value
                 .merchant_account_metadata
-                .as_ref()
-                .and_then(|metadata| {
-                    let exposed = metadata.clone().expose();
-                    (!exposed.is_empty()).then(|| {
-                        common_utils::pii::SecretSerdeValue::new(serde_json::Value::String(
-                            exposed.to_string(),
-                        ))
-                    })
-                }),
+                .map(|metadata| serde_json::from_str(&metadata.expose()))
+                .transpose()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ACCOUNT_METADATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to parse merchant account metadata".to_owned(),
+                    error_object: None,
+                }))?,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
