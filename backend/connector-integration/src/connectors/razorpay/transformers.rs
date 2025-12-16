@@ -1807,7 +1807,9 @@ pub struct RazorpayRefundWebhookDetails {
 }
 
 impl RazorpayWebhookEvent {
-    pub fn to_event_type(self) -> Result<domain_types::connector_types::EventType, errors::ConnectorError> {
+    pub fn to_event_type(
+        self,
+    ) -> Result<domain_types::connector_types::EventType, errors::ConnectorError> {
         match self {
             Self::PaymentCaptured => {
                 Ok(domain_types::connector_types::EventType::PaymentIntentCaptureSuccess)
@@ -1815,15 +1817,9 @@ impl RazorpayWebhookEvent {
             Self::PaymentFailed => {
                 Ok(domain_types::connector_types::EventType::PaymentIntentFailure)
             }
-            Self::RefundProcessed => {
-                Ok(domain_types::connector_types::EventType::RefundSuccess)
-            }
-            Self::RefundFailed => {
-                Ok(domain_types::connector_types::EventType::RefundFailure)
-            }
-            Self::Unknown => {
-                Err(errors::ConnectorError::WebhookEventTypeNotFound)
-            }
+            Self::RefundProcessed => Ok(domain_types::connector_types::EventType::RefundSuccess),
+            Self::RefundFailed => Ok(domain_types::connector_types::EventType::RefundFailure),
+            Self::Unknown => Err(errors::ConnectorError::WebhookEventTypeNotFound),
         }
     }
 }
@@ -1849,4 +1845,3 @@ impl From<RazorpayWebhookEvent> for common_enums::RefundStatus {
         }
     }
 }
-

@@ -998,11 +998,11 @@ impl<
                 "Failed to parse webhook event type from Razorpay webhook body"
             })?;
 
-        webhook_body.event.to_event_type()
+        webhook_body
+            .event
+            .to_event_type()
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
-            .attach_printable_lazy(|| {
-                "Unsupported webhook event type from Razorpay"
-            })
+            .attach_printable_lazy(|| "Unsupported webhook event type from Razorpay")
     }
 
     fn process_payment_webhook(
@@ -1017,12 +1017,12 @@ impl<
             .body
             .parse_struct("RazorpayWebhookTyped")
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
-            .attach_printable_lazy(|| {
-                "Failed to parse Razorpay payment webhook body structure"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse Razorpay payment webhook body structure")?;
 
         // Extract payment entity from nested payload (reusing old comprehensive structure)
-        let payment_wrapper = webhook_body.payload.payment
+        let payment_wrapper = webhook_body
+            .payload
+            .payment
             .ok_or(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
         let payment_entity = payment_wrapper.entity;
@@ -1063,12 +1063,12 @@ impl<
             .body
             .parse_struct("RazorpayWebhookTyped")
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
-            .attach_printable_lazy(|| {
-                "Failed to parse Razorpay refund webhook body structure"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse Razorpay refund webhook body structure")?;
 
         // Extract refund entity from nested payload (reusing old structure)
-        let refund_wrapper = webhook_body.payload.refund
+        let refund_wrapper = webhook_body
+            .payload
+            .refund
             .ok_or(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
         let refund_entity = refund_wrapper.entity;
