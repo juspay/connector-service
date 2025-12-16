@@ -188,7 +188,6 @@ pub struct AddressDetails {
     pub last_name: Option<Secret<String>>,
 
     pub origin_zip: Option<Secret<String>>,
-
 }
 
 impl AddressDetails {

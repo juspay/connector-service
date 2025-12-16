@@ -322,7 +322,6 @@ where
     Ok(hashmap)
 }
 
-
 pub(crate) fn is_manual_capture(capture_method: Option<enums::CaptureMethod>) -> bool {
     capture_method == Some(enums::CaptureMethod::Manual)
         || capture_method == Some(enums::CaptureMethod::ManualMultiple)

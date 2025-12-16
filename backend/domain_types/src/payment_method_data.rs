@@ -141,7 +141,6 @@ impl<T: PaymentMethodDataTypes> Card<T> {
         ))
     }
 
-
     pub fn get_card_expiry_year_month_2_digit_with_delimiter(
         &self,
         delimiter: String,

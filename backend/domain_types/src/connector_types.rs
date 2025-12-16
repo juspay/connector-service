@@ -1298,6 +1298,7 @@ pub enum CaptureSyncResponse {
         amount: Option<MinorUnit>,
     },
 }
+
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
@@ -3120,7 +3121,6 @@ pub struct PaypalSdkSessionTokenData {
     #[serde(rename = "paypal_sdk")]
     pub data: PaypalSdkMetaData,
 }
-
 
 /// Billing Descriptor information to be sent to the payment gateway
 #[derive(Debug, Clone, Serialize, Deserialize)]

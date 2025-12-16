@@ -320,6 +320,7 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             mandate_reference: None,
             minor_capturable_amount: None,
             minor_captured_amount: None,
+            minor_authorized_amount: None,
             captured_amount: None,
             connector_response: None,
         }

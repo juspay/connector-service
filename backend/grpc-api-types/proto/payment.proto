@@ -120,26 +120,6 @@ enum FutureUsage {
   ON_SESSION = 2;                 // For customer-initiated transactions.
 }
 
-// Indicates the category of MIT.
-enum MitCategory {
-  MIT_CATEGORY_UNSPECIFIED = 0;   // Default value
-  // A fixed purchase amount split into multiple scheduled payments until the total is paid.
-  INSTALLMENT_MIT = 1;
-  // Merchant-initiated transaction using stored credentials, but not tied to a fixed schedule
-  UNSCHEDULED_MIT = 2;
-  // Merchant-initiated payments that happen at regular intervals (usually the same amount each time).
-  RECURRING_MIT = 3;
-  // A retried MIT after a previous transaction failed or was declined.
-  RESUBMISSION_MIT = 4;
-}
-
-// Indicates the type of payment sync request.
-enum SyncRequestType {
-  SYNC_REQUEST_TYPE_UNSPECIFIED = 0;   // Default value
-  SINGLE_PAYMENT_SYNC = 1;
-  MULTIPLE_CAPTURE_SYNC = 2;
-}
-
 // Type of acceptance.
 enum AcceptanceType {
   ACCEPTANCE_TYPE_UNSPECIFIED = 0; // Default value
@@ -192,14 +172,6 @@ enum PaymentExperience {
   INVOKE_PAYMENT_APP = 6;             // Invoke a payment application.
   DISPLAY_WAIT_SCREEN = 7;            // Display a waiting screen.
   COLLECT_OTP = 8;                    // Collect an OTP from the customer.
-}
-
-// Describes the channel through which the payment was initiated..
-enum PaymentChannel {
-  PAYMENT_CHANNEL_UNSPECIFIED = 0; // Default value
-  ECOMMERCE = 1;
-  MAIL_ORDER = 2;
-  TELEPHONE_ORDER = 3;
 }
 
 // Type of event that a webhook can represent.
@@ -1127,7 +1099,6 @@ message MandateReference {
   // Connector's unique identifier for the mandate.
   optional string mandate_id = 1;
   optional string payment_method_id = 2;
-  optional string connector_mandate_request_reference_id = 3;
 }
 
 // Container for various address types related to a payment.
@@ -1553,10 +1524,6 @@ message PaymentServiceCreateAccessTokenRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-
-  // Metadata
-  map<string, string> metadata = 4; // Additional metadata for the connector
-  map<string, string> connector_metadata = 5; // Connector-specific metadata for the transaction
 }
 
 // Response message for creating an access token.
@@ -1607,7 +1574,6 @@ message PaymentServiceAuthorizeRequest {
 
   // Metadata
   map<string, string> metadata = 16; // Additional metadata for the connector
-  map<string, string> connector_metadata = 41; // Connector-specific metadata for the transaction
 
   // URLs for Redirection and Webhooks
   optional string return_url = 17; // URL to redirect after payment
@@ -1620,7 +1586,6 @@ message PaymentServiceAuthorizeRequest {
   // Order Details
   optional string order_category = 22; // Category of the order
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
-  optional string connector_order_reference_id = 40; // Connector's reference id for order
 
   // Behavioral Flags and Preferences
   optional FutureUsage setup_future_usage = 24; // Indicates future usage intention
@@ -1634,7 +1599,6 @@ message PaymentServiceAuthorizeRequest {
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
   optional string description = 35; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
-  optional PaymentChannel payment_channel = 44; // Describes the channel through which the payment was initiated
 
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 
@@ -1687,7 +1651,6 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Metadata
   map<string, string> metadata = 16; // Additional metadata for the connector
-  map<string, string> connector_metadata = 20; // Connector-specific metadata for the transaction
 
   // URLs for Redirection and Webhooks
   optional string return_url = 17; // URL to redirect after payment
@@ -1713,7 +1676,6 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
   optional string description = 35; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
-  optional PaymentChannel payment_channel = 44; // Describes the channel through which the payment was initiated
 
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 
@@ -1737,7 +1699,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional string payment_method_token = 40;
 
   // Send the connector order identifier here if an order was created before authorize
-  optional string connector_order_reference_id = 41; // Connector's reference id for order
+  optional string order_id = 41;
 }
 
 // Response message for a payment authorization.
@@ -1810,10 +1772,7 @@ message PaymentServiceGetRequest {
   optional ConnectorState state = 3; // State data for access token storage and other connector-specific state
 
   // Metadata
-  map<string, string> metadata = 10; // Additional metadata for the connector
-  map<string, string> merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-  optional SecretString connector_metadata = 13; // Connector-specific metadata for the transaction
-  optional SyncRequestType sync_type = 14; // Indicates the type of payment sync request
+  optional SecretString connector_metadata = 10; // Additional metadata for the connector
 }
 
 // Response message for a payment status synchronization.
@@ -1887,12 +1846,11 @@ message PaymentServiceVoidRequest {
 
   // Metadata
   map<string, string> connector_metadata = 9; // Additional metadata for the connector
-  map<string, string> metadata = 12; // Additional metadata for the connector
 
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
 
-  // Account-Specific Configuration
+    // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 11; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
@@ -1940,11 +1898,6 @@ message PaymentServiceVoidPostCaptureRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
-
-  // Metadata
-  map<string, string> metadata = 6; // Additional metadata for the connector
-  map<string, string> merchant_account_metadata = 7; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-  map<string, string> connector_metadata = 8; // Connector-specific metadata for the transaction
 }
 
 // Response message for a payment void post-capture operation.
@@ -1986,11 +1939,7 @@ message PaymentServiceSdkSessionTokenRequest {
   optional SecretString customer_name = 10; // Name of the customer
 
   // Account-Specific Configuration
-  optional SecretString merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-
-  // Metadata
-  map<string, string> metadata = 18; // Additional metadata for the connector
-  map<string, string> connector_metadata = 19; // Connector-specific metadata for the transaction
+  SecretString merchant_account_metadata = 17;; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a sdk session token operation.
@@ -2018,7 +1967,6 @@ message PaymentServiceCaptureRequest {
 
   // Metadata
   map<string, string> connector_metadata = 5; // Additional metadata for the connector
-  map<string, string> metadata = 13; // Additional metadata for the connector
 
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
@@ -2032,7 +1980,7 @@ message PaymentServiceCaptureRequest {
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
 
-  // Account-Specific Configuration
+    // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
@@ -2086,8 +2034,6 @@ message PaymentServiceCreateOrderRequest {
 
   // Metadata
   map<string, string> metadata = 5; // Additional metadata for the connector
-  map<string, string> merchant_account_metadata = 7; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-  map<string, string> connector_metadata = 8; // Connector-specific metadata for the transaction
 
   // State Information
   optional ConnectorState state = 6; // State data for access token storage and other connector-specific state
@@ -2138,7 +2084,6 @@ message PaymentServiceRefundRequest {
   // Metadata
   map<string, string> metadata = 13; // Metadata specific to the connector
   map<string, string> refund_metadata = 14; // Metadata specific to the refund
-  map<string, string> connector_metadata = 21; // Connector-specific metadata for the transaction
 
   // Browser Information
   optional BrowserInformation browser_info = 15; // Browser information, if relevant
@@ -2278,7 +2223,6 @@ message PaymentServiceRegisterRequest {
 
   // Metadata
   map<string, string> metadata = 12; // Additional metadata for the connector
-  map<string, string> connector_metadata = 34; // Connector-specific metadata for the transaction
 
   // URLs for Redirection and Webhooks
   optional string return_url = 13; // URL to redirect after setup
@@ -2299,13 +2243,11 @@ message PaymentServiceRegisterRequest {
   optional bool off_session = 23; // Indicates if off-session process
   bool request_incremental_authorization = 24; // Indicates if incremental authorization is requested
   optional bool request_extended_authorization = 25; // Indicates if extended authorization is requested
-  optional bool enable_partial_authorization = 43; // Indicates if partial authorization is enabled
 
   // Contextual Information
   optional CustomerAcceptance customer_acceptance = 26; // Details of customer acceptance
   optional BrowserInformation browser_info = 27; // Information about the customer's browser
   optional PaymentExperience payment_experience = 28; // Preferred payment experience
-  optional PaymentChannel payment_channel = 44; // Describes the channel through which the payment was initiated
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 30; // Account-level configuration metadata (e.g., merchant_name, brand_id)
@@ -2351,9 +2293,6 @@ message PaymentServiceRegisterResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 13; // Raw request to the connector for debugging
-
-  // Metadata
-  map<string, string> connector_metadata = 16; // Connector-specific metadata for the transaction
 }
 
 // Request message for repeat payment (MIT - Merchant Initiated Transaction).
@@ -2372,7 +2311,6 @@ message PaymentServiceRepeatEverythingRequest {
   // Optional fields
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   map<string, string> metadata = 7; // Additional metadata for the connector
-  map<string, string> connector_metadata = 10; // Connector-specific metadata for the transaction
   optional string webhook_url = 8; // URL for webhook notifications
   optional string return_url = 17; // URL to redirect after payment
   optional string description = 18; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
@@ -2398,19 +2336,11 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Behavioral Flags and Preferences
   optional bool off_session = 16; // Indicates if off-session process
-  optional bool enable_partial_authorization = 23; // Indicates if partial authorization is enabled
 
   // State Information
   optional ConnectorState state = 22; // State data for access token storage and other connector-specific state
 
   optional RecurringMandatePaymentData recurring_mandate_payment_data = 9; // Mandate payment details
-  
-  // Shipping Cost
-  optional int64 shipping_cost = 34; // Shipping cost in minor units (e.g., cents)
-
-  optional BillingDescriptor billing_descriptor = 24; // Billing Descriptor information to be sent to the payment gateway
-
-  optional MitCategory mit_category = 25; // Category of the MIT
 }
 
 // Container for recurring mandate payment data
@@ -2488,7 +2418,6 @@ message PaymentServicePreAuthenticateRequest {
 
   // Metadata
   map<string, string> metadata = 10; // Additional metadata for the connector
-  map<string, string> connector_metadata = 17; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
@@ -2557,7 +2486,6 @@ message PaymentServiceAuthenticateRequest {
 
   // Metadata
   map<string, string> metadata = 10; // Additional metadata for the connector
-  map<string, string> connector_metadata = 18; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
@@ -2629,7 +2557,6 @@ message PaymentServicePostAuthenticateRequest {
 
   // Authentication Details
   optional AuthenticationData authentication_data = 9; // Authentication data from previous steps
-  optional string connector_order_reference_id = 18; // Authenticated order id
 
   // Metadata
   map<string, string> metadata = 10; // Additional metadata for the connector
@@ -2649,7 +2576,6 @@ message PaymentServicePostAuthenticateRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-  map<string, string> connector_metadata = 19; // Connector-specific metadata for the transaction
 }
 
 // Response message for post-authentication step
@@ -2698,8 +2624,6 @@ message PaymentServiceCreateSessionTokenRequest {
 
   // Optional metadata for the connector
   map<string, string> metadata = 5; // Additional metadata for the connector
-  map<string, string> merchant_account_metadata = 8; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-  map<string, string> connector_metadata = 9; // Connector-specific metadata for the transaction
 
   // State Information
   optional ConnectorState state = 6; // State data for access token storage and other connector-specific state
@@ -3121,10 +3045,6 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // Additional Metadata
   map<string, string> metadata = 12; // Additional metadata for the connector
-
-  // URLs for Redirection
-  optional string return_url = 13; // URL to redirect after payment method token creation
-  map<string, string> connector_metadata = 14; // Connector-specific metadata for the transaction
 }
 
 // Response message for creating a payment method token.
@@ -3164,7 +3084,6 @@ message PaymentServiceCreateConnectorCustomerRequest {
 
   // Additional Metadata
   map<string, string> metadata = 9; // Additional metadata for the connector
-  map<string, string> connector_metadata = 10; // Connector-specific metadata for the transaction
 }
 
 // Response message for creating a connector customer.
