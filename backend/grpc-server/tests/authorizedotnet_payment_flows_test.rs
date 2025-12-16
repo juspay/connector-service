@@ -403,7 +403,9 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         amount: TEST_AMOUNT,
         currency: 146, // Currency value from working grpcurl
         state: None,
-        connector_metadata: HashMap::new(),
+        metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
     }
@@ -425,6 +427,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
+        metadata: HashMap::new(),
         connector_metadata: HashMap::new(),
         browser_info: None,
         capture_method: None,
@@ -493,6 +496,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         metadata: HashMap::new(),
+        connector_metadata: HashMap::new(),
         refund_metadata,
         browser_info: None,
         test_mode: Some(true),

@@ -2102,8 +2102,13 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
                 item.router_data.request.amount_to_capture
             }
         };
-        let connector_payment_id: PaypalMeta =
-            to_connector_meta(item.router_data.request.connector_metadata.clone())?;
+        let connector_payment_id: PaypalMeta = to_connector_meta(
+            item.router_data
+                .request
+                .connector_metadata
+                .clone()
+                .map(|m| m.expose()),
+        )?;
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
