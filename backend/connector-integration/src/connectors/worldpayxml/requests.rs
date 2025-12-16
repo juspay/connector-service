@@ -1,5 +1,5 @@
 use common_utils::StringMinorUnit;
-use domain_types::errors;
+use domain_types::errors::ConnectorError;
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::Serialize;
@@ -15,9 +15,9 @@ pub enum WorldpayxmlAction {
 }
 fn generate_soap_xml<T: Serialize>(
     request: &T,
-) -> Result<String, error_stack::Report<domain_types::errors::ConnectorError>> {
-    let xml_body = quick_xml::se::to_string(request)
-        .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
+) -> Result<String, error_stack::Report<ConnectorError>> {
+    let xml_body =
+        quick_xml::se::to_string(request).change_context(ConnectorError::RequestEncodingFailed)?;
 
     Ok(format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}", xml_body))
 }
@@ -33,10 +33,9 @@ pub struct WorldpayxmlPaymentsRequest {
 }
 
 impl GetSoapXml for WorldpayxmlPaymentsRequest {
-    fn to_soap_xml(
-        &self,
-    ) -> String {
-        generate_soap_xml(self).expect("Failed to generate SOAP XML for payment request")
+    fn to_soap_xml(&self) -> String {
+        generate_soap_xml(self)
+            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for payment request"))
     }
 }
 
@@ -186,10 +185,9 @@ pub struct WorldpayxmlCaptureRequest {
 }
 
 impl GetSoapXml for WorldpayxmlCaptureRequest {
-    fn to_soap_xml(
-        &self,
-    ) -> String {
-        generate_soap_xml(self).expect("Failed to generate SOAP XML for capture request")
+    fn to_soap_xml(&self) -> String {
+        generate_soap_xml(self)
+            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for capture request"))
     }
 }
 
@@ -222,10 +220,9 @@ pub struct WorldpayxmlVoidRequest {
 }
 
 impl GetSoapXml for WorldpayxmlVoidRequest {
-    fn to_soap_xml(
-        &self,
-    ) -> String {
-        generate_soap_xml(self).expect("Failed to generate SOAP XML for void request")
+    fn to_soap_xml(&self) -> String {
+        generate_soap_xml(self)
+            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for void request"))
     }
 }
 
@@ -258,10 +255,9 @@ pub struct WorldpayxmlRefundRequest {
 }
 
 impl GetSoapXml for WorldpayxmlRefundRequest {
-    fn to_soap_xml(
-        &self,
-    ) -> String {
-        generate_soap_xml(self).expect("Failed to generate SOAP XML for refund request")
+    fn to_soap_xml(&self) -> String {
+        generate_soap_xml(self)
+            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for refund request"))
     }
 }
 
@@ -294,10 +290,9 @@ pub struct WorldpayxmlPSyncRequest {
 }
 
 impl GetSoapXml for WorldpayxmlPSyncRequest {
-    fn to_soap_xml(
-        &self,
-    ) -> String {
-        generate_soap_xml(self).expect("Failed to generate SOAP XML for sync request")
+    fn to_soap_xml(&self) -> String {
+        generate_soap_xml(self)
+            .unwrap_or_else(|_| panic!("Failed to generate SOAP XML for sync request"))
     }
 }
 

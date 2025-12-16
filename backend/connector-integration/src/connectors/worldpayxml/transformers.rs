@@ -621,7 +621,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Determine if auto-capture
         let is_auto_capture = router_data.request.capture_method != Some(CaptureMethod::Manual)
-    && router_data.request.capture_method != Some(CaptureMethod::ManualMultiple);
+            && router_data.request.capture_method != Some(CaptureMethod::ManualMultiple);
 
         // Map status from lastEvent
         let status = map_worldpayxml_authorize_status(
