@@ -999,7 +999,9 @@ pub struct PhonepeWebhookData {
 }
 
 impl PhonepeWebhookEvent {
-    pub fn to_event_type(self) -> Result<domain_types::connector_types::EventType, errors::ConnectorError> {
+    pub fn to_event_type(
+        self,
+    ) -> Result<domain_types::connector_types::EventType, errors::ConnectorError> {
         match self {
             Self::PaymentSuccess => {
                 Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
@@ -1010,9 +1012,7 @@ impl PhonepeWebhookEvent {
             Self::PaymentPending => {
                 Ok(domain_types::connector_types::EventType::PaymentIntentProcessing)
             }
-            Self::Unknown => {
-                Err(errors::ConnectorError::WebhookEventTypeNotFound)
-            }
+            Self::Unknown => Err(errors::ConnectorError::WebhookEventTypeNotFound),
         }
     }
 }

@@ -298,20 +298,18 @@ impl<
             }
         };
 
-        let webhook_body: phonepe::PhonepeWebhookBody = match request
-            .body
-            .parse_struct("PhonepeWebhookBody")
-        {
-            Ok(body) => body,
-            Err(parse_error) => {
-                tracing::warn!(
-                    target: "phonepe_webhook",
-                    "Failed to parse PhonePe webhook body: {:?}",
-                    parse_error
-                );
-                return Ok(false);
-            }
-        };
+        let webhook_body: phonepe::PhonepeWebhookBody =
+            match request.body.parse_struct("PhonepeWebhookBody") {
+                Ok(body) => body,
+                Err(parse_error) => {
+                    tracing::warn!(
+                        target: "phonepe_webhook",
+                        "Failed to parse PhonePe webhook body: {:?}",
+                        parse_error
+                    );
+                    return Ok(false);
+                }
+            };
 
         let auth_json = match serde_json::from_slice::<serde_json::Value>(&webhook_secret) {
             Ok(json) => json,
@@ -343,7 +341,7 @@ impl<
             auth.salt_key.peek()
         );
 
-        use common_utils::crypto::{Sha256, GenerateDigest};
+        use common_utils::crypto::{GenerateDigest, Sha256};
         let crypto_algorithm = Sha256;
         let computed_signature = match crypto_algorithm.generate_digest(message.as_bytes()) {
             Ok(sig) => sig,
@@ -365,34 +363,26 @@ impl<
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>
+    {
         let webhook_body: phonepe::PhonepeWebhookBody = request
             .body
             .parse_struct("PhonepeWebhookBody")
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
-            .attach_printable_lazy(|| {
-                "Failed to parse webhook body from PhonePe webhook"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse webhook body from PhonePe webhook")?;
 
         let decoded = BASE64_ENGINE
             .decode(webhook_body.response.as_bytes())
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
-            .attach_printable_lazy(|| {
-                "Failed to decode base64 response from PhonePe webhook"
-            })?;
+            .attach_printable_lazy(|| "Failed to decode base64 response from PhonePe webhook")?;
 
-        let webhook_response: phonepe::PhonepeWebhookResponse =
-            serde_json::from_slice(&decoded)
-                .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
-                .attach_printable_lazy(|| {
-                    "Failed to parse decoded webhook response from PhonePe"
-                })?;
+        let webhook_response: phonepe::PhonepeWebhookResponse = serde_json::from_slice(&decoded)
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
+            .attach_printable_lazy(|| "Failed to parse decoded webhook response from PhonePe")?;
 
         phonepe::PhonepeWebhookEvent::to_event_type(webhook_response.data.state)
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
-            .attach_printable_lazy(|| {
-                "Unsupported webhook event type from PhonePe"
-            })
+            .attach_printable_lazy(|| "Unsupported webhook event type from PhonePe")
     }
 
     fn process_payment_webhook(
@@ -400,45 +390,51 @@ impl<
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<domain_types::connector_types::WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<
+        domain_types::connector_types::WebhookDetailsResponse,
+        error_stack::Report<errors::ConnectorError>,
+    > {
         let request_body_copy = request.body.clone();
 
         let webhook_body: phonepe::PhonepeWebhookBody = request
             .body
             .parse_struct("PhonepeWebhookBody")
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
-            .attach_printable_lazy(|| {
-                "Failed to parse PhonePe payment webhook body structure"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse PhonePe payment webhook body structure")?;
 
         let decoded = BASE64_ENGINE
             .decode(webhook_body.response.as_bytes())
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
-            .attach_printable_lazy(|| {
-                "Failed to decode base64 response from PhonePe webhook"
-            })?;
+            .attach_printable_lazy(|| "Failed to decode base64 response from PhonePe webhook")?;
 
-        let webhook_response: phonepe::PhonepeWebhookResponse =
-            serde_json::from_slice(&decoded)
-                .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
-                .attach_printable_lazy(|| {
-                    "Failed to parse decoded webhook response from PhonePe"
-                })?;
+        let webhook_response: phonepe::PhonepeWebhookResponse = serde_json::from_slice(&decoded)
+            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
+            .attach_printable_lazy(|| "Failed to parse decoded webhook response from PhonePe")?;
 
         let transaction_id = webhook_response.data.transaction_id.clone();
         let merchant_transaction_id = webhook_response.data.merchant_transaction_id.clone();
         let status = common_enums::AttemptStatus::from(webhook_response.data.state.clone());
 
         Ok(domain_types::connector_types::WebhookDetailsResponse {
-            resource_id: Some(domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                merchant_transaction_id.clone(),
-            )),
+            resource_id: Some(
+                domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                    merchant_transaction_id.clone(),
+                ),
+            ),
             status,
             status_code: 200,
             mandate_reference: None,
             connector_response_reference_id: Some(transaction_id),
-            error_code: if webhook_response.success { None } else { Some(webhook_response.code.clone()) },
-            error_message: if webhook_response.success { None } else { Some(webhook_response.message.clone()) },
+            error_code: if webhook_response.success {
+                None
+            } else {
+                Some(webhook_response.code.clone())
+            },
+            error_message: if webhook_response.success {
+                None
+            } else {
+                Some(webhook_response.message.clone())
+            },
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
             minor_amount_captured: None,
@@ -460,23 +456,16 @@ impl<
             .body
             .parse_struct("PhonepeWebhookBody")
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
-            .attach_printable_lazy(|| {
-                "Failed to parse PhonePe webhook body"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse PhonePe webhook body")?;
 
         let decoded = BASE64_ENGINE
             .decode(webhook_body.response.as_bytes())
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
-            .attach_printable_lazy(|| {
-                "Failed to decode base64 response from PhonePe webhook"
-            })?;
+            .attach_printable_lazy(|| "Failed to decode base64 response from PhonePe webhook")?;
 
-        let webhook_response: phonepe::PhonepeWebhookResponse =
-            serde_json::from_slice(&decoded)
-                .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
-                .attach_printable_lazy(|| {
-                    "Failed to parse decoded webhook response from PhonePe"
-                })?;
+        let webhook_response: phonepe::PhonepeWebhookResponse = serde_json::from_slice(&decoded)
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
+            .attach_printable_lazy(|| "Failed to parse decoded webhook response from PhonePe")?;
 
         Ok(Box::new(webhook_response))
     }
