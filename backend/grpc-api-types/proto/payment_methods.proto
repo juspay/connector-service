@@ -73,6 +73,8 @@ message PaymentMethod {
     Przelewy24 przelewy24 = 54;
     Pse pse = 55;
     BancontactCard bancontact_card = 56;
+    Blik blik = 57;
+    OpenBanking open_banking = 58;
     
     // MOBILE PAYMENTS (60-69) - Direct variants
     DuitNow duit_now = 60;
@@ -692,6 +694,11 @@ message Przelewy24 {
   optional BankNames bank_name = 1;
 }
 
+// Blik - Polish mobile payment system
+message Blik {
+  optional string blik_code = 1;
+}
+
 // PSE (Pagos Seguros en Línea) - Colombian online banking
 message Pse {
   // Fields will be added as needed for PSE integration
@@ -759,11 +766,6 @@ message Walley {
 // ============================================================================
 
 /*
-
-// BLIK - Polish mobile payment system
-message Blik {
-  // Fields will be added as needed for BLIK integration
-}
 
 // Bizum - Spanish mobile payment solution
 message Bizum {
