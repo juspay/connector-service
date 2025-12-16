@@ -2,8 +2,12 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
+// NOTE: These tests use #[serial] attribute to run sequentially
+// This stops tests from failing due to parallel run
+
 use grpc_server::{app, configs};
 use hyperswitch_masking::{ExposeInterface, Secret};
+use serial_test::serial;
 mod common;
 mod utils;
 
@@ -28,13 +32,13 @@ use rand::Rng;
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
-const CONNECTOR_NAME: &str = "bluesnap";
-const AUTH_TYPE: &str = "body-key";
-const MERCHANT_ID: &str = "merchant_bluesnap_test";
+const CONNECTOR_NAME: &str = "barclaycard";
+const AUTH_TYPE: &str = "signature-key";
+const MERCHANT_ID: &str = "merchant_barclaycard_test";
 
-const TEST_CARD_NUMBER: &str = "4263982640269299";
+const TEST_CARD_NUMBER: &str = "4111111111111111";
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_EXP_YEAR: &str = "30";
 const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "John Doe";
 const TEST_EMAIL: &str = "customer@example.com";
@@ -50,27 +54,34 @@ fn generate_unique_id(prefix: &str) -> String {
     format!("{}_{}", prefix, Uuid::new_v4())
 }
 
-fn load_bluesnap_credentials() -> (Secret<String>, Secret<String>) {
-    // Try loading from environment variables first
-    if let (Ok(api_key), Ok(key1)) = (
-        std::env::var("TEST_BLUESNAP_API_KEY"),
-        std::env::var("TEST_BLUESNAP_KEY1"),
+fn load_barclaycard_credentials() -> (Secret<String>, Secret<String>, Secret<String>) {
+    if let (Ok(api_key), Ok(key1), Ok(api_secret)) = (
+        std::env::var("TEST_BARCLAYCARD_API_KEY"),
+        std::env::var("TEST_BARCLAYCARD_KEY1"),
+        std::env::var("TEST_BARCLAYCARD_API_SECRET"),
     ) {
-        return (Secret::new(api_key), Secret::new(key1));
+        return (
+            Secret::new(api_key),
+            Secret::new(key1),
+            Secret::new(api_secret),
+        );
     }
 
-    // Fall back to credential file
     let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
-        .expect("Failed to load BlueSnap credentials");
+        .expect("Failed to load Barclaycard credentials");
 
     match auth {
-        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => (api_key, key1),
-        _ => panic!("Expected BodyKey auth type for BlueSnap"),
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key, key1, api_secret),
+        _ => panic!("Expected SignatureKey auth type for Barclaycard"),
     }
 }
 
-fn add_bluesnap_metadata<T>(request: &mut Request<T>) {
-    let (api_key, key1) = load_bluesnap_credentials();
+fn add_barclaycard_metadata<T>(request: &mut Request<T>) {
+    let (api_key, key1, api_secret) = load_barclaycard_credentials();
 
     request.metadata_mut().append(
         "x-connector",
@@ -86,6 +97,13 @@ fn add_bluesnap_metadata<T>(request: &mut Request<T>) {
     request.metadata_mut().append(
         "x-key1",
         key1.expose().parse().expect("Failed to parse x-key1"),
+    );
+    request.metadata_mut().append(
+        "x-api-secret",
+        api_secret
+            .expose()
+            .parse()
+            .expect("Failed to parse x-api-secret"),
     );
     request.metadata_mut().append(
         "x-merchant-id",
@@ -116,17 +134,17 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
 
     let mut rng = rand::thread_rng();
     let random_street_num = rng.gen_range(100..9999);
-    let random_zip_suffix = rng.gen_range(1000..9999);
+    let random_zip_suffix = rng.gen_range(10000..99999);
 
     let address = PaymentAddress {
         billing_address: Some(Address {
             first_name: Some("John".to_string().into()),
             last_name: Some("Doe".to_string().into()),
             email: Some(TEST_EMAIL.to_string().into()),
-            line1: Some(format!("{} Main St", random_street_num).into()),
+            line1: Some(format!("{random_street_num} Main St").into()),
             city: Some("San Francisco".to_string().into()),
             state: Some("CA".to_string().into()),
-            zip_code: Some(format!("{}", random_zip_suffix).into()),
+            zip_code: Some(format!("{random_zip_suffix}").into()),
             country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
             ..Default::default()
         }),
@@ -149,7 +167,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         address: Some(address),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("bluesnap_test"))),
+            id_type: Some(IdType::Id(generate_unique_id("barclaycard_test"))),
         }),
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
@@ -164,7 +182,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("bluesnap_sync"))),
+            id_type: Some(IdType::Id(generate_unique_id("barclaycard_sync"))),
         }),
         capture_method: None,
         handle_response: None,
@@ -172,6 +190,9 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         currency: i32::from(Currency::Usd),
         state: None,
         encoded_data: None,
+        connector_metadata: HashMap::new(),
+        setup_future_usage: None,
+        sync_type: None,
     }
 }
 
@@ -196,9 +217,9 @@ fn create_payment_void_request(transaction_id: &str, amount: i64) -> PaymentServ
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
-        cancellation_reason: None,
+        cancellation_reason: Some("Customer requested cancellation".to_string()),
         request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("bluesnap_void"))),
+            id_type: Some(IdType::Id(generate_unique_id("barclaycard_void"))),
         }),
         all_keys_required: None,
         browser_info: None,
@@ -206,6 +227,7 @@ fn create_payment_void_request(transaction_id: &str, amount: i64) -> PaymentServ
         amount: Some(amount),
         currency: Some(i32::from(Currency::Usd)),
         state: None,
+        merchant_account_metadata: Default::default(),
     }
 }
 
@@ -247,6 +269,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
 }
 
 #[tokio::test]
+#[serial]
 async fn test_health() {
     grpc_test!(client, HealthClient<Channel>, {
         let health_request = HealthCheckRequest {
@@ -262,41 +285,56 @@ async fn test_health() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_payment_authorization_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         let authorize_request = create_authorize_request(CaptureMethod::Automatic);
         let mut request = Request::new(authorize_request);
-        add_bluesnap_metadata(&mut request);
+        add_barclaycard_metadata(&mut request);
 
         let response = client
             .authorize(request)
             .await
             .expect("Payment authorization failed");
         let authorize_response = response.into_inner();
+
+        if let Some(error_message) = &authorize_response.error_message {
+            panic!(
+                "Authorization failed with error: {} (code: {:?}, reason: {:?})",
+                error_message, authorize_response.error_code, authorize_response.error_reason
+            );
+        }
 
         assert!(authorize_response.transaction_id.is_some());
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
         assert!(
             matches!(status, PaymentStatus::Charged | PaymentStatus::Pending),
-            "Expected Charged or Pending status, got {:?}",
-            status
+            "Expected Charged or Pending status, got {status:?}"
         );
     });
 }
 
 #[tokio::test]
+#[serial]
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         let authorize_request = create_authorize_request(CaptureMethod::Manual);
         let amount = authorize_request.amount;
         let mut request = Request::new(authorize_request);
-        add_bluesnap_metadata(&mut request);
+        add_barclaycard_metadata(&mut request);
 
         let response = client
             .authorize(request)
             .await
             .expect("Payment authorization failed");
         let authorize_response = response.into_inner();
+
+        if let Some(error_message) = &authorize_response.error_message {
+            panic!(
+                "Manual capture authorization failed with error: {} (code: {:?}, reason: {:?})",
+                error_message, authorize_response.error_code, authorize_response.error_reason
+            );
+        }
 
         assert!(authorize_response.transaction_id.is_some());
         let transaction_id = authorize_response
@@ -312,13 +350,12 @@ async fn test_payment_authorization_manual_capture() {
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
         assert!(
             matches!(status, PaymentStatus::Authorized | PaymentStatus::Pending),
-            "Expected Authorized or Pending status after authorization, got {:?}",
-            status
+            "Expected Authorized or Pending status after authorization, got {status:?}"
         );
 
         let capture_request = create_payment_capture_request(&transaction_id, amount);
         let mut capture_req = Request::new(capture_request);
-        add_bluesnap_metadata(&mut capture_req);
+        add_barclaycard_metadata(&mut capture_req);
 
         let capture_response = client
             .capture(capture_req)
@@ -332,19 +369,22 @@ async fn test_payment_authorization_manual_capture() {
                 capture_status,
                 PaymentStatus::Charged | PaymentStatus::Pending
             ),
-            "Expected Charged or Pending status after capture, got {:?}",
-            capture_status
+            "Expected Charged or Pending status after capture, got {capture_status:?}"
         );
     });
 }
 
+// NOTE: Payment sync test requires a 10-second delay due to Barclaycard's transaction
+// search endpoint (/tss/v2/transactions/{id}) having indexing delays. Transactions
+// need time to propagate to their search system before they can be queried.
 #[tokio::test]
+#[serial]
 async fn test_payment_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         let authorize_request = create_authorize_request(CaptureMethod::Automatic);
         let amount = authorize_request.amount;
         let mut request = Request::new(authorize_request);
-        add_bluesnap_metadata(&mut request);
+        add_barclaycard_metadata(&mut request);
 
         let response = client
             .authorize(request)
@@ -352,6 +392,14 @@ async fn test_payment_sync() {
             .expect("Payment authorization failed");
         let authorize_response = response.into_inner();
 
+        if let Some(error_message) = &authorize_response.error_message {
+            panic!(
+                "Payment sync authorization failed with error: {} (code: {:?}, reason: {:?})",
+                error_message, authorize_response.error_code, authorize_response.error_reason
+            );
+        }
+
+        assert!(authorize_response.transaction_id.is_some());
         let transaction_id = authorize_response
             .transaction_id
             .as_ref()
@@ -362,34 +410,103 @@ async fn test_payment_sync() {
             })
             .expect("Failed to extract transaction ID");
 
+        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+
         let sync_request = create_payment_sync_request(&transaction_id, amount);
         let mut sync_req = Request::new(sync_request);
-        add_bluesnap_metadata(&mut sync_req);
+        add_barclaycard_metadata(&mut sync_req);
 
         let sync_response = client.get(sync_req).await.expect("Payment sync failed");
         let sync_result = sync_response.into_inner();
 
-        assert_eq!(
-            sync_result
-                .transaction_id
-                .as_ref()
-                .and_then(|id| id.id_type.as_ref())
-                .and_then(|id_type| match id_type {
-                    IdType::Id(id) => Some(id.clone()),
-                    _ => None,
-                }),
-            Some(transaction_id)
+        if let Some(error_message) = &sync_result.error_message {
+            panic!(
+                "Payment sync failed with error: {} (code: {:?}, reason: {:?})",
+                error_message, sync_result.error_code, sync_result.error_reason
+            );
+        }
+
+        assert!(sync_result.transaction_id.is_some());
+        let sync_status = PaymentStatus::try_from(sync_result.status).unwrap();
+        assert!(
+            matches!(
+                sync_status,
+                PaymentStatus::Charged | PaymentStatus::Pending | PaymentStatus::Authorized
+            ),
+            "Expected valid payment status, got {sync_status:?}"
         );
     });
 }
 
 #[tokio::test]
+#[serial]
+async fn test_payment_void() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let authorize_request = create_authorize_request(CaptureMethod::Manual);
+        let amount = authorize_request.amount;
+        let mut request = Request::new(authorize_request);
+        add_barclaycard_metadata(&mut request);
+
+        let response = client
+            .authorize(request)
+            .await
+            .expect("Payment authorization failed");
+        let authorize_response = response.into_inner();
+
+        if let Some(error_message) = &authorize_response.error_message {
+            panic!(
+                "Void authorization failed with error: {} (code: {:?}, reason: {:?})",
+                error_message, authorize_response.error_code, authorize_response.error_reason
+            );
+        }
+
+        assert!(authorize_response.transaction_id.is_some());
+        let transaction_id = authorize_response
+            .transaction_id
+            .as_ref()
+            .and_then(|id| id.id_type.as_ref())
+            .and_then(|id_type| match id_type {
+                IdType::Id(id) => Some(id.clone()),
+                _ => None,
+            })
+            .expect("Failed to extract transaction ID");
+
+        let status = PaymentStatus::try_from(authorize_response.status).unwrap();
+        assert!(
+            matches!(status, PaymentStatus::Authorized | PaymentStatus::Pending),
+            "Expected Authorized or Pending status after authorization, got {status:?}"
+        );
+
+        let void_request = create_payment_void_request(&transaction_id, amount);
+        let mut void_req = Request::new(void_request);
+        add_barclaycard_metadata(&mut void_req);
+
+        let void_response = client.void(void_req).await.expect("Payment void failed");
+        let void_result = void_response.into_inner();
+
+        if let Some(error_message) = &void_result.error_message {
+            panic!(
+                "Payment void failed with error: {} (code: {:?}, reason: {:?})",
+                error_message, void_result.error_code, void_result.error_reason
+            );
+        }
+
+        let void_status = PaymentStatus::try_from(void_result.status).unwrap();
+        assert!(
+            matches!(void_status, PaymentStatus::Voided | PaymentStatus::Pending),
+            "Expected Voided or Pending status after void, got {void_status:?}"
+        );
+    });
+}
+
+#[tokio::test]
+#[serial]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         let authorize_request = create_authorize_request(CaptureMethod::Automatic);
         let amount = authorize_request.amount;
         let mut request = Request::new(authorize_request);
-        add_bluesnap_metadata(&mut request);
+        add_barclaycard_metadata(&mut request);
 
         let response = client
             .authorize(request)
@@ -397,6 +514,14 @@ async fn test_refund() {
             .expect("Payment authorization failed");
         let authorize_response = response.into_inner();
 
+        if let Some(error_message) = &authorize_response.error_message {
+            panic!(
+                "Refund authorization failed with error: {} (code: {:?}, reason: {:?})",
+                error_message, authorize_response.error_code, authorize_response.error_reason
+            );
+        }
+
+        assert!(authorize_response.transaction_id.is_some());
         let transaction_id = authorize_response
             .transaction_id
             .as_ref()
@@ -407,32 +532,43 @@ async fn test_refund() {
             })
             .expect("Failed to extract transaction ID");
 
-        let refund_amount = amount / 2;
+        let status = PaymentStatus::try_from(authorize_response.status).unwrap();
+        assert!(
+            matches!(status, PaymentStatus::Charged | PaymentStatus::Pending),
+            "Expected Charged or Pending status, got {status:?}"
+        );
+
+        let refund_amount = amount;
         let refund_request = create_refund_request(&transaction_id, amount, refund_amount);
         let mut refund_req = Request::new(refund_request);
-        add_bluesnap_metadata(&mut refund_req);
+        add_barclaycard_metadata(&mut refund_req);
 
         let refund_response = client.refund(refund_req).await.expect("Refund failed");
         let refund_result = refund_response.into_inner();
 
-        assert!(!refund_result.refund_id.is_empty());
         let refund_status = RefundStatus::try_from(refund_result.status).unwrap();
         assert!(
-            matches!(refund_status, RefundStatus::RefundSuccess),
-            "Expected RefundSuccess status, got {:?}",
-            refund_status
+            matches!(
+                refund_status,
+                RefundStatus::RefundSuccess | RefundStatus::RefundPending
+            ),
+            "Expected RefundSuccess or RefundPending refund status, got {refund_status:?}"
         );
     });
 }
 
+// NOTE: Refund sync test requires a 10-second delay due to Barclaycard's transaction
+// search endpoint (/tss/v2/transactions/{id}) having indexing delays. Refunds need
+// time to propagate to their search system before they can be queried.
 #[tokio::test]
+#[serial]
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {
             let authorize_request = create_authorize_request(CaptureMethod::Automatic);
             let amount = authorize_request.amount;
             let mut request = Request::new(authorize_request);
-            add_bluesnap_metadata(&mut request);
+            add_barclaycard_metadata(&mut request);
 
             let response = client
                 .authorize(request)
@@ -440,6 +576,14 @@ async fn test_refund_sync() {
                 .expect("Payment authorization failed");
             let authorize_response = response.into_inner();
 
+            if let Some(error_message) = &authorize_response.error_message {
+                panic!(
+                    "Refund sync authorization failed with error: {} (code: {:?}, reason: {:?})",
+                    error_message, authorize_response.error_code, authorize_response.error_reason
+                );
+            }
+
+            assert!(authorize_response.transaction_id.is_some());
             let transaction_id = authorize_response
                 .transaction_id
                 .as_ref()
@@ -450,19 +594,21 @@ async fn test_refund_sync() {
                 })
                 .expect("Failed to extract transaction ID");
 
-            let refund_amount = amount / 2;
+            let refund_amount = amount;
             let refund_request = create_refund_request(&transaction_id, amount, refund_amount);
             let mut refund_req = Request::new(refund_request);
-            add_bluesnap_metadata(&mut refund_req);
+            add_barclaycard_metadata(&mut refund_req);
 
             let refund_response = client.refund(refund_req).await.expect("Refund failed");
             let refund_result = refund_response.into_inner();
 
             let refund_id = &refund_result.refund_id;
 
+            tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+
             let refund_sync_request = create_refund_sync_request(&transaction_id, refund_id);
             let mut refund_sync_req = Request::new(refund_sync_request);
-            add_bluesnap_metadata(&mut refund_sync_req);
+            add_barclaycard_metadata(&mut refund_sync_req);
 
             let refund_sync_response = refund_client
                 .get(refund_sync_req)
@@ -470,47 +616,21 @@ async fn test_refund_sync() {
                 .expect("Refund sync failed");
             let refund_sync_result = refund_sync_response.into_inner();
 
-            assert_eq!(&refund_sync_result.refund_id, refund_id);
+            if let Some(error_message) = &refund_sync_result.error_message {
+                panic!(
+                    "Refund sync failed with error: {} (code: {:?}, reason: {:?})",
+                    error_message, refund_sync_result.error_code, refund_sync_result.error_reason
+                );
+            }
+
+            let refund_sync_status = RefundStatus::try_from(refund_sync_result.status).unwrap();
+            assert!(
+                matches!(
+                    refund_sync_status,
+                    RefundStatus::RefundSuccess | RefundStatus::RefundPending
+                ),
+                "Expected RefundSuccess or RefundPending refund status in sync, got {refund_sync_status:?}"
+            );
         });
-    });
-}
-
-#[tokio::test]
-async fn test_payment_void() {
-    grpc_test!(client, PaymentServiceClient<Channel>, {
-        let authorize_request = create_authorize_request(CaptureMethod::Manual);
-        let amount = authorize_request.amount;
-        let mut request = Request::new(authorize_request);
-        add_bluesnap_metadata(&mut request);
-
-        let response = client
-            .authorize(request)
-            .await
-            .expect("Payment authorization failed");
-        let authorize_response = response.into_inner();
-
-        let transaction_id = authorize_response
-            .transaction_id
-            .as_ref()
-            .and_then(|id| id.id_type.as_ref())
-            .and_then(|id_type| match id_type {
-                IdType::Id(id) => Some(id.clone()),
-                _ => None,
-            })
-            .expect("Failed to extract transaction ID");
-
-        let void_request = create_payment_void_request(&transaction_id, amount);
-        let mut void_req = Request::new(void_request);
-        add_bluesnap_metadata(&mut void_req);
-
-        let void_response = client.void(void_req).await.expect("Payment void failed");
-        let void_result = void_response.into_inner();
-
-        let void_status = PaymentStatus::try_from(void_result.status).unwrap();
-        assert!(
-            matches!(void_status, PaymentStatus::Voided),
-            "Expected Voided status, got {:?}",
-            void_status
-        );
     });
 }

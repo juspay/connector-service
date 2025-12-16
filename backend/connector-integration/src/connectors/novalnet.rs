@@ -15,8 +15,8 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void, VoidPC,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -26,9 +26,9 @@ use domain_types::{
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors,
@@ -68,6 +68,11 @@ pub(crate) mod headers {
 }
 
 // Trait implementations with generic type parameters
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Novalnet<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Novalnet<T>
 {
@@ -274,8 +279,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
-    {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = novalnet::NovalnetAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         let api_key: String = auth.payment_access_key.expose();
@@ -572,7 +576,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
         let notif_item = get_webhook_object_from_body(&request.body)
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
@@ -584,7 +588,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
         let notif = get_webhook_object_from_body(&request.body)
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
@@ -634,7 +638,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
+    ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let algorithm = crypto::Sha256;
 
         let connector_webhook_secrets = match connector_webhook_secret {
@@ -694,7 +698,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorError>> {
+    ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
         let notif = get_webhook_object_from_body(&request.body)
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
 
@@ -729,8 +733,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorError>>
-    {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let notif = get_webhook_object_from_body(&request.body)
             .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)?;
 
@@ -749,10 +752,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        RefundWebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let notif: novalnet::NovalnetWebhookNotificationResponseRefunds = request
             .body
             .parse_struct("NovalnetWebhookNotificationResponse")
@@ -773,10 +773,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        DisputeWebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
+    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let notif: transformers::NovalnetWebhookNotificationResponse =
             get_webhook_object_from_body(&request.body)
                 .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
@@ -887,14 +884,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -943,6 +933,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Novalnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Novalnet<T>
 {
@@ -1089,14 +1089,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
@@ -1152,6 +1145,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         VoidPC,
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Novalnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Novalnet<T>
 {

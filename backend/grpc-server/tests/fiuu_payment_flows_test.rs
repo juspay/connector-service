@@ -170,6 +170,11 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Myr),
         state: None,
+        metadata: std::collections::HashMap::new(),
+        merchant_account_metadata: std::collections::HashMap::new(),
+        connector_metadata: None,
+        setup_future_usage: None,
+        sync_type: None,
     }
 }
 
@@ -239,9 +244,11 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         request_ref_id: None,
         browser_info: None,
+        test_mode: Some(true),
         refund_metadata: std::collections::HashMap::new(),
         state: None,
         merchant_account_metadata: std::collections::HashMap::new(),
+        payment_method_type: None,
     }
 }
 

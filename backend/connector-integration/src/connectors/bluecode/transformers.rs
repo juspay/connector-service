@@ -86,7 +86,7 @@ pub struct BluecodeWebhookResponse {
     pub billing_amount: Option<FloatMajorUnit>,
     pub billing_currency: Option<String>,
     pub language: Option<String>,
-    pub ip_address: Option<Secret<String, common_utils::pii::IpAddress>>,
+    pub ip_address: Option<Secret<String, pii::IpAddress>>,
     pub first_name: Option<Secret<String>>,
     pub last_name: Option<Secret<String>>,
     pub billing_address_line1: Option<Secret<String>>,
@@ -123,7 +123,7 @@ impl TryFrom<&pii::SecretSerdeValue> for BluecodeMetadataObject {
 
     fn try_from(secret_value: &pii::SecretSerdeValue) -> Result<Self, Self::Error> {
         match secret_value.peek() {
-            serde_json::Value::String(s) => serde_json::from_str(s).change_context(
+            Value::String(s) => serde_json::from_str(s).change_context(
                 errors::ConnectorError::InvalidConnectorConfig {
                     config: "Deserializing BluecodeMetadataObject from connector_meta_data string",
                 },
@@ -138,14 +138,7 @@ impl TryFrom<&pii::SecretSerdeValue> for BluecodeMetadataObject {
 }
 
 // Request TryFrom implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BluecodeRouterData<
             RouterDataV2<
@@ -287,22 +280,14 @@ impl From<BluecodePaymentStatus> for AttemptStatus {
 }
 
 // Response TryFrom implementations
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            BluecodePaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+impl<F, T> TryFrom<ResponseRouterData<BluecodePaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 where
     T: Clone,
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            BluecodePaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<BluecodePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let redirection_data = Some(domain_types::router_response_types::RedirectForm::Form {
             endpoint: item.response.payment_link.to_string(),
@@ -342,7 +327,7 @@ impl<F> TryFrom<ResponseRouterData<BluecodeSyncResponse, Self>>
             http_code,
         } = item;
         let status = AttemptStatus::from(response.status);
-        let response = if status == common_enums::AttemptStatus::Failure {
+        let response = if status == AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: NO_ERROR_CODE.to_string(),
                 message: NO_ERROR_MESSAGE.to_string(),

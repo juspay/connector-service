@@ -178,14 +178,7 @@ pub struct PhonepeSyncResponseData {
 // ===== REQUEST BUILDING =====
 
 // TryFrom implementation for macro-generated PhonepeRouterData wrapper (owned)
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PhonepeRouterData<
             RouterDataV2<
@@ -324,14 +317,7 @@ impl<
 }
 
 // TryFrom implementation for borrowed PhonepeRouterData wrapper (for header generation)
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         &PhonepeRouterData<
             &RouterDataV2<
@@ -471,38 +457,14 @@ impl<
 
 // ===== RESPONSE HANDLING =====
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            PhonepePaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PhonepePaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            PhonepePaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<PhonepePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
@@ -682,7 +644,7 @@ fn generate_phonepe_checksum(
         .change_context(errors::ConnectorError::RequestEncodingFailed)?;
     let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {
         use std::fmt::Write;
-        write!(&mut acc, "{byte:02x}").unwrap();
+        let _ = write!(&mut acc, "{byte:02x}");
         acc
     });
 
@@ -698,14 +660,7 @@ fn generate_phonepe_checksum(
 // ===== SYNC REQUEST BUILDING =====
 
 // TryFrom implementation for owned PhonepeRouterData wrapper (sync)
-impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PhonepeRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -745,14 +700,7 @@ impl<
 }
 
 // TryFrom implementation for borrowed PhonepeRouterData wrapper (sync header generation)
-impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         &PhonepeRouterData<
             &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -793,22 +741,12 @@ impl<
 
 // ===== SYNC RESPONSE HANDLING =====
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            PhonepeSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = Error;
 
-    fn try_from(
-        item: ResponseRouterData<
-            PhonepeSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PhonepeSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         if response.success {
@@ -911,7 +849,7 @@ fn generate_phonepe_sync_checksum(
         .change_context(errors::ConnectorError::RequestEncodingFailed)?;
     let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {
         use std::fmt::Write;
-        write!(&mut acc, "{byte:02x}").unwrap();
+        let _ = write!(&mut acc, "{byte:02x}");
         acc
     });
 

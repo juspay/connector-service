@@ -8,17 +8,17 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, DefendDispute, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
+        RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -59,6 +59,11 @@ pub(crate) mod headers {
 }
 
 // Trait implementations with generic type parameters
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Helcim<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Helcim<T>
 {
@@ -515,7 +520,7 @@ macros::macro_connector_implementation!(
 // Stub implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -532,7 +537,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -549,7 +554,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -562,7 +567,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -574,7 +579,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -586,7 +591,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -599,7 +604,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -616,7 +621,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -633,7 +638,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -683,6 +688,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Helcim<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Helcim<T>
 {
 }
@@ -873,6 +888,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Helcim<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Helcim<T>
 {
 }
