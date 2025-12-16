@@ -835,7 +835,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 terminal_id: None,
             },
             reference_transaction_details: ReferenceTransactionDetails {
-                reference_transaction_id: router_data.request.connector_transaction_id.clone(),
+                reference_transaction_id: router_data.request.connector_refund_id.clone(),
             },
         })
     }
