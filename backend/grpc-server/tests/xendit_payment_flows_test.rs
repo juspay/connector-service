@@ -42,7 +42,7 @@ const CONNECTOR_CUSTOMER_ID: &str = "abc123";
 // Test card data - Updated to match new JSON payload
 const TEST_AMOUNT: i64 = 10000000000; // 10 trillion from new payload
 const TEST_MINOR_AMOUNT: i64 = 10000000000; // Minor amount from new payload
-const TEST_CARD_NUMBER: &str = "4111111111111111"; // Valid test card for Xendit
+const TEST_CARD_NUMBER: &str = "4000000000001091"; // Valid test card for Xendit
 const TEST_CARD_EXP_MONTH: &str = "10";
 const TEST_CARD_EXP_YEAR: &str = "2027"; // Full year format
 const TEST_CARD_CVC: &str = "123";
@@ -128,7 +128,15 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             "http://localhost:8080/webhooks/merchant_1753672298/mca_8rIwEeXmFvrIA59fMH75".to_string(),
         ),
         email: Some(TEST_EMAIL.to_string().into()),
-        address: Some(grpc_api_types::payments::PaymentAddress::default()),
+        address: Some(grpc_api_types::payments::PaymentAddress {
+            billing_address: Some(grpc_api_types::payments::Address {
+                phone_number: Some(Secret::new("9123456789".to_string())),
+                phone_country_code: Some("+91".to_string()),
+                email: Some(Secret::new("kalo@hul.com".to_string())),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(TEST_REQUEST_REF_ID.to_string())),
@@ -158,8 +166,11 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Idr),
         state: None,
+        metadata: std::collections::HashMap::new(),
+        merchant_account_metadata: std::collections::HashMap::new(),
         connector_metadata: None,
         setup_future_usage: None,
+        sync_type: None,
     }
 }
 

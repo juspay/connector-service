@@ -343,6 +343,7 @@ card_details),
         enrolled_for_3ds: false,
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("mandate_{}", get_timestamp()))),
+        sync_type: None,
         }),
         metadata: HashMap::new(),
         ..Default::default()
