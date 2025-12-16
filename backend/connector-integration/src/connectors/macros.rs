@@ -156,7 +156,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 _req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<common_utils::request::RequestContent>, domain_types::errors::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
             {
                 // always return None
                 Ok(None)
@@ -177,7 +177,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<common_utils::request::RequestContent>, domain_types::errors::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
             {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [<$connector RouterData>] {
@@ -186,7 +186,7 @@ macro_rules! expand_fn_get_request_body {
                 };
                 let request = bridge.request_body(input_data)?;
                 let form_data = <$curl_req as GetFormData>::get_form_data(&request);
-                Ok(Some(common_utils::request::RequestContent::FormData(form_data)))
+                Ok(Some(macro_types::RequestContent::FormData(form_data)))
             }
         }
     };
@@ -204,7 +204,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<common_utils::request::RequestContent>, domain_types::errors::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
             {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [<$connector RouterData>] {
@@ -221,7 +221,7 @@ macro_rules! expand_fn_get_request_body {
                             .attach_printable(e)
                     })?;
 
-                Ok(Some(common_utils::request::RequestContent::RawBytes(soap_xml.into_bytes())))
+                Ok(Some(macro_types::RequestContent::RawBytes(soap_xml.into_bytes())))
             }
         }
     };
@@ -239,7 +239,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<common_utils::request::RequestContent>, domain_types::errors::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
             {
                 use crate::connectors::macros::ContentTypeSelector;
 
@@ -255,14 +255,14 @@ macro_rules! expand_fn_get_request_body {
 
                 match content_type {
                     common_enums::DynamicContentType::Json => {
-                        Ok(Some(common_utils::request::RequestContent::Json(Box::new(request))))
+                        Ok(Some(macro_types::RequestContent::Json(Box::new(request))))
                     }
                     common_enums::DynamicContentType::FormUrlEncoded => {
-                        Ok(Some(common_utils::request::RequestContent::FormUrlEncoded(Box::new(request))))
+                        Ok(Some(macro_types::RequestContent::FormUrlEncoded(Box::new(request))))
                     }
                     common_enums::DynamicContentType::FormData => {
                         let form_data = <$curl_req as GetFormData>::get_form_data(&request);
-                        Ok(Some(common_utils::request::RequestContent::FormData(form_data)))
+                        Ok(Some(macro_types::RequestContent::FormData(form_data)))
                     }
                 }
             }
@@ -282,7 +282,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<common_utils::request::RequestContent>, domain_types::errors::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
             {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [< $connector RouterData >] {
@@ -290,7 +290,7 @@ macro_rules! expand_fn_get_request_body {
                     router_data: req.clone(),
                 };
                 let request = bridge.request_body(input_data)?;
-                Ok(Some(common_utils::request::RequestContent::$content_type(Box::new(request))))
+                Ok(Some(macro_types::RequestContent::$content_type(Box::new(request))))
             }
         }
     };
@@ -307,7 +307,7 @@ macro_rules! expand_fn_handle_response {
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            domain_types::errors::ConnectorError,
+            macro_types::ConnectorError,
         > {
             use error_stack::ResultExt;
             paste::paste! {let bridge = self.[< $flow:snake >];}
@@ -338,7 +338,7 @@ macro_rules! expand_fn_handle_response {
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            domain_types::errors::ConnectorError,
+            macro_types::ConnectorError,
         > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
             let response_body = bridge.response(res.response)?;
@@ -366,9 +366,9 @@ macro_rules! expand_default_functions {
         fn get_headers(
             &self,
             req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-        ) -> common_utils::errors::CustomResult<
-            Vec<(String, hyperswitch_masking::Maskable<String>)>,
-            domain_types::errors::ConnectorError,
+        ) -> macro_types::CustomResult<
+            Vec<(String, macro_types::Maskable<String>)>,
+            macro_types::ConnectorError,
         > {
             self.build_headers(req)
         }
@@ -395,7 +395,7 @@ macro_rules! expand_default_functions {
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
             self.build_error_response(res, event_builder)
         }
     };
@@ -1142,14 +1142,14 @@ macro_rules! expand_imports {
             // pub(super) use domain_models::{
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
             // };
-            pub use common_utils::{errors::CustomResult, events, request::RequestContent};
-            pub use domain_types::{
+            pub(super) use common_utils::{errors::CustomResult, events, request::RequestContent};
+            pub(super) use domain_types::{
                 errors::ConnectorError, router_data::ErrorResponse, router_data_v2::RouterDataV2,
                 router_response_types::Response,
             };
-            pub use hyperswitch_masking::Maskable;
+            pub(super) use hyperswitch_masking::Maskable;
 
-            pub use crate::types::*;
+            pub(super) use crate::types::*;
         }
     };
 }

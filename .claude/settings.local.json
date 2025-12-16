@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp /tmp/macros_before.rs backend/connector-integration/src/connectors/macros.rs)",
+      "Bash(cargo build --lib)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
