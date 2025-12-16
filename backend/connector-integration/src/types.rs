@@ -74,14 +74,13 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Payload => Box::new(connectors::Payload::new()),
             ConnectorEnum::Paysafe => Box::new(connectors::Paysafe::new()),
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
+            ConnectorEnum::Getnet => Box::new(connectors::Getnet::new()),
             ConnectorEnum::Barclaycard => Box::new(connectors::Barclaycard::new()),
             ConnectorEnum::Billwerk => Box::new(connectors::Billwerk::new()),
             ConnectorEnum::Nuvei => Box::new(connectors::Nuvei::new()),
             ConnectorEnum::Airwallex => Box::new(connectors::Airwallex::new()),
             ConnectorEnum::Shift4 => Box::new(connectors::Shift4::new()),
             ConnectorEnum::Bamboraapac => Box::new(connectors::Bamboraapac::new()),
-            ConnectorEnum::Bankofamerica => Box::new(connectors::Bankofamerica::new()),
-            ConnectorEnum::Powertranz => Box::new(connectors::Powertranz::new()),
         }
     }
 }

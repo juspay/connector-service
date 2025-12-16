@@ -973,26 +973,6 @@ message ConnectorState {
   optional string connector_customer_id = 2;
 }
 
-message BillingDescriptor {
-  // Customer's billing name
-  optional SecretString name = 1;
-
-  // Customer's billing email
-  optional SecretString city = 2;
-
-  // Customer's billing phone number
-  optional SecretString phone = 3;
-
-  // Complete description that appears on customers' statements
-  optional string statement_descriptor = 4;
-
-  // Provides information about a card payment that customers see on their statements
-  optional string statement_descriptor_suffix = 5;
-
-  // A reference to be shown on billing description
-  optional string reference = 6;
-}
-
 // Additional authentication data, typically from 3DS.
 message AuthenticationData {
   // Electronic Commerce Indicator (ECI) from 3DS.
@@ -1592,7 +1572,6 @@ message PaymentServiceAuthorizeRequest {
   optional bool off_session = 25; // Indicates if off-session transaction
   bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
   optional bool request_extended_authorization = 27; // Indicates if extended authorization is requested
-  optional bool enable_partial_authorization = 43; // Indicates if partial authorization is enabled
 
   // Contextual Information
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
@@ -1610,7 +1589,6 @@ message PaymentServiceAuthorizeRequest {
 
   optional string statement_descriptor_name = 36; // Complete description that appears on customers' statements
   optional string statement_descriptor_suffix = 37; // Provides information about a card payment that customers see on their statements
-  optional BillingDescriptor billing_descriptor = 42; // Billing Descriptor information to be sent to the payment gateway
 
   // State Information
   optional ConnectorState state = 38; // State data for access token storage and other connector-specific state
@@ -1669,7 +1647,6 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional bool off_session = 25; // Indicates if off-session transaction
   bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
   optional bool request_extended_authorization = 27; // Indicates if extended authorization is requested
-  optional bool enable_partial_authorization = 43; // Indicates if partial authorization is enabled
 
   // Contextual Information
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
@@ -1687,7 +1664,6 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   optional string statement_descriptor_name = 36; // Complete description that appears on customers' statements
   optional string statement_descriptor_suffix = 37; // Provides information about a card payment that customers see on their statements
-  optional BillingDescriptor billing_descriptor = 42; // Billing Descriptor information to be sent to the payment gateway
 
   // State Information
   optional ConnectorState state = 38; // State data for access token storage and other connector-specific state
@@ -1738,8 +1714,7 @@ message PaymentServiceAuthorizeResponse {
   // Payment Details
   optional int64 captured_amount = 15; // Amount that has been captured
   optional int64 minor_captured_amount = 16; // Captured amount in minor currency units
-  optional int64 minor_capturable_amount = 17; // Capturable amount in minor currency units
-  optional int64 minor_authorized_amount = 21; // Authorized amount in minor currency units
+  optional int64 minor_amount_capturable = 17; // Capturable amount in minor currency units
 
   optional MandateReference mandate_reference = 18; // Mandate reference, if applicable
   optional ConnectorResponseData connector_response = 19; // Various data regarding the response from connector
@@ -1758,21 +1733,15 @@ message PaymentServiceGetRequest {
   // Capture Settings
   optional CaptureMethod capture_method = 8; // Method for capturing the payment
 
-  // Body of the response
+  // Body of the response.
   optional bytes handle_response = 4;
 
   // Amount Information
   int64 amount = 5; // The amount for the payment in minor currency units
   Currency currency = 6; // The currency for the payment, in ISO 4217 three-letter code
 
-  // Behavioral Flags of the payment
-  optional FutureUsage setup_future_usage = 11; // Indicates future usage intention
-
   // State Information
   optional ConnectorState state = 3; // State data for access token storage and other connector-specific state
-
-  // Metadata
-  optional SecretString connector_metadata = 10; // Additional metadata for the connector
 }
 
 // Response message for a payment status synchronization.
@@ -2251,8 +2220,6 @@ message PaymentServiceRegisterRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 30; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-  
-  optional BillingDescriptor billing_descriptor = 42; // Billing Descriptor information to be sent to the payment gateway
 
   // State Information
   optional ConnectorState state = 31; // State data for access token storage and other connector-specific state

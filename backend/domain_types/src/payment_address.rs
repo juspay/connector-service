@@ -186,8 +186,6 @@ pub struct AddressDetails {
 
     /// The last name for the address
     pub last_name: Option<Secret<String>>,
-
-    pub origin_zip: Option<Secret<String>>,
 }
 
 impl AddressDetails {
@@ -233,7 +231,6 @@ impl AddressDetails {
                 line3: self.line3.or(other.line3.clone()),
                 zip: self.zip.or(other.zip.clone()),
                 state: self.state.or(other.state.clone()),
-                origin_zip: self.origin_zip.clone().or(other.origin_zip.clone()),
             }
         } else {
             self
@@ -422,16 +419,6 @@ pub struct OrderDetailsWithAmount {
     pub product_type: Option<ProductType>,
     /// The tax code for the product
     pub product_tax_code: Option<String>,
-    /// stock keeping unit of the product
-    pub sku: Option<String>,
-    /// universal product code of the product
-    pub upc: Option<String>,
-    /// commodity code of the product
-    pub commodity_code: Option<String>,
-    /// total amount of the product
-    pub total_amount: Option<MinorUnit>,
-    /// discount amount on the unit
-    pub unit_discount_amount: Option<MinorUnit>,
 }
 
 impl hyperswitch_masking::SerializableSecret for OrderDetailsWithAmount {}

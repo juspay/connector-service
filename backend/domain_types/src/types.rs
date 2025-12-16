@@ -56,20 +56,6 @@ fn convert_merchant_metadata_to_json(metadata: &HashMap<String, String>) -> serd
     serde_json::Value::Object(metadata_map)
 }
 
-/// Convert HashMap to JSON Value, deserializing string values that contain JSON
-fn convert_metadata_to_json(metadata: &HashMap<String, String>) -> serde_json::Value {
-    let metadata_map = metadata
-        .iter()
-        .fold(serde_json::Map::new(), |mut map, (key, value)| {
-            // Try to parse the value as JSON first, if it fails, treat it as a plain string
-            let json_value = serde_json::from_str::<serde_json::Value>(value)
-                .unwrap_or_else(|_| serde_json::Value::String(value.clone()));
-            map.insert(key.clone(), json_value);
-            map
-        });
-    serde_json::Value::Object(metadata_map)
-}
-
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
@@ -79,11 +65,11 @@ use crate::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ApplePayPaymentRequest,
-        ApplePaySessionResponse, BillingDescriptor, ConnectorCustomerData,
-        ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        GpayAllowedPaymentMethods, GpayBillingAddressFormat, GpaySessionTokenResponse,
-        MandateReferenceId, MultipleCaptureRequestData, NextActionCall, PaymentCreateOrderData,
+        ApplePaySessionResponse, ConnectorCustomerData, ConnectorMandateReferenceId,
+        ConnectorResponseHeaders, ContinueRedirectionResponse, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, DisputeWebhookDetailsResponse, GpayAllowedPaymentMethods,
+        GpayBillingAddressFormat, GpaySessionTokenResponse, MandateReferenceId,
+        MultipleCaptureRequestData, NextActionCall, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
@@ -175,8 +161,7 @@ pub struct Connectors {
     pub barclaycard: ConnectorParams,
     pub nexixpay: ConnectorParams,
     pub airwallex: ConnectorParams,
-    pub bankofamerica: ConnectorParams,
-    pub powertranz: ConnectorParams,
+    pub getnet: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -1386,34 +1371,6 @@ impl<
         // For now, set to None as Hyperswitch needs to be updated to send this data properly
         let connector_testing_data: Option<Secret<serde_json::Value>> = None;
 
-        let billing_descriptor = value
-            .billing_descriptor
-            .as_ref()
-            .map(|descriptor| {
-                BillingDescriptor::from((
-                    descriptor,
-                    value.statement_descriptor_name.clone(),
-                    value.statement_descriptor_suffix.clone(),
-                ))
-            })
-            .or_else(|| {
-                // Only build a fallback if at least one descriptor exists
-                if value.statement_descriptor_name.is_some()
-                    || value.statement_descriptor_suffix.is_some()
-                {
-                    Some(BillingDescriptor {
-                        name: None,
-                        city: None,
-                        phone: None,
-                        reference: None,
-                        statement_descriptor: value.statement_descriptor_name.clone(),
-                        statement_descriptor_suffix: value.statement_descriptor_suffix.clone(),
-                    })
-                } else {
-                    None
-                }
-            });
-
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -1458,7 +1415,9 @@ impl<
             minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
             email,
             customer_name: None,
-            billing_descriptor,
+            statement_descriptor_suffix: value.statement_descriptor_suffix,
+            statement_descriptor: value.statement_descriptor_name,
+
             router_return_url: value.return_url.clone(),
             complete_authorize_url: value.complete_authorize_url,
             setup_future_usage,
@@ -1512,7 +1471,6 @@ impl<
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
             connector_testing_data,
-            enable_partial_authorization: value.enable_partial_authorization,
         })
     }
 }
@@ -1597,34 +1555,6 @@ impl<
         // For now, set to None as Hyperswitch needs to be updated to send this data properly
         let connector_testing_data: Option<Secret<serde_json::Value>> = None;
 
-        let billing_descriptor = value
-            .billing_descriptor
-            .as_ref()
-            .map(|descriptor| {
-                BillingDescriptor::from((
-                    descriptor,
-                    value.statement_descriptor_name.clone(),
-                    value.statement_descriptor_suffix.clone(),
-                ))
-            })
-            .or_else(|| {
-                // Only build a fallback if at least one descriptor exists
-                if value.statement_descriptor_name.is_some()
-                    || value.statement_descriptor_suffix.is_some()
-                {
-                    Some(BillingDescriptor {
-                        name: None,
-                        city: None,
-                        phone: None,
-                        reference: None,
-                        statement_descriptor: value.statement_descriptor_name.clone(),
-                        statement_descriptor_suffix: value.statement_descriptor_suffix.clone(),
-                    })
-                } else {
-                    None
-                }
-            });
-
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -1669,7 +1599,9 @@ impl<
             minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
             email,
             customer_name: None,
-            billing_descriptor,
+            statement_descriptor_suffix: value.statement_descriptor_suffix,
+            statement_descriptor: value.statement_descriptor_name,
+
             router_return_url: value.return_url.clone(),
             complete_authorize_url: value.complete_authorize_url,
             setup_future_usage,
@@ -1699,7 +1631,13 @@ impl<
             metadata: if value.metadata.is_empty() {
                 None
             } else {
-                Some(convert_metadata_to_json(&value.metadata))
+                Some(serde_json::Value::Object(
+                    value
+                        .metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
             },
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
@@ -1717,7 +1655,6 @@ impl<
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
             connector_testing_data,
-            enable_partial_authorization: value.enable_partial_authorization,
         })
     }
 }
@@ -2102,7 +2039,6 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
             state: value.state,
             first_name: value.first_name,
             last_name: value.last_name,
-            origin_zip: None,
         })
     }
 }
@@ -2143,11 +2079,6 @@ impl ForeignTryFrom<grpc_api_types::payments::OrderDetailsWithAmount> for OrderD
                     common_enums::ProductType::foreign_from(grpc_product_type)
                 }),
             product_tax_code: item.product_tax_code,
-            commodity_code: None,
-            sku: None,
-            upc: None,
-            unit_discount_amount: None,
-            total_amount: None,
         })
     }
 }
@@ -2214,7 +2145,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -2326,8 +2256,6 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             vault_headers,
             recurring_mandate_payment_data: None,
             order_details,
-
-            minor_amount_authorized: None,
         })
     }
 }
@@ -2447,8 +2375,6 @@ impl
             vault_headers,
             recurring_mandate_payment_data: None,
             order_details,
-
-            minor_amount_authorized: None,
         })
     }
 }
@@ -2526,7 +2452,6 @@ impl
             vault_headers: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -2599,7 +2524,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -2665,7 +2589,6 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -2841,8 +2764,7 @@ pub fn generate_create_order_response(
                 state: None,
                 captured_amount: None,
                 minor_captured_amount: None,
-                minor_capturable_amount: None,
-                minor_authorized_amount: None,
+                minor_amount_capturable: None,
                 mandate_reference: None,
                 connector_response: None,
             }
@@ -2880,8 +2802,7 @@ pub fn generate_create_order_response(
                 state: None,
                 captured_amount: None,
                 minor_captured_amount: None,
-                minor_capturable_amount: None,
-                minor_authorized_amount: None,
+                minor_amount_capturable: None,
                 mandate_reference: None,
                 connector_response: None,
             }
@@ -3064,14 +2985,10 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                         .resource_common_data
                         .minor_amount_captured
                         .map(|amount_captured| amount_captured.get_amount_as_i64()),
-                    minor_capturable_amount: router_data_v2
+                    minor_amount_capturable: router_data_v2
                         .resource_common_data
                         .minor_amount_capturable
                         .map(|amount_capturable| amount_capturable.get_amount_as_i64()),
-                    minor_authorized_amount: router_data_v2
-                        .resource_common_data
-                        .minor_amount_authorized
-                        .map(|amount_authorized| amount_authorized.get_amount_as_i64()),
                     connector_response,
                 }
             }
@@ -3114,8 +3031,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 state,
                 captured_amount: None,
                 minor_captured_amount: None,
-                minor_capturable_amount: None,
-                minor_authorized_amount: None,
+                minor_amount_capturable: None,
                 connector_response: None,
             }
         }
@@ -3271,22 +3187,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
 
         let encoded_data = value.encoded_data;
 
-        let connector_metadata = value
-            .connector_metadata
-            .map(|metadata| serde_json::from_str(&metadata.expose()))
-            .transpose()
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Failed to parse connector metadata".to_owned(),
-                error_object: None,
-            }))?;
-
         Ok(Self {
             connector_transaction_id,
             encoded_data,
             capture_method,
-            connector_metadata,
+            connector_meta: None,
             sync_type: router_request_types::SyncRequestType::SinglePaymentSync,
             mandate_id: None,
             payment_method_type: None,
@@ -3296,7 +3201,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             integrity_object: None,
             all_keys_required: None, // Field not available in new proto structure
             split_payments: None,
-            setup_future_usage: None,
         })
     }
 }
@@ -3351,7 +3255,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -4822,7 +4725,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -5415,7 +5317,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -5481,7 +5382,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -5549,7 +5449,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -5778,7 +5677,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -5822,19 +5720,6 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             mandate_type: None,
         };
 
-        let billing_descriptor =
-            value
-                .billing_descriptor
-                .as_ref()
-                .map(|descriptor| BillingDescriptor {
-                    name: descriptor.name.clone(),
-                    city: descriptor.city.clone(),
-                    phone: descriptor.phone.clone(),
-                    statement_descriptor: descriptor.statement_descriptor.clone(),
-                    statement_descriptor_suffix: descriptor.statement_descriptor_suffix.clone(),
-                    reference: descriptor.reference.clone(),
-                });
-
         Ok(Self {
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             payment_method_data: PaymentMethodData::foreign_try_from(
@@ -5849,6 +5734,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             )?,
             amount: Some(0),
             confirm: true,
+            statement_descriptor_suffix: None,
             customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
                 customer_acceptance.clone(),
             )?),
@@ -5896,7 +5782,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            billing_descriptor,
+            statement_descriptor: None,
             merchant_order_reference_id: value.merchant_order_reference_id,
             merchant_account_metadata: (!value.merchant_account_metadata.is_empty()).then(|| {
                 common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
@@ -5922,37 +5808,6 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance> for mandates::
                 .map(mandates::OnlineMandate::foreign_try_from)
                 .transpose()?,
         })
-    }
-}
-
-impl
-    From<(
-        &grpc_api_types::payments::BillingDescriptor,
-        Option<String>,
-        Option<String>,
-    )> for BillingDescriptor
-{
-    fn from(
-        (descriptor, statement_descriptor_name, statement_descriptor_suffix): (
-            &grpc_api_types::payments::BillingDescriptor,
-            Option<String>,
-            Option<String>,
-        ),
-    ) -> Self {
-        BillingDescriptor {
-            name: descriptor.name.clone(),
-            city: descriptor.city.clone(),
-            phone: descriptor.phone.clone(),
-            statement_descriptor: descriptor
-                .statement_descriptor
-                .clone()
-                .or(statement_descriptor_name),
-            statement_descriptor_suffix: descriptor
-                .statement_descriptor_suffix
-                .clone()
-                .or(statement_descriptor_suffix),
-            reference: descriptor.reference.clone(),
-        }
     }
 }
 
@@ -6431,7 +6286,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -6890,7 +6744,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -7030,7 +6883,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -7176,7 +7028,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -7397,7 +7248,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -8471,7 +8321,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -8553,7 +8402,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -8635,7 +8483,6 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }

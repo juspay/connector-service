@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+getnet.base_url = "https://api-sbx.pre.globalgetnet.com"
 barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
 airwallex.base_url = "https://api-demo.airwallex.com/api/v1"
 shift4.base_url = "https://api.shift4.com"
@@ -84,8 +85,6 @@ billwerk.base_url = "https://api.reepay.com/"
 billwerk.secondary_base_url = "https://card.reepay.com/"
 nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
 bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
-bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
-powertranz.base_url = "https://staging.ptranz.com/api"
 
 # Generic Events Configuration
 [events]
