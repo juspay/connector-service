@@ -5373,15 +5373,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
-            metadata: (!value.metadata.is_empty()).then(|| {
-                Secret::new(serde_json::Value::Object(
-                    value
-                        .metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            }),
+            metadata: (!value.metadata.is_empty())
+                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.metadata))),
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
