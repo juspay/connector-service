@@ -581,12 +581,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | BankRedirectData::Sofort { .. }
                     | BankRedirectData::Trustly { .. }
                     | BankRedirectData::OnlineBankingThailand { .. }
-                    | BankRedirectData::LocalBankRedirect {} => {
-                        Err(ConnectorError::NotImplemented(
-                            utils::get_unimplemented_payment_method_error_message("fiuu"),
-                        )
-                        .into())
-                    }
+                    | BankRedirectData::LocalBankRedirect {}
+                    | BankRedirectData::OpenBanking {} => Err(ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("fiuu"),
+                    )
+                    .into()),
                 },
                 PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
                     WalletData::GooglePay(google_pay_data) => {
