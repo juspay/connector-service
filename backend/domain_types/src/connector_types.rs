@@ -46,6 +46,7 @@ use url::Url;
 pub enum ConnectorEnum {
     Adyen,
     Forte,
+    Getnet,
     Razorpay,
     RazorpayV2,
     Fiserv,
@@ -113,6 +114,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
         match connector {
             grpc_api_types::payments::Connector::Adyen => Ok(Self::Adyen),
             grpc_api_types::payments::Connector::Forte => Ok(Self::Forte),
+            grpc_api_types::payments::Connector::Getnet => Ok(Self::Getnet),
             grpc_api_types::payments::Connector::Razorpay => Ok(Self::Razorpay),
             grpc_api_types::payments::Connector::Fiserv => Ok(Self::Fiserv),
             grpc_api_types::payments::Connector::Elavon => Ok(Self::Elavon),

@@ -155,6 +155,9 @@ pub use self::nmi::Nmi;
 pub mod forte;
 pub use self::forte::Forte;
 
+pub mod getnet;
+pub use self::getnet::Getnet;
+
 pub mod shift4;
 pub use self::shift4::Shift4;
 
