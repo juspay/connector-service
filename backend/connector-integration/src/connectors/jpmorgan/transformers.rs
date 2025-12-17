@@ -1,4 +1,5 @@
 use common_enums::{AttemptStatus, CaptureMethod};
+use common_utils::pii::SecretSerdeValue;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, Refund, Void},
     connector_types::{
@@ -10,18 +11,16 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    utils::missing_field_err,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::{requests, responses, JpmorganAmountConvertor};
-use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData};
+use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};
 
 type Error = error_stack::Report<errors::ConnectorError>;
-
-const MERCHANT_COMPANY_NAME: &str = "JPMC";
-const MERCHANT_PRODUCT_NAME: &str = "Hyperswitch";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -39,6 +38,38 @@ impl TryFrom<&ConnectorAuthType> for JpmorganAuthType {
                 client_secret: key1.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
+pub struct JpmorganMetadataMerchantSoftware {
+    pub company_name: Secret<String>,
+    pub product_name: Secret<String>,
+}
+
+/// JPMorgan connector metadata containing merchant software information
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct JpmorganConnectorMetadataObject {
+    pub merchant_software: Option<JpmorganMetadataMerchantSoftware>,
+}
+
+impl TryFrom<&Option<SecretSerdeValue>> for JpmorganConnectorMetadataObject {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(meta_data: &Option<SecretSerdeValue>) -> Result<Self, Self::Error> {
+        let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
+            .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                config: "merchant_connector_account.metadata",
+            })?;
+        Ok(metadata)
+    }
+}
+
+impl From<JpmorganMetadataMerchantSoftware> for requests::JpmorganMerchantSoftware {
+    fn from(metadata: JpmorganMetadataMerchantSoftware) -> Self {
+        Self {
+            company_name: metadata.company_name,
+            product_name: metadata.product_name,
         }
     }
 }
@@ -148,10 +179,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Card(card_data) => {
                 let capture_method = map_capture_method(router_data.request.capture_method)?;
 
-                let merchant_software = requests::JpmorganMerchantSoftware {
-                    company_name: Secret::new(MERCHANT_COMPANY_NAME.to_string()),
-                    product_name: Secret::new(MERCHANT_PRODUCT_NAME.to_string()),
-                };
+                let connector_metadata: JpmorganConnectorMetadataObject =
+                    utils::to_connector_meta_from_secret(
+                        router_data.request.merchant_account_metadata.clone(),
+                    )
+                    .change_context(
+                        errors::ConnectorError::InvalidConnectorConfig {
+                            config: "merchant_connector_account.metadata",
+                        },
+                    )?;
+
+                let merchant_software = connector_metadata
+                    .merchant_software
+                    .ok_or_else(missing_field_err("merchant_software"))?
+                    .into();
 
                 let expiry = requests::Expiry {
                     month: Secret::new(
@@ -263,10 +304,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let merchant_software = requests::JpmorganMerchantSoftware {
-            company_name: Secret::new(MERCHANT_COMPANY_NAME.to_string()),
-            product_name: Secret::new(MERCHANT_PRODUCT_NAME.to_string()),
-        };
+        let connector_metadata: JpmorganConnectorMetadataObject =
+            utils::to_connector_meta_from_secret(
+                item.router_data.request.merchant_account_metadata.clone(),
+            )
+            .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                config: "merchant_connector_account.metadata",
+            })?;
+
+        let merchant_software = connector_metadata
+            .merchant_software
+            .ok_or_else(missing_field_err("merchant_software"))?
+            .into();
+
         let merchant = requests::JpmorganMerchantRefund { merchant_software };
 
         let amount = JpmorganAmountConvertor::convert(

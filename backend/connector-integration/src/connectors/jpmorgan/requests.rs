@@ -45,7 +45,7 @@ pub struct JpmorganMerchant {
     pub merchant_software: JpmorganMerchantSoftware,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganMerchantSoftware {
     pub company_name: Secret<String>,
