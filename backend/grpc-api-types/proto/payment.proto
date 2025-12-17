@@ -2155,7 +2155,7 @@ message PaymentServiceRefundRequest {
 
   // Payment Method Type
   optional PaymentMethodType payment_method_type = 20; // Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
-  optional string customer_id = 21; // Merchant's customer ID
+  optional string customer_id = 22; // Merchant's customer ID
 }
 
 // Response message for a refund operation (unified for both Create and Get).
