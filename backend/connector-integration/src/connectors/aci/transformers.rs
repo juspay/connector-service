@@ -400,7 +400,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | BankRedirectData::OnlineBankingSlovakia { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBankingUk { .. } => {
+            | BankRedirectData::OpenBankingUk { .. }
+            | BankRedirectData::OpenBanking {} => {
                 Err(ConnectorError::NotImplemented("Payment method".to_string()))?
             }
         };

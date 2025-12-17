@@ -1007,6 +1007,7 @@ pub enum PaymentMethodType {
     PagoEfectivo,
     PermataBankTransfer,
     OpenBankingUk,
+    OpenBanking,
     PayBright,
     Paypal,
     Paze,

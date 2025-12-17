@@ -100,6 +100,7 @@ pub enum ConnectorEnum {
     Barclaycard,
     Nexixpay,
     Airwallex,
+    Tsys,
     Bankofamerica,
     Powertranz,
     Bambora,
@@ -167,6 +168,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Barclaycard => Ok(Self::Barclaycard),
             grpc_api_types::payments::Connector::Nexixpay => Ok(Self::Nexixpay),
             grpc_api_types::payments::Connector::Airwallex => Ok(Self::Airwallex),
+            grpc_api_types::payments::Connector::Tsys => Ok(Self::Tsys),
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
             grpc_api_types::payments::Connector::Powertranz => Ok(Self::Powertranz),
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
@@ -917,6 +919,7 @@ pub struct PaymentVoidData {
     pub amount: Option<MinorUnit>,
     pub currency: Option<Currency>,
     pub connector_metadata: Option<SecretSerdeValue>,
+    pub metadata: Option<SecretSerdeValue>,
 }
 
 impl PaymentVoidData {
@@ -2093,10 +2096,11 @@ pub struct PaymentsCaptureData {
     pub currency: Currency,
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
-    pub connector_metadata: Option<serde_json::Value>,
+    pub connector_metadata: Option<SecretSerdeValue>,
     pub integrity_object: Option<CaptureIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
+    pub metadata: Option<SecretSerdeValue>,
 }
 
 impl PaymentsCaptureData {
@@ -2536,6 +2540,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                     Self::LocalBankRedirect
                 }
                 payment_method_data::BankRedirectData::Eft { .. } => Self::Eft,
+                payment_method_data::BankRedirectData::OpenBanking {} => Self::OpenBanking,
             },
             PaymentMethodData::BankDebit(bank_debit_data) => match bank_debit_data {
                 payment_method_data::BankDebitData::AchBankDebit { .. } => Self::AchBankDebit,

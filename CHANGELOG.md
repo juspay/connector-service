@@ -4,6 +4,37 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.17.0
+
+### Features
+
+- **connector:**
+  - [TSYS] Connector Integration ([#347](https://github.com/juspay/connector-service/pull/347)) ([`549d00a`](https://github.com/juspay/connector-service/commit/549d00a820e8a564e666ccd905b0e7942575a0ab))
+  - Refactored Volt connector and Refund & RSync flow implementation ([#362](https://github.com/juspay/connector-service/pull/362)) ([`e75ad17`](https://github.com/juspay/connector-service/commit/e75ad17ef5e6d181e378c47a0413f1450bcbfb6b))
+
+### Bug Fixes
+
+- **connector:** Fiserv RSync flow Diff fix ([#377](https://github.com/juspay/connector-service/pull/377)) ([`ddcf3c0`](https://github.com/juspay/connector-service/commit/ddcf3c092c813e1c982983fd6fb43c3319afec51))
+- Correct mapping of metadata ([#367](https://github.com/juspay/connector-service/pull/367)) ([`0f0dd5f`](https://github.com/juspay/connector-service/commit/0f0dd5f23b19161f7ecef29f09d0022a3d86e3c6))
+- Capture, Void, Refund Request ([#374](https://github.com/juspay/connector-service/pull/374)) ([`1b4c268`](https://github.com/juspay/connector-service/commit/1b4c2686c62cec0ee42e601b13663cc5b8b29134))
+- Removed the authorization_indicator_type field from Authdotnet Req ([#372](https://github.com/juspay/connector-service/pull/372)) ([`a9bd19e`](https://github.com/juspay/connector-service/commit/a9bd19ebc7a475ab967710b2ecfd3acaf1b9e69c))
+
+**Full Changelog:** [`2025.12.16.0...2025.12.17.0`](https://github.com/juspay/connector-service/compare/2025.12.16.0...2025.12.17.0)
+
+- - -
+
+## 2025.12.16.0
+
+### Features
+
+- **connector:**
+  - [Checkout] Added Setupmandate & Repeatpayment flows for Checkout ([#366](https://github.com/juspay/connector-service/pull/366)) ([`54ea726`](https://github.com/juspay/connector-service/commit/54ea7265d715054101b56da85e4f76b200909679))
+  - [PAYME] Connector Integration ([#364](https://github.com/juspay/connector-service/pull/364)) ([`8665908`](https://github.com/juspay/connector-service/commit/8665908b4be468052bc875f391ac4bdf99129fcd))
+
+**Full Changelog:** [`2025.12.15.0...2025.12.16.0`](https://github.com/juspay/connector-service/compare/2025.12.15.0...2025.12.16.0)
+
+- - -
+
 ## 2025.12.15.0
 
 ### Features

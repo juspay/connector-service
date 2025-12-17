@@ -75,6 +75,7 @@ message PaymentMethod {
     Eps eps = 53;
     Przelewy24 przelewy24 = 54;
     Pse pse = 55;
+    OpenBanking open_banking = 56;
     
     // MOBILE PAYMENTS (60-69) - Direct variants
     DuitNow duit_now = 60;
@@ -653,6 +654,11 @@ message OpenBankingUK {
   optional string country = 1;
   // Bank issuer for UK Open Banking
   optional string issuer = 2;
+}
+
+// Open Banking - Open Banking implementation
+message OpenBanking {
+  // Fields will be added as needed for Open Banking integration
 }
 
 // Open Banking Payment Initiation Service

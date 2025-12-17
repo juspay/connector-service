@@ -553,6 +553,7 @@ enum PaymentMethodType {
   OPEN_BANKING_PIS = 96;
   DIRECT_CARRIER_BILLING = 97;
   INSTANT_BANK_TRANSFER = 98;
+  OPEN_BANKING = 99;
 }
 
 message PaymentMethodData {

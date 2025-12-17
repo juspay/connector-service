@@ -632,13 +632,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.currency,
             )
             .change_context(ConnectorError::AmountConversionFailed)?;
-        let order_id = router_data
-            .request
-            .connector_metadata
-            .as_ref()
-            .and_then(|v| v.get("order_id"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+        let order_id = router_data.request.metadata.as_ref().and_then(|v| {
+            let exposed = v.clone().expose();
+            exposed
+                .get("order_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        });
 
         Ok(Self {
             amount: Amount {
@@ -835,7 +835,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 terminal_id: None,
             },
             reference_transaction_details: ReferenceTransactionDetails {
-                reference_transaction_id: router_data.request.connector_transaction_id.clone(),
+                reference_transaction_id: router_data.request.connector_refund_id.clone(),
             },
         })
     }
