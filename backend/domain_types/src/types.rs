@@ -179,6 +179,7 @@ pub struct Connectors {
     pub barclaycard: ConnectorParams,
     pub nexixpay: ConnectorParams,
     pub airwallex: ConnectorParams,
+    pub worldpayxml: ConnectorParams,
     pub tsys: ConnectorParams,
     pub bankofamerica: ConnectorParams,
     pub powertranz: ConnectorParams,
