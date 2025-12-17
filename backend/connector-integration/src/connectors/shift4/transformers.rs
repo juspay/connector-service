@@ -149,10 +149,6 @@ impl<T: PaymentMethodDataTypes>
             PaymentMethodData::BankRedirect(bank_redirect_data) => match bank_redirect_data {
                 BankRedirectData::Ideal { .. } => "ideal",
                 BankRedirectData::Eps { .. } => "eps",
-                BankRedirectData::Giropay { .. } => "giropay",
-                BankRedirectData::Sofort { .. } => "sofort",
-                BankRedirectData::Trustly { .. } => "trustly",
-                BankRedirectData::Blik { .. } => "blik",
                 _ => {
                     return Err(error_stack::report!(errors::ConnectorError::NotSupported {
                         message: format!(
