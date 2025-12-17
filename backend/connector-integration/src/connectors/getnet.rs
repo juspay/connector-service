@@ -662,15 +662,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Getnet<T>
-{
-}
 
 // ===== AUTHENTICATION FLOW CONNECTOR INTEGRATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

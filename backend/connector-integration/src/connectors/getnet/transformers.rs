@@ -129,6 +129,7 @@ impl From<&GetnetPaymentStatus> for RefundStatus {
 // ===== AUTHORIZE REQUEST =====
 #[derive(Debug, Serialize)]
 pub struct GetnetAuthorizeRequest<T: PaymentMethodDataTypes> {
+    pub request_id: String,
     pub idempotency_key: String,
     pub order_id: String,
     pub data: GetnetPaymentData<T>,
@@ -136,14 +137,15 @@ pub struct GetnetAuthorizeRequest<T: PaymentMethodDataTypes> {
 
 #[derive(Debug, Serialize)]
 pub struct GetnetPaymentData<T: PaymentMethodDataTypes> {
+    pub customer_id: String,
     pub amount: i64,
     pub currency: String,
     pub payment: GetnetPayment<T>,
-    pub customer: GetnetCustomer,
 }
 
 #[derive(Debug, Serialize)]
 pub struct GetnetPayment<T: PaymentMethodDataTypes> {
+    pub payment_id: String,
     pub payment_method: String,
     pub transaction_type: String,
     pub number_installments: i32,
@@ -159,11 +161,6 @@ pub struct GetnetCard<T: PaymentMethodDataTypes> {
     pub security_code: Secret<String>,
     #[serde(skip)]
     _phantom: std::marker::PhantomData<T>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GetnetCustomer {
-    pub email: Option<Secret<String>>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
@@ -193,10 +190,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             }
         };
 
+        // Convert 4-digit year to 2-digit year (e.g., "2025" -> "25")
+        let year_str = card_data.card_exp_year.peek();
+        let expiration_year = if year_str.len() >= 2 {
+            Secret::new(year_str[year_str.len() - 2..].to_string())
+        } else {
+            card_data.card_exp_year.clone()
+        };
+
         let card = GetnetCard {
             number: Secret::new(card_data.card_number.peek().to_string()),
             expiration_month: card_data.card_exp_month.clone(),
-            expiration_year: card_data.card_exp_year.clone(),
+            expiration_year,
             cardholder_name: Secret::new(
                 item.request
                     .customer_name
@@ -208,36 +213,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         };
 
         let payment = GetnetPayment {
+            payment_id: uuid::Uuid::new_v4().to_string(),
             payment_method: PAYMENT_METHOD_CREDIT.to_string(),
             transaction_type: TRANSACTION_TYPE_FULL.to_string(),
             number_installments: DEFAULT_INSTALLMENTS,
             card,
         };
 
-        let customer = GetnetCustomer {
-            email: item
-                .request
-                .email
-                .as_ref()
-                .map(|e| Secret::new(e.peek().to_string())),
-        };
+        // Use simple "test" as customer_id for sandbox (as shown in Getnet documentation)
+        let customer_id = item
+            .request
+            .email
+            .as_ref()
+            .map(|e| e.peek().to_string())
+            .unwrap_or_else(|| "test".to_string());
 
         let data = GetnetPaymentData {
+            customer_id,
             amount: item.request.minor_amount.get_amount_as_i64(),
             currency: item.request.currency.to_string(),
             payment,
-            customer,
         };
 
+        let request_ref_id = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
         Ok(Self {
-            idempotency_key: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            request_id: uuid::Uuid::new_v4().to_string(),
+            idempotency_key: request_ref_id.clone(),
+            order_id: request_ref_id,
             data,
         })
     }

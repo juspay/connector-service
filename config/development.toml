@@ -43,7 +43,7 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
-getnet.base_url = "https://api-sbx.pre.globalgetnet.com"
+getnet.base_url = "https://api-sbx.globalgetnet.com"
 barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
 airwallex.base_url = "https://api-demo.airwallex.com/api/v1"
 shift4.base_url = "https://api.shift4.com"
