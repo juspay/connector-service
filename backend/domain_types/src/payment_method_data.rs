@@ -352,6 +352,7 @@ pub enum UpiSource {
     UpiCc,      // UPI Credit Card (RuPay credit on UPI)
     UpiCl,      // UPI Credit Line
     UpiAccount, // UPI Bank Account (Savings)
+    UpiCcCl,    // UPI Credit Card + Credit Line
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]

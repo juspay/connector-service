@@ -234,12 +234,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(_intent_data) => PhonepePaymentInstrument {
+                UpiData::UpiIntent(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_INTENT.to_string(),
                     target_app: None, // Could be extracted from payment method details if needed
                     vpa: None,
                 },
-                UpiData::UpiQr(_qr_data) => PhonepePaymentInstrument {
+                UpiData::UpiQr(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
                     vpa: None,
@@ -391,12 +391,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(_intent_data) => PhonepePaymentInstrument {
+                UpiData::UpiIntent(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_INTENT.to_string(),
                     target_app: None, // Could be extracted from payment method details if needed
                     vpa: None,
                 },
-                UpiData::UpiQr(_qr_data) => PhonepePaymentInstrument {
+                UpiData::UpiQr(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
                     vpa: None,
@@ -680,14 +680,14 @@ pub fn is_irctc_merchant(merchant_id: &str) -> bool {
 }
 
 // Determine payment mode based on UPI source
-// Maps: UPI_CC/UPI_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
+// Maps: UPI_CC/UPI_CL/UPI_CC_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
 fn get_payment_mode_from_upi_source(
     upi_source: Option<&domain_types::payment_method_data::UpiSource>,
 ) -> Option<String> {
     use domain_types::payment_method_data::UpiSource;
 
     upi_source.map(|source| match source {
-        UpiSource::UpiCc | UpiSource::UpiCl => "ALL".to_string(),
+        UpiSource::UpiCc | UpiSource::UpiCl | UpiSource::UpiCcCl => "ALL".to_string(),
         UpiSource::UpiAccount => "ACCOUNT".to_string(),
     })
 }

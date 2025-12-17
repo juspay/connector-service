@@ -313,6 +313,26 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
     }
 }
 
+// Helper function to extract and convert UPI source from gRPC type
+fn convert_upi_source(
+    source_option: Option<i32>,
+) -> Result<Option<payment_method_data::UpiSource>, error_stack::Report<ApplicationErrorResponse>> {
+    source_option
+        .map(|source| {
+            grpc_api_types::payments::UpiSource::try_from(source)
+                .map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_UPI_SOURCE".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Invalid UPI source value".to_owned(),
+                        error_object: None,
+                    }))
+                })
+                .and_then(payment_method_data::UpiSource::foreign_try_from)
+        })
+        .transpose()
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::UpiSource> for payment_method_data::UpiSource {
     type Error = ApplicationErrorResponse;
 
@@ -323,14 +343,7 @@ impl ForeignTryFrom<grpc_api_types::payments::UpiSource> for payment_method_data
             grpc_api_types::payments::UpiSource::UpiCc => Ok(Self::UpiCc),
             grpc_api_types::payments::UpiSource::UpiCl => Ok(Self::UpiCl),
             grpc_api_types::payments::UpiSource::UpiAccount => Ok(Self::UpiAccount),
-            grpc_api_types::payments::UpiSource::Unspecified => Err(error_stack::report!(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_UPI_SOURCE".to_owned(),
-                    error_identifier: 400,
-                    error_message: "UPI source is unspecified".to_owned(),
-                    error_object: None,
-                })
-            )),
+            grpc_api_types::payments::UpiSource::UpiCcCl => Ok(Self::UpiCcCl),
         }
     }
 }
@@ -387,23 +400,7 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(
                     upi_collect,
                 ) => {
-                    let upi_source = upi_collect
-                        .upi_source
-                        .map(|source| {
-                            grpc_api_types::payments::UpiSource::try_from(source)
-                                .map_err(|_| {
-                                    error_stack::report!(ApplicationErrorResponse::BadRequest(
-                                        ApiError {
-                                            sub_code: "INVALID_UPI_SOURCE".to_owned(),
-                                            error_identifier: 400,
-                                            error_message: "Invalid UPI source value".to_owned(),
-                                            error_object: None,
-                                        }
-                                    ))
-                                })
-                                .and_then(payment_method_data::UpiSource::foreign_try_from)
-                        })
-                        .transpose()?;
+                    let upi_source = convert_upi_source(upi_collect.upi_source)?;
                     Ok(PaymentMethodData::Upi(
                         payment_method_data::UpiData::UpiCollect(
                             payment_method_data::UpiCollectData {
@@ -414,23 +411,7 @@ impl<
                     ))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(upi_intent) => {
-                    let upi_source = upi_intent
-                        .upi_source
-                        .map(|source| {
-                            grpc_api_types::payments::UpiSource::try_from(source)
-                                .map_err(|_| {
-                                    error_stack::report!(ApplicationErrorResponse::BadRequest(
-                                        ApiError {
-                                            sub_code: "INVALID_UPI_SOURCE".to_owned(),
-                                            error_identifier: 400,
-                                            error_message: "Invalid UPI source value".to_owned(),
-                                            error_object: None,
-                                        }
-                                    ))
-                                })
-                                .and_then(payment_method_data::UpiSource::foreign_try_from)
-                        })
-                        .transpose()?;
+                    let upi_source = convert_upi_source(upi_intent.upi_source)?;
                     Ok(PaymentMethodData::Upi(
                         payment_method_data::UpiData::UpiIntent(
                             payment_method_data::UpiIntentData { upi_source },
@@ -438,23 +419,7 @@ impl<
                     ))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(upi_qr) => {
-                    let upi_source = upi_qr
-                        .upi_source
-                        .map(|source| {
-                            grpc_api_types::payments::UpiSource::try_from(source)
-                                .map_err(|_| {
-                                    error_stack::report!(ApplicationErrorResponse::BadRequest(
-                                        ApiError {
-                                            sub_code: "INVALID_UPI_SOURCE".to_owned(),
-                                            error_identifier: 400,
-                                            error_message: "Invalid UPI source value".to_owned(),
-                                            error_object: None,
-                                        }
-                                    ))
-                                })
-                                .and_then(payment_method_data::UpiSource::foreign_try_from)
-                        })
-                        .transpose()?;
+                    let upi_source = convert_upi_source(upi_qr.upi_source)?;
                     Ok(PaymentMethodData::Upi(
                         crate::payment_method_data::UpiData::UpiQr(
                             crate::payment_method_data::UpiQrData { upi_source },

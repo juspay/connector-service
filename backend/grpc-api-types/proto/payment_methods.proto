@@ -501,10 +501,10 @@ message PaypalSdkWallet {
 
 // UPI Source types for UPI payments
 enum UpiSource {
-  UPI_SOURCE_UNSPECIFIED = 0;
-  UPI_CC = 1;    // UPI Credit Card (RuPay credit on UPI)
-  UPI_CL = 2;    // UPI Credit Line
-  UPI_ACCOUNT = 3; // UPI Bank Account (Savings)
+  UPI_CC = 0;    // UPI Credit Card (RuPay credit on UPI)
+  UPI_CL = 1;    // UPI Credit Line
+  UPI_ACCOUNT = 2; // UPI Bank Account (Savings)
+  UPI_CC_CL = 3; // UPI Credit Card + Credit Line
 }
 
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
