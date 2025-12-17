@@ -4762,7 +4762,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             amount,
             currency,
             connector_metadata: (!value.connector_metadata.is_empty())
-                .then(|| Secret::new(convert_metadata_to_json(&value.connector_metadata))),
+                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.connector_metadata))),
         })
     }
 }
