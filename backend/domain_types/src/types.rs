@@ -703,6 +703,11 @@ impl<
                             .and_then(|c| CountryAlpha2::from_str(&c).ok()),
                     },
                 )),
+                grpc_api_types::payments::payment_method::PaymentMethod::OpenBanking(_) => {
+                    Ok(PaymentMethodData::BankRedirect(
+                        payment_method_data::BankRedirectData::OpenBanking {},
+                    ))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingFpx(fpx) => {
                     Ok(Self::BankRedirect(
                         payment_method_data::BankRedirectData::OnlineBankingFpx {
@@ -873,6 +878,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // ONLINE BANKING - PaymentMethodType mappings
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::OpenBankingUk(_) => Ok(Some(PaymentMethodType::OpenBankingUk)),
+                grpc_api_types::payments::payment_method::PaymentMethod::OpenBanking(_) => Ok(Some(PaymentMethodType::OpenBanking)),
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingFpx(_) => Ok(Some(PaymentMethodType::OnlineBankingFpx)),
                 // ============================================================================
                 // MOBILE & CRYPTO PAYMENTS - PaymentMethodType mappings

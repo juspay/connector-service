@@ -416,12 +416,6 @@ pub enum Reason {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AuthorizationIndicator {
-    authorization_indicator: AuthorizationType,
-}
-
-#[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum ProfileDetails {
     CreateProfileDetails(CreateProfileDetails),
@@ -464,7 +458,6 @@ pub struct AuthorizedotnetTransactionRequest<T: PaymentMethodDataTypes> {
     user_fields: Option<UserFields>,
     processing_options: Option<ProcessingOptions>,
     subsequent_auth_information: Option<SubsequentAuthInformation>,
-    authorization_indicator_type: Option<AuthorizationIndicator>,
     ref_trans_id: Option<String>,
 }
 
@@ -707,12 +700,6 @@ fn create_regular_transaction_request<
         user_fields,
         processing_options: None,
         subsequent_auth_information: None,
-        authorization_indicator_type: match item.router_data.request.capture_method {
-            Some(capture_method) => Some(AuthorizationIndicator {
-                authorization_indicator: capture_method.try_into()?,
-            }),
-            None => None,
-        },
         ref_trans_id: None,
     })
 }
@@ -745,7 +732,6 @@ pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
     user_fields: Option<UserFields>,
     processing_options: Option<ProcessingOptions>,
     subsequent_auth_information: Option<SubsequentAuthInformation>,
-    authorization_indicator_type: Option<AuthorizationIndicator>,
 }
 
 // Implementation for RepeatPayment request conversion
@@ -903,12 +889,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             user_fields,
             processing_options,
             subsequent_auth_information,
-            authorization_indicator_type: match item.router_data.request.capture_method {
-                Some(capture_method) => Some(AuthorizationIndicator {
-                    authorization_indicator: capture_method.try_into()?,
-                }),
-                None => None,
-            },
         };
 
         Ok(Self {

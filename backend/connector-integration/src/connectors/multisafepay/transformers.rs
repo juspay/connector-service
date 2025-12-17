@@ -131,12 +131,11 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::Przelewy24 { .. }
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
-            | BankRedirectData::LocalBankRedirect {} => {
-                Err(errors::ConnectorError::NotImplemented(
-                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
-                ))
-                .attach_printable("Bank redirect payment method not supported")?
-            }
+            | BankRedirectData::LocalBankRedirect {}
+            | BankRedirectData::OpenBanking {} => Err(errors::ConnectorError::NotImplemented(
+                crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+            ))
+            .attach_printable("Bank redirect payment method not supported")?,
         },
         PaymentMethodData::PayLater(_) => Type::Redirect,
         PaymentMethodData::BankDebit(_)
@@ -254,12 +253,11 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::Przelewy24 { .. }
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
-            | BankRedirectData::LocalBankRedirect {} => {
-                Err(errors::ConnectorError::NotImplemented(
-                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
-                ))
-                .attach_printable("Bank redirect payment method not supported")?
-            }
+            | BankRedirectData::LocalBankRedirect {}
+            | BankRedirectData::OpenBanking {} => Err(errors::ConnectorError::NotImplemented(
+                crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+            ))
+            .attach_printable("Bank redirect payment method not supported")?,
         },
         PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
             WalletData::GooglePay(_) => Gateway::GooglePay,

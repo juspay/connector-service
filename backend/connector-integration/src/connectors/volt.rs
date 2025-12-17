@@ -3,7 +3,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -35,16 +35,41 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as volt, VoltAuthUpdateRequest, VoltAuthUpdateResponse, VoltPaymentsRequest,
-    VoltPaymentsResponse, VoltPsyncRequest, VoltPsyncResponse,
+    self as volt, RefundResponse, VoltAuthUpdateRequest, VoltAuthUpdateResponse,
+    VoltPaymentsRequest, VoltPaymentsResponse, VoltPsyncRequest, VoltPsyncResponse,
+    VoltRefundRequest,
 };
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
+// Trait for types that can provide access tokens
+pub trait AccessTokenProvider {
+    fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError>;
+}
+
+impl AccessTokenProvider for PaymentFlowData {
+    fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError> {
+        self.get_access_token()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)
+    }
+}
+
+impl AccessTokenProvider for RefundFlowData {
+    fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError> {
+        self.get_access_token()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)
+    }
+}
+
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use error_stack::ResultExt;
+
+const X_VOLT_API_VERSION: &str = "X-Volt-Api-Version";
+const X_VOLT_INITIATION_CHANNEL: &str = "X-Volt-Initiation-Channel";
+const VOLT_VERSION: &str = "1";
+const VOLT_INITIATION_CHANNEL: &str = "hosted";
 
 // Trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -174,8 +199,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const ACCEPT: &str = "Accept";
+    pub(crate) const IDEMPOTENCY_KEY: &str = "idempotency-key";
 }
-
 macros::create_all_prerequisites!(
     connector_name: Volt,
     generic_type: T,
@@ -197,31 +223,49 @@ macros::create_all_prerequisites!(
             request_body: VoltPsyncRequest,
             response_body: VoltPsyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: VoltRefundRequest,
+            response_body: RefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         )
     ],
     amount_converters: [],
     member_functions: {
-        pub fn build_headers<F, Req, Res>(
+        pub fn build_headers<F, FlowData, Req, Res>(
             &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+            req: &RouterDataV2<F, FlowData, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
         where
-            Self: ConnectorIntegrationV2<F, PaymentFlowData, Req, Res>,
+            FlowData: AccessTokenProvider,
+            Self: ConnectorIntegrationV2<F, FlowData, Req, Res>,
         {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
-            )];
-
             // Add Bearer token for access token authentication
-            let access_token = req.resource_common_data
-                .get_access_token()
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-            let auth_header = (
-                headers::AUTHORIZATION.to_string(),
-                format!("Bearer {access_token}").into_masked(),
-            );
-            header.push(auth_header);
+            let access_token = req.resource_common_data.get_access_token()?;
+            let header = vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    self.common_get_content_type().to_string().into(),
+                ),
+                (
+                    headers::ACCEPT.to_string(),
+                    self.common_get_content_type().to_string().into(),
+                ),
+                (
+                    headers::AUTHORIZATION.to_string(),
+                    format!("Bearer {}", access_token).into_masked(),
+                ),
+                (
+                    headers::IDEMPOTENCY_KEY.to_string(),
+                    uuid::Uuid::new_v4().to_string().into(),
+                ),
+                (X_VOLT_API_VERSION.to_string(), VOLT_VERSION.into()),
+                (
+                    X_VOLT_INITIATION_CHANNEL.to_string(),
+                    VOLT_INITIATION_CHANNEL.into(),
+                ),
+            ];
 
             Ok(header)
         }
@@ -266,19 +310,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
-        let reason = match &response.exception.error_list {
+        let reason = match &response.errors {
             Some(error_list) => error_list
                 .iter()
                 .map(|error| error.message.clone())
                 .collect::<Vec<String>>()
                 .join(" & "),
-            None => response.exception.message.clone(),
+            None => response.message.clone(),
         };
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.exception.message.to_string(),
-            message: response.exception.message.clone(),
+            code: response.code.unwrap_or(NO_ERROR_CODE.to_string()),
+            message: response.message.clone(),
             reason: Some(reason),
             attempt_status: None,
             connector_transaction_id: None,
@@ -313,7 +357,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            Ok(format!("{base_url}v2/payments"))
+            Ok(format!("{base_url}/payments"))
         }
     }
 );
@@ -321,7 +365,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Volt,
-    curl_request: FormUrlEncoded(VoltAuthUpdateRequest),
+    curl_request: Json(VoltAuthUpdateRequest),
     curl_response: VoltAuthUpdateResponse,
     flow_name: CreateAccessToken,
     resource_common_data: PaymentFlowData,
@@ -337,7 +381,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             Ok(vec![(
                 headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
+                self.common_get_content_type().to_string().into(),
             )])
         }
         fn get_url(
@@ -345,7 +389,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            Ok(format!("{base_url}oauth"))
+            Ok(format!("{base_url}/oauth"))
         }
     }
 );
@@ -379,18 +423,48 @@ macros::macro_connector_implementation!(
                 .connector_transaction_id
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            Ok(format!("{base_url}payments/{connector_payment_id}"))
+            Ok(format!("{base_url}/payments/{connector_payment_id}"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Volt,
+    curl_request: Json(VoltRefundRequest),
+    curl_response: RefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = req.resource_common_data.connectors.volt
+            .secondary_base_url
+            .as_ref()
+            .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+            let connector_payment_id = req.request.connector_transaction_id.clone();
+            Ok(format!(
+                "{base_url}/payments/{connector_payment_id}/request-refund",
+            ))
         }
     }
 );
 
 // Stub implementations for unsupported flows (required by macro system)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Volt<T>
-{
-}
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Volt<T>
@@ -398,7 +472,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Volt<T>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Volt<T>
 {
 }
 

@@ -1,5 +1,5 @@
-use common_enums::{self, AttemptStatus, Currency};
-use common_utils::{consts, id_type::CustomerId, request::Method, types::MinorUnit};
+use common_enums::{self, AttemptStatus};
+use common_utils::{consts, request::Method, types::MinorUnit, CustomerId};
 use domain_types::{
     connector_flow::{Authorize, CreateAccessToken, PSync},
     connector_types::{
@@ -50,17 +50,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 fn get_attempt_status((item, current_status): (VoltPaymentStatus, AttemptStatus)) -> AttemptStatus {
     match item {
         VoltPaymentStatus::Received | VoltPaymentStatus::Settled => AttemptStatus::Charged,
-        VoltPaymentStatus::Completed | VoltPaymentStatus::DelayedAtBank => AttemptStatus::Pending,
+        VoltPaymentStatus::Completed
+        | VoltPaymentStatus::DelayedAtBank
+        | VoltPaymentStatus::AuthorisedByUser
+        | VoltPaymentStatus::ApprovedByRisk => AttemptStatus::Pending,
         VoltPaymentStatus::NewPayment
         | VoltPaymentStatus::BankRedirect
-        | VoltPaymentStatus::AwaitingCheckoutAuthorisation => AttemptStatus::AuthenticationPending,
+        | VoltPaymentStatus::AwaitingCheckoutAuthorisation
+        | VoltPaymentStatus::AdditionalAuthorizationRequired => {
+            AttemptStatus::AuthenticationPending
+        }
         VoltPaymentStatus::RefusedByBank
         | VoltPaymentStatus::RefusedByRisk
         | VoltPaymentStatus::NotReceived
         | VoltPaymentStatus::ErrorAtBank
         | VoltPaymentStatus::CancelledByUser
         | VoltPaymentStatus::AbandonedByUser
-        | VoltPaymentStatus::Failed => AttemptStatus::Failure,
+        | VoltPaymentStatus::Failed
+        | VoltPaymentStatus::ProviderCommunicationError => AttemptStatus::Failure,
         VoltPaymentStatus::Unknown => current_status,
     }
 }
@@ -77,15 +84,15 @@ pub mod webhook_headers {
 #[serde(rename_all = "camelCase")]
 pub struct VoltPaymentsRequest {
     amount: MinorUnit,
-    currency_code: Currency,
-    #[serde(rename = "type")]
-    transaction_type: TransactionType,
-    merchant_internal_reference: String,
-    shopper: ShopperDetails,
-    payment_success_url: Option<String>,
-    payment_failure_url: Option<String>,
-    payment_pending_url: Option<String>,
-    payment_cancel_url: Option<String>,
+    currency: common_enums::Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    open_banking_u_k: Option<OpenBankingUk>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    open_banking_e_u: Option<OpenBankingEu>,
+    internal_reference: String,
+    payer: PayerDetails,
+    payment_system: PaymentSystem,
+    communication: CommunicationDetails,
 }
 
 #[derive(Debug, Serialize)]
@@ -99,11 +106,51 @@ pub enum TransactionType {
 }
 
 #[derive(Debug, Serialize)]
-pub struct ShopperDetails {
+pub struct OpenBankingUk {
+    #[serde(rename = "type")]
+    transaction_type: TransactionType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OpenBankingEu {
+    #[serde(rename = "type")]
+    transaction_type: TransactionType,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PayerDetails {
     reference: CustomerId,
     email: Option<common_utils::pii::Email>,
     first_name: Secret<String>,
     last_name: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PaymentSystem {
+    OpenBankingEu,
+    OpenBankingUk,
+    NppPayToAu,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CommunicationDetails {
+    #[serde[rename = "return"]]
+    return_urls: ReturnUrls,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReturnUrls {
+    success: Link,
+    failure: Link,
+    pending: Link,
+    cancel: Link,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Link {
+    link: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -132,73 +179,104 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
-            PaymentMethodData::BankRedirect(bank_redirect) => match bank_redirect {
-                BankRedirectData::OpenBankingUk { .. } => {
-                    let amount = item.router_data.request.amount;
-                    let currency_code = item.router_data.request.currency;
-                    let merchant_internal_reference = item
+            PaymentMethodData::BankRedirect(ref bank_redirect) => {
+                let transaction_type = TransactionType::Services; //transaction_type is a form of enum, it is pre defined and value for this can not be taken from user so we are keeping it as Services as this transaction is type of service.
+                let currency = item.router_data.request.currency;
+
+                let (payment_system, open_banking_u_k, open_banking_e_u) = match bank_redirect {
+                    BankRedirectData::OpenBankingUk { .. } => Ok((
+                        PaymentSystem::OpenBankingUk,
+                        Some(OpenBankingUk { transaction_type }),
+                        None,
+                    )),
+                    BankRedirectData::OpenBanking {} => {
+                        if matches!(currency, common_enums::Currency::GBP) {
+                            Ok((
+                                PaymentSystem::OpenBankingUk,
+                                Some(OpenBankingUk { transaction_type }),
+                                None,
+                            ))
+                        } else {
+                            Ok((
+                                PaymentSystem::OpenBankingEu,
+                                None,
+                                Some(OpenBankingEu { transaction_type }),
+                            ))
+                        }
+                    }
+                    BankRedirectData::BancontactCard { .. }
+                    | BankRedirectData::Bizum {}
+                    | BankRedirectData::Blik { .. }
+                    | BankRedirectData::Eft { .. }
+                    | BankRedirectData::Eps { .. }
+                    | BankRedirectData::Giropay { .. }
+                    | BankRedirectData::Ideal { .. }
+                    | BankRedirectData::Interac { .. }
+                    | BankRedirectData::OnlineBankingCzechRepublic { .. }
+                    | BankRedirectData::OnlineBankingFinland { .. }
+                    | BankRedirectData::OnlineBankingPoland { .. }
+                    | BankRedirectData::OnlineBankingSlovakia { .. }
+                    | BankRedirectData::Przelewy24 { .. }
+                    | BankRedirectData::Sofort { .. }
+                    | BankRedirectData::Trustly { .. }
+                    | BankRedirectData::OnlineBankingFpx { .. }
+                    | BankRedirectData::OnlineBankingThailand { .. }
+                    | BankRedirectData::LocalBankRedirect {} => {
+                        Err(errors::ConnectorError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("Volt"),
+                        ))
+                    }
+                }?;
+
+                let amount = item.router_data.request.amount;
+                let internal_reference = item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone();
+                let communication = CommunicationDetails {
+                    return_urls: ReturnUrls {
+                        success: Link {
+                            link: item.router_data.request.router_return_url.clone(),
+                        },
+                        failure: Link {
+                            link: item.router_data.request.router_return_url.clone(),
+                        },
+                        pending: Link {
+                            link: item.router_data.request.router_return_url.clone(),
+                        },
+                        cancel: Link {
+                            link: item.router_data.request.router_return_url.clone(),
+                        },
+                    },
+                };
+                let address = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_address()?;
+                let first_name = address.get_first_name()?;
+                let payer = PayerDetails {
+                    email: item.router_data.request.get_optional_email(),
+                    first_name: first_name.to_owned(),
+                    last_name: address.get_last_name().unwrap_or(first_name).to_owned(),
+                    reference: item
                         .router_data
                         .resource_common_data
-                        .connector_request_reference_id
-                        .clone();
-                    let payment_success_url = item.router_data.request.router_return_url.clone();
-                    let payment_failure_url = item.router_data.request.router_return_url.clone();
-                    let payment_pending_url = item.router_data.request.router_return_url.clone();
-                    let payment_cancel_url = item.router_data.request.router_return_url.clone();
-                    let shopper = ShopperDetails {
-                        email: item.router_data.request.email.clone(),
-                        first_name: item
-                            .router_data
-                            .resource_common_data
-                            .get_billing_first_name()?,
-                        last_name: item
-                            .router_data
-                            .resource_common_data
-                            .get_billing_last_name()?,
-                        reference: item
-                            .router_data
-                            .resource_common_data
-                            .get_customer_id()
-                            .unwrap_or_else(|_| CustomerId::default()),
-                    };
-                    let transaction_type = TransactionType::Services; //transaction_type is a form of enum, it is pre defined and value for this can not be taken from user so we are keeping it as Services as this transaction is type of service.
+                        .get_customer_id()?
+                        .to_owned(),
+                };
 
-                    Ok(Self {
-                        amount,
-                        currency_code,
-                        merchant_internal_reference,
-                        payment_success_url,
-                        payment_failure_url,
-                        payment_pending_url,
-                        payment_cancel_url,
-                        shopper,
-                        transaction_type,
-                    })
-                }
-                BankRedirectData::BancontactCard { .. }
-                | BankRedirectData::Bizum {}
-                | BankRedirectData::Blik { .. }
-                | BankRedirectData::Eft { .. }
-                | BankRedirectData::Eps { .. }
-                | BankRedirectData::Giropay { .. }
-                | BankRedirectData::Ideal { .. }
-                | BankRedirectData::Interac { .. }
-                | BankRedirectData::OnlineBankingCzechRepublic { .. }
-                | BankRedirectData::OnlineBankingFinland { .. }
-                | BankRedirectData::OnlineBankingPoland { .. }
-                | BankRedirectData::OnlineBankingSlovakia { .. }
-                | BankRedirectData::Przelewy24 { .. }
-                | BankRedirectData::Sofort { .. }
-                | BankRedirectData::Trustly { .. }
-                | BankRedirectData::OnlineBankingFpx { .. }
-                | BankRedirectData::OnlineBankingThailand { .. }
-                | BankRedirectData::LocalBankRedirect {} => {
-                    Err(errors::ConnectorError::NotImplemented(
-                        utils::get_unimplemented_payment_method_error_message("Volt"),
-                    )
-                    .into())
-                }
-            },
+                Ok(Self {
+                    amount,
+                    currency,
+                    internal_reference,
+                    communication,
+                    payer,
+                    payment_system,
+                    open_banking_u_k,
+                    open_banking_e_u,
+                })
+            }
             PaymentMethodData::Card(_)
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Wallet(_)
@@ -333,8 +411,42 @@ impl TryFrom<&ConnectorAuthType> for VoltAuthType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VoltPaymentsResponse {
-    checkout_url: String,
     id: String,
+    amount: MinorUnit,
+    currency: common_enums::Currency,
+    status: VoltPaymentStatus,
+    payment_initiation_flow: VoltPaymentInitiationFlow,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoltPaymentInitiationFlow {
+    status: VoltPaymentInitiationFlowStatus,
+    details: VoltPaymentInitiationFlowDetails,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum VoltPaymentInitiationFlowStatus {
+    Processing,
+    Finished,
+    Aborted,
+    Exception,
+    WaitingForInput,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoltPaymentInitiationFlowDetails {
+    reason: String,
+    redirect: VoltRedirect,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoltRedirect {
+    url: Secret<url::Url>,
+    direct_url: Secret<url::Url>,
 }
 
 impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponse, Self>>
@@ -342,9 +454,16 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: ResponseRouterData<VoltPaymentsResponse, Self>) -> Result<Self, Self::Error> {
-        let url = item.response.checkout_url;
+        let url = item
+            .response
+            .payment_initiation_flow
+            .details
+            .redirect
+            .url
+            .clone()
+            .expose();
         let redirection_data = Some(RedirectForm::Form {
-            endpoint: url,
+            endpoint: url.to_string(),
             method: Method::Get,
             form_fields: Default::default(),
         });
@@ -369,6 +488,10 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponse, Self>>
 #[derive(strum::Display)]
 pub enum VoltPaymentStatus {
     NewPayment,
+    ApprovedByRisk,
+    AdditionalAuthorizationRequired,
+    AuthorisedByUser,
+    ProviderCommunicationError,
     Completed,
     Received,
     NotReceived,
@@ -398,6 +521,8 @@ pub struct VoltPsyncResponse {
     status: VoltPaymentStatus,
     id: String,
     merchant_internal_reference: Option<String>,
+    amount: MinorUnit,
+    currency: common_enums::Currency,
 }
 
 impl<F> TryFrom<ResponseRouterData<VoltPsyncResponse, Self>>
@@ -718,25 +843,22 @@ impl From<VoltWebhookBodyEventType> for IncomingWebhookEvent {
 
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct VoltErrorResponse {
-    pub exception: VoltErrorException,
+    pub code: Option<String>,
+    pub message: String,
+    pub errors: Option<Vec<Errors>>,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Errors {
+    #[serde(rename = "type")]
+    pub error_type: String,
+    pub property_path: String,
+    pub message: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct VoltAuthErrorResponse {
     pub code: u64,
-    pub message: String,
-}
-
-#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct VoltErrorException {
-    pub code: u64,
-    pub message: String,
-    pub error_list: Option<Vec<VoltErrorList>>,
-}
-
-#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct VoltErrorList {
-    pub property: String,
     pub message: String,
 }
