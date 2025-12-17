@@ -34,7 +34,9 @@ pub struct WorldpayxmlPaymentsRequest {
 
 impl GetSoapXml for WorldpayxmlPaymentsRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self).unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
@@ -185,7 +187,9 @@ pub struct WorldpayxmlCaptureRequest {
 
 impl GetSoapXml for WorldpayxmlCaptureRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self).unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
@@ -219,7 +223,9 @@ pub struct WorldpayxmlVoidRequest {
 
 impl GetSoapXml for WorldpayxmlVoidRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self).unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
@@ -253,7 +259,9 @@ pub struct WorldpayxmlRefundRequest {
 
 impl GetSoapXml for WorldpayxmlRefundRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self).unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
@@ -287,7 +295,9 @@ pub struct WorldpayxmlPSyncRequest {
 
 impl GetSoapXml for WorldpayxmlPSyncRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self).unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
