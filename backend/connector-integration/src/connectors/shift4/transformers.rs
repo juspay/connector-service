@@ -1,6 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
-use common_utils::types::MinorUnit;
+use common_utils::{pii, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
@@ -9,9 +9,12 @@ use domain_types::{
         ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
@@ -69,6 +72,7 @@ pub struct Shift4PaymentsRequest<T: PaymentMethodDataTypes> {
 #[serde(untagged)]
 pub enum Shift4PaymentMethod<T: PaymentMethodDataTypes> {
     Card(Shift4CardPayment<T>),
+    BankRedirect(Shift4BankRedirectPayment),
 }
 
 #[derive(Debug, Serialize)]
@@ -86,6 +90,127 @@ pub struct Shift4CardData<T: PaymentMethodDataTypes> {
     pub cardholder_name: Secret<String>,
 }
 
+// BankRedirect Payment Structures
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4BankRedirectPayment {
+    pub payment_method: Shift4BankRedirectMethod,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flow: Option<Shift4FlowRequest>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4FlowRequest {
+    pub return_url: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Shift4BankRedirectMethod {
+    #[serde(rename = "type")]
+    pub payment_type: String,
+    pub billing: Shift4Billing,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Shift4Billing {
+    pub name: Option<Secret<String>>,
+    pub email: Option<pii::Email>,
+    pub address: Option<Shift4Address>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Shift4Address {
+    pub line1: Option<Secret<String>>,
+    pub line2: Option<Secret<String>>,
+    pub city: Option<Secret<String>>,
+    pub state: Option<Secret<String>>,
+    pub zip: Option<Secret<String>>,
+    pub country: Option<String>,
+}
+
+// BankRedirect Data Transformation
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    > for Shift4BankRedirectMethod
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        router_data: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let payment_type = match &router_data.request.payment_method_data {
+            PaymentMethodData::BankRedirect(bank_redirect_data) => match bank_redirect_data {
+                BankRedirectData::Ideal { .. } => "ideal",
+                BankRedirectData::Eps { .. } => "eps",
+                BankRedirectData::Giropay { .. } => "giropay",
+                BankRedirectData::Sofort { .. } => "sofort",
+                BankRedirectData::Trustly { .. } => "trustly",
+                BankRedirectData::Blik { .. } => "blik",
+                _ => {
+                    return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                        message: format!(
+                            "BankRedirect type {:?} is not supported by Shift4",
+                            bank_redirect_data
+                        ),
+                        connector: "Shift4",
+                    }))
+                }
+            },
+            _ => {
+                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    message: "Non-bank redirect payment method".to_string(),
+                    connector: "Shift4",
+                }))
+            }
+        };
+
+        // Extract billing information
+        let billing = router_data
+            .resource_common_data
+            .address
+            .get_payment_method_billing();
+        let name = billing.as_ref().and_then(|b| b.get_optional_full_name());
+
+        // Extract email from request - prioritize from payment data, fallback to address
+        let email = router_data
+            .request
+            .email
+            .as_ref()
+            .cloned()
+            .or_else(|| billing.as_ref().and_then(|b| b.email.as_ref()).cloned());
+
+        let address = billing
+            .as_ref()
+            .and_then(|b| b.address.as_ref())
+            .map(|addr| Shift4Address {
+                line1: addr.line1.clone(),
+                line2: addr.line2.clone(),
+                city: addr.city.clone(),
+                state: addr.state.clone(),
+                zip: addr.zip.clone(),
+                country: addr.country.as_ref().map(|c| c.to_string()),
+            });
+
+        let billing_info = Shift4Billing {
+            name,
+            email,
+            address,
+        };
+
+        Ok(Self {
+            payment_type: payment_type.to_string(),
+            billing: billing_info,
+        })
+    }
+}
+
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -101,8 +226,53 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let card_data = match &item.request.payment_method_data {
-            PaymentMethodData::Card(card) => card,
+        let captured = item
+            .request
+            .is_auto_capture()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let payment_method = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                // Get cardholder name from address/billing info if available
+                let cardholder_name = item
+                    .resource_common_data
+                    .address
+                    .get_payment_method_billing()
+                    .and_then(|billing| billing.get_optional_full_name())
+                    .or_else(|| {
+                        item.request
+                            .customer_name
+                            .as_ref()
+                            .map(|name| Secret::new(name.clone()))
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                            field_name: "cardholder_name"
+                        })
+                    })?;
+
+                Shift4PaymentMethod::Card(Shift4CardPayment {
+                    card: Shift4CardData {
+                        number: card_data.card_number.clone(),
+                        exp_month: card_data.card_exp_month.clone(),
+                        exp_year: card_data.card_exp_year.clone(),
+                        cardholder_name,
+                    },
+                })
+            }
+            PaymentMethodData::BankRedirect(_bank_redirect_data) => {
+                let bank_redirect_method = Shift4BankRedirectMethod::try_from(item)?;
+                let return_url = item.request.get_router_return_url().change_context(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "return_url",
+                    },
+                )?;
+
+                Shift4PaymentMethod::BankRedirect(Shift4BankRedirectPayment {
+                    payment_method: bank_redirect_method,
+                    flow: Some(Shift4FlowRequest { return_url }),
+                })
+            }
             _ => {
                 return Err(error_stack::report!(errors::ConnectorError::NotSupported {
                     message: "Payment method".to_string(),
@@ -111,43 +281,13 @@ impl<T: PaymentMethodDataTypes>
             }
         };
 
-        let captured = item
-            .request
-            .is_auto_capture()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-        // Get cardholder name from address/billing info if available
-        let cardholder_name = item
-            .resource_common_data
-            .address
-            .get_payment_method_billing()
-            .and_then(|billing| billing.get_optional_full_name())
-            .or_else(|| {
-                item.request
-                    .customer_name
-                    .as_ref()
-                    .map(|name| Secret::new(name.clone()))
-            })
-            .ok_or_else(|| {
-                error_stack::report!(errors::ConnectorError::MissingRequiredField {
-                    field_name: "cardholder_name"
-                })
-            })?;
-
         Ok(Self {
             amount: item.request.minor_amount,
             currency: item.request.currency,
             captured,
             description: item.resource_common_data.description.clone(),
             metadata: item.request.metadata.clone(),
-            payment_method: Shift4PaymentMethod::Card(Shift4CardPayment {
-                card: Shift4CardData {
-                    number: card_data.card_number.clone(),
-                    exp_month: card_data.card_exp_month.clone(),
-                    exp_year: card_data.card_exp_year.clone(),
-                    cardholder_name,
-                },
-            }),
+            payment_method,
         })
     }
 }
@@ -167,6 +307,13 @@ pub struct Shift4PaymentsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct FlowResponse {
     pub next_action: Option<NextAction>,
+    pub redirect: Option<RedirectResponse>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RedirectResponse {
+    pub redirect_url: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -218,10 +365,22 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsRespons
             }
         };
 
+        // Extract redirect URL from flow if present
+        let redirection_data = item
+            .response
+            .flow
+            .as_ref()
+            .and_then(|flow| flow.redirect.as_ref())
+            .map(|redirect| {
+                Box::new(RedirectForm::Uri {
+                    uri: redirect.redirect_url.clone(),
+                })
+            });
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
-                redirection_data: None,
+                redirection_data,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
