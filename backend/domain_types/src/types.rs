@@ -715,6 +715,36 @@ impl<
                         },
                     ))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Ideal(ideal) => {
+                    let bank_name = ideal.bank_name
+                        .map(|bn| grpc_api_types::payments::BankNames::try_from(bn))
+                        .transpose()
+                        .ok()
+                        .flatten()
+                        .map(|bn| common_enums::BankNames::foreign_try_from(bn))
+                        .transpose()?;
+                    Ok(Self::BankRedirect(
+                        payment_method_data::BankRedirectData::Ideal {
+                            bank_name,
+                        }
+                    ))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Eps(eps) => {
+                    let bank_name = eps.bank_name
+                        .map(|bn| grpc_api_types::payments::BankNames::try_from(bn))
+                        .transpose()
+                        .ok()
+                        .flatten()
+                        .map(|bn| common_enums::BankNames::foreign_try_from(bn))
+                        .transpose()?;
+                    let country = eps.country.as_deref().and_then(|c| common_enums::CountryAlpha2::from_str(c).ok());
+                    Ok(Self::BankRedirect(
+                        payment_method_data::BankRedirectData::Eps {
+                            bank_name,
+                            country,
+                        }
+                    ))
+                }
                 // ============================================================================
                 // MOBILE PAYMENTS - Direct variants
                 // ============================================================================
@@ -945,12 +975,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     })))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Ideal(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "iDEAL is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::Ideal))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_) => {
                     Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
@@ -977,12 +1002,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     })))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Eps(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "EPS is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::Eps))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(_) => {
                     Err(report!(ApplicationErrorResponse::BadRequest(ApiError {

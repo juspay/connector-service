@@ -661,7 +661,8 @@ message LocalBankRedirect {
 
 // iDEAL - Dutch online banking payment method
 message Ideal {
-  // Fields will be added as needed for iDEAL integration
+  // Optional bank name for iDEAL payment
+  optional BankNames bank_name = 1;
 }
 
 // Sofort - German online banking payment method
@@ -681,7 +682,10 @@ message Giropay {
 
 // EPS (Electronic Payment Standard) - Austrian bank transfer system
 message Eps {
-  // Fields will be added as needed for EPS integration
+  // Optional bank name for EPS payment
+  optional BankNames bank_name = 1;
+  // Optional country code
+  optional string country = 2;
 }
 
 // Przelewy24 - Polish payment system
