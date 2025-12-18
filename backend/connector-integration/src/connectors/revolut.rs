@@ -44,7 +44,9 @@ use transformers as revolut;
 use transformers::{
     RevolutCaptureRequest, RevolutOrderCreateRequest, RevolutOrderCreateResponse,
     RevolutOrderCreateResponse as RevolutPSyncResponse,
-    RevolutOrderCreateResponse as RevolutCaptureResponse,
+    RevolutOrderCreateResponse as RevolutCaptureResponse, RevolutRefundRequest,
+    RevolutRefundResponse,
+    RevolutRefundResponse as RevolutRSyncResponse,
 };
 
 pub(crate) mod headers {
@@ -517,23 +519,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Revolut<T>
-{
-}
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Revolut<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::ValidationTrait for Revolut<T>
@@ -545,9 +537,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > ConnectorCommon for Revolut<T>
@@ -654,6 +646,17 @@ macros::create_all_prerequisites!(
             request_body: RevolutCaptureRequest,
             response_body: RevolutCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: RevolutRefundRequest,
+            response_body: RevolutRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            response_body: RevolutRSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [],
@@ -782,6 +785,91 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/orders/{order_id}/capture"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Revolut,
+    curl_request: Json(RevolutRefundRequest),
+    curl_response: RevolutRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut headers = vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/json".to_string().into(),
+                ),
+                (
+                    "Revolut-Api-Version".to_string(),
+                    "2024-09-01".to_string().into(),
+                ),
+            ];
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            headers.append(&mut api_key);
+            Ok(headers)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let order_id = req.request.connector_transaction_id.clone();
+            let base_url = req.resource_common_data.connectors.revolut.base_url.to_string();
+            Ok(format!("{base_url}/api/orders/{order_id}/refund"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Revolut,
+    curl_response: RevolutRSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut headers = vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/json".to_string().into(),
+                ),
+                (
+                    "Revolut-Api-Version".to_string(),
+                    "2024-09-01".to_string().into(),
+                ),
+            ];
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            headers.append(&mut api_key);
+            Ok(headers)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let order_id = req.request.connector_transaction_id.clone();
+            let base_url = req.resource_common_data.connectors.revolut.base_url.to_string();
+            Ok(format!("{base_url}/api/orders/{order_id}"))
         }
     }
 );
