@@ -11,7 +11,6 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    utils::missing_field_err,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
