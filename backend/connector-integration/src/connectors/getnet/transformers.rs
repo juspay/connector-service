@@ -149,12 +149,7 @@ pub struct GetnetCard<T: PaymentMethodDataTypes> {
 }
 
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     >
     TryFrom<
         GetnetRouterData<
@@ -283,12 +278,7 @@ pub struct GetnetAuthorizeResponse {
 }
 
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     >
     TryFrom<
         ResponseRouterData<
@@ -345,12 +335,7 @@ pub struct GetnetCaptureRequest {
 }
 
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     >
     TryFrom<
         GetnetRouterData<
@@ -522,12 +507,7 @@ pub struct GetnetRefundRequest {
 }
 
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     >
     TryFrom<
         GetnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
@@ -637,12 +617,7 @@ pub struct GetnetAccessTokenRequest {
 }
 
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     >
     TryFrom<
         GetnetRouterData<
@@ -716,12 +691,7 @@ impl<F, T>
 pub type GetnetVoidRequest = GetnetRefundRequest;
 
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     >
     TryFrom<
         GetnetRouterData<
