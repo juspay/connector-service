@@ -1,5 +1,7 @@
+use std::borrow::Cow;
+
 use common_enums::{self, CountryAlpha2, Currency};
-use common_utils::{types::MinorUnit, StringMajorUnit};
+use common_utils::{id_type::CustomerId, types::MinorUnit, StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
@@ -35,8 +37,6 @@ fn extract_report_group(connector_meta_data: &Option<Secret<serde_json::Value>>)
         }
     })
 }
-
-use common_utils::id_type::CustomerId;
 
 fn extract_customer_id(customer_id: &Option<CustomerId>) -> Option<String> {
     customer_id.as_ref().and_then(|id| {
@@ -1954,10 +1954,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .customer_id
             .as_ref()
-            .and_then(|id_str| {
-                use std::borrow::Cow;
-                CustomerId::try_from(Cow::from(id_str.clone())).ok()
-            })
+            .and_then(|id_str| CustomerId::try_from(Cow::from(id_str.clone())).ok())
             .as_ref()
             .and_then(|customer_id| extract_customer_id(&Some(customer_id.clone())));
 

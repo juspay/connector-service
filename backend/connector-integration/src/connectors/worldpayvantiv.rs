@@ -63,6 +63,24 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
+/// Helper function to unwrap JSON-wrapped XML responses
+/// Some responses might come as a JSON string containing XML, this function handles that case
+fn unwrap_json_wrapped_xml(response_bytes: &[u8]) -> CustomResult<String, ConnectorError> {
+    let response_str = std::str::from_utf8(response_bytes)
+        .change_context(ConnectorError::ResponseDeserializationFailed)?;
+
+    // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
+    let xml_str = if response_str.trim().starts_with('"') {
+        // Try to parse as JSON string first to unwrap the XML
+        serde_json::from_str::<String>(response_str)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?
+    } else {
+        response_str.to_string()
+    };
+
+    Ok(xml_str)
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     PaymentPreAuthenticateV2<T> for Worldpayvantiv<T>
 {
@@ -299,17 +317,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        let response_str = std::str::from_utf8(&res.response)
-            .map_err(|_| ConnectorError::ResponseDeserializationFailed)?;
-
-        // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
-        let xml_str = if response_str.trim().starts_with('"') {
-            // Try to parse as JSON string first
-            serde_json::from_str::<String>(response_str)
-                .map_err(|_| ConnectorError::ResponseDeserializationFailed)?
-        } else {
-            response_str.to_string()
-        };
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .map_err(|_parse_error| ConnectorError::ResponseDeserializationFailed)?;
@@ -362,17 +370,7 @@ macros::create_all_prerequisites!(
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, ConnectorError> {
             // Convert XML responses to JSON format for the macro's JSON parser
-            let response_str = std::str::from_utf8(&bytes)
-                .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
-            // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
-            let xml_str = if response_str.trim().starts_with('"') {
-                // Try to parse as JSON string first to unwrap the XML
-                serde_json::from_str::<String>(response_str)
-                    .change_context(ConnectorError::ResponseDeserializationFailed)?
-            } else {
-                response_str.to_string()
-            };
+            let xml_str = unwrap_json_wrapped_xml(&bytes)?;
 
             // Parse XML to struct, then serialize back to JSON
             if xml_str.trim().starts_with("<?xml") || xml_str.trim().starts_with("<") {
@@ -538,17 +536,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ConnectorError,
     > {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
-        // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
-        let xml_str = if response_str.trim().starts_with('"') {
-            // Try to parse as JSON string first
-            serde_json::from_str::<String>(response_str)
-                .change_context(ConnectorError::ResponseDeserializationFailed)?
-        } else {
-            response_str.to_string()
-        };
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
@@ -617,17 +605,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ConnectorError,
     > {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
-        // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
-        let xml_str = if response_str.trim().starts_with('"') {
-            // Try to parse as JSON string first
-            serde_json::from_str::<String>(response_str)
-                .change_context(ConnectorError::ResponseDeserializationFailed)?
-        } else {
-            response_str.to_string()
-        };
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
@@ -720,17 +698,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ConnectorError,
     > {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
-        // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
-        let xml_str = if response_str.trim().starts_with('"') {
-            // Try to parse as JSON string first
-            serde_json::from_str::<String>(response_str)
-                .change_context(ConnectorError::ResponseDeserializationFailed)?
-        } else {
-            response_str.to_string()
-        };
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
@@ -799,17 +767,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ConnectorError,
     > {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
-        // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
-        let xml_str = if response_str.trim().starts_with('"') {
-            // Try to parse as JSON string first
-            serde_json::from_str::<String>(response_str)
-                .change_context(ConnectorError::ResponseDeserializationFailed)?
-        } else {
-            response_str.to_string()
-        };
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
