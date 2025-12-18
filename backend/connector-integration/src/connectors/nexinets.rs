@@ -409,7 +409,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let meta: nexinets::NexinetsPaymentsMetadata =
-            utils::to_connector_meta(req.request.connector_metadata.clone())?;
+            utils::to_connector_meta(req.request.metadata.clone().map(|secret| secret.expose()))?;
         let order_id = nexinets::get_order_id(&meta)?;
         let transaction_id = nexinets::get_transaction_id(&meta)?;
         Ok(format!(
@@ -521,7 +521,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let meta: nexinets::NexinetsPaymentsMetadata =
-            utils::to_connector_meta(req.request.connector_metadata.clone().map(|secret| secret.expose()))?;
+            utils::to_connector_meta(req.request.metadata.clone().map(|secret| secret.expose()))?;
         let order_id = nexinets::get_order_id(&meta)?;
         let transaction_id = nexinets::get_transaction_id(&meta)?;
         Ok(format!(
@@ -719,14 +719,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
@@ -736,14 +729,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,

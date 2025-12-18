@@ -50,16 +50,13 @@ impl TryFrom<&ConnectorAuthType> for HipayAuthType {
 // Converts a serializable struct into reqwest::multipart::Form
 pub fn build_form_from_struct<T: Serialize>(
     data: T,
-) -> Result<reqwest::multipart::Form, domain_types::errors::ParsingError> {
+) -> Result<reqwest::multipart::Form, errors::ParsingError> {
     let mut form = reqwest::multipart::Form::new();
-    let serialized = serde_json::to_value(&data)
-        .map_err(|_| domain_types::errors::ParsingError::EncodeError("json-value"))?;
-    let serialized_object =
-        serialized
-            .as_object()
-            .ok_or(domain_types::errors::ParsingError::EncodeError(
-                "Expected object",
-            ))?;
+    let serialized =
+        serde_json::to_value(&data).map_err(|_| errors::ParsingError::EncodeError("json-value"))?;
+    let serialized_object = serialized
+        .as_object()
+        .ok_or(errors::ParsingError::EncodeError("Expected object"))?;
     for (key, values) in serialized_object {
         let value = match values {
             serde_json::Value::String(s) => s.clone(),
@@ -302,14 +299,7 @@ pub struct HipayPaymentsRequest {
     pub authentication_indicator: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<
             RouterDataV2<
@@ -500,31 +490,13 @@ pub type HipayRefundResponse = HipayMaintenanceResponse<HipayRefundStatus>;
 pub type HipayPSyncResponse = HipaySyncResponse;
 pub type HipayRSyncResponse = HipayRefundSyncResponse;
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            HipayAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            HipayAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<HipayAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
         let status = AttemptStatus::from(item.response.status.clone());
@@ -589,14 +561,7 @@ pub struct HipayTokenRequest<T: PaymentMethodDataTypes> {
     pub cvc: Secret<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<
             RouterDataV2<
@@ -676,18 +641,7 @@ pub struct HipayTokenResponse {
     pub country: Option<common_enums::CountryAlpha2>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            HipayTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayTokenResponse, Self>>
     for RouterDataV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -697,17 +651,7 @@ impl<T: PaymentMethodDataTypes>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayTokenResponse, Self>) -> Result<Self, Self::Error> {
         use hyperswitch_masking::ExposeInterface;
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse {
@@ -760,22 +704,12 @@ fn get_sync_status(state: i32) -> AttemptStatus {
 
 // Payment Sync Response Implementation
 // Uses HipaySyncResponse enum with v3 API flat structure
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<HipayPSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayPSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Handle sync response - could be Response or Error variant
         match item.response {
             HipaySyncResponse::Response { id, status, .. } => {
@@ -837,14 +771,7 @@ pub struct HipayCaptureRequest {
     pub amount: Option<StringMajorUnit>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -880,22 +807,12 @@ impl<
 
 // Capture Response Implementation
 // Uses HipayMaintenanceResponse<HipayPaymentStatus> with direct enum conversion
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<HipayCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayCaptureResponse, Self>) -> Result<Self, Self::Error> {
         // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
         let status = AttemptStatus::from(item.response.status.clone());
 
@@ -949,14 +866,7 @@ pub struct HipayRefundRequest {
     pub amount: Option<StringMajorUnit>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for HipayRefundRequest
@@ -989,22 +899,12 @@ impl<
 
 // Refund Response Implementation
 // Uses HipayMaintenanceResponse<HipayRefundStatus> with From trait conversion
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<HipayRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayRefundResponse, Self>) -> Result<Self, Self::Error> {
         // Convert HipayRefundStatus enum directly to RefundStatus using From trait
         let refund_status = RefundStatus::from(item.response.status.clone());
 
@@ -1021,22 +921,12 @@ impl
 
 // Refund Sync Response Implementation
 // Uses HipayRefundSyncResponse JSON structure from v3 API
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<HipayRSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayRSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Map numeric status codes to RefundStatus (matching Hyperswitch)
         // Status codes from HiPay API documentation:
         // 24 = Refund Requested (Pending)
@@ -1071,14 +961,7 @@ pub struct HipayVoidRequest {
     pub amount: Option<StringMajorUnit>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1104,22 +987,12 @@ impl<
 
 // Void Response Implementation
 // Uses HipayMaintenanceResponse<HipayPaymentStatus> with direct enum conversion
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<HipayVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayVoidResponse, Self>) -> Result<Self, Self::Error> {
         // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
         let status = AttemptStatus::from(item.response.status.clone());
 

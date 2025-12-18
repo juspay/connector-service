@@ -118,7 +118,7 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
     resource_common_data: &PaymentFlowData,
     capture_method: Option<enums::CaptureMethod>,
     is_mandate: bool,
-) -> Result<requests::PayloadCardsRequestData<T>, Error> {
+) -> Result<PayloadCardsRequestData<T>, Error> {
     if let PaymentMethodData::Card(req_card) = payment_method_data {
         let payload_auth = PayloadAuth::try_from((connector_auth_type, currency))?;
 
@@ -154,7 +154,7 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
             None
         };
 
-        Ok(requests::PayloadCardsRequestData {
+        Ok(PayloadCardsRequestData {
             amount,
             card,
             transaction_types: requests::TransactionTypes::Payment,
@@ -176,14 +176,7 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
 // TryFrom implementations for request bodies
 
 // SetupMandate request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PayloadRouterData<
             RouterDataV2<
@@ -194,7 +187,7 @@ impl<
             >,
             T,
         >,
-    > for requests::PayloadCardsRequestData<T>
+    > for PayloadCardsRequestData<T>
 {
     type Error = Error;
 
@@ -234,14 +227,7 @@ impl<
 }
 
 // Authorize request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PayloadRouterData<
             RouterDataV2<
@@ -252,7 +238,7 @@ impl<
             >,
             T,
         >,
-    > for requests::PayloadPaymentsRequest<T>
+    > for PayloadPaymentsRequest<T>
 {
     type Error = Error;
 
@@ -313,20 +299,13 @@ impl<
 }
 
 // Capture request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PayloadRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
         >,
-    > for requests::PayloadCaptureRequest
+    > for PayloadCaptureRequest
 {
     type Error = Error;
 
@@ -343,20 +322,13 @@ impl<
 }
 
 // Void request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PayloadRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
-    > for requests::PayloadVoidRequest
+    > for PayloadVoidRequest
 {
     type Error = Error;
 
@@ -373,14 +345,7 @@ impl<
 }
 
 // RepeatPayment request - for recurring/mandate payments
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PayloadRouterData<
             RouterDataV2<
@@ -391,7 +356,7 @@ impl<
             >,
             T,
         >,
-    > for requests::PayloadRepeatPaymentRequest<T>
+    > for PayloadRepeatPaymentRequest<T>
 {
     type Error = Error;
 
@@ -450,20 +415,13 @@ impl<
 }
 
 // Refund request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PayloadRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
-    > for requests::PayloadRefundRequest
+    > for PayloadRefundRequest
 {
     type Error = Error;
 
@@ -507,13 +465,13 @@ impl From<responses::PayloadPaymentStatus> for common_enums::AttemptStatus {
 
 // Common function to handle PayloadPaymentsResponse
 fn handle_payment_response<F, T>(
-    response: responses::PayloadPaymentsResponse,
+    response: PayloadPaymentsResponse,
     router_data: RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
     http_code: u16,
     is_mandate_payment: bool,
 ) -> Result<RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>, Error> {
     match response {
-        responses::PayloadPaymentsResponse::PayloadCardsResponse(card_response) => {
+        PayloadPaymentsResponse::PayloadCardsResponse(card_response) => {
             let status = common_enums::AttemptStatus::from(card_response.status);
 
             let mandate_reference = if is_mandate_payment {
@@ -595,38 +553,14 @@ fn handle_payment_response<F, T>(
 }
 
 // Authorize response
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
         handle_payment_response(
@@ -639,25 +573,8 @@ impl<
 }
 
 // SetupMandate response
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
     for RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -668,15 +585,7 @@ impl<
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // SetupMandate is always a mandate payment
         handle_payment_response(item.response, item.router_data, item.http_code, true)
@@ -684,18 +593,7 @@ impl<
 }
 
 // RepeatPayment response - for recurring/mandate payments
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<
-                domain_types::connector_flow::RepeatPayment,
-                PaymentFlowData,
-                domain_types::connector_types::RepeatPaymentData,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
@@ -706,15 +604,7 @@ impl
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<
-                domain_types::connector_flow::RepeatPayment,
-                PaymentFlowData,
-                domain_types::connector_types::RepeatPaymentData,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // RepeatPayment should not return mandate_reference as the mandate already exists
         handle_payment_response(item.response, item.router_data, item.http_code, false)
@@ -722,18 +612,7 @@ impl
 }
 
 // PSync response
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<
-                domain_types::connector_flow::PSync,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentsSyncData,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::PSync,
         PaymentFlowData,
@@ -744,57 +623,33 @@ impl
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<
-                domain_types::connector_flow::PSync,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentsSyncData,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         handle_payment_response(item.response, item.router_data, item.http_code, false)
     }
 }
 
 // Capture response
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         handle_payment_response(item.response, item.router_data, item.http_code, false)
     }
 }
 
 // Void response
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::PayloadPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         handle_payment_response(item.response, item.router_data, item.http_code, false)
     }
@@ -812,21 +667,13 @@ impl From<responses::RefundStatus> for enums::RefundStatus {
 }
 
 // Refund response
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::PayloadRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::PayloadRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<PayloadRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -848,21 +695,13 @@ pub fn parse_webhook_event(
 }
 
 // RSync response
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::PayloadRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::PayloadRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<PayloadRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -877,49 +716,46 @@ impl
 
 // Webhook event transformation
 pub fn get_event_type_from_trigger(
-    trigger: responses::PayloadWebhooksTrigger,
+    trigger: PayloadWebhooksTrigger,
 ) -> domain_types::connector_types::EventType {
     match trigger {
         // Payment Success Events
-        responses::PayloadWebhooksTrigger::Processed => {
+        PayloadWebhooksTrigger::Processed => {
             domain_types::connector_types::EventType::PaymentIntentSuccess
         }
-        responses::PayloadWebhooksTrigger::Authorized => {
+        PayloadWebhooksTrigger::Authorized => {
             domain_types::connector_types::EventType::PaymentIntentAuthorizationSuccess
         }
         // Payment Processing Events
-        responses::PayloadWebhooksTrigger::Payment
-        | responses::PayloadWebhooksTrigger::AutomaticPayment => {
+        PayloadWebhooksTrigger::Payment | PayloadWebhooksTrigger::AutomaticPayment => {
             domain_types::connector_types::EventType::PaymentIntentProcessing
         }
         // Payment Failure Events
-        responses::PayloadWebhooksTrigger::Decline
-        | responses::PayloadWebhooksTrigger::Reject
-        | responses::PayloadWebhooksTrigger::BankAccountReject => {
+        PayloadWebhooksTrigger::Decline
+        | PayloadWebhooksTrigger::Reject
+        | PayloadWebhooksTrigger::BankAccountReject => {
             domain_types::connector_types::EventType::PaymentIntentFailure
         }
-        responses::PayloadWebhooksTrigger::Void | responses::PayloadWebhooksTrigger::Reversal => {
+        PayloadWebhooksTrigger::Void | PayloadWebhooksTrigger::Reversal => {
             domain_types::connector_types::EventType::PaymentIntentCancelled
         }
         // Refund Events
-        responses::PayloadWebhooksTrigger::Refund => {
-            domain_types::connector_types::EventType::RefundSuccess
-        }
+        PayloadWebhooksTrigger::Refund => domain_types::connector_types::EventType::RefundSuccess,
         // Dispute Events
-        responses::PayloadWebhooksTrigger::Chargeback => {
+        PayloadWebhooksTrigger::Chargeback => {
             domain_types::connector_types::EventType::DisputeOpened
         }
-        responses::PayloadWebhooksTrigger::ChargebackReversal => {
+        PayloadWebhooksTrigger::ChargebackReversal => {
             domain_types::connector_types::EventType::DisputeWon
         }
         // Other payment-related events - treat as generic payment processing
-        responses::PayloadWebhooksTrigger::PaymentActivationStatus
-        | responses::PayloadWebhooksTrigger::Credit
-        | responses::PayloadWebhooksTrigger::Deposit
-        | responses::PayloadWebhooksTrigger::PaymentLinkStatus
-        | responses::PayloadWebhooksTrigger::ProcessingStatus
-        | responses::PayloadWebhooksTrigger::TransactionOperation
-        | responses::PayloadWebhooksTrigger::TransactionOperationClear => {
+        PayloadWebhooksTrigger::PaymentActivationStatus
+        | PayloadWebhooksTrigger::Credit
+        | PayloadWebhooksTrigger::Deposit
+        | PayloadWebhooksTrigger::PaymentLinkStatus
+        | PayloadWebhooksTrigger::ProcessingStatus
+        | PayloadWebhooksTrigger::TransactionOperation
+        | PayloadWebhooksTrigger::TransactionOperationClear => {
             domain_types::connector_types::EventType::PaymentIntentProcessing
         }
     }

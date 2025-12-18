@@ -164,6 +164,12 @@ pub use self::nexixpay::Nexixpay;
 pub mod airwallex;
 pub use self::airwallex::Airwallex;
 
+pub mod worldpayxml;
+pub use self::worldpayxml::Worldpayxml;
+
+pub mod tsys;
+pub use self::tsys::Tsys;
+
 pub mod bankofamerica;
 pub use self::bankofamerica::Bankofamerica;
 
@@ -172,6 +178,9 @@ pub use self::powertranz::Powertranz;
 
 pub mod bambora;
 pub use self::bambora::Bambora;
+
+pub mod payme;
+pub use self::payme::Payme;
 
 pub mod revolut;
 pub use self::revolut::Revolut;

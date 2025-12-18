@@ -22,7 +22,7 @@ use domain_types::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -38,7 +38,9 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     CheckoutErrorResponse, PaymentCaptureRequest, PaymentCaptureResponse, PaymentVoidRequest,
-    PaymentVoidResponse, PaymentsRequest, PaymentsResponse, PaymentsResponse as PSyncResponse,
+    PaymentVoidResponse, PaymentsRequest, PaymentsRequest as SetupMandateRequest,
+    PaymentsRequest as RepeatPaymentRequest, PaymentsResponse, PaymentsResponse as PSyncResponse,
+    PaymentsResponse as SetupMandateResponse, PaymentsResponse as RepeatPaymentResponse,
     RSyncResponse, RefundRequest, RefundResponse,
 };
 
@@ -58,243 +60,105 @@ pub(crate) mod headers {
 }
 
 // Type alias for non-generic trait implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::SdkSessionTokenV2 for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Checkout<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::ConnectorServiceTrait<T> for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthorizeV2<T> for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthorizeV2<T> for Checkout<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentSessionToken for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSessionToken for Checkout<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::CreateConnectorCustomer for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentSyncV2 for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentVoidV2 for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundSyncV2 for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundV2 for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentCapture for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::ValidationTrait for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::SetupMandateV2<T> for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::AcceptDispute for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::SubmitEvidenceV2 for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::DisputeDefend for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::IncomingWebhook for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentOrderCreate for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RepeatPaymentV2 for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2 for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentTokenV2<T> for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Checkout<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPreAuthenticateV2<T> for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPreAuthenticateV2<T> for Checkout<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthenticateV2<T> for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthenticateV2<T> for Checkout<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPostAuthenticateV2<T> for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentVoidPostCaptureV2 for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for Checkout<T>
 {
 }
 
@@ -324,6 +188,18 @@ macros::create_all_prerequisites!(
             request_body: PaymentVoidRequest,
             response_body: PaymentVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: SetupMandateRequest<T>,
+            response_body: SetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: RepeatPaymentRequest<T>,
+            response_body: RepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
@@ -368,14 +244,8 @@ macros::create_all_prerequisites!(
     }
 );
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorCommon for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Checkout<T>
 {
     fn id(&self) -> &'static str {
         "checkout"
@@ -388,9 +258,9 @@ impl<
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         let auth = transformers::CheckoutAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("Bearer {}", auth.api_secret.peek()).into_masked(),
@@ -405,7 +275,7 @@ impl<
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: CheckoutErrorResponse = if res.response.is_empty() {
             let (error_codes, error_type) = if res.status_code == 401 {
                 (
@@ -423,7 +293,7 @@ impl<
         } else {
             res.response
                 .parse_struct("ErrorResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
+                .change_context(ConnectorError::ResponseDeserializationFailed)?
         };
 
         with_error_response_body!(event_builder, response);
@@ -469,18 +339,46 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(format!("{}payments", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Checkout,
+    curl_request: Json(RepeatPaymentRequest),
+    curl_response: PaymentsResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}payments", self.connector_base_url_payments(req)))
         }
     }
@@ -496,20 +394,20 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Get,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
             let suffix = match req.request.sync_type {
-                SyncRequestType::MultipleCaptureSync(_) => "/actions",
+                SyncRequestType::MultipleCaptureSync => "/actions",
                 SyncRequestType::SinglePaymentSync => "",
             };
             Ok(format!(
@@ -519,7 +417,7 @@ macros::macro_connector_implementation!(
                 req.request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
+                    .change_context(ConnectorError::MissingConnectorTransactionID)?,
                 suffix
             ))
         }
@@ -537,21 +435,21 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
             let connector_tx_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id.clone(),
-                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
+                _ => return Err(ConnectorError::MissingConnectorTransactionID.into()),
             };
             Ok(format!("{}payments/{}/captures", self.connector_base_url_payments(req), connector_tx_id))
         }
@@ -569,18 +467,18 @@ macros::macro_connector_implementation!(
     flow_response: RefundsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
             let connector_tx_id = &req.request.connector_transaction_id;
             Ok(format!("{}payments/{}/refunds", self.connector_base_url_refunds(req), connector_tx_id))
         }
@@ -597,18 +495,18 @@ macros::macro_connector_implementation!(
     flow_response: RefundsResponseData,
     http_method: Get,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
             let connector_tx_id = &req.request.connector_transaction_id;
             Ok(format!(
                 "{}payments/{}/actions",
@@ -630,49 +528,53 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
             let connector_tx_id = req.request.connector_transaction_id.clone();
             Ok(format!("{}payments/{}/voids", self.connector_base_url_payments(req), connector_tx_id))
         }
     }
 );
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Checkout<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Checkout,
+    curl_request: Json(SetupMandateRequest),
+    curl_response: SetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(format!("{}payments", self.connector_base_url_payments(req)))
+        }
+    }
+);
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
@@ -682,14 +584,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateAccessToken,
         PaymentFlowData,
@@ -699,14 +594,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateConnectorCustomer,
         PaymentFlowData,
@@ -716,14 +604,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateSessionToken,
         PaymentFlowData,
@@ -733,14 +614,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateAccessToken,
         PaymentFlowData,
@@ -750,14 +624,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateConnectorCustomer,
         PaymentFlowData,
@@ -766,51 +633,25 @@ impl<
     > for Checkout<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Checkout<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Checkout<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Checkout<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -820,14 +661,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -837,14 +671,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,
         PaymentFlowData,
@@ -854,14 +681,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         Authenticate,
         PaymentFlowData,
@@ -871,14 +691,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PostAuthenticate,
         PaymentFlowData,
@@ -888,14 +701,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         SdkSessionToken,
         PaymentFlowData,
@@ -906,14 +712,7 @@ impl<
 }
 
 // SourceVerification implementations for all flows
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Authorize,
         PaymentFlowData,
@@ -923,14 +722,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
@@ -940,14 +732,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Capture,
         PaymentFlowData,
@@ -957,14 +742,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Void,
         PaymentFlowData,
@@ -974,14 +752,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Refund,
         RefundFlowData,
@@ -991,14 +762,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RSync,
         RefundFlowData,
@@ -1008,14 +772,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SetupMandate,
         PaymentFlowData,
@@ -1025,14 +782,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
@@ -1042,14 +792,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SubmitEvidence,
         DisputeFlowData,
@@ -1059,14 +802,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         DefendDispute,
         DisputeFlowData,
@@ -1076,14 +812,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
@@ -1093,14 +822,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
@@ -1110,27 +832,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Checkout<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
@@ -1140,14 +842,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PreAuthenticate,
         PaymentFlowData,
@@ -1157,14 +852,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Authenticate,
         PaymentFlowData,
@@ -1174,14 +862,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PostAuthenticate,
         PaymentFlowData,
@@ -1191,14 +872,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SdkSessionToken,
         PaymentFlowData,
@@ -1208,14 +882,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         VoidPC,
         PaymentFlowData,
@@ -1225,14 +892,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         VoidPC,
         PaymentFlowData,
@@ -1242,14 +902,8 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorErrorTypeMapping for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorErrorTypeMapping for Checkout<T>
 {
     fn get_connector_error_type(
         &self,

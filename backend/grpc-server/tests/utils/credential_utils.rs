@@ -317,7 +317,7 @@ fn parse_currency_auth_key_details(
         let currency = currency_str.parse::<Currency>().map_err(|_| {
             CredentialError::InvalidStructure(
                 connector_name.to_string(),
-                format!("Invalid currency: {}", currency_str),
+                format!("Invalid currency: {currency_str}"),
             )
         })?;
 

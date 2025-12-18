@@ -236,7 +236,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let card_data = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             payment_method_data => Err(errors::ConnectorError::NotSupported {
-                message: format!("Payment method {:?}", payment_method_data),
+                message: format!("Payment method {payment_method_data:?}"),
                 connector: "Nexixpay",
             })?,
         };
@@ -449,31 +449,13 @@ impl From<NexixpayPaymentStatus> for AttemptStatus {
 }
 
 // Response transformer implementation
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            NexixpayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            NexixpayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<NexixpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let operation = &item.response.operation;
 
@@ -580,22 +562,12 @@ pub struct NexixpaySyncResponse {
 }
 
 // Response transformer implementation for PSync
-impl
-    TryFrom<
-        ResponseRouterData<
-            NexixpaySyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<NexixpaySyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            NexixpaySyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<NexixpaySyncResponse, Self>) -> Result<Self, Self::Error> {
         // Map operation result to payment status using From trait
         let status = AttemptStatus::from(item.response.operation_result.clone());
 
@@ -663,21 +635,13 @@ pub struct NexixpayCaptureResponse {
     pub operation_time: String,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            NexixpayCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<NexixpayCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            NexixpayCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<NexixpayCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Capture response is minimal - only operationId and time
         // Capture call does not return status in their response, so we return Pending
@@ -784,21 +748,13 @@ pub struct NexixpayRefundResponse {
     pub operation_time: String,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            NexixpayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<NexixpayRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            NexixpayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<NexixpayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // CRITICAL: NexiXPay refund response is minimal (only operationId and time)
         // The response itself does NOT contain a status field
@@ -881,38 +837,12 @@ pub struct NexixpayVoidResponse {
     pub operation_time: String,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            NexixpayVoidResponse,
-            RouterDataV2<
-                domain_types::connector_flow::Void,
-                PaymentFlowData,
-                PaymentVoidData,
-                PaymentsResponseData,
-            >,
-        >,
-    >
-    for RouterDataV2<
-        domain_types::connector_flow::Void,
-        PaymentFlowData,
-        PaymentVoidData,
-        PaymentsResponseData,
-    >
+impl TryFrom<ResponseRouterData<NexixpayVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            NexixpayVoidResponse,
-            RouterDataV2<
-                domain_types::connector_flow::Void,
-                PaymentFlowData,
-                PaymentVoidData,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<NexixpayVoidResponse, Self>) -> Result<Self, Self::Error> {
         // CRITICAL: NexiXPay void response is minimal (only operationId and time)
 
         // Build connector metadata - preserve existing structural data and add void response data
@@ -1031,21 +961,13 @@ impl From<NexixpayRefundResultStatus> for RefundStatus {
 }
 
 // Response transformer implementation for RSync
-impl
-    TryFrom<
-        ResponseRouterData<
-            NexixpayRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<NexixpayRSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            NexixpayRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<NexixpayRSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // CRITICAL: Map operation result to refund status using From trait
         // This addresses reviewer feedback:
@@ -1169,7 +1091,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )? {
             PaymentMethodData::Card(card) => card,
             payment_method_data => Err(errors::ConnectorError::NotSupported {
-                message: format!("Payment method {:?} for 3DS", payment_method_data),
+                message: format!("Payment method {payment_method_data:?} for 3DS"),
                 connector: "Nexixpay",
             })?,
         };
@@ -1298,54 +1220,31 @@ pub struct NexixpayPreAuthenticateResponse {
 }
 
 // PreAuthenticate Response transformer
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            NexixpayPreAuthenticateResponse,
-            RouterDataV2<
-                domain_types::connector_flow::PreAuthenticate,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPreAuthenticateResponse, Self>>
     for RouterDataV2<
-        domain_types::connector_flow::PreAuthenticate,
+        PreAuthenticate,
         PaymentFlowData,
-        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
     >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            NexixpayPreAuthenticateResponse,
-            RouterDataV2<
-                domain_types::connector_flow::PreAuthenticate,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<NexixpayPreAuthenticateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let operation = &response.operation;
 
         // Map status based on operation result
         let status = match &operation.operation_result {
-            NexixpayPaymentStatus::ThreedsValidated => {
-                common_enums::AttemptStatus::AuthenticationSuccessful
-            }
-            NexixpayPaymentStatus::ThreedsFailed => {
-                common_enums::AttemptStatus::AuthenticationFailed
-            }
+            NexixpayPaymentStatus::ThreedsValidated => AttemptStatus::AuthenticationSuccessful,
+            NexixpayPaymentStatus::ThreedsFailed => AttemptStatus::AuthenticationFailed,
             NexixpayPaymentStatus::Declined | NexixpayPaymentStatus::DeniedByRisk => {
-                common_enums::AttemptStatus::AuthenticationFailed
+                AttemptStatus::AuthenticationFailed
             }
             // If 3DS is required, status is AuthenticationPending
-            _ => common_enums::AttemptStatus::AuthenticationPending,
+            _ => AttemptStatus::AuthenticationPending,
         };
 
         // Build connector metadata to store operationId for Authorize (/payment)
@@ -1540,53 +1439,30 @@ pub struct NexixpayThreeDSAuthResult {
 }
 
 // PostAuthenticate Response transformer
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            NexixpayPostAuthenticateResponse,
-            RouterDataV2<
-                domain_types::connector_flow::PostAuthenticate,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPostAuthenticateResponse, Self>>
     for RouterDataV2<
-        domain_types::connector_flow::PostAuthenticate,
+        PostAuthenticate,
         PaymentFlowData,
-        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
     >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            NexixpayPostAuthenticateResponse,
-            RouterDataV2<
-                domain_types::connector_flow::PostAuthenticate,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<NexixpayPostAuthenticateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let operation = &response.operation;
 
         // Map status based on operation result
         let status = match &operation.operation_result {
-            NexixpayPaymentStatus::ThreedsValidated => {
-                common_enums::AttemptStatus::AuthenticationSuccessful
-            }
-            NexixpayPaymentStatus::ThreedsFailed => {
-                common_enums::AttemptStatus::AuthenticationFailed
-            }
+            NexixpayPaymentStatus::ThreedsValidated => AttemptStatus::AuthenticationSuccessful,
+            NexixpayPaymentStatus::ThreedsFailed => AttemptStatus::AuthenticationFailed,
             NexixpayPaymentStatus::Declined | NexixpayPaymentStatus::DeniedByRisk => {
-                common_enums::AttemptStatus::AuthenticationFailed
+                AttemptStatus::AuthenticationFailed
             }
-            _ => common_enums::AttemptStatus::AuthenticationPending,
+            _ => AttemptStatus::AuthenticationPending,
         };
 
         // CRITICAL FIX: Store PaRes in authentication_data.ds_trans_id for Authorize flow
