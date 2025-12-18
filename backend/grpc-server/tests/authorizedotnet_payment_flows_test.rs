@@ -503,6 +503,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         state: None,
         merchant_account_metadata: HashMap::new(),
         payment_method_type: None,
+        customer_id: Some("TEST_CONNECTOR".to_string()),
     }
 }
 

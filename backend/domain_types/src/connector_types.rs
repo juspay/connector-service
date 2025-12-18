@@ -535,6 +535,15 @@ impl PaymentFlowData {
             .and_then(|phone_details| phone_details.get_number_with_country_code().ok())
     }
 
+    pub fn get_optional_shipping_line3(&self) -> Option<Secret<String>> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.line3)
+        })
+    }
+
     pub fn get_description(&self) -> Result<String, Error> {
         self.description
             .clone()
@@ -685,6 +694,17 @@ impl PaymentFlowData {
                     .clone()
                     .address
                     .and_then(|billing_details| billing_details.line2)
+            })
+    }
+
+    pub fn get_optional_billing_line3(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.line3)
             })
     }
 
@@ -2029,6 +2049,7 @@ pub struct RefundsData {
     pub refund_id: String,
     pub connector_transaction_id: String,
     pub connector_refund_id: Option<String>,
+    pub customer_id: Option<String>,
     pub currency: Currency,
     pub payment_amount: i64,
     pub reason: Option<String>,
