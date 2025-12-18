@@ -1,4 +1,9 @@
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
+#[allow(clippy::panic)]
+#[allow(clippy::indexing_slicing)]
+#[allow(clippy::print_stdout)]
 mod tests {
     pub mod authorize {
         use std::{borrow::Cow, marker::PhantomData, str::FromStr};
@@ -31,7 +36,7 @@ mod tests {
                 PaymentsAuthorizeData<DefaultPCIHolder>,
                 PaymentsResponseData,
             > = RouterDataV2 {
-                flow: PhantomData::<domain_types::connector_flow::Authorize>,
+                flow: PhantomData::<Authorize>,
                 resource_common_data: PaymentFlowData {
                     merchant_id: common_utils::id_type::MerchantId::default(),
                     customer_id: None,
@@ -82,6 +87,7 @@ mod tests {
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(
@@ -267,6 +273,7 @@ mod tests {
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Default::default()),

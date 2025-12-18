@@ -265,14 +265,14 @@ impl Deref for NetworkToken {
 impl<'de> Deserialize<'de> for CardNumber {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Self::from_str(&s).map_err(serde::de::Error::custom)
+        Self::from_str(&s).map_err(de::Error::custom)
     }
 }
 
 impl<'de> Deserialize<'de> for NetworkToken {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Self::from_str(&s).map_err(serde::de::Error::custom)
+        Self::from_str(&s).map_err(de::Error::custom)
     }
 }
 
@@ -314,7 +314,7 @@ impl prost::Message for CardNumber {
         if tag == 1 {
             let mut temp_string = String::new();
             prost::encoding::string::merge(wire_type, &mut temp_string, buf, ctx)?;
-            *self = CardNumber(StrongSecret::new(temp_string));
+            *self = Self(StrongSecret::new(temp_string));
             Ok(())
         } else {
             prost::encoding::skip_field(wire_type, tag, buf, ctx)
@@ -330,7 +330,7 @@ impl prost::Message for CardNumber {
     }
 
     fn clear(&mut self) {
-        *self = CardNumber::default();
+        *self = Self::default();
     }
 }
 
@@ -447,7 +447,7 @@ impl TryFrom<u8> for CardExpirationMonth {
 impl<'de> Deserialize<'de> for CardExpirationMonth {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         let month = u8::deserialize(deserializer)?;
         month.try_into().map_err(de::Error::custom)
@@ -485,7 +485,7 @@ impl TryFrom<u16> for CardExpirationYear {
 impl<'de> Deserialize<'de> for CardExpirationYear {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         let year = u16::deserialize(deserializer)?;
         year.try_into().map_err(de::Error::custom)

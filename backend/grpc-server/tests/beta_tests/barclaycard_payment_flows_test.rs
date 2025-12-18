@@ -141,10 +141,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             first_name: Some("John".to_string().into()),
             last_name: Some("Doe".to_string().into()),
             email: Some(TEST_EMAIL.to_string().into()),
-            line1: Some(format!("{} Main St", random_street_num).into()),
+            line1: Some(format!("{random_street_num} Main St").into()),
             city: Some("San Francisco".to_string().into()),
             state: Some("CA".to_string().into()),
-            zip_code: Some(format!("{}", random_zip_suffix).into()),
+            zip_code: Some(format!("{random_zip_suffix}").into()),
             country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
             ..Default::default()
         }),
@@ -190,8 +190,9 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         currency: i32::from(Currency::Usd),
         state: None,
         encoded_data: None,
-        connector_metadata: None,
+        connector_metadata: HashMap::new(),
         setup_future_usage: None,
+        sync_type: None,
     }
 }
 
@@ -308,8 +309,7 @@ async fn test_payment_authorization_auto_capture() {
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
         assert!(
             matches!(status, PaymentStatus::Charged | PaymentStatus::Pending),
-            "Expected Charged or Pending status, got {:?}",
-            status
+            "Expected Charged or Pending status, got {status:?}"
         );
     });
 }
@@ -350,8 +350,7 @@ async fn test_payment_authorization_manual_capture() {
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
         assert!(
             matches!(status, PaymentStatus::Authorized | PaymentStatus::Pending),
-            "Expected Authorized or Pending status after authorization, got {:?}",
-            status
+            "Expected Authorized or Pending status after authorization, got {status:?}"
         );
 
         let capture_request = create_payment_capture_request(&transaction_id, amount);
@@ -370,8 +369,7 @@ async fn test_payment_authorization_manual_capture() {
                 capture_status,
                 PaymentStatus::Charged | PaymentStatus::Pending
             ),
-            "Expected Charged or Pending status after capture, got {:?}",
-            capture_status
+            "Expected Charged or Pending status after capture, got {capture_status:?}"
         );
     });
 }
@@ -435,8 +433,7 @@ async fn test_payment_sync() {
                 sync_status,
                 PaymentStatus::Charged | PaymentStatus::Pending | PaymentStatus::Authorized
             ),
-            "Expected valid payment status, got {:?}",
-            sync_status
+            "Expected valid payment status, got {sync_status:?}"
         );
     });
 }
@@ -477,8 +474,7 @@ async fn test_payment_void() {
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
         assert!(
             matches!(status, PaymentStatus::Authorized | PaymentStatus::Pending),
-            "Expected Authorized or Pending status after authorization, got {:?}",
-            status
+            "Expected Authorized or Pending status after authorization, got {status:?}"
         );
 
         let void_request = create_payment_void_request(&transaction_id, amount);
@@ -498,8 +494,7 @@ async fn test_payment_void() {
         let void_status = PaymentStatus::try_from(void_result.status).unwrap();
         assert!(
             matches!(void_status, PaymentStatus::Voided | PaymentStatus::Pending),
-            "Expected Voided or Pending status after void, got {:?}",
-            void_status
+            "Expected Voided or Pending status after void, got {void_status:?}"
         );
     });
 }
@@ -540,8 +535,7 @@ async fn test_refund() {
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
         assert!(
             matches!(status, PaymentStatus::Charged | PaymentStatus::Pending),
-            "Expected Charged or Pending status, got {:?}",
-            status
+            "Expected Charged or Pending status, got {status:?}"
         );
 
         let refund_amount = amount;
@@ -558,8 +552,7 @@ async fn test_refund() {
                 refund_status,
                 RefundStatus::RefundSuccess | RefundStatus::RefundPending
             ),
-            "Expected RefundSuccess or RefundPending refund status, got {:?}",
-            refund_status
+            "Expected RefundSuccess or RefundPending refund status, got {refund_status:?}"
         );
     });
 }
@@ -636,8 +629,7 @@ async fn test_refund_sync() {
                     refund_sync_status,
                     RefundStatus::RefundSuccess | RefundStatus::RefundPending
                 ),
-                "Expected RefundSuccess or RefundPending refund status in sync, got {:?}",
-                refund_sync_status
+                "Expected RefundSuccess or RefundPending refund status in sync, got {refund_sync_status:?}"
             );
         });
     });

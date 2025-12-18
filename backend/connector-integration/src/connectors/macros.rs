@@ -64,7 +64,7 @@ pub(crate) fn validate_xml_structure(xml_str: &str) -> Result<(), String> {
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Eof) => break,
-            Err(e) => return Err(format!("XML validation failed: {}", e)),
+            Err(e) => return Err(format!("XML validation failed: {e}")),
             _ => {}
         }
         buf.clear();
