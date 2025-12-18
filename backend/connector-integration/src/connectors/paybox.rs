@@ -159,24 +159,35 @@ macros::create_all_prerequisites!(
         ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
             tracing::debug!("Paybox - Raw bytes from connector: {:?}", bytes);
 
-            // Paybox returns URL-encoded response wrapped in a JSON string
-            // First, parse the JSON string to get the URL-encoded content
-            let json_string: String = match serde_json::from_slice(&bytes) {
-                Ok(s) => {
-                    tracing::debug!("Paybox - Successfully unwrapped JSON string");
-                    s
+            // Paybox can return responses in two formats:
+            // 1. JSON-wrapped: {"response": "URLENCODED_DATA"}
+            // 2. Direct URL-encoded: URLENCODED_DATA
+
+            // First, try to parse as JSON-wrapped
+            let url_encoded_string = match serde_json::from_slice::<serde_json::Value>(&bytes) {
+                Ok(json_value) => {
+                    tracing::debug!("Paybox - Successfully parsed as JSON");
+                    // Try to extract the response string from the JSON
+                    if let Some(response_str) = json_value.get("response").and_then(|v| v.as_str()) {
+                        tracing::debug!("Paybox - Extracted URL-encoded string from JSON response field");
+                        response_str.to_string()
+                    } else {
+                        // If no "response" field, treat the entire JSON as the URL-encoded string
+                        tracing::debug!("Paybox - No 'response' field found, using full JSON as URL-encoded string");
+                        json_value.to_string()
+                    }
                 }
-                Err(e) => {
-                    tracing::error!("Paybox - Failed to parse JSON-wrapped response: {:?}", e);
-                    return Err(errors::ConnectorError::ResponseDeserializationFailed)
-                        .attach_printable(format!("Failed to parse JSON-wrapped response from Paybox: {:?}", e));
+                Err(_) => {
+                    // If JSON parsing fails, treat the raw bytes as URL-encoded data
+                    tracing::debug!("Paybox - Failed to parse as JSON, treating raw bytes as URL-encoded data");
+                    String::from_utf8_lossy(&bytes).to_string()
                 }
             };
 
-            tracing::debug!("Paybox - URL-encoded response from Paybox (unwrapped from JSON):\n{}", json_string);
+            tracing::debug!("Paybox - URL-encoded response from Paybox:\n{}", url_encoded_string);
 
             // Decode from ISO-8859-15 to UTF-8
-            let (decoded_str, _, _) = encoding_rs::ISO_8859_15.decode(json_string.as_bytes());
+            let (decoded_str, _, _) = encoding_rs::ISO_8859_15.decode(url_encoded_string.as_bytes());
             let response_str = decoded_str.trim();
 
             tracing::debug!("Paybox - After ISO-8859-15 decode:\n{}", response_str);
