@@ -86,15 +86,15 @@ pub enum GetnetPaymentStatus {
 impl From<&GetnetPaymentStatus> for AttemptStatus {
     fn from(status: &GetnetPaymentStatus) -> Self {
         match status {
-            GetnetPaymentStatus::Approved | GetnetPaymentStatus::Captured => AttemptStatus::Charged,
+            GetnetPaymentStatus::Approved | GetnetPaymentStatus::Captured => Self::Charged,
             GetnetPaymentStatus::Pending
             | GetnetPaymentStatus::Waiting
-            | GetnetPaymentStatus::Authorized => AttemptStatus::Pending,
+            | GetnetPaymentStatus::Authorized => Self::Pending,
             GetnetPaymentStatus::Denied
             | GetnetPaymentStatus::Failed
-            | GetnetPaymentStatus::Error => AttemptStatus::Failure,
-            GetnetPaymentStatus::Canceled | GetnetPaymentStatus::Cancelled => AttemptStatus::Voided,
-            GetnetPaymentStatus::Unknown => AttemptStatus::Pending,
+            | GetnetPaymentStatus::Error => Self::Failure,
+            GetnetPaymentStatus::Canceled | GetnetPaymentStatus::Cancelled => Self::Voided,
+            GetnetPaymentStatus::Unknown => Self::Pending,
         }
     }
 }
@@ -102,12 +102,12 @@ impl From<&GetnetPaymentStatus> for AttemptStatus {
 impl From<&GetnetPaymentStatus> for RefundStatus {
     fn from(status: &GetnetPaymentStatus) -> Self {
         match status {
-            GetnetPaymentStatus::Canceled | GetnetPaymentStatus::Cancelled => RefundStatus::Success,
-            GetnetPaymentStatus::Pending | GetnetPaymentStatus::Waiting => RefundStatus::Pending,
+            GetnetPaymentStatus::Canceled | GetnetPaymentStatus::Cancelled => Self::Success,
+            GetnetPaymentStatus::Pending | GetnetPaymentStatus::Waiting => Self::Pending,
             GetnetPaymentStatus::Denied
             | GetnetPaymentStatus::Failed
-            | GetnetPaymentStatus::Error => RefundStatus::Failure,
-            _ => RefundStatus::Pending,
+            | GetnetPaymentStatus::Error => Self::Failure,
+            _ => Self::Pending,
         }
     }
 }
@@ -148,9 +148,7 @@ pub struct GetnetCard<T: PaymentMethodDataTypes> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<
             RouterDataV2<
@@ -277,33 +275,14 @@ pub struct GetnetAuthorizeResponse {
     pub brand: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            GetnetAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<GetnetAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GetnetAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<GetnetAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(&item.response.status);
 
@@ -334,9 +313,7 @@ pub struct GetnetCaptureRequest {
     pub amount: MinorUnit,
 }
 
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -389,21 +366,13 @@ pub struct GetnetCaptureResponse {
     pub captured_at: Option<String>,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            GetnetCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GetnetCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GetnetCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<GetnetCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(&item.response.status);
 
@@ -459,22 +428,12 @@ pub struct GetnetSyncRecord {
     pub href: Option<String>,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            GetnetSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GetnetSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            GetnetSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<GetnetSyncResponse, Self>) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(&item.response.status);
 
         Ok(Self {
@@ -506,9 +465,7 @@ pub struct GetnetRefundRequest {
     pub payment_method: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for GetnetRefundRequest
@@ -550,22 +507,12 @@ pub struct GetnetRefundResponse {
     pub canceled_at: Option<String>,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            GetnetRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<GetnetRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            GetnetRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<GetnetRefundResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(&item.response.status);
 
         Ok(Self {
@@ -582,21 +529,13 @@ impl
 // ===== RSYNC RESPONSE =====
 pub type GetnetRefundSyncResponse = GetnetSyncResponse;
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            GetnetRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<GetnetRefundSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GetnetRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<GetnetRefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(&item.response.status);
 
@@ -616,9 +555,7 @@ pub struct GetnetAccessTokenRequest {
     pub grant_type: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<
             RouterDataV2<
@@ -659,21 +596,13 @@ pub struct GetnetAccessTokenResponse {
     pub scope: Option<String>,
 }
 
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            GetnetAccessTokenResponse,
-            RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
+impl<F, T> TryFrom<ResponseRouterData<GetnetAccessTokenResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GetnetAccessTokenResponse,
-            RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>,
-        >,
+        item: ResponseRouterData<GetnetAccessTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
@@ -690,9 +619,7 @@ impl<F, T>
 // Getnet uses the same endpoint for both void and refund
 pub type GetnetVoidRequest = GetnetRefundRequest;
 
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -736,22 +663,12 @@ impl<
 // Getnet uses the same endpoint for both void and refund
 pub type GetnetVoidResponse = GetnetRefundResponse;
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            GetnetVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GetnetVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            GetnetVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<GetnetVoidResponse, Self>) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(&item.response.status);
 
         Ok(Self {
