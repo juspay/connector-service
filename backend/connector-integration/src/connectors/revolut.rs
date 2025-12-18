@@ -45,8 +45,7 @@ use transformers::{
     RevolutCaptureRequest, RevolutOrderCreateRequest, RevolutOrderCreateResponse,
     RevolutOrderCreateResponse as RevolutPSyncResponse,
     RevolutOrderCreateResponse as RevolutCaptureResponse, RevolutRefundRequest,
-    RevolutRefundResponse,
-    RevolutRefundResponse as RevolutRSyncResponse,
+    RevolutRefundResponse, RevolutRefundResponse as RevolutRSyncResponse,
 };
 
 pub(crate) mod headers {
@@ -519,30 +518,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-
-
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::ValidationTrait for Revolut<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Revolut<T>
 {
     fn should_do_order_create(&self) -> bool {
         false
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > ConnectorCommon for Revolut<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Revolut<T>
 {
     fn id(&self) -> &'static str {
         "revolut"

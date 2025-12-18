@@ -3,7 +3,8 @@ use domain_types::{
     connector_flow::{Authorize, Capture, PSync, Refund},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
@@ -596,10 +597,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            RevolutOrderCreateResponse,
-            Self,
-        >,
+        item: ResponseRouterData<RevolutOrderCreateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
@@ -643,10 +641,7 @@ impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            RevolutOrderCreateResponse,
-            Self,
-        >,
+        item: ResponseRouterData<RevolutOrderCreateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
@@ -755,8 +750,12 @@ pub struct RevolutRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<RevolutRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for RevolutRefundRequest
+    TryFrom<
+        RevolutRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for RevolutRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -777,21 +776,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-impl<F>
-    TryFrom<
-        ResponseRouterData<
-            RevolutRefundResponse,
-            Self,
-        >,
-    > for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
+impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            RevolutRefundResponse,
-            Self,
-        >,
+        item: ResponseRouterData<RevolutRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
         let status = match response.state {
@@ -813,21 +804,13 @@ impl<F>
     }
 }
 
-impl<F>
-    TryFrom<
-        ResponseRouterData<
-            RevolutRefundResponse,
-            Self,
-        >,
-    > for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            RevolutRefundResponse,
-            Self,
-        >,
+        item: ResponseRouterData<RevolutRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
         let status = match response.state {
