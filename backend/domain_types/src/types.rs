@@ -972,9 +972,9 @@ impl ForeignTryFrom<grpc_api_types::payments::BankHolderType> for common_enums::
             }
             grpc_api_types::payments::BankHolderType::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_BANK_TYPE".to_owned(),
+                    sub_code: "INVALID_BANK_HOLDER_TYPE".to_owned(),
                     error_identifier: 400,
-                    error_message: "Invalid bank type".to_owned(),
+                    error_message: "Invalid bank holder type".to_owned(),
                     error_object: None,
                 }))?
             }
