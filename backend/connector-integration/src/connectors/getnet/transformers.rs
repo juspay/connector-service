@@ -220,8 +220,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 
         let cardholder_name = card_data
             .card_holder_name
-            .as_ref()
-            .map(Clone::clone)
+            .clone()
             .or_else(|| item.resource_common_data.get_optional_billing_full_name())
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "card_holder_name",
@@ -503,7 +502,8 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
         let payment_id = router_data.request.connector_transaction_id.clone();
 
         // Determine payment method based on capture method
-        let payment_method = GetnetPaymentMethod::from_capture_method(router_data.request.capture_method);
+        let payment_method =
+            GetnetPaymentMethod::from_capture_method(router_data.request.capture_method);
 
         Ok(Self {
             idempotency_key: router_data
