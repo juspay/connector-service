@@ -1,5 +1,5 @@
 use crate::{connectors::getnet::GetnetRouterData, types::ResponseRouterData};
-use common_enums::{AttemptStatus, RefundStatus};
+use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{id_type::CustomerId, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
@@ -9,7 +9,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 const PAYMENT_METHOD_CREDIT: &str = "CREDIT";
 const TRANSACTION_TYPE_FULL: &str = "FULL";
 const DEFAULT_INSTALLMENTS: i32 = 1;
+const DEFAULT_CARD_HOLDER_NAME: &str = "Card Holder";
 
 #[derive(Debug, Clone)]
 pub struct GetnetAuthType {
@@ -130,8 +131,8 @@ pub struct GetnetAuthorizeRequest<T: PaymentMethodDataTypes> {
 #[derive(Debug, Serialize)]
 pub struct GetnetPaymentData<T: PaymentMethodDataTypes> {
     pub customer_id: String,
-    pub amount: i64,
-    pub currency: String,
+    pub amount: MinorUnit,
+    pub currency: Currency,
     pub payment: GetnetPayment<T>,
 }
 
@@ -146,7 +147,7 @@ pub struct GetnetPayment<T: PaymentMethodDataTypes> {
 
 #[derive(Debug, Serialize)]
 pub struct GetnetCard<T: PaymentMethodDataTypes> {
-    pub number: Secret<String>,
+    pub number: RawCardNumber<T>,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
     pub cardholder_name: Secret<String>,
@@ -190,13 +191,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             card_data.card_exp_year.clone()
         };
 
+        let cardholder_name = if let Some(ref holder_name) = card_data.card_holder_name {
+            holder_name.clone()
+        } else if let Some(billing_addr) = item.resource_common_data.get_optional_billing() {
+            let first_name = billing_addr
+                .address
+                .as_ref()
+                .and_then(|addr| addr.first_name.as_ref().map(|n| n.peek().clone()))
+                .unwrap_or_default();
+            let last_name = billing_addr
+                .address
+                .as_ref()
+                .and_then(|addr| addr.last_name.as_ref().map(|n| n.peek().clone()))
+                .unwrap_or_default();
+
+            if !first_name.is_empty() || !last_name.is_empty() {
+                Secret::new(format!("{} {}", first_name, last_name).trim().to_string())
+            } else {
+                Secret::new(DEFAULT_CARD_HOLDER_NAME.to_string())
+            }
+        } else {
+            Secret::new(DEFAULT_CARD_HOLDER_NAME.to_string())
+        };
+
         let card = GetnetCard {
-            number: Secret::new(card_data.card_number.peek().to_string()),
+            number: card_data.card_number.clone(),
             expiration_month: card_data.card_exp_month.clone(),
             expiration_year,
-            cardholder_name: item
-                .resource_common_data
-                .get_billing_full_name()?,
+            cardholder_name,
             security_code: card_data.card_cvc.clone(),
             _phantom: std::marker::PhantomData,
         };
@@ -218,8 +240,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let data = GetnetPaymentData {
             customer_id,
-            amount: item.request.minor_amount.get_amount_as_i64(),
-            currency: item.request.currency.to_string(),
+            amount: item.request.minor_amount,
+            currency: item.request.currency,
             payment,
         };
 
@@ -241,8 +263,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 pub struct GetnetAuthorizeResponse {
     pub payment_id: String,
     pub order_id: Option<String>,
-    pub amount: Option<i64>,
-    pub currency: Option<String>,
+    pub amount: MinorUnit,
+    pub currency: Option<Currency>,
     pub status: GetnetPaymentStatus,
     pub payment_method: Option<String>,
     pub received_at: Option<String>,
@@ -305,7 +327,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 pub struct GetnetCaptureRequest {
     pub idempotency_key: String,
     pub payment_id: String,
-    pub amount: i64,
+    pub amount: MinorUnit,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
@@ -334,13 +356,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let capture_amount = router_data.request.amount_to_capture;
 
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(MinorUnit::new(capture_amount), router_data.request.currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailedWithReason(
-                "Amount conversion failed".to_string(),
-            ))?;
+        let capture_amount_minor = MinorUnit::new(capture_amount);
 
         Ok(Self {
             idempotency_key: router_data
@@ -348,7 +364,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 .connector_request_reference_id
                 .clone(),
             payment_id,
-            amount: amount.get_amount_as_i64(),
+            amount: capture_amount_minor,
         })
     }
 }
@@ -359,8 +375,8 @@ pub struct GetnetCaptureResponse {
     pub seller_id: Option<String>,
     pub payment_id: String,
     pub order_id: Option<String>,
-    pub amount: Option<i64>,
-    pub currency: Option<String>,
+    pub amount: MinorUnit,
+    pub currency: Option<Currency>,
     pub status: GetnetPaymentStatus,
     pub reason_code: Option<String>,
     pub reason_message: Option<String>,
@@ -482,7 +498,7 @@ impl TryFrom<
 pub struct GetnetRefundRequest {
     pub idempotency_key: String,
     pub payment_id: String,
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub payment_method: String,
 }
 
@@ -505,15 +521,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let router_data = &item.router_data;
 
         let payment_id = router_data.request.connector_transaction_id.clone();
-        let refund_amount = router_data.request.minor_refund_amount;
-
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(refund_amount, router_data.request.currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailedWithReason(
-                "Amount conversion failed".to_string(),
-            ))?;
 
         Ok(Self {
             idempotency_key: router_data
@@ -521,7 +528,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 .connector_request_reference_id
                 .clone(),
             payment_id,
-            amount: amount.get_amount_as_i64(),
+            amount: router_data.request.minor_refund_amount,
             payment_method: PAYMENT_METHOD_CREDIT.to_string(),
         })
     }
@@ -533,7 +540,7 @@ pub struct GetnetRefundResponse {
     pub seller_id: Option<String>,
     pub payment_id: String,
     pub order_id: Option<String>,
-    pub amount: Option<i64>,
+    pub amount: MinorUnit,
     pub status: GetnetPaymentStatus,
     pub reason_code: Option<String>,
     pub reason_message: Option<String>,
@@ -703,28 +710,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 field_name: "amount",
             })?;
 
-        let currency = router_data
-            .request
-            .currency
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "currency",
-            })?;
-
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(void_amount, currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailedWithReason(
-                "Amount conversion failed".to_string(),
-            ))?;
-
         Ok(Self {
             idempotency_key: router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
             payment_id,
-            amount: amount.get_amount_as_i64(),
+            amount: void_amount,
             payment_method: PAYMENT_METHOD_CREDIT.to_string(),
         })
     }
