@@ -1,6 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
-use common_utils::{pii, types::MinorUnit};
+use common_utils::{pii, request::Method, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
@@ -19,6 +19,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 // Import the connector's RouterData wrapper type created by the macro
 use super::Shift4RouterData;
@@ -367,10 +368,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsRespons
             .flow
             .as_ref()
             .and_then(|flow| flow.redirect.as_ref())
-            .map(|redirect| {
-                Box::new(RedirectForm::Uri {
-                    uri: redirect.redirect_url.clone(),
-                })
+            .and_then(|redirect| {
+                Url::parse(&redirect.redirect_url)
+                    .ok()
+                    .map(|url| Box::new(RedirectForm::from((url, Method::Get))))
             });
 
         Ok(Self {
