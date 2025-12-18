@@ -178,22 +178,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
                 .unwrap_or_else(|| "rtpGrp".to_string());
 
-        let bill_to_address = get_billing_address(
-            &item
-                .router_data
-                .resource_common_data
-                .address
-                .get_payment_method_billing()
-                .cloned(),
-        );
-        let ship_to_address = get_shipping_address(
-            &item
-                .router_data
-                .resource_common_data
-                .address
-                .get_shipping()
-                .cloned(),
-        );
+        let bill_to_address = get_billing_address(&item.router_data.resource_common_data);
+        let ship_to_address = get_shipping_address(&item.router_data.resource_common_data);
 
         let (authorization, sale) =
             if item.router_data.request.is_auto_capture()? && amount != MinorUnit::zero() {
@@ -1681,82 +1667,48 @@ fn determine_google_pay_card_type(
     }
 }
 
-fn get_billing_address(
-    billing_address: &Option<domain_types::payment_address::Address>,
-) -> Option<BillToAddress> {
-    billing_address.as_ref().map(|addr| BillToAddress {
-        name: addr.get_optional_full_name(),
-        company: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.first_name.as_ref().map(|f| f.peek().to_string())),
-        address_line1: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line1.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        address_line2: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line2.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        address_line3: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line3.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        city: addr.address.as_ref().and_then(|a| a.city.clone()),
-        state: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.state.as_ref().map(|s| Secret::new(s.peek().to_string()))),
-        zip: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.zip.as_ref().map(|z| Secret::new(z.peek().to_string()))),
-        country: addr.address.as_ref().and_then(|a| a.country),
-        email: addr.email.clone(),
-        phone: addr
-            .phone
-            .as_ref()
-            .and_then(|p| p.number.as_ref().map(|n| Secret::new(n.peek().to_string()))),
-    })
+fn get_billing_address(resource_data: &PaymentFlowData) -> Option<BillToAddress> {
+    resource_data
+        .get_optional_billing()
+        .and_then(|billing_address| {
+            billing_address.address.clone().map(|_| BillToAddress {
+                name: resource_data.get_optional_billing_full_name(),
+                company: resource_data
+                    .get_optional_billing_first_name()
+                    .map(|f| f.expose()),
+                address_line1: resource_data.get_optional_billing_line1(),
+                address_line2: resource_data.get_optional_billing_line2(),
+                address_line3: resource_data.get_optional_billing_line3(),
+                city: resource_data.get_optional_billing_city(),
+                state: resource_data.get_optional_billing_state(),
+                zip: resource_data.get_optional_billing_zip(),
+                country: resource_data.get_optional_billing_country(),
+                email: resource_data.get_optional_billing_email(),
+                phone: resource_data.get_optional_billing_phone_number(),
+            })
+        })
 }
 
-fn get_shipping_address(
-    shipping_address: &Option<domain_types::payment_address::Address>,
-) -> Option<ShipToAddress> {
-    shipping_address.as_ref().map(|addr| ShipToAddress {
-        name: addr.get_optional_full_name(),
-        company: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.first_name.as_ref().map(|f| f.peek().to_string())),
-        address_line1: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line1.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        address_line2: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line2.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        address_line3: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line3.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        city: addr.address.as_ref().and_then(|a| a.city.clone()),
-        state: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.state.as_ref().map(|s| Secret::new(s.peek().to_string()))),
-        zip: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.zip.as_ref().map(|z| Secret::new(z.peek().to_string()))),
-        country: addr.address.as_ref().and_then(|a| a.country),
-        email: addr.email.clone(),
-        phone: addr
-            .phone
-            .as_ref()
-            .and_then(|p| p.number.as_ref().map(|n| Secret::new(n.peek().to_string()))),
-    })
+fn get_shipping_address(resource_data: &PaymentFlowData) -> Option<ShipToAddress> {
+    resource_data
+        .get_optional_shipping()
+        .and_then(|shipping_address| {
+            shipping_address.address.clone().map(|_| ShipToAddress {
+                name: resource_data.get_optional_shipping_full_name(),
+                company: resource_data
+                    .get_optional_shipping_first_name()
+                    .map(|f| f.expose()),
+                address_line1: resource_data.get_optional_shipping_line1(),
+                address_line2: resource_data.get_optional_shipping_line2(),
+                address_line3: resource_data.get_optional_shipping_line3(),
+                city: resource_data.get_optional_shipping_city(),
+                state: resource_data.get_optional_shipping_state(),
+                zip: resource_data.get_optional_shipping_zip(),
+                country: resource_data.get_optional_shipping_country(),
+                email: resource_data.get_optional_shipping_email(),
+                phone: resource_data.get_optional_shipping_phone_number(),
+            })
+        })
 }
 
 fn get_valid_transaction_id(
