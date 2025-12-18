@@ -16,11 +16,37 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
-const PAYMENT_METHOD_CREDIT: &str = "CREDIT";
 const TRANSACTION_TYPE_FULL: &str = "FULL";
 const DEFAULT_INSTALLMENTS: i32 = 1;
-const DEFAULT_CARD_HOLDER_NAME: &str = "Card Holder";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GetnetPaymentMethod {
+    #[serde(rename = "CREDIT")]
+    DirectCredit,
+    #[serde(rename = "CREDIT_AUTHORIZATION")]
+    DirectCreditAuthorization,
+}
+
+impl fmt::Display for GetnetPaymentMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DirectCredit => write!(f, "CREDIT"),
+            Self::DirectCreditAuthorization => write!(f, "CREDIT_AUTHORIZATION"),
+        }
+    }
+}
+
+impl GetnetPaymentMethod {
+    /// Determine payment method based on capture method
+    fn from_capture_method(capture_method: Option<common_enums::CaptureMethod>) -> Self {
+        match capture_method {
+            Some(common_enums::CaptureMethod::Manual) => Self::DirectCreditAuthorization,
+            _ => Self::DirectCredit,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct GetnetAuthType {
@@ -144,11 +170,9 @@ pub struct GetnetCard<T: PaymentMethodDataTypes> {
     pub expiration_year: Secret<String>,
     pub cardholder_name: Secret<String>,
     pub security_code: Secret<String>,
-    #[serde(skip)]
-    _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<
             RouterDataV2<
@@ -178,9 +202,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let card_data = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Payment method not supported".to_string(),
-                )
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Payment method not supported".to_string(),
+                    connector: "Getnet",
+                }
                 .into())
             }
         };
@@ -193,28 +218,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             card_data.card_exp_year.clone()
         };
 
-        let cardholder_name = if let Some(ref holder_name) = card_data.card_holder_name {
-            holder_name.clone()
-        } else if let Some(billing_addr) = item.resource_common_data.get_optional_billing() {
-            let first_name = billing_addr
-                .address
-                .as_ref()
-                .and_then(|addr| addr.first_name.as_ref().map(|n| n.peek().clone()))
-                .unwrap_or_default();
-            let last_name = billing_addr
-                .address
-                .as_ref()
-                .and_then(|addr| addr.last_name.as_ref().map(|n| n.peek().clone()))
-                .unwrap_or_default();
-
-            if !first_name.is_empty() || !last_name.is_empty() {
-                Secret::new(format!("{} {}", first_name, last_name).trim().to_string())
-            } else {
-                Secret::new(DEFAULT_CARD_HOLDER_NAME.to_string())
-            }
-        } else {
-            Secret::new(DEFAULT_CARD_HOLDER_NAME.to_string())
-        };
+        let cardholder_name = card_data
+            .card_holder_name
+            .as_ref()
+            .map(Clone::clone)
+            .or_else(|| item.resource_common_data.get_optional_billing_full_name())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "card_holder_name",
+            })?;
 
         let card = GetnetCard {
             number: card_data.card_number.clone(),
@@ -222,12 +233,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             expiration_year,
             cardholder_name,
             security_code: card_data.card_cvc.clone(),
-            _phantom: std::marker::PhantomData,
         };
+
+        // Determine payment method based on capture method
+        let payment_method = GetnetPaymentMethod::from_capture_method(item.request.capture_method);
 
         let payment = GetnetPayment {
             payment_id: uuid::Uuid::new_v4().to_string(),
-            payment_method: PAYMENT_METHOD_CREDIT.to_string(),
+            payment_method: payment_method.to_string(),
             transaction_type: TRANSACTION_TYPE_FULL.to_string(),
             number_installments: DEFAULT_INSTALLMENTS,
             card,
@@ -275,7 +288,7 @@ pub struct GetnetAuthorizeResponse {
     pub brand: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<GetnetAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -284,6 +297,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: ResponseRouterData<GetnetAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
+        // Getnet returns status in the response - use it directly
+        // The status mapping already handles both manual and automatic capture correctly:
+        // - Authorized/Captured/Approved -> Charged (for automatic capture)
+        // - Authorized/Pending -> Pending (for manual capture)
+        // - Denied/Failed/Error -> Failure
         let status = AttemptStatus::from(&item.response.status);
 
         Ok(Self {
@@ -313,7 +331,7 @@ pub struct GetnetCaptureRequest {
     pub amount: MinorUnit,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -408,15 +426,17 @@ pub struct GetnetSyncResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetnetSyncPaymentDetails {
-    pub payment_method: Option<String>,
-    pub transaction_type: Option<String>,
-    pub card: Option<GetnetSyncCardDetails>,
+    pub payment_method: String,
+    pub transaction_type: String,
+    pub card: GetnetSyncCardDetails,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetnetSyncCardDetails {
-    pub number: Option<String>,
-    pub brand: Option<String>,
+    pub number: String,
+    pub brand: String,
+    pub expiration_year: String,
+    pub expiration_month: String,
     pub cardholder_name: Option<String>,
 }
 
@@ -465,7 +485,7 @@ pub struct GetnetRefundRequest {
     pub payment_method: String,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for GetnetRefundRequest
@@ -482,6 +502,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let payment_id = router_data.request.connector_transaction_id.clone();
 
+        // Determine payment method based on capture method
+        let payment_method = GetnetPaymentMethod::from_capture_method(router_data.request.capture_method);
+
         Ok(Self {
             idempotency_key: router_data
                 .resource_common_data
@@ -489,7 +512,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             payment_id,
             amount: router_data.request.minor_refund_amount,
-            payment_method: PAYMENT_METHOD_CREDIT.to_string(),
+            payment_method: payment_method.to_string(),
         })
     }
 }
@@ -555,7 +578,7 @@ pub struct GetnetAccessTokenRequest {
     pub grant_type: String,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<
             RouterDataV2<
@@ -619,7 +642,7 @@ impl<F, T> TryFrom<ResponseRouterData<GetnetAccessTokenResponse, Self>>
 // Getnet uses the same endpoint for both void and refund
 pub type GetnetVoidRequest = GetnetRefundRequest;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -654,7 +677,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             payment_id,
             amount: void_amount,
-            payment_method: PAYMENT_METHOD_CREDIT.to_string(),
+            payment_method: GetnetPaymentMethod::DirectCreditAuthorization.to_string(),
         })
     }
 }

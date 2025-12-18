@@ -239,7 +239,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into(),
+                    format!("Bearer {access_token}").into(),
                 ),
                 (
                     headers::CONTENT_TYPE.to_string(),
@@ -542,7 +542,7 @@ macros::macro_connector_implementation!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Basic {}", encoded_auth).into_masked(),
+                    format!("Basic {encoded_auth}").into_masked(),
                 ),
             ])
         }
