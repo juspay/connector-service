@@ -46,7 +46,9 @@ impl GetRequestIncrementalAuthorization for PaymentsSyncData {
     }
 }
 
-impl GetRequestIncrementalAuthorization for RepeatPaymentData {
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize>
+    GetRequestIncrementalAuthorization for RepeatPaymentData<T> 
+{
     fn get_request_incremental_authorization(&self) -> Option<bool> {
         None
     }
@@ -149,7 +151,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         &PaypalRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     > for OrderRequestAmount
@@ -157,7 +159,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: &PaypalRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -284,7 +286,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         &PaypalRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     > for ItemDetails
@@ -292,7 +294,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: &PaypalRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -627,8 +629,8 @@ pub type PaypalRepeatPaymentRequest<T> = PaypalPaymentsRequest<T>;
 pub type PaypalRepeatPaymentResponse = PaypalAuthResponse;
 
 // Response handling for RepeatPayment - delegates to PaypalOrdersResponse
-impl TryFrom<ResponseRouterData<PaypalAuthResponse, Self>>
-    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize> TryFrom<ResponseRouterData<PaypalAuthResponse, Self>>
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<PaypalAuthResponse, Self>) -> Result<Self, Self::Error> {
@@ -2568,7 +2570,7 @@ impl TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PaypalRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     > for PaypalPaymentsRequest<T>
@@ -2577,7 +2579,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: PaypalRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {

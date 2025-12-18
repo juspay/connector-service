@@ -1081,7 +1081,7 @@ pub struct PaymentRequestBankTransfer {
 pub struct PaymentRequestNetworkToken {
     pub amount: StringMajorUnit,
     pub currency: enums::Currency,
-    pub pan: NetworkTokenNumber,
+    pub pan: cards::CardNumber,
     #[serde(rename = "exp")]
     pub expiry_date: Secret<String>,
     #[serde(rename = "RedirectUrl")]

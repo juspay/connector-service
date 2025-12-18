@@ -2211,7 +2211,7 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct RepeatPaymentData {
+pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub mandate_reference: MandateReferenceId,
     pub amount: i64,
     pub minor_amount: MinorUnit,
@@ -2233,9 +2233,10 @@ pub struct RepeatPaymentData {
     pub mit_category: Option<common_enums::MitCategory>,
     pub enable_partial_authorization: Option<bool>,
     pub billing_descriptor: Option<BillingDescriptor>,
+    pub payment_method_data: PaymentMethodData<T>,
 }
 
-impl RepeatPaymentData {
+impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
     pub fn get_mandate_reference(&self) -> &MandateReferenceId {
         &self.mandate_reference
     }
@@ -2274,6 +2275,15 @@ impl RepeatPaymentData {
                 .ip_address
                 .map(|ip| Secret::new(ip.to_string()))
         })
+    }
+    pub fn connector_mandate_id(&self) -> Option<String> {
+        match &self.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => {
+                connector_mandate_ids.get_connector_mandate_id()
+            }
+            MandateReferenceId::NetworkMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => None,
+        }
     }
 }
 

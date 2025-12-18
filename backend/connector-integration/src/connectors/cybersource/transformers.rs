@@ -652,7 +652,7 @@ pub struct CaptureOptions {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkTokenizedCard {
-    number: NetworkTokenNumber,
+    number: cards::CardNumber,
     expiration_month: Secret<String>,
     expiration_year: Secret<String>,
     cryptogram: Option<Secret<String>>,
@@ -926,14 +926,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     From<
         &CybersourceRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     > for ClientReferenceInformation
 {
     fn from(
         item: &CybersourceRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Self {
@@ -3672,8 +3672,8 @@ impl<F> TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -4286,7 +4286,7 @@ pub enum RepeatPaymentInformation {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     > for CybersourceRepeatPaymentRequest
@@ -4294,7 +4294,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CybersourceRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -4383,7 +4383,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
         Option<BillTo>,
@@ -4397,7 +4397,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 RouterDataV2<
                     RepeatPayment,
                     PaymentFlowData,
-                    RepeatPaymentData,
+                    RepeatPaymentData<T>,
                     PaymentsResponseData,
                 >,
                 T,
@@ -4426,7 +4426,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
         Option<PaymentSolution>,
@@ -4440,7 +4440,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 RouterDataV2<
                     RepeatPayment,
                     PaymentFlowData,
-                    RepeatPaymentData,
+                    RepeatPaymentData<T>,
                     PaymentsResponseData,
                 >,
                 T,

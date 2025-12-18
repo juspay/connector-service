@@ -287,7 +287,7 @@ pub struct PazeDecryptedData {
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeToken {
-    pub payment_token: NetworkTokenNumber,
+    pub payment_token: cards::CardNumber,
     pub token_expiration_month: Secret<String>,
     pub token_expiration_year: Secret<String>,
     pub payment_account_reference: Secret<String>,

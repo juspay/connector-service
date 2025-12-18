@@ -46,7 +46,9 @@ impl GetCaptureMethod for PaymentsSyncData {
     }
 }
 
-impl GetCaptureMethod for RepeatPaymentData {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> GetCaptureMethod 
+    for RepeatPaymentData<T> 
+{
     fn get_capture_method(&self) -> Option<common_enums::CaptureMethod> {
         self.capture_method
     }
@@ -524,7 +526,7 @@ pub struct AciNetworkTokenData {
     #[serde(rename = "tokenAccount.type")]
     pub token_type: AciTokenAccountType,
     #[serde(rename = "tokenAccount.number")]
-    pub token_number: NetworkTokenNumber,
+    pub token_number: cards::CardNumber,
     #[serde(rename = "tokenAccount.expiryMonth")]
     pub token_expiry_month: Secret<String>,
     #[serde(rename = "tokenAccount.expiryYear")]
@@ -1891,7 +1893,7 @@ pub struct AciRepeatPaymentRequest<
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AciRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     > for AciRepeatPaymentRequest<T>
@@ -1899,7 +1901,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = Error;
     fn try_from(
         item: AciRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
