@@ -67,13 +67,15 @@ pub(crate) mod headers {
 /// Some responses might come as a JSON string containing XML, this function handles that case
 fn unwrap_json_wrapped_xml(response_bytes: &[u8]) -> CustomResult<String, ConnectorError> {
     let response_str = std::str::from_utf8(response_bytes)
-        .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        .change_context(ConnectorError::ResponseDeserializationFailed)
+        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
     // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
     let xml_str = if response_str.trim().starts_with('"') {
         // Try to parse as JSON string first to unwrap the XML
         serde_json::from_str::<String>(response_str)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?
+            .change_context(ConnectorError::ResponseDeserializationFailed)
+            .attach_printable("Failed to parse JSON-wrapped XML response")?
     } else {
         response_str.to_string()
     };
