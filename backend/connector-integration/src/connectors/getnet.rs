@@ -8,7 +8,7 @@ use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PostAuthenticate, PaymentMethodToken,
+        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
         PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
         SubmitEvidence, Void, VoidPC,
     },
@@ -26,7 +26,7 @@ use domain_types::{
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ErrorResponse},
+    router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -53,7 +53,6 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const X_TRANSACTION_CHANNEL_ENTRY: &str = "x-transaction-channel-entry";
 }
-
 
 const TRANSACTION_CHANNEL_ENTRY_DEFAULT: &str = "XX";
 
@@ -126,7 +125,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Getnet<T>
 {
 }
-
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SdkSessionTokenV2 for Getnet<T>
@@ -472,7 +470,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         VoidPC,
@@ -613,7 +610,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     for Getnet<T>
 {
 }
-
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -825,7 +821,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateAccessToken,
@@ -885,4 +880,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Getnet<T>
 {
 }
-

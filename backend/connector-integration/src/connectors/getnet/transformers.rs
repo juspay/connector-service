@@ -4,8 +4,8 @@ use common_utils::{id_type::CustomerId, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, PaymentVoidData,
+        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
@@ -38,18 +38,14 @@ impl TryFrom<&ConnectorAuthType> for GetnetAuthType {
                 api_key,
                 key1,
                 api_secret,
-            } => {
-                Ok(Self {
-                    api_key: api_key.to_owned(),
-                    api_secret: api_secret.to_owned(),
-                    seller_id: key1.to_owned(),
-                })
-            },
-            _other => {
-                Err(error_stack::report!(
-                    errors::ConnectorError::FailedToObtainAuthType
-                ))
-            }
+            } => Ok(Self {
+                api_key: api_key.to_owned(),
+                api_secret: api_secret.to_owned(),
+                seller_id: key1.to_owned(),
+            }),
+            _other => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -90,18 +86,14 @@ pub enum GetnetPaymentStatus {
 impl From<&GetnetPaymentStatus> for AttemptStatus {
     fn from(status: &GetnetPaymentStatus) -> Self {
         match status {
-            GetnetPaymentStatus::Approved | GetnetPaymentStatus::Captured => {
-                AttemptStatus::Charged
-            }
+            GetnetPaymentStatus::Approved | GetnetPaymentStatus::Captured => AttemptStatus::Charged,
             GetnetPaymentStatus::Pending
             | GetnetPaymentStatus::Waiting
             | GetnetPaymentStatus::Authorized => AttemptStatus::Pending,
             GetnetPaymentStatus::Denied
             | GetnetPaymentStatus::Failed
             | GetnetPaymentStatus::Error => AttemptStatus::Failure,
-            GetnetPaymentStatus::Canceled | GetnetPaymentStatus::Cancelled => {
-                AttemptStatus::Voided
-            }
+            GetnetPaymentStatus::Canceled | GetnetPaymentStatus::Cancelled => AttemptStatus::Voided,
             GetnetPaymentStatus::Unknown => AttemptStatus::Pending,
         }
     }
@@ -156,10 +148,22 @@ pub struct GetnetCard<T: PaymentMethodDataTypes> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         GetnetRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for GetnetAuthorizeRequest<T>
@@ -168,7 +172,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
     fn try_from(
         wrapper: GetnetRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -273,7 +282,14 @@ pub struct GetnetAuthorizeResponse {
     pub brand: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         ResponseRouterData<
             GetnetAuthorizeResponse,
@@ -303,9 +319,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.payment_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.payment_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -330,7 +344,14 @@ pub struct GetnetCaptureRequest {
     pub amount: MinorUnit,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         GetnetRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -383,7 +404,8 @@ pub struct GetnetCaptureResponse {
     pub captured_at: Option<String>,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             GetnetCaptureResponse,
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -402,9 +424,7 @@ impl TryFrom<
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.payment_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.payment_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -454,7 +474,8 @@ pub struct GetnetSyncRecord {
     pub href: Option<String>,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             GetnetSyncResponse,
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -473,9 +494,7 @@ impl TryFrom<
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.payment_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.payment_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -502,12 +521,16 @@ pub struct GetnetRefundRequest {
     pub payment_method: String,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
-        GetnetRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        GetnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for GetnetRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -547,7 +570,8 @@ pub struct GetnetRefundResponse {
     pub canceled_at: Option<String>,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             GetnetRefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -578,7 +602,8 @@ impl TryFrom<
 // ===== RSYNC RESPONSE =====
 pub type GetnetRefundSyncResponse = GetnetSyncResponse;
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             GetnetRefundSyncResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -611,7 +636,14 @@ pub struct GetnetAccessTokenRequest {
     pub grant_type: String,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         GetnetRouterData<
             RouterDataV2<
@@ -683,7 +715,14 @@ impl<F, T>
 // Getnet uses the same endpoint for both void and refund
 pub type GetnetVoidRequest = GetnetRefundRequest;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         GetnetRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -703,12 +742,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let payment_id = router_data.request.connector_transaction_id.clone();
 
-        let void_amount = router_data
-            .request
-            .amount
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "amount",
-            })?;
+        let void_amount =
+            router_data
+                .request
+                .amount
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                })?;
 
         Ok(Self {
             idempotency_key: router_data
@@ -726,7 +766,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 // Getnet uses the same endpoint for both void and refund
 pub type GetnetVoidResponse = GetnetRefundResponse;
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             GetnetVoidResponse,
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -745,9 +786,7 @@ impl TryFrom<
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.payment_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.payment_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
