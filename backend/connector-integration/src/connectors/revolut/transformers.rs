@@ -769,8 +769,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(Self {
             amount: router_data.request.minor_refund_amount,
             currency: router_data.request.currency.to_string(),
-            merchant_order_data: None,
-            metadata: None,
+            merchant_order_data: router_data
+                .request
+                .connector_metadata
+                .as_ref()
+                .and_then(|m| {
+                    m.get("merchant_reference")
+                        .and_then(|v| v.as_str())
+                        .map(|reference| RevolutMerchantOrderData {
+                            reference: Some(reference.to_string()),
+                            url: None,
+                        })
+                }),
+            metadata: router_data.request.connector_metadata.clone(),
             description: router_data.request.reason.clone(),
         })
     }
