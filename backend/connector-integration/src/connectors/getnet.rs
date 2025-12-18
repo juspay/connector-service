@@ -51,26 +51,17 @@ use crate::with_error_response_body;
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
-    pub(crate) const X_SELLER_ID: &str = "x-seller-id";
     pub(crate) const X_TRANSACTION_CHANNEL_ENTRY: &str = "x-transaction-channel-entry";
 }
 
-/// Transaction channel entry code for API requests
-/// XX = Default channel for digital platform payments as per Getnet API specification
+
 const TRANSACTION_CHANNEL_ENTRY_DEFAULT: &str = "XX";
 
-// ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Getnet<T>
 {
-    // PaymentTokenV2 implementation removed as tokenization flow is no longer supported
-    // The trait bound is satisfied by implementing PaymentTokenV2 separately
 }
 
-
-// ===== PAYMENT TOKENIZATION TRAIT IMPLEMENTATION =====
-
-// ===== PAYMENT FLOW TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Getnet<T>
 {
@@ -96,7 +87,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== REFUND FLOW TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Getnet<T>
 {
@@ -107,7 +97,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== ADVANCED FLOW TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Getnet<T>
 {
@@ -144,7 +133,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== AUTHENTICATION FLOW TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentPreAuthenticateV2<T> for Getnet<T>
 {
@@ -160,7 +148,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== DISPUTE FLOW TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::AcceptDispute for Getnet<T>
 {
@@ -176,13 +163,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== WEBHOOK TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Getnet<T>
 {
 }
 
-// ===== VALIDATION TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Getnet<T>
 {
@@ -191,13 +176,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-// ===== CONNECTOR CUSTOMER TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::CreateConnectorCustomer for Getnet<T>
 {
 }
 
-// ===== MACRO-BASED CONNECTOR SETUP =====
 macros::create_all_prerequisites!(
     connector_name: Getnet,
     generic_type: T,
@@ -250,54 +233,25 @@ macros::create_all_prerequisites!(
         pub fn build_headers(
             &self,
             access_token: &str,
-            seller_id: &str,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            Ok(vec![
+        ) -> Vec<(String, Maskable<String>)> {
+            vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
                     "application/json".to_string().into(),
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {}", access_token).into(),
                 ),
                 (
-                    headers::X_SELLER_ID.to_string(),
-                    seller_id.to_string().into(),
+                    headers::CONTENT_TYPE.to_string(),
+                    self.common_get_content_type().to_string().into(),
                 ),
                 (
                     headers::X_TRANSACTION_CHANNEL_ENTRY.to_string(),
                     TRANSACTION_CHANNEL_ENTRY_DEFAULT.to_string().into(),
                 ),
-            ])
-        }
-
-        pub fn build_payment_headers<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let access_token = req.resource_common_data
-                .access_token
-                .clone()
-                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-            let auth = getnet::GetnetAuthType::try_from(&req.connector_auth_type)
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-
-            self.build_headers(&access_token.access_token, auth.seller_id.peek())
-        }
-
-        pub fn build_refund_headers<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let access_token = req.resource_common_data
-                .access_token
-                .clone()
-                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-            let auth = getnet::GetnetAuthType::try_from(&req.connector_auth_type)
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-
-            self.build_headers(&access_token.access_token, auth.seller_id.peek())
+            ]
         }
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
@@ -316,7 +270,6 @@ macros::create_all_prerequisites!(
     }
 );
 
-// ===== CONNECTOR COMMON IMPLEMENTATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Getnet<T>
 {
@@ -334,18 +287,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         &connectors.getnet.base_url
-    }
-
-    fn get_auth_header(
-        &self,
-        auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = getnet::GetnetAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
-            headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.peek()).into(),
-        )])
     }
 
     fn build_error_response(
@@ -374,7 +315,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-// ===== AUTHORIZE FLOW IMPLEMENTATION =====
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Getnet,
@@ -392,7 +332,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers(req)
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            Ok(self.build_headers(&access_token))
         }
 
         fn get_url(
@@ -404,7 +346,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ===== CAPTURE FLOW IMPLEMENTATION =====
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Getnet,
@@ -422,7 +363,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers(req)
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            Ok(self.build_headers(&access_token))
         }
 
         fn get_url(
@@ -434,7 +377,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ===== PSYNC FLOW IMPLEMENTATION =====
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Getnet,
@@ -451,7 +393,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers(req)
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            Ok(self.build_headers(&access_token))
         }
 
         fn get_url(
@@ -466,7 +410,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ===== REFUND FLOW IMPLEMENTATION =====
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Getnet,
@@ -484,7 +427,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_refund_headers(req)
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            Ok(self.build_headers(&access_token))
         }
 
         fn get_url(
@@ -496,7 +441,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ===== VOID FLOW IMPLEMENTATION =====
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Getnet,
@@ -514,7 +458,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers(req)
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            Ok(self.build_headers(&access_token))
         }
 
         fn get_url(
@@ -526,7 +472,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ===== EMPTY IMPLEMENTATIONS FOR OTHER FLOWS =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -538,7 +483,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== RSYNC FLOW IMPLEMENTATION =====
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Getnet,
@@ -555,7 +499,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_refund_headers(req)
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            Ok(self.build_headers(&access_token))
         }
 
         fn get_url(
@@ -568,7 +514,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ===== ACCESS TOKEN FLOW IMPLEMENTATION =====
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Getnet,
@@ -611,6 +556,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/authentication/oauth2/access_token", self.connector_base_url_payments(req)))
         }
+
     }
 );
 
@@ -669,7 +615,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 
-// ===== AUTHENTICATION FLOW CONNECTOR INTEGRATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,
@@ -720,7 +665,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== CONNECTOR CUSTOMER CONNECTOR INTEGRATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         domain_types::connector_flow::CreateConnectorCustomer,
@@ -731,7 +675,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== SOURCE VERIFICATION IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Authorize,
@@ -893,7 +836,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== AUTHENTICATION FLOW SOURCE VERIFICATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PreAuthenticate,
@@ -934,7 +876,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== CONNECTOR CUSTOMER SOURCE VERIFICATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         domain_types::connector_flow::CreateConnectorCustomer,
@@ -944,3 +885,4 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Getnet<T>
 {
 }
+

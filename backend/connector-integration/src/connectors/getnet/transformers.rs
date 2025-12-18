@@ -1,6 +1,6 @@
 use crate::{connectors::getnet::GetnetRouterData, types::ResponseRouterData};
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::MinorUnit;
+use common_utils::{id_type::CustomerId, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{
@@ -17,13 +17,10 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-// ===== CONSTANTS =====
 const PAYMENT_METHOD_CREDIT: &str = "CREDIT";
 const TRANSACTION_TYPE_FULL: &str = "FULL";
 const DEFAULT_INSTALLMENTS: i32 = 1;
-const DEFAULT_CARDHOLDER_NAME: &str = "CARDHOLDER";
 
-// ===== AUTH TYPE =====
 #[derive(Debug, Clone)]
 pub struct GetnetAuthType {
     pub api_key: Secret<String>,
@@ -41,16 +38,13 @@ impl TryFrom<&ConnectorAuthType> for GetnetAuthType {
                 key1,
                 api_secret,
             } => {
-                // Log for debugging
-                tracing::info!("GetnetAuthType - Successfully matched SignatureKey variant");
                 Ok(Self {
                     api_key: api_key.to_owned(),
                     api_secret: api_secret.to_owned(),
                     seller_id: key1.to_owned(),
                 })
             },
-            other => {
-                tracing::error!("GetnetAuthType - Unexpected auth type variant: {:?}", other);
+            _other => {
                 Err(error_stack::report!(
                     errors::ConnectorError::FailedToObtainAuthType
                 ))
@@ -65,7 +59,6 @@ pub struct GetnetErrorResponse {
     #[serde(rename = "error_code")]
     pub code: Option<String>,
     pub message: String,
-    #[serde(rename = "details")]
     pub details: Option<Vec<GetnetErrorDetail>>,
 }
 
@@ -126,7 +119,6 @@ impl From<&GetnetPaymentStatus> for RefundStatus {
     }
 }
 
-// ===== AUTHORIZE REQUEST =====
 #[derive(Debug, Serialize)]
 pub struct GetnetAuthorizeRequest<T: PaymentMethodDataTypes> {
     pub request_id: String,
@@ -202,12 +194,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             number: Secret::new(card_data.card_number.peek().to_string()),
             expiration_month: card_data.card_exp_month.clone(),
             expiration_year,
-            cardholder_name: Secret::new(
-                item.request
-                    .customer_name
-                    .clone()
-                    .unwrap_or_else(|| DEFAULT_CARDHOLDER_NAME.to_string()),
-            ),
+            cardholder_name: item
+                .resource_common_data
+                .get_billing_full_name()?,
             security_code: card_data.card_cvc.clone(),
             _phantom: std::marker::PhantomData,
         };
@@ -220,13 +209,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             card,
         };
 
-        // Use simple "test" as customer_id for sandbox (as shown in Getnet documentation)
         let customer_id = item
-            .request
-            .email
-            .as_ref()
-            .map(|e| e.peek().to_string())
-            .unwrap_or_else(|| "test".to_string());
+            .resource_common_data
+            .get_customer_id()
+            .unwrap_or_else(|_| CustomerId::default())
+            .get_string_repr()
+            .to_string();
 
         let data = GetnetPaymentData {
             customer_id,
@@ -249,7 +237,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// ===== AUTHORIZE RESPONSE =====
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetnetAuthorizeResponse {
     pub payment_id: String,
@@ -314,7 +301,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// ===== CAPTURE REQUEST =====
 #[derive(Debug, Serialize)]
 pub struct GetnetCaptureRequest {
     pub idempotency_key: String,
@@ -367,7 +353,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// ===== CAPTURE RESPONSE =====
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetnetCaptureResponse {
     pub idempotency_key: Option<String>,
@@ -542,7 +527,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// ===== REFUND RESPONSE =====
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetnetRefundResponse {
     pub idempotency_key: Option<String>,
@@ -585,7 +569,6 @@ impl TryFrom<
 }
 
 // ===== RSYNC RESPONSE =====
-// Getnet uses the same endpoint for both PSync and RSync
 pub type GetnetRefundSyncResponse = GetnetSyncResponse;
 
 impl TryFrom<
@@ -616,7 +599,6 @@ impl TryFrom<
     }
 }
 
-// ===== ACCESS TOKEN REQUEST =====
 #[derive(Debug, Serialize)]
 pub struct GetnetAccessTokenRequest {
     pub grant_type: String,
