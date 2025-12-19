@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.19.0
+
+### Features
+
+- **connector:** [Stripe] Add Banktransfer, BNPL, BankRedirect PMs for stripe ([#371](https://github.com/juspay/connector-service/pull/371)) ([`24682d9`](https://github.com/juspay/connector-service/commit/24682d9e28b386f0ca9d45a30c230f7369397a95))
+
+### Bug Fixes
+
+- [WORLPAYVANTIV] Diff Checks ([#375](https://github.com/juspay/connector-service/pull/375)) ([`116c3b6`](https://github.com/juspay/connector-service/commit/116c3b6d4eccaee4364c0d44ebb8ffe169970f01))
+
+**Full Changelog:** [`2025.12.18.0...2025.12.19.0`](https://github.com/juspay/connector-service/compare/2025.12.18.0...2025.12.19.0)
+
+- - -
+
 ## 2025.12.18.0
 
 ### Features
