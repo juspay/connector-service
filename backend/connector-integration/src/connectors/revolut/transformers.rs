@@ -4,7 +4,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        ResponseId, WebhookDetailsResponse,
     },
     errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
@@ -910,6 +910,74 @@ impl<F> TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
                 ..router_data.resource_common_data
             },
             ..router_data
+        })
+    }
+}
+
+// Webhook related structures and implementations
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RevolutWebhookBody {
+    pub event: RevolutWebhookEvent,
+    pub order_id: String,
+    pub merchant_order_ext_ref: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RevolutWebhookEvent {
+    OrderCompleted,
+    OrderAuthorised,
+    OrderCancelled,
+    OrderFailed,
+    OrderPaymentAuthenticated,
+    OrderPaymentDeclined,
+    OrderPaymentFailed,
+    PayoutInitiated,
+    PayoutCompleted,
+    PayoutFailed,
+    DisputeActionRequired,
+    DisputeUnderReview,
+    DisputeWon,
+    DisputeLost,
+}
+
+/// Maps Revolut webhook event to AttemptStatus for webhook processing
+fn map_webhook_event_to_attempt_status(
+    event: RevolutWebhookEvent,
+) -> Result<AttemptStatus, ConnectorError> {
+    match event {
+        RevolutWebhookEvent::OrderCompleted => Ok(AttemptStatus::Charged),
+        RevolutWebhookEvent::OrderAuthorised => Ok(AttemptStatus::Authorized),
+        RevolutWebhookEvent::OrderCancelled => Ok(AttemptStatus::Voided),
+        RevolutWebhookEvent::OrderFailed => Ok(AttemptStatus::Failure),
+        _ => Err(ConnectorError::WebhookEventTypeNotFound),
+    }
+}
+
+impl TryFrom<RevolutWebhookBody> for WebhookDetailsResponse {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(webhook_body: RevolutWebhookBody) -> Result<Self, Self::Error> {
+        let status = map_webhook_event_to_attempt_status(webhook_body.event)?;
+
+        Ok(Self {
+            resource_id: Some(ResponseId::ConnectorTransactionId(
+                webhook_body.order_id.clone(),
+            )),
+            status,
+            error_code: None,
+            error_message: None,
+            error_reason: None,
+            status_code: 200,
+            connector_response_reference_id: webhook_body.merchant_order_ext_ref,
+            mandate_reference: None,
+            raw_connector_response: None,
+            response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            minor_amount_captured: None,
+            amount_captured: None,
+            network_txn_id: None,
         })
     }
 }

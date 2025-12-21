@@ -9,16 +9,7 @@ use domain_types::{
         SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -31,7 +22,7 @@ use domain_types::{
 use std::fmt::Debug;
 
 use common_enums::{AttemptStatus, CurrencyUnit};
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{crypto::{self, VerifySignature}, errors::CustomResult, events, ext_traits::ByteSliceExt};
 
 use crate::{types::ResponseRouterData, with_error_response_body};
 use error_stack::ResultExt;
@@ -161,6 +152,130 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Revolut<T>
 {
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+        let signature_header = request
+            .headers
+            .get("revolut-signature")
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Missing incoming webhook signature for Revolut")?;
+
+        // Revolut signature format is "v1=hex_signature".
+        // We need to split by '=' and take the second part.
+        let signature_parts: Vec<&str> = signature_header.split('=').collect();
+
+        let hex_signature = signature_parts
+            .get(1)
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Invalid signature format for Revolut")?;
+
+        hex::decode(hex_signature)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secrets: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+        // 1. Get the Timestamp
+        let timestamp = request
+            .headers
+            .get("revolut-request-timestamp")
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Missing timestamp header for Revolut")?;
+
+        // 2. Get the Raw Body
+        let body = std::str::from_utf8(&request.body)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Webhook source verification message parsing failed for Revolut")?;
+
+        // 3. Construct the signing string: "v1.{timestamp}.{body}"
+        let message = format!("v1.{}.{}", timestamp, body);
+
+        Ok(message.into_bytes())
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
+        // Revolut uses HMAC-SHA256
+        let algorithm = crypto::HmacSha256;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets,
+            None => Err(errors::ConnectorError::WebhookSourceVerificationFailed)?,
+        };
+
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Webhook source verification failed for Revolut")
+    }
+
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
+        let notif: revolut::RevolutWebhookBody = request
+            .body
+            .parse_struct("RevolutWebhookBody")
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+        match notif.event {
+            revolut::RevolutWebhookEvent::OrderCompleted => Ok(EventType::PaymentIntentSuccess),
+            revolut::RevolutWebhookEvent::OrderAuthorised => Ok(EventType::PaymentIntentAuthorizationSuccess),
+            revolut::RevolutWebhookEvent::OrderCancelled => Ok(EventType::PaymentIntentCancelled),
+            revolut::RevolutWebhookEvent::OrderFailed => Ok(EventType::PaymentIntentFailure),
+            revolut::RevolutWebhookEvent::OrderPaymentAuthenticated => {
+                Ok(EventType::PaymentIntentAuthorizationSuccess)
+            }
+            revolut::RevolutWebhookEvent::OrderPaymentDeclined => {
+                Ok(EventType::PaymentIntentAuthorizationFailure)
+            }
+            revolut::RevolutWebhookEvent::OrderPaymentFailed => Ok(EventType::PaymentIntentFailure),
+            revolut::RevolutWebhookEvent::PayoutInitiated => Ok(EventType::PayoutCreated),
+            revolut::RevolutWebhookEvent::PayoutCompleted => Ok(EventType::PayoutSuccess),
+            revolut::RevolutWebhookEvent::PayoutFailed => Ok(EventType::PayoutFailure),
+            revolut::RevolutWebhookEvent::DisputeActionRequired => Ok(EventType::DisputeOpened),
+            revolut::RevolutWebhookEvent::DisputeUnderReview => Ok(EventType::DisputeOpened),
+            revolut::RevolutWebhookEvent::DisputeWon => Ok(EventType::DisputeWon),
+            revolut::RevolutWebhookEvent::DisputeLost => Ok(EventType::DisputeLost),
+        }
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+        let notif: revolut::RevolutWebhookBody = request
+            .body
+            .parse_struct("RevolutWebhookBody")
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+        let response = WebhookDetailsResponse::try_from(notif)
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed);
+
+        response.map(|mut response| {
+            response.raw_connector_response =
+                Some(String::from_utf8_lossy(&request.body).to_string());
+            response
+        })
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
