@@ -9,7 +9,16 @@ use domain_types::{
         SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -22,7 +31,12 @@ use domain_types::{
 use std::fmt::Debug;
 
 use common_enums::{AttemptStatus, CurrencyUnit};
-use common_utils::{crypto::{self, VerifySignature}, errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{
+    crypto::{self, VerifySignature},
+    errors::CustomResult,
+    events,
+    ext_traits::ByteSliceExt,
+};
 
 use crate::{types::ResponseRouterData, with_error_response_body};
 use error_stack::ResultExt;
@@ -237,7 +251,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
         match notif.event {
             revolut::RevolutWebhookEvent::OrderCompleted => Ok(EventType::PaymentIntentSuccess),
-            revolut::RevolutWebhookEvent::OrderAuthorised => Ok(EventType::PaymentIntentAuthorizationSuccess),
+            revolut::RevolutWebhookEvent::OrderAuthorised => {
+                Ok(EventType::PaymentIntentAuthorizationSuccess)
+            }
             revolut::RevolutWebhookEvent::OrderCancelled => Ok(EventType::PaymentIntentCancelled),
             revolut::RevolutWebhookEvent::OrderFailed => Ok(EventType::PaymentIntentFailure),
             revolut::RevolutWebhookEvent::OrderPaymentAuthenticated => {
