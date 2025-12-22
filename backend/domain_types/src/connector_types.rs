@@ -1036,7 +1036,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub session_token: Option<String>,
     pub access_token: Option<AccessTokenResponseData>,
     pub customer_acceptance: Option<CustomerAcceptance>,
-    pub enrolled_for_3ds: bool,
+    pub enrolled_for_3ds: Option<bool>,
     pub related_transaction_id: Option<String>,
     pub payment_experience: Option<common_enums::PaymentExperience>,
     pub payment_method_type: Option<PaymentMethodType>,

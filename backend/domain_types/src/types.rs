@@ -1688,7 +1688,7 @@ impl<
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
-            enrolled_for_3ds: false,
+            enrolled_for_3ds: value.enrolled_for_3ds,
             related_transaction_id: None,
             payment_experience: None,
             customer_id: value
@@ -1702,7 +1702,9 @@ impl<
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            request_incremental_authorization: false,
+            request_incremental_authorization: value
+                .request_incremental_authorization
+                .unwrap_or(false),
             metadata: if value.metadata.is_empty() {
                 None
             } else {
@@ -1892,7 +1894,7 @@ impl<
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
-            enrolled_for_3ds: false,
+            enrolled_for_3ds: value.enrolled_for_3ds,
             related_transaction_id: None,
             payment_experience: None,
             customer_id: value
@@ -1906,7 +1908,9 @@ impl<
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            request_incremental_authorization: false,
+            request_incremental_authorization: value
+                .request_incremental_authorization
+                .unwrap_or(false),
             metadata: if value.metadata.is_empty() {
                 None
             } else {

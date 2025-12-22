@@ -914,7 +914,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .router_data
             .resource_common_data
             .is_three_ds()
-            .then_some(item.router_data.request.enrolled_for_3ds);
+            .then_some(item.router_data.request.enrolled_for_3ds)
+            .flatten();
 
         Ok(Self {
             txn_details,

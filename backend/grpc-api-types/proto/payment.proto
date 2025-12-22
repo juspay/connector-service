@@ -1349,7 +1349,7 @@ message PaymentServiceAuthorizeRequest {
 
   // Authentication Details
   AuthenticationType auth_type = 13; // Type of authentication to be used
-  bool enrolled_for_3ds = 14; // Indicates if the customer is enrolled for 3D Secure
+  optional bool enrolled_for_3ds = 14; // Indicates if the customer is enrolled for 3D Secure
   optional AuthenticationData authentication_data = 15; // Additional authentication data
 
   // Metadata
@@ -1372,7 +1372,7 @@ message PaymentServiceAuthorizeRequest {
   // Behavioral Flags and Preferences
   optional FutureUsage setup_future_usage = 24; // Indicates future usage intention
   optional bool off_session = 25; // Indicates if off-session transaction
-  bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
+  optional bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
   optional bool request_extended_authorization = 27; // Indicates if extended authorization is requested
   optional bool enable_partial_authorization = 43; // Indicates if partial authorization is enabled
 
@@ -1429,7 +1429,7 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Authentication Details
   AuthenticationType auth_type = 13; // Type of authentication to be used
-  bool enrolled_for_3ds = 14; // Indicates if the customer is enrolled for 3D Secure
+  optional bool enrolled_for_3ds = 14; // Indicates if the customer is enrolled for 3D Secure
   optional AuthenticationData authentication_data = 15; // Additional authentication data
 
   // Metadata
@@ -1451,7 +1451,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   // Behavioral Flags and Preferences
   optional FutureUsage setup_future_usage = 24; // Indicates future usage intention
   optional bool off_session = 25; // Indicates if off-session transaction
-  bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
+  optional bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
   optional bool request_extended_authorization = 27; // Indicates if extended authorization is requested
   optional bool enable_partial_authorization = 43; // Indicates if partial authorization is enabled
 
