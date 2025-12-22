@@ -287,16 +287,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Calculate payment_mode from upi_source
-        // UPI_CC/UPI_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
-        let upi_source_enum = match &router_data.request.payment_method_data {
-            PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(intent_data) => intent_data.upi_source.as_ref(),
-                UpiData::UpiQr(qr_data) => qr_data.upi_source.as_ref(),
-                UpiData::UpiCollect(collect_data) => collect_data.upi_source.as_ref(),
-            },
-            _ => None,
-        };
-        let payment_mode = get_payment_mode_from_upi_source(upi_source_enum);
+        let payment_mode = router_data
+            .request
+            .payment_method_data
+            .get_upi_source()
+            .map(|source| source.to_payment_mode());
 
         // Build payload
         let payload = PhonepePaymentRequestPayload {
@@ -444,16 +439,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Calculate payment_mode from upi_source
-        // UPI_CC/UPI_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
-        let upi_source_enum = match &router_data.request.payment_method_data {
-            PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(intent_data) => intent_data.upi_source.as_ref(),
-                UpiData::UpiQr(qr_data) => qr_data.upi_source.as_ref(),
-                UpiData::UpiCollect(collect_data) => collect_data.upi_source.as_ref(),
-            },
-            _ => None,
-        };
-        let payment_mode = get_payment_mode_from_upi_source(upi_source_enum);
+        let payment_mode = router_data
+            .request
+            .payment_method_data
+            .get_upi_source()
+            .map(|source| source.to_payment_mode());
 
         // Build payload
         let payload = PhonepePaymentRequestPayload {
@@ -677,19 +667,6 @@ impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
 // This should be called with the merchant_id from X-MERCHANT-ID auth header
 pub fn is_irctc_merchant(merchant_id: &str) -> bool {
     merchant_id.contains("IRCTC")
-}
-
-// Determine payment mode based on UPI source
-// Maps: UPI_CC/UPI_CL/UPI_CC_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
-fn get_payment_mode_from_upi_source(
-    upi_source: Option<&domain_types::payment_method_data::UpiSource>,
-) -> Option<String> {
-    use domain_types::payment_method_data::UpiSource;
-
-    upi_source.map(|source| match source {
-        UpiSource::UpiCc | UpiSource::UpiCl | UpiSource::UpiCcCl => "ALL".to_string(),
-        UpiSource::UpiAccount => "ACCOUNT".to_string(),
-    })
 }
 
 fn generate_phonepe_checksum(
