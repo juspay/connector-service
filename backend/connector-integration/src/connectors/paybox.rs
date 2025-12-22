@@ -37,7 +37,7 @@ use interfaces::{
     connector_types::{self},
 };
 use serde::Serialize;
-use transformers::{self as paybox, *};
+use transformers::*;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
@@ -82,7 +82,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: paybox::PayboxErrorResponse = res
+        let response: PayboxErrorResponse = res
             .response
             .parse_struct("PayboxErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
@@ -214,7 +214,7 @@ macros::create_all_prerequisites!(
 
             // Parse URL-encoded response using serde_qs (following Hyperswitch pattern)
             tracing::debug!("Paybox - Attempting to parse URL-encoded response with serde_qs");
-            let url_encoded_response: paybox::PayboxPaymentResponse = match serde_qs::from_str(response_str) {
+            let url_encoded_response: PayboxPaymentResponse = match serde_qs::from_str(response_str) {
                 Ok(parsed) => {
                     tracing::debug!("Paybox - Successfully parsed URL-encoded response");
                     parsed

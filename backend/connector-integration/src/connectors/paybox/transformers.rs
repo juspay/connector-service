@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{errors::CustomResult, types::MinorUnit};
-use tracing::{debug, error, info, warn};
+use tracing::{debug};
 use domain_types::{
     connector_flow::*,
     connector_types::*,
@@ -409,8 +409,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
         };
 
-        let paybox_meta: PayboxMeta = utils::to_connector_meta(router_data.request.connector_meta.clone())?;
-        let numtrans = paybox_meta.connector_request_id;
+        // Try reading from multiple sources in order of preference
+        let numtrans = router_data
+            .request
+            .connector_metadata
+            .as_ref()
+            .and_then(|meta| utils::to_connector_meta_from_secret(Some(meta.clone())).ok())
+            .map(|meta: PayboxMeta| meta.connector_request_id)
+            .or_else(|| {
+                router_data
+                    .resource_common_data
+                    .connector_meta_data
+                    .as_ref()
+                    .and_then(|meta| utils::to_connector_meta_from_secret(Some(meta.clone())).ok())
+                    .map(|meta: PayboxMeta| meta.connector_request_id)
+            })
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_request_id (NUMTRANS)",
+            })?;
 
         Ok(Self {
             version: VERSION_PAYBOX.to_string(),
@@ -557,7 +573,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             .request
             .connector_metadata
             .as_ref()
-            .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.clone()).ok())
+            .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.peek().clone()).ok())
             .map(|meta| meta.connector_request_id)
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "connector_request_id (NUMTRANS)",
@@ -989,7 +1005,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             paybox_request_number: generate_request_id()?,
             date: generate_date_time(),
             transaction_number: connector_refund_id.clone(),
-            paybox_order_id: connector_refund_id,
+            paybox_order_id: router_data.request.connector_transaction_id.clone(),
         })
     }
 }
