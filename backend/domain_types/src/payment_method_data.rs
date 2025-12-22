@@ -508,6 +508,7 @@ pub enum BankRedirectData {
     Eft {
         provider: String,
     },
+    OpenBanking {},
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize)]

@@ -63,6 +63,26 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
+/// Helper function to unwrap JSON-wrapped XML responses
+/// Some responses might come as a JSON string containing XML, this function handles that case
+fn unwrap_json_wrapped_xml(response_bytes: &[u8]) -> CustomResult<String, ConnectorError> {
+    let response_str = std::str::from_utf8(response_bytes)
+        .change_context(ConnectorError::ResponseDeserializationFailed)
+        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
+
+    // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
+    let xml_str = if response_str.trim().starts_with('"') {
+        // Try to parse as JSON string first to unwrap the XML
+        serde_json::from_str::<String>(response_str)
+            .change_context(ConnectorError::ResponseDeserializationFailed)
+            .attach_printable("Failed to parse JSON-wrapped XML response")?
+    } else {
+        response_str.to_string()
+    };
+
+    Ok(xml_str)
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     PaymentPreAuthenticateV2<T> for Worldpayvantiv<T>
 {
@@ -299,9 +319,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        let response_str = std::str::from_utf8(&res.response)
-            .map_err(|_| ConnectorError::ResponseDeserializationFailed)?;
-        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
+
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .map_err(|_parse_error| ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
@@ -352,13 +372,12 @@ macros::create_all_prerequisites!(
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, ConnectorError> {
             // Convert XML responses to JSON format for the macro's JSON parser
-            let response_str = std::str::from_utf8(&bytes)
-                .change_context(ConnectorError::ResponseDeserializationFailed)?;
+            let xml_str = unwrap_json_wrapped_xml(&bytes)?;
 
             // Parse XML to struct, then serialize back to JSON
-            if response_str.trim().starts_with("<?xml") || response_str.trim().starts_with("<") {
+            if xml_str.trim().starts_with("<?xml") || xml_str.trim().starts_with("<") {
                 // This is an XML response - convert to JSON
-                let xml_response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
+                let xml_response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
                     .change_context(ConnectorError::ResponseDeserializationFailed)?;
 
                 let json_bytes = serde_json::to_vec(&xml_response)
@@ -373,12 +392,11 @@ macros::create_all_prerequisites!(
 
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let mut header = vec![];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut api_key);
-            Ok(header)
+            // For XML-based flows (Authorize, Capture, Void, VoidPC, Refund, SetupMandate),
+            // we don't send authorization header - it's included in the XML body
+            Ok(vec![])
         }
 
         pub fn connector_base_url_payments<F, Req, Res>(
@@ -520,9 +538,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ConnectorError,
     > {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
+
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -589,9 +607,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ConnectorError,
     > {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
+
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -682,9 +700,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ConnectorError,
     > {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
+
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -751,9 +769,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ConnectorError,
     > {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
+
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)

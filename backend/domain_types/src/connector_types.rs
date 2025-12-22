@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use common_enums::{
-    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentMethod,
-    PaymentMethodType,
+    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentChannel,
+    PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
     errors,
@@ -78,6 +78,7 @@ pub enum ConnectorEnum {
     Cybersource,
     Worldpay,
     Worldpayvantiv,
+    Worldpayxml,
     Multisafepay,
     Payload,
     Fiservemea,
@@ -100,9 +101,11 @@ pub enum ConnectorEnum {
     Barclaycard,
     Nexixpay,
     Airwallex,
+    Tsys,
     Bankofamerica,
     Powertranz,
     Bambora,
+    Payme,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -144,6 +147,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
             grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpayvantiv),
+            grpc_api_types::payments::Connector::Worldpayxml => Ok(Self::Worldpayxml),
             grpc_api_types::payments::Connector::Multisafepay => Ok(Self::Multisafepay),
             grpc_api_types::payments::Connector::Payload => Ok(Self::Payload),
             grpc_api_types::payments::Connector::Fiservemea => Ok(Self::Fiservemea),
@@ -166,9 +170,11 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Barclaycard => Ok(Self::Barclaycard),
             grpc_api_types::payments::Connector::Nexixpay => Ok(Self::Nexixpay),
             grpc_api_types::payments::Connector::Airwallex => Ok(Self::Airwallex),
+            grpc_api_types::payments::Connector::Tsys => Ok(Self::Tsys),
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
             grpc_api_types::payments::Connector::Powertranz => Ok(Self::Powertranz),
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
+            grpc_api_types::payments::Connector::Payme => Ok(Self::Payme),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -205,6 +211,7 @@ pub struct ConnectorMandateReferenceId {
     payment_method_id: Option<String>,
     update_history: Option<Vec<UpdateHistory>>,
     mandate_metadata: Option<SecretSerdeValue>,
+    connector_mandate_request_reference_id: Option<String>,
 }
 
 impl ConnectorMandateReferenceId {
@@ -213,12 +220,14 @@ impl ConnectorMandateReferenceId {
         payment_method_id: Option<String>,
         update_history: Option<Vec<UpdateHistory>>,
         mandate_metadata: Option<SecretSerdeValue>,
+        connector_mandate_request_reference_id: Option<String>,
     ) -> Self {
         Self {
             connector_mandate_id,
             payment_method_id,
             update_history,
             mandate_metadata,
+            connector_mandate_request_reference_id,
         }
     }
 
@@ -236,6 +245,10 @@ impl ConnectorMandateReferenceId {
 
     pub fn get_mandate_metadata(&self) -> Option<SecretSerdeValue> {
         self.mandate_metadata.clone()
+    }
+
+    pub fn get_connector_mandate_request_reference_id(&self) -> Option<String> {
+        self.connector_mandate_request_reference_id.clone()
     }
 }
 
@@ -522,6 +535,15 @@ impl PaymentFlowData {
             .and_then(|phone_details| phone_details.get_number_with_country_code().ok())
     }
 
+    pub fn get_optional_shipping_line3(&self) -> Option<Secret<String>> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.line3)
+        })
+    }
+
     pub fn get_description(&self) -> Result<String, Error> {
         self.description
             .clone()
@@ -672,6 +694,17 @@ impl PaymentFlowData {
                     .clone()
                     .address
                     .and_then(|billing_details| billing_details.line2)
+            })
+    }
+
+    pub fn get_optional_billing_line3(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.line3)
             })
     }
 
@@ -908,6 +941,7 @@ pub struct PaymentVoidData {
     pub amount: Option<MinorUnit>,
     pub currency: Option<Currency>,
     pub connector_metadata: Option<SecretSerdeValue>,
+    pub metadata: Option<SecretSerdeValue>,
 }
 
 impl PaymentVoidData {
@@ -1025,6 +1059,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub setup_mandate_details: Option<MandateData>,
     pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub connector_testing_data: Option<SecretSerdeValue>,
+    pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
 }
 
@@ -2014,6 +2049,7 @@ pub struct RefundsData {
     pub refund_id: String,
     pub connector_transaction_id: String,
     pub connector_refund_id: Option<String>,
+    pub customer_id: Option<String>,
     pub currency: Currency,
     pub payment_amount: i64,
     pub reason: Option<String>,
@@ -2083,10 +2119,11 @@ pub struct PaymentsCaptureData {
     pub currency: Currency,
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
-    pub connector_metadata: Option<serde_json::Value>,
+    pub connector_metadata: Option<SecretSerdeValue>,
     pub integrity_object: Option<CaptureIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
+    pub metadata: Option<SecretSerdeValue>,
 }
 
 impl PaymentsCaptureData {
@@ -2151,6 +2188,8 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub customer_id: Option<CustomerId>,
     pub integrity_object: Option<SetupMandateIntegrityObject>,
     pub merchant_account_metadata: Option<SecretSerdeValue>,
+    pub payment_channel: Option<PaymentChannel>,
+    pub enable_partial_authorization: Option<bool>,
 }
 
 impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
@@ -2214,6 +2253,9 @@ pub struct RepeatPaymentData {
     pub split_payments: Option<SplitPaymentsRequest>,
     pub recurring_mandate_payment_data: Option<router_data::RecurringMandatePaymentData>,
     pub shipping_cost: Option<MinorUnit>,
+    pub mit_category: Option<common_enums::MitCategory>,
+    pub enable_partial_authorization: Option<bool>,
+    pub billing_descriptor: Option<BillingDescriptor>,
 }
 
 impl RepeatPaymentData {
@@ -2248,6 +2290,13 @@ impl RepeatPaymentData {
         self.recurring_mandate_payment_data
             .to_owned()
             .ok_or_else(missing_field_err("recurring_mandate_payment_data"))
+    }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
     }
 }
 
@@ -2514,6 +2563,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                     Self::LocalBankRedirect
                 }
                 payment_method_data::BankRedirectData::Eft { .. } => Self::Eft,
+                payment_method_data::BankRedirectData::OpenBanking {} => Self::OpenBanking,
             },
             PaymentMethodData::BankDebit(bank_debit_data) => match bank_debit_data {
                 payment_method_data::BankDebitData::AchBankDebit { .. } => Self::AchBankDebit,

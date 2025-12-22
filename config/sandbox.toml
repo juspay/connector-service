@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+payme.base_url = "https://sandbox.payme.io/api/"
 barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
 airwallex.base_url = "https://api-demo.airwallex.com/api/v1"
 bambora.base_url = "https://api.na.bambora.com/v1"
@@ -64,7 +65,8 @@ nexinets.base_url = "https://apitest.payengine.de/v1"
 noon.base_url = "https://api-test.noonpayments.com/"
 mifinity.base_url = "https://demo.mifinity.com/"
 braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
-volt.base_url = "https://api.sandbox.volt.io/"
+volt.base_url = "https://gateway.sandbox.volt.io"
+volt.secondary_base_url = "https://api.sandbox.volt.io"
 bluecode.base_url = "https://dev.eorder.reloadhero.com/"
 cryptopay.base_url = "https://business-sandbox.cryptopay.me"
 helcim.base_url = "https://api.helcim.com/"
@@ -85,6 +87,8 @@ billwerk.base_url = "https://api.reepay.com/"
 billwerk.secondary_base_url = "https://card.reepay.com/"
 nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
 bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
+worldpayxml.base_url = "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp"
+tsys.base_url = "https://stagegw.transnox.com/"
 bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
 

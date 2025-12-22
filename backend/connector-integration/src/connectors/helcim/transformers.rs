@@ -340,7 +340,7 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
                     ..item.router_data
                 })
             }
-            SyncRequestType::MultipleCaptureSync(_) => {
+            SyncRequestType::MultipleCaptureSync => {
                 Err(
                     ConnectorError::NotImplemented("manual multiple capture sync".to_string())
                         .into(),
