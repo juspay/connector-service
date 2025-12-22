@@ -178,6 +178,11 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
+        metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: None,
+        setup_future_usage: None,
+        sync_type: None,
     }
 }
 
@@ -252,9 +257,11 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp()))),
         }),
         browser_info: None,
+        test_mode: Some(true),
         refund_metadata,
         state: None,
         merchant_account_metadata: HashMap::new(),
+        payment_method_type: None,
     }
 }
 
