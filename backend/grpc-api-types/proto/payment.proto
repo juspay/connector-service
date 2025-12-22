@@ -2049,6 +2049,7 @@ message PaymentServiceRefundRequest {
   // Metadata
   map<string, string> metadata = 13; // Metadata specific to the connector
   map<string, string> refund_metadata = 14; // Metadata specific to the refund
+  map<string, string> connector_metadata = 21; // Metadata specific to the refund
 
   // Browser Information
   optional BrowserInformation browser_info = 15; // Browser information, if relevant

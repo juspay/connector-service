@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{errors::CustomResult, types::MinorUnit};
+use tracing::{debug, error, info, warn};
 use domain_types::{
     connector_flow::*,
     connector_types::*,
@@ -400,6 +401,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
         item: PayboxRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
+        debug!("Paybox PSync router_data: {:?}", router_data);
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)?;
 
         let numappel = match &router_data.request.connector_transaction_id {
@@ -552,33 +554,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 
         // Try reading from multiple sources in order of preference
         let numtrans = router_data
-            .resource_common_data
-            .reference_id
-            .clone()
-            .or_else(|| {
-                // Fallback 1: try reading from request.connector_metadata
-                tracing::debug!("Paybox Capture - Trying to parse connector_metadata");
-                router_data
-                    .request
-                    .connector_metadata
-                    .as_ref()
-                    .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.clone()).ok())
-                    .map(|meta| meta.connector_request_id)
-            })
-            .or_else(|| {
-                // Fallback 2: try reading from resource_common_data.connector_meta_data
-                tracing::debug!("Paybox Capture - Trying to parse resource_common_data.connector_meta_data");
-                router_data
-                    .resource_common_data
-                    .connector_meta_data
-                    .as_ref()
-                    .and_then(|meta| utils::to_connector_meta_from_secret::<PayboxMeta>(Some(meta.clone())).ok())
-                    .map(|meta| meta.connector_request_id)
-            })
+            .request
+            .connector_metadata
+            .as_ref()
+            .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.clone()).ok())
+            .map(|meta| meta.connector_request_id)
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "connector_request_id (NUMTRANS)",
-            })
-            .attach_printable("Failed to find NUMTRANS in reference_id, connector_metadata, or resource_common_data")?;
+            })?;
 
         tracing::debug!(numtrans = %numtrans, "Paybox Capture - numtrans");
 
@@ -590,12 +573,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             )
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
-        tracing::debug!(
-            numtrans = %numtrans,
-            numappel = %numappel,
-            amount = ?amount,
-            "Paybox Capture - Building request"
-        );
+        // tracing::debug!(
+        //     numtrans = %numtrans,
+        //     numappel = %numappel,
+        //     amount = ?amount,
+        //     "Paybox Capture - Building request"
+        // );
 
         let capture_request = Self {
             version: VERSION_PAYBOX.to_string(),
@@ -849,20 +832,42 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
         let connector = item.connector;
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)?;
 
+        tracing::debug!("=== PAYBOX REFUND - FULL ROUTER DATA START ===");
+
+        // Log the ENTIRE router_data structure
+        tracing::debug!("Paybox Refund - FULL router_data:\n{:#?}", router_data);
+
+        tracing::debug!("=== PAYBOX REFUND - FULL ROUTER DATA END ===");
+
         let numappel = router_data.request.connector_transaction_id.clone();
 
-        // Try to get NUMTRANS from stored metadata, fallback to NUMAPPEL if not available
-        // Note: connector_metadata in request may contain merchant custom data
-        let numtrans = router_data.request.connector_metadata
-            .clone()
-            .and_then(|meta| utils::to_connector_meta::<PayboxMeta>(Some(meta)).ok())
+        tracing::debug!("Paybox Refund - NUMAPPEL (connector_transaction_id): {}", numappel);
+
+        // Check what fields are available for extracting numtrans
+        tracing::debug!("Paybox Refund - request.connector_metadata: {:?}", router_data.request.connector_metadata);
+        tracing::debug!("Paybox Refund - resource_common_data: {:?}", router_data.resource_common_data);
+
+        let numtrans = router_data
+            .request
+            .connector_metadata
+            .as_ref()
+            .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.clone()).ok())
             .map(|meta| meta.connector_request_id)
             .unwrap_or_else(|| numappel.clone());
+
+        tracing::debug!(numtrans = %numtrans, "Paybox Refund - numtrans");
 
         let amount = connector
             .amount_converter
             .convert(router_data.request.minor_refund_amount, router_data.request.currency)
             .change_context(errors::ConnectorError::ParsingFailed)?;
+
+        tracing::debug!(
+            numtrans = %numtrans,
+            numappel = %numappel,
+            amount = ?amount,
+            "Paybox Refund - Building request"
+        );
 
         Ok(Self {
             version: VERSION_PAYBOX.to_string(),
@@ -1008,7 +1013,7 @@ pub struct PayboxRSyncResponse {
     #[serde(rename = "COMMENTAIRE")]
     pub response_message: String,
     #[serde(rename = "STATUS")]
-    pub status: PayboxStatus,
+    pub status: Option<PayboxStatus>,
 }
 
 impl TryFrom<
@@ -1026,8 +1031,19 @@ impl TryFrom<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let connector_refund_status = item.response.status;
-        let refund_status = RefundStatus::from(connector_refund_status);
+        // Determine refund status from either STATUS field or CODEREPONSE
+        let refund_status = match item.response.status {
+            Some(status) => RefundStatus::from(status),
+            None => {
+                // If STATUS field is not present, derive from CODEREPONSE
+                // "00000" indicates success
+                if item.response.response_code == "00000" {
+                    RefundStatus::Success
+                } else {
+                    RefundStatus::Failure
+                }
+            }
+        };
 
         Ok(Self {
             response: Ok(RefundsResponseData {

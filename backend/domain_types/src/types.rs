@@ -4640,7 +4640,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
             refund_amount: value.refund_amount,
-            connector_metadata: serde_json::to_value(&value.metadata)
+            connector_metadata: serde_json::to_value(&value.connector_metadata)
                 .inspect_err(|e| {
                     tracing::warn!(
                         error = %e,

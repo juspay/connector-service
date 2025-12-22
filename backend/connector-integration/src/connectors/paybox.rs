@@ -172,9 +172,15 @@ macros::create_all_prerequisites!(
                         tracing::debug!("Paybox - Extracted URL-encoded string from JSON response field");
                         response_str.to_string()
                     } else {
-                        // If no "response" field, treat the entire JSON as the URL-encoded string
-                        tracing::debug!("Paybox - No 'response' field found, using full JSON as URL-encoded string");
-                        json_value.to_string()
+                        // If no "response" field, check if the JSON itself is a string value
+                        if let Some(json_str) = json_value.as_str() {
+                            tracing::debug!("Paybox - JSON is a string value, using it directly");
+                            json_str.to_string()
+                        } else {
+                            // If the JSON is not a string, convert to string (this may add quotes)
+                            tracing::debug!("Paybox - No 'response' field found, converting JSON to string");
+                            json_value.to_string()
+                        }
                     }
                 }
                 Err(_) => {
