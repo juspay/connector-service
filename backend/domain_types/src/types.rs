@@ -1050,6 +1050,19 @@ impl<
                     }))
                 }
 
+                // ============================================================================
+                // BANK REDIRECT - Trustly
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Trustly(trustly_data) => {
+                    let country = match trustly_data.country() {
+                        grpc_payment_types::CountryAlpha2::Unspecified => None,
+                        country_code => Some(CountryAlpha2::foreign_try_from(country_code)?),
+                    };
+                    Ok(Self::BankRedirect(
+                        payment_method_data::BankRedirectData::Trustly { country },
+                    ))
+                }
+
                 // Catch-all for unsupported variants
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
@@ -1344,12 +1357,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     })))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Trustly(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Trustly is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::Trustly))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Pse(_) => {
                     Err(report!(ApplicationErrorResponse::BadRequest(ApiError {

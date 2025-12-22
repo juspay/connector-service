@@ -1,6 +1,9 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
-use common_utils::types::{FloatMajorUnit, StringMajorUnit};
+use common_utils::{
+    request::Method,
+    types::{FloatMajorUnit, StringMajorUnit},
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -12,9 +15,11 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 #[derive(Debug, Clone)]
 pub struct AirwallexAuthType {
@@ -74,16 +79,31 @@ pub struct AirwallexPaymentRequest {
 }
 
 #[derive(Debug, Serialize)]
-pub struct AirwallexPaymentMethod {
-    pub card: AirwallexCardData,
-    #[serde(rename = "type")]
-    pub payment_method_type: AirwallexPaymentType,
+#[serde(untagged)]
+pub enum AirwallexPaymentMethod {
+    Card(AirwallexCardData),
+    BankRedirect(AirwallexBankRedirectData),
+}
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum AirwallexBankRedirectData {
+    Ideal(AirwallexIdealData),
+    Trustly(AirwallexTrustlyData),
+    Blik(AirwallexBlikData),
 }
 
 // Removed old AirwallexPaymentMethodData enum - now using individual Option fields for cleaner serialization
 
 #[derive(Debug, Serialize)]
 pub struct AirwallexCardData {
+    pub card: AirwallexCardDetails,
+    #[serde(rename = "type")]
+    pub payment_method_type: AirwallexPaymentType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexCardDetails {
     pub number: Secret<String>,
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
@@ -107,6 +127,45 @@ pub enum AirwallexPaymentType {
     Ideal,
     Skrill,
     BankTransfer,
+}
+
+// BankRedirect-specific data structures
+#[derive(Debug, Serialize)]
+pub struct AirwallexIdealData {
+    pub ideal: AirwallexIdealDetails,
+    #[serde(rename = "type")]
+    pub payment_method_type: AirwallexPaymentType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexIdealDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bank_name: Option<common_enums::BankNames>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexTrustlyData {
+    pub trustly: AirwallexTrustlyDetails,
+    #[serde(rename = "type")]
+    pub payment_method_type: AirwallexPaymentType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexTrustlyDetails {
+    pub shopper_name: Secret<String>,
+    pub country_code: common_enums::CountryAlpha2,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexBlikData {
+    pub blik: AirwallexBlikDetails,
+    #[serde(rename = "type")]
+    pub payment_method_type: AirwallexPaymentType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexBlikDetails {
+    pub shopper_name: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -237,8 +296,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let payment_method = match item.router_data.request.payment_method_data.clone() {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
-                AirwallexPaymentMethod {
-                    card: AirwallexCardData {
+                AirwallexPaymentMethod::Card(AirwallexCardData {
+                    card: AirwallexCardDetails {
                         number: Secret::new(card_data.card_number.peek().to_string()),
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: card_data.get_expiry_year_4_digit(),
@@ -248,8 +307,66 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .map(|name| Secret::new(name.expose())),
                     },
                     payment_method_type: AirwallexPaymentType::Card,
-                }
+                })
             }
+            domain_types::payment_method_data::PaymentMethodData::BankRedirect(
+                bank_redirect_data,
+            ) => match bank_redirect_data {
+                domain_types::payment_method_data::BankRedirectData::Ideal { bank_name } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Ideal(
+                        AirwallexIdealData {
+                            ideal: AirwallexIdealDetails { bank_name },
+                            payment_method_type: AirwallexPaymentType::Ideal,
+                        },
+                    ))
+                }
+                domain_types::payment_method_data::BankRedirectData::Trustly { .. } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Trustly(
+                        AirwallexTrustlyData {
+                            trustly: AirwallexTrustlyDetails {
+                                shopper_name: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_full_name()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "shopper_name",
+                                    })?,
+                                country_code: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_country()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "country_code",
+                                    })?,
+                            },
+                            payment_method_type: AirwallexPaymentType::Trustly,
+                        },
+                    ))
+                }
+                domain_types::payment_method_data::BankRedirectData::Blik { blik_code: _ } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Blik(
+                        AirwallexBlikData {
+                            blik: AirwallexBlikDetails {
+                                shopper_name: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_full_name()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "shopper_name",
+                                    })?,
+                            },
+                            payment_method_type: AirwallexPaymentType::Blik,
+                        },
+                    ))
+                }
+                _ => {
+                    return Err(errors::ConnectorError::NotSupported {
+                        message: "Bank Redirect Payment Method".to_string(),
+                        connector: "Airwallex",
+                    }
+                    .into())
+                }
+            },
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
                     message: "Payment Method".to_string(),
@@ -321,6 +438,12 @@ pub struct AirwallexPaymentsResponse {
     // Void-specific fields
     pub cancelled_at: Option<String>,
     pub cancellation_reason: Option<String>,
+    // Additional fields from actual Airwallex response
+    pub request_id: Option<String>,
+    pub merchant_order_id: Option<String>,
+    pub descriptor: Option<String>,
+    pub base_amount: Option<FloatMajorUnit>,
+    pub base_currency: Option<Currency>,
 }
 
 // Type alias - reuse the same response structure for PSync
@@ -329,7 +452,7 @@ pub type AirwallexSyncResponse = AirwallexPaymentsResponse;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AirwallexPaymentAttempt {
     pub id: Option<String>,
-    pub status: Option<AirwallexPaymentStatus>,
+    pub status: Option<String>, // Changed from AirwallexPaymentStatus to String to handle different values
     pub amount: Option<FloatMajorUnit>,
     pub payment_method: Option<AirwallexPaymentMethodInfo>,
     pub authorization_code: Option<String>,
@@ -337,6 +460,18 @@ pub struct AirwallexPaymentAttempt {
     pub processor_response: Option<AirwallexProcessorResponse>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
+    // Additional fields from Airwallex response
+    pub currency: Option<Currency>,
+    pub merchant_order_id: Option<String>,
+    pub payment_intent_id: Option<String>,
+    pub provider_transaction_id: Option<String>,
+    pub captured_amount: Option<FloatMajorUnit>,
+    pub refunded_amount: Option<FloatMajorUnit>,
+    pub settle_via: Option<String>,
+    pub authentication_data: Option<serde_json::Value>, // Complex object, use generic value
+    pub expires_at: Option<String>,
+    pub payment_method_options: Option<serde_json::Value>, // Complex object, use generic value
+    pub device_data: Option<serde_json::Value>,            // Complex object, use generic value
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -360,6 +495,15 @@ pub struct AirwallexPaymentMethodInfo {
     #[serde(rename = "type")]
     pub method_type: String,
     pub card: Option<AirwallexCardInfo>,
+    // Bank redirect fields
+    pub blik: Option<serde_json::Value>, // For BLIK payment method details
+    pub ideal: Option<serde_json::Value>, // For iDEAL payment method details
+    pub trustly: Option<serde_json::Value>, // For Trustly payment method details
+    // Additional payment method fields
+    pub id: Option<String>,
+    pub status: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -375,13 +519,8 @@ pub struct AirwallexCardInfo {
 pub struct AirwallexNextAction {
     #[serde(rename = "type")]
     pub action_type: String,
-    pub redirect_to_url: Option<AirwallexRedirectAction>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct AirwallexRedirectAction {
-    pub redirect_url: String,
-    pub return_url: String,
+    pub method: Option<String>,
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -434,9 +573,18 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexPaymentsResp
     ) -> Result<Self, Self::Error> {
         let status = get_payment_status(&item.response.status, &item.response.next_action);
 
-        // Handle 3DS redirection for customer action required
-        // For now, set to None - will be implemented in a separate flow
-        let redirection_data = None;
+        // Handle redirection for bank redirects and 3DS
+        let redirection_data = item.response.next_action.as_ref().and_then(|next_action| {
+            if next_action.action_type == "redirect" {
+                next_action.url.as_ref().and_then(|url_str| {
+                    Url::parse(url_str)
+                        .ok()
+                        .map(|url| Box::new(RedirectForm::from((url, Method::Get))))
+                })
+            } else {
+                None
+            }
+        });
 
         // Extract network transaction ID for network response fields (PR #240 Issue #4)
         let network_txn_id = item
@@ -915,8 +1063,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let payment_method = match item.router_data.request.payment_method_data.clone() {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
-                AirwallexPaymentMethod {
-                    card: AirwallexCardData {
+                AirwallexPaymentMethod::Card(AirwallexCardData {
+                    card: AirwallexCardDetails {
                         number: Secret::new(card_data.card_number.peek().to_string()),
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: card_data.get_expiry_year_4_digit(),
@@ -926,8 +1074,66 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .map(|name| Secret::new(name.expose())),
                     },
                     payment_method_type: AirwallexPaymentType::Card,
-                }
+                })
             }
+            domain_types::payment_method_data::PaymentMethodData::BankRedirect(
+                bank_redirect_data,
+            ) => match bank_redirect_data {
+                domain_types::payment_method_data::BankRedirectData::Ideal { bank_name } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Ideal(
+                        AirwallexIdealData {
+                            ideal: AirwallexIdealDetails { bank_name },
+                            payment_method_type: AirwallexPaymentType::Ideal,
+                        },
+                    ))
+                }
+                domain_types::payment_method_data::BankRedirectData::Trustly { .. } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Trustly(
+                        AirwallexTrustlyData {
+                            trustly: AirwallexTrustlyDetails {
+                                shopper_name: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_full_name()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "shopper_name",
+                                    })?,
+                                country_code: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_country()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "country_code",
+                                    })?,
+                            },
+                            payment_method_type: AirwallexPaymentType::Trustly,
+                        },
+                    ))
+                }
+                domain_types::payment_method_data::BankRedirectData::Blik { blik_code: _ } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Blik(
+                        AirwallexBlikData {
+                            blik: AirwallexBlikDetails {
+                                shopper_name: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_full_name()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "shopper_name",
+                                    })?,
+                            },
+                            payment_method_type: AirwallexPaymentType::Blik,
+                        },
+                    ))
+                }
+                _ => {
+                    return Err(errors::ConnectorError::NotSupported {
+                        message: "Bank Redirect Payment Method".to_string(),
+                        connector: "Airwallex",
+                    }
+                    .into())
+                }
+            },
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
                     message: "Payment Method".to_string(),
