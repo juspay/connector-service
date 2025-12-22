@@ -60,6 +60,7 @@ build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "24356
 ] }
 uuid = "1.0"
 chrono = "0.4.31"
+struct-patch = { version = "0.10.4", features = ["nesting", "none_as_default"] }
 
 [build-dependencies]
 build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "build_info", features = [

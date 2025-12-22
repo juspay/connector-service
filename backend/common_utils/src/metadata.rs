@@ -3,9 +3,13 @@ use std::collections::HashSet;
 use bytes::Bytes;
 use hyperswitch_masking::{Maskable, Secret};
 use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize};
+use struct_patch::Patch;
 
 /// Configuration for header masking in gRPC metadata.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct HeaderMaskingConfig {
     unmasked_keys: HashSet<String>,
 }
@@ -20,7 +24,7 @@ impl HeaderMaskingConfig {
     }
 }
 
-impl serde::Serialize for HeaderMaskingConfig {
+impl Serialize for HeaderMaskingConfig {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -32,7 +36,7 @@ impl serde::Serialize for HeaderMaskingConfig {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for HeaderMaskingConfig {
+impl<'de> Deserialize<'de> for HeaderMaskingConfig {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,

@@ -123,32 +123,11 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod unit {
+    use base64::{engine::general_purpose, Engine as _};
     use grpc_server::configs::Config;
-    use grpc_server::utils::{merge_config_with_override, merge_configs};
+    use grpc_server::logger::config::LogKafka;
+    use grpc_server::utils::merge_config_with_override;
     use serde_json::json;
-
-    #[test]
-    fn test_merge_configs_simple() {
-        let base = json!({
-            "a": 1,
-            "b": { "c": 2, "d": 3 },
-            "e": [1, 2, 3],
-        });
-        let override_ = json!({
-            "a": 10,
-            "b": { "c": 20 },
-            "e": [4, 5],
-            "f": 100
-        });
-        let merged = merge_configs(&override_, &base);
-        let expected = json!({
-            "a": 10,
-            "b": { "c": 20, "d": 3 },
-            "e": [4, 5],
-            "f": 100
-        });
-        assert_eq!(merged, expected);
-    }
 
     #[test]
     fn test_config_from_metadata_override() {
@@ -158,7 +137,7 @@ mod unit {
             "proxy": { "idle_pool_connection_timeout": 123 },
         });
         let override_str = override_json.to_string();
-        let result = merge_config_with_override(Some(override_str), base_config.clone());
+        let result = merge_config_with_override(override_str, base_config.clone());
         assert!(
             result.is_ok(),
             "config_from_metadata should succeed with valid override"
@@ -169,18 +148,74 @@ mod unit {
     }
 
     #[test]
-    fn test_config_from_metadata_no_override() {
-        let base_config = Config::new().expect("default config should load");
-        let result = merge_config_with_override(None, base_config.clone());
+    fn test_log_kafka_partial_override() {
+        let mut base_config = Config::new().expect("default config should load");
+        base_config.log.kafka = Some(LogKafka {
+            enabled: true,
+            level: serde_json::from_value(json!("INFO")).expect("level should parse"),
+            filtering_directive: Some("info".to_string()),
+            brokers: vec!["localhost:9092".to_string()],
+            topic: "base-topic".to_string(),
+            ..Default::default()
+        });
+
+        let override_json = json!({
+            "log": {
+                "kafka": {
+                    "level": "ERROR"
+                }
+            }
+        });
+        let override_str = override_json.to_string();
+        let result = merge_config_with_override(override_str, base_config.clone());
         assert!(
             result.is_ok(),
-            "config_from_metadata should succeed with no override"
+            "config_from_metadata should succeed with valid override"
         );
         let new_config = result.expect("should get config");
-        // Should be equal to base config
-        assert_eq!(
-            serde_json::to_value(&*new_config).expect("serialize new config"),
-            serde_json::to_value(&base_config).expect("serialize base config")
+        let kafka_config = new_config
+            .log
+            .kafka
+            .as_ref()
+            .expect("kafka config should be present");
+        assert_eq!(kafka_config.level.into_level(), tracing::Level::ERROR);
+        assert!(kafka_config.enabled);
+        assert_eq!(kafka_config.brokers, vec!["localhost:9092".to_string()]);
+        assert_eq!(kafka_config.topic.as_str(), "base-topic");
+        assert_eq!(kafka_config.filtering_directive.as_deref(), Some("info"));
+    }
+
+    #[test]
+    fn test_proxy_mitm_cert_override_base64() {
+        let base_config = Config::new().expect("default config should load");
+        let pem = "-----BEGIN CERTIFICATE-----\nTEST_CERT\n-----END CERTIFICATE-----\n";
+        let encoded = general_purpose::STANDARD.encode(pem.as_bytes());
+        let override_json = json!({
+            "proxy": {
+                "mitm_ca_cert": encoded
+            }
+        });
+        let result = merge_config_with_override(override_json.to_string(), base_config.clone());
+        assert!(
+            result.is_ok(),
+            "config_from_metadata should succeed with valid override"
+        );
+        let new_config = result.expect("should get config");
+        assert_eq!(new_config.proxy.mitm_ca_cert.as_deref(), Some(pem));
+    }
+
+    #[test]
+    fn test_proxy_mitm_cert_override_rejects_pem() {
+        let base_config = Config::new().expect("default config should load");
+        let override_json = json!({
+            "proxy": {
+                "mitm_ca_cert": "-----BEGIN CERTIFICATE-----\nTEST_CERT\n-----END CERTIFICATE-----\n"
+            }
+        });
+        let result = merge_config_with_override(override_json.to_string(), base_config.clone());
+        assert!(
+            result.is_err(),
+            "config_from_metadata should reject raw PEM in mitm_ca_cert override"
         );
     }
 }

@@ -1,31 +1,54 @@
 use std::path::PathBuf;
 
-use common_utils::{consts, events::EventConfig, metadata::HeaderMaskingConfig};
-use domain_types::types::{Connectors, Proxy};
+use common_utils::{
+    consts,
+    events::{EventConfig, EventConfigPatch},
+    metadata::{HeaderMaskingConfig, HeaderMaskingConfigPatch},
+};
+use domain_types::types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch};
 
-use crate::{error::ConfigurationError, logger::config::Log};
+use crate::{
+    error::ConfigurationError,
+    logger::config::{Log, LogPatch},
+};
 use serde::{Deserialize, Serialize};
-#[derive(Clone, Debug, Deserialize, Serialize)]
+use struct_patch::Patch;
+#[derive(Debug, Deserialize, Serialize, Patch, Clone)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct Config {
+    #[patch(nesting)]
     pub common: Common,
+    #[patch(nesting)]
     pub server: Server,
+    #[patch(nesting)]
     pub metrics: MetricsServer,
+    #[patch(nesting)]
     pub log: Log,
+    #[patch(nesting)]
     pub proxy: Proxy,
+    #[patch(nesting)]
     pub connectors: Connectors,
     #[serde(default)]
+    #[patch(nesting)]
     pub events: EventConfig,
     #[serde(default)]
+    #[patch(nesting)]
     pub lineage: LineageConfig,
     #[serde(default)]
+    #[patch(nesting)]
     pub unmasked_headers: HeaderMaskingConfig,
     #[serde(default)]
+    #[patch(nesting)]
     pub test: TestConfig,
     #[serde(default)]
+    #[patch(nesting)]
     pub api_tags: ApiTagConfig,
 }
 
-#[derive(Clone, Deserialize, Debug, Default, Serialize)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct LineageConfig {
     /// Enable processing of x-lineage-ids header
     pub enabled: bool,
@@ -46,7 +69,9 @@ fn default_lineage_prefix() -> String {
 }
 
 /// Test mode configuration for mock server integration
-#[derive(Clone, Deserialize, Debug, Default, Serialize)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct TestConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -91,7 +116,9 @@ impl TestConfig {
 /// ```
 ///
 /// Note: Config crate lowercases env var keys, lookup is case-insensitive
-#[derive(Clone, Deserialize, Debug, Default, Serialize)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct ApiTagConfig {
     #[serde(default)]
     pub tags: std::collections::HashMap<String, String>,
@@ -141,7 +168,9 @@ impl ApiTagConfig {
     }
 }
 
-#[derive(Clone, Deserialize, Debug, Serialize)]
+#[derive(Clone, Deserialize, Debug, Serialize, PartialEq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct Common {
     pub environment: consts::Env,
 }
@@ -155,7 +184,9 @@ impl Common {
     }
 }
 
-#[derive(Clone, Deserialize, Debug, Serialize)]
+#[derive(Clone, Deserialize, Debug, Serialize, PartialEq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct Server {
     pub host: String,
     pub port: u16,
@@ -163,13 +194,15 @@ pub struct Server {
     pub type_: ServiceType,
 }
 
-#[derive(Clone, Deserialize, Debug, Serialize)]
+#[derive(Clone, Deserialize, Debug, Serialize, PartialEq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct MetricsServer {
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ServiceType {
     #[default]

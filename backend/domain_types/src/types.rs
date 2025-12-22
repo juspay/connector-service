@@ -22,6 +22,7 @@ use grpc_api_types::payments::{
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
+use struct_patch::Patch;
 use tracing::info;
 use utoipa::ToSchema;
 
@@ -115,71 +116,134 @@ use crate::{
     utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
 };
 
-#[derive(Clone, serde::Deserialize, serde::Serialize, Debug, Default)]
+#[derive(Clone, serde::Deserialize, serde::Serialize, Debug, Default, PartialEq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct Connectors {
     // Added pub
+    #[patch(nesting)]
     pub adyen: ConnectorParams,
+    #[patch(nesting)]
     pub forte: ConnectorParams,
+    #[patch(nesting)]
     pub razorpay: ConnectorParams,
+    #[patch(nesting)]
     pub razorpayv2: ConnectorParams,
+    #[patch(nesting)]
     pub fiserv: ConnectorParams,
+    #[patch(nesting)]
     pub elavon: ConnectorParams, // Add your connector params
+    #[patch(nesting)]
     pub xendit: ConnectorParams,
+    #[patch(nesting)]
     pub checkout: ConnectorParams,
+    #[patch(nesting)]
     pub authorizedotnet: ConnectorParams, // Add your connector params
+    #[patch(nesting)]
     pub mifinity: ConnectorParams,
+    #[patch(nesting)]
     pub phonepe: ConnectorParams,
+    #[patch(nesting)]
     pub cashfree: ConnectorParams,
+    #[patch(nesting)]
     pub paytm: ConnectorParams,
+    #[patch(nesting)]
     pub fiuu: ConnectorParams,
+    #[patch(nesting)]
     pub payu: ConnectorParams,
+    #[patch(nesting)]
     pub cashtocode: ConnectorParams,
+    #[patch(nesting)]
     pub novalnet: ConnectorParams,
+    #[patch(nesting)]
     pub nexinets: ConnectorParams,
+    #[patch(nesting)]
     pub noon: ConnectorParams,
+    #[patch(nesting)]
     pub braintree: ConnectorParams,
+    #[patch(nesting)]
     pub volt: ConnectorParams,
+    #[patch(nesting)]
     pub bluecode: ConnectorParams,
+    #[patch(nesting)]
     pub cryptopay: ConnectorParams,
+    #[patch(nesting)]
     pub helcim: ConnectorParams,
+    #[patch(nesting)]
     pub dlocal: ConnectorParams,
+    #[patch(nesting)]
     pub placetopay: ConnectorParams,
+    #[patch(nesting)]
     pub rapyd: ConnectorParams,
+    #[patch(nesting)]
     pub aci: ConnectorParams,
+    #[patch(nesting)]
     pub trustpay: ConnectorParamsWithMoreUrls,
+    #[patch(nesting)]
     pub stripe: ConnectorParams,
+    #[patch(nesting)]
     pub cybersource: ConnectorParams,
+    #[patch(nesting)]
     pub worldpay: ConnectorParams,
+    #[patch(nesting)]
     pub worldpayvantiv: ConnectorParams,
+    #[patch(nesting)]
     pub multisafepay: ConnectorParams,
+    #[patch(nesting)]
     pub payload: ConnectorParams,
+    #[patch(nesting)]
     pub fiservemea: ConnectorParams,
+    #[patch(nesting)]
     pub paysafe: ConnectorParams,
+    #[patch(nesting)]
     pub datatrans: ConnectorParams,
+    #[patch(nesting)]
     pub bluesnap: ConnectorParams,
+    #[patch(nesting)]
     pub authipay: ConnectorParams,
+    #[patch(nesting)]
     pub bamboraapac: ConnectorParams,
+    #[patch(nesting)]
     pub silverflow: ConnectorParams,
+    #[patch(nesting)]
     pub celero: ConnectorParams,
+    #[patch(nesting)]
     pub paypal: ConnectorParams,
+    #[patch(nesting)]
     pub stax: ConnectorParams,
+    #[patch(nesting)]
     pub billwerk: ConnectorParams,
+    #[patch(nesting)]
     pub hipay: ConnectorParams,
+    #[patch(nesting)]
     pub trustpayments: ConnectorParams,
+    #[patch(nesting)]
     pub globalpay: ConnectorParams,
+    #[patch(nesting)]
     pub nuvei: ConnectorParams,
+    #[patch(nesting)]
     pub iatapay: ConnectorParams,
+    #[patch(nesting)]
     pub nmi: ConnectorParams,
+    #[patch(nesting)]
     pub shift4: ConnectorParams,
+    #[patch(nesting)]
     pub barclaycard: ConnectorParams,
+    #[patch(nesting)]
     pub nexixpay: ConnectorParams,
+    #[patch(nesting)]
     pub airwallex: ConnectorParams,
+    #[patch(nesting)]
     pub bankofamerica: ConnectorParams,
+    #[patch(nesting)]
     pub powertranz: ConnectorParams,
+    #[patch(nesting)]
     pub bambora: ConnectorParams,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct ConnectorParams {
     /// base url
     #[serde(default)]
@@ -203,7 +267,9 @@ impl ConnectorParams {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct ConnectorParamsWithMoreUrls {
     /// base url
     pub base_url: String,
@@ -234,7 +300,9 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, Patch)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
+#[patch(attribute(serde(default)))]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,

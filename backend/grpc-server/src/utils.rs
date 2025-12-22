@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose, Engine as _};
 use common_utils::{
     consts::{
         self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_SHADOW_MODE,
@@ -21,6 +22,7 @@ use http::request::Request;
 use hyperswitch_masking;
 use serde_json::Value;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
+use struct_patch::Patch as _;
 use tonic::metadata;
 
 use crate::{configs, error::ResultExtGrpc, request::RequestData};
@@ -297,53 +299,68 @@ pub fn auth_from_metadata(
 }
 
 pub fn merge_config_with_override(
-    config_override: Option<String>,
+    config_override: String,
     config: configs::Config,
 ) -> CustomResult<Arc<configs::Config>, ApplicationErrorResponse> {
-    match config_override {
-        None => Ok(Arc::new(config)),
-        Some(config_override) => {
-            let override_value = serde_json::from_str(&config_override).map_err(|e| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "CANNOT_CONVERT_TO_JSON".into(),
+    let mut override_patch: configs::ConfigPatch =
+        serde_json::from_str(&config_override).map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "CANNOT_CONVERT_TO_JSON".into(),
+                error_identifier: 400,
+                error_message: format!("Cannot convert override config to JSON: {e}"),
+                error_object: None,
+            }))
+        })?;
+
+    if let Some(cert_input) = override_patch
+        .proxy
+        .mitm_ca_cert
+        .as_ref()
+        .and_then(|value| value.as_ref())
+    {
+        let cert_trimmed = cert_input.trim();
+
+        let cert = if cert_trimmed.is_empty() {
+            Err(Report::new(ApplicationErrorResponse::BadRequest(
+                ApiError {
+                    sub_code: "INVALID_MITM_CA_CERT_BASE64".into(),
                     error_identifier: 400,
-                    error_message: format!("Cannot convert override config to JSON: {e}"),
+                    error_message: "proxy.mitm_ca_cert must be base64-encoded".to_string(),
                     error_object: None,
-                }))
-            })?;
-            let base_value = serde_json::to_value(&config).map_err(|e| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "CANNOT_SERIALIZE_TO_JSON".into(),
-                    error_identifier: 400,
-                    error_message: format!("Cannot serialize base config to JSON: {e}"),
-                    error_object: None,
-                }))
-            })?;
-            let merged = merge_configs(&override_value, &base_value);
-            let result = serde_json::from_value(merged.clone())
-                .map(Arc::new)
+                },
+            )))
+        } else {
+            let sanitized: String = cert_trimmed.split_whitespace().collect();
+            let decoded = general_purpose::STANDARD
+                .decode(sanitized.as_bytes())
                 .map_err(|e| {
-                    tracing::error!(
-                        error = %e,
-                        merged_config = ?merged,
-                        "Failed to deserialize merged config"
-                    );
                     Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "CANNOT_DESERIALIZE_JSON".into(),
+                        sub_code: "INVALID_MITM_CA_CERT_BASE64".into(),
                         error_identifier: 400,
-                        error_message: format!("Cannot deserialize merged config: {e}"),
+                        error_message: format!("Invalid base64 for proxy.mitm_ca_cert: {e}"),
                         error_object: None,
                     }))
                 })?;
 
-            tracing::info!(
-                override_config = %config_override,
-                "Config override applied successfully"
-            );
+            String::from_utf8(decoded).map_err(|e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MITM_CA_CERT_UTF8".into(),
+                    error_identifier: 400,
+                    error_message: format!("Decoded proxy.mitm_ca_cert is not valid UTF-8: {e}"),
+                    error_object: None,
+                }))
+            })
+        }?;
 
-            Ok(result)
-        }
+        override_patch.proxy.mitm_ca_cert = Some(Some(cert));
     }
+
+    let mut merged_config = config;
+    merged_config.apply(override_patch);
+
+    tracing::info!("Config override applied successfully");
+
+    Ok(Arc::new(merged_config))
 }
 
 pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
