@@ -178,6 +178,7 @@ pub struct Connectors {
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
     pub barclaycard: ConnectorParams,
+    pub redsys: ConnectorParams,
     pub nexixpay: ConnectorParams,
     pub airwallex: ConnectorParams,
     pub worldpayxml: ConnectorParams,
