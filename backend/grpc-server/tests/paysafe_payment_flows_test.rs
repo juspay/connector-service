@@ -244,8 +244,8 @@ fn create_payment_authorize_request(
                 uuid::Uuid::new_v4().simple()
             ))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         merchant_account_metadata,
         ..Default::default()

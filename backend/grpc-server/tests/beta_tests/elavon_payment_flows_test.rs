@@ -170,8 +170,8 @@ fn create_payment_authorize_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("elavon_test_{}", get_timestamp()))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         // all_keys_required: Some(false),
