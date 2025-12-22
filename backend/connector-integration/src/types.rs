@@ -65,6 +65,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Placetopay => Box::new(connectors::Placetopay::new()),
             ConnectorEnum::Trustpayments => Box::new(connectors::Trustpayments::new()),
             ConnectorEnum::Rapyd => Box::new(connectors::Rapyd::new()),
+            ConnectorEnum::Redsys => Box::new(connectors::Redsys::new()),
             ConnectorEnum::Aci => Box::new(connectors::Aci::new()),
             ConnectorEnum::Trustpay => Box::new(connectors::Trustpay::new()),
             ConnectorEnum::Stripe => Box::new(connectors::Stripe::new()),
