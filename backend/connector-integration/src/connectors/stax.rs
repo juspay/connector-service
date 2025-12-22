@@ -6,13 +6,15 @@ use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void,
+        Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund,
+        SdkSessionToken, Void,
     },
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
@@ -164,6 +166,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Stax<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Stax<T>
+{
+}
+
 // ===== VALIDATION TRAIT IMPLEMENTATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Stax<T>
@@ -295,7 +312,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/charge", base_url))
+            Ok(format!("{base_url}/charge"))
         }
     }
 );
@@ -332,7 +349,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/transaction/{}", base_url, transaction_id))
+            Ok(format!("{base_url}/transaction/{transaction_id}"))
         }
     }
 );
@@ -361,7 +378,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/transaction/{}/capture", base_url, transaction_id))
+            Ok(format!("{base_url}/transaction/{transaction_id}/capture"))
         }
     }
 );
@@ -386,7 +403,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let transaction_id = req.request.connector_transaction_id.clone();
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/transaction/{}/void", base_url, transaction_id))
+            Ok(format!("{base_url}/transaction/{transaction_id}/void"))
         }
     }
 );
@@ -411,7 +428,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let transaction_id = req.request.connector_transaction_id.clone();
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}/transaction/{}/refund", base_url, transaction_id))
+            Ok(format!("{base_url}/transaction/{transaction_id}/refund"))
         }
     }
 );
@@ -444,7 +461,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let refund_id = req.request.connector_refund_id.clone();
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}/transaction/{}", base_url, refund_id))
+            Ok(format!("{base_url}/transaction/{refund_id}"))
         }
     }
 );
@@ -468,7 +485,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/payment-method/", base_url))
+            Ok(format!("{base_url}/payment-method/"))
         }
     }
 );
@@ -492,7 +509,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/customer", base_url))
+            Ok(format!("{base_url}/customer"))
         }
     }
 );
@@ -577,6 +594,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Stax<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Stax<T>
 {
 }

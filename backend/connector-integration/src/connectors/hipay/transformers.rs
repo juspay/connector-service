@@ -18,7 +18,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -50,16 +50,13 @@ impl TryFrom<&ConnectorAuthType> for HipayAuthType {
 // Converts a serializable struct into reqwest::multipart::Form
 pub fn build_form_from_struct<T: Serialize>(
     data: T,
-) -> Result<reqwest::multipart::Form, domain_types::errors::ParsingError> {
+) -> Result<reqwest::multipart::Form, errors::ParsingError> {
     let mut form = reqwest::multipart::Form::new();
-    let serialized = serde_json::to_value(&data)
-        .map_err(|_| domain_types::errors::ParsingError::EncodeError("json-value"))?;
-    let serialized_object =
-        serialized
-            .as_object()
-            .ok_or(domain_types::errors::ParsingError::EncodeError(
-                "Expected object",
-            ))?;
+    let serialized =
+        serde_json::to_value(&data).map_err(|_| errors::ParsingError::EncodeError("json-value"))?;
+    let serialized_object = serialized
+        .as_object()
+        .ok_or(errors::ParsingError::EncodeError("Expected object"))?;
     for (key, values) in serialized_object {
         let value = match values {
             serde_json::Value::String(s) => s.clone(),
@@ -272,25 +269,22 @@ impl std::fmt::Display for HipayOperation {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Operation {
+    Authorization,
+    Sale,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HipayPaymentsRequest {
     pub payment_product: String,
     pub orderid: String,
-    pub operation: String,
+    pub operation: Operation,
     pub description: String,
     pub currency: common_enums::Currency,
     pub amount: StringMajorUnit,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cardtoken: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub card_security_code: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub firstname: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub lastname: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ipaddr: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accept_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -300,21 +294,12 @@ pub struct HipayPaymentsRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cancel_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub exception_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub eci: Option<String>,
+    pub notify_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication_indicator: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<
             RouterDataV2<
@@ -340,8 +325,6 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        use hyperswitch_masking::PeekInterface;
-
         // Get payment method - determine payment_product based on card network
         // Priority order (matching Hyperswitch):
         // 1. For tokenized cards: Use connector_customer (contains domestic_network from tokenization)
@@ -387,45 +370,6 @@ impl<
             }
         };
 
-        // Determine operation based on capture method
-        let operation = match item.router_data.request.capture_method {
-            Some(common_enums::CaptureMethod::Manual) => "Authorization".to_string(),
-            _ => "Sale".to_string(), // Automatic capture or default
-        };
-
-        // Extract customer information using utility functions
-        let firstname = item
-            .router_data
-            .resource_common_data
-            .get_optional_billing_first_name();
-        let lastname = item
-            .router_data
-            .resource_common_data
-            .get_optional_billing_last_name();
-
-        // Get email - convert Email type to Secret<String>
-        let email = item.router_data.request.email.as_ref().map(|e| {
-            use hyperswitch_masking::PeekInterface;
-            Secret::new(e.peek().to_string())
-        });
-
-        // Get IP address using utility function
-        let ipaddr = item
-            .router_data
-            .request
-            .get_ip_address_as_optional()
-            .map(|ip| {
-                use hyperswitch_masking::PeekInterface;
-                ip.peek().to_string()
-            });
-
-        // Get return URLs from router data
-        let accept_url = item.router_data.request.complete_authorize_url.clone();
-        let decline_url = accept_url.clone();
-        let pending_url = accept_url.clone();
-        let cancel_url = accept_url.clone();
-        let exception_url = accept_url.clone();
-
         // Convert amount to StringMajorUnit (HiPay expects string with decimals)
         let amount = item
             .connector
@@ -435,6 +379,12 @@ impl<
                 item.router_data.request.currency,
             )
             .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
+        // Determine operation based on capture method (matching HS)
+        let operation = match item.router_data.request.capture_method {
+            Some(common_enums::CaptureMethod::Manual) => Operation::Authorization,
+            _ => Operation::Sale, // Automatic capture or default
+        };
 
         // Extract card token from payment_method_token if present,
         // or from connector_customer as fallback (when token is passed via gRPC)
@@ -454,12 +404,33 @@ impl<
                     .clone()
             });
 
-        // Extract CVC for tokenized payments (HiPay requires CVC with token)
-        let card_security_code = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::CardToken(token_data) => token_data.card_cvc.clone(),
-            PaymentMethodData::Card(card_data) => Some(card_data.card_cvc.clone()),
-            _ => None,
-        };
+        // Build callback URLs matching HS implementation
+        // Use /redirect/response/hipay path (not /redirect/complete/hipay)
+        let base_url = item.router_data.request.complete_authorize_url.clone();
+        let redirect_base = base_url.map(|url| {
+            // Replace /redirect/complete/hipay with /redirect/response/hipay
+            url.replace("/redirect/complete/hipay", "/redirect/response/hipay")
+        });
+
+        let accept_url = redirect_base.clone();
+        let decline_url = redirect_base.clone();
+        let pending_url = redirect_base.clone();
+        let cancel_url = redirect_base.clone();
+        let notify_url = redirect_base;
+
+        // Set authentication_indicator to "0" for non-3DS (matching HS)
+        // Can be extended later to support 3DS flows
+        let authentication_indicator = Some("0".to_string());
+
+        // Use description from resource_common_data (matching HS)
+        // HS uses item.router_data.get_description() which returns this field
+        // Default to "Short Description" to match HS if not present
+        let description = item
+            .router_data
+            .resource_common_data
+            .description
+            .clone()
+            .unwrap_or_else(|| "Short Description".to_string());
 
         Ok(Self {
             payment_product,
@@ -469,27 +440,16 @@ impl<
                 .connector_request_reference_id
                 .clone(),
             operation,
-            description: item
-                .router_data
-                .request
-                .statement_descriptor
-                .clone()
-                .unwrap_or_else(|| "Payment".to_string()),
+            description,
             currency: item.router_data.request.currency,
             amount,
             cardtoken,
-            card_security_code,
-            email,
-            firstname,
-            lastname,
-            ipaddr,
             accept_url,
             decline_url,
             pending_url,
             cancel_url,
-            exception_url,
-            eci: None,
-            authentication_indicator: None,
+            notify_url,
+            authentication_indicator,
         })
     }
 }
@@ -530,31 +490,13 @@ pub type HipayRefundResponse = HipayMaintenanceResponse<HipayRefundStatus>;
 pub type HipayPSyncResponse = HipaySyncResponse;
 pub type HipayRSyncResponse = HipayRefundSyncResponse;
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            HipayAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            HipayAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<HipayAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
         let status = AttemptStatus::from(item.response.status.clone());
@@ -619,14 +561,7 @@ pub struct HipayTokenRequest<T: PaymentMethodDataTypes> {
     pub cvc: Secret<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<
             RouterDataV2<
@@ -706,18 +641,7 @@ pub struct HipayTokenResponse {
     pub country: Option<common_enums::CountryAlpha2>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            HipayTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayTokenResponse, Self>>
     for RouterDataV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -727,17 +651,7 @@ impl<T: PaymentMethodDataTypes>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayTokenResponse, Self>) -> Result<Self, Self::Error> {
         use hyperswitch_masking::ExposeInterface;
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse {
@@ -790,22 +704,12 @@ fn get_sync_status(state: i32) -> AttemptStatus {
 
 // Payment Sync Response Implementation
 // Uses HipaySyncResponse enum with v3 API flat structure
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<HipayPSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayPSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Handle sync response - could be Response or Error variant
         match item.response {
             HipaySyncResponse::Response { id, status, .. } => {
@@ -867,14 +771,7 @@ pub struct HipayCaptureRequest {
     pub amount: Option<StringMajorUnit>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -910,22 +807,12 @@ impl<
 
 // Capture Response Implementation
 // Uses HipayMaintenanceResponse<HipayPaymentStatus> with direct enum conversion
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<HipayCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayCaptureResponse, Self>) -> Result<Self, Self::Error> {
         // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
         let status = AttemptStatus::from(item.response.status.clone());
 
@@ -979,14 +866,7 @@ pub struct HipayRefundRequest {
     pub amount: Option<StringMajorUnit>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for HipayRefundRequest
@@ -1019,22 +899,12 @@ impl<
 
 // Refund Response Implementation
 // Uses HipayMaintenanceResponse<HipayRefundStatus> with From trait conversion
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<HipayRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayRefundResponse, Self>) -> Result<Self, Self::Error> {
         // Convert HipayRefundStatus enum directly to RefundStatus using From trait
         let refund_status = RefundStatus::from(item.response.status.clone());
 
@@ -1051,22 +921,12 @@ impl
 
 // Refund Sync Response Implementation
 // Uses HipayRefundSyncResponse JSON structure from v3 API
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<HipayRSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayRSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Map numeric status codes to RefundStatus (matching Hyperswitch)
         // Status codes from HiPay API documentation:
         // 24 = Refund Requested (Pending)
@@ -1101,14 +961,7 @@ pub struct HipayVoidRequest {
     pub amount: Option<StringMajorUnit>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HipayRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1134,22 +987,12 @@ impl<
 
 // Void Response Implementation
 // Uses HipayMaintenanceResponse<HipayPaymentStatus> with direct enum conversion
-impl
-    TryFrom<
-        ResponseRouterData<
-            HipayVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<HipayVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            HipayVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<HipayVoidResponse, Self>) -> Result<Self, Self::Error> {
         // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
         let status = AttemptStatus::from(item.response.status.clone());
 

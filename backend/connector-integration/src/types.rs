@@ -24,6 +24,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
 
     fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector<T> {
         match connector_name {
+            ConnectorEnum::Forte => Box::new(connectors::Forte::new()),
             ConnectorEnum::Adyen => Box::new(connectors::Adyen::new()),
             ConnectorEnum::Bluesnap => Box::new(connectors::Bluesnap::new()),
             ConnectorEnum::Razorpay => Box::new(connectors::Razorpay::new()),
@@ -49,6 +50,9 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Cryptopay => Box::new(connectors::Cryptopay::new()),
             ConnectorEnum::Helcim => Box::new(connectors::Helcim::new()),
             ConnectorEnum::Multisafepay => Box::new(connectors::Multisafepay::new()),
+            ConnectorEnum::Iatapay => Box::new(connectors::Iatapay::new()),
+            ConnectorEnum::Nmi => Box::new(connectors::Nmi::new()),
+            ConnectorEnum::Nexixpay => Box::new(connectors::Nexixpay::new()),
             ConnectorEnum::Authipay => Box::new(connectors::Authipay::new()),
             ConnectorEnum::Stax => Box::new(connectors::Stax::new()),
             ConnectorEnum::Fiservemea => Box::new(connectors::Fiservemea::new()),
@@ -67,10 +71,21 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Cybersource => Box::new(connectors::Cybersource::new()),
             ConnectorEnum::Worldpay => Box::new(connectors::Worldpay::new()),
             ConnectorEnum::Worldpayvantiv => Box::new(connectors::Worldpayvantiv::new()),
+            ConnectorEnum::Worldpayxml => Box::new(connectors::Worldpayxml::new()),
             ConnectorEnum::Payload => Box::new(connectors::Payload::new()),
             ConnectorEnum::Paysafe => Box::new(connectors::Paysafe::new()),
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
+            ConnectorEnum::Barclaycard => Box::new(connectors::Barclaycard::new()),
             ConnectorEnum::Billwerk => Box::new(connectors::Billwerk::new()),
+            ConnectorEnum::Payme => Box::new(connectors::Payme::new()),
+            ConnectorEnum::Nuvei => Box::new(connectors::Nuvei::new()),
+            ConnectorEnum::Airwallex => Box::new(connectors::Airwallex::new()),
+            ConnectorEnum::Bambora => Box::new(connectors::Bambora::new()),
+            ConnectorEnum::Shift4 => Box::new(connectors::Shift4::new()),
+            ConnectorEnum::Bamboraapac => Box::new(connectors::Bamboraapac::new()),
+            ConnectorEnum::Tsys => Box::new(connectors::Tsys::new()),
+            ConnectorEnum::Bankofamerica => Box::new(connectors::Bankofamerica::new()),
+            ConnectorEnum::Powertranz => Box::new(connectors::Powertranz::new()),
         }
     }
 }

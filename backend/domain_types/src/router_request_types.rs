@@ -1,11 +1,7 @@
 use std::str::FromStr;
 
 use common_enums::{self, CaptureMethod, Currency};
-use common_utils::{
-    pii::{self, IpAddress},
-    types::SemanticVersion,
-    Email, MinorUnit,
-};
+use common_utils::{pii::IpAddress, types::SemanticVersion, Email, MinorUnit};
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::Serialize;
@@ -19,7 +15,7 @@ use crate::{
     utils,
 };
 
-pub type Error = error_stack::Report<crate::errors::ConnectorError>;
+pub type Error = error_stack::Report<errors::ConnectorError>;
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct BrowserInformation {
@@ -95,7 +91,7 @@ impl BrowserInformation {
 
 #[derive(Debug, Default, Clone)]
 pub enum SyncRequestType {
-    MultipleCaptureSync(Vec<String>),
+    MultipleCaptureSync,
     #[default]
     SinglePaymentSync,
 }
@@ -162,7 +158,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             }))
         }).transpose()?;
         let trans_status = trans_status.map(|trans_status|{
-            grpc_api_types::payments::TransactionStatus::try_from(trans_status).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
+            payments::TransactionStatus::try_from(trans_status).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
                 sub_code: "INVALID_TRANSACTION_STATUS".to_owned(),
                 error_identifier: 400,
                 error_message: "Invalid transaction status format. Expected one of the valid 3DS transaction status values".to_string(),
@@ -197,7 +193,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
     }
 }
 
-impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
+impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
     fn foreign_from(value: AuthenticationData) -> Self {
         use hyperswitch_masking::ExposeInterface;
         Self {
@@ -224,7 +220,7 @@ impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
 #[derive(Debug, Clone)]
 pub struct ConnectorCustomerData<T: PaymentMethodDataTypes> {
     pub description: Option<String>,
-    pub email: Option<pii::Email>,
+    pub email: Option<Email>,
     pub phone: Option<Secret<String>>,
     pub name: Option<Secret<String>>,
     pub preprocessing_id: Option<String>,
@@ -365,3 +361,6 @@ pub struct PostAuthenticateIntegrityObject {
     pub amount: MinorUnit,
     pub currency: Currency,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SdkSessionTokenIntegrityObject {}
