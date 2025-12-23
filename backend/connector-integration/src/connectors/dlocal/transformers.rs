@@ -103,7 +103,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .resource_common_data
             .get_billing_address()?;
-        let country = address.get_country()?;
+        let country = *address.get_country()?;
         let name = address.get_full_name()?;
         match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => {
@@ -122,7 +122,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     currency: item.router_data.request.currency,
                     payment_method_id: PaymentMethodId::Card,
                     payment_method_flow: PaymentMethodFlow::Direct,
-                    country: country.clone(),
+                    country,
                     payer: Payer {
                         name,
                         email,
