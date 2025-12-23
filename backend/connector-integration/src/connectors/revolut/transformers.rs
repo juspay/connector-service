@@ -366,13 +366,13 @@ pub struct RevolutCardDetails {
     pub checks: Option<RevolutPaymentChecks>,
     pub authorisation_code: Option<String>,
     pub arn: Option<String>,
-    pub fingerprint: Option<String>,
+    pub fingerprint: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutAccountDetails {
     pub id: Option<String>,
-    pub fingerprint: Option<String>,
+    pub fingerprint: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
