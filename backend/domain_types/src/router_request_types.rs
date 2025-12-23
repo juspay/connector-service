@@ -268,7 +268,7 @@ impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
             created_at: value.created_at.map(|dt| dt.assume_utc().unix_timestamp()),
             message_extension: serde_json::to_string(&value.message_extension)
                 .ok()
-                .map(|s| Secret::new(s)),
+                .map(Secret::new),
         }
     }
 }
