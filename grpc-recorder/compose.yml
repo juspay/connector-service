@@ -1,0 +1,83 @@
+services:
+  grpc-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: connector-grpc-server
+    ports:
+      - "8085:8085"
+      - "9095:9095"
+    environment:
+      - RUST_LOG=info
+      - ENVIRONMENT=development
+    volumes:
+      - ../config:/app/config
+      - ../logs:/var/log/grpc-server
+    networks:
+      - connector-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9095/metrics"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  grpc-recorder-service:
+    build:
+      context: ..
+      dockerfile: ./grpc-recorder/Dockerfile
+    container_name: connector-grpc-recorder
+    ports:
+      - "50051:50051"  # Envoy connects here for ext_proc
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      - STORAGE_PATH=/data/recordings
+      - GRPC_PORT=50051
+      - HTTP_PORT=8000
+      - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+    networks:
+      - connector-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import socket; s = socket.socket(); s.connect((\"localhost\", 50051))' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  envoy-proxy:
+    image: envoyproxy/envoy:v1.29-latest
+    container_name: connector-envoy-proxy
+    ports:
+      - "8086:8086"
+      - "9901:9901"
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./logs/envoy:/var/log/envoy
+      - ./logs/envoy/logrotate.conf:/etc/logrotate.d/envoy:ro
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "--log-level", "warn"]
+    depends_on:
+      grpc-recorder-service: 
+        condition: service_healthy
+      grpc-server:
+        condition: service_healthy
+    networks:
+      - connector-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9901/server_info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  connector-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local

@@ -412,3 +412,7 @@ $RECYCLE.BIN/
 # DrawIO files
 **/*.drawio.bkp
 gen/**
+**/node_modules
+**/grpc-recorder/static
+**/grpc-recorder/data
+**/grpc-recorder/proto

@@ -1,0 +1,54 @@
+services:
+  grpc-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: connector-grpc-server-dev
+    ports:
+      - "8085:8085"
+      - "9095:9095"
+    environment:
+      - RUST_LOG=debug
+      - ENVIRONMENT=development
+    volumes:
+      - ./config:/app/config
+      - ./logs:/var/log/grpc-server
+      - ./backend:/app/backend  # Mount source for hot reloading if needed
+    networks:
+      - connector-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9095/metrics"]
+      interval: 30s
+      timeout: 2s
+      retries: 3
+
+  envoy-proxy:
+    image: envoyproxy/envoy:v1.29-latest
+    container_name: connector-envoy-proxy-dev
+    ports:
+      - "8086:8086"
+      - "9901:9901"
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./logs:/var/log/envoy
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
+    depends_on:
+      grpc-server:
+        condition: service_healthy
+    networks:
+      - connector-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9901/server_info"]
+      interval: 30s
+      timeout: 2s
+      retries: 3
+
+networks:
+  connector-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local

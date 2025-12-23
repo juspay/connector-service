@@ -16,17 +16,40 @@ buffer_limit = 100000
 
 [server]
 host = "0.0.0.0"
-port = 8000
+port = 8085
 type = "grpc"
 
 [metrics]
 host = "0.0.0.0"
-port = 8080
+port = 9095
 
 [proxy]
-idle_pool_connection_timeout = 90
+http_url = "http://host.docker.internal:8081"                    # Proxy all HTTP traffic via this proxy
+https_url = "http://host.docker.internal:8081"                   # Proxy all HTTPS traffic via this proxy
+idle_pool_connection_timeout = 90                     # Timeout for idle pool connections (defaults to 90s)
+bypass_proxy_hosts = ""                               # A comma-separated list of domains or IP addresses that should not use the proxy
+mitm_proxy_enabled = true                                   # Enable MITM mode
+mitm_ca_cert = """-----BEGIN CERTIFICATE-----
+MIIDNTCCAh2gAwIBAgIUGUARaXNSdoZGF0qlN8wKbDtJhGswDQYJKoZIhvcNAQEL
+BQAwKDESMBAGA1UEAwwJbWl0bXByb3h5MRIwEAYDVQQKDAltaXRtcHJveHkwHhcN
+MjUxMjA5MDY0MTMzWhcNMzUxMjA5MDY0MTMzWjAoMRIwEAYDVQQDDAltaXRtcHJv
+eHkxEjAQBgNVBAoMCW1pdG1wcm94eTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBAKpWNpYMwZA43HDMvbwUnkw+bLbzygFmATDxMC7VquUEQlIZ2mpgo94E
+weo+BnAULEbSWqFdTREx45Wuapp1tCVq4wYU2fs3JzSfC3SU5iiRo7S12j0Z2OnW
+QwnDOKsTaC4/MrZfGz9Q3i2dvFrht0DaWa46vfXzdfFeZbuBQEQMe3b6yJu1RfBj
+GwrG8xljFpddiVJcKAebyLX9kgWZpYxhYh8qsRiMK6FrSupPsVD+oiJNpB9BpU2c
+hUjLARfbHp03Po/LoG8Abg+7wS7xBiBxMpRbiDgz1fndX8cUqPAslOxI1rU21bm/
+u+GtirurjadrdWDVEwP26c/b+OcSq88CAwEAAaNXMFUwDwYDVR0TAQH/BAUwAwEB
+/zATBgNVHSUEDDAKBggrBgEFBQcDATAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE
+FKpa1ECzCtYtvmlWKICFAARnStYRMA0GCSqGSIb3DQEBCwUAA4IBAQBTv7EIYIad
++J7ge2HBFuADYorOpFKSEA8tQSYrJayELzfuCgzpiE+Tbe7AG4GnoZK7IaM2/4J9
+vT6kWuflqHc2RCHKj0gq11pbKPTk9WruhBfMc+ufRKBshwHazGpVqQ0sWbLWjM/4
+la/3mFiHmcn/CgOE5c7myqJ4jBfkAca2os/ttG08YZ8ze9HWxXtyxXis9Q5+/o3P
+kw/675HvL39x1F2/oHwlCH+TI0fH/xy9h88p2LvRHMrKJfPY5fWMm4IKfrN/Rabs
+JtlKN1wXWO4AjF8DJv2QqOCn0LMScOwlCKO4JadtG91kBPpHQNe5sElaKIto5hOm
+I/HEz+loOmX0
+-----END CERTIFICATE-----"""
 bypass_proxy_urls = []
-mitm_proxy_enabled = false
 
 [test]
 enabled = false
