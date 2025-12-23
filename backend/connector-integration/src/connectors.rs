@@ -184,3 +184,6 @@ pub use self::bambora::Bambora;
 
 pub mod payme;
 pub use self::payme::Payme;
+
+pub mod revolut;
+pub use self::revolut::Revolut;
