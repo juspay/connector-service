@@ -93,6 +93,7 @@ worldpayxml.base_url = "https://secure.worldpay.com/jsp/merchant/xml/paymentServ
 tsys.base_url = "https://gateway.transit-pass.com/"
 bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
+revolut.base_url = "https://oba-auth.revolut.com/"
 
 # Generic Events Configuration
 [events]
