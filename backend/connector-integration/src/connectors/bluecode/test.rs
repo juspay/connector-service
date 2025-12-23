@@ -143,7 +143,7 @@ mod tests {
                         ))
                         .unwrap(),
                     ),
-                    request_incremental_authorization: false,
+                    request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
                     merchant_order_reference_id: None,
@@ -286,7 +286,7 @@ mod tests {
                     payment_experience: None,
                     payment_method_type: None,
                     customer_id: None,
-                    request_incremental_authorization: false,
+                    request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(0),
                     merchant_order_reference_id: None,

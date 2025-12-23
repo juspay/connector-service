@@ -1702,9 +1702,9 @@ impl<
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            request_incremental_authorization: value
-                .request_incremental_authorization
-                .unwrap_or(false),
+            request_incremental_authorization: Some(
+                value.request_incremental_authorization.unwrap_or(false),
+            ),
             metadata: if value.metadata.is_empty() {
                 None
             } else {
@@ -1908,9 +1908,9 @@ impl<
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            request_incremental_authorization: value
-                .request_incremental_authorization
-                .unwrap_or(false),
+            request_incremental_authorization: Some(
+                value.request_incremental_authorization.unwrap_or(false),
+            ),
             metadata: if value.metadata.is_empty() {
                 None
             } else {

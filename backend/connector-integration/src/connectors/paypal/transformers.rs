@@ -36,7 +36,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     GetRequestIncrementalAuthorization for PaymentsAuthorizeData<T>
 {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
-        Some(self.request_incremental_authorization)
+        self.request_incremental_authorization
     }
 }
 

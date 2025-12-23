@@ -1041,7 +1041,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_experience: Option<common_enums::PaymentExperience>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub customer_id: Option<CustomerId>,
-    pub request_incremental_authorization: bool,
+    pub request_incremental_authorization: Option<bool>,
     pub metadata: Option<serde_json::Value>,
     pub authentication_data: Option<router_request_types::AuthenticationData>,
     pub split_payments: Option<SplitPaymentsRequest>,
