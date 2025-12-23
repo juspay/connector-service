@@ -45,7 +45,7 @@ use domain_types::{
     },
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{Mask, Maskable};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -743,22 +743,94 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Razorpay<T>
 {
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
+        // 1. Extract webhook secret
+        let webhook_secret = match connector_webhook_secret {
+            Some(secrets) => secrets.secret,
+            None => {
+                tracing::warn!(
+                    target: "razorpay_webhook",
+                    "No webhook secret provided for Razorpay webhook verification"
+                );
+                return Ok(false);
+            }
+        };
+
+        // 2. Extract X-Razorpay-Signature header (case-insensitive)
+        let signature_header = match request
+            .headers
+            .get("X-Razorpay-Signature")
+            .or_else(|| request.headers.get("x-razorpay-signature"))
+        {
+            Some(header) => header,
+            None => {
+                tracing::warn!(
+                    target: "razorpay_webhook",
+                    "Missing X-Razorpay-Signature header in webhook request from Razorpay"
+                );
+                return Ok(false);
+            }
+        };
+
+        // 3. Decode hex signature (direct hex, no prefix)
+        let expected_signature = match hex::decode(signature_header) {
+            Ok(sig) => sig,
+            Err(hex_error) => {
+                tracing::warn!(
+                    target: "razorpay_webhook",
+                    "Failed to decode hex signature from X-Razorpay-Signature header: '{}', error: {}",
+                    signature_header,
+                    hex_error
+                );
+                return Ok(false);
+            }
+        };
+
+        // 4. Compute HMAC-SHA256 of raw request body
+        use common_utils::crypto::{HmacSha256, SignMessage};
+        let crypto_algorithm = HmacSha256;
+        let computed_signature = match crypto_algorithm.sign_message(&webhook_secret, &request.body)
+        {
+            Ok(sig) => sig,
+            Err(crypto_error) => {
+                tracing::error!(
+                    target: "razorpay_webhook",
+                    "Failed to compute HMAC-SHA256 signature for webhook verification, error: {:?}",
+                    crypto_error
+                );
+                return Ok(false);
+            }
+        };
+
+        // 5. Constant-time comparison to prevent timing attacks
+        Ok(computed_signature == expected_signature)
+    }
+
     fn get_event_type(
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
-        let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-            report!(errors::ConnectorError::WebhookBodyDecodingFailed)
-                .attach_printable(format!("error while decoing webhook body {err}"))
-        })?;
+        // Try to parse with typed event first (new structure)
+        let webhook_body: transformers::RazorpayWebhookTyped = request
+            .body
+            .parse_struct("RazorpayWebhookTyped")
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
+            .attach_printable_lazy(|| {
+                "Failed to parse webhook event type from Razorpay webhook body"
+            })?;
 
-        if payload.refund.is_some() {
-            Ok(EventType::RefundSuccess)
-        } else {
-            Ok(EventType::PaymentIntentSuccess)
-        }
+        webhook_body
+            .event
+            .to_event_type()
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
+            .attach_printable_lazy(|| "Unsupported webhook event type from Razorpay")
     }
 
     fn process_payment_webhook(
@@ -768,33 +840,42 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let request_body_copy = request.body.clone();
-        let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-            report!(errors::ConnectorError::WebhookBodyDecodingFailed)
-                .attach_printable(format!("error while decoding webhook body {err}"))
-        })?;
 
-        let notif = payload.payment.ok_or_else(|| {
-            error_stack::Report::new(errors::ConnectorError::RequestEncodingFailed)
-        })?;
+        let webhook_body: transformers::RazorpayWebhookTyped = request
+            .body
+            .parse_struct("RazorpayWebhookTyped")
+            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
+            .attach_printable_lazy(|| "Failed to parse Razorpay payment webhook body structure")?;
+
+        // Extract payment entity from nested payload (reusing old comprehensive structure)
+        let payment_wrapper = webhook_body
+            .payload
+            .payment
+            .ok_or(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+
+        let payment_entity = payment_wrapper.entity;
+        let transaction_id = payment_entity.id.clone();
+        let status = AttemptStatus::from(webhook_body.event);
 
         Ok(WebhookDetailsResponse {
-            resource_id: Some(ResponseId::ConnectorTransactionId(notif.entity.order_id)),
-            status: transformers::get_razorpay_payment_webhook_status(
-                notif.entity.entity,
-                notif.entity.status,
-            )?,
-            mandate_reference: None,
-            connector_response_reference_id: None,
-            error_code: notif.entity.error_code,
-            error_message: notif.entity.error_reason,
-            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            resource_id: Some(ResponseId::ConnectorTransactionId(
+                payment_entity.order_id.clone(),
+            )),
+            status,
             status_code: 200,
+            mandate_reference: None,
+            connector_response_reference_id: Some(transaction_id),
+            error_code: payment_entity.error_code,
+            error_message: payment_entity.error_description,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
-            transformation_status: common_enums::WebhookTransformationStatus::Complete,
             minor_amount_captured: None,
-            amount_captured: None,
-            error_reason: None,
-            network_txn_id: None,
+            amount_captured: Some(payment_entity.amount),
+            error_reason: payment_entity.error_reason,
+            network_txn_id: payment_entity
+                .acquirer_data
+                .and_then(|data| data.rrn.map(|rrn| rrn.peek().to_string())),
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
 
@@ -805,26 +886,41 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let request_body_copy = request.body.clone();
-        let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-            report!(errors::ConnectorError::WebhookBodyDecodingFailed)
-                .attach_printable(format!("error while decoing webhook body {err}"))
-        })?;
 
-        let notif = payload.refund.ok_or_else(|| {
-            error_stack::Report::new(errors::ConnectorError::RequestEncodingFailed)
-        })?;
+        let webhook_body: transformers::RazorpayWebhookTyped = request
+            .body
+            .parse_struct("RazorpayWebhookTyped")
+            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
+            .attach_printable_lazy(|| "Failed to parse Razorpay refund webhook body structure")?;
+
+        // Extract refund entity from nested payload (reusing old structure)
+        let refund_wrapper = webhook_body
+            .payload
+            .refund
+            .ok_or(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+
+        let refund_entity = refund_wrapper.entity;
+
+        // Extract unique_request_id from notes (reference: Flow.hs:5334-5335)
+        // Now supported because we added notes field to RefundEntity
+        let connector_refund_id = refund_entity
+            .notes
+            .as_ref()
+            .and_then(|notes| notes.get("unique_request_id"))
+            .and_then(|v| v.as_str())
+            .map(String::from)
+            .unwrap_or(refund_entity.id.clone());
+
+        let status = common_enums::RefundStatus::from(webhook_body.event);
 
         Ok(RefundWebhookDetailsResponse {
-            connector_refund_id: Some(notif.entity.id),
-            status: transformers::get_razorpay_refund_webhook_status(
-                notif.entity.entity,
-                notif.entity.status,
-            )?,
-            connector_response_reference_id: None,
+            connector_refund_id: Some(connector_refund_id.clone()),
+            status,
+            status_code: 200,
+            connector_response_reference_id: Some(connector_refund_id),
             error_code: None,
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
-            status_code: 200,
             response_headers: None,
         })
     }
