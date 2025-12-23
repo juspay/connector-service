@@ -517,3 +517,49 @@ pub fn convert_canada_state_to_code(state: &str) -> String {
         _ => state.to_string(),
     }
 }
+
+/// Convert Spanish autonomous community/province names to their 2-letter ISO 3166-2:ES codes
+///
+/// # Arguments
+/// * `state` - The state/province name or code to convert
+///
+/// # Returns
+/// * `Ok(String)` - The 2-letter state code
+/// * `Err(ConnectorError)` - If the state cannot be mapped
+pub fn convert_spain_state_to_code(state: &str) -> Result<String, crate::errors::ConnectorError> {
+    // If already 2 characters, assume it's already an abbreviation
+    if state.len() == 2 {
+        return Ok(state.to_uppercase());
+    }
+
+    // Convert full autonomous community/province names to ISO 3166-2:ES codes (case-insensitive)
+    match state.to_lowercase().trim() {
+        // Autonomous Communities
+        "andalucía" | "andalucia" | "andalusia" => Ok("AN".to_string()),
+        "aragón" | "aragon" => Ok("AR".to_string()),
+        "asturias" | "principado de asturias" => Ok("AS".to_string()),
+        "islas baleares" | "illes balears" | "baleares" | "balearic islands" => {
+            Ok("IB".to_string())
+        }
+        "canarias" | "islas canarias" | "canary islands" => Ok("CN".to_string()),
+        "cantabria" => Ok("CB".to_string()),
+        "castilla-la mancha" | "castilla la mancha" => Ok("CM".to_string()),
+        "castilla y león" | "castilla y leon" | "castilla leon" => Ok("CL".to_string()),
+        "cataluña" | "catalunya" | "catalonia" => Ok("CT".to_string()),
+        "comunidad valenciana" | "comunitat valenciana" | "valencia" | "valencian community" => {
+            Ok("VC".to_string())
+        }
+        "extremadura" => Ok("EX".to_string()),
+        "galicia" => Ok("GA".to_string()),
+        "comunidad de madrid" | "madrid" => Ok("MD".to_string()),
+        "región de murcia" | "region de murcia" | "murcia" => Ok("MC".to_string()),
+        "comunidad foral de navarra" | "navarra" | "navarre" => Ok("NC".to_string()),
+        "país vasco" | "pais vasco" | "euskadi" | "basque country" => Ok("PV".to_string()),
+        "la rioja" | "rioja" => Ok("RI".to_string()),
+        // Autonomous Cities
+        "ceuta" => Ok("CE".to_string()),
+        "melilla" => Ok("ML".to_string()),
+        // If no match found, return original (might be valid code or international)
+        _ => Ok(state.to_string()),
+    }
+}
