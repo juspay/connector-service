@@ -4,6 +4,18 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.23.0
+
+### Features
+
+- **connector:**
+  - [SHIFT4] Bank-Redirect ([#383](https://github.com/juspay/connector-service/pull/383)) ([`042b281`](https://github.com/juspay/connector-service/commit/042b2815c6b219f418ba2e2fdd9478abb1aec2f3))
+  - Jpmorgan ([#358](https://github.com/juspay/connector-service/pull/358)) ([`95358c3`](https://github.com/juspay/connector-service/commit/95358c33971ba82cd1558bc3d511a245a619a7c2))
+
+**Full Changelog:** [`2025.12.19.0...2025.12.23.0`](https://github.com/juspay/connector-service/compare/2025.12.19.0...2025.12.23.0)
+
+- - -
+
 ## 2025.12.19.0
 
 ### Features
