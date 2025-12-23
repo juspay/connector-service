@@ -1,6 +1,5 @@
 pub mod transformers;
 
-use std::{fmt::Debug, marker::{Send, Sync}};
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::MinorUnit};
 use domain_types::{
@@ -37,6 +36,10 @@ use interfaces::{
     connector_types::{self},
 };
 use serde::Serialize;
+use std::{
+    fmt::Debug,
+    marker::{Send, Sync},
+};
 use transformers::*;
 
 use super::macros;
@@ -244,100 +247,124 @@ macros::create_all_prerequisites!(
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Paybox<T>
-{}
+{
+}
 
 // Empty implementations for unsupported flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentPreAuthenticateV2<T> for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthenticateV2<T> for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentPostAuthenticateV2<T> for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SubmitEvidenceV2 for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::DisputeDefend for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::AcceptDispute for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2 for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentTokenV2<T> for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SdkSessionTokenV2 for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidPostCaptureV2 for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::CreateConnectorCustomer for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Paybox<T>
-{}
+{
+}
 
 // SourceVerification implementations for all flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -347,7 +374,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -356,7 +384,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsSyncData,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -365,7 +394,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsCaptureData,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -374,7 +404,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentVoidData,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -383,7 +414,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundsData,
         RefundsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -392,7 +424,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundSyncData,
         RefundsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // ============================================================================
 // EMPTY CONNECTOR INTEGRATION IMPLEMENTATIONS FOR UNSUPPORTED FLOWS
@@ -406,7 +439,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -415,7 +449,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // Authenticate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -425,7 +460,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -434,7 +470,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // PostAuthenticate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -444,7 +481,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -453,7 +491,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // CreateSessionToken
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -463,7 +502,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SessionTokenRequestData,
         SessionTokenResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -472,7 +512,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SessionTokenRequestData,
         SessionTokenResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // CreateAccessToken
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -482,7 +523,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         AccessTokenRequestData,
         AccessTokenResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -491,7 +533,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         AccessTokenRequestData,
         AccessTokenResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // CreateOrder
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -501,7 +544,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -510,7 +554,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Paybox<T>
-{}
+{
+}
 
 // PaymentMethodToken
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -520,7 +565,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -529,7 +575,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
     > for Paybox<T>
-{}
+{
+}
 
 // CreateConnectorCustomer
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -539,7 +586,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ConnectorCustomerData,
         ConnectorCustomerResponse,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -548,7 +596,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ConnectorCustomerData,
         ConnectorCustomerResponse,
     > for Paybox<T>
-{}
+{
+}
 
 // VoidPC (Void Post Capture)
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -558,7 +607,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsCancelPostCaptureData,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -567,7 +617,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsCancelPostCaptureData,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // SetupMandate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -577,7 +628,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SetupMandateRequestData<T>,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -586,7 +638,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SetupMandateRequestData<T>,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // SdkSessionToken
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -596,7 +649,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -605,17 +659,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // RepeatPayment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData,
-        PaymentsResponseData,
-    > for Paybox<T>
-{}
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Paybox<T>
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -624,17 +676,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RepeatPaymentData,
         PaymentsResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // SubmitEvidence
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for Paybox<T>
-{}
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Paybox<T>
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -643,17 +693,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SubmitEvidenceData,
         DisputeResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // DefendDispute
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        DefendDispute,
-        DisputeFlowData,
-        DisputeDefendData,
-        DisputeResponseData,
-    > for Paybox<T>
-{}
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Paybox<T>
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -662,17 +710,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeDefendData,
         DisputeResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // Accept (AcceptDispute)
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-    > for Paybox<T>
-{}
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Paybox<T>
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -681,7 +727,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         AcceptDisputeData,
         DisputeResponseData,
     > for Paybox<T>
-{}
+{
+}
 
 // ============================================================================
 // FLOW IMPLEMENTATIONS
