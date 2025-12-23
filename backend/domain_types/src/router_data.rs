@@ -347,13 +347,13 @@ pub enum PaymentMethodToken {
 #[derive(Debug, Default, Clone)]
 pub struct RecurringMandatePaymentData {
     pub payment_method_type: Option<common_enums::enums::PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
-    pub original_payment_authorized_amount: Option<i64>,
+    pub original_payment_authorized_amount: Option<MinorUnit>,
     pub original_payment_authorized_currency: Option<common_enums::enums::Currency>,
     pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl RecurringMandatePaymentData {
-    pub fn get_original_payment_amount(&self) -> Result<i64, Error> {
+    pub fn get_original_payment_amount(&self) -> Result<MinorUnit, Error> {
         self.original_payment_authorized_amount
             .ok_or_else(missing_field_err("original_payment_authorized_amount"))
     }

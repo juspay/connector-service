@@ -903,6 +903,12 @@ impl PaymentFlowData {
             .and_then(|billing_address| billing_address.get_optional_full_name())
             .ok_or_else(missing_field_err("address.billing first_name & last_name"))
     }
+
+    pub fn get_recurring_mandate_payment_data(&self) -> Result<RecurringMandatePaymentData, Error> {
+        self.recurring_mandate_payment_data
+            .to_owned()
+            .ok_or_else(missing_field_err("recurring_mandate_payment_data"))
+    }
 }
 
 impl RawConnectorRequestResponse for PaymentFlowData {
@@ -2807,6 +2813,22 @@ pub struct RecurringMandatePaymentData {
     pub original_payment_authorized_amount: Option<MinorUnit>,
     pub original_payment_authorized_currency: Option<Currency>,
     pub mandate_metadata: Option<SecretSerdeValue>,
+}
+
+pub trait RecurringMandateData {
+    fn get_original_payment_amount(&self) -> Result<MinorUnit, Error>;
+    fn get_original_payment_currency(&self) -> Result<Currency, Error>;
+}
+
+impl RecurringMandateData for RecurringMandatePaymentData {
+    fn get_original_payment_amount(&self) -> Result<MinorUnit, Error> {
+        self.original_payment_authorized_amount
+            .ok_or_else(missing_field_err("original_payment_authorized_amount"))
+    }
+    fn get_original_payment_currency(&self) -> Result<Currency, Error> {
+        self.original_payment_authorized_currency
+            .ok_or_else(missing_field_err("original_payment_authorized_currency"))
+    }
 }
 
 #[derive(Clone, Debug)]

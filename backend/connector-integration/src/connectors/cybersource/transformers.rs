@@ -20,8 +20,8 @@ use domain_types::{
         MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        PaymentsSyncData, RecurringMandateData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     payment_address::Address,
@@ -37,7 +37,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_request_types,
     router_response_types::RedirectForm,
-    utils::CardIssuer,
+    utils::{to_currency_base_unit, CardIssuer},
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -3717,9 +3717,18 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         );
         let response =
             get_payment_response((&item.response, status, item.http_code)).map_err(|err| *err);
+
+        let connector_response = item
+            .response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             response,
@@ -4726,7 +4735,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Option<String>,
         ),
     ) -> Result<Self, Self::Error> {
-        let commerce_indicator = solution
+        let mut commerce_indicator = solution
             .as_ref()
             .map(|pm_solution| match pm_solution {
                 PaymentSolution::ApplePay | PaymentSolution::SamsungPay => network
@@ -4745,93 +4754,198 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             &item.router_data.request.merchant_account_metadata,
         )?;
 
-        // Extract connector mandate ID from mandate_reference
-        let connector_mandate_id = match &item.router_data.request.mandate_reference {
-            MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
-                connector_mandate_data
-                    .get_connector_mandate_id()
-                    .ok_or_else(|| ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                    })?
-            }
-            MandateReferenceId::NetworkMandateId(_)
-            | MandateReferenceId::NetworkTokenWithNTI(_) => {
-                return Err(error_stack::report!(ConnectorError::NotSupported {
-                    message: "Network mandate ID not supported for Cybersource repeat payments"
-                        .to_string(),
-                    connector: "cybersource",
-                }));
-            }
-        };
-
-        let (action_list, action_token_types, authorization_options) = if !connector_mandate_id
-            .is_empty()
+        let (action_list, action_token_types, authorization_options) = match item
+            .router_data
+            .request
+            .mandate_reference
+            .clone()
         {
-            match item.router_data.request.mandate_reference.clone() {
-                MandateReferenceId::ConnectorMandateId(_) => {
-                    let original_amount = item
-                        .router_data
-                        .request
-                        .recurring_mandate_payment_data
-                        .as_ref()
-                        .and_then(|recurring_mandate_payment_data| {
-                            recurring_mandate_payment_data.original_payment_authorized_amount
-                        });
+            MandateReferenceId::ConnectorMandateId(_) => {
+                let original_amount = item
+                    .router_data
+                    .request
+                    .recurring_mandate_payment_data
+                    .as_ref()
+                    .and_then(|recurring_mandate_payment_data| {
+                        recurring_mandate_payment_data.original_payment_authorized_amount
+                    });
 
-                    let original_currency = item
-                        .router_data
-                        .request
-                        .recurring_mandate_payment_data
-                        .as_ref()
-                        .and_then(|recurring_mandate_payment_data| {
-                            recurring_mandate_payment_data.original_payment_authorized_currency
-                        });
+                let original_currency = item
+                    .router_data
+                    .request
+                    .recurring_mandate_payment_data
+                    .as_ref()
+                    .and_then(|recurring_mandate_payment_data| {
+                        recurring_mandate_payment_data.original_payment_authorized_currency
+                    });
 
-                    let original_authorized_amount = match original_amount.zip(original_currency) {
-                        Some((original_amount, original_currency)) => {
-                            Some(domain_types::utils::get_amount_as_string(
-                                &common_enums::CurrencyUnit::Base,
-                                original_amount,
-                                original_currency,
-                            )?)
-                        }
-                        None => None,
-                    };
-                    (
-                        None,
-                        None,
-                        Some(CybersourceAuthorizationOptions {
-                            initiator: None,
-                            merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
-                                reason: None,
-                                original_authorized_amount,
-                                previous_transaction_id: None,
-                            }),
-                            ignore_avs_result: connector_merchant_config.disable_avs,
-                            ignore_cv_result: connector_merchant_config.disable_cvn,
+                let original_authorized_amount = match original_amount.zip(original_currency) {
+                    Some((original_amount, original_currency)) => {
+                        Some(domain_types::utils::get_amount_as_string(
+                            &common_enums::CurrencyUnit::Base,
+                            original_amount,
+                            original_currency,
+                        )?)
+                    }
+                    None => None,
+                };
+                (
+                    None,
+                    None,
+                    Some(CybersourceAuthorizationOptions {
+                        initiator: None,
+                        merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
+                            reason: None,
+                            original_authorized_amount,
+                            previous_transaction_id: None,
                         }),
-                    )
-                }
-                MandateReferenceId::NetworkMandateId(_)
-                | MandateReferenceId::NetworkTokenWithNTI(_) => {
-                    return Err(error_stack::report!(ConnectorError::NotSupported {
-                        message: "Network mandate ID not supported for Cybersource repeat payments"
-                            .to_string(),
-                        connector: "cybersource",
-                    }));
-                }
+                        ignore_avs_result: connector_merchant_config.disable_avs,
+                        ignore_cv_result: connector_merchant_config.disable_cvn,
+                    }),
+                )
             }
-        } else {
-            (
-                None,
-                None,
-                Some(CybersourceAuthorizationOptions {
-                    initiator: None,
-                    merchant_initiated_transaction: None,
-                    ignore_avs_result: connector_merchant_config.disable_avs,
-                    ignore_cv_result: connector_merchant_config.disable_cvn,
-                }),
-            )
+            MandateReferenceId::NetworkMandateId(network_transaction_id) => {
+                let (original_amount, original_currency) = match network
+                    .clone()
+                    .map(|network| network.to_lowercase())
+                    .as_deref()
+                {
+                    //This is to make original_authorized_amount mandatory for discover card networks in NetworkMandateId flow
+                    Some("004") => {
+                        let original_amount = Some(
+                            item.router_data
+                                .resource_common_data
+                                .get_recurring_mandate_payment_data()?
+                                .get_original_payment_amount()?,
+                        );
+                        let original_currency = Some(
+                            item.router_data
+                                .resource_common_data
+                                .get_recurring_mandate_payment_data()?
+                                .get_original_payment_currency()?,
+                        );
+                        (original_amount, original_currency)
+                    }
+                    _ => {
+                        let original_amount = item
+                            .router_data
+                            .resource_common_data
+                            .recurring_mandate_payment_data
+                            .as_ref()
+                            .and_then(|recurring_mandate_payment_data| {
+                                recurring_mandate_payment_data.original_payment_authorized_amount
+                            });
+
+                        let original_currency = item
+                            .router_data
+                            .resource_common_data
+                            .recurring_mandate_payment_data
+                            .as_ref()
+                            .and_then(|recurring_mandate_payment_data| {
+                                recurring_mandate_payment_data.original_payment_authorized_currency
+                            });
+
+                        (original_amount, original_currency)
+                    }
+                };
+                let original_authorized_amount = match original_amount.zip(original_currency) {
+                    Some((original_amount, original_currency)) => {
+                        Some(to_currency_base_unit(original_amount, original_currency)?)
+                    }
+                    None => None,
+                };
+                commerce_indicator = "recurring".to_string();
+                (
+                    None,
+                    None,
+                    Some(CybersourceAuthorizationOptions {
+                        initiator: Some(CybersourcePaymentInitiator {
+                            initiator_type: Some(CybersourcePaymentInitiatorTypes::Merchant),
+                            credential_stored_on_file: None,
+                            stored_credential_used: Some(true),
+                        }),
+                        merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
+                            reason: Some("7".to_string()),
+                            original_authorized_amount,
+                            previous_transaction_id: Some(Secret::new(network_transaction_id)),
+                        }),
+                        ignore_avs_result: connector_merchant_config.disable_avs,
+                        ignore_cv_result: connector_merchant_config.disable_cvn,
+                    }),
+                )
+            }
+            MandateReferenceId::NetworkTokenWithNTI(mandate_data) => {
+                let (original_amount, original_currency) = match network
+                    .clone()
+                    .map(|network| network.to_lowercase())
+                    .as_deref()
+                {
+                    //This is to make original_authorized_amount mandatory for discover card networks in NetworkMandateId flow
+                    Some("004") => {
+                        let original_amount = Some(
+                            item.router_data
+                                .resource_common_data
+                                .get_recurring_mandate_payment_data()?
+                                .get_original_payment_amount()?,
+                        );
+                        let original_currency = Some(
+                            item.router_data
+                                .resource_common_data
+                                .get_recurring_mandate_payment_data()?
+                                .get_original_payment_currency()?,
+                        );
+                        (original_amount, original_currency)
+                    }
+                    _ => {
+                        let original_amount = item
+                            .router_data
+                            .resource_common_data
+                            .recurring_mandate_payment_data
+                            .as_ref()
+                            .and_then(|recurring_mandate_payment_data| {
+                                recurring_mandate_payment_data.original_payment_authorized_amount
+                            });
+
+                        let original_currency = item
+                            .router_data
+                            .resource_common_data
+                            .recurring_mandate_payment_data
+                            .as_ref()
+                            .and_then(|recurring_mandate_payment_data| {
+                                recurring_mandate_payment_data.original_payment_authorized_currency
+                            });
+
+                        (original_amount, original_currency)
+                    }
+                };
+                let original_authorized_amount = match original_amount.zip(original_currency) {
+                    Some((original_amount, original_currency)) => {
+                        Some(to_currency_base_unit(original_amount, original_currency)?)
+                    }
+                    None => None,
+                };
+                commerce_indicator = "recurring".to_string();
+                (
+                    None,
+                    None,
+                    Some(CybersourceAuthorizationOptions {
+                        initiator: Some(CybersourcePaymentInitiator {
+                            initiator_type: Some(CybersourcePaymentInitiatorTypes::Merchant),
+                            credential_stored_on_file: None,
+                            stored_credential_used: Some(true),
+                        }),
+                        merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
+                            reason: Some("7".to_string()), // 7 is for MIT using NTI
+                            original_authorized_amount,
+                            previous_transaction_id: Some(Secret::new(
+                                mandate_data.network_transaction_id,
+                            )),
+                        }),
+                        ignore_avs_result: connector_merchant_config.disable_avs,
+                        ignore_cv_result: connector_merchant_config.disable_cvn,
+                    }),
+                )
+            }
         };
 
         Ok(Self {

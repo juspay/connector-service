@@ -7700,7 +7700,9 @@ impl<
             recurring_mandate_payment_data: value.recurring_mandate_payment_data.map(|v| {
                 RecurringMandatePaymentData {
                     payment_method_type: None,
-                    original_payment_authorized_amount: v.original_payment_authorized_amount,
+                    original_payment_authorized_amount: v
+                        .original_payment_authorized_amount
+                        .map(common_utils::types::MinorUnit::new),
                     original_payment_authorized_currency: Some(
                         common_enums::Currency::foreign_try_from(
                             v.original_payment_authorized_currency(),
@@ -7842,6 +7844,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                 connector_metadata,
                 mandate_reference,
                 status_code,
+                incremental_authorization_allowed,
                 ..
             } => Ok(
                 grpc_api_types::payments::PaymentServiceRepeatEverythingResponse {
@@ -7886,6 +7889,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                         .resource_common_data
                         .minor_amount_captured
                         .map(|amount_captured| amount_captured.get_amount_as_i64()),
+                    incremental_authorization_allowed,
                 },
             ),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -7934,6 +7938,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                     connector_response: None,
                     captured_amount: None,
                     minor_captured_amount: None,
+                    incremental_authorization_allowed: None,
                 },
             )
         }

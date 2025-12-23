@@ -2235,6 +2235,9 @@ message PaymentServiceRepeatEverythingResponse {
   optional int64 minor_captured_amount = 16; // Captured amount in minor currency units
 
   optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
+
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 18; // Indicates if incremental authorization is allowed
 }
 
 // -------------------------

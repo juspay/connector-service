@@ -88,7 +88,7 @@ impl GetRequestIncrementalAuthorization for PaymentVoidData {
 
 impl<T: PaymentMethodDataTypes> GetRequestIncrementalAuthorization for RepeatPaymentData<T> {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
-        None
+        Some(false)
     }
 }
 
