@@ -15,10 +15,12 @@ use domain_types::{
 
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::types::MinorUnit;
-use hyperswitch_masking::Secret;
+use common_utils::{custom_serde, types::MinorUnit};
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use time::PrimitiveDateTime;
+use url::Url;
 
 pub struct RevolutAuthType {
     pub api_key: Secret<String>,
@@ -28,7 +30,7 @@ pub struct RevolutAuthType {
 #[derive(Debug, Serialize)]
 pub struct RevolutOrderCreateRequest {
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub settlement_currency: Option<String>,
     pub description: Option<String>,
     pub customer: Option<RevolutCustomer>,
@@ -40,7 +42,7 @@ pub struct RevolutOrderCreateRequest {
     pub location_id: Option<String>,
     pub metadata: Option<serde_json::Value>,
     pub industry_data: Option<serde_json::Value>,
-    pub merchant_order_data: Option<serde_json::Value>,
+    pub merchant_order_data: Option<RevolutMerchantOrderData>,
     pub upcoming_payment_data: Option<serde_json::Value>,
     pub redirect_url: Option<String>,
     pub statement_descriptor_suffix: Option<String>,
@@ -93,14 +95,12 @@ pub struct RevolutLineItemQuantity {
     pub unit: Option<String>,
 }
 
-#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutLineItemDiscount {
     pub name: String,
     pub amount: MinorUnit,
 }
 
-#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutLineItemTax {
     pub name: String,
@@ -163,18 +163,20 @@ pub enum RevolutErrorResponse {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevolutOrderCreateResponse {
     pub id: String,
-    pub token: String,
+    pub token: Secret<String>,
     pub r#type: RevolutOrderType,
     pub state: RevolutOrderState,
-    pub created_at: String,
-    pub updated_at: String,
+    #[serde(with = "custom_serde::iso8601")]
+    pub created_at: PrimitiveDateTime,
+    #[serde(with = "custom_serde::iso8601")]
+    pub updated_at: PrimitiveDateTime,
     pub description: Option<String>,
     pub capture_mode: Option<RevolutCaptureMode>,
     pub cancel_authorised_after: Option<String>,
     pub amount: MinorUnit,
     pub outstanding_amount: Option<MinorUnit>,
     pub refunded_amount: Option<MinorUnit>,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub settlement_currency: Option<String>,
     pub customer: Option<RevolutCustomer>,
     pub payments: Option<Vec<RevolutPayment>>,
@@ -228,11 +230,13 @@ pub struct RevolutPayment {
     pub state: RevolutPaymentState,
     pub decline_reason: Option<RevolutDeclineReason>,
     pub bank_message: Option<String>,
-    pub created_at: String,
-    pub updated_at: String,
+    #[serde(with = "custom_serde::iso8601")]
+    pub created_at: PrimitiveDateTime,
+    #[serde(with = "custom_serde::iso8601")]
+    pub updated_at: PrimitiveDateTime,
     pub token: Option<String>,
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub settled_amount: Option<MinorUnit>,
     pub settled_currency: Option<String>,
     pub payment_method: Option<RevolutPaymentMethod>,
@@ -305,14 +309,15 @@ pub enum RevolutDeclineReason {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutMerchantOrderData {
-    pub url: Option<String>,
+    pub url: Option<Url>,
     pub reference: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutUpcomingPaymentData {
-    pub date: String,
-    pub payment_method_id: String,
+    #[serde(with = "custom_serde::iso8601")]
+    pub date: PrimitiveDateTime,
+    pub payment_method_id: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -326,7 +331,7 @@ pub enum RevolutRiskLevel {
 pub struct RevolutFee {
     pub r#type: RevolutFeeType,
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -364,7 +369,6 @@ pub struct RevolutCardDetails {
     pub fingerprint: Option<String>,
 }
 
-#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutAccountDetails {
     pub id: Option<String>,
@@ -444,66 +448,6 @@ pub struct RevolutThreeDsFingerprintChallenge {
     pub fingerprint_data: String,
 }
 
-#[allow(dead_code)]
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Serialize)]
-pub struct RevolutPaymentsRequest<T: PaymentMethodDataTypes> {
-    pub saved_payment_method: RevolutSavedPaymentMethod,
-    #[serde(skip)]
-    pub _phantom: std::marker::PhantomData<T>,
-}
-
-#[allow(dead_code)]
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Serialize)]
-pub struct RevolutSavedPaymentMethod {
-    pub r#type: RevolutPaymentMethodType,
-    pub id: String,
-    pub initiator: RevolutPaymentInitiator,
-    pub environment: Option<RevolutEnvironment>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RevolutPaymentMethodType {
-    Card,
-    RevolutPay,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RevolutPaymentInitiator {
-    Customer,
-    Merchant,
-}
-
-#[allow(dead_code)]
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Serialize)]
-pub struct RevolutEnvironment {
-    pub r#type: String, // "browser"
-    pub time_zone_utc_offset: i32,
-    pub color_depth: i32,
-    pub screen_width: i32,
-    pub screen_height: i32,
-    pub java_enabled: bool,
-    pub challenge_window_width: Option<i32>,
-    pub browser_url: Option<String>,
-}
-
-#[allow(dead_code)]
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Deserialize, Serialize)]
-pub struct RevolutPaymentsResponse {
-    pub id: String,
-    pub order_id: String,
-    pub payment_method: RevolutPaymentMethod,
-    pub state: RevolutPaymentState,
-    pub authentication_challenge: Option<RevolutAuthenticationChallenge>,
-}
-
 impl TryFrom<&ConnectorAuthType> for RevolutAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -561,15 +505,90 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 date_of_birth: None,
             });
 
+        // Map shipping data from resource_common_data
+        let shipping = router_data
+            .resource_common_data
+            .get_optional_shipping()
+            .map(|_shipping_address| {
+                // Create contact with at least email or phone
+                // Use shipping email if available, otherwise use customer email
+                let contact_email = router_data
+                    .resource_common_data
+                    .get_optional_shipping_email()
+                    .or_else(|| router_data.request.email.clone());
+
+                // Only include contact if we have email or phone
+                let contact = if contact_email.is_some()
+                    || router_data
+                        .resource_common_data
+                        .get_optional_shipping_phone_number()
+                        .is_some()
+                {
+                    Some(RevolutContact {
+                        full_name: router_data
+                            .resource_common_data
+                            .get_optional_shipping_full_name(),
+                        phone: router_data
+                            .resource_common_data
+                            .get_optional_shipping_phone_number(),
+                        email: contact_email,
+                    })
+                } else {
+                    None
+                };
+
+                RevolutShipping {
+                    address: Some(RevolutAddress {
+                        street_line_1: router_data
+                            .resource_common_data
+                            .get_optional_shipping_line1()
+                            .map(|line1| line1.expose()),
+                        street_line_2: router_data
+                            .resource_common_data
+                            .get_optional_shipping_line2()
+                            .map(|line2| line2.expose()),
+                        region: router_data
+                            .resource_common_data
+                            .get_optional_shipping_state()
+                            .map(|state| state.expose()),
+                        city: router_data
+                            .resource_common_data
+                            .get_optional_shipping_city()
+                            .map(|city| city.expose()),
+                        country_code: router_data
+                            .resource_common_data
+                            .get_optional_shipping_country()
+                            .map(|country| country.to_string()),
+                        postcode: router_data
+                            .resource_common_data
+                            .get_optional_shipping_zip()
+                            .map(|zip| zip.expose()),
+                    }),
+                    contact,
+                    shipments: None,
+                }
+            });
+
+        // Map merchant_order_data from merchant_order_reference_id
+        let merchant_order_data =
+            router_data
+                .request
+                .merchant_order_reference_id
+                .clone()
+                .map(|reference| RevolutMerchantOrderData {
+                    url: None,
+                    reference: Some(reference),
+                });
+
         Ok(Self {
             amount: router_data.request.amount,
-            currency: router_data.request.currency.to_string(),
+            currency: router_data.request.currency,
             settlement_currency: None,
             description: router_data.resource_common_data.description.clone(),
             customer,
             enforce_challenge: None,
             line_items: None,
-            shipping: None,
+            shipping,
             capture_mode: router_data.request.capture_method.map(|c| match c {
                 common_enums::CaptureMethod::Manual => RevolutCaptureMode::Manual,
                 _ => RevolutCaptureMode::Automatic,
@@ -578,7 +597,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             location_id: None,
             metadata: router_data.request.metadata.clone(),
             industry_data: None,
-            merchant_order_data: None,
+            merchant_order_data,
             upcoming_payment_data: None,
             redirect_url: router_data.request.router_return_url.clone(),
             statement_descriptor_suffix: router_data
@@ -714,15 +733,17 @@ pub struct RevolutRefundResponse {
     pub id: String,
     pub r#type: RevolutOrderType,
     pub state: RevolutOrderState,
-    pub created_at: String,
-    pub updated_at: String,
+    #[serde(with = "custom_serde::iso8601")]
+    pub created_at: PrimitiveDateTime,
+    #[serde(with = "custom_serde::iso8601")]
+    pub updated_at: PrimitiveDateTime,
     pub description: Option<String>,
     pub capture_mode: Option<RevolutCaptureMode>,
     pub cancel_authorised_after: Option<String>,
     pub amount: MinorUnit,
     pub outstanding_amount: Option<MinorUnit>,
     pub refunded_amount: Option<MinorUnit>,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub settlement_currency: Option<String>,
     pub customer: Option<RevolutCustomer>,
     pub payments: Option<Vec<RevolutPayment>>,
@@ -743,7 +764,7 @@ pub struct RevolutRefundResponse {
 #[derive(Debug, Serialize)]
 pub struct RevolutRefundRequest {
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub merchant_order_data: Option<RevolutMerchantOrderData>,
     pub metadata: Option<serde_json::Value>,
     pub description: Option<String>,
@@ -768,7 +789,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = item.router_data;
         Ok(Self {
             amount: router_data.request.minor_refund_amount,
-            currency: router_data.request.currency.to_string(),
+            currency: router_data.request.currency,
             merchant_order_data: router_data
                 .request
                 .connector_metadata

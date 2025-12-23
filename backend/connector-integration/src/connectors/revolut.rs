@@ -983,7 +983,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let order_id = req.request.connector_transaction_id.clone();
+            let order_id = req.request.connector_refund_id.clone();
             let base_url = req.resource_common_data.connectors.revolut.base_url.to_string();
             Ok(format!("{base_url}/api/orders/{order_id}"))
         }

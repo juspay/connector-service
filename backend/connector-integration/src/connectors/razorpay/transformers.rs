@@ -754,6 +754,7 @@ impl<F, Req>
         ),
     ) -> Result<Self, Self::Error> {
         let is_manual_capture = false;
+
         match response {
             RazorpayResponse::PaymentResponse(payment_response) => {
                 let status =
