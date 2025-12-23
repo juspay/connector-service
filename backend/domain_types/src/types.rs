@@ -964,7 +964,7 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(
                     network_token_data,
                 ) => {
-                    let network_token = network_token_data.network_token
+                    let token_number = network_token_data.token_number
                         .ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "MISSING_NETWORK_TOKEN".to_owned(),
                             error_identifier: 400,
@@ -973,20 +973,20 @@ impl<
                         }))?;
 
                     Ok(Self::NetworkToken(payment_method_data::NetworkTokenData {
-                        token_number: network_token,
-                        token_exp_month: network_token_data.network_token_exp_month.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                        token_number,
+                        token_exp_month: network_token_data.token_exp_month.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "MISSING_TOKEN_EXP_MONTH".to_owned(),
                             error_identifier: 400,
                             error_message: "Missing token expiration month".to_owned(),
                             error_object: None,
                         }))?,
-                        token_exp_year: network_token_data.network_token_exp_year.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                        token_exp_year: network_token_data.token_exp_year.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "MISSING_TOKEN_EXP_YEAR".to_owned(),
                             error_identifier: 400,
                             error_message: "Missing token expiration year".to_owned(),
                             error_object: None,
                         }))?,
-                        token_cryptogram: network_token_data.cryptogram,
+                        token_cryptogram: network_token_data.token_cryptogram,
                         card_issuer: network_token_data.card_issuer,
                         card_network: network_token_data
                             .card_network

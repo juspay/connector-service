@@ -24,13 +24,6 @@ enum CardNetwork {
   RUPAY = 10;
 }
 
-// Card types for card payments
-enum CardType {
-  CARD_TYPE_UNSPECIFIED = 0;
-  CARD_TYPE_CREDIT = 1;
-  CARD_TYPE_DEBIT = 2;
-}
-
 // ============================================================================
 // COMPOSITE MESSAGES
 // ============================================================================
@@ -266,10 +259,6 @@ message CardDetails {
 }
 
 message CardNumberType {
-  string value = 1;
-}
-
-message NetworkTokenType {
   string value = 1;
 }
 
@@ -1303,10 +1292,10 @@ message CardDetailsForNetworkTransactionId {
 
 // Network token data for recurring payments
 message NetworkTokenData {
-    CardNumberType network_token = 1;
-    SecretString network_token_exp_month = 2;
-    SecretString network_token_exp_year = 3;
-    optional SecretString cryptogram = 4;
+    CardNumberType token_number = 1;
+    SecretString token_exp_month = 2;
+    SecretString token_exp_year = 3;
+    optional SecretString token_cryptogram = 4;
     optional string card_issuer = 5;
     optional CardNetwork card_network = 6;
     optional string card_type = 7;
