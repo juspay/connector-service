@@ -517,20 +517,32 @@ message PaypalSdkWallet {
 // REAL-TIME PAYMENT METHODS
 // ============================================================================
 
+// UPI Source types for UPI payments
+enum UpiSource {
+  UPI_CC = 0;    // UPI Credit Card (RuPay credit on UPI)
+  UPI_CL = 1;    // UPI Credit Line
+  UPI_ACCOUNT = 2; // UPI Bank Account (Savings)
+  UPI_CC_CL = 3; // UPI Credit Card + Credit Line
+}
+
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
 message UpiCollect {
   // Virtual Payment Address
   optional SecretString vpa_id = 1;
+  // UPI source type
+  optional UpiSource upi_source = 2;
 }
 
 message UpiIntent {
-  // No additional fields required for UPI Intent
-    optional string app_name = 1;
-
+  // App name for UPI Intent
+  optional string app_name = 1;
+  // UPI source type
+  optional UpiSource upi_source = 2;
 }
 
 message UpiQr {
-  // No additional fields required for UPI QR
+  // UPI source type
+  optional UpiSource upi_source = 1;
 }
 
 // PIX - Brazilian instant payment ecosystem
