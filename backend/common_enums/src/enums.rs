@@ -2046,3 +2046,12 @@ pub enum MitCategory {
     /// A retried MIT after a previous transaction failed or was declined.
     Resubmission,
 }
+
+/// Padding schemes used for cryptographic operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CryptoPadding {
+    /// PKCS7 padding - adds bytes equal to the number of padding bytes needed
+    PKCS7,
+    /// Zero padding - pads with null bytes
+    ZeroPadding,
+}

@@ -623,6 +623,64 @@ pub type EncryptableName = Encryptable<Secret<String>>;
 /// Type alias for `Encryptable<Secret<String>>` used for `email` field
 pub type EncryptableEmail = Encryptable<Secret<String, pii::EmailStrategy>>;
 
+/// Triple DES (3DES) encryption using EDE3 CBC mode
+/// Used by connectors like Redsys for signature generation
+pub struct TripleDesEde3CBC {
+    padding: common_enums::CryptoPadding,
+    iv: Vec<u8>,
+}
+
+impl TripleDesEde3CBC {
+    /// Triple DES key length (24 bytes = 192 bits)
+    pub const TRIPLE_DES_KEY_LENGTH: usize = 24;
+    /// Triple DES IV length (8 bytes = 64 bits)
+    pub const TRIPLE_DES_IV_LENGTH: usize = 8;
+
+    /// Create a new TripleDesEde3CBC instance
+    ///
+    /// # Arguments
+    /// * `padding` - Optional padding scheme (defaults to PKCS7)
+    /// * `iv` - Initialization vector (must be 8 bytes)
+    ///
+    /// # Errors
+    /// Returns `CryptoError::InvalidIvLength` if IV is not 8 bytes
+    pub fn new(
+        padding: Option<common_enums::CryptoPadding>,
+        iv: Vec<u8>,
+    ) -> CustomResult<Self, errors::CryptoError> {
+        if iv.len() != Self::TRIPLE_DES_IV_LENGTH {
+            Err(errors::CryptoError::InvalidIvLength)?
+        };
+        let padding = padding.unwrap_or(common_enums::CryptoPadding::PKCS7);
+        Ok(Self { iv, padding })
+    }
+}
+
+impl EncodeMessage for TripleDesEde3CBC {
+    fn encode_message(
+        &self,
+        secret: &[u8],
+        msg: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+        if secret.len() != Self::TRIPLE_DES_KEY_LENGTH {
+            Err(errors::CryptoError::InvalidKeyLength)?
+        }
+        let mut buffer = msg.to_vec();
+
+        // Apply zero padding if specified
+        if let common_enums::CryptoPadding::ZeroPadding = self.padding {
+            let pad_len = Self::TRIPLE_DES_IV_LENGTH - (buffer.len() % Self::TRIPLE_DES_IV_LENGTH);
+            if pad_len != Self::TRIPLE_DES_IV_LENGTH {
+                buffer.extend(vec![0u8; pad_len]);
+            }
+        };
+
+        let cipher = openssl::symm::Cipher::des_ede3_cbc();
+        openssl::symm::encrypt(cipher, secret, Some(&self.iv), &buffer)
+            .change_context(errors::CryptoError::EncodingFailed)
+    }
+}
+
 #[cfg(test)]
 mod crypto_tests {
     #![allow(clippy::expect_used)]
