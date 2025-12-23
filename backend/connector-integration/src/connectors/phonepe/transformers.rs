@@ -666,7 +666,7 @@ impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
 // Check if merchant ID corresponds to IRCTC (merchant-based endpoints)
 // This should be called with the merchant_id from X-MERCHANT-ID auth header
 pub fn is_irctc_merchant(merchant_id: &str) -> bool {
-    merchant_id.contains("IRCTC")
+    merchant_id.contains(constants::IRCTC_IDENTIFIER)
 }
 
 fn generate_phonepe_checksum(
