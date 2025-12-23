@@ -78,6 +78,7 @@ pub enum ConnectorEnum {
     Cybersource,
     Worldpay,
     Worldpayvantiv,
+    Worldpayxml,
     Multisafepay,
     Payload,
     Fiservemea,
@@ -103,6 +104,7 @@ pub enum ConnectorEnum {
     Tsys,
     Bankofamerica,
     Powertranz,
+    Jpmorgan,
     Bambora,
     Payme,
 }
@@ -146,6 +148,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
             grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpayvantiv),
+            grpc_api_types::payments::Connector::Worldpayxml => Ok(Self::Worldpayxml),
             grpc_api_types::payments::Connector::Multisafepay => Ok(Self::Multisafepay),
             grpc_api_types::payments::Connector::Payload => Ok(Self::Payload),
             grpc_api_types::payments::Connector::Fiservemea => Ok(Self::Fiservemea),
@@ -171,6 +174,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Tsys => Ok(Self::Tsys),
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
             grpc_api_types::payments::Connector::Powertranz => Ok(Self::Powertranz),
+            grpc_api_types::payments::Connector::Jpmorgan => Ok(Self::Jpmorgan),
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
             grpc_api_types::payments::Connector::Payme => Ok(Self::Payme),
             grpc_api_types::payments::Connector::Unspecified => {
@@ -533,6 +537,15 @@ impl PaymentFlowData {
             .and_then(|phone_details| phone_details.get_number_with_country_code().ok())
     }
 
+    pub fn get_optional_shipping_line3(&self) -> Option<Secret<String>> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.line3)
+        })
+    }
+
     pub fn get_description(&self) -> Result<String, Error> {
         self.description
             .clone()
@@ -683,6 +696,17 @@ impl PaymentFlowData {
                     .clone()
                     .address
                     .and_then(|billing_details| billing_details.line2)
+            })
+    }
+
+    pub fn get_optional_billing_line3(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.line3)
             })
     }
 
@@ -1514,6 +1538,7 @@ pub struct RefundsResponseData {
 
 #[derive(Debug, Clone)]
 pub struct RefundFlowData {
+    pub merchant_id: common_utils::id_type::MerchantId,
     pub status: common_enums::RefundStatus,
     pub refund_id: Option<String>,
     pub connectors: Connectors,
@@ -2027,6 +2052,7 @@ pub struct RefundsData {
     pub refund_id: String,
     pub connector_transaction_id: String,
     pub connector_refund_id: Option<String>,
+    pub customer_id: Option<String>,
     pub currency: Currency,
     pub payment_amount: i64,
     pub reason: Option<String>,

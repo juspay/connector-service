@@ -1,5 +1,7 @@
+use std::borrow::Cow;
+
 use common_enums::{self, CountryAlpha2, Currency};
-use common_utils::{types::MinorUnit, StringMajorUnit};
+use common_utils::{id_type::CustomerId, types::MinorUnit, StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
@@ -32,6 +34,17 @@ fn extract_report_group(connector_meta_data: &Option<Secret<serde_json::Value>>)
             serde_json::from_value::<WorldpayvantivMetadataObject>(metadata_value.clone())
                 .ok()
                 .map(|obj| obj.report_group)
+        }
+    })
+}
+
+fn extract_customer_id(customer_id: &Option<CustomerId>) -> Option<String> {
+    customer_id.as_ref().and_then(|id| {
+        let customer_id_str = id.get_string_repr().to_string();
+        if customer_id_str.len() <= worldpayvantiv_constants::CUSTOMER_ID_MAX_LENGTH {
+            Some(customer_id_str)
+        } else {
+            None
         }
     })
 }
@@ -114,10 +127,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let card_type = match card_data.card_network.clone() {
                     Some(network) => WorldpayvativCardType::try_from(network)?,
                     None => {
-                        return Err(ConnectorError::MissingRequiredField {
-                            field_name: "card_network",
-                        }
-                        .into());
+                        // Fallback to BIN-based card issuer detection
+                        let card_issuer =
+                            domain_types::utils::get_card_issuer(card_data.card_number.peek())?;
+                        WorldpayvativCardType::try_from(&card_issuer)?
                     }
                 };
 
@@ -165,34 +178,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
                 .unwrap_or_else(|| "rtpGrp".to_string());
 
-        let bill_to_address = get_billing_address(
-            &item
-                .router_data
-                .resource_common_data
-                .address
-                .get_payment_method_billing()
-                .cloned(),
-        );
-        let ship_to_address = get_shipping_address(
-            &item
-                .router_data
-                .resource_common_data
-                .address
-                .get_shipping()
-                .cloned(),
-        );
+        let bill_to_address = get_billing_address(&item.router_data.resource_common_data);
+        let ship_to_address = get_shipping_address(&item.router_data.resource_common_data);
 
         let (authorization, sale) =
             if item.router_data.request.is_auto_capture()? && amount != MinorUnit::zero() {
                 let sale = Sale {
                     id: format!("{}_{}", OperationId::Sale, merchant_txn_id),
                     report_group: report_group.clone(),
-                    customer_id: item
-                        .router_data
-                        .resource_common_data
-                        .get_customer_id()
-                        .ok()
-                        .map(|id| Secret::new(id.get_string_repr().to_string())),
+                    customer_id: extract_customer_id(
+                        &item.router_data.resource_common_data.customer_id,
+                    )
+                    .map(Secret::new),
                     order_id: merchant_txn_id.clone(),
                     amount,
                     order_source,
@@ -208,12 +205,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let authorization = Authorization {
                     id: format!("{}_{}", OperationId::Auth, merchant_txn_id),
                     report_group: report_group.clone(),
-                    customer_id: item
-                        .router_data
-                        .resource_common_data
-                        .get_customer_id()
-                        .ok()
-                        .map(|id| Secret::new(id.get_string_repr().to_string())),
+                    customer_id: extract_customer_id(
+                        &item.router_data.resource_common_data.customer_id,
+                    )
+                    .map(Secret::new),
                     order_id: merchant_txn_id.clone(),
                     amount,
                     order_source,
@@ -414,6 +409,8 @@ pub struct RefundRequest {
     pub id: String,
     #[serde(rename = "@reportGroup")]
     pub report_group: String,
+    #[serde(rename = "@customerId", skip_serializing_if = "Option::is_none")]
+    pub customer_id: Option<String>,
     pub cnp_txn_id: String,
     pub amount: MinorUnit,
 }
@@ -504,6 +501,25 @@ impl TryFrom<common_enums::CardNetwork> for WorldpayvativCardType {
     }
 }
 
+impl TryFrom<&domain_types::utils::CardIssuer> for WorldpayvativCardType {
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(card_issuer: &domain_types::utils::CardIssuer) -> Result<Self, Self::Error> {
+        match card_issuer {
+            domain_types::utils::CardIssuer::Visa => Ok(Self::Visa),
+            domain_types::utils::CardIssuer::Master => Ok(Self::MasterCard),
+            domain_types::utils::CardIssuer::AmericanExpress => Ok(Self::AmericanExpress),
+            domain_types::utils::CardIssuer::Discover => Ok(Self::Discover),
+            domain_types::utils::CardIssuer::DinersClub => Ok(Self::DinersClub),
+            domain_types::utils::CardIssuer::JCB => Ok(Self::JCB),
+            _ => Err(ConnectorError::NotSupported {
+                message: "Card network".to_string(),
+                connector: "worldpayvantiv",
+            }
+            .into()),
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum OrderSource {
@@ -541,11 +557,15 @@ pub struct BillToAddress {
     pub company: Option<String>,
     pub address_line1: Option<Secret<String>>,
     pub address_line2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address_line3: Option<Secret<String>>,
     pub city: Option<Secret<String>>,
     pub state: Option<Secret<String>>,
     pub zip: Option<Secret<String>>,
     pub country: Option<CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<common_utils::pii::Email>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<Secret<String>>,
 }
 
@@ -557,11 +577,15 @@ pub struct ShipToAddress {
     pub company: Option<String>,
     pub address_line1: Option<Secret<String>>,
     pub address_line2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address_line3: Option<Secret<String>>,
     pub city: Option<Secret<String>>,
     pub state: Option<Secret<String>>,
     pub zip: Option<Secret<String>>,
     pub country: Option<CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<common_utils::pii::Email>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<Secret<String>>,
 }
 
@@ -1473,11 +1497,10 @@ where
             let card_type = match card_data.card_network.clone() {
                 Some(network) => WorldpayvativCardType::try_from(network)?,
                 None => {
-                    // Determine from card number if network not provided
-                    return Err(ConnectorError::MissingRequiredField {
-                        field_name: "card_network",
-                    }
-                    .into());
+                    // Fallback to BIN-based card issuer detection
+                    let card_issuer =
+                        domain_types::utils::get_card_issuer(card_data.card_number.peek())?;
+                    WorldpayvativCardType::try_from(&card_issuer)?
                 }
             };
 
@@ -1644,74 +1667,48 @@ fn determine_google_pay_card_type(
     }
 }
 
-fn get_billing_address(
-    billing_address: &Option<domain_types::payment_address::Address>,
-) -> Option<BillToAddress> {
-    billing_address.as_ref().map(|addr| BillToAddress {
-        name: addr.get_optional_full_name(),
-        company: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.first_name.as_ref().map(|f| f.peek().to_string())),
-        address_line1: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line1.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        address_line2: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line2.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        city: addr.address.as_ref().and_then(|a| a.city.clone()),
-        state: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.state.as_ref().map(|s| Secret::new(s.peek().to_string()))),
-        zip: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.zip.as_ref().map(|z| Secret::new(z.peek().to_string()))),
-        country: addr.address.as_ref().and_then(|a| a.country),
-        email: addr.email.clone(),
-        phone: addr
-            .phone
-            .as_ref()
-            .and_then(|p| p.number.as_ref().map(|n| Secret::new(n.peek().to_string()))),
-    })
+fn get_billing_address(resource_data: &PaymentFlowData) -> Option<BillToAddress> {
+    resource_data
+        .get_optional_billing()
+        .and_then(|billing_address| {
+            billing_address.address.clone().map(|_| BillToAddress {
+                name: resource_data.get_optional_billing_full_name(),
+                company: resource_data
+                    .get_optional_billing_first_name()
+                    .map(|f| f.expose()),
+                address_line1: resource_data.get_optional_billing_line1(),
+                address_line2: resource_data.get_optional_billing_line2(),
+                address_line3: resource_data.get_optional_billing_line3(),
+                city: resource_data.get_optional_billing_city(),
+                state: resource_data.get_optional_billing_state(),
+                zip: resource_data.get_optional_billing_zip(),
+                country: resource_data.get_optional_billing_country(),
+                email: resource_data.get_optional_billing_email(),
+                phone: resource_data.get_optional_billing_phone_number(),
+            })
+        })
 }
 
-fn get_shipping_address(
-    shipping_address: &Option<domain_types::payment_address::Address>,
-) -> Option<ShipToAddress> {
-    shipping_address.as_ref().map(|addr| ShipToAddress {
-        name: addr.get_optional_full_name(),
-        company: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.first_name.as_ref().map(|f| f.peek().to_string())),
-        address_line1: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line1.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        address_line2: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.line2.as_ref().map(|l| Secret::new(l.peek().to_string()))),
-        city: addr.address.as_ref().and_then(|a| a.city.clone()),
-        state: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.state.as_ref().map(|s| Secret::new(s.peek().to_string()))),
-        zip: addr
-            .address
-            .as_ref()
-            .and_then(|a| a.zip.as_ref().map(|z| Secret::new(z.peek().to_string()))),
-        country: addr.address.as_ref().and_then(|a| a.country),
-        email: addr.email.clone(),
-        phone: addr
-            .phone
-            .as_ref()
-            .and_then(|p| p.number.as_ref().map(|n| Secret::new(n.peek().to_string()))),
-    })
+fn get_shipping_address(resource_data: &PaymentFlowData) -> Option<ShipToAddress> {
+    resource_data
+        .get_optional_shipping()
+        .and_then(|shipping_address| {
+            shipping_address.address.clone().map(|_| ShipToAddress {
+                name: resource_data.get_optional_shipping_full_name(),
+                company: resource_data
+                    .get_optional_shipping_first_name()
+                    .map(|f| f.expose()),
+                address_line1: resource_data.get_optional_shipping_line1(),
+                address_line2: resource_data.get_optional_shipping_line2(),
+                address_line3: resource_data.get_optional_shipping_line3(),
+                city: resource_data.get_optional_shipping_city(),
+                state: resource_data.get_optional_shipping_state(),
+                zip: resource_data.get_optional_shipping_zip(),
+                country: resource_data.get_optional_shipping_country(),
+                email: resource_data.get_optional_shipping_email(),
+                phone: resource_data.get_optional_shipping_phone_number(),
+            })
+        })
 }
 
 fn get_valid_transaction_id(
@@ -1820,9 +1817,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        // Extract report_group from merchant_account_metadata (connector_meta_data)
+        let report_group =
+            extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
+                .unwrap_or_else(|| "rtpGrp".to_string());
+
         let capture = CaptureRequest {
             id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
-            report_group: "Default".to_string(),
+            report_group,
             cnp_txn_id,
             amount: item.router_data.request.minor_amount_to_capture,
             enhanced_data: None,
@@ -1937,9 +1939,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        // Extract report_group from merchant_account_metadata
+        let report_group = item
+            .router_data
+            .request
+            .merchant_account_metadata
+            .as_ref()
+            .and_then(|metadata| extract_report_group(&Some(metadata.clone())))
+            .unwrap_or_else(|| "rtpGrp".to_string());
+
+        // Extract customer_id from RefundsData - since RefundsData stores it as String, we convert it to CustomerId to use with extract_customer_id function
+        let customer_id = item
+            .router_data
+            .request
+            .customer_id
+            .as_ref()
+            .and_then(|id_str| CustomerId::try_from(Cow::from(id_str.clone())).ok())
+            .as_ref()
+            .and_then(|customer_id| extract_customer_id(&Some(customer_id.clone())));
+
         let credit = RefundRequest {
+            report_group,
             id: format!("{}_{}", OperationId::Refund, merchant_txn_id),
-            report_group: "Default".to_string(),
+            customer_id,
             cnp_txn_id,
             amount: item.router_data.request.minor_refund_amount,
         };
@@ -2152,9 +2174,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        // Extract report_group from merchant_account_metadata (connector_meta_data)
+        let report_group =
+            extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
+                .unwrap_or_else(|| "rtpGrp".to_string());
+
         let capture = CaptureRequest {
             id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
-            report_group: "Default".to_string(),
+            report_group,
             cnp_txn_id,
             amount: item.router_data.request.minor_amount_to_capture,
             enhanced_data: None,
@@ -2285,9 +2312,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        // Extract report_group from merchant_account_metadata (connector_meta_data)
+        let report_group =
+            extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
+                .unwrap_or_else(|| "rtpGrp".to_string());
+
         let void = VoidRequest {
             id: format!("{}_{}", OperationId::Void, merchant_txn_id),
-            report_group: "Default".to_string(),
+            report_group,
             cnp_txn_id,
         };
 

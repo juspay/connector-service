@@ -149,6 +149,9 @@ pub use self::nuvei::Nuvei;
 pub mod iatapay;
 pub use self::iatapay::Iatapay;
 
+pub mod jpmorgan;
+pub use self::jpmorgan::Jpmorgan;
+
 pub mod nmi;
 pub use self::nmi::Nmi;
 
@@ -163,6 +166,9 @@ pub use self::nexixpay::Nexixpay;
 
 pub mod airwallex;
 pub use self::airwallex::Airwallex;
+
+pub mod worldpayxml;
+pub use self::worldpayxml::Worldpayxml;
 
 pub mod tsys;
 pub use self::tsys::Tsys;
