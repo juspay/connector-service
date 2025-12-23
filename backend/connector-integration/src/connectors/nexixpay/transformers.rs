@@ -1504,6 +1504,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPostAuthentic
                         acs_transaction_id: None,
                         // CRITICAL FIX: Store operationId in transaction_id for Authorize flow
                         transaction_id: Some(operation.operation_id.clone()),
+                        authentication_type: None,
+                        challenge_cancel: None,
+                        challenge_code_reason: None,
+                        challenge_code: None,
+                        created_at: None,
+                        message_extension: None,
                     }
                 }),
                 connector_response_reference_id: Some(operation.order_id.clone()),

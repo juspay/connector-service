@@ -709,7 +709,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 // RepeatPayment response transformer
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize> TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
+impl<
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,

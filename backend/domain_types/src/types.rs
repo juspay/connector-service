@@ -88,16 +88,16 @@ use crate::{
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         GpayAllowedPaymentMethods, GpayBillingAddressFormat, GpaySessionTokenResponse,
-        MandateReferenceId, MultipleCaptureRequestData, NextActionCall, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse, NetworkTokenWithNTIRef,
+        MandateReferenceId, MultipleCaptureRequestData, NetworkTokenWithNTIRef, NextActionCall,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, PaypalFlow, PaypalTransactionInfo,
+        RawConnectorRequestResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -2794,6 +2794,17 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             trans_status,
             acs_transaction_id: value.acs_transaction_id,
             transaction_id: value.transaction_id,
+            challenge_cancel: value.challenge_cancel,
+            challenge_code_reason: value.challenge_code_reason,
+            challenge_code: value.challenge_code,
+            created_at: value.created_at.map(|dt| dt.assume_utc().unix_timestamp()),
+            authentication_type: value
+                .authentication_type
+                .map(grpc_api_types::payments::DecoupledAuthenticationType::foreign_from)
+                .map(i32::from),
+            message_extension: serde_json::to_string(&value.message_extension)
+                .ok()
+                .map(|s| Secret::new(s)),
         })
     }
 }
@@ -7431,7 +7442,8 @@ pub fn generate_create_connector_customer_response(
     }
 }
 
-impl<T: PaymentMethodDataTypes
+impl<
+        T: PaymentMethodDataTypes
             + Default
             + Debug
             + Send
@@ -7441,8 +7453,7 @@ impl<T: PaymentMethodDataTypes
             + serde::de::DeserializeOwned
             + Clone
             + CardConversionHelper<T>,
->
-ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
+    > ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
     for RepeatPaymentData<T>
 {
     type Error = ApplicationErrorResponse;
@@ -7483,33 +7494,35 @@ ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
 
         // Extract mandate reference_id
         let mandate_ref = match value.mandate_reference_id {
-            Some(mandate_reference_id) => {
-                match mandate_reference_id.mandate_id_type {
-                    Some(grpc_payment_types::mandate_reference_id::MandateIdType::ConnectorMandateId(cm)) => MandateReferenceId::ConnectorMandateId(
-                        ConnectorMandateReferenceId::new(
-                            cm.connector_mandate_id,
-                            cm.payment_method_id,
-                            None,
-                            None,
-                            cm.connector_mandate_request_reference_id,
-                        )
+            Some(mandate_reference_id) => match mandate_reference_id.mandate_id_type {
+                Some(
+                    grpc_payment_types::mandate_reference_id::MandateIdType::ConnectorMandateId(cm),
+                ) => MandateReferenceId::ConnectorMandateId(ConnectorMandateReferenceId::new(
+                    cm.connector_mandate_id,
+                    cm.payment_method_id,
+                    None,
+                    None,
+                    cm.connector_mandate_request_reference_id,
+                )),
+                Some(
+                    grpc_payment_types::mandate_reference_id::MandateIdType::NetworkMandateId(nmi),
+                ) => MandateReferenceId::NetworkMandateId(nmi),
+                Some(
+                    grpc_payment_types::mandate_reference_id::MandateIdType::NetworkTokenWithNti(
+                        nti,
                     ),
-                    Some(grpc_payment_types::mandate_reference_id::MandateIdType::NetworkMandateId(nmi)) => MandateReferenceId::NetworkMandateId(nmi),   
-                    Some(grpc_payment_types::mandate_reference_id::MandateIdType::NetworkTokenWithNti(nti)) => MandateReferenceId::NetworkTokenWithNTI(
-                        NetworkTokenWithNTIRef {
-                            network_transaction_id: nti.network_transaction_id,
-                            token_exp_month: nti.token_exp_month,
-                            token_exp_year: nti.token_exp_year,
-                        }
-                    ),
-                    None => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_MANDATE_REFERENCE_ID".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Mandate reference id is required".to_owned(),
-                        error_object: None,
-                    }))?,
-                }
-            }
+                ) => MandateReferenceId::NetworkTokenWithNTI(NetworkTokenWithNTIRef {
+                    network_transaction_id: nti.network_transaction_id,
+                    token_exp_month: nti.token_exp_month,
+                    token_exp_year: nti.token_exp_year,
+                }),
+                None => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MANDATE_REFERENCE_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Mandate reference id is required".to_owned(),
+                    error_object: None,
+                }))?,
+            },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_MANDATE_REFERENCE".to_owned(),
                 error_identifier: 400,
@@ -7542,6 +7555,12 @@ ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
                     statement_descriptor_suffix: descriptor.statement_descriptor_suffix.clone(),
                     reference: descriptor.reference.clone(),
                 });
+
+        let authentication_data = value
+            .authentication_data
+            .clone()
+            .map(router_request_types::AuthenticationData::try_from)
+            .transpose()?;
 
         Ok(Self {
             mandate_reference: mandate_ref,
@@ -7593,7 +7612,40 @@ ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
             billing_descriptor,
             enable_partial_authorization: value.enable_partial_authorization,
             payment_method_data,
+            authentication_data,
         })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::DecoupledAuthenticationType>
+    for common_enums::DecoupledAuthenticationType
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::DecoupledAuthenticationType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::DecoupledAuthenticationType::Challenge => Ok(Self::Challenge),
+            grpc_api_types::payments::DecoupledAuthenticationType::Frictionless => Ok(Self::Frictionless),
+            grpc_api_types::payments::DecoupledAuthenticationType::Unspecified => Err(ApplicationErrorResponse::BadRequest(ApiError{
+                sub_code: "INVALID_DECOUPLED_AUTHENTICATION_TYPE".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid decoupled authentication type. Expected 'CHALLENGE' or 'FRICTIONLESS'".to_string(),
+                error_object: None,
+            }))?
+        }
+    }
+}
+
+impl ForeignFrom<common_enums::DecoupledAuthenticationType>
+    for grpc_api_types::payments::DecoupledAuthenticationType
+{
+    fn foreign_from(value: common_enums::DecoupledAuthenticationType) -> Self {
+        match value {
+            common_enums::DecoupledAuthenticationType::Frictionless => Self::Frictionless,
+            common_enums::DecoupledAuthenticationType::Challenge => Self::Challenge,
+        }
     }
 }
 

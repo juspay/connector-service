@@ -20,7 +20,7 @@ use domain_types::{
         BankRedirectData, BankTransferData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
     },
-    router_data::{ConnectorAuthType, ErrorResponse, NetworkTokenNumber},
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,

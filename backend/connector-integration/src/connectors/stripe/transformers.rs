@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, ops::Deref, str::FromStr};
 
+use cards::CardNumber;
 use common_utils::{
     collect_missing_value_keys, consts, custom_serde,
     errors::CustomResult,
@@ -40,7 +41,6 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
 };
-use cards::CardNumber;
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -4592,8 +4592,10 @@ impl<F, T> TryFrom<ResponseRouterData<CreateConnectorCustomerResponse, Self>>
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Serialize> TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>>
-    for StripeSplitPaymentRequest
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Serialize>
+    TryFrom<
+        &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+    > for StripeSplitPaymentRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -4683,7 +4685,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Ser
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Serialize> TryFrom<ResponseRouterData<PaymentsAuthorizeResponse, Self>>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Serialize>
+    TryFrom<ResponseRouterData<PaymentsAuthorizeResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -4701,7 +4704,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Ser
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for PaymentIntentRequest<T>
@@ -4709,7 +4717,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         value: StripeRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -4788,7 +4801,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 state: item.resource_common_data.get_optional_billing_state(),
                 name: item.resource_common_data.get_optional_billing_full_name(),
                 email: item.resource_common_data.get_optional_billing_email(),
-                phone: item.resource_common_data.get_optional_billing_phone_number(),
+                phone: item
+                    .resource_common_data
+                    .get_optional_billing_phone_number(),
             }),
         };
 
@@ -4823,29 +4838,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     let payment_data = match item.request.payment_method_data {
                         PaymentMethodData::CardDetailsForNetworkTransactionId(
                             ref card_details_for_network_transaction_id,
-                        ) => StripePaymentMethodData::CardNetworkTransactionId(StripeCardNetworkTransactionIdData {
-                            payment_method_data_type: StripePaymentMethodType::Card,
-                            payment_method_data_card_number: 
-                                card_details_for_network_transaction_id
-                                    .card_number
-                                    .clone(),
-                            payment_method_data_card_exp_month:
-                                card_details_for_network_transaction_id
-                                    .card_exp_month
-                                    .clone(),
-                            payment_method_data_card_exp_year:
-                                card_details_for_network_transaction_id
-                                    .card_exp_year
-                                    .clone(),
-                            payment_method_data_card_cvc: None,
-                            payment_method_auth_type: None,
-                            payment_method_data_card_preferred_network:
-                                card_details_for_network_transaction_id
-                                    .card_network
-                                    .clone()
-                                    .and_then(get_stripe_card_network),
-                            request_overcapture: None,
-                        }),
+                        ) => StripePaymentMethodData::CardNetworkTransactionId(
+                            StripeCardNetworkTransactionIdData {
+                                payment_method_data_type: StripePaymentMethodType::Card,
+                                payment_method_data_card_number:
+                                    card_details_for_network_transaction_id.card_number.clone(),
+                                payment_method_data_card_exp_month:
+                                    card_details_for_network_transaction_id
+                                        .card_exp_month
+                                        .clone(),
+                                payment_method_data_card_exp_year:
+                                    card_details_for_network_transaction_id
+                                        .card_exp_year
+                                        .clone(),
+                                payment_method_data_card_cvc: None,
+                                payment_method_auth_type: None,
+                                payment_method_data_card_preferred_network:
+                                    card_details_for_network_transaction_id
+                                        .card_network
+                                        .clone()
+                                        .and_then(get_stripe_card_network),
+                                request_overcapture: None,
+                            },
+                        ),
                         PaymentMethodData::CardRedirect(_)
                         | PaymentMethodData::Wallet(_)
                         | PaymentMethodData::PayLater(_)
@@ -4882,8 +4897,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         create_stripe_payment_method(
                             &item.request.payment_method_data,
                             PaymentRequestDetails {
-                                auth_type : item.resource_common_data.auth_type,
-                                payment_method_token: item.resource_common_data.payment_method_token.clone(),
+                                auth_type: item.resource_common_data.auth_type,
+                                payment_method_token: item
+                                    .resource_common_data
+                                    .payment_method_token
+                                    .clone(),
                                 is_customer_initiated_mandate_payment: Some(false),
                                 billing_address: billing_address.ok_or_else(|| {
                                     ConnectorError::MissingRequiredField {
@@ -4893,7 +4911,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 request_incremental_authorization: false,
                                 request_extended_authorization: None,
                                 request_overcapture: None,
-                            }
+                            },
                         )?;
 
                     validate_shipping_address_against_payment_method(
@@ -5010,7 +5028,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-fn get_payment_method_type_for_saved_payment_method_payment<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Serialize>(
+fn get_payment_method_type_for_saved_payment_method_payment<
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Serialize,
+>(
     item: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
 ) -> Result<Option<StripePaymentMethodType>, error_stack::Report<ConnectorError>> {
     if item.resource_common_data.payment_method == common_enums::PaymentMethod::Card {

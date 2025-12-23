@@ -14,7 +14,6 @@ use utoipa::ToSchema;
 
 use crate::{
     errors::ConnectorError,
-    router_data::NetworkTokenNumber,
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
 };
 

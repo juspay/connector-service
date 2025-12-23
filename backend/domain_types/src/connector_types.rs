@@ -2234,6 +2234,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub enable_partial_authorization: Option<bool>,
     pub billing_descriptor: Option<BillingDescriptor>,
     pub payment_method_data: PaymentMethodData<T>,
+    pub authentication_data: Option<router_request_types::AuthenticationData>,
 }
 
 impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
@@ -2258,6 +2259,11 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
         self.webhook_url
             .clone()
             .ok_or_else(missing_field_err("webhook_url"))
+    }
+    pub fn get_router_return_url(&self) -> Result<String, Error> {
+        self.router_return_url
+            .clone()
+            .ok_or_else(missing_field_err("return_url"))
     }
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))

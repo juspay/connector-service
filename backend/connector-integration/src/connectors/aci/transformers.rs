@@ -11,7 +11,7 @@ use domain_types::{
         BankRedirectData, Card, NetworkTokenData, PayLaterData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
-    router_data::{ConnectorAuthType, ErrorResponse, NetworkTokenNumber},
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -46,8 +46,8 @@ impl GetCaptureMethod for PaymentsSyncData {
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> GetCaptureMethod 
-    for RepeatPaymentData<T> 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> GetCaptureMethod
+    for RepeatPaymentData<T>
 {
     fn get_capture_method(&self) -> Option<common_enums::CaptureMethod> {
         self.capture_method
@@ -1893,7 +1893,12 @@ pub struct AciRepeatPaymentRequest<
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AciRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for AciRepeatPaymentRequest<T>
@@ -1901,7 +1906,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = Error;
     fn try_from(
         item: AciRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {

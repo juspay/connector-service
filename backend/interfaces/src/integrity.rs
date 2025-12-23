@@ -328,7 +328,9 @@ impl GetIntegrityObject<SubmitEvidenceIntegrityObject> for SubmitEvidenceData {
     }
 }
 
-impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject> for RepeatPaymentData<T> {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject>
+    for RepeatPaymentData<T>
+{
     fn get_response_integrity_object(&self) -> Option<RepeatPaymentIntegrityObject> {
         self.integrity_object.clone()
     }

@@ -795,6 +795,30 @@ message AuthenticationData {
 
   // UCAF (Universal Cardholder Authentication Field) collection indicator.
   optional string ucaf_collection_indicator = 9;
+
+  // Challenge code for authentication
+  optional string challenge_code = 10;
+
+  // Challenge cancel reason
+  optional string challenge_cancel = 11;
+
+  // Reason for challenge code
+  optional string challenge_code_reason = 12;
+
+  // Unix timestamp of when the authentication data was created
+  optional int64 created_at = 13;
+
+  // Type of authentication used for the payment
+  optional DecoupledAuthenticationType authentication_type = 14;
+
+  optional SecretString message_extension = 15;
+}
+
+// Type of authentication used for the payment
+enum DecoupledAuthenticationType {
+  DECOUPLED_AUTHENTICATION_TYPE_UNSPECIFIED = 0; // Default value
+  Challenge = 1;
+  Frictionless = 2;
 }
 
 // Details of customer acceptance for mandates or terms.
@@ -2185,6 +2209,8 @@ message PaymentServiceRepeatEverythingRequest {
   optional BillingDescriptor billing_descriptor = 24; // Billing Descriptor information to be sent to the payment gateway
 
   optional MitCategory mit_category = 25; // Category of the MIT
+
+  optional AuthenticationData authentication_data = 36; // Additional authentication data
 }
 
 // Container for recurring mandate payment data

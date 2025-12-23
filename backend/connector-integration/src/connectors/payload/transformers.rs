@@ -593,7 +593,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 // RepeatPayment response - for recurring/mandate payments
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize> TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
+impl<
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
