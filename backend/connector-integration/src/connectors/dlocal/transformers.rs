@@ -1,13 +1,12 @@
-use common_utils::{pii, request::Method, types::MinorUnit};
+use common_utils::{pii, request::Method, FloatMajorUnit};
 use domain_types::{
-    connector_flow::{self, Authorize, PSync, RSync, Void},
+    connector_flow::{self, Authorize},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
-    payment_address::AddressDetails,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
@@ -15,28 +14,26 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::dlocal::DlocalRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Default, Eq, PartialEq, Serialize)]
 pub struct Payer {
-    pub name: Option<Secret<String>>,
-    pub email: Option<pii::Email>,
+    pub name: Secret<String>,
+    pub email: pii::Email,
     pub document: Secret<String>,
 }
 
 #[derive(Debug, Default, Eq, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
-    pub holder_name: Secret<String>,
+    pub holder_name: Option<Secret<String>>,
     pub number: RawCardNumber<T>,
     pub cvv: Secret<String>,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
     pub capture: String,
-    pub installments_id: Option<String>,
-    pub installments: Option<String>,
 }
 
 #[derive(Debug, Default, Eq, PartialEq, Serialize)]
@@ -59,13 +56,13 @@ pub enum PaymentMethodFlow {
     ReDirect,
 }
 
-#[derive(Default, Debug, Serialize, Eq, PartialEq)]
+#[derive(Default, Debug, Serialize, PartialEq)]
 pub struct DlocalPaymentsRequest<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
-    pub amount: MinorUnit,
+    pub amount: FloatMajorUnit,
     pub currency: common_enums::Currency,
-    pub country: String,
+    pub country: common_enums::CountryAlpha2,
     pub payment_method_id: PaymentMethodId,
     pub payment_method_flow: PaymentMethodFlow,
     pub payer: Payer,
@@ -101,13 +98,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let email = item.router_data.request.email.clone();
+        let email = item.router_data.request.get_email()?;
         let address = item
             .router_data
             .resource_common_data
             .get_billing_address()?;
         let country = address.get_country()?;
-        let name = get_payer_name(address);
+        let name = address.get_full_name()?;
         match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => {
                 let should_capture = matches!(
@@ -125,7 +122,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     currency: item.router_data.request.currency,
                     payment_method_id: PaymentMethodId::Card,
                     payment_method_flow: PaymentMethodFlow::Direct,
-                    country: country.to_string(),
+                    country: country.clone(),
                     payer: Payer {
                         name,
                         email,
@@ -133,29 +130,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         document: get_doc_from_currency(country.to_string()),
                     },
                     card: Some(Card {
-                        holder_name: item
-                            .router_data
-                            .resource_common_data
-                            .get_optional_billing_full_name()
-                            .unwrap_or(Secret::new("".to_string())),
+                        holder_name: ccard.card_holder_name.clone(),
                         number: ccard.card_number.clone(),
                         cvv: ccard.card_cvc.clone(),
                         expiration_month: ccard.card_exp_month.clone(),
                         expiration_year: ccard.card_exp_year.clone(),
                         capture: should_capture.to_string(),
-                        installments_id: item
-                            .router_data
-                            .request
-                            .mandate_id
-                            .as_ref()
-                            .and_then(|ids| ids.mandate_id.clone()),
-                        // [#595[FEATURE] Pass Mandate history information in payment flows/request]
-                        installments: item
-                            .router_data
-                            .request
-                            .mandate_id
-                            .clone()
-                            .map(|_| "1".to_string()),
                     }),
                     order_id: item
                         .router_data
@@ -199,65 +179,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-fn get_payer_name(address: &AddressDetails) -> Option<Secret<String>> {
-    let first_name = address
-        .first_name
-        .clone()
-        .map_or("".to_string(), |first_name| first_name.peek().to_string());
-    let last_name = address
-        .last_name
-        .clone()
-        .map_or("".to_string(), |last_name| last_name.peek().to_string());
-    let name: String = format!("{first_name} {last_name}").trim().to_string();
-    if !name.is_empty() {
-        Some(Secret::new(name))
-    } else {
-        None
-    }
-}
-
-pub struct DlocalPaymentsSyncRequest {
-    pub authz_id: String,
-}
-
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for DlocalPaymentsSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            authz_id: (item
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(ConnectorError::MissingConnectorTransactionID)?),
-        })
-    }
-}
-
-pub struct DlocalPaymentsCancelRequest {
-    pub cancel_id: String,
-}
-
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
-    for DlocalPaymentsCancelRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            cancel_id: item.request.connector_transaction_id.clone(),
-        })
-    }
-}
-
-#[derive(Default, Debug, Serialize, Eq, PartialEq)]
+#[derive(Default, Debug, Serialize, PartialEq)]
 pub struct DlocalPaymentsCaptureRequest {
     pub authorization_id: Secret<String>,
-    pub amount: i64,
+    pub amount: FloatMajorUnit,
     pub currency: String,
     pub order_id: String,
 }
@@ -287,6 +212,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        let amount = utils::convert_amount(
+            item.connector.amount_converter,
+            item.router_data.request.minor_amount_to_capture,
+            item.router_data.request.currency,
+        )?;
+
         Ok(Self {
             authorization_id: Secret::new(
                 item.router_data
@@ -295,7 +226,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_connector_transaction_id()
                     .change_context(ConnectorError::MissingConnectorTransactionID)?,
             ),
-            amount: item.router_data.request.amount_to_capture,
+            amount,
             currency: item.router_data.request.currency.to_string(),
             order_id: item
                 .router_data
@@ -336,7 +267,6 @@ impl TryFrom<&ConnectorAuthType> for DlocalAuthType {
 pub enum DlocalPaymentStatus {
     Authorized,
     Paid,
-    Verified,
     Cancelled,
     #[default]
     Pending,
@@ -347,11 +277,10 @@ impl From<DlocalPaymentStatus> for common_enums::AttemptStatus {
     fn from(item: DlocalPaymentStatus) -> Self {
         match item {
             DlocalPaymentStatus::Authorized => Self::Authorized,
-            DlocalPaymentStatus::Verified => Self::Authorized,
             DlocalPaymentStatus::Paid => Self::Charged,
-            DlocalPaymentStatus::Pending => Self::AuthenticationPending,
+            DlocalPaymentStatus::Pending => Self::Pending,
             DlocalPaymentStatus::Cancelled => Self::Voided,
-            DlocalPaymentStatus::Rejected => Self::AuthenticationFailed,
+            DlocalPaymentStatus::Rejected => Self::Failure,
         }
     }
 }
@@ -507,7 +436,7 @@ impl<F> TryFrom<ResponseRouterData<DlocalPaymentsCancelResponse, Self>>
 // REFUND :
 #[derive(Default, Debug, Serialize)]
 pub struct DlocalRefundRequest {
-    pub amount: String,
+    pub amount: FloatMajorUnit,
     pub payment_id: String,
     pub currency: common_enums::Currency,
     pub id: String,
@@ -524,7 +453,12 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount_to_refund = item.router_data.request.refund_amount.to_string();
+        let amount_to_refund = utils::convert_amount(
+            item.connector.amount_converter,
+            item.router_data.request.minor_refund_amount,
+            item.router_data.request.currency,
+        )?;
+
         Ok(Self {
             amount: amount_to_refund,
             payment_id: item.router_data.request.connector_transaction_id.clone(),
@@ -550,8 +484,7 @@ impl From<RefundStatus> for common_enums::RefundStatus {
         match item {
             RefundStatus::Success => Self::Success,
             RefundStatus::Pending => Self::Pending,
-            RefundStatus::Rejected => Self::ManualReview,
-            RefundStatus::Cancelled => Self::Failure,
+            RefundStatus::Rejected | RefundStatus::Cancelled => Self::Failure,
         }
     }
 }
@@ -575,25 +508,6 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                 status_code: item.http_code,
             }),
             ..item.router_data
-        })
-    }
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct DlocalRefundsSyncRequest {
-    pub refund_id: String,
-}
-
-impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
-    for DlocalRefundsSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let refund_id = item.request.connector_refund_id.clone();
-        Ok(Self {
-            refund_id: (refund_id),
         })
     }
 }
