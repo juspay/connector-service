@@ -104,8 +104,9 @@ impl From<PayboxStatus> for AttemptStatus {
         match item {
             PayboxStatus::Cancelled => Self::Voided,
             PayboxStatus::Authorised => Self::Authorized,
-            PayboxStatus::Captured | PayboxStatus::Refunded => Self::Charged,
+            PayboxStatus::Captured => Self::Charged,
             PayboxStatus::Rejected => Self::Failure,
+            PayboxStatus::Refunded => Self::AutoRefunded
         }
     }
 }
@@ -175,7 +176,7 @@ pub struct PayboxPaymentRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "MONTANT")]
     pub amount: MinorUnit,
     #[serde(rename = "DEVISE")]
-    pub currency: String,
+    pub currency: common_enums::Currency,
     #[serde(rename = "REFERENCE")]
     pub reference: String,
     #[serde(rename = "DATEQ")]
@@ -257,7 +258,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             key: auth.key,
             paybox_request_number: generate_request_id()?,
             amount,
-            currency: router_data.request.currency.iso_4217().to_string(),
+            currency: router_data.request.currency,
             reference: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -377,8 +378,6 @@ pub struct PayboxSyncRequest {
     pub key: Secret<String>,
     #[serde(rename = "NUMQUESTION")]
     pub paybox_request_number: String,
-    #[serde(rename = "REFERENCE")]
-    pub reference: String,
     #[serde(rename = "DATEQ")]
     pub date: String,
     #[serde(rename = "NUMTRANS")]
@@ -430,10 +429,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             rank: auth.rank,
             key: auth.key,
             paybox_request_number: generate_request_id()?,
-            reference: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
             date: generate_date_time()?,
             transaction_number: numtrans,
             paybox_order_id: numappel,
@@ -515,7 +510,7 @@ pub struct PayboxCaptureRequest {
     #[serde(rename = "MONTANT")]
     pub amount: MinorUnit,
     #[serde(rename = "DEVISE")]
-    pub currency: String,
+    pub currency: common_enums::Currency,
     #[serde(rename = "REFERENCE")]
     pub reference: String,
     #[serde(rename = "DATEQ")]
@@ -579,7 +574,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             key: auth.key,
             paybox_request_number: generate_request_id()?,
             amount,
-            currency: router_data.request.currency.iso_4217().to_string(),
+            currency: router_data.request.currency,
             reference: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -602,14 +597,6 @@ impl TryFrom<ResponseRouterData<PayboxCaptureResponse, Self>>
         item: ResponseRouterData<PayboxCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
         if item.response.response_code == SUCCESS_CODE {
-            // Create connector_metadata with NUMTRANS
-            let connector_metadata = serde_json::json!(PayboxMeta {
-                connector_request_id: item.response.transaction_number.clone()
-            });
-
-            // Manually set connector_meta_data
-            let connector_meta_data = Secret::new(connector_metadata.clone());
-
             Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(
@@ -617,7 +604,7 @@ impl TryFrom<ResponseRouterData<PayboxCaptureResponse, Self>>
                     ),
                     redirection_data: None,
                     mandate_reference: None,
-                    connector_metadata: Some(connector_metadata),
+                    connector_metadata: None,
                     network_txn_id: None,
                     connector_response_reference_id: Some(item.response.paybox_order_id.clone()),
                     incremental_authorization_allowed: None,
@@ -625,7 +612,6 @@ impl TryFrom<ResponseRouterData<PayboxCaptureResponse, Self>>
                 }),
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Charged,
-                    connector_meta_data: Some(connector_meta_data),
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
@@ -670,7 +656,7 @@ pub struct PayboxVoidRequest {
     #[serde(rename = "MONTANT")]
     pub amount: MinorUnit,
     #[serde(rename = "DEVISE")]
-    pub currency: String,
+    pub currency: common_enums::Currency,
     #[serde(rename = "REFERENCE")]
     pub reference: String,
     #[serde(rename = "DATEQ")]
@@ -743,7 +729,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             key: auth.key,
             paybox_request_number: generate_request_id()?,
             amount,
-            currency: currency.iso_4217().to_string(),
+            currency,
             reference: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -825,7 +811,7 @@ pub struct PayboxRefundRequest {
     #[serde(rename = "MONTANT")]
     pub amount: MinorUnit,
     #[serde(rename = "DEVISE")]
-    pub currency: String,
+    pub currency: common_enums::Currency,
     #[serde(rename = "REFERENCE")]
     pub reference: String,
     #[serde(rename = "DATEQ")]
@@ -882,7 +868,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             key: auth.key,
             paybox_request_number: generate_request_id()?,
             amount,
-            currency: router_data.request.currency.iso_4217().to_string(),
+            currency: router_data.request.currency,
             reference: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -925,11 +911,11 @@ impl TryFrom<ResponseRouterData<PayboxRefundResponse, Self>>
             Ok(Self {
                 response: Ok(RefundsResponseData {
                     connector_refund_id: item.response.paybox_order_id.clone(),
-                    refund_status: RefundStatus::Pending,
+                    refund_status: RefundStatus::Success,
                     status_code: item.http_code,
                 }),
                 resource_common_data: RefundFlowData {
-                    status: RefundStatus::Pending,
+                    status: RefundStatus::Success,
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
@@ -957,35 +943,13 @@ impl TryFrom<ResponseRouterData<PayboxRefundResponse, Self>>
 // RSYNC FLOW
 // ============================================================================
 
-#[derive(Debug, Serialize)]
-pub struct PayboxRefundSyncRequest {
-    #[serde(rename = "VERSION")]
-    pub version: String,
-    #[serde(rename = "TYPE")]
-    pub transaction_type: String,
-    #[serde(rename = "SITE")]
-    pub site: Secret<String>,
-    #[serde(rename = "RANG")]
-    pub rank: Secret<String>,
-    #[serde(rename = "CLE")]
-    pub key: Secret<String>,
-    #[serde(rename = "NUMQUESTION")]
-    pub paybox_request_number: String,
-    #[serde(rename = "DATEQ")]
-    pub date: String,
-    #[serde(rename = "NUMTRANS")]
-    pub transaction_number: String,
-    #[serde(rename = "NUMAPPEL")]
-    pub paybox_order_id: String,
-}
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PayboxRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
             T,
         >,
-    > for PayboxRefundSyncRequest
+    > for PayboxSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 

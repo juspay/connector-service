@@ -110,6 +110,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 // FOUNDATION SETUP - create_all_prerequisites!
 // ============================================================================
 
+/// Type alias for payment sync request
+pub type PayboxPSyncRequest = PayboxSyncRequest;
+
+/// Type alias for refund sync request
+pub type PayboxRSyncRequest = PayboxSyncRequest;
+
 macros::create_all_prerequisites!(
     connector_name: Paybox,
     generic_type: T,
@@ -122,7 +128,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: PayboxSyncRequest,
+            request_body: PayboxPSyncRequest,
             response_body: PayboxPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
@@ -146,7 +152,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: RSync,
-            request_body: PayboxRefundSyncRequest,
+            request_body: PayboxRSyncRequest,
             response_body: PayboxRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
