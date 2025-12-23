@@ -13,7 +13,7 @@ use time::Date;
 use utoipa::ToSchema;
 
 use crate::{
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     router_data::NetworkTokenNumber,
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
 };
@@ -140,6 +140,25 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             self.card_exp_month.peek()
         ))
     }
+
+    pub fn get_card_expiry_year_month_2_digit_with_delimiter(
+        &self,
+        delimiter: String,
+    ) -> Result<Secret<String>, ConnectorError> {
+        let year = self.get_card_expiry_year_2_digit()?;
+        Ok(Secret::new(format!(
+            "{}{}{}",
+            year.peek(),
+            delimiter,
+            self.card_exp_month.peek()
+        )))
+    }
+
+    pub fn get_cardholder_name(&self) -> Result<Secret<String>, Error> {
+        self.card_holder_name
+            .clone()
+            .ok_or_else(missing_field_err("card.card_holder_name"))
+    }
 }
 
 impl Card<DefaultPCIHolder> {
@@ -217,9 +236,9 @@ pub struct NetworkTokenData {
     pub network_token_exp_year: Secret<String>,
     pub cryptogram: Option<Secret<String>>,
     pub card_issuer: Option<String>, //since network token is tied to card, so its issuer will be same as card issuer
-    pub card_network: Option<common_enums::CardNetwork>,
+    pub card_network: Option<CardNetwork>,
     pub card_type: Option<CardType>,
-    pub card_issuing_country: Option<common_enums::CountryAlpha2>,
+    pub card_issuing_country: Option<CountryAlpha2>,
     pub bank_code: Option<String>,
     pub card_holder_name: Option<Secret<String>>,
     pub nick_name: Option<Secret<String>>,
@@ -489,6 +508,7 @@ pub enum BankRedirectData {
     Eft {
         provider: String,
     },
+    OpenBanking {},
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -549,7 +569,7 @@ impl WalletData {
     }
     pub fn get_wallet_token_as_json<T>(&self, wallet_name: String) -> Result<T, Error>
     where
-        T: serde::de::DeserializeOwned,
+        T: DeserializeOwned,
     {
         serde_json::from_str::<T>(self.get_wallet_token()?.peek())
             .change_context(ConnectorError::InvalidWalletToken { wallet_name })
@@ -603,7 +623,7 @@ pub struct TouchNGoRedirection {}
 pub struct SamsungPayWalletCredentials {
     pub method: Option<String>,
     pub recurring_payment: Option<bool>,
-    pub card_brand: common_enums::SamsungPayCardBrand,
+    pub card_brand: SamsungPayCardBrand,
     pub dpan_last_four_digits: Option<String>,
     #[serde(rename = "card_last4digits")]
     pub card_last_four_digits: String,
@@ -670,7 +690,7 @@ impl GooglePayWalletData {
         let encrypted_data = self
             .tokenization_data
             .get_encrypted_google_pay_payment_data_mandatory()
-            .change_context(errors::ConnectorError::InvalidWalletToken {
+            .change_context(ConnectorError::InvalidWalletToken {
                 wallet_name: "Google Pay".to_string(),
             })?;
 
@@ -1037,7 +1057,7 @@ pub struct CardDetailsForNetworkTransactionId {
     pub card_exp_month: Secret<String>,
     pub card_exp_year: Secret<String>,
     pub card_issuer: Option<String>,
-    pub card_network: Option<common_enums::CardNetwork>,
+    pub card_network: Option<CardNetwork>,
     pub card_type: Option<String>,
     pub card_issuing_country: Option<String>,
     pub bank_code: Option<String>,

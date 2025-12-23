@@ -227,14 +227,7 @@ fn get_vpa_id_from_upi(upi_data: &UpiData) -> Option<Secret<String, UpiVpaMaskin
 }
 
 // ===== REQUEST TRANSFORMER =====
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         crate::connectors::iatapay::IatapayRouterData<
             RouterDataV2<
@@ -266,7 +259,7 @@ impl<
         let country = get_country_from_payment_method(payment_method_data)?;
 
         // Format locale as "en-{country}"
-        let locale = format!("en-{}", country);
+        let locale = format!("en-{country}");
 
         // Extract merchant ID from connector auth
         let auth = IatapayAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -325,38 +318,14 @@ impl<
 }
 
 // ===== RESPONSE TRANSFORMER =====
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            IatapayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<IatapayPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            IatapayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<IatapayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
@@ -461,22 +430,12 @@ impl<
 }
 
 // ===== PSYNC RESPONSE TRANSFORMER =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            IatapaySyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<IatapaySyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            IatapaySyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<IatapaySyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -602,14 +561,7 @@ pub struct IatapayRefundResponse {
 pub type IatapayRefundSyncResponse = IatapayRefundResponse;
 
 // ===== REFUND REQUEST TRANSFORMER =====
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         crate::connectors::iatapay::IatapayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -655,21 +607,13 @@ impl<
 }
 
 // ===== REFUND RESPONSE TRANSFORMER =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            IatapayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<IatapayRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            IatapayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<IatapayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let mut router_data = item.router_data;
         let response = item.response;
@@ -707,21 +651,13 @@ impl
 }
 
 // ===== REFUND SYNC RESPONSE TRANSFORMER =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            IatapayRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<IatapayRefundSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            IatapayRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<IatapayRefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let mut router_data = item.router_data;
         let response = item.response;
@@ -760,14 +696,7 @@ impl
 }
 
 // ===== OAUTH 2.0 ACCESS TOKEN TRANSFORMERS =====
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         crate::connectors::iatapay::IatapayRouterData<
             RouterDataV2<
@@ -797,18 +726,7 @@ impl<
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            IatapayAuthUpdateResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
-                PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                domain_types::connector_types::AccessTokenResponseData,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<IatapayAuthUpdateResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::CreateAccessToken,
         PaymentFlowData,
@@ -819,15 +737,7 @@ impl
     type Error = Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            IatapayAuthUpdateResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
-                PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                domain_types::connector_types::AccessTokenResponseData,
-            >,
-        >,
+        item: ResponseRouterData<IatapayAuthUpdateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
         let mut router_data = item.router_data;

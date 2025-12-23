@@ -5,7 +5,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -22,20 +22,12 @@ use url::Url;
 use super::RapydRouterData;
 use crate::types::ResponseRouterData;
 
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            RapydPaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+impl<F, T> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            RapydPaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<RapydPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let (status, response) = match &item.response.data {
             Some(data) => {
@@ -65,9 +57,8 @@ impl<F, T>
                             .as_ref()
                             .filter(|redirect_str| !redirect_str.is_empty())
                             .map(|url| {
-                                Url::parse(url).change_context(
-                                    errors::ConnectorError::FailedToObtainIntegrationUrl,
-                                )
+                                Url::parse(url)
+                                    .change_context(ConnectorError::FailedToObtainIntegrationUrl)
                             })
                             .transpose()?;
 
@@ -131,26 +122,21 @@ pub struct RapydAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for RapydAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
                 access_key: api_key.to_owned(),
                 secret_key: key1.to_owned(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType)?,
+            _ => Err(ConnectorError::FailedToObtainAuthType)?,
         }
     }
 }
 
 #[derive(Default, Debug, Serialize)]
 pub struct RapydPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
     pub amount: FloatMajorUnit,
     pub currency: common_enums::Currency,
@@ -170,14 +156,7 @@ pub struct PaymentMethodOptions {
 }
 
 #[derive(Default, Debug, Serialize)]
-pub struct PaymentMethod<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct PaymentMethod<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "type")]
     pub pm_type: String,
     pub fields: Option<PaymentFields<T>>,
@@ -186,14 +165,7 @@ pub struct PaymentMethod<
 }
 
 #[derive(Default, Debug, Serialize)]
-pub struct PaymentFields<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct PaymentFields<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     pub number: RawCardNumber<T>,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
@@ -222,14 +194,7 @@ pub struct RapydWallet {
     token: Option<Secret<String>>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         RapydRouterData<
             RouterDataV2<
@@ -303,7 +268,7 @@ impl<
                         token: Some(Secret::new(
                             data.tokenization_data
                                 .get_encrypted_google_pay_token()
-                                .change_context(errors::ConnectorError::MissingRequiredField {
+                                .change_context(ConnectorError::MissingRequiredField {
                                     field_name: "gpay wallet_token",
                                 })?
                                 .to_owned(),
@@ -313,7 +278,7 @@ impl<
                         let apple_pay_encrypted_data = data
                             .payment_data
                             .get_encrypted_apple_pay_payment_data_mandatory()
-                            .change_context(errors::ConnectorError::MissingRequiredField {
+                            .change_context(ConnectorError::MissingRequiredField {
                                 field_name: "Apple pay encrypted data",
                             })?;
                         Some(RapydWallet {
@@ -333,9 +298,7 @@ impl<
             _ => None,
         }
         .get_required_value("payment_method not implemented")
-        .change_context(errors::ConnectorError::NotImplemented(
-            "payment_method".to_owned(),
-        ))?;
+        .change_context(ConnectorError::NotImplemented("payment_method".to_owned()))?;
         let return_url = item.router_data.request.get_router_return_url()?;
         let amount = item
             .connector
@@ -344,7 +307,7 @@ impl<
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             amount,
             currency: item.router_data.request.currency,
@@ -459,14 +422,7 @@ pub struct CaptureRequest {
     statement_descriptor: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         RapydRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -505,18 +461,11 @@ pub struct RapydRefundRequest {
     pub currency: Option<common_enums::Currency>,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<RapydRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<RapydRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for RapydRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: RapydRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {

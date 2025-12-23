@@ -135,14 +135,7 @@ impl From<BluesnapRefundStatus> for common_enums::RefundStatus {
 
 // ===== REQUEST TRANSFORMERS =====
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BluesnapRouterData<
             RouterDataV2<
@@ -271,7 +264,10 @@ impl<
             payment_method_details,
             card_holder_info,
             transaction_fraud_info: Some(TransactionFraudInfo {
-                fraud_session_id: router_data.resource_common_data.payment_id.clone(),
+                fraud_session_id: router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
             }),
             merchant_transaction_id: Some(
                 router_data
@@ -284,14 +280,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BluesnapRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -327,14 +316,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BluesnapRouterData<
             RouterDataV2<
@@ -369,14 +351,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BluesnapRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -408,31 +383,13 @@ impl<
 
 // ===== RESPONSE TRANSFORMERS =====
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            BluesnapAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BluesnapAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<BluesnapAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_attempt_status_from_bluesnap_status(
             item.response.card_transaction_type.clone(),
@@ -461,21 +418,13 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BluesnapCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<BluesnapCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BluesnapCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<BluesnapCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_attempt_status_from_bluesnap_status(
             item.response.card_transaction_type.clone(),
@@ -504,18 +453,7 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BluesnapVoidResponse,
-            RouterDataV2<
-                domain_types::connector_flow::Void,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentVoidData,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<BluesnapVoidResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::Void,
         PaymentFlowData,
@@ -525,16 +463,41 @@ impl
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
+    fn try_from(item: ResponseRouterData<BluesnapVoidResponse, Self>) -> Result<Self, Self::Error> {
+        let status = get_attempt_status_from_bluesnap_status(
+            item.response.card_transaction_type.clone(),
+            item.response.processing_info.processing_status.clone(),
+        );
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.transaction_id.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.transaction_id.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<BluesnapPSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
     fn try_from(
-        item: ResponseRouterData<
-            BluesnapVoidResponse,
-            RouterDataV2<
-                domain_types::connector_flow::Void,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentVoidData,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<BluesnapPSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_attempt_status_from_bluesnap_status(
             item.response.card_transaction_type.clone(),
@@ -563,64 +526,13 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BluesnapPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<BluesnapRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BluesnapPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let status = get_attempt_status_from_bluesnap_status(
-            item.response.card_transaction_type.clone(),
-            item.response.processing_info.processing_status.clone(),
-        );
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.transaction_id.clone(),
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: Some(item.response.transaction_id.clone()),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
-    }
-}
-
-impl
-    TryFrom<
-        ResponseRouterData<
-            BluesnapRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<
-            BluesnapRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<BluesnapRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = item.response.refund_status.clone().into();
 
@@ -673,21 +585,13 @@ pub fn map_webhook_event_to_incoming_webhook_event(
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BluesnapRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<BluesnapRefundSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BluesnapRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<BluesnapRefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = match item.response.processing_info.processing_status {
             BluesnapProcessingStatus::Success => common_enums::RefundStatus::Success,
