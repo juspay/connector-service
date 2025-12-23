@@ -26,30 +26,7 @@ port = 8080
 [proxy]
 idle_pool_connection_timeout = 90
 bypass_proxy_urls = []
-mitm_proxy_enabled = true
-http_url = "http://localhost:8081"
-https_url = "http://localhost:8081"
-mitm_ca_cert = """-----BEGIN CERTIFICATE-----
-MIIDNTCCAh2gAwIBAgIUQdlpnK9M7uKWKMWscIeO5UVjqN0wDQYJKoZIhvcNAQEL
-BQAwKDESMBAGA1UEAwwJbWl0bXByb3h5MRIwEAYDVQQKDAltaXRtcHJveHkwHhcN
-MjUxMjAxMTIyOTU5WhcNMzUxMjAxMTIyOTU5WjAoMRIwEAYDVQQDDAltaXRtcHJv
-eHkxEjAQBgNVBAoMCW1pdG1wcm94eTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
-AQoCggEBALHEOrpblTzINq+PVxKi4vWcNp2UGjFdss0N5+WH0Y4xS/zbC2/oB1O9
-nK9u7MzdQ52jDD2rKE2psapfpmOHhgjVrg0iU2uRed14ZpO0Sv3IcfW7QPR/3hSU
-IwzN9GYQtSWkbAbaupl8ZZPn84sOdPOZ0erNHDsCVxM0ssXnxAt4SEijCgAKBIFs
-63ncc9RXCQrB7kxqVKZtbJSbCkVZfmTQvqeG/oj8bFEJk1x6PGAIMiBVBFtriJpm
-Q9d5J03XOEr1LgHJdD/+9XtYPU+XthYcFqXoDizewIVtu2PkvBHOw3XARJlgU7k+
-6skflr+f+n3u3Xi8ojpU47VNsqiYrQ8CAwEAAaNXMFUwDwYDVR0TAQH/BAUwAwEB
-/zATBgNVHSUEDDAKBggrBgEFBQcDATAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE
-FMA0g4IGzpFmO8iO5VorRlXjqdIOMA0GCSqGSIb3DQEBCwUAA4IBAQCCyKNnH29o
-Xwvmt6JjezNYoLq5847HHrWbRx0CkFJb1pZVHka8p010+h0e61lBvHe4Z75vbQKY
-rcvVFKJ5krlLvkf01PiYSImSPsKfwLZpkpEeKQm+LLvMmV90IGeBwDuzqx6h1n7+
-QjHRP4dFziHdh2Xrzias4KAaYfI24M9ek0iPxuLwyVEjCnpZdlbr0Fo2mHWc+qPl
-vuN2IkXou77Onh6T24V4aOHuBPiW5mAW6Btsv1NTgy4Aey7i9zQAK9BJn/BuHcoT
-GTJvUuUraqVmCg48cqehYS/wNmY2jqSitXkt3gAobHiJ11i7PbvpsiTlQ33q10pV
-v6iPJhdABgkM
------END CERTIFICATE-----
-"""
+mitm_proxy_enabled = false
 
 [test]
 enabled = false
