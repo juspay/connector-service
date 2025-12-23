@@ -187,6 +187,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .attach_printable("Invalid signature format for Revolut")?;
 
         hex::decode(hex_signature)
+            .attach_printable("Failed to decode hex signature")
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
     }
 
@@ -282,6 +283,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let notif: revolut::RevolutWebhookBody = request
             .body
             .parse_struct("RevolutWebhookBody")
+            .attach_printable("Failed to parse Revolut webhook body")
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
         let response = WebhookDetailsResponse::try_from(notif)
             .change_context(errors::ConnectorError::WebhookResponseEncodingFailed);
@@ -709,14 +711,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 (code, message, attempt_status)
             }
             revolut::RevolutErrorResponse::ErrorIdResponse { error_id, code, .. } => {
-                let (error_code, attempt_status) = if let Some(numeric_code) = code {
-                    let status = match numeric_code {
-                        1024 => AttemptStatus::Failure,
-                        _ => AttemptStatus::Pending,
-                    };
-                    (numeric_code.to_string(), status)
-                } else {
-                    ("UNKNOWN_ERROR".to_string(), AttemptStatus::Failure)
+                let (error_code, attempt_status) = match code {
+                    Some(numeric_code) => {
+                        let status = match numeric_code {
+                            1024 => AttemptStatus::Failure,
+                            _ => AttemptStatus::Pending,
+                        };
+                        (numeric_code.to_string(), status)
+                    }
+                    None => ("UNKNOWN_ERROR".to_string(), AttemptStatus::Failure),
                 };
                 (
                     error_code,

@@ -40,8 +40,8 @@ pub struct RevolutOrderCreateRequest {
     pub capture_mode: Option<RevolutCaptureMode>,
     pub cancel_authorised_after: Option<String>,
     pub location_id: Option<String>,
-    pub metadata: Option<serde_json::Value>,
-    pub industry_data: Option<serde_json::Value>,
+    pub metadata: Option<Secret<serde_json::Value>>,
+    pub industry_data: Option<Secret<serde_json::Value>>,
     pub merchant_order_data: Option<RevolutMerchantOrderData>,
     pub upcoming_payment_data: Option<serde_json::Value>,
     pub redirect_url: Option<String>,
@@ -181,8 +181,8 @@ pub struct RevolutOrderCreateResponse {
     pub customer: Option<RevolutCustomer>,
     pub payments: Option<Vec<RevolutPayment>>,
     pub location_id: Option<String>,
-    pub metadata: Option<serde_json::Value>,
-    pub industry_data: Option<serde_json::Value>,
+    pub metadata: Option<Secret<serde_json::Value>>,
+    pub industry_data: Option<Secret<serde_json::Value>>,
     pub merchant_order_data: Option<RevolutMerchantOrderData>,
     pub upcoming_payment_data: Option<RevolutUpcomingPaymentData>,
     pub checkout_url: Option<String>,
@@ -595,7 +595,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }),
             cancel_authorised_after: None,
             location_id: None,
-            metadata: router_data.request.metadata.clone(),
+            metadata: router_data.request.metadata.clone().map(Secret::new),
             industry_data: None,
             merchant_order_data,
             upcoming_payment_data: None,
@@ -664,41 +664,39 @@ impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
-        let (status, payment_id) = if let Some(payments) = &response.payments {
-            if let Some(first_payment) = payments.first() {
-                let status = match first_payment.state {
-                    RevolutPaymentState::Authorised => AttemptStatus::Authorized,
-                    RevolutPaymentState::Captured | RevolutPaymentState::Completed => {
-                        AttemptStatus::Charged
-                    }
-                    RevolutPaymentState::Failed | RevolutPaymentState::Declined => {
-                        AttemptStatus::Failure
-                    }
-                    RevolutPaymentState::Cancelled => AttemptStatus::Voided,
-                    RevolutPaymentState::Pending => AttemptStatus::Pending,
-                    RevolutPaymentState::AuthenticationChallenge => {
-                        AttemptStatus::AuthenticationPending
-                    }
-                    _ => AttemptStatus::Pending,
-                };
-                (status, Some(first_payment.id.clone()))
-            } else {
-                (map_order_state(response.state), None)
-            }
-        } else {
-            (map_order_state(response.state), None)
+        let (status, payment_id) = match &response.payments {
+            Some(payments) => match payments.first() {
+                Some(first_payment) => {
+                    let status = match first_payment.state {
+                        RevolutPaymentState::Authorised => AttemptStatus::Authorized,
+                        RevolutPaymentState::Captured | RevolutPaymentState::Completed => {
+                            AttemptStatus::Charged
+                        }
+                        RevolutPaymentState::Failed | RevolutPaymentState::Declined => {
+                            AttemptStatus::Failure
+                        }
+                        RevolutPaymentState::Cancelled => AttemptStatus::Voided,
+                        RevolutPaymentState::Pending => AttemptStatus::Pending,
+                        RevolutPaymentState::AuthenticationChallenge => {
+                            AttemptStatus::AuthenticationPending
+                        }
+                        _ => AttemptStatus::Pending,
+                    };
+                    (status, Some(first_payment.id.clone()))
+                }
+                None => (map_order_state(response.state), None),
+            },
+            None => (map_order_state(response.state), None),
         };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    payment_id.unwrap_or_else(|| response.id.clone()),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(response.id.clone()),
+                connector_response_reference_id: payment_id.or_else(|| Some(response.id.clone())),
                 incremental_authorization_allowed: None,
                 status_code: 200,
             }),
@@ -748,8 +746,8 @@ pub struct RevolutRefundResponse {
     pub customer: Option<RevolutCustomer>,
     pub payments: Option<Vec<RevolutPayment>>,
     pub location_id: Option<String>,
-    pub metadata: Option<serde_json::Value>,
-    pub industry_data: Option<serde_json::Value>,
+    pub metadata: Option<Secret<serde_json::Value>>,
+    pub industry_data: Option<Secret<serde_json::Value>>,
     pub merchant_order_data: Option<RevolutMerchantOrderData>,
     pub upcoming_payment_data: Option<RevolutUpcomingPaymentData>,
     pub checkout_url: Option<String>,
@@ -766,7 +764,7 @@ pub struct RevolutRefundRequest {
     pub amount: MinorUnit,
     pub currency: common_enums::Currency,
     pub merchant_order_data: Option<RevolutMerchantOrderData>,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<Secret<serde_json::Value>>,
     pub description: Option<String>,
 }
 
@@ -802,7 +800,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             url: None,
                         })
                 }),
-            metadata: router_data.request.connector_metadata.clone(),
+            metadata: router_data
+                .request
+                .connector_metadata
+                .clone()
+                .map(Secret::new),
             description: router_data.request.reason.clone(),
         })
     }
