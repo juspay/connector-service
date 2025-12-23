@@ -20,7 +20,6 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use time::PrimitiveDateTime;
-use url::Url;
 
 pub struct RevolutAuthType {
     pub api_key: Secret<String>,
@@ -309,7 +308,7 @@ pub enum RevolutDeclineReason {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutMerchantOrderData {
-    pub url: Option<Url>,
+    pub url: Option<String>,
     pub reference: Option<String>,
 }
 
@@ -569,16 +568,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 }
             });
 
-        // Map merchant_order_data from merchant_order_reference_id
-        let merchant_order_data =
-            router_data
-                .request
-                .merchant_order_reference_id
-                .clone()
-                .map(|reference| RevolutMerchantOrderData {
-                    url: None,
-                    reference: Some(reference),
-                });
+        // Map merchant_order_data from connector_request_reference_id
+        let merchant_order_data = Some(RevolutMerchantOrderData {
+            url: router_data.request.router_return_url.clone(),
+            reference: Some(
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+        });
 
         Ok(Self {
             amount: router_data.request.amount,
@@ -788,18 +787,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(Self {
             amount: router_data.request.minor_refund_amount,
             currency: router_data.request.currency,
-            merchant_order_data: router_data
-                .request
-                .connector_metadata
-                .as_ref()
-                .and_then(|m| {
-                    m.get("merchant_reference")
-                        .and_then(|v| v.as_str())
-                        .map(|reference| RevolutMerchantOrderData {
-                            reference: Some(reference.to_string()),
-                            url: None,
-                        })
-                }),
+            merchant_order_data: Some(RevolutMerchantOrderData {
+                reference: Some(
+                    router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
+                url: None,
+            }),
             metadata: router_data
                 .request
                 .connector_metadata
