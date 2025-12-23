@@ -106,7 +106,7 @@ impl From<PayboxStatus> for AttemptStatus {
             PayboxStatus::Authorised => Self::Authorized,
             PayboxStatus::Captured => Self::Charged,
             PayboxStatus::Rejected => Self::Failure,
-            PayboxStatus::Refunded => Self::AutoRefunded
+            PayboxStatus::Refunded => Self::AutoRefunded,
         }
     }
 }
