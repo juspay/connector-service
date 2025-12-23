@@ -3017,17 +3017,6 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             trans_status,
             acs_transaction_id: value.acs_transaction_id,
             transaction_id: value.transaction_id,
-            challenge_cancel: value.challenge_cancel,
-            challenge_code_reason: value.challenge_code_reason,
-            challenge_code: value.challenge_code,
-            created_at: value.created_at.map(|dt| dt.assume_utc().unix_timestamp()),
-            authentication_type: value
-                .authentication_type
-                .map(grpc_api_types::payments::DecoupledAuthenticationType::foreign_from)
-                .map(i32::from),
-            message_extension: serde_json::to_string(&value.message_extension)
-                .ok()
-                .map(Secret::new),
         })
     }
 }
@@ -7728,38 +7717,6 @@ impl<
             payment_method_data,
             authentication_data,
         })
-    }
-}
-
-impl ForeignTryFrom<grpc_api_types::payments::DecoupledAuthenticationType>
-    for common_enums::DecoupledAuthenticationType
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        value: grpc_api_types::payments::DecoupledAuthenticationType,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        match value {
-            grpc_api_types::payments::DecoupledAuthenticationType::Challenge => Ok(Self::Challenge),
-            grpc_api_types::payments::DecoupledAuthenticationType::Frictionless => Ok(Self::Frictionless),
-            grpc_api_types::payments::DecoupledAuthenticationType::Unspecified => Err(ApplicationErrorResponse::BadRequest(ApiError{
-                sub_code: "INVALID_DECOUPLED_AUTHENTICATION_TYPE".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid decoupled authentication type. Expected 'CHALLENGE' or 'FRICTIONLESS'".to_string(),
-                error_object: None,
-            }))?
-        }
-    }
-}
-
-impl ForeignFrom<common_enums::DecoupledAuthenticationType>
-    for grpc_api_types::payments::DecoupledAuthenticationType
-{
-    fn foreign_from(value: common_enums::DecoupledAuthenticationType) -> Self {
-        match value {
-            common_enums::DecoupledAuthenticationType::Frictionless => Self::Frictionless,
-            common_enums::DecoupledAuthenticationType::Challenge => Self::Challenge,
-        }
     }
 }
 

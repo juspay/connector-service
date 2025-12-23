@@ -3,7 +3,6 @@ use jsonwebtoken as jwt;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    date_time,
     ext_traits::{OptionExt, ValueExt},
     pii,
     types::{SemanticVersion, StringMajorUnit},
@@ -476,12 +475,6 @@ fn get_authentication_data_for_check_enrollment_response(
         ds_trans_id,
         acs_transaction_id: response.validate_response.acs_transaction_id,
         transaction_id: response.validate_response.xid,
-        authentication_type: None,
-        challenge_cancel: None,
-        challenge_code_reason: None,
-        challenge_code: None,
-        created_at: None,
-        message_extension: None,
     }
 }
 
@@ -513,12 +506,6 @@ fn get_authentication_data_for_validation_response(
         ds_trans_id,
         acs_transaction_id: response.validate_response.acs_transaction_id,
         transaction_id: response.validate_response.xid,
-        authentication_type: None,
-        challenge_cancel: None,
-        challenge_code_reason: None,
-        challenge_code: None,
-        created_at: None,
-        message_extension: None,
     }
 }
 
@@ -576,12 +563,6 @@ impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthI
             acs_transaction_id: _,
             transaction_id,
             ucaf_collection_indicator,
-            created_at: _,
-            challenge_cancel: _,
-            challenge_code: _,
-            challenge_code_reason: _,
-            authentication_type: _,
-            message_extension: _,
         } = value;
 
         Self {
@@ -4330,6 +4311,7 @@ pub struct CybersourceRepeatPaymentRequest {
 pub enum RepeatPaymentInformation {
     MandatePayment(Box<MandatePaymentInformation>),
     Cards(Box<CardWithNtiPaymentInformation>),
+    NetworkToken(Box<NetworkTokenPaymentInformation>),
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -4369,9 +4351,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::CardDetailsForNetworkTransactionId(card) => {
                 Self::try_from((&item, card))
             }
+            PaymentMethodData::NetworkToken(token_data) => Self::try_from((&item, token_data)),
             PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
-            | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::Wallet(_)
             | PaymentMethodData::Card(_)
             | PaymentMethodData::BankRedirect(_)
@@ -4530,11 +4512,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Err(_) => None,
         };
 
-        // For all card payments, we are explicitly setting `pares_status` to `AuthenticationSuccessful`
-        // to indicate that the Payer Authentication was successful, regardless of actual ACS response.
-        // This is a default behavior and may be adjusted based on future integration requirements.
-        let pares_status = Some(CybersourceParesStatus::AuthenticationSuccessful);
-
         let payment_information =
             RepeatPaymentInformation::Cards(Box::new(CardWithNtiPaymentInformation {
                 card: CardWithNti {
@@ -4565,60 +4542,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .authentication_data
-            .as_ref()
-            .map(|authn_data| {
-                let effective_authentication_type =
-                    authn_data.authentication_type.as_ref().map(Into::into);
-                let (ucaf_authentication_data, cavv, ucaf_collection_indicator) =
-                    if ccard.card_network == Some(common_enums::CardNetwork::Mastercard) {
-                        (authn_data.cavv.clone(), None, Some("2".to_string()))
-                    } else {
-                        (None, authn_data.cavv.clone(), None)
-                    };
-                let authentication_date = authn_data.created_at.and_then(|created_at| {
-                    date_time::format_date(created_at, date_time::DateFormat::YYYYMMDDHHmmss).ok()
-                });
-
-                let network_score = (ccard.card_network
-                    == Some(common_enums::CardNetwork::CartesBancaires))
-                .then_some(authn_data.message_extension.as_ref())
-                .flatten()
-                .map(|secret| secret.clone().expose())
-                .and_then(|exposed| {
-                    serde_json::from_value::<Vec<MessageExtensionAttribute>>(exposed)
-                        .map_err(|err| {
-                            tracing::error!("Failed to deserialize message_extension: {:?}", err);
-                        })
-                        .ok()
-                        .and_then(|exts| extract_score_id(&exts))
-                });
-
-                let cavv_algorithm = Some("2".to_string());
-
-                CybersourceConsumerAuthInformation {
-                    pares_status,
-                    ucaf_collection_indicator,
-                    cavv,
-                    ucaf_authentication_data,
-                    xid: None,
-                    directory_server_transaction_id: authn_data
-                        .ds_trans_id
-                        .clone()
-                        .map(Secret::new),
-                    specification_version: authn_data.message_version.clone(),
-                    pa_specification_version: authn_data.message_version.clone(),
-                    veres_enrolled: Some("Y".to_string()),
-                    eci_raw: authn_data.eci.clone(),
-                    authentication_date,
-                    effective_authentication_type,
-                    challenge_code: authn_data.challenge_code.clone(),
-                    signed_pares_status_reason: authn_data.challenge_code_reason.clone(),
-                    challenge_cancel_code: authn_data.challenge_cancel.clone(),
-                    network_score,
-                    acs_transaction_id: authn_data.acs_transaction_id.clone(),
-                    cavv_algorithm,
-                }
-            });
+            .clone()
+            .map(From::from);
 
         Ok(Self {
             processing_information,
@@ -4631,28 +4556,95 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-fn extract_score_id(message_extensions: &[MessageExtensionAttribute]) -> Option<u32> {
-    message_extensions.iter().find_map(|attr| {
-        attr.id
-            .ends_with("CB-SCORE")
-            .then(|| {
-                attr.id
-                    .split('_')
-                    .next()
-                    .and_then(|p| p.strip_prefix('A'))
-                    .and_then(|s| {
-                        s.parse::<u32>().map(Some).unwrap_or_else(|err| {
-                            tracing::error!("Failed to parse score_id from '{}': {}", s, err);
-                            None
-                        })
-                    })
-                    .or_else(|| {
-                        tracing::error!("Unexpected prefix format in id: {}", attr.id);
-                        None
-                    })
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &CybersourceRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &NetworkTokenData,
+    )> for CybersourceRepeatPaymentRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        (item, token_data): (
+            &CybersourceRouterData<
+                RouterDataV2<
+                    RepeatPayment,
+                    PaymentFlowData,
+                    RepeatPaymentData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &NetworkTokenData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let transaction_type = if item.router_data.request.off_session == Some(true) {
+            TransactionType::StoredCredentials
+        } else {
+            TransactionType::InApp
+        };
+
+        let email = item.router_data.request.get_email()?;
+        let bill_to = build_bill_to(
+            item.router_data.resource_common_data.get_optional_billing(),
+            email,
+        )?;
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
+
+        let card_issuer = token_data.get_card_issuer();
+        let card_type = match card_issuer {
+            Ok(issuer) => Some(card_issuer_to_string(issuer)),
+            Err(_) => None,
+        };
+
+        let payment_information =
+            RepeatPaymentInformation::NetworkToken(Box::new(NetworkTokenPaymentInformation {
+                tokenized_card: NetworkTokenizedCard {
+                    number: token_data.get_network_token(),
+                    expiration_month: token_data.get_network_token_expiry_month(),
+                    expiration_year: token_data.get_network_token_expiry_year(),
+                    cryptogram: token_data.get_cryptogram().clone(),
+                    transaction_type,
+                },
+            }));
+
+        let processing_information = ProcessingInformation::try_from((item, None, card_type))?;
+        let client_reference_information = ClientReferenceInformation::from(item);
+        let merchant_defined_information = item
+            .router_data
+            .request
+            .metadata
+            .as_ref()
+            .map(|metadata_map| {
+                serde_json::to_value(metadata_map)
+                    .change_context(ConnectorError::RequestEncodingFailed)
+                    .map(utils::convert_metadata_to_merchant_defined_info)
             })
-            .flatten()
-    })
+            .transpose()?;
+
+        let consumer_authentication_information = item
+            .router_data
+            .request
+            .authentication_data
+            .clone()
+            .map(From::from);
+
+        Ok(Self {
+            processing_information,
+            payment_information,
+            order_information,
+            client_reference_information,
+            consumer_authentication_information,
+            merchant_defined_information,
+        })
+    }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>

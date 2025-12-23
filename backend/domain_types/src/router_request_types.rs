@@ -1,17 +1,12 @@
 use std::str::FromStr;
 
 use common_enums::{self, CaptureMethod, Currency};
-use common_utils::{
-    pii::{IpAddress, SecretSerdeValue},
-    types::SemanticVersion,
-    Email, MinorUnit,
-};
+use common_utils::{pii::IpAddress, types::SemanticVersion, Email, MinorUnit};
 use error_stack::ResultExt;
-use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
-use crate::utils::{ForeignFrom, ForeignTryFrom};
+use crate::utils::ForeignFrom;
 use grpc_api_types::payments;
 
 use crate::{
@@ -130,24 +125,11 @@ pub struct AuthenticationData {
     pub ds_trans_id: Option<String>,
     pub acs_transaction_id: Option<String>,
     pub transaction_id: Option<String>,
-    pub authentication_type: Option<common_enums::DecoupledAuthenticationType>,
-    pub created_at: Option<time::PrimitiveDateTime>,
-    pub challenge_code: Option<String>,
-    pub challenge_cancel: Option<String>,
-    pub challenge_code_reason: Option<String>,
-    pub message_extension: Option<SecretSerdeValue>,
 }
 
 impl TryFrom<payments::AuthenticationData> for AuthenticationData {
     type Error = error_stack::Report<errors::ApplicationErrorResponse>;
     fn try_from(value: payments::AuthenticationData) -> Result<Self, Self::Error> {
-        let authentication_type = match value.authentication_type() {
-            payments::DecoupledAuthenticationType::Unspecified => None,
-            _ => Some(common_enums::DecoupledAuthenticationType::foreign_try_from(
-                value.authentication_type(),
-            )?),
-        };
-
         let payments::AuthenticationData {
             eci,
             cavv,
@@ -158,12 +140,6 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             acs_transaction_id,
             transaction_id,
             ucaf_collection_indicator,
-            authentication_type: _authentication_type,
-            created_at,
-            challenge_code,
-            challenge_cancel,
-            challenge_code_reason,
-            message_extension,
         } = value;
         let threeds_server_transaction_id =
             utils::extract_optional_connector_request_reference_id(&threeds_server_transaction_id);
@@ -204,18 +180,6 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
                 })),
             }))}).transpose()?.map(common_enums::TransactionStatus::foreign_from);
 
-        let message_extension = message_extension
-            .map(|m| serde_json::from_str(&m.expose()))
-            .transpose()
-            .change_context(errors::ApplicationErrorResponse::BadRequest(
-                errors::ApiError {
-                    sub_code: "INVALID_MESSAGE_EXTENSION".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse message extension".to_owned(),
-                    error_object: None,
-                },
-            ))?;
-
         Ok(Self {
             ucaf_collection_indicator,
             trans_status,
@@ -226,14 +190,6 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             ds_trans_id: ds_transaction_id,
             acs_transaction_id,
             transaction_id,
-            challenge_cancel,
-            challenge_code,
-            challenge_code_reason,
-            authentication_type,
-            created_at: created_at
-                .and_then(|ts| time::OffsetDateTime::from_unix_timestamp(ts).ok())
-                .map(|offset_dt| time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())),
-            message_extension,
         })
     }
 }
@@ -258,17 +214,6 @@ impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
                 .map(i32::from),
             acs_transaction_id: value.acs_transaction_id,
             transaction_id: value.transaction_id,
-            challenge_cancel: value.challenge_cancel,
-            challenge_code: value.challenge_code,
-            challenge_code_reason: value.challenge_code_reason,
-            authentication_type: value
-                .authentication_type
-                .map(payments::DecoupledAuthenticationType::foreign_from)
-                .map(i32::from),
-            created_at: value.created_at.map(|dt| dt.assume_utc().unix_timestamp()),
-            message_extension: serde_json::to_string(&value.message_extension)
-                .ok()
-                .map(Secret::new),
         }
     }
 }
