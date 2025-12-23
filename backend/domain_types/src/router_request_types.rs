@@ -179,6 +179,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
                     "description": "Transaction status represents the result of 3D Secure authentication/verification process"
                 })),
             }))}).transpose()?.map(common_enums::TransactionStatus::foreign_from);
+
         Ok(Self {
             ucaf_collection_indicator,
             trans_status,

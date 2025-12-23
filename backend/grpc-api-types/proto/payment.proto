@@ -878,6 +878,31 @@ message MandateReference {
   optional string connector_mandate_request_reference_id = 3;
 }
 
+message MandateReferenceId {
+  oneof mandate_id_type {
+    // mandate_id send by connector
+    ConnectorMandateReferenceId connector_mandate_id = 1;
+
+    // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with card data
+    string network_mandate_id = 2;
+
+    // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with network token data
+    NetworkTokenWithNTI network_token_with_nti = 3;
+  }
+}
+
+message ConnectorMandateReferenceId {
+  optional string connector_mandate_id = 1;
+  optional string payment_method_id = 2;
+  optional string connector_mandate_request_reference_id = 3;
+}
+
+message NetworkTokenWithNTI {
+  string network_transaction_id = 1;
+  optional SecretString token_exp_month = 2;
+  optional SecretString token_exp_year = 3;
+}
+
 // Container for various address types related to a payment.
 message PaymentAddress {
   // Shipping address.
@@ -2111,13 +2136,16 @@ message PaymentServiceRepeatEverythingRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
 
   // Mandate Information (required for MIT)
-  MandateReference mandate_reference = 2; // Reference to existing mandate
+  optional MandateReferenceId mandate_reference_id = 2; // Reference to existing mandate
 
   // Amount Information
   int64 amount = 3; // The amount for the payment in major currency units
   Currency currency = 4; // The currency for the payment, in ISO 4217 three-letter code
   int64 minor_amount = 5; // The minor amount for the payment (e.g., cents)
 
+  // Optional payment Method Information (required for network transaction flows)
+  optional PaymentMethod payment_method = 35;
+  
   // Optional fields
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   map<string, string> metadata = 7; // Additional metadata for the connector
@@ -2160,6 +2188,8 @@ message PaymentServiceRepeatEverythingRequest {
   optional BillingDescriptor billing_descriptor = 24; // Billing Descriptor information to be sent to the payment gateway
 
   optional MitCategory mit_category = 25; // Category of the MIT
+
+  optional AuthenticationData authentication_data = 36; // Additional authentication data
 }
 
 // Container for recurring mandate payment data
@@ -2206,6 +2236,9 @@ message PaymentServiceRepeatEverythingResponse {
   optional int64 minor_captured_amount = 16; // Captured amount in minor currency units
 
   optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
+
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 18; // Indicates if incremental authorization is allowed
 }
 
 // -------------------------

@@ -84,7 +84,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Barclaycard<T>
+    connector_types::RepeatPaymentV2<T> for Barclaycard<T>
 {
 }
 
@@ -237,7 +237,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        domain_types::connector_types::RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Barclaycard<T>
 {
@@ -815,7 +815,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        domain_types::connector_types::RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Barclaycard<T>
 {

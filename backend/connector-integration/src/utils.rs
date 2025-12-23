@@ -181,7 +181,7 @@ impl<T: PaymentMethodDataTypes> SplitPaymentData for PaymentsAuthorizeData<T> {
     }
 }
 
-impl SplitPaymentData for RepeatPaymentData {
+impl<T: PaymentMethodDataTypes> SplitPaymentData for RepeatPaymentData<T> {
     fn get_split_payment_data(
         &self,
     ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {

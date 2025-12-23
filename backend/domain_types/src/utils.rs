@@ -152,11 +152,11 @@ pub fn get_timestamp_in_milliseconds(datetime: &PrimitiveDateTime) -> i64 {
 
 pub fn get_amount_as_string(
     currency_unit: &CurrencyUnit,
-    amount: i64,
+    amount: MinorUnit,
     currency: common_enums::Currency,
 ) -> core::result::Result<String, error_stack::Report<errors::ConnectorError>> {
     let amount = match currency_unit {
-        CurrencyUnit::Minor => amount.to_string(),
+        CurrencyUnit::Minor => amount.get_amount_as_i64().to_string(),
         CurrencyUnit::Base => to_currency_base_unit(amount, currency)?,
     };
     Ok(amount)
@@ -171,11 +171,11 @@ pub fn base64_decode(
 }
 
 pub fn to_currency_base_unit(
-    amount: i64,
+    amount: MinorUnit,
     currency: common_enums::Currency,
 ) -> core::result::Result<String, error_stack::Report<errors::ConnectorError>> {
     currency
-        .to_currency_base_unit(amount)
+        .to_currency_base_unit(amount.get_amount_as_i64())
         .change_context(errors::ConnectorError::ParsingFailed)
 }
 
