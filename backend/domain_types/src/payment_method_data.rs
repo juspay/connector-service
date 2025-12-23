@@ -230,7 +230,7 @@ pub enum MobilePaymentData {
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Default)]
 pub struct NetworkTokenData {
-    pub token_number: cards::CardNumber,
+    pub token_number: cards::NetworkToken,
     pub token_exp_month: Secret<String>,
     pub token_exp_year: Secret<String>,
     pub token_cryptogram: Option<Secret<String>>,
@@ -256,7 +256,7 @@ impl NetworkTokenData {
         Secret::new(year)
     }
 
-    pub fn get_network_token(&self) -> cards::CardNumber {
+    pub fn get_network_token(&self) -> cards::NetworkToken {
         self.token_number.clone()
     }
 

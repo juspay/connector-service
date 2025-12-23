@@ -262,6 +262,10 @@ message CardNumberType {
   string value = 1;
 }
 
+message NetworkTokenType {
+  string value = 1;
+}
+
 // Card redirect payment method
 // Used for card payments that require a redirect to a 3DS page or issuer site
 message CardRedirect {
@@ -1292,7 +1296,7 @@ message CardDetailsForNetworkTransactionId {
 
 // Network token data for recurring payments
 message NetworkTokenData {
-    CardNumberType token_number = 1;
+    NetworkTokenType token_number = 1;
     SecretString token_exp_month = 2;
     SecretString token_exp_year = 3;
     optional SecretString token_cryptogram = 4;
