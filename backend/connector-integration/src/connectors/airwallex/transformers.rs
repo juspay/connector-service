@@ -438,12 +438,7 @@ pub struct AirwallexPaymentsResponse {
     // Void-specific fields
     pub cancelled_at: Option<String>,
     pub cancellation_reason: Option<String>,
-    // Additional fields from actual Airwallex response
-    pub request_id: Option<String>,
-    pub merchant_order_id: Option<String>,
-    pub descriptor: Option<String>,
-    pub base_amount: Option<FloatMajorUnit>,
-    pub base_currency: Option<Currency>,
+
 }
 
 // Type alias - reuse the same response structure for PSync
@@ -460,18 +455,7 @@ pub struct AirwallexPaymentAttempt {
     pub processor_response: Option<AirwallexProcessorResponse>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
-    // Additional fields from Airwallex response
-    pub currency: Option<Currency>,
-    pub merchant_order_id: Option<String>,
-    pub payment_intent_id: Option<String>,
-    pub provider_transaction_id: Option<String>,
-    pub captured_amount: Option<FloatMajorUnit>,
-    pub refunded_amount: Option<FloatMajorUnit>,
-    pub settle_via: Option<String>,
-    pub authentication_data: Option<serde_json::Value>, // Complex object, use generic value
-    pub expires_at: Option<String>,
-    pub payment_method_options: Option<serde_json::Value>, // Complex object, use generic value
-    pub device_data: Option<serde_json::Value>,            // Complex object, use generic value
+
 }
 
 #[derive(Debug, Deserialize, Serialize)]
