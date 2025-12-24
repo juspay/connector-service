@@ -14,7 +14,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -113,9 +113,9 @@ impl From<&GetnetPaymentStatus> for AttemptStatus {
     fn from(status: &GetnetPaymentStatus) -> Self {
         match status {
             GetnetPaymentStatus::Approved | GetnetPaymentStatus::Captured => Self::Charged,
+            GetnetPaymentStatus::Authorized => Self::Authorized,
             GetnetPaymentStatus::Pending
-            | GetnetPaymentStatus::Waiting
-            | GetnetPaymentStatus::Authorized => Self::Pending,
+            | GetnetPaymentStatus::Waiting => Self::Pending,
             GetnetPaymentStatus::Denied
             | GetnetPaymentStatus::Failed
             | GetnetPaymentStatus::Error => Self::Failure,
@@ -203,7 +203,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             PaymentMethodData::Card(card) => card,
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
-                    message: "Payment method not supported".to_string(),
+                    message: "Payment method ".to_string(),
                     connector: "Getnet",
                 }
                 .into())
@@ -211,12 +211,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
         };
 
         // Convert 4-digit year to 2-digit year (e.g., "2025" -> "25")
-        let year_str = card_data.card_exp_year.peek();
-        let expiration_year = if year_str.len() >= 2 {
-            Secret::new(year_str[year_str.len() - 2..].to_string())
-        } else {
-            card_data.card_exp_year.clone()
-        };
+        let expiration_year = card_data.get_card_expiry_year_2_digit()?;
 
         let cardholder_name = card_data
             .card_holder_name
