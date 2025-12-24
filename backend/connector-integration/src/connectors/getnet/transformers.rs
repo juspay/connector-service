@@ -114,8 +114,7 @@ impl From<&GetnetPaymentStatus> for AttemptStatus {
         match status {
             GetnetPaymentStatus::Approved | GetnetPaymentStatus::Captured => Self::Charged,
             GetnetPaymentStatus::Authorized => Self::Authorized,
-            GetnetPaymentStatus::Pending
-            | GetnetPaymentStatus::Waiting => Self::Pending,
+            GetnetPaymentStatus::Pending | GetnetPaymentStatus::Waiting => Self::Pending,
             GetnetPaymentStatus::Denied
             | GetnetPaymentStatus::Failed
             | GetnetPaymentStatus::Error => Self::Failure,
