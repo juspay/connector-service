@@ -4458,12 +4458,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .as_ref()
-            .map(|metadata_map| {
-                serde_json::to_value(metadata_map)
-                    .change_context(ConnectorError::RequestEncodingFailed)
-                    .map(utils::convert_metadata_to_merchant_defined_info)
-            })
-            .transpose()?;
+            .map(|metadata| metadata.clone().expose())
+            .map(utils::convert_metadata_to_merchant_defined_info);
+
         Ok(Self {
             processing_information,
             payment_information,
@@ -4540,12 +4537,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .as_ref()
-            .map(|metadata_map| {
-                serde_json::to_value(metadata_map)
-                    .change_context(ConnectorError::RequestEncodingFailed)
-                    .map(utils::convert_metadata_to_merchant_defined_info)
-            })
-            .transpose()?;
+            .map(|metadata| metadata.clone().expose())
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         let consumer_authentication_information = item
             .router_data
@@ -4631,12 +4624,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .as_ref()
-            .map(|metadata_map| {
-                serde_json::to_value(metadata_map)
-                    .change_context(ConnectorError::RequestEncodingFailed)
-                    .map(utils::convert_metadata_to_merchant_defined_info)
-            })
-            .transpose()?;
+            .map(|metadata| metadata.clone().expose())
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         let consumer_authentication_information = item
             .router_data
