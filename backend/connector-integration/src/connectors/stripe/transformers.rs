@@ -70,7 +70,7 @@ trait GetRequestIncrementalAuthorization {
 
 impl<T: PaymentMethodDataTypes> GetRequestIncrementalAuthorization for PaymentsAuthorizeData<T> {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
-        Some(self.request_incremental_authorization)
+        self.request_incremental_authorization
     }
 }
 
@@ -1893,7 +1893,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         })?,
                         request_incremental_authorization: item
                             .request
-                            .request_incremental_authorization,
+                            .request_incremental_authorization
+                            .unwrap_or(false),
                         request_extended_authorization: item.request.request_extended_authorization,
                         request_overcapture: item
                             .request
