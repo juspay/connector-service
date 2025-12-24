@@ -106,6 +106,10 @@ message PaymentMethod {
     Affirm affirm = 110;                                       // Affirm - US BNPL service
     AfterpayClearpay afterpay_clearpay = 111;                  // Afterpay/Clearpay - BNPL service
     Klarna klarna = 112;                                       // Klarna - Swedish BNPL service
+    
+    // NETWORK TRANSACTION METHODS (120-129) - For recurring payments with network transaction IDs
+    CardDetailsForNetworkTransactionId card_details_for_network_transaction_id = 120; // Card details with network transaction ID
+    NetworkTokenData network_token = 121; // Network token data
   }
 }
 
@@ -255,6 +259,10 @@ message CardDetails {
 }
 
 message CardNumberType {
+  string value = 1;
+}
+
+message NetworkTokenType {
   string value = 1;
 }
 
@@ -1278,6 +1286,39 @@ enum BankNames {
   Yoursafe = 144;
   N26 = 145;
   NationaleNederlanden = 146;
+}
+
+// ============================================================================
+// NETWORK TRANSACTION PAYMENT METHODS
+// ============================================================================
+
+// Card details with network transaction ID for recurring payments
+message CardDetailsForNetworkTransactionId {
+    CardNumberType card_number = 1;
+    SecretString card_exp_month = 2;
+    SecretString card_exp_year = 3;
+    optional string card_issuer = 4;
+    optional CardNetwork card_network = 5;
+    optional string card_type = 6;
+    optional string card_issuing_country = 7;
+    optional string bank_code = 8;
+    optional SecretString nick_name = 9;
+    optional SecretString card_holder_name = 10;
+}
+
+// Network token data for recurring payments
+message NetworkTokenData {
+    NetworkTokenType token_number = 1;
+    SecretString token_exp_month = 2;
+    SecretString token_exp_year = 3;
+    optional SecretString token_cryptogram = 4;
+    optional string card_issuer = 5;
+    optional CardNetwork card_network = 6;
+    optional string card_type = 7;
+    optional string card_issuing_country = 8;
+    optional string bank_code = 9;
+    optional SecretString nick_name = 11;
+    optional string eci = 12;
 }
 
 // Country Alpha-2 code enumeration.
