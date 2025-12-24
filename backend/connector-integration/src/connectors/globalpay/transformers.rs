@@ -112,7 +112,7 @@ impl From<GlobalpayPaymentStatus> for AttemptStatus {
             GlobalpayPaymentStatus::Failed => Self::Failure,
             GlobalpayPaymentStatus::Rejected => Self::Failure,
             GlobalpayPaymentStatus::Pending => Self::Pending,
-            GlobalpayPaymentStatus::Initiated => Self::Pending,
+            GlobalpayPaymentStatus::Initiated => Self::AuthenticationPending,
             GlobalpayPaymentStatus::ForReview => Self::Pending,
             GlobalpayPaymentStatus::Funded => Self::Charged,
             GlobalpayPaymentStatus::Reversed => Self::Voided,
@@ -608,16 +608,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
             .map(|url| Box::new(RedirectForm::from((url.clone(), Method::Get))));
 
         // Determine status based on connector status and presence of redirect
-        let status = match item.response.status.clone() {
-            // If we have a redirect URL and status is PENDING or INITIATED, it means customer needs to authenticate
-            GlobalpayPaymentStatus::Pending | GlobalpayPaymentStatus::Initiated
-                if redirect_url.is_some() =>
-            {
-                AttemptStatus::AuthenticationPending
-            }
-            // Otherwise use the standard status mapping
-            _ => AttemptStatus::from(item.response.status.clone()),
-        };
+        let status = AttemptStatus::from(item.response.status.clone());
 
         // Extract network transaction ID from card response
         let network_txn_id = item
