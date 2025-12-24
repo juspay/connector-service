@@ -4,6 +4,19 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.24.0
+
+### Features
+
+- **connector:**
+  - Revolut Connector Integration ([#328](https://github.com/juspay/connector-service/pull/328)) ([`212c6c4`](https://github.com/juspay/connector-service/commit/212c6c4697dfe37e5cd8ad52f35d55d770c732b1))
+  - Revolut pay fix ([#391](https://github.com/juspay/connector-service/pull/391)) ([`768cac9`](https://github.com/juspay/connector-service/commit/768cac9a8284a91db2e808789b6386483b25633a))
+- Added upi_source for cc/cl ([#368](https://github.com/juspay/connector-service/pull/368)) ([`6313849`](https://github.com/juspay/connector-service/commit/6313849618e5397e38960334fbf102f044c698ec))
+
+**Full Changelog:** [`2025.12.23.0...2025.12.24.0`](https://github.com/juspay/connector-service/compare/2025.12.23.0...2025.12.24.0)
+
+- - -
+
 ## 2025.12.23.0
 
 ### Features
