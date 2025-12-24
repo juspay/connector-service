@@ -149,8 +149,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("stripe_test"))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         connector_customer_id: Some("cus_TE8065JzRWlLQf".to_string()),
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),

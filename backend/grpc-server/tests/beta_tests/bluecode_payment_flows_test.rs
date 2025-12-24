@@ -148,7 +148,7 @@ fn create_payment_authorize_request(
 
     if let common_enums::CaptureMethod::Manual = capture_method {
         request.capture_method = Some(i32::from(CaptureMethod::Manual));
-        // request.request_incremental_authorization = true;
+        // request.request_incremental_authorization = Some(true);
     } else {
         request.capture_method = Some(i32::from(CaptureMethod::Automatic));
     }
@@ -214,9 +214,9 @@ fn create_payment_authorize_request(
     // Set the transaction details
     request.auth_type = i32::from(AuthenticationType::NoThreeDs);
 
-    request.request_incremental_authorization = true;
+    request.request_incremental_authorization = Some(true);
 
-    request.enrolled_for_3ds = true;
+    request.enrolled_for_3ds = Some(true);
 
     // Set capture method
     // request.capture_method = Some(i32::from(CaptureMethod::from(capture_method)));
