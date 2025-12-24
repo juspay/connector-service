@@ -3,6 +3,7 @@ use crate::{
     types::ResponseRouterData,
 };
 use common_enums::{AttemptStatus, RefundStatus};
+use common_utils::request::Method;
 use common_utils::types::StringMinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
@@ -12,14 +13,18 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use rand::distributions::DistString;
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 // ===== TYPE ALIASES FOR MACRO =====
 // These type aliases are needed because the create_all_prerequisites! macro
@@ -292,6 +297,27 @@ pub struct StoredCredential {
     pub initiator: Option<InitiatorType>,
 }
 
+// ===== APM / BANK REDIRECT STRUCTURES =====
+
+/// APM (Alternative Payment Method) provider for bank redirect payments
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ApmProvider {
+    Giropay,
+    Ideal,
+    Paypal,
+    Sofort,
+    Eps,
+    Testpay,
+}
+
+/// APM payment method data for bank redirect flows
+#[derive(Debug, Serialize)]
+pub struct GlobalpayApm {
+    /// A string used to identify the payment method provider being used to execute this transaction.
+    pub provider: Option<ApmProvider>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct GlobalpayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub account_name: String,
@@ -318,6 +344,8 @@ pub struct GlobalpayPaymentMethod<T: PaymentMethodDataTypes> {
     pub entry_mode: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card: Option<GlobalpayCard<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub apm: Option<GlobalpayApm>,
 }
 
 #[derive(Debug, Serialize)]
@@ -380,6 +408,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         expiry_year: expiry_year_2digit,
                         cvv: card_data.card_cvc.clone(),
                         cvv_indicator,
+                    }),
+                    apm: None,
+                }
+            }
+            PaymentMethodData::BankRedirect(bank_redirect) => {
+                let apm_provider = match bank_redirect {
+                    BankRedirectData::Eps { .. } => Some(ApmProvider::Eps),
+                    BankRedirectData::Ideal { .. } => Some(ApmProvider::Ideal),
+                    _ => {
+                        return Err(error_stack::report!(
+                            errors::ConnectorError::NotImplemented(
+                                "Bank redirect payment method not supported".to_string()
+                            )
+                        ))
+                    }
+                };
+
+                GlobalpayPaymentMethod {
+                    name: item.request.customer_name.clone().map(Secret::new),
+                    entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
+                    card: None,
+                    apm: Some(GlobalpayApm {
+                        provider: apm_provider,
                     }),
                 }
             }
@@ -535,11 +586,38 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
     fn try_from(
         item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = AttemptStatus::from(item.response.status.clone());
+        // Extract redirect URL from APM response for bank redirect flows
+        let redirect_url = item
+            .response
+            .payment_method
+            .as_ref()
+            .and_then(|payment_method| {
+                payment_method
+                    .apm
+                    .as_ref()
+                    .and_then(|apm| apm.redirect_url.as_ref())
+            })
+            .filter(|redirect_str| !redirect_str.is_empty())
+            .map(|url| {
+                Url::parse(url).change_context(errors::ConnectorError::FailedToObtainIntegrationUrl)
+            })
+            .transpose()?;
 
-        // TODO: Add redirect URL support for APM flows (PayPal, bank redirects)
-        // Extract from: item.response.payment_method.apm.redirect_url
-        // Need to convert to RedirectForm type
+        let redirection_data = redirect_url
+            .as_ref()
+            .map(|url| Box::new(RedirectForm::from((url.clone(), Method::Get))));
+
+        // Determine status based on connector status and presence of redirect
+        let status = match item.response.status.clone() {
+            // If we have a redirect URL and status is PENDING or INITIATED, it means customer needs to authenticate
+            GlobalpayPaymentStatus::Pending | GlobalpayPaymentStatus::Initiated
+                if redirect_url.is_some() =>
+            {
+                AttemptStatus::AuthenticationPending
+            }
+            // Otherwise use the standard status mapping
+            _ => AttemptStatus::from(item.response.status.clone()),
+        };
 
         // Extract network transaction ID from card response
         let network_txn_id = item
@@ -587,7 +665,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
             }),
             _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
-                redirection_data: None,
+                redirection_data,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id,
@@ -618,10 +696,6 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
         item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
-
-        // TODO: Add redirect URL support for APM flows
-        // Extract from: item.response.payment_method.apm.redirect_url
-        // Need to convert to RedirectForm type
 
         // Extract network transaction ID from card response
         let network_txn_id = item
