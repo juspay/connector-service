@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use struct_patch::Patch;
 
 use crate::{
     global_id::{
@@ -340,9 +339,14 @@ impl EventStage {
 }
 
 /// Configuration for events system
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Patch)]
-#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
-#[patch(attribute(serde(default)))]
+#[derive(
+    Debug,
+    Clone,
+    Deserialize,
+    Serialize,
+    PartialEq,
+    config_patch_derive::Patch,
+)]
 pub struct EventConfig {
     pub enabled: bool,
     pub topic: String,

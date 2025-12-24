@@ -998,6 +998,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "config_patch_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "connector-integration"
 version = "0.1.0"
 dependencies = [
@@ -1351,6 +1360,7 @@ dependencies = [
  "actix-web",
  "base64 0.21.7",
  "bytes",
+ "config_patch_derive",
  "error-stack 0.4.1",
  "grpc-api-types",
  "http 0.2.12",
@@ -1361,7 +1371,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "struct-patch",
  "strum",
  "thiserror 1.0.69",
  "time",
@@ -2657,6 +2666,7 @@ dependencies = [
  "build_info",
  "chrono",
  "config",
+ "config_patch_derive",
  "connector-integration",
  "domain_types",
  "error-stack 0.4.1",
@@ -2680,7 +2690,6 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "serial_test",
- "struct-patch",
  "tempfile",
  "thiserror 1.0.69",
  "time",
@@ -5695,26 +5704,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
-name = "struct-patch"
-version = "0.10.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e986d2cf6e819bd843319120453d837dfdfa31497c3fee4cefa614b2d182d8c"
-dependencies = [
- "struct-patch-derive",
-]
-
-[[package]]
-name = "struct-patch-derive"
-version = "0.10.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68c6387c1c7b53060605101b63d93edca618c6cf7ce61839f2ec2a527419fdb5"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
 name = "strum"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6460,6 +6449,7 @@ dependencies = [
  "blake3",
  "bytes",
  "chrono",
+ "config_patch_derive",
  "error-stack 0.4.1",
  "futures",
  "hex",
@@ -6479,7 +6469,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "struct-patch",
  "strum",
  "thiserror 1.0.69",
  "time",

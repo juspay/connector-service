@@ -3,25 +3,27 @@
 //!
 
 use serde::{Deserialize, Serialize};
-use struct_patch::Patch;
 /// Log config settings.
-#[derive(Debug, Deserialize, Clone, Serialize, PartialEq, Patch)]
-#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
-#[patch(attribute(serde(default)))]
+#[derive(Debug, Deserialize, Clone, Serialize, PartialEq, config_patch_derive::Patch)]
+#[patch(nested_all)]
 pub struct Log {
     /// Logging to a console.
-    #[patch(nesting)]
     pub console: LogConsole,
     /// Logging to Kafka (optional).
     #[serde(default)]
-    #[patch(name = "Option<LogKafkaPatch>")]
     pub kafka: Option<LogKafka>,
 }
 
 /// Logging to a console.
-#[derive(Debug, Deserialize, Clone, Serialize, PartialEq, Eq, Patch)]
-#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
-#[patch(attribute(serde(default)))]
+#[derive(
+    Debug,
+    Deserialize,
+    Clone,
+    Serialize,
+    PartialEq,
+    Eq,
+    config_patch_derive::Patch,
+)]
 pub struct LogConsole {
     /// Whether you want to see log in your terminal.
     pub enabled: bool,
@@ -85,9 +87,15 @@ pub enum LogFormat {
 }
 
 /// Logging to Kafka.
-#[derive(Debug, Deserialize, Clone, Serialize, PartialEq, Patch, Default)]
-#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
-#[patch(attribute(serde(default)))]
+#[derive(
+    Debug,
+    Deserialize,
+    Clone,
+    Serialize,
+    PartialEq,
+    Default,
+    config_patch_derive::Patch,
+)]
 pub struct LogKafka {
     /// Whether Kafka logging is enabled.
     pub enabled: bool,

@@ -1,15 +1,13 @@
 use std::collections::HashSet;
 
+use crate::config_patch::Patch;
 use bytes::Bytes;
 use hyperswitch_masking::{Maskable, Secret};
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
-use struct_patch::Patch;
 
 /// Configuration for header masking in gRPC metadata.
-#[derive(Debug, Clone, PartialEq, Eq, Patch)]
-#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
-#[patch(attribute(serde(default)))]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HeaderMaskingConfig {
     unmasked_keys: HashSet<String>,
 }
@@ -63,6 +61,23 @@ impl Default for HeaderMaskingConfig {
                 .iter()
                 .map(|&key| key.to_string())
                 .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
+pub struct HeaderMaskingConfigPatch {
+    #[serde(rename = "keys")]
+    pub keys: Option<Vec<String>>,
+}
+
+impl Patch<HeaderMaskingConfigPatch> for HeaderMaskingConfig {
+    fn apply(&mut self, patch: HeaderMaskingConfigPatch) {
+        if let Some(keys) = patch.keys {
+            let set: HashSet<String> =
+                keys.into_iter().map(|key| key.to_lowercase()).collect();
+            *self = HeaderMaskingConfig::new(set);
         }
     }
 }
