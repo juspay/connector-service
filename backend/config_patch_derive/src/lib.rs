@@ -1,18 +1,8 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
-    parse_macro_input,
-    punctuated::Punctuated,
-    Attribute,
-    Data,
-    DeriveInput,
-    Fields,
-    GenericArgument,
-    Meta,
-    PathArguments,
-    Token,
-    Type,
-    TypePath,
+    parse_macro_input, punctuated::Punctuated, Attribute, Data, DeriveInput, Fields,
+    GenericArgument, Meta, PathArguments, Token, Type, TypePath,
 };
 
 #[proc_macro_derive(Patch, attributes(patch))]
@@ -47,12 +37,7 @@ fn derive_patch_impl(input: DeriveInput) -> syn::Result<TokenStream> {
     for field in fields {
         let field_ident = match field.ident {
             Some(ident) => ident,
-            None => {
-                return Err(syn::Error::new_spanned(
-                    &field,
-                    "expected named field",
-                ))
-            }
+            None => return Err(syn::Error::new_spanned(&field, "expected named field")),
         };
         let field_ty = field.ty;
 

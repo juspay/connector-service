@@ -320,8 +320,14 @@ mod unit {
         assert_eq!(new_config.metrics.port, 9091);
 
         assert!(new_config.log.console.enabled);
-        assert_eq!(new_config.log.console.level.into_level(), tracing::Level::ERROR);
-        assert!(matches!(new_config.log.console.log_format, LogFormat::Default));
+        assert_eq!(
+            new_config.log.console.level.into_level(),
+            tracing::Level::ERROR
+        );
+        assert!(matches!(
+            new_config.log.console.log_format,
+            LogFormat::Default
+        ));
         assert_eq!(
             new_config.log.console.filtering_directive.as_deref(),
             Some("debug")
@@ -341,7 +347,10 @@ mod unit {
         assert_eq!(kafka_config.flush_interval_ms, Some(250));
         assert_eq!(kafka_config.buffer_limit, Some(1000));
 
-        assert_eq!(new_config.proxy.http_url.as_deref(), Some("http://proxy.local"));
+        assert_eq!(
+            new_config.proxy.http_url.as_deref(),
+            Some("http://proxy.local")
+        );
         assert_eq!(new_config.proxy.https_url, None);
         assert_eq!(new_config.proxy.idle_pool_connection_timeout, Some(45));
         assert_eq!(
@@ -378,17 +387,32 @@ mod unit {
             new_config.events.brokers,
             vec!["broker1:9092".to_string(), "broker2:9092".to_string()]
         );
-        assert_eq!(new_config.events.partition_key_field.as_str(), "merchant_id");
         assert_eq!(
-            new_config.events.transformations.get("order_id").map(String::as_str),
+            new_config.events.partition_key_field.as_str(),
+            "merchant_id"
+        );
+        assert_eq!(
+            new_config
+                .events
+                .transformations
+                .get("order_id")
+                .map(String::as_str),
             Some("payment_id")
         );
         assert_eq!(
-            new_config.events.static_values.get("app").map(String::as_str),
+            new_config
+                .events
+                .static_values
+                .get("app")
+                .map(String::as_str),
             Some("grpc")
         );
         assert_eq!(
-            new_config.events.extractions.get("path").map(String::as_str),
+            new_config
+                .events
+                .extractions
+                .get("path")
+                .map(String::as_str),
             Some("metadata.path")
         );
 

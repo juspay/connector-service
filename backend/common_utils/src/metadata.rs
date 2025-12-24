@@ -75,9 +75,8 @@ pub struct HeaderMaskingConfigPatch {
 impl Patch<HeaderMaskingConfigPatch> for HeaderMaskingConfig {
     fn apply(&mut self, patch: HeaderMaskingConfigPatch) {
         if let Some(keys) = patch.keys {
-            let set: HashSet<String> =
-                keys.into_iter().map(|key| key.to_lowercase()).collect();
-            *self = HeaderMaskingConfig::new(set);
+            let set: HashSet<String> = keys.into_iter().map(|key| key.to_lowercase()).collect();
+            *self = Self::new(set);
         }
     }
 }

@@ -198,15 +198,7 @@ pub struct Connectors {
     pub revolut: ConnectorParams,
 }
 
-#[derive(
-    Clone,
-    Deserialize,
-    Serialize,
-    Debug,
-    Default,
-    PartialEq,
-    config_patch_derive::Patch,
-)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParams {
     /// base url
     #[serde(default)]
@@ -230,15 +222,7 @@ impl ConnectorParams {
     }
 }
 
-#[derive(
-    Debug,
-    Deserialize,
-    Serialize,
-    Clone,
-    Default,
-    PartialEq,
-    config_patch_derive::Patch,
-)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParamsWithMoreUrls {
     /// base url
     pub base_url: String,
@@ -269,16 +253,7 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(
-    Debug,
-    Deserialize,
-    Serialize,
-    Clone,
-    PartialEq,
-    Eq,
-    Hash,
-    config_patch_derive::Patch,
-)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, config_patch_derive::Patch)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,

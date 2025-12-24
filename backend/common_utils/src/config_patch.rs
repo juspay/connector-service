@@ -18,9 +18,7 @@ pub trait Patch<P> {
 /// - Missing field => `None` (no change)
 /// - Field present with `null` => `Some(None)` (clear)
 /// - Field present with value => `Some(Some(value))` (replace)
-pub fn deserialize_option_option<'de, D, T>(
-    deserializer: D,
-) -> Result<Option<Option<T>>, D::Error>
+pub fn deserialize_option_option<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
 where
     D: serde::Deserializer<'de>,
     T: Deserialize<'de>,
@@ -60,10 +58,7 @@ where
             *target = None;
         }
         Some(Some(patch_value)) => {
-            let mut value = match target.take() {
-                Some(existing) => existing,
-                None => T::default(),
-            };
+            let mut value = target.take().unwrap_or_default();
             value.apply(patch_value);
             *target = Some(value);
         }

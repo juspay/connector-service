@@ -33,15 +33,7 @@ pub struct Config {
     pub api_tags: ApiTagConfig,
 }
 
-#[derive(
-    Clone,
-    Deserialize,
-    Debug,
-    Default,
-    Serialize,
-    PartialEq,
-    config_patch_derive::Patch,
-)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct LineageConfig {
     /// Enable processing of x-lineage-ids header
     pub enabled: bool,
@@ -62,15 +54,7 @@ fn default_lineage_prefix() -> String {
 }
 
 /// Test mode configuration for mock server integration
-#[derive(
-    Clone,
-    Deserialize,
-    Debug,
-    Default,
-    Serialize,
-    PartialEq,
-    config_patch_derive::Patch,
-)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct TestConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -115,15 +99,7 @@ impl TestConfig {
 /// ```
 ///
 /// Note: Config crate lowercases env var keys, lookup is case-insensitive
-#[derive(
-    Clone,
-    Deserialize,
-    Debug,
-    Default,
-    Serialize,
-    PartialEq,
-    config_patch_derive::Patch,
-)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct ApiTagConfig {
     #[serde(default)]
     pub tags: std::collections::HashMap<String, String>,

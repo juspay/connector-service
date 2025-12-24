@@ -15,15 +15,7 @@ pub struct Log {
 }
 
 /// Logging to a console.
-#[derive(
-    Debug,
-    Deserialize,
-    Clone,
-    Serialize,
-    PartialEq,
-    Eq,
-    config_patch_derive::Patch,
-)]
+#[derive(Debug, Deserialize, Clone, Serialize, PartialEq, Eq, config_patch_derive::Patch)]
 pub struct LogConsole {
     /// Whether you want to see log in your terminal.
     pub enabled: bool,
@@ -87,15 +79,7 @@ pub enum LogFormat {
 }
 
 /// Logging to Kafka.
-#[derive(
-    Debug,
-    Deserialize,
-    Clone,
-    Serialize,
-    PartialEq,
-    Default,
-    config_patch_derive::Patch,
-)]
+#[derive(Debug, Deserialize, Clone, Serialize, PartialEq, Default, config_patch_derive::Patch)]
 pub struct LogKafka {
     /// Whether Kafka logging is enabled.
     pub enabled: bool,
