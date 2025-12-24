@@ -249,7 +249,16 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            Ok(format!("{}{}", base_url, constants::API_PAY_ENDPOINT))
+            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
+
+            // Use merchant-based endpoint if merchant is IRCTC
+            let api_endpoint = if phonepe::is_irctc_merchant(auth.merchant_id.peek()) {
+                constants::API_IRCTC_PAY_ENDPOINT
+            } else {
+                constants::API_PAY_ENDPOINT
+            };
+
+            Ok(format!("{}{}", base_url, api_endpoint))
         }
     }
 );
@@ -304,8 +313,15 @@ macros::macro_connector_implementation!(
             let merchant_transaction_id = &req.resource_common_data.connector_request_reference_id;
 
             let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
-            let api_endpoint = constants::API_STATUS_ENDPOINT;
             let merchant_id = auth.merchant_id.peek();
+
+            // Use merchant-based endpoint if merchant is IRCTC
+            let api_endpoint = if phonepe::is_irctc_merchant(merchant_id) {
+                constants::API_IRCTC_STATUS_ENDPOINT
+            } else {
+                constants::API_STATUS_ENDPOINT
+            };
+
             Ok(format!("{base_url}{api_endpoint}/{merchant_id}/{merchant_transaction_id}"))
         }
     }
