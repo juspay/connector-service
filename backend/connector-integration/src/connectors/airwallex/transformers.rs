@@ -438,7 +438,6 @@ pub struct AirwallexPaymentsResponse {
     // Void-specific fields
     pub cancelled_at: Option<String>,
     pub cancellation_reason: Option<String>,
-
 }
 
 // Type alias - reuse the same response structure for PSync
@@ -455,7 +454,6 @@ pub struct AirwallexPaymentAttempt {
     pub processor_response: Option<AirwallexProcessorResponse>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
-
 }
 
 #[derive(Debug, Deserialize, Serialize)]
