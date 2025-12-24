@@ -43,6 +43,7 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+paybox.base_url = "https://preprod-ppps.paybox.com/PPPS.php"
 payme.base_url = "https://sandbox.payme.io/api/"
 barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
 airwallex.base_url = "https://api-demo.airwallex.com/api/v1"

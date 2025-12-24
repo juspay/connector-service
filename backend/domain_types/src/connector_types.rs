@@ -98,6 +98,7 @@ pub enum ConnectorEnum {
     Iatapay,
     Nmi,
     Shift4,
+    Paybox,
     Barclaycard,
     Nexixpay,
     Airwallex,
