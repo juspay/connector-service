@@ -160,12 +160,11 @@ fn generate_date_time() -> CustomResult<String, errors::ConnectorError> {
 // ============================================================================
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "UPPERCASE")] 
 pub struct PayboxPaymentRequest<T: PaymentMethodDataTypes> {
-    #[serde(rename = "VERSION")]
     pub version: String,
     #[serde(rename = "TYPE")]
     pub transaction_type: String,
-    #[serde(rename = "SITE")]
     pub site: Secret<String>,
     #[serde(rename = "RANG")]
     pub rank: Secret<String>,
@@ -177,7 +176,6 @@ pub struct PayboxPaymentRequest<T: PaymentMethodDataTypes> {
     pub amount: MinorUnit,
     #[serde(rename = "DEVISE")]
     pub currency: common_enums::Currency,
-    #[serde(rename = "REFERENCE")]
     pub reference: String,
     #[serde(rename = "DATEQ")]
     pub date: String,
@@ -185,7 +183,6 @@ pub struct PayboxPaymentRequest<T: PaymentMethodDataTypes> {
     pub card_number: RawCardNumber<T>,
     #[serde(rename = "DATEVAL")]
     pub expiration_date: Secret<String>,
-    #[serde(rename = "CVV")]
     pub cvv: Secret<String>,
     #[serde(rename = "ACTIVITE")]
     pub activity: String,
@@ -273,6 +270,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")] 
 pub struct PayboxPaymentResponse {
     #[serde(rename = "NUMTRANS")]
     pub transaction_number: String,
@@ -280,7 +278,6 @@ pub struct PayboxPaymentResponse {
     pub paybox_order_id: String,
     #[serde(rename = "NUMQUESTION")]
     pub paybox_request_number: Option<String>,
-    #[serde(rename = "SITE")]
     pub site: Option<String>,
     #[serde(rename = "RANG")]
     pub rank: Option<String>,
@@ -330,7 +327,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PayboxAuthorizeRespon
                     mandate_reference: None,
                     connector_metadata: Some(connector_metadata),
                     network_txn_id: None,
-                    connector_response_reference_id: Some(item.response.paybox_order_id.clone()),
+                    connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 }),
@@ -437,6 +434,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")] 
 pub struct PayboxPSyncResponse {
     #[serde(rename = "NUMTRANS")]
     pub transaction_number: String,
@@ -444,7 +442,6 @@ pub struct PayboxPSyncResponse {
     pub paybox_order_id: String,
     #[serde(rename = "NUMQUESTION")]
     pub paybox_request_number: Option<String>,
-    #[serde(rename = "SITE")]
     pub site: Option<String>,
     #[serde(rename = "RANG")]
     pub rank: Option<String>,
@@ -454,7 +451,6 @@ pub struct PayboxPSyncResponse {
     pub response_code: String,
     #[serde(rename = "COMMENTAIRE")]
     pub response_message: String,
-    #[serde(rename = "STATUS")]
     pub status: PayboxStatus,
 }
 
@@ -476,7 +472,7 @@ impl TryFrom<ResponseRouterData<PayboxPSyncResponse, Self>>
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(item.response.paybox_order_id.clone()),
+                connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
@@ -606,7 +602,7 @@ impl TryFrom<ResponseRouterData<PayboxCaptureResponse, Self>>
                     mandate_reference: None,
                     connector_metadata: None,
                     network_txn_id: None,
-                    connector_response_reference_id: Some(item.response.paybox_order_id.clone()),
+                    connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 }),
@@ -761,7 +757,7 @@ impl TryFrom<ResponseRouterData<PayboxVoidResponse, Self>>
                     mandate_reference: None,
                     connector_metadata: Some(connector_metadata),
                     network_txn_id: None,
-                    connector_response_reference_id: Some(item.response.paybox_order_id.clone()),
+                    connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 }),
