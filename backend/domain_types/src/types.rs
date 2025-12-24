@@ -183,6 +183,7 @@ pub struct Connectors {
     pub globalpay: ConnectorParams,
     pub nuvei: ConnectorParams,
     pub iatapay: ConnectorParams,
+    pub jpmorgan: ConnectorParams,
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
     pub barclaycard: ConnectorParams,
@@ -194,6 +195,7 @@ pub struct Connectors {
     pub powertranz: ConnectorParams,
     pub bambora: ConnectorParams,
     pub payme: ConnectorParams,
+    pub revolut: ConnectorParams,
 }
 
 #[derive(
@@ -348,6 +350,41 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
     }
 }
 
+// Helper function to extract and convert UPI source from gRPC type
+fn convert_upi_source(
+    source_option: Option<i32>,
+) -> Result<Option<payment_method_data::UpiSource>, error_stack::Report<ApplicationErrorResponse>> {
+    source_option
+        .map(|source| {
+            grpc_api_types::payments::UpiSource::try_from(source)
+                .map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_UPI_SOURCE".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Invalid UPI source value".to_owned(),
+                        error_object: None,
+                    }))
+                })
+                .and_then(payment_method_data::UpiSource::foreign_try_from)
+        })
+        .transpose()
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::UpiSource> for payment_method_data::UpiSource {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::UpiSource,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::UpiSource::UpiCc => Ok(Self::UpiCc),
+            grpc_api_types::payments::UpiSource::UpiCl => Ok(Self::UpiCl),
+            grpc_api_types::payments::UpiSource::UpiAccount => Ok(Self::UpiAccount),
+            grpc_api_types::payments::UpiSource::UpiCcCl => Ok(Self::UpiCcCl),
+        }
+    }
+}
+
 impl<
         T: PaymentMethodDataTypes
             + Default
@@ -399,20 +436,32 @@ impl<
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(
                     upi_collect,
-                ) => Ok(Self::Upi(payment_method_data::UpiData::UpiCollect(
-                    payment_method_data::UpiCollectData {
-                        vpa_id: upi_collect.vpa_id.map(|vpa| vpa.expose().into()),
-                    },
-                ))),
-                grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_upi_intent) => {
-                    Ok(Self::Upi(payment_method_data::UpiData::UpiIntent(
-                        payment_method_data::UpiIntentData {},
-                    )))
+                ) => {
+                    let upi_source = convert_upi_source(upi_collect.upi_source)?;
+                    Ok(PaymentMethodData::Upi(
+                        payment_method_data::UpiData::UpiCollect(
+                            payment_method_data::UpiCollectData {
+                                vpa_id: upi_collect.vpa_id.map(|vpa| vpa.expose().into()),
+                                upi_source,
+                            },
+                        ),
+                    ))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_upi_qr) => {
-                    Ok(Self::Upi(payment_method_data::UpiData::UpiQr(
-                        payment_method_data::UpiQrData {},
-                    )))
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(upi_intent) => {
+                    let upi_source = convert_upi_source(upi_intent.upi_source)?;
+                    Ok(PaymentMethodData::Upi(
+                        payment_method_data::UpiData::UpiIntent(
+                            payment_method_data::UpiIntentData { upi_source },
+                        ),
+                    ))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(upi_qr) => {
+                    let upi_source = convert_upi_source(upi_qr.upi_source)?;
+                    Ok(PaymentMethodData::Upi(
+                        crate::payment_method_data::UpiData::UpiQr(
+                            crate::payment_method_data::UpiQrData { upi_source },
+                        ),
+                    ))
                 }
                 // ============================================================================
                 // REWARD METHODS - Flattened direct variants
@@ -4247,71 +4296,13 @@ impl
     ForeignTryFrom<(
         grpc_api_types::payments::RefundServiceGetRequest,
         Connectors,
-    )> for RefundFlowData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        (value, connectors): (
-            grpc_api_types::payments::RefundServiceGetRequest,
-            Connectors,
-        ),
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let access_token = value
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
-        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
-            .then(|| {
-                serde_json::to_value(&value.merchant_account_metadata)
-                    .map(common_utils::pii::SecretSerdeValue::new)
-            })
-            .transpose()
-            .ok()
-            .flatten();
-
-        let payment_method = value
-            .payment_method_type
-            .map(|pm_type_i32| {
-                // Convert i32 to gRPC PaymentMethodType enum
-                let grpc_pm_type =
-                    grpc_api_types::payments::PaymentMethodType::try_from(pm_type_i32)
-                        .unwrap_or(grpc_api_types::payments::PaymentMethodType::Unspecified);
-
-                // Convert from gRPC enum to internal PaymentMethod using ForeignTryFrom
-                PaymentMethod::foreign_try_from(grpc_pm_type)
-            })
-            .transpose()?;
-        Ok(Self {
-            status: common_enums::RefundStatus::Pending,
-            refund_id: None,
-            connectors,
-            connector_request_reference_id: extract_connector_request_reference_id(
-                &value.request_ref_id,
-            ),
-            raw_connector_response: None,
-            raw_connector_request: None,
-            connector_response_headers: None,
-            access_token,
-            connector_meta_data,
-            test_mode: value.test_mode,
-            payment_method,
-        })
-    }
-}
-
-impl
-    ForeignTryFrom<(
-        grpc_api_types::payments::RefundServiceGetRequest,
-        Connectors,
         &MaskedMetadata,
     )> for RefundFlowData
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, _metadata): (
+        (value, connectors, metadata): (
             grpc_api_types::payments::RefundServiceGetRequest,
             Connectors,
             &MaskedMetadata,
@@ -4345,7 +4336,10 @@ impl
             })
             .transpose()?;
 
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
         Ok(Self {
+            merchant_id: merchant_id_from_header,
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
             ),
@@ -4368,71 +4362,13 @@ impl
     ForeignTryFrom<(
         grpc_api_types::payments::PaymentServiceRefundRequest,
         Connectors,
-    )> for RefundFlowData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        (value, connectors): (
-            grpc_api_types::payments::PaymentServiceRefundRequest,
-            Connectors,
-        ),
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let access_token = value
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
-        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
-            .then(|| {
-                serde_json::to_value(&value.merchant_account_metadata)
-                    .map(common_utils::pii::SecretSerdeValue::new)
-            })
-            .transpose()
-            .ok()
-            .flatten();
-
-        let payment_method = value
-            .payment_method_type
-            .map(|pm_type_i32| {
-                // Convert i32 to gRPC PaymentMethodType enum
-                let grpc_pm_type =
-                    grpc_api_types::payments::PaymentMethodType::try_from(pm_type_i32)
-                        .unwrap_or(grpc_api_types::payments::PaymentMethodType::Unspecified);
-
-                // Convert from gRPC enum to internal PaymentMethod using ForeignTryFrom
-                PaymentMethod::foreign_try_from(grpc_pm_type)
-            })
-            .transpose()?;
-        Ok(Self {
-            status: common_enums::RefundStatus::Pending,
-            refund_id: Some(value.refund_id),
-            connectors,
-            connector_request_reference_id: extract_connector_request_reference_id(
-                &value.request_ref_id,
-            ),
-            raw_connector_response: None,
-            raw_connector_request: None,
-            connector_response_headers: None,
-            access_token,
-            connector_meta_data,
-            test_mode: value.test_mode,
-            payment_method,
-        })
-    }
-}
-
-impl
-    ForeignTryFrom<(
-        grpc_api_types::payments::PaymentServiceRefundRequest,
-        Connectors,
         &MaskedMetadata,
     )> for RefundFlowData
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, _metadata): (
+        (value, connectors, metadata): (
             grpc_api_types::payments::PaymentServiceRefundRequest,
             Connectors,
             &MaskedMetadata,
@@ -4466,7 +4402,10 @@ impl
             })
             .transpose()?;
 
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
         Ok(Self {
+            merchant_id: merchant_id_from_header,
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
             ),

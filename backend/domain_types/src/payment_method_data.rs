@@ -212,6 +212,21 @@ pub enum PaymentMethodData<T: PaymentMethodDataTypes> {
     MobilePayment(MobilePaymentData),
 }
 
+impl<T: PaymentMethodDataTypes> PaymentMethodData<T> {
+    /// Extracts the UpiSource from UPI payment method data
+    /// Returns None if the payment method is not UPI or if upi_source is not set
+    pub fn get_upi_source(&self) -> Option<&UpiSource> {
+        match self {
+            Self::Upi(upi_data) => match upi_data {
+                UpiData::UpiIntent(intent_data) => intent_data.upi_source.as_ref(),
+                UpiData::UpiQr(qr_data) => qr_data.upi_source.as_ref(),
+                UpiData::UpiCollect(collect_data) => collect_data.upi_source.as_ref(),
+            },
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OpenBankingData {
@@ -347,16 +362,41 @@ pub enum UpiData {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct UpiCollectData {
-    pub vpa_id: Option<Secret<String, UpiVpaMaskingStrategy>>,
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum UpiSource {
+    UpiCc,      // UPI Credit Card (RuPay credit on UPI)
+    UpiCl,      // UPI Credit Line
+    UpiAccount, // UPI Bank Account (Savings)
+    UpiCcCl,    // UPI Credit Card + Credit Line
+}
+
+impl UpiSource {
+    /// Converts UpiSource to payment mode string for PhonePe connector
+    /// Maps: UPI_CC/UPI_CL/UPI_CC_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
+    pub fn to_payment_mode(&self) -> String {
+        match self {
+            Self::UpiCc | Self::UpiCl | Self::UpiCcCl => "ALL".to_string(),
+            Self::UpiAccount => "ACCOUNT".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct UpiIntentData {}
+#[serde(rename_all = "snake_case")]
+pub struct UpiCollectData {
+    pub vpa_id: Option<Secret<String, UpiVpaMaskingStrategy>>,
+    pub upi_source: Option<UpiSource>,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct UpiQrData {}
+pub struct UpiIntentData {
+    pub upi_source: Option<UpiSource>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct UpiQrData {
+    pub upi_source: Option<UpiSource>,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum RealTimePaymentData {

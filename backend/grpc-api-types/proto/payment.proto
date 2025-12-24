@@ -534,6 +534,7 @@ enum Connector {
   PAYSAFE = 101;
   BARCLAYCARD = 102;
   WORLDPAYXML = 103;
+  REVOLUT = 104;
 }
 
 // Payment method types.
