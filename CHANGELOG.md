@@ -4,6 +4,45 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.24.0
+
+### Features
+
+- **connector:**
+  - Revolut Connector Integration ([#328](https://github.com/juspay/connector-service/pull/328)) ([`212c6c4`](https://github.com/juspay/connector-service/commit/212c6c4697dfe37e5cd8ad52f35d55d770c732b1))
+  - Revolut pay fix ([#391](https://github.com/juspay/connector-service/pull/391)) ([`768cac9`](https://github.com/juspay/connector-service/commit/768cac9a8284a91db2e808789b6386483b25633a))
+- Added upi_source for cc/cl ([#368](https://github.com/juspay/connector-service/pull/368)) ([`6313849`](https://github.com/juspay/connector-service/commit/6313849618e5397e38960334fbf102f044c698ec))
+
+**Full Changelog:** [`2025.12.23.0...2025.12.24.0`](https://github.com/juspay/connector-service/compare/2025.12.23.0...2025.12.24.0)
+
+- - -
+
+## 2025.12.23.0
+
+### Features
+
+- **connector:**
+  - [SHIFT4] Bank-Redirect ([#383](https://github.com/juspay/connector-service/pull/383)) ([`042b281`](https://github.com/juspay/connector-service/commit/042b2815c6b219f418ba2e2fdd9478abb1aec2f3))
+  - Jpmorgan ([#358](https://github.com/juspay/connector-service/pull/358)) ([`95358c3`](https://github.com/juspay/connector-service/commit/95358c33971ba82cd1558bc3d511a245a619a7c2))
+
+**Full Changelog:** [`2025.12.19.0...2025.12.23.0`](https://github.com/juspay/connector-service/compare/2025.12.19.0...2025.12.23.0)
+
+- - -
+
+## 2025.12.19.0
+
+### Features
+
+- **connector:** [Stripe] Add Banktransfer, BNPL, BankRedirect PMs for stripe ([#371](https://github.com/juspay/connector-service/pull/371)) ([`24682d9`](https://github.com/juspay/connector-service/commit/24682d9e28b386f0ca9d45a30c230f7369397a95))
+
+### Bug Fixes
+
+- [WORLPAYVANTIV] Diff Checks ([#375](https://github.com/juspay/connector-service/pull/375)) ([`116c3b6`](https://github.com/juspay/connector-service/commit/116c3b6d4eccaee4364c0d44ebb8ffe169970f01))
+
+**Full Changelog:** [`2025.12.18.0...2025.12.19.0`](https://github.com/juspay/connector-service/compare/2025.12.18.0...2025.12.19.0)
+
+- - -
+
 ## 2025.12.18.0
 
 ### Features

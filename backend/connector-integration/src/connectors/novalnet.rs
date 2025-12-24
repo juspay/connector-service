@@ -114,7 +114,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Novalnet<T>
+    connector_types::RepeatPaymentV2<T> for Novalnet<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -214,7 +214,7 @@ macros::create_all_prerequisites!(
             flow: RepeatPayment,
             request_body: NovalnetRepeatPaymentsRequest<T>,
             response_body: NovalnetRepeatPaymentsResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -540,7 +540,7 @@ macros::macro_connector_implementation!(
     curl_response: NovalnetRepeatPaymentsResponse,
     flow_name: RepeatPayment,
     resource_common_data: PaymentFlowData,
-    flow_request: RepeatPaymentData,
+    flow_request: RepeatPaymentData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
@@ -548,14 +548,14 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let url = if req.request.is_auto_capture()? {
                 format!("{}/payment",self.connector_base_url_payments(req))
@@ -1063,7 +1063,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Novalnet<T>
 {

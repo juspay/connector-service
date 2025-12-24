@@ -149,6 +149,9 @@ pub use self::nuvei::Nuvei;
 pub mod iatapay;
 pub use self::iatapay::Iatapay;
 
+pub mod jpmorgan;
+pub use self::jpmorgan::Jpmorgan;
+
 pub mod nmi;
 pub use self::nmi::Nmi;
 
@@ -184,3 +187,6 @@ pub use self::bambora::Bambora;
 
 pub mod payme;
 pub use self::payme::Payme;
+
+pub mod revolut;
+pub use self::revolut::Revolut;

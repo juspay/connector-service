@@ -31,6 +31,8 @@ bluesnap.base_url = "https://ws.bluesnap.com"
 bluesnap.secondary_base_url = "https://pay.bluesnap.com"
 multisafepay.base_url = "https://testapi.multisafepay.com/v1/json"
 iatapay.base_url = "https://iata-pay.iata.org/api/v1"
+jpmorgan.base_url = "https://api-ms.payments.jpmorgan.com/api/v2"
+jpmorgan.secondary_base_url = "https://id.payments.jpmorgan.com"
 nmi.base_url = "https://secure.nmi.com"
 nexixpay.base_url = "https://xpay.nexigroup.com/api/phoenix-0.0/psp/api/v1"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
@@ -92,6 +94,7 @@ worldpayxml.base_url = "https://secure.worldpay.com/jsp/merchant/xml/paymentServ
 tsys.base_url = "https://gateway.transit-pass.com/"
 bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
+revolut.base_url = "https://oba-auth.revolut.com/"
 
 # Generic Events Configuration
 [events]
