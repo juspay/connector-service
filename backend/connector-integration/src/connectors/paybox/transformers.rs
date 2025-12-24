@@ -160,7 +160,7 @@ fn generate_date_time() -> CustomResult<String, errors::ConnectorError> {
 // ============================================================================
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "UPPERCASE")] 
+#[serde(rename_all = "UPPERCASE")]
 pub struct PayboxPaymentRequest<T: PaymentMethodDataTypes> {
     pub version: String,
     #[serde(rename = "TYPE")]
@@ -270,7 +270,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "UPPERCASE")] 
+#[serde(rename_all = "UPPERCASE")]
 pub struct PayboxPaymentResponse {
     #[serde(rename = "NUMTRANS")]
     pub transaction_number: String,
@@ -434,7 +434,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "UPPERCASE")] 
+#[serde(rename_all = "UPPERCASE")]
 pub struct PayboxPSyncResponse {
     #[serde(rename = "NUMTRANS")]
     pub transaction_number: String,
