@@ -238,8 +238,8 @@ fn create_payment_authorize_request_with_amount(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("helcim_test_{}", get_timestamp()))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         order_category: Some("PAY".to_string()),
         metadata,

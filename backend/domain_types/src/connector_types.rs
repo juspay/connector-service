@@ -108,6 +108,7 @@ pub enum ConnectorEnum {
     Jpmorgan,
     Bambora,
     Payme,
+    Revolut,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -178,6 +179,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Jpmorgan => Ok(Self::Jpmorgan),
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
             grpc_api_types::payments::Connector::Payme => Ok(Self::Payme),
+            grpc_api_types::payments::Connector::Revolut => Ok(Self::Revolut),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -904,6 +906,12 @@ impl PaymentFlowData {
             .and_then(|billing_address| billing_address.get_optional_full_name())
             .ok_or_else(missing_field_err("address.billing first_name & last_name"))
     }
+
+    pub fn get_recurring_mandate_payment_data(&self) -> Result<RecurringMandatePaymentData, Error> {
+        self.recurring_mandate_payment_data
+            .to_owned()
+            .ok_or_else(missing_field_err("recurring_mandate_payment_data"))
+    }
 }
 
 impl RawConnectorRequestResponse for PaymentFlowData {
@@ -1037,12 +1045,12 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub session_token: Option<String>,
     pub access_token: Option<AccessTokenResponseData>,
     pub customer_acceptance: Option<CustomerAcceptance>,
-    pub enrolled_for_3ds: bool,
+    pub enrolled_for_3ds: Option<bool>,
     pub related_transaction_id: Option<String>,
     pub payment_experience: Option<common_enums::PaymentExperience>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub customer_id: Option<CustomerId>,
-    pub request_incremental_authorization: bool,
+    pub request_incremental_authorization: Option<bool>,
     pub metadata: Option<serde_json::Value>,
     pub authentication_data: Option<router_request_types::AuthenticationData>,
     pub split_payments: Option<SplitPaymentsRequest>,
@@ -2238,7 +2246,7 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct RepeatPaymentData {
+pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub mandate_reference: MandateReferenceId,
     pub amount: i64,
     pub minor_amount: MinorUnit,
@@ -2260,9 +2268,11 @@ pub struct RepeatPaymentData {
     pub mit_category: Option<common_enums::MitCategory>,
     pub enable_partial_authorization: Option<bool>,
     pub billing_descriptor: Option<BillingDescriptor>,
+    pub payment_method_data: PaymentMethodData<T>,
+    pub authentication_data: Option<router_request_types::AuthenticationData>,
 }
 
-impl RepeatPaymentData {
+impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
     pub fn get_mandate_reference(&self) -> &MandateReferenceId {
         &self.mandate_reference
     }
@@ -2285,6 +2295,11 @@ impl RepeatPaymentData {
             .clone()
             .ok_or_else(missing_field_err("webhook_url"))
     }
+    pub fn get_router_return_url(&self) -> Result<String, Error> {
+        self.router_return_url
+            .clone()
+            .ok_or_else(missing_field_err("return_url"))
+    }
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))
     }
@@ -2301,6 +2316,15 @@ impl RepeatPaymentData {
                 .ip_address
                 .map(|ip| Secret::new(ip.to_string()))
         })
+    }
+    pub fn connector_mandate_id(&self) -> Option<String> {
+        match &self.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => {
+                connector_mandate_ids.get_connector_mandate_id()
+            }
+            MandateReferenceId::NetworkMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => None,
+        }
     }
 }
 
@@ -2792,6 +2816,22 @@ pub struct RecurringMandatePaymentData {
     pub original_payment_authorized_amount: Option<MinorUnit>,
     pub original_payment_authorized_currency: Option<Currency>,
     pub mandate_metadata: Option<SecretSerdeValue>,
+}
+
+pub trait RecurringMandateData {
+    fn get_original_payment_amount(&self) -> Result<MinorUnit, Error>;
+    fn get_original_payment_currency(&self) -> Result<Currency, Error>;
+}
+
+impl RecurringMandateData for RecurringMandatePaymentData {
+    fn get_original_payment_amount(&self) -> Result<MinorUnit, Error> {
+        self.original_payment_authorized_amount
+            .ok_or_else(missing_field_err("original_payment_authorized_amount"))
+    }
+    fn get_original_payment_currency(&self) -> Result<Currency, Error> {
+        self.original_payment_authorized_currency
+            .ok_or_else(missing_field_err("original_payment_authorized_currency"))
+    }
 }
 
 #[derive(Clone, Debug)]

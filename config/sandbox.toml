@@ -94,6 +94,7 @@ worldpayxml.base_url = "https://secure-test.worldpay.com/jsp/merchant/xml/paymen
 tsys.base_url = "https://stagegw.transnox.com/"
 bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
+revolut.base_url = "https://sandbox-oba-auth.revolut.com/"
 
 # Generic Events Configuration
 [events]

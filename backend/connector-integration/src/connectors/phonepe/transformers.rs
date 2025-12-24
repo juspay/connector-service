@@ -61,6 +61,8 @@ struct PhonepePaymentRequestPayload {
     payment_instrument: PhonepePaymentInstrument,
     #[serde(rename = "deviceContext", skip_serializing_if = "Option::is_none")]
     device_context: Option<PhonepeDeviceContext>,
+    #[serde(rename = "paymentMode", skip_serializing_if = "Option::is_none")]
+    payment_mode: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -173,6 +175,12 @@ pub struct PhonepeSyncResponseData {
     response_code: Option<String>,
     #[serde(rename = "paymentInstrument", skip_serializing_if = "Option::is_none")]
     payment_instrument: Option<serde_json::Value>,
+    #[serde(rename = "cardNetwork", skip_serializing_if = "Option::is_none")]
+    card_network: Option<String>,
+    #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
+    account_type: Option<String>,
+    #[serde(rename = "upiCreditLine", skip_serializing_if = "Option::is_none")]
+    upi_credit_line: Option<bool>,
 }
 
 // ===== REQUEST BUILDING =====
@@ -278,6 +286,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => None,
         };
 
+        // Calculate payment_mode from upi_source
+        let payment_mode = router_data
+            .request
+            .payment_method_data
+            .get_upi_source()
+            .map(|source| source.to_payment_mode());
+
         // Build payload
         let payload = PhonepePaymentRequestPayload {
             merchant_id: auth.merchant_id.clone(),
@@ -295,6 +310,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             mobile_number,
             payment_instrument,
             device_context,
+            payment_mode,
         };
 
         // Convert to JSON and encode
@@ -304,8 +320,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Base64 encode the payload
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
 
-        // Generate checksum
-        let api_path = format!("/{}", constants::API_PAY_ENDPOINT);
+        // Generate checksum - use merchant-based endpoint if merchant is IRCTC
+        let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
+            constants::API_IRCTC_PAY_ENDPOINT
+        } else {
+            constants::API_PAY_ENDPOINT
+        };
+        let api_path = format!("/{}", api_endpoint);
         let checksum =
             generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
 
@@ -417,6 +438,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => None,
         };
 
+        // Calculate payment_mode from upi_source
+        let payment_mode = router_data
+            .request
+            .payment_method_data
+            .get_upi_source()
+            .map(|source| source.to_payment_mode());
+
         // Build payload
         let payload = PhonepePaymentRequestPayload {
             merchant_id: auth.merchant_id.clone(),
@@ -434,6 +462,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             mobile_number,
             payment_instrument,
             device_context,
+            payment_mode,
         };
 
         // Convert to JSON and encode
@@ -443,8 +472,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Base64 encode the payload
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
 
-        // Generate checksum
-        let api_path = format!("/{}", constants::API_PAY_ENDPOINT);
+        // Generate checksum - use merchant-based endpoint if merchant is IRCTC
+        let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
+            constants::API_IRCTC_PAY_ENDPOINT
+        } else {
+            constants::API_PAY_ENDPOINT
+        };
+        let api_path = format!("/{}", api_endpoint);
         let checksum =
             generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
 
@@ -629,6 +663,12 @@ impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
 
 // ===== HELPER FUNCTIONS =====
 
+// Check if merchant ID corresponds to IRCTC (merchant-based endpoints)
+// This should be called with the merchant_id from X-MERCHANT-ID auth header
+pub fn is_irctc_merchant(merchant_id: &str) -> bool {
+    merchant_id.contains(constants::IRCTC_IDENTIFIER)
+}
+
 fn generate_phonepe_checksum(
     base64_payload: &str,
     api_path: &str,
@@ -683,10 +723,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_request_reference_id;
 
-        // Generate checksum for status API
+        // Generate checksum for status API - use IRCTC endpoint if merchant is IRCTC
+        let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
+            constants::API_IRCTC_STATUS_ENDPOINT
+        } else {
+            constants::API_STATUS_ENDPOINT
+        };
         let api_path = format!(
             "/{}/{}/{}",
-            constants::API_STATUS_ENDPOINT,
+            api_endpoint,
             auth.merchant_id.peek(),
             merchant_transaction_id
         );
@@ -723,10 +768,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_request_reference_id;
 
-        // Generate checksum for status API
+        // Generate checksum for status API - use IRCTC endpoint if merchant is IRCTC
+        let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
+            constants::API_IRCTC_STATUS_ENDPOINT
+        } else {
+            constants::API_STATUS_ENDPOINT
+        };
         let api_path = format!(
             "/{}/{}/{}",
-            constants::API_STATUS_ENDPOINT,
+            api_endpoint,
             auth.merchant_id.peek(),
             merchant_transaction_id
         );

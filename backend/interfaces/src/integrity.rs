@@ -161,7 +161,7 @@ impl_check_integrity!(SessionTokenRequestData);
 impl_check_integrity!(AccessTokenRequestData);
 impl_check_integrity!(PaymentMethodTokenizationData<S>);
 impl_check_integrity!(SubmitEvidenceData);
-impl_check_integrity!(RepeatPaymentData);
+impl_check_integrity!(RepeatPaymentData<S>);
 impl_check_integrity!(PaymentsAuthenticateData<S>);
 impl_check_integrity!(PaymentsPostAuthenticateData<S>);
 impl_check_integrity!(PaymentsPreAuthenticateData<S>);
@@ -328,7 +328,9 @@ impl GetIntegrityObject<SubmitEvidenceIntegrityObject> for SubmitEvidenceData {
     }
 }
 
-impl GetIntegrityObject<RepeatPaymentIntegrityObject> for RepeatPaymentData {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject>
+    for RepeatPaymentData<T>
+{
     fn get_response_integrity_object(&self) -> Option<RepeatPaymentIntegrityObject> {
         self.integrity_object.clone()
     }

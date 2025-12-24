@@ -136,7 +136,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Phonepe<T>
+    connector_types::RepeatPaymentV2<T> for Phonepe<T>
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -249,7 +249,16 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            Ok(format!("{}{}", base_url, constants::API_PAY_ENDPOINT))
+            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
+
+            // Use merchant-based endpoint if merchant is IRCTC
+            let api_endpoint = if phonepe::is_irctc_merchant(auth.merchant_id.peek()) {
+                constants::API_IRCTC_PAY_ENDPOINT
+            } else {
+                constants::API_PAY_ENDPOINT
+            };
+
+            Ok(format!("{}{}", base_url, api_endpoint))
         }
     }
 );
@@ -304,8 +313,15 @@ macros::macro_connector_implementation!(
             let merchant_transaction_id = &req.resource_common_data.connector_request_reference_id;
 
             let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
-            let api_endpoint = constants::API_STATUS_ENDPOINT;
             let merchant_id = auth.merchant_id.peek();
+
+            // Use merchant-based endpoint if merchant is IRCTC
+            let api_endpoint = if phonepe::is_irctc_merchant(merchant_id) {
+                constants::API_IRCTC_STATUS_ENDPOINT
+            } else {
+                constants::API_STATUS_ENDPOINT
+            };
+
             Ok(format!("{base_url}{api_endpoint}/{merchant_id}/{merchant_transaction_id}"))
         }
     }
@@ -443,8 +459,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Phonepe<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Phonepe<T>
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -649,7 +669,7 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     RepeatPayment,
     PaymentFlowData,
-    RepeatPaymentData,
+    RepeatPaymentData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(

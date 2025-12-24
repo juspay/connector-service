@@ -116,6 +116,7 @@ nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
 tsys.base_url = "https://stagegw.transnox.com/"
 bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
+revolut.base_url = "https://sandbox-merchant.revolut.com/"
 
 # Generic Events Configuration
 [events]
