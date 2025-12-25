@@ -1413,9 +1413,32 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
+    pub webhook_url: Option<String>,
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+}
+
+impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(ConnectorError::CaptureMethodNotSupported.into())
+            }
+        }
+    }
+
+    pub fn get_webhook_url(&self) -> Result<String, Error> {
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1430,6 +1453,23 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+    pub authentication_data: Option<router_request_types::AuthenticationData>,
+}
+
+impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(ConnectorError::CaptureMethodNotSupported.into())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1457,9 +1497,26 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
+    pub authentication_data: Option<router_request_types::AuthenticationData>,
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+}
+
+impl<T: PaymentMethodDataTypes> PaymentsPostAuthenticateData<T> {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(ConnectorError::CaptureMethodNotSupported.into())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
