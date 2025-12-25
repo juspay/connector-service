@@ -2278,6 +2278,7 @@ message PaymentServicePreAuthenticateRequest {
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
   optional string continue_redirection_url = 12; // URL to complete authorization
+  optional string webhook_url = 18; // URL for webhook notifications
 
   // Contextual Information
   optional BrowserInformation browser_info = 14; // Information about the customer's browser
@@ -2287,6 +2288,9 @@ message PaymentServicePreAuthenticateRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 19; // Method for capturing the payment
 }
 
 // Response message for pre-authentication step
@@ -2359,6 +2363,9 @@ message PaymentServiceAuthenticateRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 13; // Method for capturing the payment
 }
 
 // Response message for authentication step
@@ -2435,6 +2442,9 @@ message PaymentServicePostAuthenticateRequest {
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
   map<string, string> connector_metadata = 19; // Connector-specific metadata for the transaction
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 20; // Method for capturing the payment
 }
 
 // Response message for post-authentication step
