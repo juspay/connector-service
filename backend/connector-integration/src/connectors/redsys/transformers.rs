@@ -382,23 +382,12 @@ where
             ds_merchant_cvv2: card.card_cvc.clone(),
         };
 
-        let transaction = RedsysTransaction::try_from((&payment_request, &auth))?;
+        let transaction = Self::try_from((&payment_request, &auth))?;
         Ok(transaction)
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<
-                PreAuthenticate,
-                PaymentFlowData,
-                PaymentsPreAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
     for RouterDataV2<
         PreAuthenticate,
         PaymentFlowData,
@@ -409,15 +398,7 @@ impl<T: PaymentMethodDataTypes>
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<
-                PreAuthenticate,
-                PaymentFlowData,
-                PaymentsPreAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<responses::RedsysResponse, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response {
             responses::RedsysResponse::RedsysResponse(ref transaction) => {
@@ -797,23 +778,12 @@ where
             ds_merchant_cvv2: card.card_cvc.clone(),
         };
 
-        let transaction = RedsysTransaction::try_from((&payment_request, &auth))?;
+        let transaction = Self::try_from((&payment_request, &auth))?;
         Ok(transaction)
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
     for RouterDataV2<
         Authenticate,
         PaymentFlowData,
@@ -824,15 +794,7 @@ impl<T: PaymentMethodDataTypes>
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<responses::RedsysResponse, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response {
             responses::RedsysResponse::RedsysResponse(ref transaction) => {
@@ -1193,23 +1155,12 @@ where
             ds_merchant_cvv2: card.card_cvc.clone(),
         };
 
-        let transaction = RedsysTransaction::try_from((&payment_request, &auth))?;
+        let transaction = Self::try_from((&payment_request, &auth))?;
         Ok(transaction)
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<
-                PostAuthenticate,
-                PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
     for RouterDataV2<
         PostAuthenticate,
         PaymentFlowData,
@@ -1220,15 +1171,7 @@ impl<T: PaymentMethodDataTypes>
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<
-                PostAuthenticate,
-                PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<responses::RedsysResponse, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response {
             responses::RedsysResponse::RedsysResponse(ref transaction) => {
@@ -1329,26 +1272,18 @@ where
             )?,
         };
 
-        let transaction = RedsysTransaction::try_from((&capture_request, &auth))?;
+        let transaction = Self::try_from((&capture_request, &auth))?;
         Ok(transaction)
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<responses::RedsysResponse, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response {
             responses::RedsysResponse::RedsysResponse(ref transaction) => {
@@ -1452,26 +1387,18 @@ where
             )?,
         };
 
-        let transaction = RedsysTransaction::try_from((&void_request, &auth))?;
+        let transaction = Self::try_from((&void_request, &auth))?;
         Ok(transaction)
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<responses::RedsysResponse, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response {
             responses::RedsysResponse::RedsysResponse(ref transaction) => {
@@ -1559,26 +1486,18 @@ where
             )?,
         };
 
-        let transaction = RedsysTransaction::try_from((&refund_request, &auth))?;
+        let transaction = Self::try_from((&refund_request, &auth))?;
         Ok(transaction)
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::RedsysResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<responses::RedsysResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = match item.response {
             responses::RedsysResponse::RedsysResponse(ref transaction) => {
@@ -1700,21 +1619,13 @@ pub fn construct_sync_request(
     Ok(body.as_bytes().to_vec())
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::RedsysSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::RedsysSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<responses::RedsysSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let message_data = item
             .response
@@ -1794,21 +1705,13 @@ impl
 // RSync Flow Transformers
 // ============================================================================
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            responses::RedsysSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = Error;
 
     fn try_from(
-        item: ResponseRouterData<
-            responses::RedsysSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<responses::RedsysSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let message_data = item
             .response
