@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
+config_patch_derive = { path = "../config_patch_derive" }
 anyhow = "1.0"
 rdkafka = { version = "0.36", optional = true }
 tracing-kafka = { path = "../tracing-kafka", optional = true }

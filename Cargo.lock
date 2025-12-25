@@ -998,6 +998,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "config_patch_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "connector-integration"
 version = "0.1.0"
 dependencies = [
@@ -1351,6 +1360,7 @@ dependencies = [
  "actix-web",
  "base64 0.21.7",
  "bytes",
+ "config_patch_derive",
  "error-stack 0.4.1",
  "grpc-api-types",
  "http 0.2.12",
@@ -2656,6 +2666,7 @@ dependencies = [
  "build_info",
  "chrono",
  "config",
+ "config_patch_derive",
  "connector-integration",
  "domain_types",
  "error-stack 0.4.1",
@@ -6438,6 +6449,7 @@ dependencies = [
  "blake3",
  "bytes",
  "chrono",
+ "config_patch_derive",
  "error-stack 0.4.1",
  "futures",
  "hex",

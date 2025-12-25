@@ -4,7 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 /// Log config settings.
-#[derive(Debug, Deserialize, Clone, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize, PartialEq, config_patch_derive::Patch)]
+#[patch(nested_all)]
 pub struct Log {
     /// Logging to a console.
     pub console: LogConsole,
@@ -14,7 +15,7 @@ pub struct Log {
 }
 
 /// Logging to a console.
-#[derive(Debug, Deserialize, Clone, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize, PartialEq, Eq, config_patch_derive::Patch)]
 pub struct LogConsole {
     /// Whether you want to see log in your terminal.
     pub enabled: bool,
@@ -27,7 +28,7 @@ pub struct LogConsole {
 }
 
 /// Describes the level of verbosity of a span or event.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Level(pub(super) tracing::Level);
 
 impl Serialize for Level {
@@ -43,6 +44,12 @@ impl Level {
     /// Returns the most verbose [`tracing::Level`]
     pub fn into_level(&self) -> tracing::Level {
         self.0
+    }
+}
+
+impl Default for Level {
+    fn default() -> Self {
+        Self(tracing::Level::INFO)
     }
 }
 
@@ -72,7 +79,7 @@ pub enum LogFormat {
 }
 
 /// Logging to Kafka.
-#[derive(Debug, Deserialize, Clone, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize, PartialEq, Default, config_patch_derive::Patch)]
 pub struct LogKafka {
     /// Whether Kafka logging is enabled.
     pub enabled: bool,

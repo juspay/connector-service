@@ -5,6 +5,7 @@ members = [
   "backend/connector-integration",
   "backend/external-services",
   "backend/grpc-server", 
+  "backend/config_patch_derive",
   "sdk/rust-grpc-client",
   "backend/common_enums",
   "backend/common_utils",
