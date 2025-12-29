@@ -1,4 +1,5 @@
-use common_utils::{pii, StringMinorUnit};
+use common_utils::{pii, MinorUnit};
+use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +14,7 @@ pub type RedsysRefundRequest = super::transformers::RedsysTransaction;
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct RedsysPaymentRequest {
-    pub ds_merchant_amount: StringMinorUnit,
+    pub ds_merchant_amount: MinorUnit,
     pub ds_merchant_currency: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ds_merchant_emv3ds: Option<RedsysEmvThreeDsRequestData>,
@@ -24,6 +25,13 @@ pub struct RedsysPaymentRequest {
     pub ds_merchant_terminal: Secret<String>,
     pub ds_merchant_transactiontype: RedsysTransactionType,
     pub ds_merchant_cvv2: Secret<String>,
+}
+
+#[derive(Debug)]
+pub struct RedsysCardData<T: PaymentMethodDataTypes> {
+    pub card_number: RawCardNumber<T>,
+    pub expiry_date: Secret<String>,
+    pub cvv2: Secret<String>,
 }
 
 /// Transaction types supported by Redsys
@@ -44,6 +52,19 @@ pub enum RedsysTransactionType {
     /// Cancellation (void)
     #[serde(rename = "9")]
     Cancellation,
+}
+
+/// 3DS invoke case (method URL present)
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RedsysThreeDsInvokeData {
+    pub is_invoke_case: bool,
+    pub three_ds_method_submitted: bool,
+}
+
+/// 3DS exempt case (no method URL)
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RedsysThreeDsExemptData {
+    pub is_invoke_case: bool,
 }
 
 /// EMV 3DS request data for 3D Secure authentication
@@ -164,7 +185,7 @@ pub struct RedsysOperationRequest {
     pub ds_merchant_terminal: Secret<String>,
     pub ds_merchant_currency: String,
     pub ds_merchant_transactiontype: RedsysTransactionType,
-    pub ds_merchant_amount: StringMinorUnit,
+    pub ds_merchant_amount: MinorUnit,
 }
 
 /// SOAP XML messages container for sync operations

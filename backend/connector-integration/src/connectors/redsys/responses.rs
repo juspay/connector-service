@@ -1,3 +1,4 @@
+use domain_types::router_response_types;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -51,6 +52,19 @@ pub struct RedsysEmv3DSResponseData {
     pub three_d_s_method_u_r_l: Option<String>,
     pub acs_u_r_l: Option<String>,
     pub creq: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RedsysThreedsChallengeResponse {
+    pub cres: String,
+}
+
+/// Result type for pre-authenticate response building
+pub struct PreAuthenticateResponseData {
+    pub redirection_data: Option<Box<router_response_types::RedirectForm>>,
+    pub connector_meta_data: Option<Secret<serde_json::Value>>,
+    pub response_ref_id: Option<String>,
+    pub authentication_data: Option<domain_types::router_request_types::AuthenticationData>,
 }
 
 /// Response code from Redsys (4-digit code)

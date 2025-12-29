@@ -184,7 +184,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-macros::create_amount_converter_wrapper!(connector_name: Redsys, amount_type: StringMinorUnit);
+macros::create_amount_converter_wrapper!(connector_name: Redsys, amount_type: MinorUnit);
 macros::create_all_prerequisites!(
     connector_name: Redsys,
     generic_type: T,
@@ -207,24 +207,24 @@ macros::create_all_prerequisites!(
             response_body: RedsysPostAuthenticateResponse,
             router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         ),
-    (
-        flow: Capture,
-        request_body: RedsysCaptureRequest,
-        response_body: RedsysCaptureResponse,
-        router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ),
-    (
-        flow: Void,
-        request_body: RedsysVoidRequest,
-        response_body: RedsysVoidResponse,
-        router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ),
-    (
-        flow: Refund,
-        request_body: RedsysRefundRequest,
-        response_body: RedsysRefundResponse,
-        router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    )
+        (
+            flow: Capture,
+            request_body: RedsysCaptureRequest,
+            response_body: RedsysCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Void,
+            request_body: RedsysVoidRequest,
+            response_body: RedsysVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: RedsysRefundRequest,
+            response_body: RedsysRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        )
     ],
     amount_converters: [],
     member_functions: {
@@ -972,11 +972,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >,
     ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented(
-            "Authorize flow - Use PreAuthenticate/Authenticate/PostAuthenticate for 3DS payments"
-                .to_string(),
-        )
-        .into())
+        Err(errors::ConnectorError::NotImplemented("Authorize flow".to_string()).into())
     }
 }
 
