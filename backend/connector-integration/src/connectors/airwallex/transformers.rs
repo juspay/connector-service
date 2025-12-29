@@ -478,9 +478,9 @@ pub struct AirwallexPaymentMethodInfo {
     pub method_type: String,
     pub card: Option<AirwallexCardInfo>,
     // Bank redirect fields
-    pub blik: Option<serde_json::Value>, // For BLIK payment method details
-    pub ideal: Option<serde_json::Value>, // For iDEAL payment method details
-    pub trustly: Option<serde_json::Value>, // For Trustly payment method details
+    pub blik: Option<Secret<serde_json::Value>>, // For BLIK payment method details
+    pub ideal: Option<Secret<serde_json::Value>>, // For iDEAL payment method details
+    pub trustly: Option<Secret<serde_json::Value>>, // For Trustly payment method details
     // Additional payment method fields
     pub id: Option<String>,
     pub status: Option<String>,
