@@ -1420,7 +1420,6 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
-    pub webhook_url: Option<String>,
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
@@ -1441,11 +1440,6 @@ impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
         }
     }
 
-    pub fn get_webhook_url(&self) -> Result<String, Error> {
-        self.webhook_url
-            .clone()
-            .ok_or_else(missing_field_err("webhook_url"))
-    }
 }
 
 #[derive(Debug, Clone)]

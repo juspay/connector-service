@@ -8629,7 +8629,6 @@ impl<
                 .transpose()?,
             enrolled_for_3ds,
             redirect_response,
-            webhook_url: value.webhook_url,
             capture_method: value
                 .capture_method
                 .map(|cm| {
