@@ -1477,6 +1477,18 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
             }
         }
     }
+
+    pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
+    }
+
+    pub fn get_continue_redirection_url(&self) -> Result<Url, Error> {
+        self.continue_redirection_url
+            .clone()
+            .ok_or_else(missing_field_err("continue_redirection_url"))
+    }
 }
 
 #[derive(Debug, Clone)]
