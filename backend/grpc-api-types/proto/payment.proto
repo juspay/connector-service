@@ -2319,6 +2319,9 @@ message PaymentServicePreAuthenticateResponse {
 
   // Raw Response
   optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+  
+  // Authentication Results
+  optional AuthenticationData authentication_data = 8; // Authentication data from the connector
 }
 
 // Request message for authentication step
