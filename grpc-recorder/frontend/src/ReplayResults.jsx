@@ -7,14 +7,18 @@ import {
   AlertCircle,
   GitBranch,
   Database,
+  Terminal,
+  GitCompare,
 } from "lucide-react";
 import { DiffEditor } from "@monaco-editor/react";
 import stringify from "json-stable-stringify";
+import GrpccurlViewer from "./GrpccurlViewer";
 
 export default function ReplayResults({ data }) {
   const [selectedId, setSelectedId] = useState(null);
   const [replayResults, setReplayResults] = useState({});
   const [loading, setLoading] = useState({});
+  const [activeTab, setActiveTab] = useState("diff"); // "diff" or "grpccurl"
 
   function normalizeJson(json) {
     if (!json) return json; // fallback
@@ -164,45 +168,76 @@ export default function ReplayResults({ data }) {
                 </button>
               </div>
 
-              {/* DIFF */}
-              <div className="flex-1 overflow-auto p-6">
-                {replayResults[selectedRecording.request_id]?.error && (
-                  <div className="text-red-600">
-                    {replayResults[selectedRecording.request_id].error}
-                  </div>
-                )}
+              {/* TABS */}
+              <div className="border-b flex">
+                <button
+                  onClick={() => setActiveTab("diff")}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "diff"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <GitCompare className="w-4 h-4" />
+                  Diff View
+                </button>
+                <button
+                  onClick={() => setActiveTab("grpccurl")}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "grpccurl"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <Terminal className="w-4 h-4" />
+                  grpcurl
+                </button>
+              </div>
 
-                {replayResults[selectedRecording.request_id]?.results?.map(
-                  (res, i) => (
-                    <div key={i} className="mb-8">
-                      <div className="mb-2 flex items-center gap-2 text-sm">
-                        <GitBranch className="w-4 h-4" />
-                        Level: {res.level} · Status: {res.semantic?.status}
+              {/* CONTENT */}
+              <div className="flex-1 overflow-auto">
+                {activeTab === "diff" ? (
+                  <div className="p-6">
+                    {replayResults[selectedRecording.request_id]?.error && (
+                      <div className="text-red-600">
+                        {replayResults[selectedRecording.request_id].error}
                       </div>
+                    )}
 
-                      {res.expected && res.actual && (
-                        <div className="h-[600px] border rounded-lg overflow-hidden">
-                          <DiffEditor
-                            original={normalizeJson(res.expected)}   // LEFT
-                            modified={normalizeJson(res.actual)}     // RIGHT
-                            language="json"
-                            theme="vs"
-                            options={{
-                              readOnly: true,
-                              renderSideBySide: true,
-                              wordWrap: "on",                 // 👈 NO horizontal scroll
-                              minimap: { enabled: false },
-                              scrollBeyondLastLine: false,
-                              automaticLayout: true,
-                              renderOverviewRuler: false,
-                              diffAlgorithm: "advanced",
-                            }}
-                          />
+                    {replayResults[selectedRecording.request_id]?.results?.map(
+                      (res, i) => (
+                        <div key={i} className="mb-8">
+                          <div className="mb-2 flex items-center gap-2 text-sm">
+                            <GitBranch className="w-4 h-4" />
+                            Level: {res.level} · Status: {res.semantic?.status}
+                          </div>
+
+                          {res.expected && res.actual && (
+                            <div className="h-[600px] border rounded-lg overflow-hidden">
+                              <DiffEditor
+                                original={normalizeJson(res.expected)}   // LEFT
+                                modified={normalizeJson(res.actual)}     // RIGHT
+                                language="json"
+                                theme="vs"
+                                options={{
+                                  readOnly: true,
+                                  renderSideBySide: true,
+                                  wordWrap: "on",
+                                  minimap: { enabled: false },
+                                  scrollBeyondLastLine: false,
+                                  automaticLayout: true,
+                                  renderOverviewRuler: false,
+                                  diffAlgorithm: "advanced",
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
-
-                      )}
-                    </div>
-                  )
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <GrpccurlViewer recording={selectedRecording} />
                 )}
               </div>
             </div>

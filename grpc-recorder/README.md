@@ -6,7 +6,7 @@ Start in Docker
 ```
 docker-compose up -d
 ```
-Build only recorder-service with frontend
+Build recorder-service with frontend
 ```
 docker-compose build grpc-recorder-service
 ```
