@@ -3233,7 +3233,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                             ..item.router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::AuthenticateResponse {
-                            redirection_data: Box::new(redirection_data),
+                            redirection_data: redirection_data.map(Box::new),
                             connector_response_reference_id,
                             authentication_data: Some(
                                 get_authentication_data_for_check_enrollment_response(
