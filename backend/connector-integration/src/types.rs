@@ -46,7 +46,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Noon => Box::new(connectors::Noon::new()),
             ConnectorEnum::Volt => Box::new(connectors::Volt::new()),
             ConnectorEnum::Braintree => Box::new(connectors::Braintree::new()),
-            ConnectorEnum::Bluecode => Box::new(connectors::Bluecode::new()),
+            ConnectorEnum::Calida => Box::new(connectors::Calida::new()),
             ConnectorEnum::Cryptopay => Box::new(connectors::Cryptopay::new()),
             ConnectorEnum::Helcim => Box::new(connectors::Helcim::new()),
             ConnectorEnum::Multisafepay => Box::new(connectors::Multisafepay::new()),

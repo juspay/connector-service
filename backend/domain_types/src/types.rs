@@ -144,7 +144,7 @@ pub struct Connectors {
     pub noon: ConnectorParams,
     pub braintree: ConnectorParams,
     pub volt: ConnectorParams,
-    pub bluecode: ConnectorParams,
+    pub calida: ConnectorParams,
     pub cryptopay: ConnectorParams,
     pub helcim: ConnectorParams,
     pub dlocal: ConnectorParams,

@@ -56,8 +56,8 @@ pub use self::braintree::Braintree;
 pub mod volt;
 pub use self::volt::Volt;
 
-pub mod bluecode;
-pub use self::bluecode::Bluecode;
+pub mod calida;
+pub use self::calida::Calida;
 
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;
