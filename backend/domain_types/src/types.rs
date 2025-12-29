@@ -8873,6 +8873,7 @@ impl<
                     )
                 })
                 .transpose()?,
+            threeds_method_comp_ind: None,
         })
     }
 }
