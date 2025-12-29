@@ -2943,7 +2943,7 @@ impl
             minor_amount_capturable: None,
             access_token,
             session_token: None,
-            reference_id: None,
+            reference_id: value.connector_order_reference_id.clone(),
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,

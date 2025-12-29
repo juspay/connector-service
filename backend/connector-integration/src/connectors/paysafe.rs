@@ -421,7 +421,7 @@ macros::macro_connector_implementation!(
                 }
                 Err(_) => {
                     // For paymenthandle sync (before authorization), use merchantRefNum
-                    let connector_payment_id = req.resource_common_data.connector_request_reference_id.clone();
+                    let connector_payment_id = req.resource_common_data.get_reference_id()?;
                     format!("{base_url}v1/paymenthandles?merchantRefNum={connector_payment_id}")
                 }
             };

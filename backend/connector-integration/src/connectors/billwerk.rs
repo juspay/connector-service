@@ -751,7 +751,7 @@ macros::macro_connector_implementation!(
         Ok(format!(
             "{}v1/charge/{}",
             self.connector_base_url_payments(req),
-            req.resource_common_data.connector_request_reference_id.clone()
+            req.resource_common_data.get_reference_id()?
         ))
     }
 

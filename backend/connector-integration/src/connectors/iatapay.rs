@@ -411,7 +411,7 @@ macros::macro_connector_implementation!(
             let merchant_id = auth.merchant_id.peek();
 
             // Extract connector_request_reference_id from request
-            let payment_id = &req.resource_common_data.connector_request_reference_id;
+            let payment_id = req.resource_common_data.get_reference_id()?;
 
             Ok(format!(
                 "{}/merchants/{}/payments/{}",
