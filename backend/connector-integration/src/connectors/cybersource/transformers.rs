@@ -2938,6 +2938,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                             .unwrap_or(info_response.id.clone()),
                     ),
                     status_code: item.http_code,
+                    authentication_data: None,
                 }),
                 ..item.router_data
             }),
