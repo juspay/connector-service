@@ -3,7 +3,7 @@ use crate::{types::ResponseRouterData, utils::to_connector_meta};
 use base64::Engine;
 use cards;
 use common_enums;
-use common_utils::{types::StringMajorUnit, CustomResult};
+use common_utils::{types::StringMajorUnit, CustomResult, Method};
 use domain_types::{
     connector_flow::{Authorize, Capture, PostAuthenticate, RepeatPayment},
     connector_types::{
@@ -26,6 +26,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
+
 use url::Url;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 trait GetRequestIncrementalAuthorization {
@@ -1819,12 +1820,71 @@ impl TryFrom<ResponseRouterData<PaypalSyncResponse, Self>>
                     http_code: item.http_code,
                 })
             }
-            PaypalSyncResponse::PaypalRedirectSyncResponse(_)
-            | PaypalSyncResponse::PaypalThreeDsSyncResponse(_) => {
-                Err(ConnectorError::NotImplemented(
-                    "Redirect and 3DS sync responses not implemented".to_string(),
-                )
-                .into())
+            PaypalSyncResponse::PaypalRedirectSyncResponse(response) => {
+                // Handle bank redirect sync responses (iDEAL, Giropay, EPS, Sofort)
+                let status = get_order_status(response.status.clone(), response.intent.clone());
+                let purchase_units = response.purchase_units.first();
+
+                // For bank redirects, check if there's still a payer-action link (redirect pending)
+                let redirection_data =
+                    if matches!(response.status, PaypalOrderStatus::PayerActionRequired) {
+                        get_redirect_url(response.links.clone())?
+                            .map(|url| Box::new(RedirectForm::from((url, Method::Get))))
+                    } else {
+                        None
+                    };
+
+                let connector_meta = serde_json::json!(PaypalMeta {
+                    authorize_id: None,
+                    capture_id: None,
+                    incremental_authorization_id: None,
+                    psync_flow: response.intent.clone(),
+                    next_action: None,
+                    order_id: Some(response.id.clone()),
+                });
+
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+                        redirection_data,
+                        mandate_reference: None,
+                        connector_metadata: Some(connector_meta),
+                        network_txn_id: None,
+                        connector_response_reference_id: Some(
+                            purchase_units.map_or(response.id, |item| item.invoice_id.clone()),
+                        ),
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    }),
+                    ..item.router_data
+                })
+            }
+            PaypalSyncResponse::PaypalThreeDsSyncResponse(response) => {
+                // Handle 3DS sync responses
+                let status =
+                    get_order_status(response.status.clone(), PaypalPaymentIntent::Authenticate);
+
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: Some(response.id),
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    }),
+                    ..item.router_data
+                })
             }
         }
     }
@@ -1876,11 +1936,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         resource_id: ResponseId::ConnectorTransactionId(
                             threeds_response.id.clone(),
                         ),
-                        redirection_data: link.map(|url| {
-                            Box::new(RedirectForm::Uri {
-                                uri: url.to_string(),
-                            })
-                        }),
+                        redirection_data: link
+                            .map(|url| Box::new(RedirectForm::from((url, Method::Get)))),
                         mandate_reference: None,
                         connector_metadata: Some(connector_meta),
                         network_txn_id: None,
@@ -1922,11 +1979,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
-                redirection_data: Some(Box::new(RedirectForm::Uri {
-                    uri: link
-                        .ok_or(ConnectorError::ResponseDeserializationFailed)?
-                        .to_string(),
-                })),
+                redirection_data: Some(Box::new(RedirectForm::from((
+                    link.ok_or(ConnectorError::ResponseDeserializationFailed)?,
+                    Method::Get,
+                )))),
                 mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
@@ -2110,6 +2166,11 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
                 .clone()
                 .map(|m| m.expose()),
         )?;
+
+        // Simplified capture_id logic to use response.id directly
+        let capture_id = item.response.id.clone();
+        let invoice_id = item.response.invoice_id.clone();
+
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
@@ -2122,17 +2183,14 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
                 mandate_reference: None,
                 connector_metadata: Some(serde_json::json!(PaypalMeta {
                     authorize_id: connector_payment_id.authorize_id,
-                    capture_id: Some(item.response.id.clone()),
+                    capture_id: Some(capture_id.clone()),
                     incremental_authorization_id: None,
                     psync_flow: PaypalPaymentIntent::Capture,
                     next_action: None,
                     order_id: None,
                 })),
                 network_txn_id: None,
-                connector_response_reference_id: item
-                    .response
-                    .invoice_id
-                    .or(Some(item.response.id)),
+                connector_response_reference_id: invoice_id.or(Some(capture_id)),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
