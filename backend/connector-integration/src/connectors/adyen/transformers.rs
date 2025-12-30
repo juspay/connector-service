@@ -21,7 +21,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+        BankRedirectData, Card, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData
     },
     router_data::{ConnectorAuthType, ConnectorResponseData, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -72,6 +72,7 @@ pub enum CardBrand {
     Accel,
     Pulse,
     Nyce,
+    Bcmc,
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -107,6 +108,418 @@ pub enum AdyenPaymentMethod<
     #[serde(rename = "googlepay")]
     Gpay(Box<AdyenGPay>),
     ApplePay(Box<AdyenApplePay>),
+    #[serde(rename = "scheme")]
+    BancontactCard(Box<AdyenCard<DefaultPCIHolder>>),
+    Bizum,
+    Blik(Box<BlikRedirectionData>),
+    Eps(Box<BankRedirectionWithIssuer>),
+    Ideal,
+    #[serde(rename = "onlineBanking_CZ")]
+    OnlineBankingCzechRepublic(Box<OnlineBankingCzechRepublicData>),
+    #[serde(rename = "ebanking_FI")]
+    OnlineBankingFinland,
+    #[serde(rename = "onlineBanking_PL")]
+    OnlineBankingPoland(Box<OnlineBankingPolandData>),
+    #[serde(rename = "onlineBanking_SK")]
+    OnlineBankingSlovakia(Box<OnlineBankingSlovakiaData>),
+    #[serde(rename = "molpay_ebanking_fpx_MY")]
+    OnlineBankingFpx(Box<OnlineBankingFpxData>),
+    #[serde(rename = "molpay_ebanking_TH")]
+    OnlineBankingThailand(Box<OnlineBankingThailandData>),
+    #[serde(rename = "paybybank")]
+    OpenBankingUK(Box<OpenBankingUKData>),
+    #[serde(rename = "trustly")]
+    Trustly,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlikRedirectionData {
+    blik_code: Secret<String>,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankRedirectionWithIssuer {
+    issuer: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OnlineBankingCzechRepublicData {
+    issuer: OnlineBankingCzechRepublicBanks,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OnlineBankingCzechRepublicBanks {
+    KB,
+    CS,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OnlineBankingPolandData {
+    issuer: OnlineBankingPolandBanks,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub enum OnlineBankingPolandBanks {
+    #[serde(rename = "154")]
+    BlikPSP,
+    #[serde(rename = "31")]
+    PlaceZIPKO,
+    #[serde(rename = "243")]
+    MBank,
+    #[serde(rename = "112")]
+    PayWithING,
+    #[serde(rename = "20")]
+    SantanderPrzelew24,
+    #[serde(rename = "65")]
+    BankPEKAOSA,
+    #[serde(rename = "85")]
+    BankMillennium,
+    #[serde(rename = "88")]
+    PayWithAliorBank,
+    #[serde(rename = "143")]
+    BankiSpoldzielcze,
+    #[serde(rename = "26")]
+    PayWithInteligo,
+    #[serde(rename = "33")]
+    BNPParibasPoland,
+    #[serde(rename = "144")]
+    BankNowySA,
+    #[serde(rename = "45")]
+    CreditAgricole,
+    #[serde(rename = "99")]
+    PayWithBOS,
+    #[serde(rename = "119")]
+    PayWithCitiHandlowy,
+    #[serde(rename = "131")]
+    PayWithPlusBank,
+    #[serde(rename = "64")]
+    ToyotaBank,
+    #[serde(rename = "153")]
+    VeloBank,
+    #[serde(rename = "141")]
+    ETransferPocztowy24,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OnlineBankingSlovakiaData {
+    issuer: OnlineBankingSlovakiaBanks,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OnlineBankingSlovakiaBanks {
+    Vub,
+    Posto,
+    Sporo,
+    Tatra,
+    Viamo,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OnlineBankingFpxData {
+    issuer: OnlineBankingFpxIssuer,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OnlineBankingFpxIssuer {
+    FpxAbb,
+    FpxAgrobank,
+    FpxAbmb,
+    FpxAmb,
+    FpxBimb,
+    FpxBmmb,
+    FpxBkrm,
+    FpxBsn,
+    FpxCimbclicks,
+    FpxHlb,
+    FpxHsbc,
+    FpxKfh,
+    FpxMb2u,
+    FpxOcbc,
+    FpxPbb,
+    FpxRhb,
+    FpxScb,
+    FpxUob,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OnlineBankingThailandData {
+    issuer: OnlineBankingThailandIssuer,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize, Clone)]
+pub enum OnlineBankingThailandIssuer {
+    #[serde(rename = "molpay_bangkokbank")]
+    Bangkokbank,
+    #[serde(rename = "molpay_krungsribank")]
+    Krungsribank,
+    #[serde(rename = "molpay_krungthaibank")]
+    Krungthaibank,
+    #[serde(rename = "molpay_siamcommercialbank")]
+    Siamcommercialbank,
+    #[serde(rename = "molpay_kbank")]
+    Kbank,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OpenBankingUKData {
+    issuer: Option<OpenBankingUKIssuer>,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize, Clone)]
+pub enum OpenBankingUKIssuer {
+    #[serde(rename = "uk-test-open-banking-redirect")]
+    RedirectSuccess,
+    #[serde(rename = "uk-test-open-banking-redirect-failed")]
+    RedirectFailure,
+    #[serde(rename = "uk-test-open-banking-redirect-cancelled")]
+    RedirectCancelled,
+    #[serde(rename = "uk-aib-oauth2")]
+    Aib,
+    #[serde(rename = "uk-bankofscotland-oauth2")]
+    BankOfScotland,
+    #[serde(rename = "uk-barclays-oauth2")]
+    Barclays,
+    #[serde(rename = "uk-danskebank-oauth2")]
+    DanskeBank,
+    #[serde(rename = "uk-firstdirect-oauth2")]
+    FirstDirect,
+    #[serde(rename = "uk-firsttrust-oauth2")]
+    FirstTrust,
+    #[serde(rename = "uk-hsbc-oauth2")]
+    HsbcBank,
+    #[serde(rename = "uk-halifax-oauth2")]
+    Halifax,
+    #[serde(rename = "uk-lloyds-oauth2")]
+    Lloyds,
+    #[serde(rename = "uk-monzo-oauth2")]
+    Monzo,
+    #[serde(rename = "uk-natwest-oauth2")]
+    NatWest,
+    #[serde(rename = "uk-nationwide-oauth2")]
+    NationwideBank,
+    #[serde(rename = "uk-revolut-oauth2")]
+    Revolut,
+    #[serde(rename = "uk-rbs-oauth2")]
+    RoyalBankOfScotland,
+    #[serde(rename = "uk-santander-oauth2")]
+    SantanderPrzelew24,
+    #[serde(rename = "uk-starling-oauth2")]
+    Starling,
+    #[serde(rename = "uk-tsb-oauth2")]
+    TsbBank,
+    #[serde(rename = "uk-tesco-oauth2")]
+    TescoBank,
+    #[serde(rename = "uk-ulster-oauth2")]
+    UlsterBank,
+}
+
+pub struct AdyenTestBankNames(String);
+
+impl TryFrom<&common_enums::BankNames> for AdyenTestBankNames {
+    type Error = Error;
+    fn try_from(bank: &common_enums::BankNames) -> Result<Self, Self::Error> {
+        Ok(match bank {
+            common_enums::BankNames::AbnAmro => Self("1121".to_string()),
+            common_enums::BankNames::AsnBank => Self("1151".to_string()),
+            common_enums::BankNames::Bunq => Self("1152".to_string()),
+            common_enums::BankNames::Ing => Self("1154".to_string()),
+            common_enums::BankNames::Knab => Self("1155".to_string()),
+            common_enums::BankNames::N26 => Self("1156".to_string()),
+            common_enums::BankNames::NationaleNederlanden => Self("1157".to_string()),
+            common_enums::BankNames::Rabobank => Self("1157".to_string()),
+            common_enums::BankNames::Regiobank => Self("1158".to_string()),
+            common_enums::BankNames::Revolut => Self("1159".to_string()),
+            common_enums::BankNames::SnsBank => Self("1159".to_string()),
+            common_enums::BankNames::TriodosBank => Self("1159".to_string()),
+            common_enums::BankNames::VanLanschot => Self("1159".to_string()),
+            common_enums::BankNames::Yoursafe => Self("1159".to_string()),
+            common_enums::BankNames::BankAustria => {
+                Self("e6819e7a-f663-414b-92ec-cf7c82d2f4e5".to_string())
+            }
+            common_enums::BankNames::BawagPskAg => {
+                Self("ba7199cc-f057-42f2-9856-2378abf21638".to_string())
+            }
+            common_enums::BankNames::Dolomitenbank => {
+                Self("d5d5b133-1c0d-4c08-b2be-3c9b116dc326".to_string())
+            }
+            common_enums::BankNames::EasybankAg => {
+                Self("eff103e6-843d-48b7-a6e6-fbd88f511b11".to_string())
+            }
+            common_enums::BankNames::ErsteBankUndSparkassen => {
+                Self("3fdc41fc-3d3d-4ee3-a1fe-cd79cfd58ea3".to_string())
+            }
+            common_enums::BankNames::HypoTirolBankAg => {
+                Self("6765e225-a0dc-4481-9666-e26303d4f221".to_string())
+            }
+            common_enums::BankNames::PosojilnicaBankEGen => {
+                Self("65ef4682-4944-499f-828f-5d74ad288376".to_string())
+            }
+            common_enums::BankNames::RaiffeisenBankengruppeOsterreich => {
+                Self("ee9fc487-ebe0-486c-8101-17dce5141a67".to_string())
+            }
+            common_enums::BankNames::SchoellerbankAg => {
+                Self("1190c4d1-b37a-487e-9355-e0a067f54a9f".to_string())
+            }
+            common_enums::BankNames::SpardaBankWien => {
+                Self("8b0bfeea-fbb0-4337-b3a1-0e25c0f060fc".to_string())
+            }
+            common_enums::BankNames::VolksbankGruppe => {
+                Self("e2e97aaa-de4c-4e18-9431-d99790773433".to_string())
+            }
+            common_enums::BankNames::VolkskreditbankAg => {
+                Self("4a0a975b-0594-4b40-9068-39f77b3a91f9".to_string())
+            }
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "payment method".into(),
+            ))?,
+        })
+    }
+}
+
+impl TryFrom<&common_enums::BankNames> for OnlineBankingCzechRepublicBanks {
+    type Error = Error;
+    fn try_from(bank_name: &common_enums::BankNames) -> Result<Self, Self::Error> {
+        match bank_name {
+            common_enums::BankNames::KomercniBanka => Ok(Self::KB),
+            common_enums::BankNames::CeskaSporitelna => Ok(Self::CS),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "payment method".into(),
+            ))?,
+        }
+    }
+}
+
+impl TryFrom<&common_enums::BankNames> for OnlineBankingPolandBanks {
+    type Error = Error;
+    fn try_from(bank_name: &common_enums::BankNames) -> Result<Self, Self::Error> {
+        match bank_name {
+            common_enums::BankNames::BlikPSP => Ok(Self::BlikPSP),
+            common_enums::BankNames::PlaceZIPKO => Ok(Self::PlaceZIPKO),
+            common_enums::BankNames::MBank => Ok(Self::MBank),
+            common_enums::BankNames::PayWithING => Ok(Self::PayWithING),
+            common_enums::BankNames::SantanderPrzelew24 => Ok(Self::SantanderPrzelew24),
+            common_enums::BankNames::BankPEKAOSA => Ok(Self::BankPEKAOSA),
+            common_enums::BankNames::BankMillennium => Ok(Self::BankMillennium),
+            common_enums::BankNames::PayWithAliorBank => Ok(Self::PayWithAliorBank),
+            common_enums::BankNames::BankiSpoldzielcze => Ok(Self::BankiSpoldzielcze),
+            common_enums::BankNames::PayWithInteligo => Ok(Self::PayWithInteligo),
+            common_enums::BankNames::BNPParibasPoland => Ok(Self::BNPParibasPoland),
+            common_enums::BankNames::BankNowySA => Ok(Self::BankNowySA),
+            common_enums::BankNames::CreditAgricole => Ok(Self::CreditAgricole),
+            common_enums::BankNames::PayWithBOS => Ok(Self::PayWithBOS),
+            common_enums::BankNames::PayWithCitiHandlowy => Ok(Self::PayWithCitiHandlowy),
+            common_enums::BankNames::PayWithPlusBank => Ok(Self::PayWithPlusBank),
+            common_enums::BankNames::ToyotaBank => Ok(Self::ToyotaBank),
+            common_enums::BankNames::VeloBank => Ok(Self::VeloBank),
+            common_enums::BankNames::ETransferPocztowy24 => Ok(Self::ETransferPocztowy24),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "payment method".into(),
+            ))?,
+        }
+    }
+}
+
+impl TryFrom<&common_enums::BankNames> for OnlineBankingSlovakiaBanks {
+    type Error = Error;
+    fn try_from(bank_name: &common_enums::BankNames) -> Result<Self, Self::Error> {
+        match bank_name {
+            common_enums::BankNames::EPlatbyVUB => Ok(Self::Vub),
+            common_enums::BankNames::PostovaBanka => Ok(Self::Posto),
+            common_enums::BankNames::SporoPay => Ok(Self::Sporo),
+            common_enums::BankNames::TatraPay => Ok(Self::Tatra),
+            common_enums::BankNames::Viamo => Ok(Self::Viamo),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "payment method".into(),
+            ))?,
+        }
+    }
+}
+
+impl TryFrom<&common_enums::BankNames> for OnlineBankingFpxIssuer {
+    type Error = Error;
+    fn try_from(bank_name: &common_enums::BankNames) -> Result<Self, Self::Error> {
+        match bank_name {
+            common_enums::BankNames::AffinBank => Ok(Self::FpxAbb),
+            common_enums::BankNames::AgroBank => Ok(Self::FpxAgrobank),
+            common_enums::BankNames::AllianceBank => Ok(Self::FpxAbmb),
+            common_enums::BankNames::AmBank => Ok(Self::FpxAmb),
+            common_enums::BankNames::BankIslam => Ok(Self::FpxBimb),
+            common_enums::BankNames::BankMuamalat => Ok(Self::FpxBmmb),
+            common_enums::BankNames::BankRakyat => Ok(Self::FpxBkrm),
+            common_enums::BankNames::BankSimpananNasional => Ok(Self::FpxBsn),
+            common_enums::BankNames::CimbBank => Ok(Self::FpxCimbclicks),
+            common_enums::BankNames::HongLeongBank => Ok(Self::FpxHlb),
+            common_enums::BankNames::HsbcBank => Ok(Self::FpxHsbc),
+            common_enums::BankNames::KuwaitFinanceHouse => Ok(Self::FpxKfh),
+            common_enums::BankNames::Maybank => Ok(Self::FpxMb2u),
+            common_enums::BankNames::OcbcBank => Ok(Self::FpxOcbc),
+            common_enums::BankNames::PublicBank => Ok(Self::FpxPbb),
+            common_enums::BankNames::RhbBank => Ok(Self::FpxRhb),
+            common_enums::BankNames::StandardCharteredBank => Ok(Self::FpxScb),
+            common_enums::BankNames::UobBank => Ok(Self::FpxUob),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "payment method".into(),
+            ))?,
+        }
+    }
+}
+
+impl TryFrom<&common_enums::BankNames> for OnlineBankingThailandIssuer {
+    type Error = Error;
+    fn try_from(bank_name: &common_enums::BankNames) -> Result<Self, Self::Error> {
+        match bank_name {
+            common_enums::BankNames::BangkokBank => Ok(Self::Bangkokbank),
+            common_enums::BankNames::KrungsriBank => Ok(Self::Krungsribank),
+            common_enums::BankNames::KrungThaiBank => Ok(Self::Krungthaibank),
+            common_enums::BankNames::TheSiamCommercialBank => Ok(Self::Siamcommercialbank),
+            common_enums::BankNames::KasikornBank => Ok(Self::Kbank),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "payment method".into(),
+            ))?,
+        }
+    }
+}
+
+impl TryFrom<&common_enums::BankNames> for OpenBankingUKIssuer {
+    type Error = Error;
+    fn try_from(bank_name: &common_enums::BankNames) -> Result<Self, Self::Error> {
+        match bank_name {
+            common_enums::BankNames::OpenBankSuccess => Ok(Self::RedirectSuccess),
+            common_enums::BankNames::OpenBankFailure => Ok(Self::RedirectFailure),
+            common_enums::BankNames::OpenBankCancelled => Ok(Self::RedirectCancelled),
+            common_enums::BankNames::Aib => Ok(Self::Aib),
+            common_enums::BankNames::BankOfScotland => Ok(Self::BankOfScotland),
+            common_enums::BankNames::Barclays => Ok(Self::Barclays),
+            common_enums::BankNames::DanskeBank => Ok(Self::DanskeBank),
+            common_enums::BankNames::FirstDirect => Ok(Self::FirstDirect),
+            common_enums::BankNames::FirstTrust => Ok(Self::FirstTrust),
+            common_enums::BankNames::HsbcBank => Ok(Self::HsbcBank),
+            common_enums::BankNames::Halifax => Ok(Self::Halifax),
+            common_enums::BankNames::Lloyds => Ok(Self::Lloyds),
+            common_enums::BankNames::Monzo => Ok(Self::Monzo),
+            common_enums::BankNames::NatWest => Ok(Self::NatWest),
+            common_enums::BankNames::NationwideBank => Ok(Self::NationwideBank),
+            common_enums::BankNames::Revolut => Ok(Self::Revolut),
+            common_enums::BankNames::RoyalBankOfScotland => Ok(Self::RoyalBankOfScotland),
+            common_enums::BankNames::SantanderPrzelew24 => Ok(Self::SantanderPrzelew24),
+            common_enums::BankNames::Starling => Ok(Self::Starling),
+            common_enums::BankNames::TsbBank => Ok(Self::TsbBank),
+            common_enums::BankNames::TescoBank => Ok(Self::TescoBank),
+            common_enums::BankNames::UlsterBank => Ok(Self::UlsterBank),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "payment method".into(),
+            ))?,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -723,6 +1136,135 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
+        &BankRedirectData,
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    )> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+    fn try_from(
+        (bank_redirect_data, item): (
+            &BankRedirectData,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match bank_redirect_data {
+            BankRedirectData::BancontactCard {
+                card_number,
+                card_exp_month,
+                card_exp_year,
+                ..
+            } => {
+                let card_holder_name = item.resource_common_data.get_optional_billing_full_name();
+                // BancontactCard is hardcoded to DefaultPCIHolder, so direct construction
+                let card_num = card_number
+                    .as_ref()
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "bancontact_card.card_number",
+                    })?
+                    .clone();
+                let raw_card_number = RawCardNumber(card_num);
+                Ok(AdyenPaymentMethod::BancontactCard(Box::new(AdyenCard {
+                    number: raw_card_number,
+                    expiry_month: card_exp_month
+                        .as_ref()
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "bancontact_card.card_exp_month",
+                        })?
+                        .clone(),
+                    expiry_year: card_exp_year
+                        .as_ref()
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "bancontact_card.card_exp_year",
+                        })?
+                        .clone(),
+                    holder_name: card_holder_name,
+                    cvc: None,
+                    brand: Some(CardBrand::Bcmc),
+                    network_payment_reference: None,
+                })))
+            }
+            BankRedirectData::Bizum { .. } => Ok(AdyenPaymentMethod::Bizum),
+            BankRedirectData::Blik { blik_code } => {
+                Ok(AdyenPaymentMethod::Blik(Box::new(BlikRedirectionData {
+                    blik_code: Secret::new(blik_code.clone().ok_or(
+                        errors::ConnectorError::MissingRequiredField {
+                            field_name: "blik_code",
+                        },
+                    )?),
+                })))
+            }
+            BankRedirectData::Eps { bank_name, .. } => Ok(AdyenPaymentMethod::Eps(Box::new(
+                BankRedirectionWithIssuer {
+                    issuer: Some(
+                        AdyenTestBankNames::try_from(&bank_name.ok_or(
+                            errors::ConnectorError::MissingRequiredField {
+                                field_name: "eps.bank_name",
+                            },
+                        )?)?
+                        .0,
+                    ),
+                },
+            ))),
+            BankRedirectData::Ideal { .. } => Ok(AdyenPaymentMethod::Ideal),
+            BankRedirectData::OnlineBankingCzechRepublic { issuer } => {
+                Ok(AdyenPaymentMethod::OnlineBankingCzechRepublic(Box::new(
+                    OnlineBankingCzechRepublicData {
+                        issuer: OnlineBankingCzechRepublicBanks::try_from(issuer)?,
+                    },
+                )))
+            }
+            BankRedirectData::OnlineBankingFinland { .. } => {
+                Ok(AdyenPaymentMethod::OnlineBankingFinland)
+            }
+            BankRedirectData::OnlineBankingPoland { issuer } => Ok(
+                AdyenPaymentMethod::OnlineBankingPoland(Box::new(OnlineBankingPolandData {
+                    issuer: OnlineBankingPolandBanks::try_from(issuer)?,
+                })),
+            ),
+            BankRedirectData::OnlineBankingSlovakia { issuer } => Ok(
+                AdyenPaymentMethod::OnlineBankingSlovakia(Box::new(OnlineBankingSlovakiaData {
+                    issuer: OnlineBankingSlovakiaBanks::try_from(issuer)?,
+                })),
+            ),
+            BankRedirectData::OnlineBankingFpx { issuer } => Ok(
+                AdyenPaymentMethod::OnlineBankingFpx(Box::new(OnlineBankingFpxData {
+                    issuer: OnlineBankingFpxIssuer::try_from(issuer)?,
+                })),
+            ),
+            BankRedirectData::OnlineBankingThailand { issuer } => Ok(
+                AdyenPaymentMethod::OnlineBankingThailand(Box::new(OnlineBankingThailandData {
+                    issuer: OnlineBankingThailandIssuer::try_from(issuer)?,
+                })),
+            ),
+            BankRedirectData::OpenBankingUk { issuer, .. } => Ok(
+                AdyenPaymentMethod::OpenBankingUK(Box::new(OpenBankingUKData {
+                    issuer: match issuer {
+                        Some(bank_name) => Some(OpenBankingUKIssuer::try_from(bank_name)?),
+                        None => None,
+                    },
+                })),
+            ),
+            BankRedirectData::Trustly { .. } => Ok(AdyenPaymentMethod::Trustly),
+            BankRedirectData::Giropay { .. }
+            | BankRedirectData::Eft { .. }
+            | BankRedirectData::Interac { .. }
+            | BankRedirectData::LocalBankRedirect {}
+            | BankRedirectData::Przelewy24 { .. }
+            | BankRedirectData::Sofort { .. }
+            | BankRedirectData::OpenBanking { .. } => {
+                Err(errors::ConnectorError::NotImplemented("payment method".into()).into())
+            }
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
         AdyenRouterData<
             RouterDataV2<
                 Authorize,
@@ -986,6 +1528,161 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &BankRedirectData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &BankRedirectData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, bank_redirect_data) = value;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let shopper_reference = build_shopper_reference(&item.router_data);
+        let (recurring_processing_model, store_payment_method, _) =
+            get_recurring_processing_model(&item.router_data)?;
+        let browser_info = get_browser_info(&item.router_data)?;
+        let additional_data = get_additional_data(&item.router_data);
+        let return_url = item.router_data.request.get_router_return_url()?;
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+        AdyenPaymentMethod::try_from((bank_redirect_data, &item.router_data))?,
+        ));
+        let (shopper_locale, country) = get_redirect_extra_details(&item.router_data)?;
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+
+        let (store, splits) = match item.router_data.request.split_payments.as_ref() {
+            Some(_split_payment) => {
+                // todo: Handle split payments if needed
+                (adyen_metadata.store.clone(), None)
+            }
+            _ => (adyen_metadata.store.clone(), None),
+        };
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+
+        let delivery_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .get_optional_shipping(),
+        )
+        .and_then(Result::ok);
+        let telephone_number = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_phone_number();
+
+        Ok(AdyenPaymentRequest {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info,
+            additional_data,
+            mpi_data: None,
+            telephone_number,
+            shopper_name: get_shopper_name(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            ),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale,
+            social_security_number: None,
+            billing_address,
+            delivery_address,
+            country_code: country,
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: item
+                .router_data
+                .request
+                .billing_descriptor
+                .clone()
+                .and_then(|descriptor| descriptor.statement_descriptor),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store,
+            splits,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value))),
+            platform_chargeback_logic,
+            session_validity: None,
+        })
+    }
+}
+
+fn get_redirect_extra_details<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
+    item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+) -> CustomResult<(Option<String>, Option<common_enums::CountryAlpha2>), errors::ConnectorError> {
+    match &item.request.payment_method_data {
+        PaymentMethodData::BankRedirect(
+            BankRedirectData::Trustly { .. } | BankRedirectData::OpenBankingUk { .. },
+        ) => {
+            let country = item
+                .resource_common_data
+                .address
+                .get_payment_billing()
+                .and_then(|billing| billing.address.as_ref())
+                .and_then(|addr| addr.country);
+            Ok((
+                item.request.get_optional_language_from_browser_info(),
+                country,
+            ))
+        }
+        _ => Ok((None, None)),
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AdyenRouterData<
             RouterDataV2<
@@ -1023,8 +1720,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             None => match item.router_data.request.payment_method_data.clone() {
                 PaymentMethodData::Card(ref card) => Self::try_from((item, card)),
                 PaymentMethodData::Wallet(ref wallet_data) => Self::try_from((item, wallet_data)),
+                PaymentMethodData::BankRedirect(ref bank_redirect) => {
+                    Self::try_from((item, bank_redirect))
+                }
                 PaymentMethodData::PayLater(_)
-                | PaymentMethodData::BankRedirect(_)
                 | PaymentMethodData::BankDebit(_)
                 | PaymentMethodData::BankTransfer(_)
                 | PaymentMethodData::CardRedirect(_)
