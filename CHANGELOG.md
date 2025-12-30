@@ -4,6 +4,17 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.17.0-hotfix1
+
+### Hotfix
+
+- Adyen url fix on non test mode for authorize, void, etc ([`e171847`](https://github.com/juspay/connector-service/commit/e1718473fcca171e766f3aa0eabeeba0979765ec))
+- Adyen dispute url error fix, as testmode field not supported yet ([`e1328b6`](https://github.com/juspay/connector-service/commit/e1328b6d19322cf339209142ec12de2f4d77bbff))
+
+**Full Changelog:** [`2025.12.17.0...2025.12.17.0-hotfix1`](https://github.com/juspay/connector-service/compare/2025.12.17.0...2025.12.17.0-hotfix1)
+
+- - -
+
 ## 2025.12.17.0
 
 ### Features
