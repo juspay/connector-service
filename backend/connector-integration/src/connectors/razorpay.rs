@@ -489,7 +489,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
-        
+
         // Check if request_ref_id is provided to determine URL pattern
         match &req.resource_common_data.reference_id {
             Some(ref_id) => {
