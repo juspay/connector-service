@@ -4,6 +4,19 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.30.0
+
+### Features
+
+- **connector:**
+  - [AIRWALLEX] Bank-Redirect ([#388](https://github.com/juspay/connector-service/pull/388)) ([`7e26d93`](https://github.com/juspay/connector-service/commit/7e26d9325acff64c11a9194c91b420f6295ab83e))
+  - [GLOBALPAY] Bank-Redirect ([#393](https://github.com/juspay/connector-service/pull/393)) ([`be59b37`](https://github.com/juspay/connector-service/commit/be59b3715966ee8282c19510c720c5c34bac5210))
+  - Refactor Calida ([#394](https://github.com/juspay/connector-service/pull/394)) ([`625d71f`](https://github.com/juspay/connector-service/commit/625d71f81a7d269e14047461f16a278f53601468))
+
+**Full Changelog:** [`2025.12.25.0...2025.12.30.0`](https://github.com/juspay/connector-service/compare/2025.12.25.0...2025.12.30.0)
+
+- - -
+
 ## 2025.12.25.0
 
 ### Features
