@@ -951,10 +951,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ============================================================================
-// Unimplemented Flows - Return Not Implemented Error
-// ============================================================================
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         Authorize,
@@ -963,17 +959,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Redsys<T>
 {
-    fn build_request_v2(
-        &self,
-        _req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("Authorize flow".to_string()).into())
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -984,17 +969,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Redsys<T>
 {
-    fn build_request_v2(
-        &self,
-        _req: &RouterDataV2<
-            RepeatPayment,
-            PaymentFlowData,
-            RepeatPaymentData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("RepeatPayment flow".to_string()).into())
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -1005,15 +979,4 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentMethodTokenResponse,
     > for Redsys<T>
 {
-    fn build_request_v2(
-        &self,
-        _req: &RouterDataV2<
-            connector_flow::PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
-        >,
-    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("PaymentMethodToken flow".to_string()).into())
-    }
 }
