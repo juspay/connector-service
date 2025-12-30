@@ -108,6 +108,7 @@ pub enum ConnectorEnum {
     Bambora,
     Payme,
     Revolut,
+    Loonio,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -179,6 +180,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
             grpc_api_types::payments::Connector::Payme => Ok(Self::Payme),
             grpc_api_types::payments::Connector::Revolut => Ok(Self::Revolut),
+            grpc_api_types::payments::Connector::Loonio => Ok(Self::Loonio),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
