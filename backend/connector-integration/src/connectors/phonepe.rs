@@ -310,7 +310,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            let merchant_transaction_id = &req.resource_common_data.connector_request_reference_id;
+            let merchant_transaction_id = req.resource_common_data.get_reference_id()?;
 
             let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
             let merchant_id = auth.merchant_id.peek();
