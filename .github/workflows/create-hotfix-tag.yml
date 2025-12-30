@@ -4,9 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Hotfix branch to create tag from (e.g., hotfix-2024.12.30.1)'
+        description: "Hotfix branch to create tag from (e.g., hotfix-2024.12.30.1)"
         required: true
         type: string
+
+permissions:
+  contents: read
 
 jobs:
   create_tag:
