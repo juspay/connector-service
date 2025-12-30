@@ -527,14 +527,10 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            let endpoint = build_env_specific_endpoint(
-                dispute_url,
-                req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
-            )?;
-            Ok(format!("{endpoint}ca/services/DisputeService/v30/defendDispute"))
+            Ok(format!("{dispute_url}ca/services/DisputeService/v30/defendDispute"))
         }
     }
 );
@@ -1051,14 +1047,10 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            let endpoint = build_env_specific_endpoint(
-                dispute_url,
-                req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
-            )?;
-            Ok(format!("{endpoint}ca/services/DisputeService/v30/acceptDispute"))
+            Ok(format!("{dispute_url}ca/services/DisputeService/v30/acceptDispute"))
         }
     }
 );
@@ -1086,14 +1078,10 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            let endpoint = build_env_specific_endpoint(
-                dispute_url,
-                req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
-            )?;
-            Ok(format!("{endpoint}ca/services/DisputeService/v30/supplyDefenseDocument"))
+            Ok(format!("{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"))
         }
     }
 );
