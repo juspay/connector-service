@@ -1587,6 +1587,9 @@ message PaymentServiceGetRequest {
   map<string, string> merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
   optional SecretString connector_metadata = 13; // Connector-specific metadata for the transaction
   optional SyncRequestType sync_type = 14; // Indicates the type of payment sync request
+
+  // Connector Reference Id
+  optional string connector_order_reference_id = 15; // Connector's reference id for order
 }
 
 // Response message for a payment status synchronization.
