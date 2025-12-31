@@ -4,6 +4,17 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.31.0
+
+### Features
+
+- **connector:** [PAYPAL] Bank-Redirect ([#397](https://github.com/juspay/connector-service/pull/397)) ([`83c945f`](https://github.com/juspay/connector-service/commit/83c945fe302493e8d268895bcb3313254721b19c))
+- **core:** Add connector_order_reference_id for Psync ([#395](https://github.com/juspay/connector-service/pull/395)) ([`3dcfd30`](https://github.com/juspay/connector-service/commit/3dcfd30ef1405c81ba711c370397cabba277e854))
+
+**Full Changelog:** [`2025.12.30.0...2025.12.31.0`](https://github.com/juspay/connector-service/compare/2025.12.30.0...2025.12.31.0)
+
+- - -
+
 ## 2025.12.30.0
 
 ### Features
