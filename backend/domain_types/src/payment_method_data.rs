@@ -14,7 +14,6 @@ use utoipa::ToSchema;
 
 use crate::{
     errors::ConnectorError,
-    router_data::NetworkTokenNumber,
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
 };
 
@@ -212,6 +211,21 @@ pub enum PaymentMethodData<T: PaymentMethodDataTypes> {
     MobilePayment(MobilePaymentData),
 }
 
+impl<T: PaymentMethodDataTypes> PaymentMethodData<T> {
+    /// Extracts the UpiSource from UPI payment method data
+    /// Returns None if the payment method is not UPI or if upi_source is not set
+    pub fn get_upi_source(&self) -> Option<&UpiSource> {
+        match self {
+            Self::Upi(upi_data) => match upi_data {
+                UpiData::UpiIntent(intent_data) => intent_data.upi_source.as_ref(),
+                UpiData::UpiQr(qr_data) => qr_data.upi_source.as_ref(),
+                UpiData::UpiCollect(collect_data) => collect_data.upi_source.as_ref(),
+            },
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OpenBankingData {
@@ -231,47 +245,46 @@ pub enum MobilePaymentData {
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Default)]
 pub struct NetworkTokenData {
-    pub network_token: cards::NetworkToken,
-    pub network_token_exp_month: Secret<String>,
-    pub network_token_exp_year: Secret<String>,
-    pub cryptogram: Option<Secret<String>>,
-    pub card_issuer: Option<String>, //since network token is tied to card, so its issuer will be same as card issuer
-    pub card_network: Option<CardNetwork>,
-    pub card_type: Option<CardType>,
-    pub card_issuing_country: Option<CountryAlpha2>,
+    pub token_number: cards::NetworkToken,
+    pub token_exp_month: Secret<String>,
+    pub token_exp_year: Secret<String>,
+    pub token_cryptogram: Option<Secret<String>>,
+    pub card_issuer: Option<String>,
+    pub card_network: Option<common_enums::CardNetwork>,
+    pub card_type: Option<String>,
+    pub card_issuing_country: Option<String>,
     pub bank_code: Option<String>,
-    pub card_holder_name: Option<Secret<String>>,
     pub nick_name: Option<Secret<String>>,
     pub eci: Option<String>,
 }
 
 impl NetworkTokenData {
     pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
-        get_card_issuer(self.network_token.peek())
+        get_card_issuer(self.token_number.peek())
     }
 
     pub fn get_expiry_year_4_digit(&self) -> Secret<String> {
-        let mut year = self.network_token_exp_year.peek().clone();
+        let mut year = self.token_exp_year.peek().clone();
         if year.len() == 2 {
             year = format!("20{year}");
         }
         Secret::new(year)
     }
 
-    pub fn get_network_token(&self) -> NetworkTokenNumber {
-        self.network_token.clone()
+    pub fn get_network_token(&self) -> cards::NetworkToken {
+        self.token_number.clone()
     }
 
     pub fn get_network_token_expiry_month(&self) -> Secret<String> {
-        self.network_token_exp_month.clone()
+        self.token_exp_month.clone()
     }
 
     pub fn get_network_token_expiry_year(&self) -> Secret<String> {
-        self.network_token_exp_year.clone()
+        self.token_exp_year.clone()
     }
 
     pub fn get_cryptogram(&self) -> Option<Secret<String>> {
-        self.cryptogram.clone()
+        self.token_cryptogram.clone()
     }
 }
 
@@ -347,16 +360,41 @@ pub enum UpiData {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct UpiCollectData {
-    pub vpa_id: Option<Secret<String, UpiVpaMaskingStrategy>>,
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum UpiSource {
+    UpiCc,      // UPI Credit Card (RuPay credit on UPI)
+    UpiCl,      // UPI Credit Line
+    UpiAccount, // UPI Bank Account (Savings)
+    UpiCcCl,    // UPI Credit Card + Credit Line
+}
+
+impl UpiSource {
+    /// Converts UpiSource to payment mode string for PhonePe connector
+    /// Maps: UPI_CC/UPI_CL/UPI_CC_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
+    pub fn to_payment_mode(&self) -> String {
+        match self {
+            Self::UpiCc | Self::UpiCl | Self::UpiCcCl => "ALL".to_string(),
+            Self::UpiAccount => "ACCOUNT".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct UpiIntentData {}
+#[serde(rename_all = "snake_case")]
+pub struct UpiCollectData {
+    pub vpa_id: Option<Secret<String, UpiVpaMaskingStrategy>>,
+    pub upi_source: Option<UpiSource>,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct UpiQrData {}
+pub struct UpiIntentData {
+    pub upi_source: Option<UpiSource>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct UpiQrData {
+    pub upi_source: Option<UpiSource>,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum RealTimePaymentData {

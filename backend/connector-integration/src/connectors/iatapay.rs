@@ -108,7 +108,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Iatapay<T>
+    connector_types::RepeatPaymentV2<T> for Iatapay<T>
 {
 }
 
@@ -411,7 +411,7 @@ macros::macro_connector_implementation!(
             let merchant_id = auth.merchant_id.peek();
 
             // Extract connector_request_reference_id from request
-            let payment_id = &req.resource_common_data.connector_request_reference_id;
+            let payment_id = req.resource_common_data.get_reference_id()?;
 
             Ok(format!(
                 "{}/merchants/{}/payments/{}",
@@ -584,8 +584,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Iatapay<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Iatapay<T>
 {
 }
 
@@ -814,7 +818,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Iatapay<T>
 {

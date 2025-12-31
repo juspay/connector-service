@@ -154,8 +154,8 @@ fn create_payment_authorize_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("braintree_test_{}", get_timestamp()))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         metadata,
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
@@ -183,6 +183,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 

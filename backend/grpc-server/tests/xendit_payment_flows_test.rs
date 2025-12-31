@@ -141,8 +141,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(TEST_REQUEST_REF_ID.to_string())),
         }),
-        enrolled_for_3ds: true,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(true),
+        request_incremental_authorization: Some(false),
         customer_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
         // browser_info: TODO - BrowserInfo type not available in grpc_api_types
         capture_method: Some(i32::from(capture_method)),
@@ -171,6 +171,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 

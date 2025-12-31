@@ -56,8 +56,8 @@ pub use self::braintree::Braintree;
 pub mod volt;
 pub use self::volt::Volt;
 
-pub mod bluecode;
-pub use self::bluecode::Bluecode;
+pub mod calida;
+pub use self::calida::Calida;
 
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;
@@ -149,6 +149,9 @@ pub use self::nuvei::Nuvei;
 pub mod iatapay;
 pub use self::iatapay::Iatapay;
 
+pub mod jpmorgan;
+pub use self::jpmorgan::Jpmorgan;
+
 pub mod nmi;
 pub use self::nmi::Nmi;
 
@@ -181,3 +184,6 @@ pub use self::bambora::Bambora;
 
 pub mod payme;
 pub use self::payme::Payme;
+
+pub mod revolut;
+pub use self::revolut::Revolut;

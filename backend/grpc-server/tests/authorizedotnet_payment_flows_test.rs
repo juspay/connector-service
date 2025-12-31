@@ -20,15 +20,15 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        AcceptanceType, Address, AuthenticationType, BrowserInformation, CaptureMethod,
-        CardDetails, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage, Identifier,
-        MandateReference, PaymentAddress, PaymentMethod, PaymentMethodType,
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
-        PaymentServiceRepeatEverythingResponse, PaymentServiceVoidRequest, PaymentStatus,
-        RefundServiceGetRequest, RefundStatus,
+        identifier::IdType, mandate_reference_id::MandateIdType, payment_method,
+        payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
+        BrowserInformation, CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2,
+        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReferenceId, PaymentAddress,
+        PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
+        PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
+        PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
 use rand::{distributions::Alphanumeric, Rng};
@@ -179,10 +179,14 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         id_type: Some(IdType::Id(generate_unique_request_ref_id("repeat_req"))),
     };
 
-    let mandate_reference = MandateReference {
-        connector_mandate_request_reference_id: None,
-        mandate_id: Some(mandate_id.to_string()),
-        payment_method_id: None,
+    let mandate_reference = MandateReferenceId {
+        mandate_id_type: Some(MandateIdType::ConnectorMandateId(
+            ConnectorMandateReferenceId {
+                connector_mandate_request_reference_id: None,
+                connector_mandate_id: Some(mandate_id.to_string()),
+                payment_method_id: None,
+            },
+        )),
     };
 
     // Create metadata matching your JSON format
@@ -195,7 +199,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
 
     PaymentServiceRepeatEverythingRequest {
         request_ref_id: Some(request_ref_id),
-        mandate_reference: Some(mandate_reference),
+        mandate_reference_id: Some(mandate_reference),
         amount: REPEAT_AMOUNT,
         currency: i32::from(Currency::Usd),
         minor_amount: REPEAT_AMOUNT,
@@ -364,14 +368,14 @@ fn create_payment_authorize_request(
     // Set the transaction details
     request.auth_type = i32::from(AuthenticationType::NoThreeDs);
 
-    request.request_incremental_authorization = true;
+    request.request_incremental_authorization = Some(true);
 
-    request.enrolled_for_3ds = true;
+    request.enrolled_for_3ds = Some(true);
 
     // Set capture method
     if let common_enums::CaptureMethod::Manual = capture_method {
         request.capture_method = Some(i32::from(CaptureMethod::Manual));
-        // request.request_incremental_authorization = true;
+        // request.request_incremental_authorization = Some(true);
     } else {
         request.capture_method = Some(i32::from(CaptureMethod::Automatic));
     }
@@ -408,6 +412,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 
