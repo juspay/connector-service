@@ -1616,12 +1616,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             additional_data,
             mpi_data: None,
             telephone_number,
-            shopper_name: get_shopper_name(
-                item.router_data
-                    .resource_common_data
-                    .address
-                    .get_payment_billing(),
-            ),
+            shopper_name: None,
             shopper_email: item
                 .router_data
                 .resource_common_data
@@ -1631,7 +1626,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             billing_address,
             delivery_address,
             country_code: country,
-            line_items: None,
+            line_items: Some(get_line_items(&item)),
             shopper_reference,
             store_payment_method,
             channel: None,
@@ -3043,33 +3038,38 @@ fn get_recurring_processing_model<
 >(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> Result<RecurringDetails, Error> {
-    let shopper_reference = match item.resource_common_data.get_connector_customer_id() {
-        Ok(connector_customer_id) => Some(connector_customer_id),
-        Err(_) => {
-            let customer_id = item.request.get_customer_id()?;
-            Some(format!(
-                "{}_{}",
-                item.resource_common_data.merchant_id.get_string_repr(),
-                customer_id.get_string_repr()
-            ))
-        }
-    };
+    let shopper_reference = item.resource_common_data.get_connector_customer_id().ok();
 
     match (item.request.setup_future_usage, item.request.off_session) {
+        // Setup for future off-session usage
         (Some(common_enums::FutureUsage::OffSession), _) => {
             let store_payment_method = item.request.is_mandate_payment();
+            let shopper_reference = shopper_reference.ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_customer_id",
+                },
+            )?;
             Ok((
                 Some(AdyenRecurringModel::UnscheduledCardOnFile),
                 Some(store_payment_method),
-                shopper_reference,
+                Some(shopper_reference),
             ))
         }
-        (_, Some(true)) => Ok((
-            Some(AdyenRecurringModel::UnscheduledCardOnFile),
-            None,
-            shopper_reference,
-        )),
-        _ => Ok((None, None, None)),
+        // Off-session payment
+        (_, Some(true)) => {
+            let shopper_reference = shopper_reference.ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_customer_id",
+                },
+            )?;
+            Ok((
+                Some(AdyenRecurringModel::UnscheduledCardOnFile),
+                None,
+                Some(shopper_reference),
+            ))
+        }
+        // On-session payment
+        _ => Ok((None, None, shopper_reference)),
     }
 }
 
@@ -4480,6 +4480,40 @@ fn get_country_code(
     address: Option<&domain_types::payment_address::Address>,
 ) -> Option<common_enums::CountryAlpha2> {
     address.and_then(|billing| billing.address.as_ref().and_then(|address| address.country))
+}
+
+fn get_line_items<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+    item: &AdyenRouterData<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        T,
+    >,
+) -> Vec<LineItem> {
+    let order_details = item.router_data.resource_common_data.order_details.clone();
+    match order_details {
+        Some(od) => od
+            .iter()
+            .enumerate()
+            .map(|(i, data)| LineItem {
+                amount_including_tax: Some(data.amount),
+                amount_excluding_tax: Some(data.amount),
+                description: Some(data.product_name.clone()),
+                id: Some(format!("Items #{i}")),
+                tax_amount: None,
+                quantity: Some(data.quantity),
+            })
+            .collect(),
+        None => {
+            let line_item = LineItem {
+                amount_including_tax: Some(item.router_data.request.amount),
+                amount_excluding_tax: Some(item.router_data.request.amount),
+                description: item.router_data.resource_common_data.description.clone(),
+                id: Some(String::from("Items #1")),
+                tax_amount: None,
+                quantity: Some(1),
+            };
+            vec![line_item]
+        }
+    }
 }
 
 #[derive(Debug, serde::Deserialize)]
