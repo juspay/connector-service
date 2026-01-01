@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.01.0
+
+### Bug Fixes
+
+- Adyen url on non test mode for authorize,void,etc ([#402](https://github.com/juspay/connector-service/pull/402)) ([`e1a2e3c`](https://github.com/juspay/connector-service/commit/e1a2e3c4e2655a73859c38c9f42dee4097a8c493))
+
+**Full Changelog:** [`2025.12.31.0...2026.01.01.0`](https://github.com/juspay/connector-service/compare/2025.12.31.0...2026.01.01.0)
+
+- - -
+
 ## 2025.12.31.0
 
 ### Features
