@@ -7621,6 +7621,8 @@ impl<
         value: grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract values first to avoid partial move
+        let merchant_config_currency =
+            common_enums::Currency::foreign_try_from(value.merchant_config_currency())?;
         let amount = value.amount;
         let minor_amount = value.minor_amount;
         let currency = value.currency();
@@ -7774,6 +7776,8 @@ impl<
             enable_partial_authorization: value.enable_partial_authorization,
             payment_method_data,
             authentication_data,
+            merchant_account_id: value.merchant_account_id,
+            merchant_config_currency: Some(merchant_config_currency),
         })
     }
 }

@@ -1,3 +1,7 @@
+use crate::{
+    connectors::braintree::BraintreeRouterData, types::ResponseRouterData,
+    unimplemented_payment_method, utils,
+};
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -33,11 +37,7 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::Display;
 use time::PrimitiveDateTime;
-
-use crate::{
-    connectors::braintree::BraintreeRouterData, types::ResponseRouterData,
-    unimplemented_payment_method, utils,
-};
+use tracing::info;
 
 pub const BRAINTREE_CONNECTOR_NAME: &str = "braintree";
 
@@ -372,24 +372,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let metadata: BraintreeMeta =
-            if let (Some(merchant_account_id), Some(merchant_config_currency)) = (
-                item.router_data.request.merchant_account_id.clone(),
-                item.router_data.request.merchant_config_currency,
-            ) {
-                BraintreeMeta {
-                    merchant_account_id: merchant_account_id.into(),
-                    merchant_config_currency,
-                }
-            } else {
-                utils::to_connector_meta_from_secret(
-                    item.router_data
-                        .resource_common_data
-                        .connector_meta_data
-                        .clone(),
-                )
-                .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
-            };
+        let metadata: BraintreeMeta = if let (
+            Some(merchant_account_id),
+            Some(merchant_config_currency),
+        ) = (
+            item.router_data.request.merchant_account_id.clone(),
+            item.router_data.request.merchant_config_currency,
+        ) {
+            info!(
+                "BRAINTREE: Picking merchant_account_id and merchant_config_currency from payments request"
+              );
+            BraintreeMeta {
+                merchant_account_id: merchant_account_id.into(),
+                merchant_config_currency,
+            }
+        } else {
+            utils::to_connector_meta_from_secret(
+                item.router_data
+                    .resource_common_data
+                    .connector_meta_data
+                    .clone(),
+            )
+            .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
+        };
         validate_currency(
             item.router_data.request.currency,
             Some(metadata.merchant_config_currency),
@@ -2573,10 +2578,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let metadata: BraintreeMeta = utils::to_connector_meta_from_secret(
-            item.router_data.request.merchant_account_metadata.clone(),
-        )
-        .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?;
+        let metadata: BraintreeMeta = if let (
+            Some(merchant_account_id),
+            Some(merchant_config_currency),
+        ) = (
+            item.router_data.request.merchant_account_id.clone(),
+            item.router_data.request.merchant_config_currency,
+        ) {
+            info!(
+                "BRAINTREE: Picking merchant_account_id and merchant_config_currency from repeatpayments request"
+            );
+
+            BraintreeMeta {
+                merchant_account_id,
+                merchant_config_currency,
+            }
+        } else {
+            utils::to_connector_meta_from_secret(
+                item.router_data
+                    .resource_common_data
+                    .connector_meta_data
+                    .clone(),
+            )
+            .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
+        };
         validate_currency(
             item.router_data.request.currency,
             Some(metadata.merchant_config_currency),
