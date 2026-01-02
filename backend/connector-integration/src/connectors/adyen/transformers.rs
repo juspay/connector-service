@@ -21,7 +21,8 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankRedirectData, Card, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData
+        BankRedirectData, Card, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber, WalletData,
     },
     router_data::{ConnectorAuthType, ConnectorResponseData, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -37,7 +38,7 @@ use url::Url;
 use super::AdyenRouterData;
 use crate::{
     types::ResponseRouterData,
-    utils::{is_manual_capture, to_connector_meta_from_secret},
+    utils::{self, is_manual_capture, to_connector_meta_from_secret},
 };
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -379,7 +380,7 @@ impl TryFrom<&common_enums::BankNames> for AdyenTestBankNames {
                 Self("4a0a975b-0594-4b40-9068-39f77b3a91f9".to_string())
             }
             _ => Err(errors::ConnectorError::NotImplemented(
-                "payment method".into(),
+                utils::get_unimplemented_payment_method_error_message("Adyen"),
             ))?,
         })
     }
@@ -1168,7 +1169,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })?
                     .clone();
                 let raw_card_number = RawCardNumber(card_num);
-                Ok(AdyenPaymentMethod::BancontactCard(Box::new(AdyenCard {
+                Ok(Self::BancontactCard(Box::new(AdyenCard {
                     number: raw_card_number,
                     expiry_month: card_exp_month
                         .as_ref()
@@ -1188,18 +1189,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     network_payment_reference: None,
                 })))
             }
-            BankRedirectData::Bizum { .. } => Ok(AdyenPaymentMethod::Bizum),
-            BankRedirectData::Blik { blik_code } => {
-                Ok(AdyenPaymentMethod::Blik(Box::new(BlikRedirectionData {
-                    blik_code: Secret::new(blik_code.clone().ok_or(
-                        errors::ConnectorError::MissingRequiredField {
-                            field_name: "blik_code",
-                        },
-                    )?),
-                })))
-            }
-            BankRedirectData::Eps { bank_name, .. } => Ok(AdyenPaymentMethod::Eps(Box::new(
-                BankRedirectionWithIssuer {
+            BankRedirectData::Bizum { .. } => Ok(Self::Bizum),
+            BankRedirectData::Blik { blik_code } => Ok(Self::Blik(Box::new(BlikRedirectionData {
+                blik_code: Secret::new(blik_code.clone().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "blik_code",
+                    },
+                )?),
+            }))),
+            BankRedirectData::Eps { bank_name, .. } => {
+                Ok(Self::Eps(Box::new(BankRedirectionWithIssuer {
                     issuer: Some(
                         AdyenTestBankNames::try_from(&bank_name.ok_or(
                             errors::ConnectorError::MissingRequiredField {
@@ -1208,57 +1207,54 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         )?)?
                         .0,
                     ),
-                },
-            ))),
-            BankRedirectData::Ideal { .. } => Ok(AdyenPaymentMethod::Ideal),
-            BankRedirectData::OnlineBankingCzechRepublic { issuer } => {
-                Ok(AdyenPaymentMethod::OnlineBankingCzechRepublic(Box::new(
-                    OnlineBankingCzechRepublicData {
-                        issuer: OnlineBankingCzechRepublicBanks::try_from(issuer)?,
-                    },
-                )))
+                })))
             }
-            BankRedirectData::OnlineBankingFinland { .. } => {
-                Ok(AdyenPaymentMethod::OnlineBankingFinland)
-            }
-            BankRedirectData::OnlineBankingPoland { issuer } => Ok(
-                AdyenPaymentMethod::OnlineBankingPoland(Box::new(OnlineBankingPolandData {
+            BankRedirectData::Ideal { .. } => Ok(Self::Ideal),
+            BankRedirectData::OnlineBankingCzechRepublic { issuer } => Ok(
+                Self::OnlineBankingCzechRepublic(Box::new(OnlineBankingCzechRepublicData {
+                    issuer: OnlineBankingCzechRepublicBanks::try_from(issuer)?,
+                })),
+            ),
+            BankRedirectData::OnlineBankingFinland { .. } => Ok(Self::OnlineBankingFinland),
+            BankRedirectData::OnlineBankingPoland { issuer } => Ok(Self::OnlineBankingPoland(
+                Box::new(OnlineBankingPolandData {
                     issuer: OnlineBankingPolandBanks::try_from(issuer)?,
-                })),
-            ),
-            BankRedirectData::OnlineBankingSlovakia { issuer } => Ok(
-                AdyenPaymentMethod::OnlineBankingSlovakia(Box::new(OnlineBankingSlovakiaData {
+                }),
+            )),
+            BankRedirectData::OnlineBankingSlovakia { issuer } => Ok(Self::OnlineBankingSlovakia(
+                Box::new(OnlineBankingSlovakiaData {
                     issuer: OnlineBankingSlovakiaBanks::try_from(issuer)?,
-                })),
-            ),
-            BankRedirectData::OnlineBankingFpx { issuer } => Ok(
-                AdyenPaymentMethod::OnlineBankingFpx(Box::new(OnlineBankingFpxData {
+                }),
+            )),
+            BankRedirectData::OnlineBankingFpx { issuer } => {
+                Ok(Self::OnlineBankingFpx(Box::new(OnlineBankingFpxData {
                     issuer: OnlineBankingFpxIssuer::try_from(issuer)?,
-                })),
-            ),
-            BankRedirectData::OnlineBankingThailand { issuer } => Ok(
-                AdyenPaymentMethod::OnlineBankingThailand(Box::new(OnlineBankingThailandData {
+                })))
+            }
+            BankRedirectData::OnlineBankingThailand { issuer } => Ok(Self::OnlineBankingThailand(
+                Box::new(OnlineBankingThailandData {
                     issuer: OnlineBankingThailandIssuer::try_from(issuer)?,
-                })),
-            ),
-            BankRedirectData::OpenBankingUk { issuer, .. } => Ok(
-                AdyenPaymentMethod::OpenBankingUK(Box::new(OpenBankingUKData {
+                }),
+            )),
+            BankRedirectData::OpenBankingUk { issuer, .. } => {
+                Ok(Self::OpenBankingUK(Box::new(OpenBankingUKData {
                     issuer: match issuer {
                         Some(bank_name) => Some(OpenBankingUKIssuer::try_from(bank_name)?),
                         None => None,
                     },
-                })),
-            ),
-            BankRedirectData::Trustly { .. } => Ok(AdyenPaymentMethod::Trustly),
+                })))
+            }
+            BankRedirectData::Trustly { .. } => Ok(Self::Trustly),
             BankRedirectData::Giropay { .. }
             | BankRedirectData::Eft { .. }
             | BankRedirectData::Interac { .. }
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::Przelewy24 { .. }
             | BankRedirectData::Sofort { .. }
-            | BankRedirectData::OpenBanking { .. } => {
-                Err(errors::ConnectorError::NotImplemented("payment method".into()).into())
-            }
+            | BankRedirectData::OpenBanking { .. } => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Adyen"),
+            )
+            .into()),
         }
     }
 }
@@ -1567,7 +1563,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let additional_data = get_additional_data(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-        AdyenPaymentMethod::try_from((bank_redirect_data, &item.router_data))?,
+            AdyenPaymentMethod::try_from((bank_redirect_data, &item.router_data))?,
         ));
         let (shopper_locale, country) = get_redirect_extra_details(&item.router_data)?;
         let billing_address = get_address_info(
@@ -1600,7 +1596,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .get_optional_billing_phone_number();
 
-        Ok(AdyenPaymentRequest {
+        Ok(Self {
             amount,
             merchant_account: auth_type.merchant_account,
             payment_method,
@@ -3044,11 +3040,10 @@ fn get_recurring_processing_model<
         // Setup for future off-session usage
         (Some(common_enums::FutureUsage::OffSession), _) => {
             let store_payment_method = item.request.is_mandate_payment();
-            let shopper_reference = shopper_reference.ok_or(
-                errors::ConnectorError::MissingRequiredField {
+            let shopper_reference =
+                shopper_reference.ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "connector_customer_id",
-                },
-            )?;
+                })?;
             Ok((
                 Some(AdyenRecurringModel::UnscheduledCardOnFile),
                 Some(store_payment_method),
@@ -3057,11 +3052,10 @@ fn get_recurring_processing_model<
         }
         // Off-session payment
         (_, Some(true)) => {
-            let shopper_reference = shopper_reference.ok_or(
-                errors::ConnectorError::MissingRequiredField {
+            let shopper_reference =
+                shopper_reference.ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "connector_customer_id",
-                },
-            )?;
+                })?;
             Ok((
                 Some(AdyenRecurringModel::UnscheduledCardOnFile),
                 None,
@@ -4482,7 +4476,9 @@ fn get_country_code(
     address.and_then(|billing| billing.address.as_ref().and_then(|address| address.country))
 }
 
-fn get_line_items<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+fn get_line_items<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
     item: &AdyenRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
