@@ -7777,7 +7777,7 @@ impl<
             payment_method_data,
             authentication_data,
             merchant_account_id: value.merchant_account_id,
-            merchant_config_currency: Some(merchant_config_currency),
+            merchant_configered_currency: Some(merchant_config_currency),
         })
     }
 }

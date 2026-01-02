@@ -2583,7 +2583,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Some(merchant_config_currency),
         ) = (
             item.router_data.request.merchant_account_id.clone(),
-            item.router_data.request.merchant_config_currency,
+            item.router_data.request.merchant_configered_currency,
         ) {
             info!(
                 "BRAINTREE: Picking merchant_account_id and merchant_config_currency from repeatpayments request"
