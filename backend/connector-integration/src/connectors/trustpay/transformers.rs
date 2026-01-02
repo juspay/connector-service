@@ -84,7 +84,7 @@ pub enum TrustpayBankTransferPaymentMethod {
     InstantBankTransferPL,
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct MerchantIdentification {
     pub project_id: Secret<String>,
@@ -141,7 +141,7 @@ pub struct BankPaymentInformationResponse {
     pub amount: WebhookAmount,
 }
 
-#[derive(Debug, Serialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Eq, PartialEq)]
 pub struct CallbackURLs {
     pub success: String,
     pub cancel: String,
