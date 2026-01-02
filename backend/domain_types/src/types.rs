@@ -3620,28 +3620,28 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransfer(
-                        _,
-                    )),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransfer(_)),
             } => Ok(Self::BankTransfer),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaBankTransfer(
-                        _,
-                    )),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaBankTransfer(_)),
             } => Ok(Self::BankTransfer),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(
-                        _,
-                    )),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_)),
             } => Ok(Self::BankTransfer),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(
-                        _,
-                    )),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_)),
             } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Ideal(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Eps(_)),
+            } => Ok(Self::BankRedirect),
             _ => Ok(Self::Card), // Default fallback
         }
     }
