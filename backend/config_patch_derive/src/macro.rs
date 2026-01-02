@@ -4,7 +4,7 @@ use syn::{parse_quote, Attribute, Data, DeriveInput, Fields, Generics};
 use crate::generics::{
     add_where_bounds, append_patch_params, build_patch_generics, GenericPatchCtx,
 };
-use crate::helper::build_patch_field_specfic_metadata;
+use crate::helper::build_patch_field_specific_metadata;
 
 // Build the derive expansion for a struct.
 pub(crate) fn derive_patch_impl(input: DeriveInput) -> syn::Result<proc_macro::TokenStream> {
@@ -38,7 +38,7 @@ pub(crate) fn derive_patch_impl(input: DeriveInput) -> syn::Result<proc_macro::T
     let mut apply_stmts = Vec::new();
 
     for field in fields {
-        let field_spec = build_patch_field_specfic_metadata(&field, &mut patch_ctx)?;
+        let field_spec = build_patch_field_specific_metadata(&field, &mut patch_ctx)?;
 
         if let Some(spec) = field_spec {
             let doc_attrs = &spec.doc_attrs;

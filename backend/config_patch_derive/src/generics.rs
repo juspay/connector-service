@@ -80,13 +80,9 @@ impl GenericPatchCtx {
                 #ident: ::common_utils::config_patch::Patch<#patch_ident>
             )),
         };
-
-        match predicate {
-            Some(pred) => {
-                self.bound_keys.insert(key);
-                self.where_bounds.push(pred);
-            }
-            None => {}
+        if let Some(pred) = predicate {
+            self.bound_keys.insert(key);
+            self.where_bounds.push(pred);
         }
     }
 

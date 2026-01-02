@@ -235,7 +235,10 @@ mod unit {
         base_config.server.port = 61234;
 
         let result = merge_config_with_override(String::new(), base_config.clone());
-        assert!(result.is_ok(), "empty override should be treated as no override");
+        assert!(
+            result.is_ok(),
+            "empty override should be treated as no override"
+        );
         let new_config = result.expect("should get config");
 
         assert_eq!(new_config.server.port, 61234);
@@ -294,8 +297,7 @@ mod unit {
                 "mitm_ca_cert": "-----BEGIN CERTIFICATE-----\nTEST_CERT\n-----END CERTIFICATE-----\n"
             }
         });
-        let result =
-            merge_config_with_override(override_json.to_string(), base_config.clone());
+        let result = merge_config_with_override(override_json.to_string(), base_config.clone());
         assert!(
             result.is_err(),
             "config_from_metadata should reject raw PEM in mitm_ca_cert override"
@@ -434,10 +436,14 @@ mod unit {
         let new_config = apply_override_with_base(override_json, base_config);
 
         assert_eq!(
-            new_config.events.transformations.get("new_key").map(String::as_str),
+            new_config
+                .events
+                .transformations
+                .get("new_key")
+                .map(String::as_str),
             Some("new_value")
         );
-        assert!(new_config.events.transformations.get("old_key").is_none());
+        assert!(!new_config.events.transformations.contains_key("old_key"));
     }
 
     #[test]
@@ -610,7 +616,7 @@ mod unit {
         };
 
         base.apply(patch);
-        assert_eq!(base.inner.flag, true);
+        assert!(base.inner.flag);
     }
 
     #[test]

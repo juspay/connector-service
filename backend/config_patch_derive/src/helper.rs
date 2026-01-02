@@ -34,7 +34,7 @@ enum FieldPatchKind<'a> {
 }
 
 // Build the patch field spec and apply statement for a single field.
-pub(crate) fn build_patch_field_specfic_metadata(
+pub(crate) fn build_patch_field_specific_metadata(
     field: &syn::Field,
     patch_ctx: &mut GenericPatchCtx,
 ) -> syn::Result<Option<FieldSpec>> {
@@ -121,14 +121,20 @@ fn get_field_patch_config(attrs: &[Attribute]) -> syn::Result<FieldPatchConfig> 
     }
 
     if ignore && patch_type.is_some() {
-        let span_attr = patch_attr.unwrap_or_else(|| &attrs[0]);
-        return Err(syn::Error::new_spanned(
-            span_attr,
-            "patch(ignore) cannot be combined with patch_type",
-        ));
+        let span_attr = patch_attr.or_else(|| attrs.first());
+        match span_attr {
+            Some(attr) => Err(syn::Error::new_spanned(
+                attr,
+                "patch(ignore) cannot be combined with patch_type",
+            )),
+            None => Err(syn::Error::new(
+                Span::call_site(),
+                "patch(ignore) cannot be combined with patch_type",
+            )),
+        }
+    } else {
+        Ok(FieldPatchConfig { ignore, patch_type })
     }
-
-    Ok(FieldPatchConfig { ignore, patch_type })
 }
 
 fn field_patch_kind<'a>(

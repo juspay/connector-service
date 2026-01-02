@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used)]
 use std::collections::HashSet;
 
 use crate::generics::collect_generic_params;
