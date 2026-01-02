@@ -1189,6 +1189,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::Cashapp => {
                 Ok(Some(PaymentMethodType::Cashapp))
             }
+            grpc_api_types::payments::PaymentMethodType::SepaBankTransfer => {
+                Ok(Some(PaymentMethodType::SepaBankTransfer))
+            }
+            grpc_api_types::payments::PaymentMethodType::InstantBankTransfer => {
+                Ok(Some(PaymentMethodType::InstantBankTransfer))
+            }
+            grpc_api_types::payments::PaymentMethodType::InstantBankTransferFinland => {
+                Ok(Some(PaymentMethodType::InstantBankTransferFinland))
+            }
+            grpc_api_types::payments::PaymentMethodType::InstantBankTransferPoland => {
+                Ok(Some(PaymentMethodType::InstantBankTransferPoland))
+            }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
                 error_identifier: 400,
@@ -3609,6 +3621,24 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransfer(
+                        _,
+                    )),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaBankTransfer(
+                        _,
+                    )),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(
+                        _,
+                    )),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(
                         _,
                     )),
             } => Ok(Self::BankTransfer),
