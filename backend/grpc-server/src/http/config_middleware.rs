@@ -77,7 +77,7 @@ where
             Some(override_str) => {
                 // Merge override with default
                 let new_config = match merge_config_with_override(
-                    Some(override_str),
+                    override_str,
                     (*self.base_config).clone(),
                 ) {
                     Ok(cfg) => cfg,

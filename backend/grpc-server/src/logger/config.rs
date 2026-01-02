@@ -5,7 +5,6 @@
 use serde::{Deserialize, Serialize};
 /// Log config settings.
 #[derive(Debug, Deserialize, Clone, Serialize, PartialEq, config_patch_derive::Patch)]
-#[patch(nested_all)]
 pub struct Log {
     /// Logging to a console.
     pub console: LogConsole,
@@ -28,7 +27,7 @@ pub struct LogConsole {
 }
 
 /// Describes the level of verbosity of a span or event.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, config_patch_derive::Patch)]
 pub struct Level(pub(super) tracing::Level);
 
 impl Serialize for Level {
@@ -68,7 +67,9 @@ impl<'de> Deserialize<'de> for Level {
 }
 
 /// Telemetry / tracing.
-#[derive(Default, Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(
+    Default, Debug, Deserialize, Serialize, Clone, PartialEq, Eq, config_patch_derive::Patch,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum LogFormat {
     /// Default pretty log format

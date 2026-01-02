@@ -300,14 +300,14 @@ pub fn auth_from_metadata(
 }
 
 pub fn merge_config_with_override(
-    config_override: Option<String>,
+    config_override: String,
     config: configs::Config,
 ) -> CustomResult<Arc<configs::Config>, ApplicationErrorResponse> {
-    match config_override {
-        None => Ok(Arc::new(config)),
-        Some(config_override) => {
+    match config_override.trim().is_empty() {
+        true => Ok(Arc::new(config)),
+        false => {
             let mut override_patch: ConfigPatch =
-                serde_json::from_str(&config_override).map_err(|e| {
+                serde_json::from_str(config_override.trim()).map_err(|e| {
                     Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "CANNOT_CONVERT_TO_JSON".into(),
                         error_identifier: 400,

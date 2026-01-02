@@ -129,7 +129,6 @@ use crate::{
     PartialEq,
     config_patch_derive::Patch,
 )]
-#[patch(nested_all)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,

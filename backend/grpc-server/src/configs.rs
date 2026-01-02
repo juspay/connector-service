@@ -13,7 +13,6 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize, Clone, config_patch_derive::Patch)]
-#[patch(nested_all)]
 pub struct Config {
     pub common: Common,
     pub server: Server,
@@ -177,7 +176,7 @@ pub struct MetricsServer {
     pub port: u16,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 #[serde(rename_all = "snake_case")]
 pub enum ServiceType {
     #[default]

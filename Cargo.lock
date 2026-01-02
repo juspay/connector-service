@@ -998,6 +998,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "config_patch"
+version = "0.1.0"
+dependencies = [
+ "config_patch_derive",
+ "serde",
+]
+
+[[package]]
 name = "config_patch_derive"
 version = "0.1.0"
 dependencies = [
@@ -1360,6 +1368,7 @@ dependencies = [
  "actix-web",
  "base64 0.21.7",
  "bytes",
+ "config_patch",
  "config_patch_derive",
  "error-stack 0.4.1",
  "grpc-api-types",
@@ -2666,6 +2675,7 @@ dependencies = [
  "build_info",
  "chrono",
  "config",
+ "config_patch",
  "config_patch_derive",
  "connector-integration",
  "domain_types",
@@ -6449,6 +6459,7 @@ dependencies = [
  "blake3",
  "bytes",
  "chrono",
+ "config_patch",
  "config_patch_derive",
  "error-stack 0.4.1",
  "futures",
