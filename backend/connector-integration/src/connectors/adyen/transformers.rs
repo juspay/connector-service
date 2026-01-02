@@ -152,10 +152,43 @@ pub enum PaymentMethod<
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AdyenMpiData {
-    directory_response: String,
-    authentication_response: String,
-    token_authentication_verification_value: Secret<String>,
+    directory_response: common_enums::TransactionStatus,
+    authentication_response: common_enums::TransactionStatus,
+    cavv: Option<Secret<String>>,
+    token_authentication_verification_value: Option<Secret<String>>,
     eci: Option<String>,
+    #[serde(rename = "dsTransID")]
+    ds_trans_id: Option<String>,
+    #[serde(rename = "threeDSVersion")]
+    three_ds_version: Option<common_utils::types::SemanticVersion>,
+    challenge_cancel: Option<String>,
+    risk_score: Option<String>,
+    cavv_algorithm: Option<String>,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplicationInfo {
+    external_platform: Option<ExternalPlatform>,
+    merchant_application: Option<MerchantApplication>,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalPlatform {
+    name: Option<String>,
+    version: Option<String>,
+    integrator: Option<String>,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MerchantApplication {
+    name: Option<String>,
+    version: Option<String>,
 }
 
 #[derive(Default, Debug, Serialize, Deserialize)]
@@ -513,6 +546,7 @@ pub struct AdyenPaymentRequest<
     metadata: Option<Secret<serde_json::Value>>,
     platform_chargeback_logic: Option<AdyenPlatformChargeBackLogicMetadata>,
     session_validity: Option<String>,
+    application_info: Option<ApplicationInfo>,
 }
 
 #[derive(Debug, Serialize)]
@@ -794,6 +828,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             AdyenPaymentMethod::try_from((card_data, card_holder_name))?,
         ));
 
+        let mpi_data =
+            if let Some(auth_data) = item.router_data.request.authentication_data.as_ref() {
+                Some(AdyenMpiData {
+                    directory_response: auth_data.trans_status.clone().ok_or(
+                        errors::ConnectorError::MissingRequiredField {
+                            field_name: "three_ds_data.trans_status",
+                        },
+                    )?,
+                    authentication_response: auth_data.trans_status.clone().ok_or(
+                        errors::ConnectorError::MissingRequiredField {
+                            field_name: "three_ds_data.trans_status",
+                        },
+                    )?,
+                    cavv: auth_data.cavv.clone(),
+                    token_authentication_verification_value: None,
+                    eci: auth_data.eci.clone(),
+                    ds_trans_id: auth_data.ds_trans_id.clone(),
+                    three_ds_version: auth_data.message_version.clone(),
+                    cavv_algorithm: None,
+                    challenge_cancel: None,
+                    risk_score: None,
+                })
+            } else {
+                None
+            };
+
+        let application_info = get_application_info(&item);
+
         Ok(Self {
             amount,
             merchant_account: auth_type.merchant_account,
@@ -808,7 +870,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             recurring_processing_model,
             browser_info: get_browser_info(&item.router_data)?,
             additional_data,
-            mpi_data: None,
+            mpi_data,
             telephone_number: item
                 .router_data
                 .resource_common_data
@@ -823,10 +885,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .router_data
                 .resource_common_data
                 .get_optional_billing_email(),
-            shopper_locale: item
-                .router_data
-                .request
-                .get_optional_language_from_browser_info(),
+            shopper_locale: None,
             social_security_number: None,
             billing_address,
             delivery_address: get_address_info(
@@ -840,12 +899,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             shopper_reference,
             store_payment_method,
             channel: None,
-            shopper_statement: item
-                .router_data
-                .request
-                .billing_descriptor
-                .clone()
-                .and_then(|descriptor| descriptor.statement_descriptor),
+            shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store,
@@ -859,6 +913,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|value| Secret::new(filter_adyen_metadata(value))),
             platform_chargeback_logic,
             session_validity: None,
+            application_info,
         })
     }
 }
@@ -981,6 +1036,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|value| Secret::new(filter_adyen_metadata(value))),
             platform_chargeback_logic,
             session_validity: None,
+            application_info: None,
         })
     }
 }
@@ -2842,13 +2898,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .router_data
                 .resource_common_data
                 .get_optional_billing_phone_number(),
-            shopper_name: None,
-            shopper_email: None,
+            shopper_name: get_shopper_name(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            ),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
             shopper_locale: None,
             social_security_number: None,
             billing_address,
-            delivery_address: None,
-            country_code: None,
+            delivery_address: get_address_info(
+                item.router_data
+                    .resource_common_data
+                    .get_optional_shipping(),
+            )
+            .and_then(Result::ok),
+            country_code: get_country_code(item.router_data.resource_common_data.get_optional_billing()),
             line_items: None,
             shopper_reference,
             store_payment_method,
@@ -2872,6 +2941,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|value| Secret::new(filter_adyen_metadata(value))),
             platform_chargeback_logic,
             session_validity: None,
+            application_info: None,
         }))
     }
 }
@@ -3781,6 +3851,25 @@ fn get_country_code(
     address: Option<&domain_types::payment_address::Address>,
 ) -> Option<common_enums::CountryAlpha2> {
     address.and_then(|billing| billing.address.as_ref().and_then(|address| address.country))
+}
+
+fn get_application_info<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+    _item: &AdyenRouterData<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        T,
+    >,
+) -> Option<ApplicationInfo> {
+    // UCS doesn't have partner_merchant_identifier_details field yet
+    None
+}
+
+fn get_shopper_statement<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+    item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+) -> Option<String> {
+    item.request
+        .billing_descriptor
+        .clone()
+        .and_then(|descriptor| descriptor.statement_descriptor)
 }
 
 #[derive(Debug, serde::Deserialize)]
