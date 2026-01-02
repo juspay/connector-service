@@ -757,6 +757,16 @@ impl<
                 ) => Ok(Self::BankTransfer(Box::new(
                     payment_method_data::BankTransferData::MultibancoBankTransfer {},
                 ))),
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::InstantBankTransferFinland {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::InstantBankTransferPoland {},
+                    )))
+                }
                 // ============================================================================
                 // ONLINE BANKING - Direct variants
                 // ============================================================================
@@ -1254,6 +1264,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::SepaBankTransfer(_) => Ok(Some(PaymentMethodType::SepaBankTransfer)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BacsBankTransfer(_) => Ok(Some(PaymentMethodType::Bacs)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MultibancoBankTransfer(_) => Ok(Some(PaymentMethodType::Multibanco)),
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_) => Ok(Some(PaymentMethodType::InstantBankTransferFinland)),
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_) => Ok(Some(PaymentMethodType::InstantBankTransferPoland)),
                 // ============================================================================
                 // ONLINE BANKING - PaymentMethodType mappings
                 // ============================================================================
