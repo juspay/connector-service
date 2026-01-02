@@ -76,19 +76,17 @@ where
         match config_override {
             Some(override_str) => {
                 // Merge override with default
-                let new_config = match merge_config_with_override(
-                    Some(override_str),
-                    (*self.base_config).clone(),
-                ) {
-                    Ok(cfg) => cfg,
-                    Err(e) => {
-                        let error_response = create_error_response(&format!(
-                            "Failed to merge config with override config: {e:?}"
-                        ));
-                        let fut = async move { Ok(error_response) };
-                        return Box::pin(fut);
-                    }
-                };
+                let new_config =
+                    match merge_config_with_override(override_str, (*self.base_config).clone()) {
+                        Ok(cfg) => cfg,
+                        Err(e) => {
+                            let error_response = create_error_response(&format!(
+                                "Failed to merge config with override config: {e:?}"
+                            ));
+                            let fut = async move { Ok(error_response) };
+                            return Box::pin(fut);
+                        }
+                    };
 
                 // Insert merged config into extensions
                 req.extensions_mut().insert(new_config);
