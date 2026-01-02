@@ -7622,7 +7622,7 @@ impl<
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract values first to avoid partial move
         let merchant_config_currency =
-            common_enums::Currency::foreign_try_from(value.merchant_config_currency())?;
+            common_enums::Currency::foreign_try_from(value.merchant_configered_currency())?;
         let amount = value.amount;
         let minor_amount = value.minor_amount;
         let currency = value.currency();
