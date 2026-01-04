@@ -3,7 +3,6 @@ use std::str::FromStr;
 use crate::{
     connectors::redsys::{RedsysAmountConvertor, RedsysRouterData},
     types::ResponseRouterData,
-    utils::missing_field_err,
 };
 use base64::Engine;
 use common_enums::enums;
@@ -519,15 +518,6 @@ fn build_threeds_invoke_response(
 
     let three_ds_method_data = BASE64_ENGINE.encode(&three_ds_data_string);
 
-    let connector_meta = requests::RedsysThreeDsInvokeData {
-        is_invoke_case: true,
-        three_ds_method_submitted: false,
-    };
-    let connector_meta_data = Some(Secret::new(
-        serde_json::to_value(&connector_meta)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
-    ));
-
     let mut form_fields = std::collections::HashMap::new();
     form_fields.insert("threeDSMethodData".to_string(), three_ds_method_data);
 
@@ -539,7 +529,7 @@ fn build_threeds_invoke_response(
 
     Ok(responses::PreAuthenticateResponseData {
         redirection_data: redirect_form,
-        connector_meta_data,
+        connector_meta_data: None,
         response_ref_id: Some(three_d_s_server_trans_i_d.to_string()),
         authentication_data,
     })
@@ -549,17 +539,9 @@ fn build_threeds_exempt_response(
     three_d_s_server_trans_i_d: String,
     authentication_data: Option<domain_types::router_request_types::AuthenticationData>,
 ) -> Result<responses::PreAuthenticateResponseData, Error> {
-    let connector_meta = requests::RedsysThreeDsExemptData {
-        is_invoke_case: false,
-    };
-    let connector_meta_data = Some(Secret::new(
-        serde_json::to_value(&connector_meta)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
-    ));
-
     Ok(responses::PreAuthenticateResponseData {
         redirection_data: None,
-        connector_meta_data,
+        connector_meta_data: None,
         response_ref_id: Some(three_d_s_server_trans_i_d),
         authentication_data,
     })
@@ -889,14 +871,14 @@ where
         let auth_data = router_data.request.authentication_data.as_ref();
 
         let three_d_s_server_trans_i_d = auth_data
-            .and_then(|a| a.threeds_server_transaction_id.clone())
+            .and_then(|auth| auth.threeds_server_transaction_id.clone())
             .or_else(|| router_data.resource_common_data.reference_id.clone())
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "authentication_data.threeds_server_transaction_id",
             })?;
 
         let message_version = auth_data
-            .and_then(|a| a.message_version.as_ref().map(|v| v.to_string()))
+            .and_then(|auth| auth.message_version.as_ref().map(|v| v.to_string()))
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "authentication_data.message_version",
             })?;
@@ -1085,17 +1067,10 @@ where
                 field_name: "authentication_data.message_version",
             })?;
 
-        // Check connector_meta to determine if it's invoke case or exempt case
-        let is_invoke_case = router_data
-            .resource_common_data
-            .connector_meta_data
-            .as_ref()
-            .and_then(|meta| {
-                serde_json::from_value::<requests::RedsysThreeDsInvokeData>(meta.clone().expose())
-                    .ok()
-            })
-            .map(|data| data.is_invoke_case)
-            .unwrap_or(false);
+        // Determine if this is invoke case based on threeds_method_comp_ind:
+        // - Success/Failure means 3DS method was invoked (invoke case)
+        // - NotAvailable means no 3DS method URL was present (exempt case)
+        let threeds_comp_ind = router_data.request.threeds_method_comp_ind.clone();
 
         let emv3ds_data = match redirect_payload_value {
             Some(payload) => requests::RedsysEmvThreeDsRequestData::new(
@@ -1105,15 +1080,9 @@ where
             .set_three_d_s_cres(payload.cres)
             .set_billing_data(billing_data)?
             .set_shipping_data(shipping_data)?,
-            None => {
-                if is_invoke_case {
-                    let three_d_s_comp_ind = requests::RedsysThreeDSCompInd::from(
-                        router_data
-                            .request
-                            .threeds_method_comp_ind
-                            .clone()
-                            .ok_or_else(missing_field_err("threeds_method_comp_ind"))?,
-                    );
+            None => match threeds_comp_ind {
+                Some(comp_ind) => {
+                    let three_d_s_comp_ind = requests::RedsysThreeDSCompInd::from(comp_ind);
                     let browser_info = router_data.request.browser_info.clone().ok_or(
                         errors::ConnectorError::MissingRequiredField {
                             field_name: "browser_info",
@@ -1137,10 +1106,13 @@ where
                     .set_notification_u_r_l(continue_redirection_url.clone())
                     .set_billing_data(billing_data)?
                     .set_shipping_data(shipping_data)?
-                } else {
-                    return Err(errors::ConnectorError::NoConnectorMetaData)?;
                 }
-            }
+                None => {
+                    return Err(errors::ConnectorError::MissingRequiredField {
+                        field_name: "threeds_method_comp_ind",
+                    })?;
+                }
+            },
         };
 
         let is_auto_capture = router_data.request.is_auto_capture()?;

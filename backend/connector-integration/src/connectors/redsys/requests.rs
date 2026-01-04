@@ -54,19 +54,6 @@ pub enum RedsysTransactionType {
     Cancellation,
 }
 
-/// 3DS invoke case (method URL present)
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RedsysThreeDsInvokeData {
-    pub is_invoke_case: bool,
-    pub three_ds_method_submitted: bool,
-}
-
-/// 3DS exempt case (no method URL)
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RedsysThreeDsExemptData {
-    pub is_invoke_case: bool,
-}
-
 /// EMV 3DS request data for 3D Secure authentication
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
