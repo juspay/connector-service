@@ -13,7 +13,7 @@ use time::Date;
 use utoipa::ToSchema;
 
 use crate::{
-    errors::ConnectorError,
+    errors::{self, ConnectorError},
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
 };
 
@@ -98,6 +98,23 @@ impl<T: PaymentMethodDataTypes> Card<T> {
                 .ok_or(ConnectorError::RequestEncodingFailed)?
                 .to_string(),
         ))
+    }
+
+    pub fn get_card_expiry_month_2_digit(&self) -> Result<Secret<String>, errors::ConnectorError> {
+        let exp_month = self
+            .card_exp_month
+            .peek()
+            .to_string()
+            .parse::<u8>()
+            .map_err(|_| errors::ConnectorError::InvalidDataFormat {
+                field_name: "payment_method_data.card.card_exp_month",
+            })?;
+        let month = cards::validate::CardExpirationMonth::try_from(exp_month).map_err(|_| {
+            errors::ConnectorError::InvalidDataFormat {
+                field_name: "payment_method_data.card.card_exp_month",
+            }
+        })?;
+        Ok(Secret::new(month.two_digits()))
     }
 
     pub fn get_card_expiry_month_year_2_digit_with_delimiter(

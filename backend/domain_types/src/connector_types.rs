@@ -1439,7 +1439,6 @@ impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
             }
         }
     }
-
 }
 
 #[derive(Debug, Clone)]
