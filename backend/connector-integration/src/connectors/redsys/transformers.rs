@@ -212,8 +212,9 @@ where
     fn try_from(payment_method_data: &Option<PaymentMethodData<T>>) -> Result<Self, Self::Error> {
         match payment_method_data {
             Some(PaymentMethodData::Card(card)) => {
-                let expiry_date =
-                    card.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?;
+                let year = card.get_card_expiry_year_2_digit()?.expose();
+                let month = card.get_card_expiry_month_2_digit()?.expose();
+                let expiry_date = Secret::new(format!("{year}{month}"));
                 Ok(Self {
                     card_number: card.card_number.clone(),
                     expiry_date,
