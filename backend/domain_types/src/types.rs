@@ -7664,7 +7664,7 @@ impl<
         value: grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract values first to avoid partial move
-        let merchant_configered_currency = value.merchant_configered_currency();
+        let merchant_configered_currency = value.clone().merchant_configered_currency();
         let amount = value.amount;
         let minor_amount = value.minor_amount;
         let currency = value.currency();
