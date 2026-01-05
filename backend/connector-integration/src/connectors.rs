@@ -161,6 +161,9 @@ pub use self::forte::Forte;
 pub mod shift4;
 pub use self::shift4::Shift4;
 
+pub mod paybox;
+pub use self::paybox::Paybox;
+
 pub mod nexixpay;
 pub use self::nexixpay::Nexixpay;
 
