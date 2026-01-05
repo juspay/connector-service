@@ -1,32 +1,6 @@
 use common_utils::consts;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
-
-/// Superposition-inspired configuration with context-based overrides
-#[derive(Debug, Deserialize, Serialize)]
-struct SuperpositionConfig {
-    #[serde(rename = "default-config")]
-    default_config: HashMap<String, ConfigValue>,
-    dimensions: HashMap<String, DimensionDef>,
-    #[serde(rename = "context", default)]
-    contexts: HashMap<String, HashMap<String, toml::Value>>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct ConfigValue {
-    value: toml::Value,
-    #[allow(dead_code)]
-    schema: toml::Value,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct DimensionDef {
-    #[allow(dead_code)]
-    position: u32,
-    #[allow(dead_code)]
-    schema: toml::Value,
-}
 
 /// Loads and resolves Superposition TOML configuration based on environment context
 pub fn load_superposition_config(
@@ -41,9 +15,9 @@ pub fn load_superposition_config(
         ))
     })?;
 
-    // Parse the TOML file
-    let parsed_config: SuperpositionConfig = toml::from_str(&toml_content).map_err(|e| {
-        config::ConfigError::Message(format!("Failed to parse superposition.toml: {}", e))
+    // Parse using official Superposition parser
+    let parsed_config = superposition_core::toml_parser::parse(&toml_content).map_err(|e| {
+        config::ConfigError::Message(format!("Failed to parse superposition.toml: {:?}", e))
     })?;
 
     // Resolve configuration for the current environment
@@ -54,25 +28,27 @@ pub fn load_superposition_config(
 
 /// Resolves the Superposition config for a given environment context
 fn resolve_config(
-    config: &SuperpositionConfig,
+    config: &superposition_core::toml_parser::Config,
     environment: &consts::Env,
 ) -> Result<HashMap<String, toml::Value>, config::ConfigError> {
     let mut resolved = HashMap::new();
 
     // Start with default config values
-    for (key, config_value) in &config.default_config {
+    for (key, config_value) in &config.default_configs {
         resolved.insert(key.clone(), config_value.value.clone());
     }
 
     // Apply context overrides for matching environment
     let env_str = environment.to_string().to_lowercase();
 
-    // Match contexts like "environment=sandbox" or "environment=development"
-    for (context_key, overrides) in &config.contexts {
-        if context_matches(context_key, &env_str) {
-            // Apply all overrides from this context
-            for (key, value) in overrides {
-                resolved.insert(key.clone(), value.clone());
+    // Find matching contexts and apply overrides
+    for context in &config.contexts {
+        if context_matches(&context.condition, &env_str) {
+            // Apply overrides from this context
+            for (override_key, override_id) in &context.override_with_keys {
+                if let Some(override_value) = config.overrides.get(&override_id.get_key()) {
+                    resolved.insert(override_key.clone(), override_value.clone());
+                }
             }
         }
     }
@@ -80,19 +56,15 @@ fn resolve_config(
     Ok(resolved)
 }
 
-/// Check if a context key matches the current environment
-fn context_matches(context_key: &str, env_str: &str) -> bool {
-    // Context keys are like "environment=sandbox" or "environment=development"
-    context_key
-        .split(';')
-        .any(|part| {
-            let part = part.trim();
-            if let Some((_dim, value)) = part.split_once('=') {
-                value.trim_matches('"') == env_str
-            } else {
-                false
-            }
-        })
+/// Check if a context condition matches the current environment
+fn context_matches(condition: &HashMap<String, serde_json::Value>, env_str: &str) -> bool {
+    // Check if the condition contains environment key matching our environment
+    if let Some(env_value) = condition.get("environment") {
+        if let Some(env_string) = env_value.as_str() {
+            return env_string == env_str;
+        }
+    }
+    false
 }
 
 /// Converts resolved flat config into nested TOML structure
