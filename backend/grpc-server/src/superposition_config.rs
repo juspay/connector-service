@@ -38,12 +38,12 @@ fn resolve_config(
         resolved.insert(key.clone(), config_value.value.clone());
     }
 
-    // Apply context overrides for matching environment
+    // Apply context overrides for matching environment (environment-only contexts)
     let env_str = environment.to_string().to_lowercase();
 
-    // Find matching contexts and apply overrides
     for context in &config.contexts {
-        if context_matches(&context.condition, &env_str) {
+        // Check if this context matches just the environment (no connector specified)
+        if context_matches_environment(&context.condition, &env_str) && !has_connector_dimension(&context.condition) {
             // Apply overrides from this context
             for (override_key, override_id) in &context.override_with_keys {
                 if let Some(override_value) = config.overrides.get(&override_id.get_key()) {
@@ -53,18 +53,117 @@ fn resolve_config(
         }
     }
 
+    // Now resolve connector-specific URLs
+    // We need to iterate through all known connectors and resolve each one
+    if let Some(connector_enum) = config.dimensions.get("connector") {
+        let connectors = extract_connector_list(&connector_enum.schema);
+
+        for connector_name in connectors {
+            // Resolve this connector's configuration
+            let connector_config = resolve_connector_config(config, &connector_name, &env_str)?;
+
+            // Add to resolved map with connector_ prefix
+            for (key, value) in connector_config {
+                let full_key = format!("connector_{}_{}", connector_name, key);
+                resolved.insert(full_key, value);
+            }
+        }
+    }
+
     Ok(resolved)
 }
 
+/// Resolves configuration for a specific connector in the given environment
+fn resolve_connector_config(
+    config: &superposition_core::toml_parser::Config,
+    connector: &str,
+    environment: &str,
+) -> Result<HashMap<String, toml::Value>, config::ConfigError> {
+    let mut connector_config = HashMap::new();
+
+    // Start with default connector values from default-config
+    for (key, config_value) in &config.default_configs {
+        if key.starts_with("connector_") && !key.starts_with("connector_base_url") {
+            // This is a connector-specific config key like connector_secondary_base_url
+            // Extract the suffix (e.g., "secondary_base_url" from "connector_secondary_base_url")
+            if let Some(suffix) = key.strip_prefix("connector_") {
+                connector_config.insert(suffix.to_string(), config_value.value.clone());
+            }
+        } else if key == "connector_base_url"
+                || key == "connector_secondary_base_url"
+                || key == "connector_third_base_url"
+                || key == "connector_dispute_base_url"
+                || key == "connector_base_url_bank_redirects" {
+            // Direct connector URL keys
+            if let Some(suffix) = key.strip_prefix("connector_") {
+                connector_config.insert(suffix.to_string(), config_value.value.clone());
+            }
+        }
+    }
+
+    // Apply connector-specific overrides (connector=X contexts)
+    for context in &config.contexts {
+        if context_matches_connector(&context.condition, connector) {
+            let env_matches = if let Some(env_value) = context.condition.get("environment") {
+                env_value.as_str().map(|s| s == environment).unwrap_or(true)
+            } else {
+                true // No environment constraint, matches all environments
+            };
+
+            if env_matches {
+                // Apply overrides from this context
+                for (override_key, override_id) in &context.override_with_keys {
+                    if override_key.starts_with("connector_") {
+                        if let Some(override_value) = config.overrides.get(&override_id.get_key()) {
+                            if let Some(suffix) = override_key.strip_prefix("connector_") {
+                                connector_config.insert(suffix.to_string(), override_value.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(connector_config)
+}
+
 /// Check if a context condition matches the current environment
-fn context_matches(condition: &HashMap<String, serde_json::Value>, env_str: &str) -> bool {
-    // Check if the condition contains environment key matching our environment
+fn context_matches_environment(condition: &HashMap<String, serde_json::Value>, env_str: &str) -> bool {
     if let Some(env_value) = condition.get("environment") {
         if let Some(env_string) = env_value.as_str() {
             return env_string == env_str;
         }
     }
     false
+}
+
+/// Check if a context has a connector dimension
+fn has_connector_dimension(condition: &HashMap<String, serde_json::Value>) -> bool {
+    condition.contains_key("connector")
+}
+
+/// Check if a context matches a specific connector
+fn context_matches_connector(condition: &HashMap<String, serde_json::Value>, connector: &str) -> bool {
+    if let Some(connector_value) = condition.get("connector") {
+        if let Some(connector_string) = connector_value.as_str() {
+            return connector_string == connector;
+        }
+    }
+    false
+}
+
+/// Extract the list of connectors from the connector dimension schema
+fn extract_connector_list(schema: &serde_json::Value) -> Vec<String> {
+    if let Some(enum_values) = schema.get("enum") {
+        if let Some(array) = enum_values.as_array() {
+            return array
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect();
+        }
+    }
+    Vec::new()
 }
 
 /// Converts resolved flat config into nested TOML structure
@@ -166,12 +265,17 @@ pub fn build_config_toml(
 
                 for (connector, urls) in connector_map {
                     for (url_type, value) in urls {
-                        toml_parts.push(format!(
-                            "{}.{} = {}",
-                            connector,
-                            url_type,
-                            toml_value_to_string(value)
-                        ));
+                        // Only add if value is not empty
+                        if let toml::Value::String(s) = value {
+                            if !s.is_empty() {
+                                toml_parts.push(format!(
+                                    "{}.{} = {}",
+                                    connector,
+                                    url_type,
+                                    toml_value_to_string(value)
+                                ));
+                            }
+                        }
                     }
                 }
                 toml_parts.push(String::new());
