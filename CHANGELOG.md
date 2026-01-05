@@ -4,6 +4,24 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.05.0
+
+### Features
+
+- **connector:**
+  - Trustpay Bank Transfer & Bank Redirect Payment Method ([#406](https://github.com/juspay/connector-service/pull/406)) ([`e8a2708`](https://github.com/juspay/connector-service/commit/e8a270876fd29a6cf6e5a65f07de5f906bb4a1a1))
+  - [PAYBOX] Connector Integration ([#387](https://github.com/juspay/connector-service/pull/387)) ([`70b74d8`](https://github.com/juspay/connector-service/commit/70b74d8412aa594771e8722f48b76ff38b9a8ba9))
+  - [LOONIO] Connector Integration ([#401](https://github.com/juspay/connector-service/pull/401)) ([`62ee8c0`](https://github.com/juspay/connector-service/commit/62ee8c0092c5a3656e601ea3b675b52adfb56fb3))
+- Adyen bankredirect payment method ([#400](https://github.com/juspay/connector-service/pull/400)) ([`bff3e26`](https://github.com/juspay/connector-service/commit/bff3e26bca3fb35d64f601cf3a8825a2f819b1b1))
+
+### Refactors
+
+- Refactor config override functionality ([#385](https://github.com/juspay/connector-service/pull/385)) ([`047fb05`](https://github.com/juspay/connector-service/commit/047fb05929cb1584100bf597a1eb511850192eca))
+
+**Full Changelog:** [`2026.01.01.0...2026.01.05.0`](https://github.com/juspay/connector-service/compare/2026.01.01.0...2026.01.05.0)
+
+- - -
+
 ## 2026.01.01.0
 
 ### Bug Fixes
