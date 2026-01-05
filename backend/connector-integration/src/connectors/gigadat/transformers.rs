@@ -344,13 +344,14 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // ===== RESPONSE TRANSFORMER (AUTHORIZE) =====
-impl<T: PaymentMethodDataTypes>
-    TryFrom<ResponseRouterData<GigadatPaymentsResponse, Self>>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GigadatPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GigadatPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GigadatPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -393,22 +394,12 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // ===== RESPONSE TRANSFORMER (PSYNC) =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            GigadatSyncResponse,
-            Self,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GigadatSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            GigadatSyncResponse,
-            Self,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<GigadatSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -472,21 +463,13 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 }
 
 // ===== RESPONSE TRANSFORMER (REFUND) =====
-impl
-    TryFrom<
-        ResponseRouterData<
-            GigadatRefundResponse,
-            Self,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<GigadatRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GigadatRefundResponse,
-            Self,
-        >,
+        item: ResponseRouterData<GigadatRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
         let mut router_data = item.router_data;
