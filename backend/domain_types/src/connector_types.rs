@@ -841,6 +841,12 @@ impl PaymentFlowData {
             .ok_or_else(missing_field_err("preprocessing_id"))
     }
 
+    pub fn get_reference_id(&self) -> Result<String, Error> {
+        self.reference_id
+            .to_owned()
+            .ok_or_else(missing_field_err("reference_id"))
+    }
+
     pub fn get_optional_billing_full_name(&self) -> Option<Secret<String>> {
         self.get_optional_billing()
             .and_then(|billing_details| billing_details.address.as_ref())

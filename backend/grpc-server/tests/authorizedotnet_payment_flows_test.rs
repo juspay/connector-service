@@ -51,7 +51,7 @@ const CONNECTOR_NAME: &str = "authorizedotnet";
 const TEST_AMOUNT: i64 = 102; // Amount from working grpcurl
 const TEST_CARD_NUMBER: &str = "5123456789012346"; // Mastercard from working grpcurl
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_EXP_YEAR: &str = "2050";
 const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "TestCustomer0011uyty4";
 const TEST_EMAIL_BASE: &str = "testcustomer001@gmail.com";
@@ -412,6 +412,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 
@@ -482,7 +483,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     refund_metadata.insert(
           "refund_metadata".to_string(),
           format!(
-              "{{\"creditCard\":{{\"cardNumber\":\"{TEST_CARD_NUMBER}\",\"expirationDate\":\"2025-12\"}}}}",
+              "{{\"creditCard\":{{\"cardNumber\":\"{TEST_CARD_NUMBER}\",\"expirationDate\":\"2050-12\"}}}}",
           ),
       );
 

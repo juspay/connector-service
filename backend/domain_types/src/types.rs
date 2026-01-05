@@ -757,6 +757,16 @@ impl<
                 ) => Ok(Self::BankTransfer(Box::new(
                     payment_method_data::BankTransferData::MultibancoBankTransfer {},
                 ))),
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::InstantBankTransferFinland {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::InstantBankTransferPoland {},
+                    )))
+                }
                 // ============================================================================
                 // ONLINE BANKING - Direct variants
                 // ============================================================================
@@ -1179,6 +1189,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::Cashapp => {
                 Ok(Some(PaymentMethodType::Cashapp))
             }
+            grpc_api_types::payments::PaymentMethodType::SepaBankTransfer => {
+                Ok(Some(PaymentMethodType::SepaBankTransfer))
+            }
+            grpc_api_types::payments::PaymentMethodType::InstantBankTransfer => {
+                Ok(Some(PaymentMethodType::InstantBankTransfer))
+            }
+            grpc_api_types::payments::PaymentMethodType::InstantBankTransferFinland => {
+                Ok(Some(PaymentMethodType::InstantBankTransferFinland))
+            }
+            grpc_api_types::payments::PaymentMethodType::InstantBankTransferPoland => {
+                Ok(Some(PaymentMethodType::InstantBankTransferPoland))
+            }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
                 error_identifier: 400,
@@ -1254,6 +1276,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::SepaBankTransfer(_) => Ok(Some(PaymentMethodType::SepaBankTransfer)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BacsBankTransfer(_) => Ok(Some(PaymentMethodType::Bacs)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MultibancoBankTransfer(_) => Ok(Some(PaymentMethodType::Multibanco)),
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_) => Ok(Some(PaymentMethodType::InstantBankTransferFinland)),
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_) => Ok(Some(PaymentMethodType::InstantBankTransferPoland)),
                 // ============================================================================
                 // ONLINE BANKING - PaymentMethodType mappings
                 // ============================================================================
@@ -2943,7 +2967,7 @@ impl
             minor_amount_capturable: None,
             access_token,
             session_token: None,
-            reference_id: None,
+            reference_id: value.connector_order_reference_id.clone(),
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -3596,10 +3620,28 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransfer(
-                        _,
-                    )),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransfer(_)),
             } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Ideal(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Eps(_)),
+            } => Ok(Self::BankRedirect),
             _ => Ok(Self::Card), // Default fallback
         }
     }
