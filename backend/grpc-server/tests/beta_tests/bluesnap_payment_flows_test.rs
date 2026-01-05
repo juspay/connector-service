@@ -34,7 +34,7 @@ const MERCHANT_ID: &str = "merchant_bluesnap_test";
 
 const TEST_CARD_NUMBER: &str = "4263982640269299";
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_EXP_YEAR: &str = "2050";
 const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "John Doe";
 const TEST_EMAIL: &str = "customer@example.com";
