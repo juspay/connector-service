@@ -7663,7 +7663,7 @@ impl<
         value: grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract values first to avoid partial move
-        let merchant_config_currency =
+        let merchant_configered_currency =
             common_enums::Currency::foreign_try_from(value.merchant_configered_currency())?;
         let amount = value.amount;
         let minor_amount = value.minor_amount;
@@ -7819,7 +7819,7 @@ impl<
             payment_method_data,
             authentication_data,
             merchant_account_id: value.merchant_account_id,
-            merchant_configered_currency: Some(merchant_config_currency),
+            merchant_configered_currency: Some(merchant_configered_currency),
         })
     }
 }

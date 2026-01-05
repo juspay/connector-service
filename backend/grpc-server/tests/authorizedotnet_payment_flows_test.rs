@@ -201,7 +201,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         request_ref_id: Some(request_ref_id),
         mandate_reference_id: Some(mandate_reference),
         amount: REPEAT_AMOUNT,
-        currency: i32::from(Currency::Usd),
+        currency: 146,
         minor_amount: REPEAT_AMOUNT,
         merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
         metadata,
