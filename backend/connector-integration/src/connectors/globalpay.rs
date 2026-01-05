@@ -125,7 +125,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -149,7 +149,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -176,7 +176,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -199,7 +199,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -278,7 +278,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Globalpay<T>
+    connector_types::RepeatPaymentV2<T> for Globalpay<T>
 {
 }
 
@@ -563,8 +563,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Globalpay<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Globalpay<T>
 {
 }
 
@@ -676,7 +680,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.globalpay.base_url;
-        Ok(format!("{}/accesstoken", base_url))
+        Ok(format!("{base_url}/accesstoken"))
     }
 
     fn get_request_body(
@@ -928,7 +932,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Globalpay<T>
 {

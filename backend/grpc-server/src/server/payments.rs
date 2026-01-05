@@ -305,67 +305,6 @@ impl Payments {
 
         let lineage_ids = &metadata_payload.lineage_ids;
         let reference_id = &metadata_payload.reference_id;
-        let should_do_order_create = connector_data.connector.should_do_order_create();
-
-        let payment_flow_data = if should_do_order_create {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                request_id,
-                lineage_ids,
-                reference_id,
-                shadow_mode: metadata_payload.shadow_mode,
-            };
-
-            let order_id = Box::pin(self.handle_order_creation(
-                config,
-                connector_data.clone(),
-                &payment_flow_data,
-                connector_auth_details.clone(),
-                &payload,
-                &connector.to_string(),
-                service_name,
-                event_params,
-            ))
-            .await?;
-
-            tracing::info!("Order created successfully with order_id: {}", order_id);
-            payment_flow_data.set_order_reference_id(Some(order_id))
-        } else {
-            payment_flow_data
-        };
-
-        let should_do_session_token = connector_data.connector.should_do_session_token();
-
-        let payment_flow_data = if should_do_session_token {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                request_id,
-                lineage_ids,
-                reference_id,
-                shadow_mode: metadata_payload.shadow_mode,
-            };
-
-            let payment_session_data = Box::pin(self.handle_session_token(
-                config,
-                connector_data.clone(),
-                &payment_flow_data,
-                connector_auth_details.clone(),
-                &payload,
-                &connector.to_string(),
-                service_name,
-                event_params,
-            ))
-            .await?;
-            tracing::info!(
-                "Session Token created successfully with session_id: {}",
-                payment_session_data.session_token
-            );
-            payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
-        } else {
-            payment_flow_data
-        };
 
         // Extract access token from Hyperswitch request
         let cached_access_token = payload
@@ -427,6 +366,68 @@ impl Payments {
             payment_flow_data.set_access_token(access_token_data)
         } else {
             // Connector doesn't support access tokens
+            payment_flow_data
+        };
+
+        let should_do_order_create = connector_data.connector.should_do_order_create();
+
+        let payment_flow_data = if should_do_order_create {
+            let event_params = EventParams {
+                _connector_name: &connector.to_string(),
+                _service_name: service_name,
+                request_id,
+                lineage_ids,
+                reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
+            };
+
+            let order_id = Box::pin(self.handle_order_creation(
+                config,
+                connector_data.clone(),
+                &payment_flow_data,
+                connector_auth_details.clone(),
+                &payload,
+                &connector.to_string(),
+                service_name,
+                event_params,
+            ))
+            .await?;
+
+            tracing::info!("Order created successfully with order_id: {}", order_id);
+            payment_flow_data.set_order_reference_id(Some(order_id))
+        } else {
+            payment_flow_data
+        };
+
+        let should_do_session_token = connector_data.connector.should_do_session_token();
+
+        let payment_flow_data = if should_do_session_token {
+            let event_params = EventParams {
+                _connector_name: &connector.to_string(),
+                _service_name: service_name,
+                request_id,
+                lineage_ids,
+                reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
+            };
+
+            let payment_session_data = Box::pin(self.handle_session_token(
+                config,
+                connector_data.clone(),
+                &payment_flow_data,
+                connector_auth_details.clone(),
+                &payload,
+                &connector.to_string(),
+                service_name,
+                event_params,
+            ))
+            .await?;
+            tracing::info!(
+                "Session Token created successfully with session_id: {}",
+                payment_session_data.session_token
+            );
+            payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
+        } else {
             payment_flow_data
         };
 
@@ -3399,7 +3400,7 @@ impl PaymentService for Payments {
                         '_,
                         RepeatPayment,
                         PaymentFlowData,
-                        RepeatPaymentData,
+                        RepeatPaymentData<DefaultPCIHolder>,
                         PaymentsResponseData,
                     > = connector_data.connector.get_connector_integration_v2();
 
@@ -3419,7 +3420,7 @@ impl PaymentService for Payments {
                     let router_data: RouterDataV2<
                         RepeatPayment,
                         PaymentFlowData,
-                        RepeatPaymentData,
+                        RepeatPaymentData<DefaultPCIHolder>,
                         PaymentsResponseData,
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,

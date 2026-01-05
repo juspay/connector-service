@@ -270,7 +270,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/charges", base_url))
+            Ok(format!("{base_url}/charges"))
         }
     }
 );
@@ -307,7 +307,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/charges/{}", base_url, connector_transaction_id))
+            Ok(format!("{base_url}/charges/{connector_transaction_id}"))
         }
     }
 );
@@ -344,7 +344,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/charges/{}/capture", base_url, connector_transaction_id))
+            Ok(format!("{base_url}/charges/{connector_transaction_id}/capture"))
         }
     }
 );
@@ -368,7 +368,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}/refunds", base_url))
+            Ok(format!("{base_url}/refunds"))
         }
     }
 );
@@ -401,7 +401,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_refund_id = req.request.connector_refund_id.clone();
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}/refunds/{}", base_url, connector_refund_id))
+            Ok(format!("{base_url}/refunds/{connector_refund_id}"))
         }
     }
 );
@@ -679,18 +679,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Shift4<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Shift4<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Shift4<T>
+    connector_types::RepeatPaymentV2<T> for Shift4<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
     for Shift4<T>
 {
 }

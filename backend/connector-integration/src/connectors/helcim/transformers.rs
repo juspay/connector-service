@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
@@ -23,11 +23,11 @@ use crate::{connectors::helcim::HelcimRouterData, types::ResponseRouterData};
 
 pub fn check_currency(
     currency: common_enums::Currency,
-) -> Result<common_enums::Currency, errors::ConnectorError> {
+) -> Result<common_enums::Currency, ConnectorError> {
     if currency == common_enums::Currency::USD {
         Ok(currency)
     } else {
-        Err(errors::ConnectorError::NotSupported {
+        Err(ConnectorError::NotSupported {
             message: format!("currency {currency} is not supported for this merchant account"),
             connector: "Helcim",
         })?
@@ -40,13 +40,13 @@ pub struct HelcimAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for HelcimAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
@@ -54,12 +54,7 @@ impl TryFrom<&ConnectorAuthType> for HelcimAuthType {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HelcimPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     amount: FloatMajorUnit,
     currency: common_enums::Currency,
@@ -82,7 +77,7 @@ pub struct HelcimBillingAddress {
     #[serde(skip_serializing_if = "Option::is_none")]
     city: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    email: Option<common_utils::pii::Email>,
+    email: Option<pii::Email>,
 }
 
 #[derive(Debug, Serialize)]
@@ -104,26 +99,14 @@ pub struct HelcimLineItems {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HelcimCard<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     card_number: RawCardNumber<T>,
     card_expiry: Secret<String>,
     card_c_v_v: Secret<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HelcimRouterData<
             RouterDataV2<
@@ -181,7 +164,7 @@ impl<
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
 
         let line_items = vec![HelcimLineItems {
             description: item
@@ -276,37 +259,13 @@ pub struct HelcimMetaData {
     pub preauth_transaction_id: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            HelcimPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            HelcimPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<HelcimPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         //PreAuth Transaction ID is stored in connector metadata
         //Initially resource_id is stored as NoResponseID for manual capture
@@ -381,11 +340,11 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
                     ..item.router_data
                 })
             }
-            SyncRequestType::MultipleCaptureSync(_) => {
-                Err(errors::ConnectorError::NotImplemented(
-                    "manual multiple capture sync".to_string(),
+            SyncRequestType::MultipleCaptureSync => {
+                Err(
+                    ConnectorError::NotImplemented("manual multiple capture sync".to_string())
+                        .into(),
                 )
-                .into())
                 // let capture_sync_response_list =
                 //     utils::construct_captures_response_hashmap(vec![item.response]);
                 // Ok(Self {
@@ -409,14 +368,7 @@ pub struct HelcimCaptureRequest {
     ecommerce: Option<bool>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HelcimRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -439,7 +391,7 @@ impl<
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
             pre_auth_transaction_id: item
@@ -447,7 +399,7 @@ impl<
                 .request
                 .get_connector_transaction_id()?
                 .parse::<u64>()
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+                .change_context(ConnectorError::RequestEncodingFailed)?,
             amount,
             ip_address,
             ecommerce: None,
@@ -495,14 +447,7 @@ pub struct HelcimVoidRequest {
     ecommerce: Option<bool>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HelcimRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -510,7 +455,7 @@ impl<
         >,
     > for HelcimVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: HelcimRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -525,7 +470,7 @@ impl<
                 .request
                 .connector_transaction_id
                 .parse::<u64>()
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+                .change_context(ConnectorError::RequestEncodingFailed)?,
             ip_address,
             ecommerce: None,
         })
@@ -569,12 +514,7 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HelcimSetupMandateRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     amount: FloatMajorUnit,
     currency: common_enums::Currency,
@@ -587,14 +527,7 @@ pub struct HelcimSetupMandateRequest<
 }
 
 // SetupMandate TryFrom implementation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         HelcimRouterData<
             RouterDataV2<
@@ -655,7 +588,7 @@ impl<
                     .unwrap_or(common_utils::types::MinorUnit::new(0)),
                 item.router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
 
         let line_items = vec![HelcimLineItems {
             description: item
@@ -693,25 +626,8 @@ impl<
 }
 
 // SetupMandate Response implementation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            HelcimPaymentsResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
     for RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -721,20 +637,13 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            HelcimPaymentsResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<HelcimPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = common_enums::AttemptStatus::from(item.response.clone());
         let mandate_reference = MandateReference {
             connector_mandate_id: Some(item.response.transaction_id.to_string()),
             payment_method_id: None,
+            connector_mandate_request_reference_id: None,
         };
 
         Ok(Self {
@@ -770,19 +679,11 @@ pub struct HelcimRefundRequest {
     ecommerce: Option<bool>,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<HelcimRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for HelcimRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: HelcimRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -794,7 +695,7 @@ impl<
             .request
             .connector_transaction_id
             .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::RequestEncodingFailed)?;
 
         let ip_address = item.router_data.request.get_ip_address()?;
         let amount = item
@@ -804,7 +705,7 @@ impl<
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
             amount,

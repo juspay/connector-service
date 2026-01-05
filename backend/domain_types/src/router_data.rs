@@ -169,6 +169,24 @@ impl Default for ErrorResponse {
 }
 
 impl ErrorResponse {
+    /// Returns attempt status for gRPC response
+    ///
+    /// For 2xx: If attempt_status is None, use fallback (router_data.status set by connector)
+    /// For 4xx/5xx: If attempt_status is None, return None
+    pub fn get_attempt_status_for_grpc(
+        &self,
+        http_status_code: u16,
+        fallback_status: common_enums::enums::AttemptStatus,
+    ) -> Option<common_enums::enums::AttemptStatus> {
+        self.attempt_status.or_else(|| {
+            if (200..300).contains(&http_status_code) {
+                Some(fallback_status)
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn get_not_implemented() -> Self {
         Self {
             code: "IR_00".to_string(),
@@ -269,7 +287,7 @@ pub struct PazeDecryptedData {
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeToken {
-    pub payment_token: NetworkTokenNumber,
+    pub payment_token: cards::NetworkToken,
     pub token_expiration_month: Secret<String>,
     pub token_expiration_year: Secret<String>,
     pub payment_account_reference: Secret<String>,
@@ -329,13 +347,13 @@ pub enum PaymentMethodToken {
 #[derive(Debug, Default, Clone)]
 pub struct RecurringMandatePaymentData {
     pub payment_method_type: Option<common_enums::enums::PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
-    pub original_payment_authorized_amount: Option<i64>,
+    pub original_payment_authorized_amount: Option<MinorUnit>,
     pub original_payment_authorized_currency: Option<common_enums::enums::Currency>,
     pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl RecurringMandatePaymentData {
-    pub fn get_original_payment_amount(&self) -> Result<i64, Error> {
+    pub fn get_original_payment_amount(&self) -> Result<MinorUnit, Error> {
         self.original_payment_authorized_amount
             .ok_or_else(missing_field_err("original_payment_authorized_amount"))
     }

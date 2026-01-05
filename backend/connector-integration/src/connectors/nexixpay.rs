@@ -219,7 +219,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Nexixpay<T>
+    connector_types::RepeatPaymentV2<T> for Nexixpay<T>
 {
 }
 
@@ -390,7 +390,7 @@ macros::macro_connector_implementation!(
             let mut header = self.build_headers(req)?;
             header.push((
                 headers::IDEMPOTENCY_KEY.to_string(),
-                uuid::Uuid::new_v4().to_string().into(),
+                Uuid::new_v4().to_string().into(),
             ));
             Ok(header)
         }
@@ -448,7 +448,7 @@ macros::macro_connector_implementation!(
             let mut header = self.build_headers(req)?;
             header.push((
                 headers::IDEMPOTENCY_KEY.to_string(),
-                uuid::Uuid::new_v4().to_string().into(),
+                Uuid::new_v4().to_string().into(),
             ));
             Ok(header)
         }
@@ -497,7 +497,7 @@ macros::macro_connector_implementation!(
             let mut header = self.build_headers(req)?;
             header.push((
                 headers::IDEMPOTENCY_KEY.to_string(),
-                uuid::Uuid::new_v4().to_string().into(),
+                Uuid::new_v4().to_string().into(),
             ));
             Ok(header)
         }
@@ -566,8 +566,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Nexixpay<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Nexixpay<T>
 {
 }
 
@@ -864,7 +868,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Nexixpay<T>
 {

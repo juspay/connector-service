@@ -131,12 +131,11 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::Przelewy24 { .. }
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
-            | BankRedirectData::LocalBankRedirect {} => {
-                Err(errors::ConnectorError::NotImplemented(
-                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
-                ))
-                .attach_printable("Bank redirect payment method not supported")?
-            }
+            | BankRedirectData::LocalBankRedirect {}
+            | BankRedirectData::OpenBanking {} => Err(errors::ConnectorError::NotImplemented(
+                crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+            ))
+            .attach_printable("Bank redirect payment method not supported")?,
         },
         PaymentMethodData::PayLater(_) => Type::Redirect,
         PaymentMethodData::BankDebit(_)
@@ -254,12 +253,11 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::Przelewy24 { .. }
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
-            | BankRedirectData::LocalBankRedirect {} => {
-                Err(errors::ConnectorError::NotImplemented(
-                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
-                ))
-                .attach_printable("Bank redirect payment method not supported")?
-            }
+            | BankRedirectData::LocalBankRedirect {}
+            | BankRedirectData::OpenBanking {} => Err(errors::ConnectorError::NotImplemented(
+                crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+            ))
+            .attach_printable("Bank redirect payment method not supported")?,
         },
         PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
             WalletData::GooglePay(_) => Gateway::GooglePay,
@@ -325,7 +323,7 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
 /// Helper function to extract card number as string from RawCardNumber
 /// For direct transactions, we need actual PCI data (DefaultPCIHolder), not vault tokens
 fn get_card_number_string<T: PaymentMethodDataTypes>(
-    card_number: &domain_types::payment_method_data::RawCardNumber<T>,
+    card_number: &RawCardNumber<T>,
 ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
     use error_stack::ResultExt;
 
@@ -493,14 +491,7 @@ pub struct MultisafepayPaymentsRequest<T: PaymentMethodDataTypes> {
 }
 
 // Implementation for macro-generated wrapper type
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         crate::connectors::multisafepay::MultisafepayRouterData<
             RouterDataV2<
@@ -822,31 +813,13 @@ where
     }))
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            MultisafepayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepayPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            MultisafepayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<MultisafepayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response_data = &item.response.data;
 
@@ -883,21 +856,13 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // PSync Response Transformer - Reuses MultisafepayPaymentsResponse structure
-impl
-    TryFrom<
-        ResponseRouterData<
-            MultisafepayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<MultisafepayPaymentsResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            MultisafepayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<MultisafepayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response_data = &item.response.data;
 
@@ -942,14 +907,7 @@ pub struct MultisafepayRefundRequest {
 }
 
 // Implementation for macro-generated wrapper type
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         crate::connectors::multisafepay::MultisafepayRouterData<
             RouterDataV2<
@@ -1014,21 +972,13 @@ pub struct MultisafepayRefundData {
     pub error_info: Option<String>,
 }
 
-impl<F>
-    TryFrom<
-        ResponseRouterData<
-            MultisafepayRefundResponse,
-            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
+impl<F> TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            MultisafepayRefundResponse,
-            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<MultisafepayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = if item.response.success {
             MultisafepayRefundStatus::Succeeded
@@ -1048,21 +998,13 @@ impl<F>
 }
 
 // Refund Sync Response - Uses MultisafepayRefundResponse
-impl
-    TryFrom<
-        ResponseRouterData<
-            MultisafepayRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            MultisafepayRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<MultisafepayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = if item.response.success {
             MultisafepayRefundStatus::Succeeded

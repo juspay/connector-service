@@ -44,7 +44,7 @@ pub trait ValueExt {
         T: serde::de::DeserializeOwned;
 }
 
-impl ValueExt for serde_json::Value {
+impl ValueExt for Value {
     fn parse_value<T>(self, type_name: &'static str) -> Result<T, ParsingError>
     where
         T: serde::de::DeserializeOwned,
@@ -63,7 +63,7 @@ pub trait Encode<'e>
 where
     Self: 'e + std::fmt::Debug,
 {
-    fn encode_to_value(&'e self) -> Result<serde_json::Value, ParsingError>
+    fn encode_to_value(&'e self) -> Result<Value, ParsingError>
     where
         Self: Serialize;
 }
@@ -72,7 +72,7 @@ impl<'e, A> Encode<'e> for A
 where
     Self: 'e + std::fmt::Debug,
 {
-    fn encode_to_value(&'e self) -> Result<serde_json::Value, ParsingError>
+    fn encode_to_value(&'e self) -> Result<Value, ParsingError>
     where
         Self: Serialize,
     {
@@ -85,14 +85,14 @@ where
 pub fn handle_json_response_deserialization_failure(
     res: Response,
     _: &'static str,
-) -> CustomResult<ErrorResponse, crate::errors::ConnectorError> {
+) -> CustomResult<ErrorResponse, errors::ConnectorError> {
     let response_data = String::from_utf8(res.response.to_vec())
-        .change_context(crate::errors::ConnectorError::ResponseDeserializationFailed)?;
+        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(crate::errors::ConnectorError::ResponseDeserializationFailed)?,
+        Ok(_) => Err(errors::ConnectorError::ResponseDeserializationFailed)?,
         // in case of unexpected response but in html or string format
         Err(_) => Ok(ErrorResponse {
             status_code: res.status_code,
@@ -152,11 +152,11 @@ pub fn get_timestamp_in_milliseconds(datetime: &PrimitiveDateTime) -> i64 {
 
 pub fn get_amount_as_string(
     currency_unit: &CurrencyUnit,
-    amount: i64,
+    amount: MinorUnit,
     currency: common_enums::Currency,
 ) -> core::result::Result<String, error_stack::Report<errors::ConnectorError>> {
     let amount = match currency_unit {
-        CurrencyUnit::Minor => amount.to_string(),
+        CurrencyUnit::Minor => amount.get_amount_as_i64().to_string(),
         CurrencyUnit::Base => to_currency_base_unit(amount, currency)?,
     };
     Ok(amount)
@@ -171,11 +171,11 @@ pub fn base64_decode(
 }
 
 pub fn to_currency_base_unit(
-    amount: i64,
+    amount: MinorUnit,
     currency: common_enums::Currency,
 ) -> core::result::Result<String, error_stack::Report<errors::ConnectorError>> {
     currency
-        .to_currency_base_unit(amount)
+        .to_currency_base_unit(amount.get_amount_as_i64())
         .change_context(errors::ConnectorError::ParsingFailed)
 }
 
@@ -395,16 +395,14 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
 pub fn extract_merchant_id_from_metadata(
     metadata: &MaskedMetadata,
 ) -> Result<common_utils::id_type::MerchantId, ApplicationErrorResponse> {
-    let merchant_id_secret = metadata
-        .get(common_utils::consts::X_MERCHANT_ID)
-        .ok_or_else(|| {
-            ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_MERCHANT_ID".to_owned(),
-                error_identifier: 400,
-                error_message: "Missing merchant ID in request metadata".to_owned(),
-                error_object: None,
-            })
-        })?;
+    let merchant_id_secret = metadata.get(consts::X_MERCHANT_ID).ok_or_else(|| {
+        ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "MISSING_MERCHANT_ID".to_owned(),
+            error_identifier: 400,
+            error_message: "Missing merchant ID in request metadata".to_owned(),
+            error_object: None,
+        })
+    })?;
 
     let merchant_id_str = merchant_id_secret.expose();
 

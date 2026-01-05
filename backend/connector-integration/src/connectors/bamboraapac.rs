@@ -94,7 +94,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::connector_types::RepeatPaymentV2 for Bamboraapac<T>
+    interfaces::connector_types::RepeatPaymentV2<T> for Bamboraapac<T>
 {
 }
 
@@ -225,7 +225,7 @@ macros::create_all_prerequisites!(
             request_body: BamboraapacRepeatPaymentRequest,
             response_body: BamboraapacRepeatPaymentResponse,
             response_format: xml,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -502,7 +502,7 @@ macros::macro_connector_implementation!(
     curl_response: BamboraapacRepeatPaymentResponse,
     flow_name: RepeatPayment,
     resource_common_data: PaymentFlowData,
-    flow_request: RepeatPaymentData,
+    flow_request: RepeatPaymentData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
     preprocess_response: true,
@@ -511,7 +511,7 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_url(
             &self,
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
         }
@@ -634,7 +634,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Bamboraapac<T>
 {

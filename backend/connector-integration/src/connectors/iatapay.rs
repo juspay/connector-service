@@ -108,7 +108,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Iatapay<T>
+    connector_types::RepeatPaymentV2<T> for Iatapay<T>
 {
 }
 
@@ -225,7 +225,7 @@ macros::create_all_prerequisites!(
     member_functions: {
         pub fn build_headers_for_payments(
             &self,
-            req: &RouterDataV2<impl std::fmt::Debug, PaymentFlowData, impl std::fmt::Debug, impl std::fmt::Debug>,
+            req: &RouterDataV2<impl Debug, PaymentFlowData, impl Debug, impl Debug>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -247,7 +247,7 @@ macros::create_all_prerequisites!(
 
         pub fn build_headers_for_refunds(
             &self,
-            req: &RouterDataV2<impl std::fmt::Debug, RefundFlowData, impl std::fmt::Debug, impl std::fmt::Debug>,
+            req: &RouterDataV2<impl Debug, RefundFlowData, impl Debug, impl Debug>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -323,7 +323,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut common_utils::events::Event>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: IatapayErrorResponse = res
             .response
@@ -411,7 +411,7 @@ macros::macro_connector_implementation!(
             let merchant_id = auth.merchant_id.peek();
 
             // Extract connector_request_reference_id from request
-            let payment_id = &req.resource_common_data.connector_request_reference_id;
+            let payment_id = req.resource_common_data.get_reference_id()?;
 
             Ok(format!(
                 "{}/merchants/{}/payments/{}",
@@ -543,7 +543,7 @@ macros::macro_connector_implementation!(
             let client_secret = auth.client_secret.peek();
 
             // Create Basic Auth: base64(client_id:client_secret)
-            let credentials = format!("{}:{}", client_id, client_secret);
+            let credentials = format!("{client_id}:{client_secret}");
             let base64_credentials = BASE64_ENGINE.encode(credentials.as_bytes());
 
             Ok(vec![
@@ -553,7 +553,7 @@ macros::macro_connector_implementation!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Basic {}", base64_credentials).into_masked(),
+                    format!("Basic {base64_credentials}").into_masked(),
                 ),
             ])
         }
@@ -584,8 +584,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Iatapay<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Iatapay<T>
 {
 }
 
@@ -814,7 +818,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Iatapay<T>
 {

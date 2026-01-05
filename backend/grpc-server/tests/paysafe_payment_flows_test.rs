@@ -79,7 +79,7 @@ const MERCHANT_ID: &str = "merchant_paysafe_test";
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4000000000001091"; // Paysafe test card
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "25";
+const TEST_CARD_EXP_YEAR: &str = "30";
 const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
@@ -170,12 +170,9 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
     match &response.transaction_id {
         Some(id) => match id.id_type.as_ref() {
             Some(IdType::Id(id)) => id.clone(),
-            _ => panic!(
-                "Expected connector transaction ID, got response: {:#?}",
-                response
-            ),
+            _ => panic!("Expected connector transaction ID, got response: {response:#?}"),
         },
-        None => panic!("Transaction ID is None in response: {:#?}", response),
+        None => panic!("Transaction ID is None in response: {response:#?}"),
     }
 }
 
@@ -247,8 +244,8 @@ fn create_payment_authorize_request(
                 uuid::Uuid::new_v4().simple()
             ))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         merchant_account_metadata,
         ..Default::default()
@@ -267,7 +264,13 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
+        metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: None,
+        setup_future_usage: None,
         encoded_data: None,
+        sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 
@@ -332,6 +335,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_metadata,
         merchant_account_metadata: Default::default(),
         state: None,
+        payment_method_type: None,
     }
 }
 
