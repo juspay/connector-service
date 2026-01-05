@@ -1,29 +1,100 @@
 use common_utils::consts;
+use domain_types::connector_types::ConnectorEnum;
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
+
+/// Cached parsed Superposition configuration - loaded once at startup
+static PARSED_SUPERPOSITION_CONFIG: Lazy<Result<superposition_core::toml_parser::Config, String>> =
+    Lazy::new(|| {
+        let config_path = superposition_config_path();
+        let toml_content = std::fs::read_to_string(&config_path)
+            .map_err(|e| format!("Failed to read superposition.toml: {}", e))?;
+
+        superposition_core::toml_parser::parse(&toml_content)
+            .map_err(|e| format!("Failed to parse superposition.toml: {:?}", e))
+    });
 
 /// Loads and resolves Superposition TOML configuration based on environment context
 pub fn load_superposition_config(
     environment: &consts::Env,
 ) -> Result<HashMap<String, toml::Value>, config::ConfigError> {
-    // Read the superposition.toml file
-    let config_path = superposition_config_path();
-    let toml_content = std::fs::read_to_string(&config_path).map_err(|e| {
-        config::ConfigError::Message(format!(
-            "Failed to read superposition.toml: {}",
-            e
-        ))
-    })?;
-
-    // Parse using official Superposition parser
-    let parsed_config = superposition_core::toml_parser::parse(&toml_content).map_err(|e| {
-        config::ConfigError::Message(format!("Failed to parse superposition.toml: {:?}", e))
-    })?;
+    // Get cached parsed config
+    let parsed_config = PARSED_SUPERPOSITION_CONFIG
+        .as_ref()
+        .map_err(|e| config::ConfigError::Message(e.clone()))?;
 
     // Resolve configuration for the current environment
-    let resolved = resolve_config(&parsed_config, environment)?;
+    let resolved = resolve_config(parsed_config, environment)?;
 
     Ok(resolved)
+}
+
+/// Resolves Superposition config for a specific connector + environment (per-request)
+/// This is used for dynamic per-request configuration resolution
+pub fn resolve_connector_specific_config(
+    connector: &ConnectorEnum,
+    environment: &consts::Env,
+) -> Result<HashMap<String, toml::Value>, config::ConfigError> {
+    // Get cached parsed config
+    let parsed_config = PARSED_SUPERPOSITION_CONFIG
+        .as_ref()
+        .map_err(|e| config::ConfigError::Message(e.clone()))?;
+
+    // Resolve with both environment and connector dimensions
+    let mut resolved = HashMap::new();
+
+    // Start with default config values
+    for (key, config_value) in &parsed_config.default_configs {
+        resolved.insert(key.clone(), config_value.value.clone());
+    }
+
+    let env_str = environment.to_string().to_lowercase();
+    let connector_str = connector.to_string().to_lowercase();
+
+    // Apply overrides in priority order:
+    // 1. Environment-only contexts
+    for context in &parsed_config.contexts {
+        if context_matches_environment(&context.condition, &env_str)
+            && !has_connector_dimension(&context.condition)
+        {
+            apply_context_overrides(&mut resolved, context, parsed_config);
+        }
+    }
+
+    // 2. Connector-only contexts (no environment constraint)
+    for context in &parsed_config.contexts {
+        if context_matches_connector(&context.condition, &connector_str)
+            && !context.condition.contains_key("environment")
+        {
+            apply_context_overrides(&mut resolved, context, parsed_config);
+        }
+    }
+
+    // 3. Connector + Environment contexts (highest priority)
+    for context in &parsed_config.contexts {
+        if context_matches_connector(&context.condition, &connector_str)
+            && context_matches_environment(&context.condition, &env_str)
+        {
+            apply_context_overrides(&mut resolved, context, parsed_config);
+        }
+    }
+
+    Ok(resolved)
+}
+
+/// Helper to apply context overrides to the resolved map
+fn apply_context_overrides(
+    resolved: &mut HashMap<String, toml::Value>,
+    context: &superposition_core::toml_parser::Context,
+    config: &superposition_core::toml_parser::Config,
+) {
+    for (override_key, override_id) in &context.override_with_keys {
+        if let Some(override_value) = config.overrides.get(&override_id.get_key()) {
+            resolved.insert(override_key.clone(), override_value.clone());
+        }
+    }
 }
 
 /// Resolves the Superposition config for a given environment context
