@@ -87,6 +87,7 @@ pub struct RedsysOperationsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct RedsysErrorResponse {
     pub error_code: String,
+    pub error_code_description: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
