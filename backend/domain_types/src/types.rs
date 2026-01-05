@@ -185,6 +185,7 @@ pub struct Connectors {
     pub jpmorgan: ConnectorParams,
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
+    pub paybox: ConnectorParams,
     pub barclaycard: ConnectorParams,
     pub nexixpay: ConnectorParams,
     pub airwallex: ConnectorParams,
