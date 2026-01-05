@@ -187,6 +187,7 @@ pub struct Connectors {
     pub bambora: ConnectorParams,
     pub payme: ConnectorParams,
     pub revolut: ConnectorParams,
+    pub gigadat: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -843,6 +844,27 @@ impl<
                         blik_code: blik.blik_code,
                     }),
                 ),
+                grpc_payment_types::payment_method::PaymentMethod::Interac(interac) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::Interac {
+                        country: match interac.country() {
+                            grpc_payment_types::CountryAlpha2::Unspecified => None,
+                            _ => Some(CountryAlpha2::foreign_try_from(interac.country())?),
+                        },
+                        email: match interac.email {
+                            Some(ref email_str) => Some(
+                                Email::try_from(email_str.clone().expose()).change_context(
+                                    ApplicationErrorResponse::BadRequest(ApiError {
+                                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: "Invalid email for Interac".to_owned(),
+                                        error_object: None,
+                                    }),
+                                )?,
+                            ),
+                            None => None,
+                        },
+                    }),
+                ),
                 // ============================================================================
                 // MOBILE PAYMENTS - Direct variants
                 // ============================================================================
@@ -1266,6 +1288,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(_) => Ok(Some(PaymentMethodType::Przelewy24)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BancontactCard(_) => Ok(Some(PaymentMethodType::BancontactCard)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Blik(_) => Ok(Some(PaymentMethodType::Blik)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Interac(_) => {
+                    Ok(Some(PaymentMethodType::Interac))
+                }
                 // ============================================================================
                 // MOBILE & CRYPTO PAYMENTS - PaymentMethodType mappings
                 // ============================================================================
@@ -2589,9 +2614,18 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             // Borrow value.address
             Some(address_value) => {
                 // address_value is &grpc_api_types::payments::PaymentAddress
-                PaymentAddress::foreign_try_from(
-                    (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
-                )?
+                let mut address_value_clone = (*address_value).clone();
+
+                // Inject email from top-level request if missing in billing address
+                if let Some(email) = &value.email {
+                    if let Some(billing) = &mut address_value_clone.billing_address {
+                        if billing.email.is_none() {
+                            billing.email = Some(email.clone());
+                        }
+                    }
+                }
+
+                PaymentAddress::foreign_try_from(address_value_clone)?
             }
             None => {
                 return Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -2608,8 +2642,11 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
+        let mut merged_metadata = value.merchant_account_metadata.clone();
+        merged_metadata.extend(value.connector_metadata.clone());
+
         let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
-            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+            convert_merchant_metadata_to_json(&merged_metadata),
         );
 
         let order_details = (!value.order_details.is_empty())

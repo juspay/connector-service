@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+gigadat.base_url = "https://interac.express-connect.com/"
 payme.base_url = "https://live.payme.io/api/"
 barclaycard.base_url = "https://api.smartpayfuse.barclaycard"
 airwallex.base_url = "https://api.airwallex.com/api/v1"
