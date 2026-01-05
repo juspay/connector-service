@@ -98,6 +98,7 @@ pub struct NovalnetRawCardDetails {
     card_number: CardNumber,
     card_expiry_month: Secret<String>,
     card_expiry_year: Secret<String>,
+    scheme_tid: Secret<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -775,8 +776,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 // Specific implementations for RepeatPayment flow
-impl TryFrom<ResponseRouterData<NovalnetPaymentsResponse, Self>>
-    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+impl<
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<NovalnetPaymentsResponse, Self>>
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -1984,7 +1987,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NovalnetRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for NovalnetPaymentsRequest<T>
@@ -1992,7 +2000,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: NovalnetRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -2063,6 +2076,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .unwrap_or(DEFAULT_LOCALE.to_string().to_string());
         let custom = NovalnetCustom { lang };
         let hook_url = item.router_data.request.get_webhook_url()?;
+        let return_url = item.router_data.request.get_router_return_url()?;
 
         let amount = item
             .connector
@@ -2114,6 +2128,48 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     customer,
                     custom,
                 })
+            }
+            MandateReferenceId::NetworkMandateId(network_transaction_id) => {
+                match item.router_data.request.payment_method_data {
+                    PaymentMethodData::CardDetailsForNetworkTransactionId(ref raw_card_details) => {
+                        let novalnet_card =
+                            NovalNetPaymentData::RawCardForNTI(NovalnetRawCardDetails {
+                                card_number: raw_card_details.card_number.clone(),
+                                card_expiry_month: raw_card_details.card_exp_month.clone(),
+                                card_expiry_year: raw_card_details.card_exp_year.clone(),
+                                scheme_tid: network_transaction_id.into(),
+                            });
+
+                        let transaction = NovalnetPaymentsRequestTransaction {
+                            test_mode,
+                            payment_type: NovalNetPaymentTypes::CREDITCARD,
+                            amount: NovalNetAmount::StringMinor(amount.clone()),
+                            currency: item.router_data.request.currency,
+                            order_no: item
+                                .router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
+                            hook_url: Some(hook_url),
+                            return_url: Some(return_url.clone()),
+                            error_return_url: Some(return_url.clone()),
+                            payment_data: Some(novalnet_card),
+                            enforce_3d,
+                            create_token: Some(CREATE_TOKEN_REQUIRED),
+                        };
+
+                        Ok(Self {
+                            merchant,
+                            transaction,
+                            customer,
+                            custom,
+                        })
+                    }
+                    _ => Err(ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("novalnet"),
+                    )
+                    .into()),
+                }
             }
             _ => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("novalnet"),

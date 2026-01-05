@@ -149,7 +149,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Razorpay<T>
+    connector_types::RepeatPaymentV2<T> for Razorpay<T>
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -489,23 +489,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+
         // Check if request_ref_id is provided to determine URL pattern
-        let request_ref_id = &req.resource_common_data.connector_request_reference_id;
+        match &req.resource_common_data.reference_id {
+            Some(ref_id) => {
+                // Use orders endpoint when request_ref_id is provided
+                Ok(format!("{base_url}v1/orders/{ref_id}/payments"))
+            }
+            None => {
+                // Extract payment ID from connector_transaction_id for standard payment sync
+                let payment_id = req
+                    .request
+                    .connector_transaction_id
+                    .get_connector_transaction_id()
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-        if request_ref_id != "default_reference_id" {
-            // Use orders endpoint when request_ref_id is provided
-            let url = format!("{base_url}v1/orders/{request_ref_id}/payments");
-            Ok(url)
-        } else {
-            // Extract payment ID from connector_transaction_id for standard payment sync
-            let payment_id = req
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-            let url = format!("{base_url}v1/payments/{payment_id}");
-            Ok(url)
+                Ok(format!("{base_url}v1/payments/{payment_id}"))
+            }
         }
     }
 
@@ -1392,7 +1392,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ConnectorIntegrationV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        domain_types::connector_types::RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Razorpay<T>
 {
@@ -1402,7 +1402,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     interfaces::verification::SourceVerification<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        domain_types::connector_types::RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Razorpay<T>
 {

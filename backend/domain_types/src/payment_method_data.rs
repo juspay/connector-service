@@ -14,7 +14,6 @@ use utoipa::ToSchema;
 
 use crate::{
     errors::ConnectorError,
-    router_data::NetworkTokenNumber,
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
 };
 
@@ -246,47 +245,46 @@ pub enum MobilePaymentData {
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Default)]
 pub struct NetworkTokenData {
-    pub network_token: cards::NetworkToken,
-    pub network_token_exp_month: Secret<String>,
-    pub network_token_exp_year: Secret<String>,
-    pub cryptogram: Option<Secret<String>>,
-    pub card_issuer: Option<String>, //since network token is tied to card, so its issuer will be same as card issuer
-    pub card_network: Option<CardNetwork>,
-    pub card_type: Option<CardType>,
-    pub card_issuing_country: Option<CountryAlpha2>,
+    pub token_number: cards::NetworkToken,
+    pub token_exp_month: Secret<String>,
+    pub token_exp_year: Secret<String>,
+    pub token_cryptogram: Option<Secret<String>>,
+    pub card_issuer: Option<String>,
+    pub card_network: Option<common_enums::CardNetwork>,
+    pub card_type: Option<String>,
+    pub card_issuing_country: Option<String>,
     pub bank_code: Option<String>,
-    pub card_holder_name: Option<Secret<String>>,
     pub nick_name: Option<Secret<String>>,
     pub eci: Option<String>,
 }
 
 impl NetworkTokenData {
     pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
-        get_card_issuer(self.network_token.peek())
+        get_card_issuer(self.token_number.peek())
     }
 
     pub fn get_expiry_year_4_digit(&self) -> Secret<String> {
-        let mut year = self.network_token_exp_year.peek().clone();
+        let mut year = self.token_exp_year.peek().clone();
         if year.len() == 2 {
             year = format!("20{year}");
         }
         Secret::new(year)
     }
 
-    pub fn get_network_token(&self) -> NetworkTokenNumber {
-        self.network_token.clone()
+    pub fn get_network_token(&self) -> cards::NetworkToken {
+        self.token_number.clone()
     }
 
     pub fn get_network_token_expiry_month(&self) -> Secret<String> {
-        self.network_token_exp_month.clone()
+        self.token_exp_month.clone()
     }
 
     pub fn get_network_token_expiry_year(&self) -> Secret<String> {
-        self.network_token_exp_year.clone()
+        self.token_exp_year.clone()
     }
 
     pub fn get_cryptogram(&self) -> Option<Secret<String>> {
-        self.cryptogram.clone()
+        self.token_cryptogram.clone()
     }
 }
 

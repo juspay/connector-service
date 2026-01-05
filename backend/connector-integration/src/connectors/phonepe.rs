@@ -136,7 +136,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Phonepe<T>
+    connector_types::RepeatPaymentV2<T> for Phonepe<T>
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -310,7 +310,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            let merchant_transaction_id = &req.resource_common_data.connector_request_reference_id;
+            let merchant_transaction_id = req.resource_common_data.get_reference_id()?;
 
             let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
             let merchant_id = auth.merchant_id.peek();
@@ -459,8 +459,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Phonepe<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Phonepe<T>
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -665,7 +669,7 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     RepeatPayment,
     PaymentFlowData,
-    RepeatPaymentData,
+    RepeatPaymentData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(

@@ -130,7 +130,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Cashfree<T>
+    connector_types::RepeatPaymentV2<T> for Cashfree<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -442,8 +442,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Default ConnectorIntegrationV2 implementations for unsupported flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Cashfree<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Cashfree<T>
 {
 }
 
@@ -560,7 +564,7 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     RepeatPayment,
     PaymentFlowData,
-    RepeatPaymentData,
+    RepeatPaymentData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
