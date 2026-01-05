@@ -4,6 +4,27 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.01.0
+
+### Bug Fixes
+
+- Adyen url on non test mode for authorize,void,etc ([#402](https://github.com/juspay/connector-service/pull/402)) ([`e1a2e3c`](https://github.com/juspay/connector-service/commit/e1a2e3c4e2655a73859c38c9f42dee4097a8c493))
+
+**Full Changelog:** [`2025.12.31.0...2026.01.01.0`](https://github.com/juspay/connector-service/compare/2025.12.31.0...2026.01.01.0)
+
+- - -
+
+## 2025.12.31.0
+
+### Features
+
+- **connector:** [PAYPAL] Bank-Redirect ([#397](https://github.com/juspay/connector-service/pull/397)) ([`83c945f`](https://github.com/juspay/connector-service/commit/83c945fe302493e8d268895bcb3313254721b19c))
+- **core:** Add connector_order_reference_id for Psync ([#395](https://github.com/juspay/connector-service/pull/395)) ([`3dcfd30`](https://github.com/juspay/connector-service/commit/3dcfd30ef1405c81ba711c370397cabba277e854))
+
+**Full Changelog:** [`2025.12.30.0...2025.12.31.0`](https://github.com/juspay/connector-service/compare/2025.12.30.0...2025.12.31.0)
+
+- - -
+
 ## 2025.12.30.0
 
 ### Features
