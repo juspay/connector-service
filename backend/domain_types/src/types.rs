@@ -188,6 +188,7 @@ pub struct Connectors {
     pub bambora: ConnectorParams,
     pub payme: ConnectorParams,
     pub revolut: ConnectorParams,
+    pub loonio: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -854,6 +855,27 @@ impl<
                         blik_code: blik.blik_code,
                     }),
                 ),
+                grpc_payment_types::payment_method::PaymentMethod::Interac(interac) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::Interac {
+                        country: match interac.country() {
+                            grpc_payment_types::CountryAlpha2::Unspecified => None,
+                            _ => Some(CountryAlpha2::foreign_try_from(interac.country())?),
+                        },
+                        email: match interac.email {
+                            Some(ref email_str) => Some(
+                                Email::try_from(email_str.clone().expose()).change_context(
+                                    ApplicationErrorResponse::BadRequest(ApiError {
+                                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: "Invalid email for Interac".to_owned(),
+                                        error_object: None,
+                                    }),
+                                )?,
+                            ),
+                            None => None,
+                        },
+                    }),
+                ),
                 // ============================================================================
                 // MOBILE PAYMENTS - Direct variants
                 // ============================================================================
@@ -1391,6 +1413,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         error_message: "PSE is not yet supported".to_owned(),
                         error_object: None,
                     })))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Interac(_) => {
+                    Ok(Some(PaymentMethodType::Interac))
                 }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
