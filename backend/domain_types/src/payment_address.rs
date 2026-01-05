@@ -2,7 +2,9 @@ use common_enums::ProductType;
 use common_utils::{ext_traits::ConfigExt, Email, MinorUnit};
 use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
 
-use crate::utils::{convert_us_state_to_code, missing_field_err, Error};
+use crate::utils::{
+    convert_canada_state_to_code, convert_us_state_to_code, missing_field_err, Error,
+};
 
 #[derive(Clone, Default, Debug)]
 pub struct PaymentAddress {
@@ -184,6 +186,8 @@ pub struct AddressDetails {
 
     /// The last name for the address
     pub last_name: Option<Secret<String>>,
+
+    pub origin_zip: Option<Secret<String>>,
 }
 
 impl AddressDetails {
@@ -229,6 +233,7 @@ impl AddressDetails {
                 line3: self.line3.or(other.line3.clone()),
                 zip: self.zip.or(other.zip.clone()),
                 state: self.state.or(other.state.clone()),
+                origin_zip: self.origin_zip.clone().or(other.origin_zip.clone()),
             }
         } else {
             self
@@ -318,6 +323,9 @@ impl AddressDetails {
         match country {
             common_enums::CountryAlpha2::US => Ok(Secret::new(
                 convert_us_state_to_code(&state.peek().to_string()).to_string(),
+            )),
+            common_enums::CountryAlpha2::CA => Ok(Secret::new(
+                convert_canada_state_to_code(&state.peek().to_string()).to_string(),
             )),
             _ => Ok(state.clone()),
         }
@@ -414,6 +422,16 @@ pub struct OrderDetailsWithAmount {
     pub product_type: Option<ProductType>,
     /// The tax code for the product
     pub product_tax_code: Option<String>,
+    /// stock keeping unit of the product
+    pub sku: Option<String>,
+    /// universal product code of the product
+    pub upc: Option<String>,
+    /// commodity code of the product
+    pub commodity_code: Option<String>,
+    /// total amount of the product
+    pub total_amount: Option<MinorUnit>,
+    /// discount amount on the unit
+    pub unit_discount_amount: Option<MinorUnit>,
 }
 
-impl hyperswitch_masking::SerializableSecret for OrderDetailsWithAmount {}
+impl SerializableSecret for OrderDetailsWithAmount {}

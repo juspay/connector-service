@@ -59,6 +59,9 @@ pub struct PostAuthenticate;
 pub struct VoidPC;
 
 #[derive(Debug, Clone)]
+pub struct SdkSessionToken;
+
+#[derive(Debug, Clone)]
 pub struct MandateRevoke;
 
 #[derive(strum::Display)]
@@ -86,5 +89,6 @@ pub enum FlowName {
     PreAuthenticate,
     Authenticate,
     PostAuthenticate,
+    SdkSessionToken,
     MandateRevoke,
 }

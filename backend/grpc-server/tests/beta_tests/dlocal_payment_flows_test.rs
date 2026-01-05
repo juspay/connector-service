@@ -199,8 +199,8 @@ fn create_payment_authorize_request(
 
     // Set the transaction details
     request.auth_type = i32::from(AuthenticationType::NoThreeDs);
-    request.request_incremental_authorization = true;
-    request.enrolled_for_3ds = true;
+    request.request_incremental_authorization = Some(true);
+    request.enrolled_for_3ds = Some(true);
 
     // Set capture method with proper conversion
     if let common_enums::CaptureMethod::Manual = capture_method {

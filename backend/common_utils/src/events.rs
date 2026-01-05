@@ -288,6 +288,7 @@ pub enum FlowName {
     PreAuthenticate,
     Authenticate,
     PostAuthenticate,
+    SdkSessionToken,
     MandateRevoke,
     Unknown,
 }
@@ -317,6 +318,7 @@ impl FlowName {
             Self::PreAuthenticate => "PreAuthenticate",
             Self::Authenticate => "Authenticate",
             Self::PostAuthenticate => "PostAuthenticate",
+            Self::SdkSessionToken => "SdkSessionToken",
             Self::MandateRevoke => "MandateRevoke",
             Self::Unknown => "Unknown",
         }
@@ -339,7 +341,7 @@ impl EventStage {
 }
 
 /// Configuration for events system
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EventConfig {
     pub enabled: bool,
     pub topic: String,

@@ -41,14 +41,17 @@ message PaymentMethod {
     // DIGITAL WALLETS (10-29) - Direct variants
     AppleWallet apple_pay = 10;                         // Apple Pay
     GoogleWallet google_pay = 11;                       // Google Pay
-    AmazonPayRedirectWallet amazon_pay_redirect = 12;   // Amazon Pay
-    CashappQrWallet cashapp_qr = 13;                    // Cash App
-    PaypalRedirectWallet paypal_redirect = 14;          // PayPal
-    WeChatPayQrWallet we_chat_pay_qr = 15;              // WeChat Pay
-    AliPayRedirectWallet ali_pay_redirect = 16;         // AliPay
-    RevolutPayWallet revolut_pay = 17;                  // Revolut Pay
-    MifinityWallet mifinity = 18;                       // Mifinity
-    Bluecode bluecode = 19;                             // Bluecode
+    ApplePayThirdPartySdkWallet apple_pay_third_party_sdk = 12;  // Apple Pay Third Party SDK
+    GooglePayThirdPartySdkWallet google_pay_third_party_sdk = 13; // Google Pay Third Party SDK
+    PaypalSdkWallet paypal_sdk = 14;                    // PayPal SDK
+    AmazonPayRedirectWallet amazon_pay_redirect = 15;   // Amazon Pay
+    CashappQrWallet cashapp_qr = 16;                    // Cash App
+    PaypalRedirectWallet paypal_redirect = 17;          // PayPal
+    WeChatPayQrWallet we_chat_pay_qr = 18;              // WeChat Pay
+    AliPayRedirectWallet ali_pay_redirect = 19;         // AliPay
+    RevolutPayWallet revolut_pay = 20;                  // Revolut Pay
+    MifinityWallet mifinity = 21;                       // Mifinity
+    Bluecode bluecode = 22;                             // Bluecode
     
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -72,6 +75,9 @@ message PaymentMethod {
     Eps eps = 53;
     Przelewy24 przelewy24 = 54;
     Pse pse = 55;
+    BancontactCard bancontact_card = 56;
+    Blik blik = 57;
+    OpenBanking open_banking = 58;
     
     // MOBILE PAYMENTS (60-69) - Direct variants
     DuitNow duit_now = 60;
@@ -83,7 +89,29 @@ message PaymentMethod {
     ClassicReward classic_reward = 80;                  // Classic reward points
     EVoucher e_voucher = 81;                           // Electronic voucher
 
-    InstantBankTransfer instant_bank_transfer = 90; // Generic instant bank transfer
+    // BANK TRANSFER (90-99)
+    InstantBankTransfer instant_bank_transfer = 90;            // Generic instant bank transfer
+    AchBankTransfer ach_bank_transfer = 91;                    // Automated Clearing House - US bank transfer system
+    SepaBankTransfer sepa_bank_transfer = 92;                  // SEPA credit transfer
+    BacsBankTransfer bacs_bank_transfer = 93;                  // Bankers' Automated Clearing Services - UK bank transfer
+    MultibancoBankTransfer multibanco_bank_transfer = 94;      // Multibanco - Portuguese payment method
+    InstantBankTransferFinland instant_bank_transfer_finland = 95;         // Finland's instant bank transfer
+    InstantBankTransferPoland instant_bank_transfer_poland = 96;           // Poland's instant bank transfer
+
+    // DIRECT DEBIT (100-109)
+    Ach ach = 100;                                              // Ach - Automated Clearing House
+    Sepa sepa = 101;                                            // Sepa - Single Euro Payments Area direct debit
+    Bacs bacs = 102;                                            // Bacs - Bankers' Automated Clearing Services
+    Becs becs = 103;                                            // Becs - Bulk Electronic Clearing System - Australian direct debit
+
+    // BUY NOW, PAY LATER (110-119)
+    Affirm affirm = 110;                                       // Affirm - US BNPL service
+    AfterpayClearpay afterpay_clearpay = 111;                  // Afterpay/Clearpay - BNPL service
+    Klarna klarna = 112;                                       // Klarna - Swedish BNPL service
+    
+    // NETWORK TRANSACTION METHODS (120-129) - For recurring payments with network transaction IDs
+    CardDetailsForNetworkTransactionId card_details_for_network_transaction_id = 120; // Card details with network transaction ID
+    NetworkTokenData network_token = 121; // Network token data
   }
 }
 
@@ -233,6 +261,10 @@ message CardDetails {
 }
 
 message CardNumberType {
+  string value = 1;
+}
+
+message NetworkTokenType {
   string value = 1;
 }
 
@@ -473,24 +505,54 @@ message RevolutPayWallet {
 message Bluecode {
 }
 
+// Apple Pay Third Party SDK - Apple Pay with token from third-party SDK
+message ApplePayThirdPartySdkWallet {
+  // Payment token from third-party SDK
+  optional SecretString token = 1;
+}
+
+// Google Pay Third Party SDK - Google Pay with token from third-party SDK  
+message GooglePayThirdPartySdkWallet {
+  // Payment token from third-party SDK
+  optional SecretString token = 1;
+}
+
+// PayPal SDK - PayPal payment with SDK token
+message PaypalSdkWallet {
+  // Payment token from PayPal SDK
+  optional SecretString token = 1;
+}
+
 // ============================================================================
 // REAL-TIME PAYMENT METHODS
 // ============================================================================
+
+// UPI Source types for UPI payments
+enum UpiSource {
+  UPI_CC = 0;    // UPI Credit Card (RuPay credit on UPI)
+  UPI_CL = 1;    // UPI Credit Line
+  UPI_ACCOUNT = 2; // UPI Bank Account (Savings)
+  UPI_CC_CL = 3; // UPI Credit Card + Credit Line
+}
 
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
 message UpiCollect {
   // Virtual Payment Address
   optional SecretString vpa_id = 1;
+  // UPI source type
+  optional UpiSource upi_source = 2;
 }
 
 message UpiIntent {
-  // No additional fields required for UPI Intent
-    optional string app_name = 1;
-
+  // App name for UPI Intent
+  optional string app_name = 1;
+  // UPI source type
+  optional UpiSource upi_source = 2;
 }
 
 message UpiQr {
-  // No additional fields required for UPI QR
+  // UPI source type
+  optional UpiSource upi_source = 1;
 }
 
 // PIX - Brazilian instant payment ecosystem
@@ -525,27 +587,27 @@ message VietQR {
 // BANK TRANSFER PAYMENT METHODS
 // ============================================================================
 
-/*
+// AchBankTransfer (Automated Clearing House) - US electronic funds transfer system
+message AchBankTransfer {
 
-// ACH (Automated Clearing House) - US electronic funds transfer system
-message ACH {
-  // Fields will be added as needed for ACH integration
 }
 
-// BACS (Bankers' Automated Clearing Services) - UK bank transfer system
-message BACS {
-  // Fields will be added as needed for BACS integration
-}
+// BacsBankTransfer (Bankers' Automated Clearing Services) - UK bank transfer system
+message BacsBankTransfer {
 
-// SEPA (Single Euro Payments Area) - EU payment integration initiative
-message SEPA {
-  // Fields will be added as needed for SEPA direct debit integration
 }
 
 // SEPA Bank Transfer - Credit transfer within the SEPA network
-message SEPABankTransfer {
-  // Fields will be added as needed for SEPA credit transfer integration
+message SepaBankTransfer {
+
 }
+
+// Multibanco - Portuguese payment method
+message MultibancoBankTransfer {
+
+}
+
+/*
 
 // EFT (Electronic Funds Transfer) - Generic electronic transfer of funds
 message EFT {
@@ -566,6 +628,16 @@ message LocalBankTransfer {
 // Instant Bank Transfer - Generic instant bank transfer method
 message InstantBankTransfer {
   // Fields will be added as needed for instant bank transfers
+}
+
+// Instant Bank Transfer Finland - Finland's instant bank transfer method
+message InstantBankTransferFinland {
+  // Fields will be added as needed for instant bank transfers finland
+}
+
+// Instant Bank Transfer Poland - Poland's instant bank transfer method
+message InstantBankTransferPoland {
+  // Fields will be added as needed for instant bank transfers poland
 }
 
 /*
@@ -622,6 +694,11 @@ message OpenBankingUK {
   optional string issuer = 2;
 }
 
+// Open Banking - Open Banking implementation
+message OpenBanking {
+  // Fields will be added as needed for Open Banking integration
+}
+
 // Open Banking Payment Initiation Service
 message OpenBankingPIS {
   // Fields will be added as needed for Open Banking PIS integration
@@ -634,7 +711,8 @@ message LocalBankRedirect {
 
 // iDEAL - Dutch online banking payment method
 message Ideal {
-  // Fields will be added as needed for iDEAL integration
+  // The bank name for ideal
+  optional BankNames bank_name = 2;
 }
 
 // Sofort - German online banking payment method
@@ -644,22 +722,42 @@ message Sofort {
 
 // Trustly - European online banking payment method
 message Trustly {
-  // Fields will be added as needed for Trustly integration
+  // The customer's full name (required by Trustly)
+  optional SecretString shopper_name = 1;
+  // The customer's country code (required by Trustly)
+  optional CountryAlpha2 country = 2;
 }
 
 // Giropay - German bank transfer payment method
 message Giropay {
-  // Fields will be added as needed for Giropay integration
+  // Bank account bic code
+  optional SecretString bank_account_bic = 2;
+  
+  // Bank account iban
+  optional SecretString bank_account_iban = 3;
+  
+  // The country for bank payment
+  optional CountryAlpha2 country = 4;
 }
 
 // EPS (Electronic Payment Standard) - Austrian bank transfer system
 message Eps {
-  // Fields will be added as needed for EPS integration
+  // The bank name for eps
+  optional BankNames bank_name = 2;
+  
+  // The country for bank payment
+  optional CountryAlpha2 country = 3;
 }
 
 // Przelewy24 - Polish payment system
 message Przelewy24 {
-  // Fields will be added as needed for Przelewy24 integration
+  // Issuer banks
+  optional BankNames bank_name = 1;
+}
+
+// Blik - Polish mobile payment system
+message Blik {
+  optional string blik_code = 1;
 }
 
 // PSE (Pagos Seguros en Línea) - Colombian online banking
@@ -667,11 +765,24 @@ message Pse {
   // Fields will be added as needed for PSE integration
 }
 
+// Bancontact - Belgian debit card scheme
+message BancontactCard {
+  // The card number
+  CardNumberType card_number = 1;
+  
+  // The card's expiry month
+  SecretString card_exp_month = 2;
+  
+  // The card's expiry year
+  SecretString card_exp_year = 3;
+  
+  // The card holder's name
+  SecretString card_holder_name = 4;
+}
+
 // ============================================================================
 // BUY NOW, PAY LATER PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
-
-/*
 
 // Affirm - US BNPL service
 message Affirm {
@@ -682,6 +793,13 @@ message Affirm {
 message AfterpayClearpay {
   // Fields will be added as needed for Afterpay/Clearpay integration
 }
+
+// Klarna - Swedish BNPL service
+message Klarna {
+  // Fields will be added as needed for Klarna integration
+}
+
+/*
 
 // Alma - French BNPL service
 message Alma {
@@ -709,11 +827,6 @@ message Walley {
 // ============================================================================
 
 /*
-
-// BLIK - Polish mobile payment system
-message Blik {
-  // Fields will be added as needed for BLIK integration
-}
 
 // Bizum - Spanish mobile payment solution
 message Bizum {
@@ -893,17 +1006,64 @@ message PayEasy {
 // DIRECT DEBIT PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
 
+// Becs - Bulk Electronic Clearing System - Australian direct debit
+message Becs {
+  // Account number for Becs payment method
+  SecretString account_number = 1;
+  
+  // Bank-State-Branch (bsb) number
+  SecretString bsb_number = 2;
+
+  // Owner name for bank debit
+  optional SecretString bank_account_holder_name = 3;
+}
+
+// Ach - Automated Clearing House
+message Ach {
+  // Account number for ach bank debit payment
+  SecretString account_number = 1;
+  
+  // Routing number for ach bank debit payment
+  SecretString routing_number = 2;
+  
+  // Card holder name
+  SecretString card_holder_name = 3;
+  
+  // Bank account holder name
+  SecretString bank_account_holder_name = 4;
+  
+  // Bank name
+  BankNames bank_name = 5;
+  
+  // Bank type
+  BankType bank_type = 6;
+  
+  // Bank holder type
+  BankHolderType bank_holder_type = 7;
+}
+
+// Sepa - Single Euro Payments Area direct debit
+message Sepa {
+  // International bank account number (iban) for SEPA
+  SecretString iban = 1;
+  
+  // Owner name for bank debit
+  optional SecretString bank_account_holder_name = 2;
+}
+
+// Bacs - Bankers' Automated Clearing Services
+message  Bacs {
+  // Account number for Bacs payment method
+  SecretString account_number = 1;
+  
+  // Sort code for Bacs payment method
+  SecretString sort_code = 2;
+  
+  // Holder name for bank debit
+  optional SecretString bank_account_holder_name = 3;
+}
+
 /*
-
-// Bancontact - Belgian debit card scheme
-message BancontactCard {
-  // Fields will be added as needed for Bancontact integration
-}
-
-// BECS - Bulk Electronic Clearing System - Australian direct debit
-message BECS {
-  // Fields will be added as needed for BECS integration
-}
 
 // Benefit - Bahrain's national electronic wallet
 message Benefit {
@@ -1141,4 +1301,303 @@ enum BankNames {
   Yoursafe = 144;
   N26 = 145;
   NationaleNederlanden = 146;
+}
+
+// ============================================================================
+// NETWORK TRANSACTION PAYMENT METHODS
+// ============================================================================
+
+// Card details with network transaction ID for recurring payments
+message CardDetailsForNetworkTransactionId {
+    CardNumberType card_number = 1;
+    SecretString card_exp_month = 2;
+    SecretString card_exp_year = 3;
+    optional string card_issuer = 4;
+    optional CardNetwork card_network = 5;
+    optional string card_type = 6;
+    optional string card_issuing_country = 7;
+    optional string bank_code = 8;
+    optional SecretString nick_name = 9;
+    optional SecretString card_holder_name = 10;
+}
+
+// Network token data for recurring payments
+message NetworkTokenData {
+    NetworkTokenType token_number = 1;
+    SecretString token_exp_month = 2;
+    SecretString token_exp_year = 3;
+    optional SecretString token_cryptogram = 4;
+    optional string card_issuer = 5;
+    optional CardNetwork card_network = 6;
+    optional string card_type = 7;
+    optional string card_issuing_country = 8;
+    optional string bank_code = 9;
+    optional SecretString nick_name = 11;
+    optional string eci = 12;
+}
+
+// Country Alpha-2 code enumeration.
+enum CountryAlpha2 {
+  COUNTRY_ALPHA2_UNSPECIFIED = 0; // Default value must be first
+  US = 1;
+  AF = 2;
+  AX = 3;
+  AL = 4;
+  DZ = 5;
+  AS = 6;
+  AD = 7;
+  AO = 8;
+  AI = 9;
+  AQ = 10;
+  AG = 11;
+  AR = 12;
+  AM = 13;
+  AW = 14;
+  AU = 15;
+  AT = 16;
+  AZ = 17;
+  BS = 18;
+  BH = 19;
+  BD = 20;
+  BB = 21;
+  BY = 22;
+  BE = 23;
+  BZ = 24;
+  BJ = 25;
+  BM = 26;
+  BT = 27;
+  BO = 28;
+  BQ = 29;
+  BA = 30;
+  BW = 31;
+  BV = 32;
+  BR = 33;
+  IO = 34;
+  BN = 35;
+  BG = 36;
+  BF = 37;
+  BI = 38;
+  KH = 39;
+  CM = 40;
+  CA = 41;
+  CV = 42;
+  KY = 43;
+  CF = 44;
+  TD = 45;
+  CL = 46;
+  CN = 47;
+  CX = 48;
+  CC = 49;
+  CO = 50;
+  KM = 51;
+  CG = 52;
+  CD = 53;
+  CK = 54;
+  CR = 55;
+  CI = 56;
+  HR = 57;
+  CU = 58;
+  CW = 59;
+  CY = 60;
+  CZ = 61;
+  DK = 62;
+  DJ = 63;
+  DM = 64;
+  DO = 65;
+  EC = 66;
+  EG = 67;
+  SV = 68;
+  GQ = 69;
+  ER = 70;
+  EE = 71;
+  ET = 72;
+  FK = 73;
+  FO = 74;
+  FJ = 75;
+  FI = 76;
+  FR = 77;
+  GF = 78;
+  PF = 79;
+  TF = 80;
+  GA = 81;
+  GM = 82;
+  GE = 83;
+  DE = 84;
+  GH = 85;
+  GI = 86;
+  GR = 87;
+  GL = 88;
+  GD = 89;
+  GP = 90;
+  GU = 91;
+  GT = 92;
+  GG = 93;
+  GN = 94;
+  GW = 95;
+  GY = 96;
+  HT = 97;
+  HM = 98;
+  VA = 99;
+  HN = 100;
+  HK = 101;
+  HU = 102;
+  IS = 103;
+  IN = 104;
+  ID = 105;
+  IR = 106;
+  IQ = 107;
+  IE = 108;
+  IM = 109;
+  IL = 110;
+  IT = 111;
+  JM = 112;
+  JP = 113;
+  JE = 114;
+  JO = 115;
+  KZ = 116;
+  KE = 117;
+  KI = 118;
+  KP = 119;
+  KR = 120;
+  KW = 121;
+  KG = 122;
+  LA = 123;
+  LV = 124;
+  LB = 125;
+  LS = 126;
+  LR = 127;
+  LY = 128;
+  LI = 129;
+  LT = 130;
+  LU = 131;
+  MO = 132;
+  MK = 133;
+  MG = 134;
+  MW = 135;
+  MY = 136;
+  MV = 137;
+  ML = 138;
+  MT = 139;
+  MH = 140;
+  MQ = 141;
+  MR = 142;
+  MU = 143;
+  YT = 144;
+  MX = 145;
+  FM = 146;
+  MD = 147;
+  MC = 148;
+  MN = 149;
+  ME = 150;
+  MS = 151;
+  MA = 152;
+  MZ = 153;
+  MM = 154;
+  NA = 155;
+  NR = 156;
+  NP = 157;
+  NL = 158;
+  NC = 159;
+  NZ = 160;
+  NI = 161;
+  NE = 162;
+  NG = 163;
+  NU = 164;
+  NF = 165;
+  MP = 166;
+  NO = 167;
+  OM = 168;
+  PK = 169;
+  PW = 170;
+  PS = 171;
+  PA = 172;
+  PG = 173;
+  PY = 174;
+  PE = 175;
+  PH = 176;
+  PN = 177;
+  PL = 178;
+  PT = 179;
+  PR = 180;
+  QA = 181;
+  RE = 182;
+  RO = 183;
+  RU = 184;
+  RW = 185;
+  BL = 186;
+  SH = 187;
+  KN = 188;
+  LC = 189;
+  MF = 190;
+  PM = 191;
+  VC = 192;
+  WS = 193;
+  SM = 194;
+  ST = 195;
+  SA = 196;
+  SN = 197;
+  RS = 198;
+  SC = 199;
+  SL = 200;
+  SG = 201;
+  SX = 202;
+  SK = 203;
+  SI = 204;
+  SB = 205;
+  SO = 206;
+  ZA = 207;
+  GS = 208;
+  SS = 209;
+  ES = 210;
+  LK = 211;
+  SD = 212;
+  SR = 213;
+  SJ = 214;
+  SZ = 215;
+  SE = 216;
+  CH = 217;
+  SY = 218;
+  TW = 219;
+  TJ = 220;
+  TZ = 221;
+  TH = 222;
+  TL = 223;
+  TG = 224;
+  TK = 225;
+  TO = 226;
+  TT = 227;
+  TN = 228;
+  TR = 229;
+  TM = 230;
+  TC = 231;
+  TV = 232;
+  UG = 233;
+  UA = 234;
+  AE = 235;
+  GB = 236;
+  UM = 237;
+  UY = 238;
+  UZ = 239;
+  VU = 240;
+  VE = 241;
+  VN = 242;
+  VG = 243;
+  VI = 244;
+  WF = 245;
+  EH = 246;
+  YE = 247;
+  ZM = 248;
+  ZW = 249;
+}
+
+enum BankType {
+  BankType_UNSPECIFIED = 0;
+  Checking = 1;
+  Savings = 2;
+}
+
+enum BankHolderType {
+  BankHolderType_UNSPECIFIED = 0;
+  Personal = 1;
+  Business = 2;
 }

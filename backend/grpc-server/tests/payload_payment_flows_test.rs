@@ -16,9 +16,10 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
+        identifier::IdType, mandate_reference_id::MandateIdType, payment_method,
+        payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
+        CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2, Currency,
+        CustomerAcceptance, FutureUsage, Identifier, MandateReferenceId, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
@@ -37,7 +38,7 @@ const MERCHANT_ID: &str = "merchant_payload_test";
 // Test card data
 const TEST_CARD_NUMBER: &str = "4111111111111111";
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_EXP_YEAR: &str = "2050";
 const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
@@ -116,10 +117,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             first_name: Some("John".to_string().into()),
             last_name: Some("Doe".to_string().into()),
             email: Some(TEST_EMAIL.to_string().into()),
-            line1: Some(format!("{} Main St", random_street_num).into()),
+            line1: Some(format!("{random_street_num} Main St").into()),
             city: Some("San Francisco".to_string().into()),
             state: Some("CA".to_string().into()),
-            zip_code: Some(format!("{}", random_zip_suffix).into()),
+            zip_code: Some(format!("{random_zip_suffix}").into()),
             country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
             ..Default::default()
         }),
@@ -145,8 +146,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("payload_test"))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         ..Default::default()
     }
@@ -166,6 +167,12 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         amount,
         currency: i32::from(Currency::Usd),
         state: None,
+        metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: None,
+        setup_future_usage: None,
+        sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 
@@ -237,9 +244,14 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
     let mut rng = rand::thread_rng();
     let unique_amount = rng.gen_range(1000..10000); // Amount between $10.00 and $100.00
 
-    let mandate_reference = MandateReference {
-        mandate_id: Some(mandate_id.to_string()),
-        payment_method_id: None,
+    let mandate_reference = MandateReferenceId {
+        mandate_id_type: Some(MandateIdType::ConnectorMandateId(
+            ConnectorMandateReferenceId {
+                connector_mandate_request_reference_id: None,
+                connector_mandate_id: Some(mandate_id.to_string()),
+                payment_method_id: None,
+            },
+        )),
     };
 
     let mut metadata = HashMap::new();
@@ -253,7 +265,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("repeat"))),
         }),
-        mandate_reference: Some(mandate_reference),
+        mandate_reference_id: Some(mandate_reference),
         amount: unique_amount,
         currency: i32::from(Currency::Usd),
         minor_amount: unique_amount,
@@ -295,8 +307,8 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
     let random_street_num = rng.gen_range(1000..9999);
     let unique_zip = format!("{}", rng.gen_range(10000..99999));
     let random_id = rng.gen_range(1000..9999);
-    let unique_email = format!("customer{}@example.com", random_id);
-    let unique_first_name = format!("John{}", random_id);
+    let unique_email = format!("customer{random_id}@example.com");
+    let unique_first_name = format!("John{random_id}");
 
     PaymentServiceRegisterRequest {
         minor_amount: Some(0), // Setup mandate with 0 amount
@@ -304,7 +316,7 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
-        customer_name: Some(format!("{} Doe", unique_first_name)),
+        customer_name: Some(format!("{unique_first_name} Doe")),
         email: Some(unique_email.clone().into()),
         customer_acceptance: Some(CustomerAcceptance {
             acceptance_type: i32::from(AcceptanceType::Offline),
@@ -315,7 +327,7 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
             billing_address: Some(Address {
                 first_name: Some(unique_first_name.into()),
                 last_name: Some("Doe".to_string().into()),
-                line1: Some(format!("{} Market St", random_street_num).into()),
+                line1: Some(format!("{random_street_num} Market St").into()),
                 line2: None,
                 line3: None,
                 city: Some("San Francisco".to_string().into()),
@@ -495,6 +507,12 @@ async fn test_authorize_capture_refund_rsync() {
             amount,
             currency: i32::from(Currency::Usd),
             state: None,
+            metadata: HashMap::new(),
+            merchant_account_metadata: HashMap::new(),
+            connector_metadata: None,
+            setup_future_usage: None,
+            sync_type: None,
+            connector_order_reference_id: None,
         };
         let mut rsync_grpc_request = Request::new(rsync_request);
         add_payload_metadata(&mut rsync_grpc_request);

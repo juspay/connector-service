@@ -154,8 +154,8 @@ fn create_payment_authorize_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("braintree_test_{}", get_timestamp()))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         metadata,
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
@@ -178,6 +178,12 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
+        metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: None,
+        setup_future_usage: None,
+        sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 
@@ -252,9 +258,11 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp()))),
         }),
         browser_info: None,
+        test_mode: Some(true),
         refund_metadata,
         state: None,
         merchant_account_metadata: HashMap::new(),
+        payment_method_type: None,
     }
 }
 

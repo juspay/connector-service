@@ -20,8 +20,8 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, MandateRevoke, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
+        SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -31,12 +31,13 @@ use domain_types::{
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
-        ResponseId, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -64,17 +65,17 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-const BLUECODE_API_VERSION: &str = "v1";
+const CALIDA_API_VERSION: &str = "v1";
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Bluecode<T>
+    connector_types::IncomingWebhook for Calida<T>
 {
     fn verify_webhook_source(
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> CustomResult<bool, errors::ConnectorError> {
+    ) -> CustomResult<bool, ConnectorError> {
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets.secret,
             None => return Ok(false),
@@ -83,22 +84,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let security_header = request
             .headers
             .get("x-eorder-webhook-signature")
-            .ok_or(domain_types::errors::ConnectorError::WebhookSignatureNotFound)?
+            .ok_or(ConnectorError::WebhookSignatureNotFound)?
             .clone();
 
         let signature = hex::decode(security_header)
-            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+            .change_context(ConnectorError::WebhookSignatureNotFound)?;
 
-        let parsed: serde_json::Value = serde_json::from_slice(&request.body)
-            .change_context(errors::ConnectorError::ParsingFailed)?;
+        let parsed: serde_json::Value =
+            serde_json::from_slice(&request.body).change_context(ConnectorError::ParsingFailed)?;
 
-        let sorted_payload = transformers::sort_and_minify_json(&parsed)?;
+        let sorted_payload = sort_and_minify_json(&parsed)?;
 
         let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA512, &connector_webhook_secrets);
 
         let verify = ring::hmac::verify(&key, sorted_payload.as_bytes(), &signature)
             .map(|_| true)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .change_context(ConnectorError::WebhookSourceVerificationFailed)?;
 
         Ok(verify)
     }
@@ -110,11 +111,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorError>> {
         let request_body_copy = request.body.clone();
-        let webhook_body: transformers::BluecodeWebhookResponse = request
+        let webhook_body: CalidaWebhookResponse = request
             .body
-            .parse_struct("BluecodeWebhookResponse")
+            .parse_struct("CalidaWebhookResponse")
             .change_context(ConnectorError::WebhookResourceObjectNotFound)
-            .attach_printable_lazy(|| "Failed to parse Bluecode payment webhook body structure")?;
+            .attach_printable_lazy(|| "Failed to parse Calida payment webhook body structure")?;
 
         let transaction_id = webhook_body.order_id.clone();
 
@@ -148,93 +149,98 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Bluecode<T>
+    connector_types::SdkSessionTokenV2 for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Bluecode<T>
+    connector_types::ConnectorServiceTrait<T> for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthorizeV2<T> for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSessionToken for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Bluecode<T>
+    connector_types::RepeatPaymentV2<T> for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Bluecode<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Bluecode<T>
+    connector_types::ValidationTrait for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Bluecode<T>
+    connector_types::PaymentOrderCreate for Calida<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPreAuthenticateV2<T> for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for Bluecode<T>
+    connector_types::PaymentAuthenticateV2<T> for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::MandateRevokeV2 for Bluecode<T>
+    connector_types::PaymentPostAuthenticateV2<T> for Calida<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Calida<T>
 {
 }
 
@@ -244,25 +250,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Bluecode<T>
+    for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Bluecode<T>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Bluecode<T>
+    for Calida<T>
 {
 }
 
@@ -272,25 +277,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Bluecode<T>
+    for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Bluecode<T>
+    for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Bluecode<T>
+    for Calida<T>
 {
 }
 
@@ -300,13 +305,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Bluecode<T>
+    for Calida<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -315,7 +320,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -325,7 +330,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -335,7 +340,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -345,24 +350,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::PaymentsCancelPostCaptureData,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Calida<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         MandateRevoke,
         PaymentFlowData,
         MandateRevokeRequestData,
         MandateRevokeResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -373,7 +381,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -383,7 +391,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -393,7 +401,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -403,7 +411,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -413,7 +421,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -423,7 +431,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -433,7 +441,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -443,7 +451,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -453,13 +461,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -470,13 +478,13 @@ impl<
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -487,7 +495,7 @@ impl<
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -497,7 +505,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -507,7 +515,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -517,7 +525,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -525,9 +533,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -537,19 +545,33 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::PaymentsCancelPostCaptureData,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Bluecode<T>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Calida<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Calida<T>
 {
 }
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -560,13 +582,13 @@ impl<
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -577,23 +599,23 @@ impl<
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Bluecode<T>
+    connector_types::PaymentAccessToken for Calida<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Bluecode<T>
+    connector_types::CreateConnectorCustomer for Calida<T>
 {
 }
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -604,13 +626,13 @@ impl<
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -621,7 +643,7 @@ impl<
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -630,7 +652,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -640,7 +662,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -650,7 +672,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
@@ -660,23 +682,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         MandateRevokeRequestData,
         MandateRevokeResponseData,
-    > for Bluecode<T>
+    > for Calida<T>
 {
 }
 
 macros::create_all_prerequisites!(
-    connector_name: Bluecode,
+    connector_name: Calida,
     generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: BluecodePaymentsRequest,
-            response_body: BluecodePaymentsResponse,
+            request_body: CalidaPaymentsRequest,
+            response_body: CalidaPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            response_body: BluecodeSyncResponse,
+            response_body: CalidaSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
@@ -689,8 +711,8 @@ macros::create_all_prerequisites!(
             req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
+            headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
             )];
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut api_key);
@@ -701,17 +723,17 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            req.resource_common_data.connectors.bluecode.base_url.as_ref()
+            req.resource_common_data.connectors.calida.base_url.as_ref()
         }
     }
 );
 
 // present
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Bluecode<T>
+    for Calida<T>
 {
     fn id(&self) -> &'static str {
-        "bluecode"
+        "calida"
     }
 
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
@@ -723,15 +745,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.bluecode.base_url.as_ref()
+        connectors.calida.base_url.as_ref()
     }
 
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = BluecodeAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        let auth = CalidaAuthType::try_from(auth_type)
+            .change_context(ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("token {}", auth.api_key.expose()).into_masked(),
@@ -742,11 +764,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: BluecodeErrorResponse = res
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+        let response: CalidaErrorResponse = res
             .response
-            .parse_struct("BluecodeErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .parse_struct("CalidaErrorResponse")
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
@@ -764,14 +786,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-impl ConnectorValidation for Bluecode<DefaultPCIHolder> {
+impl ConnectorValidation for Calida<DefaultPCIHolder> {
     fn validate_mandate_payment(
         &self,
         _pm_type: Option<PaymentMethodType>,
         pm_data: PaymentMethodData<DefaultPCIHolder>,
-    ) -> CustomResult<(), errors::ConnectorError> {
+    ) -> CustomResult<(), ConnectorError> {
         match pm_data {
-            PaymentMethodData::Card(_) => Err(errors::ConnectorError::NotImplemented(
+            PaymentMethodData::Card(_) => Err(ConnectorError::NotImplemented(
                 "validate_mandate_payment does not support cards".to_string(),
             )
             .into()),
@@ -785,7 +807,7 @@ impl ConnectorValidation for Bluecode<DefaultPCIHolder> {
         _is_three_ds: bool,
         _status: enums::AttemptStatus,
         _connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
-    ) -> CustomResult<(), errors::ConnectorError> {
+    ) -> CustomResult<(), ConnectorError> {
         Ok(())
     }
 
@@ -796,9 +818,9 @@ impl ConnectorValidation for Bluecode<DefaultPCIHolder> {
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Bluecode,
-    curl_request: Json(BluecodePaymentsRequest),
-    curl_response: BluecodePaymentsResponse,
+    connector: Calida,
+    curl_request: Json(CalidaPaymentsRequest),
+    curl_response: CalidaPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -810,17 +832,17 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
             Ok(format!(
                 "{}api/{}/order/payin/start",
                 self.connector_base_url_payments(req),
-                BLUECODE_API_VERSION
+                CALIDA_API_VERSION
             ))
         }
     }
@@ -828,8 +850,8 @@ macros::macro_connector_implementation!(
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Bluecode,
-    curl_response: BluecodeSyncResponse,
+    connector: Calida,
+    curl_response: CalidaSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -841,67 +863,66 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
             let connector_transaction_id = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorError::MissingConnectorTransactionID)?;
 
             Ok(format!(
                 "{}api/{}/order/{}/status",
                 self.connector_base_url_payments(req),
-                BLUECODE_API_VERSION,
+                CALIDA_API_VERSION,
                 connector_transaction_id
             ))
         }
     }
 );
 
-static BLUECODE_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
-    LazyLock::new(|| {
-        let supported_capture_methods = vec![enums::CaptureMethod::Automatic];
+static CALIDA_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyLock::new(|| {
+    let supported_capture_methods = vec![enums::CaptureMethod::Automatic];
 
-        let mut santander_supported_payment_methods = SupportedPaymentMethods::new();
+    let mut santander_supported_payment_methods = SupportedPaymentMethods::new();
 
-        santander_supported_payment_methods.add(
-            enums::PaymentMethod::Wallet,
-            enums::PaymentMethodType::Bluecode,
-            PaymentMethodDetails {
-                mandates: FeatureStatus::NotSupported,
-                refunds: FeatureStatus::NotSupported,
-                supported_capture_methods,
-                specific_features: None,
-            },
-        );
+    santander_supported_payment_methods.add(
+        enums::PaymentMethod::Wallet,
+        PaymentMethodType::Bluecode,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::NotSupported,
+            refunds: FeatureStatus::NotSupported,
+            supported_capture_methods,
+            specific_features: None,
+        },
+    );
 
-        santander_supported_payment_methods
-    });
+    santander_supported_payment_methods
+});
 
-static BLUECODE_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
-    display_name: "Bluecode",
-    description: "Bluecode is building a global payment network that combines Alipay+, Discover and EMPSA and enables seamless payments in 75 countries. With over 160 million acceptance points, payments are processed according to the highest European security and data protection standards to make Europe less dependent on international players.",
+static CALIDA_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
+    display_name: "Calida",
+    description: "Calida Financial is a licensed e-money institution based in Malta and they provide customized financial infrastructure and payment solutions across the EU and EEA. As part of The Payments Group, it focuses on embedded finance, prepaid services, and next-generation digital payment products.",
     connector_type: types::PaymentConnectorCategory::AlternativePaymentMethod,
 };
 
-static BLUECODE_SUPPORTED_WEBHOOK_FLOWS: [enums::EventClass; 1] = [enums::EventClass::Payments];
+static CALIDA_SUPPORTED_WEBHOOK_FLOWS: [enums::EventClass; 1] = [enums::EventClass::Payments];
 
-impl ConnectorSpecifications for Bluecode<DefaultPCIHolder> {
+impl ConnectorSpecifications for Calida<DefaultPCIHolder> {
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
-        Some(&BLUECODE_CONNECTOR_INFO)
+        Some(&CALIDA_CONNECTOR_INFO)
     }
 
     fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
-        Some(&*BLUECODE_SUPPORTED_PAYMENT_METHODS)
+        Some(&*CALIDA_SUPPORTED_PAYMENT_METHODS)
     }
 
     fn get_supported_webhook_flows(&self) -> Option<&'static [enums::EventClass]> {
-        Some(&BLUECODE_SUPPORTED_WEBHOOK_FLOWS)
+        Some(&CALIDA_SUPPORTED_WEBHOOK_FLOWS)
     }
 }

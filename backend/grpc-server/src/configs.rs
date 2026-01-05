@@ -4,8 +4,8 @@ use common_utils::{consts, events::EventConfig, metadata::HeaderMaskingConfig};
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
-
-#[derive(Clone, serde::Deserialize, Debug)]
+use serde::{Deserialize, Serialize};
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
     pub common: Common,
     pub server: Server,
@@ -25,7 +25,7 @@ pub struct Config {
     pub api_tags: ApiTagConfig,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize)]
 pub struct LineageConfig {
     /// Enable processing of x-lineage-ids header
     pub enabled: bool,
@@ -46,7 +46,7 @@ fn default_lineage_prefix() -> String {
 }
 
 /// Test mode configuration for mock server integration
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize)]
 pub struct TestConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -91,7 +91,7 @@ impl TestConfig {
 /// ```
 ///
 /// Note: Config crate lowercases env var keys, lookup is case-insensitive
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize)]
 pub struct ApiTagConfig {
     #[serde(default)]
     pub tags: std::collections::HashMap<String, String>,
@@ -126,7 +126,7 @@ impl ApiTagConfig {
                 result
             },
             |pmt| {
-                let composite_key = format!("{}_{:?}", flow_str, pmt).to_lowercase();
+                let composite_key = format!("{flow_str}_{pmt:?}").to_lowercase();
                 let result = self.tags.get(&composite_key).cloned();
                 if result.is_none() {
                     tracing::debug!(
@@ -141,7 +141,7 @@ impl ApiTagConfig {
     }
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct Common {
     pub environment: consts::Env,
 }
@@ -155,7 +155,7 @@ impl Common {
     }
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct Server {
     pub host: String,
     pub port: u16,
@@ -163,13 +163,13 @@ pub struct Server {
     pub type_: ServiceType,
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct MetricsServer {
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ServiceType {
     #[default]

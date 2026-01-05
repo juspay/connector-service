@@ -46,7 +46,7 @@ const MERCHANT_ID: &str = "merchant_1234";
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4111111111111111"; // Valid test card for Novalnet
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_EXP_YEAR: &str = "2050";
 const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
@@ -133,8 +133,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("novalnet_test"))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()

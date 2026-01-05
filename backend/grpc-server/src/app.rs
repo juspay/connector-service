@@ -1,15 +1,11 @@
-use std::{future::Future, net, sync::Arc};
-
 use axum::{extract::Request, http};
 use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
-    payments::{
-        dispute_service_handler, dispute_service_server, payment_service_handler,
-        payment_service_server, refund_service_handler, refund_service_server,
-    },
+    payments::{dispute_service_server, payment_service_server, refund_service_server},
 };
+use std::{future::Future, net, sync::Arc};
 use tokio::{
     signal::unix::{signal, SignalKind},
     sync::oneshot,
@@ -17,7 +13,10 @@ use tokio::{
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
-use crate::{configs, error::ConfigurationError, logger, utils};
+use crate::{
+    config_overrides::RequestExtensionsLayer, configs, error::ConfigurationError,
+    http::config_middleware::HttpRequestExtensionsLayer, logger, utils,
+};
 
 /// # Panics
 ///
@@ -66,21 +65,24 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
         logger::info!("Shutdown signal received");
     };
 
-    let service = Service::new(Arc::new(config));
+    let base_config = Arc::new(config);
+    let service = Service::new(Arc::clone(&base_config));
 
     logger::info!(host = %server_config.host, port = %server_config.port, r#type = ?server_config.type_, "starting connector service");
 
     match server_config.type_ {
         configs::ServiceType::Grpc => {
-            service
-                .await
-                .grpc_server(socket_addr, shutdown_signal)
-                .await?
+            Box::pin(
+                service
+                    .await
+                    .grpc_server(base_config, socket_addr, shutdown_signal),
+            )
+            .await?
         }
         configs::ServiceType::Http => {
             service
                 .await
-                .http_server(socket_addr, shutdown_signal)
+                .http_server(base_config, socket_addr, shutdown_signal)
                 .await?
         }
     }
@@ -113,18 +115,15 @@ impl Service {
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
-            payments_service: crate::server::payments::Payments {
-                config: Arc::clone(&config),
-            },
-            refunds_service: crate::server::refunds::Refunds {
-                config: Arc::clone(&config),
-            },
-            disputes_service: crate::server::disputes::Disputes { config },
+            payments_service: crate::server::payments::Payments,
+            refunds_service: crate::server::refunds::Refunds,
+            disputes_service: crate::server::disputes::Disputes,
         }
     }
 
     pub async fn http_server(
         self,
+        base_config: Arc<configs::Config>,
         socket: net::SocketAddr,
         shutdown_signal: impl Future<Output = ()> + Send + 'static,
     ) -> Result<(), ConfigurationError> {
@@ -151,14 +150,17 @@ impl Service {
             http::HeaderName::from_static(consts::X_REQUEST_ID),
         );
 
-        let router = axum::Router::new()
-            .route("/health", axum::routing::get(|| async { "health is good" }))
-            .merge(payment_service_handler(self.payments_service))
-            .merge(refund_service_handler(self.refunds_service))
-            .merge(dispute_service_handler(self.disputes_service))
+        let config_override_layer = HttpRequestExtensionsLayer::new(base_config.clone());
+        let app_state = crate::http::AppState::new(
+            self.payments_service,
+            self.refunds_service,
+            self.disputes_service,
+        );
+        let router = crate::http::create_router(app_state)
             .layer(logging_layer)
             .layer(request_id_layer)
-            .layer(propagate_request_id_layer);
+            .layer(propagate_request_id_layer)
+            .layer(config_override_layer);
 
         let listener = tokio::net::TcpListener::bind(socket).await?;
 
@@ -171,6 +173,7 @@ impl Service {
 
     pub async fn grpc_server(
         self,
+        base_config: Arc<configs::Config>,
         socket: net::SocketAddr,
         shutdown_signal: impl Future<Output = ()>,
     ) -> Result<(), ConfigurationError> {
@@ -203,11 +206,13 @@ impl Service {
         let propagate_request_id_layer = tower_http::request_id::PropagateRequestIdLayer::new(
             http::HeaderName::from_static(consts::X_REQUEST_ID),
         );
+        let config_override_layer = RequestExtensionsLayer::new(base_config.clone());
 
         Server::builder()
             .layer(logging_layer)
             .layer(request_id_layer)
             .layer(propagate_request_id_layer)
+            .layer(config_override_layer)
             .layer(metrics_layer)
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))

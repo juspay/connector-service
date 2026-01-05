@@ -35,7 +35,7 @@ const TEST_AMOUNT: i64 = 1000;
 const AUTO_CAPTURE_CARD_NUMBER: &str = "4000020000000000"; // Card number from checkout_grpcurl_test.sh for auto capture
 const MANUAL_CAPTURE_CARD_NUMBER: &str = "4242424242424242"; // Card number from checkout_grpcurl_test.sh for manual capture
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_EXP_YEAR: &str = "2050";
 const TEST_CARD_CVC: &str = "100";
 const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
@@ -158,8 +158,8 @@ fn create_payment_authorize_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("checkout_test_{}", get_timestamp()))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         metadata: std::collections::HashMap::new(),
         ..Default::default()
