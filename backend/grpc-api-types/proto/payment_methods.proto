@@ -95,6 +95,8 @@ message PaymentMethod {
     SepaBankTransfer sepa_bank_transfer = 92;                  // SEPA credit transfer
     BacsBankTransfer bacs_bank_transfer = 93;                  // Bankers' Automated Clearing Services - UK bank transfer
     MultibancoBankTransfer multibanco_bank_transfer = 94;      // Multibanco - Portuguese payment method
+    InstantBankTransferFinland instant_bank_transfer_finland = 95;         // Finland's instant bank transfer
+    InstantBankTransferPoland instant_bank_transfer_poland = 96;           // Poland's instant bank transfer
 
     // DIRECT DEBIT (100-109)
     Ach ach = 100;                                              // Ach - Automated Clearing House
@@ -626,6 +628,16 @@ message LocalBankTransfer {
 // Instant Bank Transfer - Generic instant bank transfer method
 message InstantBankTransfer {
   // Fields will be added as needed for instant bank transfers
+}
+
+// Instant Bank Transfer Finland - Finland's instant bank transfer method
+message InstantBankTransferFinland {
+  // Fields will be added as needed for instant bank transfers finland
+}
+
+// Instant Bank Transfer Poland - Poland's instant bank transfer method
+message InstantBankTransferPoland {
+  // Fields will be added as needed for instant bank transfers poland
 }
 
 /*
