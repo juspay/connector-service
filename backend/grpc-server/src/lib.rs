@@ -7,4 +7,5 @@ pub mod logger;
 pub mod metrics;
 pub mod request;
 pub mod server;
+pub mod superposition_config;
 pub mod utils;

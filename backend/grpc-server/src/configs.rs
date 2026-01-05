@@ -188,10 +188,62 @@ impl Config {
         explicit_config_path: Option<PathBuf>,
     ) -> Result<Self, config::ConfigError> {
         let env = consts::Env::current_env();
+
+        // Check if superposition.toml exists and use it if available
+        let superposition_path = {
+            let mut path = workspace_path();
+            path.push("config");
+            path.push("superposition.toml");
+            path
+        };
+
+        if superposition_path.exists() && explicit_config_path.is_none() {
+            tracing::info!("Loading configuration from superposition.toml");
+            return Self::load_from_superposition(&env);
+        }
+
+        // Fall back to environment-specific TOML files
         let config_path = Self::config_path(&env, explicit_config_path);
 
         let config = Self::builder(&env)?
             .add_source(config::File::from(config_path).required(false))
+            .add_source(
+                config::Environment::with_prefix(consts::ENV_PREFIX)
+                    .try_parsing(true)
+                    .separator("__")
+                    .list_separator(",")
+                    .with_list_parse_key("proxy.bypass_proxy_urls")
+                    .with_list_parse_key("redis.cluster_urls")
+                    .with_list_parse_key("database.tenants")
+                    .with_list_parse_key("log.kafka.brokers")
+                    .with_list_parse_key("events.brokers")
+                    .with_list_parse_key("unmasked_headers.keys"),
+            )
+            .build()?;
+
+        #[allow(clippy::print_stderr)]
+        let config: Self = serde_path_to_error::deserialize(config).map_err(|error| {
+            eprintln!("Unable to deserialize application configuration: {error}");
+            error.into_inner()
+        })?;
+
+        // Validate the environment field
+        config.common.validate()?;
+
+        Ok(config)
+    }
+
+    /// Load configuration from superposition.toml with context resolution
+    fn load_from_superposition(environment: &consts::Env) -> Result<Self, config::ConfigError> {
+        // Load and resolve Superposition config
+        let resolved = crate::superposition_config::load_superposition_config(environment)?;
+
+        // Build TOML string from resolved config
+        let toml_string = crate::superposition_config::build_config_toml(&resolved)?;
+
+        // Parse the generated TOML string into Config
+        let config = Self::builder(environment)?
+            .add_source(config::File::from_str(&toml_string, config::FileFormat::Toml))
             .add_source(
                 config::Environment::with_prefix(consts::ENV_PREFIX)
                     .try_parsing(true)

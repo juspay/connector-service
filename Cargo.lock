@@ -2684,6 +2684,7 @@ dependencies = [
  "time",
  "tokio",
  "tokio-stream",
+ "toml 0.8.23",
  "tonic 0.13.1",
  "tonic-reflection",
  "tower 0.5.2",

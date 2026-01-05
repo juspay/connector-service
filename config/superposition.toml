@@ -1,0 +1,211 @@
+# Superposition TOML Configuration for Connector Service
+# This file merges sandbox.toml, development.toml, and production.toml
+# using contextual overrides based on environment and connector dimensions
+
+[default-config]
+# Common configuration (environment is set via context)
+common_environment = { value = "sandbox", schema = { type = "string", enum = ["sandbox", "development", "production"] } }
+
+# Log console configuration (common across all environments)
+log_console_enabled = { value = true, schema = { type = "boolean" } }
+log_console_level = { value = "TRACE", schema = { type = "string" } }
+log_console_log_format = { value = "default", schema = { type = "string" } }
+
+# Log Kafka configuration (disabled by default)
+log_kafka_enabled = { value = false, schema = { type = "boolean" } }
+log_kafka_level = { value = "info", schema = { type = "string" } }
+log_kafka_filtering_directive = { value = "info", schema = { type = "string" } }
+log_kafka_brokers = { value = ["localhost:9092"], schema = { type = "array" } }
+log_kafka_topic = { value = "connector-service-logs", schema = { type = "string" } }
+log_kafka_buffer_limit = { value = 100000, schema = { type = "integer" } }
+
+# Server configuration (common across all environments)
+server_host = { value = "0.0.0.0", schema = { type = "string" } }
+server_port = { value = 8000, schema = { type = "integer" } }
+server_type = { value = "grpc", schema = { type = "string" } }
+
+# Metrics configuration (common across all environments)
+metrics_host = { value = "0.0.0.0", schema = { type = "string" } }
+metrics_port = { value = 8080, schema = { type = "integer" } }
+
+# Proxy configuration (common across all environments)
+proxy_idle_pool_connection_timeout = { value = 90, schema = { type = "integer" } }
+proxy_bypass_proxy_urls = { value = ["localhost", "local"], schema = { type = "array" } }
+proxy_mitm_proxy_enabled = { value = false, schema = { type = "boolean" } }
+
+# Events configuration (disabled by default)
+events_enabled = { value = false, schema = { type = "boolean" } }
+events_brokers = { value = ["localhost:9092"], schema = { type = "array" } }
+events_topic = { value = "audit-trail-events", schema = { type = "string" } }
+events_partition_key_field = { value = "request_id", schema = { type = "string" } }
+
+# Test configuration (disabled by default)
+test_enabled = { value = false, schema = { type = "boolean" } }
+test_mock_server_url = { value = "http://localhost:3000/mockGateway", schema = { type = "string" } }
+
+# Lineage configuration (disabled by default)
+lineage_enabled = { value = false, schema = { type = "boolean" } }
+lineage_header_name = { value = "x-lineage-ids", schema = { type = "string" } }
+lineage_field_prefix = { value = "lineage_", schema = { type = "string" } }
+
+# Unmasked headers (common across all environments)
+unmasked_headers_keys = { value = ["x-request-id", "x-merchant-id", "x-lineage-ids", "x-reference-id", "x-connector", "x-tenant-id", "x-shadow-mode"], schema = { type = "array" } }
+
+# Default connector base URLs (sandbox/test URLs as defaults)
+connector_payme_base_url = { value = "https://sandbox.payme.io/api/", schema = { type = "string" } }
+connector_barclaycard_base_url = { value = "https://api.smartpayfuse-test.barclaycard", schema = { type = "string" } }
+connector_airwallex_base_url = { value = "https://api-demo.airwallex.com/api/v1", schema = { type = "string" } }
+connector_bambora_base_url = { value = "https://api.na.bambora.com/v1", schema = { type = "string" } }
+connector_shift4_base_url = { value = "https://api.shift4.com", schema = { type = "string" } }
+connector_bluesnap_base_url = { value = "https://sandbox.bluesnap.com", schema = { type = "string" } }
+connector_bluesnap_secondary_base_url = { value = "https://sandpay.bluesnap.com", schema = { type = "string" } }
+connector_multisafepay_base_url = { value = "https://testapi.multisafepay.com/v1/json", schema = { type = "string" } }
+connector_iatapay_base_url = { value = "https://sandbox.iata-pay.iata.org/api/v1", schema = { type = "string" } }
+connector_jpmorgan_base_url = { value = "https://api-mock.payments.jpmorgan.com/api/v2", schema = { type = "string" } }
+connector_jpmorgan_secondary_base_url = { value = "https://id.payments.jpmorgan.com", schema = { type = "string" } }
+connector_nmi_base_url = { value = "https://secure.nmi.com", schema = { type = "string" } }
+connector_nexixpay_base_url = { value = "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1", schema = { type = "string" } }
+connector_authipay_base_url = { value = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments", schema = { type = "string" } }
+connector_stax_base_url = { value = "https://apiprod.fattlabs.com", schema = { type = "string" } }
+connector_trustpayments_base_url = { value = "https://webservices.securetrading.net", schema = { type = "string" } }
+connector_fiservemea_base_url = { value = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments", schema = { type = "string" } }
+connector_datatrans_base_url = { value = "https://api.sandbox.datatrans.com", schema = { type = "string" } }
+connector_silverflow_base_url = { value = "https://api-sbx.silverflow.co/v1", schema = { type = "string" } }
+connector_celero_base_url = { value = "https://sandbox.gotnpgateway.com", schema = { type = "string" } }
+connector_hipay_base_url = { value = "https://stage-secure-gateway.hipay-tpp.com/rest/", schema = { type = "string" } }
+connector_hipay_secondary_base_url = { value = "https://stage-secure2-vault.hipay-tpp.com/rest/v2/token", schema = { type = "string" } }
+connector_hipay_third_base_url = { value = "https://stage-api-gateway.hipay.com/", schema = { type = "string" } }
+connector_globalpay_base_url = { value = "https://apis.sandbox.globalpay.com/ucp", schema = { type = "string" } }
+connector_adyen_base_url = { value = "https://checkout-test.adyen.com/", schema = { type = "string" } }
+connector_adyen_dispute_base_url = { value = "https://ca-test.adyen.com/", schema = { type = "string" } }
+connector_razorpay_base_url = { value = "https://api.razorpay.com/", schema = { type = "string" } }
+connector_razorpayv2_base_url = { value = "https://api.razorpay.com/", schema = { type = "string" } }
+connector_fiserv_base_url = { value = "https://cert.api.fiservapps.com/", schema = { type = "string" } }
+connector_elavon_base_url = { value = "https://api.demo.convergepay.com/VirtualMerchantDemo/", schema = { type = "string" } }
+connector_xendit_base_url = { value = "https://api.xendit.co/", schema = { type = "string" } }
+connector_checkout_base_url = { value = "https://api.sandbox.checkout.com/", schema = { type = "string" } }
+connector_authorizedotnet_base_url = { value = "https://apitest.authorize.net/xml/v1/request.api", schema = { type = "string" } }
+connector_phonepe_base_url = { value = "https://api-preprod.phonepe.com/apis/hermes/", schema = { type = "string" } }
+connector_cashfree_base_url = { value = "https://sandbox.cashfree.com/", schema = { type = "string" } }
+connector_fiuu_base_url = { value = "https://sandbox.merchant.razer.com/", schema = { type = "string" } }
+connector_payload_base_url = { value = "https://api.payload.com", schema = { type = "string" } }
+connector_forte_base_url = { value = "https://sandbox.forte.net/api/v3", schema = { type = "string" } }
+connector_payu_base_url = { value = "https://test.payu.in/", schema = { type = "string" } }
+connector_paytm_base_url = { value = "https://securestage.paytmpayments.com/", schema = { type = "string" } }
+connector_cashtocode_base_url = { value = "https://cluster05.api-test.cashtocode.com", schema = { type = "string" } }
+connector_novalnet_base_url = { value = "https://payport.novalnet.de/v2", schema = { type = "string" } }
+connector_nexinets_base_url = { value = "https://apitest.payengine.de/v1", schema = { type = "string" } }
+connector_noon_base_url = { value = "https://api-test.noonpayments.com/", schema = { type = "string" } }
+connector_mifinity_base_url = { value = "https://demo.mifinity.com/", schema = { type = "string" } }
+connector_braintree_base_url = { value = "https://payments.sandbox.braintree-api.com/graphql", schema = { type = "string" } }
+connector_volt_base_url = { value = "https://gateway.sandbox.volt.io", schema = { type = "string" } }
+connector_volt_secondary_base_url = { value = "https://api.sandbox.volt.io", schema = { type = "string" } }
+connector_calida_base_url = { value = "https://dev.eorder.reloadhero.com/", schema = { type = "string" } }
+connector_cryptopay_base_url = { value = "https://business-sandbox.cryptopay.me", schema = { type = "string" } }
+connector_helcim_base_url = { value = "https://api.helcim.com/", schema = { type = "string" } }
+connector_dlocal_base_url = { value = "https://sandbox.dlocal.com/", schema = { type = "string" } }
+connector_placetopay_base_url = { value = "https://test.placetopay.com/rest/gateway", schema = { type = "string" } }
+connector_rapyd_base_url = { value = "https://sandboxapi.rapyd.net", schema = { type = "string" } }
+connector_aci_base_url = { value = "https://eu-test.oppwa.com/", schema = { type = "string" } }
+connector_trustpay_base_url = { value = "https://test-tpgw.trustpay.eu/", schema = { type = "string" } }
+connector_trustpay_base_url_bank_redirects = { value = "https://aapi.trustpay.eu/", schema = { type = "string" } }
+connector_stripe_base_url = { value = "https://api.stripe.com/", schema = { type = "string" } }
+connector_cybersource_base_url = { value = "https://apitest.cybersource.com/", schema = { type = "string" } }
+connector_worldpay_base_url = { value = "https://try.access.worldpay.com/", schema = { type = "string" } }
+connector_worldpayvantiv_base_url = { value = "https://transact.vantivprelive.com/vap/communicator/online", schema = { type = "string" } }
+connector_worldpayvantiv_secondary_base_url = { value = "https://onlinessr.vantivprelive.com", schema = { type = "string" } }
+connector_paypal_base_url = { value = "https://api-m.sandbox.paypal.com/", schema = { type = "string" } }
+connector_paysafe_base_url = { value = "https://api.test.paysafe.com/paymenthub/", schema = { type = "string" } }
+connector_billwerk_base_url = { value = "https://api.reepay.com/", schema = { type = "string" } }
+connector_billwerk_secondary_base_url = { value = "https://card.reepay.com/", schema = { type = "string" } }
+connector_nuvei_base_url = { value = "https://ppp-test.nuvei.com/ppp/api/v1", schema = { type = "string" } }
+connector_bamboraapac_base_url = { value = "https://demo.ippayments.com.au/interface/api", schema = { type = "string" } }
+connector_worldpayxml_base_url = { value = "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp", schema = { type = "string" } }
+connector_tsys_base_url = { value = "https://stagegw.transnox.com/", schema = { type = "string" } }
+connector_bankofamerica_base_url = { value = "https://apitest.merchant-services.bankofamerica.com/", schema = { type = "string" } }
+connector_powertranz_base_url = { value = "https://staging.ptranz.com/api", schema = { type = "string" } }
+connector_revolut_base_url = { value = "https://sandbox-oba-auth.revolut.com/", schema = { type = "string" } }
+
+[dimensions]
+# Environment dimension - determines which environment configuration to use
+environment = { position = 1, schema = { type = "string", enum = ["sandbox", "development", "production"] } }
+
+# Context overrides for development environment
+[context."environment=development"]
+common_environment = "development"
+log_kafka_enabled = true
+lineage_enabled = true
+events_transformations_gateway = "connector"
+events_transformations_action = "flow_type"
+events_transformations_entity = "flow_type"
+events_transformations_message_latency = "latency_ms"
+events_transformations_message_request_time = "timestamp"
+events_transformations_message_res_code = "status_code"
+events_transformations_message_url = "url"
+events_transformations_message_stage = "stage"
+events_transformations_message_req_body = "connector_request_data"
+events_transformations_message_res_body = "connector_response_data"
+events_transformations_udf_txn_uuid = "reference_id"
+events_static_values_hostname = "connector-service"
+events_static_values_schema_version = "V2"
+events_static_values_category = "OUTGOING_API"
+events_static_values_message_req_type = "EXTERNAL"
+events_static_values_message_log_type = "API_CALL"
+api_tags_tags_psync = "GW_TXN_SYNC"
+proxy_bypass_proxy_urls = []
+connector_revolut_base_url = "https://sandbox-merchant.revolut.com/"
+
+# Context overrides for production environment - connector URLs
+[context."environment=production"]
+common_environment = "production"
+connector_payme_base_url = "https://live.payme.io/api/"
+connector_barclaycard_base_url = "https://api.smartpayfuse.barclaycard"
+connector_airwallex_base_url = "https://api.airwallex.com/api/v1"
+connector_bluesnap_base_url = "https://ws.bluesnap.com"
+connector_bluesnap_secondary_base_url = "https://pay.bluesnap.com"
+connector_iatapay_base_url = "https://iata-pay.iata.org/api/v1"
+connector_jpmorgan_base_url = "https://api-ms.payments.jpmorgan.com/api/v2"
+connector_nexixpay_base_url = "https://xpay.nexigroup.com/api/phoenix-0.0/psp/api/v1"
+connector_authipay_base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
+connector_fiservemea_base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
+connector_datatrans_base_url = "https://api.datatrans.com"
+connector_silverflow_base_url = "https://api.silverflow.co/v1"
+connector_celero_base_url = "https://app.gotnpgateway.com"
+connector_hipay_base_url = "https://secure-gateway.hipay-tpp.com/rest/"
+connector_hipay_secondary_base_url = "https://secure2-vault.hipay-tpp.com/rest/v2/token"
+connector_hipay_third_base_url = "https://api-gateway.hipay.com/"
+connector_globalpay_base_url = "https://apis.globalpay.com/ucp"
+connector_adyen_base_url = "https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/"
+connector_adyen_dispute_base_url = "https://{{merchant_endpoint_prefix}}-ca-live.adyen.com/"
+connector_elavon_base_url = "https://api.convergepay.com/VirtualMerchant/"
+connector_xendit_base_url = "https://api.xendit.co"
+connector_phonepe_base_url = "https://api.phonepe.com/apis/hermes/"
+connector_fiuu_base_url = "https://pay.merchant.razer.com/"
+connector_forte_base_url = "https://api.forte.net/v3"
+connector_payu_base_url = "https://secure.payu.com/api/"
+connector_paytm_base_url = "https://secure.paytmpayments.com/"
+connector_cashtocode_base_url = "https://cluster14.api.cashtocode.com"
+connector_nexinets_base_url = "https://api.payengine.de/v1"
+connector_noon_base_url = "https://api.noonpayments.com/"
+connector_mifinity_base_url = "https://secure.mifinity.com/"
+connector_braintree_base_url = "https://payments.braintree-api.com/graphql"
+connector_volt_base_url = "https://gateway.volt.io"
+connector_volt_secondary_base_url = "https://api.volt.io/"
+connector_calida_base_url = "https://app.eorder.reloadhero.com/"
+connector_cryptopay_base_url = "https://business.cryptopay.me/"
+connector_dlocal_base_url = "https://api.dlocal.com/"
+connector_placetopay_base_url = "https://checkout.placetopay.com/rest/gateway"
+connector_rapyd_base_url = "https://api.rapyd.net"
+connector_aci_base_url = "https://eu-prod.oppwa.com/"
+connector_trustpay_base_url = "https://tpgw.trustpay.eu/"
+connector_cybersource_base_url = "https://api.cybersource.com/"
+connector_worldpay_base_url = "https://access.worldpay.com/"
+connector_worldpayvantiv_base_url = "https://transact.vantivcnp.com/vap/communicator/online"
+connector_worldpayvantiv_secondary_base_url = "https://onlinessr.vantivcnp.com"
+connector_bamboraapac_base_url = "https://www.bambora.co.nz/interface/api"
+connector_paypal_base_url = "https://api-m.paypal.com/"
+connector_paysafe_base_url = "https://api.paysafe.com/paymenthub/"
+connector_nuvei_base_url = "https://secure.safecharge.com/ppp/api/v1"
+connector_worldpayxml_base_url = "https://secure.worldpay.com/jsp/merchant/xml/paymentService.jsp"
+connector_tsys_base_url = "https://gateway.transit-pass.com/"
+connector_revolut_base_url = "https://oba-auth.revolut.com/"
