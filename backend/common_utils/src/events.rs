@@ -290,6 +290,7 @@ pub enum FlowName {
     PostAuthenticate,
     SdkSessionToken,
     Unknown,
+    IncrementalAuthorization,
 }
 
 impl FlowName {
@@ -318,6 +319,7 @@ impl FlowName {
             Self::Authenticate => "Authenticate",
             Self::PostAuthenticate => "PostAuthenticate",
             Self::SdkSessionToken => "SdkSessionToken",
+            Self::IncrementalAuthorization => "IncrementalAuthorization",
             Self::Unknown => "Unknown",
         }
     }

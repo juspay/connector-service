@@ -76,8 +76,11 @@ service PaymentService {
   // Creates an access token for connector authentication.
   rpc CreateAccessToken(PaymentServiceCreateAccessTokenRequest) returns (PaymentServiceCreateAccessTokenResponse);
  
-  // Placeholder
+  // Creates a session object or a session token for wallets like Apple Pay, Google Pay, etc.
   rpc SdkSessionToken(PaymentServiceSdkSessionTokenRequest) returns (PaymentServiceSdkSessionTokenResponse);
+
+  // Authorized amount for a payment can be incremented if it is in status AUTHORIZED.
+  rpc IncrementalAuthorization(PaymentServiceIncrementalAuthorizationRequest) returns (PaymentServiceIncrementalAuthorizationResponse);
 }
 
 // Service for refund-specific operations.

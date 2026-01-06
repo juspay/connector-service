@@ -17,10 +17,11 @@ use grpc_api_types::payments::{
     self as grpc_payment_types, AcceptDisputeResponse, ConnectorState, DisputeDefendRequest,
     DisputeDefendResponse, DisputeResponse, DisputeServiceSubmitEvidenceResponse,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse,
-    PaymentServiceGetResponse, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
-    PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
-    PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RefundResponse,
+    PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
+    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRegisterRequest,
+    PaymentServiceRegisterResponse, PaymentServiceSdkSessionTokenRequest,
+    PaymentServiceSdkSessionTokenResponse, PaymentServiceVoidPostCaptureResponse,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -79,8 +80,8 @@ fn convert_metadata_to_json(metadata: &HashMap<String, String>) -> serde_json::V
 use crate::{
     connector_flow::{
         Accept, Authorize, Capture, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
-        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SdkSessionToken,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        DefendDispute, IncrementalAuthorization, PSync, PaymentMethodToken, RSync, Refund,
+        RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ApplePayPaymentRequest,
@@ -92,12 +93,13 @@ use crate::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, PaypalFlow, PaypalTransactionInfo,
-        RawConnectorRequestResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -3663,7 +3665,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             .map(|metadata| serde_json::from_str(&metadata.expose()))
             .transpose()
             .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID CONNECTOR METADATA".to_owned(),
+                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
                 error_identifier: 400,
                 error_message: "Failed to parse connector metadata".to_owned(),
                 error_object: None,
@@ -3780,6 +3782,19 @@ impl ForeignFrom<common_enums::AttemptStatus> for grpc_api_types::payments::Paym
             }
             common_enums::AttemptStatus::IntegrityFailure => Self::Failure,
             common_enums::AttemptStatus::Unknown => Self::AttemptStatusUnspecified,
+        }
+    }
+}
+
+impl ForeignFrom<common_enums::AuthorizationStatus>
+    for grpc_api_types::payments::AuthorizationStatus
+{
+    fn foreign_from(status: common_enums::AuthorizationStatus) -> Self {
+        match status {
+            common_enums::AuthorizationStatus::Success => Self::AuthorizationSuccess,
+            common_enums::AuthorizationStatus::Unresolved => Self::AuthorizationUnresolved,
+            common_enums::AuthorizationStatus::Processing => Self::AuthorizationProcessing,
+            common_enums::AuthorizationStatus::Failure => Self::AuthorizationFailure,
         }
     }
 }
@@ -5120,6 +5135,122 @@ impl
     }
 }
 
+impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
+    for PaymentsIncrementalAuthorizationData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: PaymentServiceIncrementalAuthorizationRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
+
+        let connector_transaction_id = ResponseId::ConnectorTransactionId(
+            value
+                .transaction_id
+                .clone()
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_TRANSACTION_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Transaction id is missing".to_owned(),
+                    error_object: None,
+                }))?,
+        );
+
+        let connector_metadata = value
+            .connector_metadata
+            .map(|metadata| serde_json::from_str(&metadata.expose()))
+            .transpose()
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Failed to parse connector metadata".to_owned(),
+                error_object: None,
+            }))?;
+
+        Ok(Self {
+            minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
+            connector_transaction_id,
+            connector_metadata,
+            currency,
+            reason: value.reason,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        PaymentServiceIncrementalAuthorizationRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            PaymentServiceIncrementalAuthorizationRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // For void post capture operations, address information is typically not available or required
+        // Since this is a PaymentServiceVoidPostCaptureRequest, we use default address values
+        let address: PaymentAddress = PaymentAddress::new(
+            None,        // shipping
+            None,        // billing
+            None,        // payment_method_billing
+            Some(false), // should_unify_address = false for void post capture operations
+        );
+
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
+            attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: PaymentMethod::Card, //TODO
+            address,
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
+            customer_id: None,
+            connector_customer: None,
+            description: None,
+            return_url: None,
+            connector_meta_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
+            minor_amount_capturable: None,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+            minor_amount_authorized: None,
+        })
+    }
+}
+
 impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
     type Error = ApplicationErrorResponse;
 
@@ -5831,6 +5962,90 @@ impl
             order_details: None,
             minor_amount_authorized: None,
         })
+    }
+}
+
+pub fn generate_payment_incremental_authorization_response(
+    router_data_v2: RouterDataV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    >,
+) -> Result<
+    PaymentServiceIncrementalAuthorizationResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    // Create state if either access token or connector customer is available
+    let state = if router_data_v2.resource_common_data.access_token.is_some()
+        || router_data_v2
+            .resource_common_data
+            .connector_customer
+            .is_some()
+    {
+        Some(ConnectorState {
+            access_token: router_data_v2
+                .resource_common_data
+                .access_token
+                .as_ref()
+                .map(|token_data| grpc_api_types::payments::AccessToken {
+                    token: token_data.access_token.clone(),
+                    expires_in_seconds: token_data.expires_in,
+                    token_type: token_data.token_type.clone(),
+                }),
+            connector_customer_id: router_data_v2
+                .resource_common_data
+                .connector_customer
+                .clone(),
+        })
+    } else {
+        None
+    };
+
+    match router_data_v2.response {
+        Ok(response) => match response {
+            PaymentsResponseData::IncrementalAuthorizationResponse {
+                status,
+                connector_authorization_id,
+                status_code,
+            } => {
+                let grpc_status =
+                    grpc_api_types::payments::AuthorizationStatus::foreign_from(status);
+
+                Ok(PaymentServiceIncrementalAuthorizationResponse {
+                    connector_authorization_id,
+                    error_code: None,
+                    error_message: None,
+                    error_reason: None,
+                    status: grpc_status.into(),
+                    status_code: status_code as u32,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
+                    state,
+                })
+            }
+            _ => Err(report!(ApplicationErrorResponse::InternalServerError(
+                ApiError {
+                    sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
+                    error_identifier: 500,
+                    error_message: "Invalid response type received from connector".to_owned(),
+                    error_object: None,
+                }
+            ))),
+        },
+        Err(e) => Ok(PaymentServiceIncrementalAuthorizationResponse {
+            status: grpc_api_types::payments::AuthorizationStatus::AuthorizationFailure.into(),
+            connector_authorization_id: None,
+            error_message: Some(e.message),
+            error_code: Some(e.code),
+            error_reason: e.reason,
+            status_code: e.status_code as u32,
+            response_headers: router_data_v2
+                .resource_common_data
+                .get_connector_response_headers_as_map(),
+            state,
+        }),
     }
 }
 
