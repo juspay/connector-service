@@ -15,7 +15,6 @@ use domain_types::{
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::types::ResponseRouterData;
 
@@ -250,19 +249,11 @@ impl<T: PaymentMethodDataTypes>
                             field_name: "billing_address.address",
                         })?;
 
-                let name = Secret::new(format!(
-                    "{} {}",
-                    billing_address
-                        .first_name
-                        .clone()
-                        .map(|n| n.expose())
-                        .unwrap_or_default(),
-                    billing_address
-                        .last_name
-                        .clone()
-                        .map(|n| n.expose())
-                        .unwrap_or_default()
-                ));
+                let name = billing_address.get_optional_full_name().ok_or(
+                    ConnectorError::MissingRequiredField {
+                        field_name: "billing_address.first_name or billing_address.last_name",
+                    },
+                )?;
 
                 let email = billing
                     .email
@@ -271,17 +262,11 @@ impl<T: PaymentMethodDataTypes>
                         field_name: "billing_address.email",
                     })?;
 
-                let phone = billing
-                    .phone
-                    .clone()
-                    .ok_or(ConnectorError::MissingRequiredField {
+                let mobile = billing.get_phone_with_country_code().map_err(|_| {
+                    ConnectorError::MissingRequiredField {
                         field_name: "billing_address.phone",
-                    })?;
-                let mobile = Secret::new(format!(
-                    "{}{}",
-                    phone.country_code.unwrap_or_default(),
-                    phone.number.map(|n| n.expose()).unwrap_or_default()
-                ));
+                    }
+                })?;
 
                 // Get customer ID
                 let customer_id = item.resource_common_data.customer_id.clone().ok_or(
@@ -489,9 +474,4 @@ impl TryFrom<ResponseRouterData<GigadatRefundResponse, Self>>
 
         Ok(router_data)
     }
-}
-
-// ===== HELPER FOR REFUND HEADERS =====
-pub fn get_refund_idempotency_key() -> String {
-    Uuid::new_v4().to_string()
 }

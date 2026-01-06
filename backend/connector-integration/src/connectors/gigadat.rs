@@ -374,7 +374,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Add Idempotency-Key for refunds
         header.push((
             headers::IDEMPOTENCY_KEY.to_string(),
-            gigadat::get_refund_idempotency_key().into(),
+            uuid::Uuid::new_v4().to_string().into(),
         ));
         Ok(header)
     }
