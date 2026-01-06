@@ -30,6 +30,8 @@ pub struct RedsysPaymentsResponse {
     pub ds_card_psd2: Option<CardPSD2>,
     #[serde(rename = "Ds_Response")]
     pub ds_response: Option<DsResponse>,
+    #[serde(rename = "Ds_Response_Description")]
+    pub ds_response_description: Option<String>,
     #[serde(rename = "Ds_AuthorisationCode")]
     pub ds_authorisation_code: Option<Secret<String>>,
 }

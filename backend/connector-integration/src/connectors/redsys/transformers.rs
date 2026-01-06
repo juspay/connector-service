@@ -1191,23 +1191,36 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                         item.router_data.request.capture_method,
                     )?;
 
+                    let response = if domain_types::utils::is_payment_failure(attempt_status) {
+                        let error_message = response_data
+                            .ds_response_description
+                            .unwrap_or_else(|| ds_response.0.clone());
+
+                        Err(domain_types::router_data::ErrorResponse {
+                            code: ds_response.0.clone(),
+                            message: error_message.clone(),
+                            reason: Some(error_message),
+                            status_code: item.http_code,
+                            attempt_status: None,
+                            connector_transaction_id: Some(response_data.ds_order.clone()),
+                            network_decline_code: None,
+                            network_advice_code: None,
+                            network_error_message: None,
+                        })
+                    } else {
+                        Ok(PaymentsResponseData::PostAuthenticateResponse {
+                            authentication_data: None,
+                            connector_response_reference_id: Some(response_data.ds_order.clone()),
+                            status_code: item.http_code,
+                        })
+                    };
+
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
                             status: attempt_status,
                             ..item.router_data.resource_common_data
                         },
-                        response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(
-                                response_data.ds_order.clone(),
-                            ),
-                            redirection_data: None,
-                            mandate_reference: None,
-                            connector_metadata: None,
-                            network_txn_id: None,
-                            connector_response_reference_id: Some(response_data.ds_order),
-                            incremental_authorization_allowed: None,
-                            status_code: item.http_code,
-                        }),
+                        response,
                         ..item.router_data
                     })
                 } else {
