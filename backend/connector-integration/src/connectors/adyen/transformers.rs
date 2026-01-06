@@ -1005,6 +1005,15 @@ pub enum AdyenSplitType {
     Vat,
 }
 
+// Wrapper types for RepeatPayment to avoid duplicate templating structs in macro
+#[derive(Debug, Serialize)]
+#[serde(transparent)]
+pub struct AdyenRepeatPaymentRequest(pub AdyenPaymentRequest<DefaultPCIHolder>);
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct AdyenRepeatPaymentResponse(pub AdyenPaymentResponse);
+
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -2382,6 +2391,74 @@ where
     }
 }
 
+// Response transformer for RepeatPayment - similar to Cybersource/other connectors pattern
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<AdyenRepeatPaymentResponse, Self>>
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
+{
+    type Error = Error;
+    fn try_from(
+        value: ResponseRouterData<AdyenRepeatPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response: repeat_response,
+            router_data,
+            http_code,
+        } = value;
+        // Unwrap the response wrapper to get AdyenPaymentResponse
+        let response = repeat_response.0;
+        let is_manual_capture = is_manual_capture(router_data.request.capture_method);
+        let pmt = router_data.request.payment_method_type;
+
+        // Process response using existing helper functions (same as Authorize)
+        let adyen_payments_response_data = match response {
+            AdyenPaymentResponse::Response(response) => {
+                get_adyen_response(*response, is_manual_capture, http_code, pmt)?
+            }
+            AdyenPaymentResponse::PresentToShopper(response) => {
+                get_present_to_shopper_response(*response, is_manual_capture, http_code, pmt)?
+            }
+            AdyenPaymentResponse::QrCodeResponse(response) => {
+                get_qr_code_response(*response, is_manual_capture, http_code, pmt)?
+            }
+            AdyenPaymentResponse::RedirectionResponse(response) => {
+                get_redirection_response(*response, is_manual_capture, http_code, pmt)?
+            }
+            AdyenPaymentResponse::RedirectionErrorResponse(response) => {
+                get_redirection_error_response(*response, is_manual_capture, http_code, pmt)?
+            }
+            AdyenPaymentResponse::WebhookResponse(response) => get_webhook_response(
+                *response,
+                is_manual_capture,
+                false, // is_multiple_capture_psync_flow = false for repeat payment
+                http_code,
+            )?,
+        };
+
+        let minor_amount_captured = match adyen_payments_response_data.status {
+            AttemptStatus::Charged
+            | AttemptStatus::PartialCharged
+            | AttemptStatus::PartialChargedAndChargeable => adyen_payments_response_data.txn_amount,
+            _ => None,
+        };
+
+        Ok(Self {
+            response: adyen_payments_response_data.error.map_or_else(
+                || Ok(adyen_payments_response_data.payments_response_data),
+                Err,
+            ),
+            resource_common_data: PaymentFlowData {
+                status: adyen_payments_response_data.status,
+                amount_captured: minor_amount_captured.map(|amount| amount.get_amount_as_i64()),
+                minor_amount_captured,
+                connector_response: adyen_payments_response_data.connector_response,
+                ..router_data.resource_common_data
+            },
+            ..router_data
+        })
+    }
+}
+
 #[derive(Default, Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum AdyenVoidStatus {
@@ -3349,7 +3426,11 @@ fn get_additional_data<
         recurring_shopper_reference: None,
         recurring_processing_model: None,
         riskdata,
-        sca_exemption: None, // SetupMandate does not have authentication_data
+        sca_exemption: item.request.authentication_data.as_ref().and_then(|data| {
+            data.exemption_indicator
+                .as_ref()
+                .and_then(to_adyen_exemption)
+        }),
         ..AdditionalData::default()
     })
 }
@@ -3736,7 +3817,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )
         .and_then(Result::ok);
 
-        let card_holder_name = item.router_data.request.customer_name.clone();
+        let testing_data = item
+            .router_data
+            .request
+            .get_connector_testing_data()
+            .map(AdyenTestingData::try_from)
+            .transpose()?;
+        let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
+        let card_holder_name = test_holder_name.or_else(|| {
+            item.router_data
+                .resource_common_data
+                .get_optional_billing_full_name()
+        });
 
         let additional_data = get_additional_data_for_setup_mandate(&item.router_data);
 
@@ -3745,7 +3837,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-            AdyenPaymentMethod::try_from((card_data, card_holder_name.map(Secret::new)))?,
+            AdyenPaymentMethod::try_from((card_data, card_holder_name))?,
         ));
 
         Ok(Self(AdyenPaymentRequest {
@@ -3760,15 +3852,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             return_url,
             shopper_interaction,
             recurring_processing_model,
-            browser_info: None,
+            browser_info: get_browser_info_for_setup_mandate(&item.router_data)?,
             additional_data,
             mpi_data: None,
             telephone_number: item
                 .router_data
                 .resource_common_data
                 .get_optional_billing_phone_number(),
-            shopper_name: None,
-            shopper_email: None,
+            shopper_name: get_shopper_name(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            ),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
             shopper_locale: item.router_data.request.locale.clone(),
             social_security_number: None,
             billing_address,
@@ -3791,17 +3891,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .billing_descriptor
                 .clone()
                 .and_then(|descriptor| descriptor.statement_descriptor),
-            shopper_ip: None,
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store: None,
             splits: None,
             device_fingerprint,
-            metadata: item
-                .router_data
-                .request
-                .metadata
-                .clone()
-                .map(|value| Secret::new(filter_adyen_metadata(value))),
+            metadata: None,
             platform_chargeback_logic,
             session_validity: None,
         }))
@@ -3885,67 +3980,53 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         } = value;
         let pmt = router_data.request.payment_method_type;
         let is_manual_capture = false;
-        let (status, error, payment_response_data) = match response {
-            SetupMandateResponse(AdyenPaymentResponse::Response(response)) => {
-                let adyen_response =
-                    get_adyen_response(*response, is_manual_capture, http_code, pmt)?;
-                (
-                    adyen_response.status,
-                    adyen_response.error,
-                    adyen_response.payments_response_data,
-                )
+        // Unwrap the response wrapper to get AdyenPaymentResponse
+        let adyen_response = match response {
+            SetupMandateResponse(resp) => resp,
+        };
+
+        // Process response using existing helper functions (same as Authorize/RepeatPayment)
+        let adyen_payments_response_data = match adyen_response {
+            AdyenPaymentResponse::Response(response) => {
+                get_adyen_response(*response, is_manual_capture, http_code, pmt)?
             }
-            SetupMandateResponse(AdyenPaymentResponse::RedirectionResponse(response)) => {
-                let adyen_response =
-                    get_redirection_response(*response, is_manual_capture, http_code, pmt)?;
-                (
-                    adyen_response.status,
-                    adyen_response.error,
-                    adyen_response.payments_response_data,
-                )
+            AdyenPaymentResponse::PresentToShopper(response) => {
+                get_present_to_shopper_response(*response, is_manual_capture, http_code, pmt)?
             }
-            SetupMandateResponse(AdyenPaymentResponse::PresentToShopper(response)) => {
-                let adyen_response =
-                    get_present_to_shopper_response(*response, is_manual_capture, http_code, pmt)?;
-                (
-                    adyen_response.status,
-                    adyen_response.error,
-                    adyen_response.payments_response_data,
-                )
+            AdyenPaymentResponse::QrCodeResponse(response) => {
+                get_qr_code_response(*response, is_manual_capture, http_code, pmt)?
             }
-            SetupMandateResponse(AdyenPaymentResponse::RedirectionErrorResponse(response)) => {
-                let adyen_response =
-                    get_redirection_error_response(*response, is_manual_capture, http_code, pmt)?;
-                (
-                    adyen_response.status,
-                    adyen_response.error,
-                    adyen_response.payments_response_data,
-                )
+            AdyenPaymentResponse::RedirectionResponse(response) => {
+                get_redirection_response(*response, is_manual_capture, http_code, pmt)?
             }
-            SetupMandateResponse(AdyenPaymentResponse::QrCodeResponse(response)) => {
-                let adyen_response =
-                    get_qr_code_response(*response, is_manual_capture, http_code, pmt)?;
-                (
-                    adyen_response.status,
-                    adyen_response.error,
-                    adyen_response.payments_response_data,
-                )
+            AdyenPaymentResponse::RedirectionErrorResponse(response) => {
+                get_redirection_error_response(*response, is_manual_capture, http_code, pmt)?
             }
-            SetupMandateResponse(AdyenPaymentResponse::WebhookResponse(response)) => {
-                let adyen_response =
-                    get_webhook_response(*response, is_manual_capture, false, http_code)?;
-                (
-                    adyen_response.status,
-                    adyen_response.error,
-                    adyen_response.payments_response_data,
-                )
-            }
+            AdyenPaymentResponse::WebhookResponse(response) => get_webhook_response(
+                *response,
+                is_manual_capture,
+                false, // is_multiple_capture_psync_flow = false for setup mandate
+                http_code,
+            )?,
+        };
+
+        let minor_amount_captured = match adyen_payments_response_data.status {
+            AttemptStatus::Charged
+            | AttemptStatus::PartialCharged
+            | AttemptStatus::PartialChargedAndChargeable => adyen_payments_response_data.txn_amount,
+            _ => None,
         };
 
         Ok(Self {
-            response: error.map_or_else(|| Ok(payment_response_data), Err),
+            response: adyen_payments_response_data.error.map_or_else(
+                || Ok(adyen_payments_response_data.payments_response_data),
+                Err,
+            ),
             resource_common_data: PaymentFlowData {
-                status,
+                status: adyen_payments_response_data.status,
+                amount_captured: minor_amount_captured.map(|amount| amount.get_amount_as_i64()),
+                minor_amount_captured,
+                connector_response: adyen_payments_response_data.connector_response,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -4069,31 +4150,21 @@ fn get_additional_data_for_setup_mandate<
     ) {
         Some("true".to_string())
     } else {
-        None
+        Some("false".to_string())
     };
 
-    if authorisation_type.is_none()
-        && manual_capture.is_none()
-        && execute_three_d.is_none()
-        && riskdata.is_none()
-    {
-        //without this if-condition when the above 3 values are None, additionalData will be serialized to JSON like this -> additionalData: {}
-        //returning None, ensures that additionalData key will not be present in the serialized JSON
-        None
-    } else {
-        Some(AdditionalData {
-            authorisation_type,
-            manual_capture,
-            execute_three_d,
-            network_tx_reference: None,
-            recurring_detail_reference: None,
-            recurring_shopper_reference: None,
-            recurring_processing_model: None,
-            riskdata,
-            sca_exemption: None,
-            ..AdditionalData::default()
-        })
-    }
+    Some(AdditionalData {
+        authorisation_type,
+        manual_capture,
+        execute_three_d,
+        network_tx_reference: None,
+        recurring_detail_reference: None,
+        recurring_shopper_reference: None,
+        recurring_processing_model: None,
+        riskdata,
+        sca_exemption: None,
+        ..AdditionalData::default()
+    })
 }
 
 fn is_mandate_payment_for_setup_mandate<
@@ -4115,7 +4186,7 @@ fn is_mandate_payment_for_setup_mandate<
             .is_some()
 }
 
-impl<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AdyenRouterData<
             RouterDataV2<
@@ -4126,14 +4197,7 @@ impl<T>
             >,
             T,
         >,
-    > for AdyenPaymentRequest<T>
-where
-    T: PaymentMethodDataTypes<Inner = cards::CardNumber>
-        + std::fmt::Debug
-        + Sync
-        + Send
-        + 'static
-        + Serialize,
+    > for AdyenRepeatPaymentRequest
 {
     type Error = Error;
     fn try_from(
@@ -4147,8 +4211,202 @@ where
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let mandate_ref = item.router_data.request.mandate_reference.clone();
-        Self::try_from((item, mandate_ref))
+        // Directly implement RepeatPayment transformer logic - no conversion needed
+        let mandate_ref_id = item.router_data.request.mandate_reference.clone();
+        let amount = Amount {
+            currency: item.router_data.request.currency,
+            value: item.router_data.request.minor_amount,
+        };
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::ContinuedAuthentication;
+        let (recurring_processing_model, store_payment_method, shopper_reference) =
+            get_recurring_processing_model_for_repeat_payment(&item.router_data)?;
+        let browser_info = None;
+        let additional_data = get_additional_data_for_repeat_payment(&item.router_data);
+        let return_url = item.router_data.request.router_return_url.clone().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "return_url",
+            },
+        )?;
+        let payment_method_type = item.router_data.request.payment_method_type;
+        let testing_data = item
+            .router_data
+            .request
+            .get_connector_testing_data()
+            .map(AdyenTestingData::try_from)
+            .transpose()?;
+        let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
+        let payment_method = match mandate_ref_id {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => {
+                let adyen_mandate = AdyenMandate {
+                    payment_type: match payment_method_type {
+                        Some(pm_type) => PaymentType::try_from(&pm_type)?,
+                        None => PaymentType::Scheme,
+                    },
+                    stored_payment_method_id: Secret::new(
+                        connector_mandate_ids.get_connector_mandate_id().ok_or(
+                            errors::ConnectorError::MissingRequiredField {
+                                field_name: "connector_mandate_id",
+                            },
+                        )?,
+                    ),
+                    holder_name: test_holder_name,
+                };
+                PaymentMethod::AdyenMandatePaymentMethod(Box::new(adyen_mandate))
+            }
+            MandateReferenceId::NetworkMandateId(network_mandate_id) => {
+                match &item.router_data.request.payment_method_data {
+                    PaymentMethodData::CardDetailsForNetworkTransactionId(
+                        ref card_details_for_network_transaction_id,
+                    ) => {
+                        let brand = match card_details_for_network_transaction_id
+                            .card_network
+                            .clone()
+                            .and_then(get_adyen_card_network)
+                        {
+                            Some(card_network) => card_network,
+                            None => CardBrand::try_from(
+                                &card_details_for_network_transaction_id.get_card_issuer()?,
+                            )?,
+                        };
+                        let card_holder_name = item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing_full_name();
+                        let raw_card_number = RawCardNumber(
+                            card_details_for_network_transaction_id.card_number.clone(),
+                        );
+                        let adyen_card = AdyenCard {
+                            number: raw_card_number,
+                            expiry_month: card_details_for_network_transaction_id
+                                .card_exp_month
+                                .clone(),
+                            expiry_year: card_details_for_network_transaction_id
+                                .card_exp_year
+                                .clone(),
+                            cvc: None,
+                            holder_name: test_holder_name.or(card_holder_name),
+                            brand: Some(brand),
+                            network_payment_reference: Some(Secret::new(network_mandate_id)),
+                        };
+                        PaymentMethod::AdyenPaymentMethod(Box::new(AdyenPaymentMethod::AdyenCard(
+                            Box::new(adyen_card),
+                        )))
+                    }
+                    _ => {
+                        return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                            message: "Network tokenization for payment method".to_string(),
+                            connector: "Adyen",
+                        }))
+                    }
+                }
+            }
+            MandateReferenceId::NetworkTokenWithNTI(network_mandate_id) => {
+                match &item.router_data.request.payment_method_data {
+                    PaymentMethodData::NetworkToken(ref token_data) => {
+                        let card_issuer = token_data.get_card_issuer()?;
+                        let brand = CardBrand::try_from(&card_issuer)?;
+                        let card_holder_name = item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing_full_name();
+                        let adyen_network_token = AdyenNetworkTokenData {
+                            number: token_data.get_network_token(),
+                            expiry_month: token_data.get_network_token_expiry_month(),
+                            expiry_year: token_data.get_expiry_year_4_digit(),
+                            holder_name: test_holder_name.or(card_holder_name),
+                            brand: Some(brand),
+                            network_payment_reference: Some(Secret::new(
+                                network_mandate_id.network_transaction_id.clone(),
+                            )),
+                        };
+                        PaymentMethod::AdyenPaymentMethod(Box::new(
+                            AdyenPaymentMethod::NetworkToken(Box::new(adyen_network_token)),
+                        ))
+                    }
+                    _ => {
+                        return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                            message: "Network tokenization for payment method".to_string(),
+                            connector: "Adyen",
+                        }))
+                    }
+                }
+            }
+        };
+
+        let adyen_metadata = get_adyen_metadata(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|m| m.expose()),
+        );
+
+        let (store, splits) = (adyen_metadata.store.clone(), None);
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+
+        let billing_address =
+            get_address_info(item.router_data.resource_common_data.get_optional_billing())
+                .and_then(Result::ok);
+        let delivery_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .get_optional_shipping(),
+        )
+        .and_then(Result::ok);
+        let telephone_number = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_phone_number();
+
+        Ok(AdyenRepeatPaymentRequest(AdyenPaymentRequest {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            mpi_data: None,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            browser_info,
+            shopper_interaction,
+            recurring_processing_model: recurring_processing_model.clone(),
+            additional_data,
+            shopper_reference: shopper_reference.clone(),
+            store_payment_method,
+            shopper_name: get_shopper_name(
+                item.router_data.resource_common_data.get_optional_billing(),
+            ),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_statement: get_shopper_statement_for_repeat_payment(&item.router_data),
+            social_security_number: None,
+            telephone_number,
+            billing_address,
+            delivery_address,
+            country_code: None,
+            line_items: None,
+            channel: None,
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            splits,
+            store,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+            platform_chargeback_logic,
+            session_validity: None,
+        }))
     }
 }
 
@@ -4981,6 +5239,40 @@ fn get_browser_info<
         Authorize,
         PaymentFlowData,
         PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<Option<AdyenBrowserInfo>, Error> {
+    if router_data.resource_common_data.auth_type == common_enums::AuthenticationType::ThreeDs
+        || router_data.resource_common_data.payment_method == common_enums::PaymentMethod::Card
+        || router_data.resource_common_data.payment_method
+            == common_enums::PaymentMethod::BankRedirect
+        || router_data.request.payment_method_type == Some(common_enums::PaymentMethodType::GoPay)
+        || router_data.request.payment_method_type
+            == Some(common_enums::PaymentMethodType::GooglePay)
+    {
+        let info = router_data.request.get_browser_info()?;
+        Ok(Some(AdyenBrowserInfo {
+            accept_header: info.get_accept_header()?,
+            language: info.get_language()?,
+            screen_height: info.get_screen_height()?,
+            screen_width: info.get_screen_width()?,
+            color_depth: info.get_color_depth()?,
+            user_agent: info.get_user_agent()?,
+            time_zone_offset: info.get_time_zone()?,
+            java_enabled: info.get_java_enabled()?,
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+fn get_browser_info_for_setup_mandate<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
+    router_data: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
     >,
 ) -> Result<Option<AdyenBrowserInfo>, Error> {
