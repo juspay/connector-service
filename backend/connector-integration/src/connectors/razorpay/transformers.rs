@@ -1033,7 +1033,18 @@ pub struct RazorpayWebhook {
     pub account_id: String,
     pub contains: Vec<String>,
     pub entity: String,
-    pub event: String,
+    pub event: String, // Keep as String for backward compatibility
+    pub payload: Payload,
+}
+
+// Enhanced webhook structure with typed event for new webhook implementation
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub struct RazorpayWebhookTyped {
+    pub account_id: String,
+    pub contains: Vec<String>,
+    pub entity: String,
+    pub event: RazorpayWebhookEvent,
     pub payload: Payload,
 }
 
@@ -1100,6 +1111,7 @@ pub struct RefundEntity {
     pub currency: String,
     pub payment_id: String,
     pub status: RazorpayRefundStatus,
+    pub notes: Option<serde_json::Value>, // Added for unique_request_id extraction
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1115,6 +1127,7 @@ pub enum RazorpayPaymentStatus {
     Authorized,
     Captured,
     Failed,
+    Refunded,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1150,36 +1163,6 @@ pub fn get_webhook_object_from_body(
         .parse_struct("RazorpayWebhook")
         .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
     Ok(webhook.payload)
-}
-
-pub(crate) fn get_razorpay_payment_webhook_status(
-    entity: RazorpayEntity,
-    status: RazorpayPaymentStatus,
-) -> Result<AttemptStatus, errors::ConnectorError> {
-    match entity {
-        RazorpayEntity::Payment => match status {
-            RazorpayPaymentStatus::Authorized => Ok(AttemptStatus::Authorized),
-            RazorpayPaymentStatus::Captured => Ok(AttemptStatus::Charged),
-            RazorpayPaymentStatus::Failed => Ok(AttemptStatus::AuthorizationFailed),
-        },
-        RazorpayEntity::Refund => Err(errors::ConnectorError::RequestEncodingFailed),
-    }
-}
-
-pub(crate) fn get_razorpay_refund_webhook_status(
-    entity: RazorpayEntity,
-    status: RazorpayRefundStatus,
-) -> Result<common_enums::RefundStatus, errors::ConnectorError> {
-    match entity {
-        RazorpayEntity::Refund => match status {
-            RazorpayRefundStatus::Processed => Ok(common_enums::RefundStatus::Success),
-            RazorpayRefundStatus::Created | RazorpayRefundStatus::Pending => {
-                Ok(common_enums::RefundStatus::Pending)
-            }
-            RazorpayRefundStatus::Failed => Ok(common_enums::RefundStatus::Failure),
-        },
-        RazorpayEntity::Payment => Err(errors::ConnectorError::RequestEncodingFailed),
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1257,6 +1240,7 @@ impl<F, Req> ForeignTryFrom<(RazorpayCaptureResponse, Self, u16)>
             RazorpayPaymentStatus::Captured => AttemptStatus::Charged,
             RazorpayPaymentStatus::Authorized => AttemptStatus::Authorized,
             RazorpayPaymentStatus::Failed => AttemptStatus::Failure,
+            RazorpayPaymentStatus::Refunded => AttemptStatus::AutoRefunded,
         };
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -1629,4 +1613,124 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
         e
     })
     .ok()
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub enum RazorpayWebhookEvent {
+    #[serde(rename = "payment.captured")]
+    PaymentCaptured,
+
+    #[serde(rename = "payment.failed")]
+    PaymentFailed,
+
+    #[serde(rename = "refund.processed")]
+    RefundProcessed,
+
+    #[serde(rename = "refund.failed")]
+    RefundFailed,
+
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RazorpayWebhookBody {
+    pub entity: String,
+    pub account_id: String,
+    pub event: RazorpayWebhookEvent,
+    pub contains: Vec<String>,
+    pub payload: serde_json::Value,
+    pub created_at: i64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RazorpayPaymentWebhookPayload {
+    pub payment: RazorpayPaymentWebhookEntity,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RazorpayPaymentWebhookEntity {
+    pub entity: RazorpayPaymentWebhookDetails,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RazorpayPaymentWebhookDetails {
+    pub id: String,
+    pub entity: String,
+    pub amount: i64,
+    pub currency: String,
+    pub status: String,
+    pub order_id: Option<String>,
+    pub error_code: Option<String>,
+    pub error_description: Option<String>,
+    pub error_reason: Option<String>,
+    pub acquirer_data: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RazorpayRefundWebhookPayload {
+    pub refund: RazorpayRefundWebhookEntity,
+    pub payment: RazorpayPaymentWebhookEntity,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RazorpayRefundWebhookEntity {
+    pub entity: RazorpayRefundWebhookDetails,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RazorpayRefundWebhookDetails {
+    pub id: String,
+    pub entity: String,
+    pub amount: i64,
+    pub currency: String,
+    pub payment_id: String,
+    pub notes: Option<serde_json::Value>,
+    pub receipt: Option<String>,
+    pub acquirer_data: Option<serde_json::Value>,
+    pub created_at: i64,
+    pub batch_id: Option<String>,
+    pub status: String,
+    pub speed_processed: String,
+    pub speed_requested: String,
+}
+
+impl RazorpayWebhookEvent {
+    pub fn to_event_type(
+        self,
+    ) -> Result<domain_types::connector_types::EventType, errors::ConnectorError> {
+        match self {
+            Self::PaymentCaptured => {
+                Ok(domain_types::connector_types::EventType::PaymentIntentCaptureSuccess)
+            }
+            Self::PaymentFailed => {
+                Ok(domain_types::connector_types::EventType::PaymentIntentFailure)
+            }
+            Self::RefundProcessed => Ok(domain_types::connector_types::EventType::RefundSuccess),
+            Self::RefundFailed => Ok(domain_types::connector_types::EventType::RefundFailure),
+            Self::Unknown => Err(errors::ConnectorError::WebhookEventTypeNotFound),
+        }
+    }
+}
+
+impl From<RazorpayWebhookEvent> for AttemptStatus {
+    fn from(event: RazorpayWebhookEvent) -> Self {
+        match event {
+            RazorpayWebhookEvent::PaymentCaptured => Self::Charged,
+            RazorpayWebhookEvent::PaymentFailed => Self::Failure,
+            RazorpayWebhookEvent::RefundProcessed => Self::PartialCharged,
+            RazorpayWebhookEvent::RefundFailed => Self::Failure,
+            RazorpayWebhookEvent::Unknown => Self::Failure,
+        }
+    }
+}
+
+impl From<RazorpayWebhookEvent> for common_enums::RefundStatus {
+    fn from(event: RazorpayWebhookEvent) -> Self {
+        match event {
+            RazorpayWebhookEvent::RefundProcessed => Self::Success,
+            RazorpayWebhookEvent::RefundFailed => Self::Failure,
+            _ => Self::Pending,
+        }
+    }
 }
