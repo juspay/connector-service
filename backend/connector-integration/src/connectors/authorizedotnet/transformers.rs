@@ -879,8 +879,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             email: item.router_data.request.email.clone(),
         });
 
+        let transaction_type = match item.router_data.request.capture_method {
+            Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
+            Some(enums::CaptureMethod::Automatic)
+            | None
+            | Some(enums::CaptureMethod::SequentialAutomatic) => {
+                TransactionType::AuthCaptureTransaction
+            }
+            Some(_) => {
+                return Err(error_stack::report!(ConnectorError::NotSupported {
+                    message: "Capture method not supported".to_string(),
+                    connector: "authorizedotnet",
+                }))
+            }
+        };
+
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
-            transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
+            transaction_type,
             amount: item
                 .connector
                 .amount_converter
@@ -1760,7 +1775,7 @@ impl<
             &response.0,
             http_code,
             Operation::Authorize,
-            Some(enums::CaptureMethod::Automatic),
+            router_data.request.capture_method,
         );
 
         // Extract connector response data
