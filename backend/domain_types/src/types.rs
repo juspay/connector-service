@@ -120,7 +120,15 @@ use crate::{
     utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
 };
 
-#[derive(Clone, serde::Deserialize, serde::Serialize, Debug, Default)]
+#[derive(
+    Clone,
+    serde::Deserialize,
+    serde::Serialize,
+    Debug,
+    Default,
+    PartialEq,
+    config_patch_derive::Patch,
+)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
@@ -189,9 +197,10 @@ pub struct Connectors {
     pub bambora: ConnectorParams,
     pub payme: ConnectorParams,
     pub revolut: ConnectorParams,
+    pub loonio: ConnectorParams,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParams {
     /// base url
     #[serde(default)]
@@ -215,7 +224,7 @@ impl ConnectorParams {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParamsWithMoreUrls {
     /// base url
     pub base_url: String,
@@ -246,7 +255,7 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, config_patch_derive::Patch)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
@@ -855,6 +864,27 @@ impl<
                         blik_code: blik.blik_code,
                     }),
                 ),
+                grpc_payment_types::payment_method::PaymentMethod::Interac(interac) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::Interac {
+                        country: match interac.country() {
+                            grpc_payment_types::CountryAlpha2::Unspecified => None,
+                            _ => Some(CountryAlpha2::foreign_try_from(interac.country())?),
+                        },
+                        email: match interac.email {
+                            Some(ref email_str) => Some(
+                                Email::try_from(email_str.clone().expose()).change_context(
+                                    ApplicationErrorResponse::BadRequest(ApiError {
+                                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: "Invalid email for Interac".to_owned(),
+                                        error_object: None,
+                                    }),
+                                )?,
+                            ),
+                            None => None,
+                        },
+                    }),
+                ),
                 // ============================================================================
                 // MOBILE PAYMENTS - Direct variants
                 // ============================================================================
@@ -1392,6 +1422,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         error_message: "PSE is not yet supported".to_owned(),
                         error_object: None,
                     })))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Interac(_) => {
+                    Ok(Some(PaymentMethodType::Interac))
                 }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
