@@ -120,7 +120,15 @@ use crate::{
     utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
 };
 
-#[derive(Clone, serde::Deserialize, serde::Serialize, Debug, Default)]
+#[derive(
+    Clone,
+    serde::Deserialize,
+    serde::Serialize,
+    Debug,
+    Default,
+    PartialEq,
+    config_patch_derive::Patch,
+)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
@@ -189,9 +197,10 @@ pub struct Connectors {
     pub payme: ConnectorParams,
     pub revolut: ConnectorParams,
     pub gigadat: ConnectorParams,
+    pub loonio: ConnectorParams,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParams {
     /// base url
     #[serde(default)]
@@ -215,7 +224,7 @@ impl ConnectorParams {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParamsWithMoreUrls {
     /// base url
     pub base_url: String,
@@ -246,7 +255,7 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, config_patch_derive::Patch)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
@@ -1416,6 +1425,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         error_message: "PSE is not yet supported".to_owned(),
                         error_object: None,
                     })))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Interac(_) => {
+                    Ok(Some(PaymentMethodType::Interac))
                 }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {

@@ -536,6 +536,7 @@ enum Connector {
   WORLDPAYXML = 103;
   REVOLUT = 104;
   GIGADAT = 105;
+  LOONIO = 106;
 }
 
 // Payment method types.
