@@ -320,31 +320,13 @@ fn map_mollie_payment_status_to_attempt_status(
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            MolliePaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            MolliePaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<MolliePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
         let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
@@ -380,21 +362,13 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // PSync Response Transformer - Reuses MolliePaymentsResponse
-impl
-    TryFrom<
-        ResponseRouterData<
-            MolliePaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            MolliePaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<MolliePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
         let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
@@ -525,22 +499,12 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 }
 
 // Response transformer for Refund flow
-impl
-    TryFrom<
-        ResponseRouterData<
-            MollieRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            MollieRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<MollieRefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id.clone(),
@@ -553,22 +517,12 @@ impl
 }
 
 // Response transformer for RSync flow - reuses MollieRefundResponse
-impl
-    TryFrom<
-        ResponseRouterData<
-            MollieRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            MollieRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<MollieRefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id.clone(),
@@ -584,21 +538,13 @@ impl
 
 // Void Response Transformer - Reuses MolliePaymentsResponse
 // No request structure needed - DELETE endpoint with path parameter only
-impl
-    TryFrom<
-        ResponseRouterData<
-            MolliePaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            MolliePaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<MolliePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
         // Status "canceled" maps to AttemptStatus::Voided
@@ -739,18 +685,7 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // Response transformer for PaymentMethodToken flow - Card Token Response
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            MollieCardTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MollieCardTokenResponse, Self>>
     for RouterDataV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -761,15 +696,7 @@ impl<T: PaymentMethodDataTypes>
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            MollieCardTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
+        item: ResponseRouterData<MollieCardTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse {
