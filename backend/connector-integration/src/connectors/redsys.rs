@@ -1022,6 +1022,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Redsys<T>
 {
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        if !req.resource_common_data.is_three_ds() {
+            Err(errors::ConnectorError::NotSupported {
+                message: "Redsys only supports 3DS authentication flows".to_string(),
+                connector: "redsys",
+            })?
+        }
+
+        Err(errors::ConnectorError::NotImplemented("Authorize flow".to_string()).into())
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
