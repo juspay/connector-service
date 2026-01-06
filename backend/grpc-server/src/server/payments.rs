@@ -4383,7 +4383,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                     }
                 }),
                 transaction_id: resource_id
-                    .map(|id| grpc_api_types::payments::Identifier::foreign_try_from(id))
+                    .map(grpc_api_types::payments::Identifier::foreign_try_from)
                     .transpose()?,
                 redirection_data: redirection_data
                     .map(|form| match *form {
