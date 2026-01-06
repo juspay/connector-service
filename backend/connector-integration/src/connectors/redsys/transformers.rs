@@ -856,13 +856,6 @@ where
         let router_data = &item.router_data;
         let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
 
-        if !router_data.request.enrolled_for_3ds {
-            return Err(errors::ConnectorError::NotSupported {
-                message: "Non-3DS payments".to_string(),
-                connector: "redsys",
-            })?;
-        };
-
         let is_auto_capture = router_data.request.is_auto_capture()?;
 
         let ds_merchant_transactiontype = if is_auto_capture {
@@ -1030,12 +1023,6 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        if !router_data.request.enrolled_for_3ds {
-            return Err(errors::ConnectorError::NotSupported {
-                message: "Non-3DS payments".to_string(),
-                connector: "redsys",
-            })?;
-        };
 
         let card_data = requests::RedsysCardData::try_from(
             &item.router_data.request.payment_method_data.clone(),
