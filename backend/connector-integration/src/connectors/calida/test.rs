@@ -159,6 +159,7 @@ mod tests {
                     merchant_account_metadata: None,
                     billing_descriptor: None,
                     enable_partial_authorization: None,
+                    locale: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -302,6 +303,7 @@ mod tests {
                     merchant_account_metadata: None,
                     billing_descriptor: None,
                     enable_partial_authorization: None,
+                    locale: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

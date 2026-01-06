@@ -1901,6 +1901,7 @@ impl<
             connector_testing_data,
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
+            locale: value.locale.clone(),
         })
     }
 }
@@ -2099,6 +2100,7 @@ impl<
             connector_testing_data,
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
+            locale: value.locale.clone(),
         })
     }
 }
@@ -3084,6 +3086,9 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
         let trans_status = value
             .trans_status
             .map(|ts| grpc_api_types::payments::TransactionStatus::foreign_from(ts).into());
+        let exemption_indicator = value
+            .exemption_indicator
+            .map(|ei| grpc_api_types::payments::ExemptionIndicator::foreign_from(ei).into());
         Ok(Self {
             ucaf_collection_indicator: value.ucaf_collection_indicator,
             eci: value.eci,
@@ -3098,6 +3103,10 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             trans_status,
             acs_transaction_id: value.acs_transaction_id,
             transaction_id: value.transaction_id,
+            exemption_indicator,
+            cb_network_params: value
+                .cb_network_params
+                .map(grpc_api_types::payments::NetworkParams::foreign_from),
         })
     }
 }
@@ -3132,6 +3141,81 @@ impl ForeignFrom<grpc_api_types::payments::TransactionStatus> for common_enums::
             grpc_api_types::payments::TransactionStatus::ChallengeRequired => Self::ChallengeRequired,
             grpc_api_types::payments::TransactionStatus::ChallengeRequiredDecoupledAuthentication => Self::ChallengeRequiredDecoupledAuthentication,
             grpc_api_types::payments::TransactionStatus::InformationOnly => Self::InformationOnly,
+        }
+    }
+}
+
+impl ForeignFrom<common_enums::ExemptionIndicator>
+    for grpc_api_types::payments::ExemptionIndicator
+{
+    fn foreign_from(value: common_enums::ExemptionIndicator) -> Self {
+        match value {
+            common_enums::ExemptionIndicator::LowValue => Self::LowValue,
+            common_enums::ExemptionIndicator::TransactionRiskAssessment => {
+                Self::TransactionRiskAssessment
+            }
+            common_enums::ExemptionIndicator::TrustedListing => Self::TrustedListing,
+            common_enums::ExemptionIndicator::SecureCorporatePayment => {
+                Self::SecureCorporatePayment
+            }
+            common_enums::ExemptionIndicator::ScaDelegation => Self::ScaDelegation,
+            common_enums::ExemptionIndicator::ThreeDsOutage => Self::ThreeDsOutage,
+            common_enums::ExemptionIndicator::OutOfScaScope => Self::OutOfScaScope,
+            common_enums::ExemptionIndicator::Other => Self::Other,
+            common_enums::ExemptionIndicator::LowRiskProgram => Self::LowRiskProgram,
+            common_enums::ExemptionIndicator::RecurringOperation => Self::RecurringOperation,
+        }
+    }
+}
+
+impl ForeignFrom<grpc_api_types::payments::ExemptionIndicator>
+    for common_enums::ExemptionIndicator
+{
+    fn foreign_from(value: grpc_api_types::payments::ExemptionIndicator) -> Self {
+        match value {
+            grpc_api_types::payments::ExemptionIndicator::LowValue => Self::LowValue,
+            grpc_api_types::payments::ExemptionIndicator::TransactionRiskAssessment => {
+                Self::TransactionRiskAssessment
+            }
+            grpc_api_types::payments::ExemptionIndicator::TrustedListing => Self::TrustedListing,
+            grpc_api_types::payments::ExemptionIndicator::SecureCorporatePayment => {
+                Self::SecureCorporatePayment
+            }
+            grpc_api_types::payments::ExemptionIndicator::ScaDelegation => Self::ScaDelegation,
+            grpc_api_types::payments::ExemptionIndicator::ThreeDsOutage => Self::ThreeDsOutage,
+            grpc_api_types::payments::ExemptionIndicator::OutOfScaScope => Self::OutOfScaScope,
+            grpc_api_types::payments::ExemptionIndicator::Other => Self::Other,
+            grpc_api_types::payments::ExemptionIndicator::LowRiskProgram => Self::LowRiskProgram,
+            grpc_api_types::payments::ExemptionIndicator::RecurringOperation => {
+                Self::RecurringOperation
+            }
+            grpc_api_types::payments::ExemptionIndicator::Unspecified => Self::Other,
+        }
+    }
+}
+
+impl ForeignFrom<common_enums::CavvAlgorithm> for grpc_api_types::payments::CavvAlgorithm {
+    fn foreign_from(value: common_enums::CavvAlgorithm) -> Self {
+        match value {
+            common_enums::CavvAlgorithm::Zero => Self::Zero,
+            common_enums::CavvAlgorithm::One => Self::One,
+            common_enums::CavvAlgorithm::Two => Self::Two,
+            common_enums::CavvAlgorithm::Three => Self::Three,
+            common_enums::CavvAlgorithm::Four => Self::Four,
+            common_enums::CavvAlgorithm::A => Self::Four,
+        }
+    }
+}
+
+impl ForeignFrom<grpc_api_types::payments::CavvAlgorithm> for common_enums::CavvAlgorithm {
+    fn foreign_from(value: grpc_api_types::payments::CavvAlgorithm) -> Self {
+        match value {
+            grpc_api_types::payments::CavvAlgorithm::Zero => Self::Zero,
+            grpc_api_types::payments::CavvAlgorithm::One => Self::One,
+            grpc_api_types::payments::CavvAlgorithm::Two => Self::Two,
+            grpc_api_types::payments::CavvAlgorithm::Three => Self::Three,
+            grpc_api_types::payments::CavvAlgorithm::Four => Self::Four,
+            grpc_api_types::payments::CavvAlgorithm::Unspecified => Self::Zero,
         }
     }
 }
@@ -6242,6 +6326,12 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             }),
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
+            locale: value.locale.clone(),
+            connector_testing_data: value.connector_testing_data.and_then(|s| {
+                serde_json::from_str(&s.expose())
+                    .ok()
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            }),
         })
     }
 }
@@ -7817,6 +7907,12 @@ impl<
             enable_partial_authorization: value.enable_partial_authorization,
             payment_method_data,
             authentication_data,
+            locale: value.locale.clone(),
+            connector_testing_data: value.connector_testing_data.and_then(|s| {
+                serde_json::from_str(&s.expose())
+                    .ok()
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            }),
         })
     }
 }
