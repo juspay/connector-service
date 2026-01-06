@@ -1322,9 +1322,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(_) => Ok(Some(PaymentMethodType::Przelewy24)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BancontactCard(_) => Ok(Some(PaymentMethodType::BancontactCard)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Blik(_) => Ok(Some(PaymentMethodType::Blik)),
-                grpc_api_types::payments::payment_method::PaymentMethod::Interac(_) => {
-                    Ok(Some(PaymentMethodType::Interac))
-                }
                 // ============================================================================
                 // MOBILE & CRYPTO PAYMENTS - PaymentMethodType mappings
                 // ============================================================================
