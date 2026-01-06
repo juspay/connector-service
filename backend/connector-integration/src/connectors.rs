@@ -190,3 +190,6 @@ pub use self::payme::Payme;
 
 pub mod revolut;
 pub use self::revolut::Revolut;
+
+pub mod loonio;
+pub use self::loonio::Loonio;
