@@ -78,6 +78,7 @@ message PaymentMethod {
     BancontactCard bancontact_card = 56;
     Blik blik = 57;
     OpenBanking open_banking = 58;
+    Interac interac = 59;                                     // Interac - Canadian bank redirect payment method
     
     // MOBILE PAYMENTS (60-69) - Direct variants
     DuitNow duit_now = 60;
@@ -95,6 +96,8 @@ message PaymentMethod {
     SepaBankTransfer sepa_bank_transfer = 92;                  // SEPA credit transfer
     BacsBankTransfer bacs_bank_transfer = 93;                  // Bankers' Automated Clearing Services - UK bank transfer
     MultibancoBankTransfer multibanco_bank_transfer = 94;      // Multibanco - Portuguese payment method
+    InstantBankTransferFinland instant_bank_transfer_finland = 95;         // Finland's instant bank transfer
+    InstantBankTransferPoland instant_bank_transfer_poland = 96;           // Poland's instant bank transfer
 
     // DIRECT DEBIT (100-109)
     Ach ach = 100;                                              // Ach - Automated Clearing House
@@ -628,6 +631,16 @@ message InstantBankTransfer {
   // Fields will be added as needed for instant bank transfers
 }
 
+// Instant Bank Transfer Finland - Finland's instant bank transfer method
+message InstantBankTransferFinland {
+  // Fields will be added as needed for instant bank transfers finland
+}
+
+// Instant Bank Transfer Poland - Poland's instant bank transfer method
+message InstantBankTransferPoland {
+  // Fields will be added as needed for instant bank transfers poland
+}
+
 /*
 // BCA Bank Transfer - Bank Central Asia transfer in Indonesia
 message BCABankTransfer {
@@ -746,6 +759,15 @@ message Przelewy24 {
 // Blik - Polish mobile payment system
 message Blik {
   optional string blik_code = 1;
+}
+
+// Interac - Canadian bank redirect payment method (Interac e-Transfer)
+message Interac {
+  // The country for the Interac payment (typically CA for Canada)
+  optional CountryAlpha2 country = 1;
+  
+  // The email address for the Interac e-Transfer notification
+  optional SecretString email = 2;
 }
 
 // PSE (Pagos Seguros en Línea) - Colombian online banking
@@ -1107,11 +1129,6 @@ message DirectCarrierBilling {
   
   // Unique user identifier
   optional string client_uid = 2;
-}
-
-// Interac - Canadian debit card system
-message Interac {
-  // Fields will be added as needed for Interac integration
 }
 
 // Multibanco - Portuguese payment method
