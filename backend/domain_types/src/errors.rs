@@ -890,7 +890,7 @@ pub enum ConnectorError {
     InvalidDateFormat,
     #[error("Date Formatting Failed")]
     DateFormattingFailed,
-    #[error("Invalid Data format")]
+    #[error("Invalid Data format: {field_name}")]
     InvalidDataFormat { field_name: &'static str },
     #[error("Payment Method data / Payment Method Type / Payment Experience Mismatch ")]
     MismatchedPaymentData,
