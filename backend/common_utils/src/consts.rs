@@ -148,7 +148,7 @@ pub const CONST_PRODUCTION: &str = "production";
 
 pub const ENV_PREFIX: &str = "CS";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, config_patch_derive::Patch)]
 #[serde(rename_all = "snake_case")]
 pub enum Env {
     Development,
