@@ -49,7 +49,7 @@ service PaymentService {
   rpc RepeatEverything(PaymentServiceRepeatEverythingRequest) returns (PaymentServiceRepeatEverythingResponse);
 
   // Revokes an existing mandate.
-  rpc Revoke(PaymentServiceRevokeMandateRequest) returns (PaymentServiceRevokeMandateResponse);
+  rpc MandateRevoke(PaymentServiceRevokeMandateRequest) returns (PaymentServiceRevokeMandateResponse);
 
   // Creates a new dispute.
   rpc Dispute(PaymentServiceDisputeRequest) returns (DisputeResponse);
