@@ -3460,7 +3460,7 @@ impl PaymentService for Payments {
         )
         skip(self, request)
     )]
-    async fn revoke(
+    async fn mandate_revoke(
         &self,
         request: tonic::Request<PaymentServiceRevokeMandateRequest>,
     ) -> Result<tonic::Response<PaymentServiceRevokeMandateResponse>, tonic::Status> {
