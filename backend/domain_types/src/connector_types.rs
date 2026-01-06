@@ -1335,6 +1335,7 @@ pub enum PaymentsResponseData {
         status_code: u16,
     },
     AuthenticateResponse {
+        resource_id: Option<ResponseId>,
         /// For friction flow
         redirection_data: Option<Box<RedirectForm>>,
         /// For frictionles flow

@@ -456,7 +456,7 @@ fn get_preauthenticate_response(
             return Ok(responses::PreAuthenticateResponseData {
                 redirection_data: None,
                 connector_meta_data: existing_connector_meta,
-                response_ref_id: None,
+                response_ref_id: Some(response_data.ds_order.clone()),
                 authentication_data: None,
             });
         }
@@ -486,16 +486,18 @@ fn get_preauthenticate_response(
 
     match &emv3ds.three_d_s_method_u_r_l {
         Some(three_ds_method_url) => build_threeds_invoke_response(
+            response_data,
             &three_d_s_server_trans_i_d,
             three_ds_method_url,
             continue_redirection_url,
             authentication_data,
         ),
-        None => build_threeds_exempt_response(three_d_s_server_trans_i_d, authentication_data),
+        None => build_threeds_exempt_response(response_data, authentication_data),
     }
 }
 
 fn build_threeds_invoke_response(
+    response_data: &responses::RedsysPaymentsResponse,
     three_d_s_server_trans_i_d: &str,
     three_ds_method_url: &str,
     continue_redirection_url: Option<&url::Url>,
@@ -530,19 +532,19 @@ fn build_threeds_invoke_response(
     Ok(responses::PreAuthenticateResponseData {
         redirection_data: redirect_form,
         connector_meta_data: None,
-        response_ref_id: Some(three_d_s_server_trans_i_d.to_string()),
+        response_ref_id: Some(response_data.ds_order.clone()),
         authentication_data,
     })
 }
 
 fn build_threeds_exempt_response(
-    three_d_s_server_trans_i_d: String,
+    response_data: &responses::RedsysPaymentsResponse,
     authentication_data: Option<domain_types::router_request_types::AuthenticationData>,
 ) -> Result<responses::PreAuthenticateResponseData, Error> {
     Ok(responses::PreAuthenticateResponseData {
         redirection_data: None,
         connector_meta_data: None,
-        response_ref_id: Some(three_d_s_server_trans_i_d),
+        response_ref_id: Some(response_data.ds_order.clone()),
         authentication_data,
     })
 }
@@ -556,6 +558,7 @@ fn get_payments_response(
     (
         Result<PaymentsResponseData, domain_types::router_data::ErrorResponse>,
         common_enums::AttemptStatus,
+        String,
     ),
     Error,
 > {
@@ -577,6 +580,8 @@ fn get_payments_response(
         transaction_id: None,
     });
 
+    let ds_order = redsys_payments_response.ds_order.clone();
+
     if let Some(ds_response) = redsys_payments_response.ds_response {
         let status = get_redsys_attempt_status(ds_response.clone(), capture_method)?;
 
@@ -594,6 +599,9 @@ fn get_payments_response(
             })
         } else {
             Ok(PaymentsResponseData::AuthenticateResponse {
+                resource_id: Some(ResponseId::ConnectorTransactionId(
+                    redsys_payments_response.ds_order.clone(),
+                )),
                 redirection_data: None,
                 authentication_data,
                 connector_response_reference_id: Some(redsys_payments_response.ds_order.clone()),
@@ -601,20 +609,27 @@ fn get_payments_response(
             })
         };
 
-        Ok((response, status))
+        Ok((response, status, ds_order))
     } else {
         let redirection_form = redsys_payments_response
             .ds_emv3ds
             .map(|ds_emv3ds| build_threeds_form(&ds_emv3ds))
             .transpose()?;
         let response = Ok(PaymentsResponseData::AuthenticateResponse {
+            resource_id: Some(ResponseId::ConnectorTransactionId(
+                redsys_payments_response.ds_order.clone(),
+            )),
             redirection_data: redirection_form.map(Box::new),
             authentication_data,
             connector_response_reference_id: Some(redsys_payments_response.ds_order.clone()),
             status_code: http_code,
         });
 
-        Ok((response, common_enums::AttemptStatus::AuthenticationPending))
+        Ok((
+            response,
+            common_enums::AttemptStatus::AuthenticationPending,
+            ds_order,
+        ))
     }
 }
 
@@ -860,13 +875,10 @@ where
             &item.router_data.request.payment_method_data.clone(),
         )?;
 
-        let ds_merchant_order = match &router_data.response {
-            Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(order_id),
-                ..
-            }) => order_id.clone(),
-            _ => Err(errors::ConnectorError::ResponseHandlingFailed)?,
-        };
+        let ds_merchant_order = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
 
         let auth_data = router_data.request.authentication_data.as_ref();
 
@@ -942,7 +954,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
 
                 let auth_data = item.router_data.request.authentication_data.clone();
 
-                let (authenticate_response, status) = get_payments_response(
+                let (authenticate_response, status, ds_order) = get_payments_response(
                     response_data,
                     item.router_data.request.capture_method,
                     auth_data,
@@ -956,6 +968,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                             .router_data
                             .resource_common_data
                             .connector_meta_data,
+                        reference_id: Some(ds_order),
+
                         ..item.router_data.resource_common_data
                     },
                     response: authenticate_response,
@@ -1122,7 +1136,6 @@ where
             requests::RedsysTransactionType::Preauthorization
         };
 
-        // connector transaction id
         let ds_merchant_order = if router_data
             .resource_common_data
             .connector_request_reference_id
@@ -1218,6 +1231,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
                             status: attempt_status,
+                            reference_id: Some(response_data.ds_order.clone()),
                             ..item.router_data.resource_common_data
                         },
                         response,

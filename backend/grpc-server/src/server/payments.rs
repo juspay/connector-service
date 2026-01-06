@@ -4371,6 +4371,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::AuthenticateResponse {
+                resource_id,
                 redirection_data,
                 authentication_data,
                 connector_response_reference_id,
@@ -4381,7 +4382,9 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
                 }),
-                transaction_id: None,
+                transaction_id: resource_id
+                    .map(|id| grpc_api_types::payments::Identifier::foreign_try_from(id))
+                    .transpose()?,
                 redirection_data: redirection_data
                     .map(|form| match *form {
                         router_response_types::RedirectForm::Form {
