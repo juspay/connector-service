@@ -188,7 +188,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-macros::create_amount_converter_wrapper!(connector_name: Redsys, amount_type: MinorUnit);
+macros::create_amount_converter_wrapper!(connector_name: Redsys, amount_type: StringMinorUnit);
 macros::create_all_prerequisites!(
     connector_name: Redsys,
     generic_type: T,

@@ -1,6 +1,8 @@
+use common_utils::StringMinorUnit;
 use domain_types::router_response_types;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
+use cards::CardNumber;
 
 use super::{requests::RedsysThreeDsInfo, transformers::RedsysTransaction};
 
@@ -211,11 +213,13 @@ pub struct RedsysSyncResponseData {
     #[serde(rename = "Ds_Hour")]
     pub ds_hour: Option<String>,
     #[serde(rename = "Ds_Amount")]
-    pub ds_amount: Option<String>,
+    pub ds_amount: Option<StringMinorUnit>,
     #[serde(rename = "Ds_Currency")]
+    // Redsys uses numeric ISO 4217 currency codes (e.g., "978" for EUR)
+    // not 3-letter codes, so we use String here
     pub ds_currency: Option<String>,
     #[serde(rename = "Ds_CardNumber")]
-    pub ds_cardnumber: Option<String>,
+    pub ds_cardnumber: Option<CardNumber>,
     #[serde(rename = "Ds_SecurePayment")]
     pub ds_securepayment: Option<String>,
     #[serde(rename = "Ds_State")]

@@ -1,4 +1,4 @@
-use common_utils::{pii, MinorUnit};
+use common_utils::{pii, StringMinorUnit};
 use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ pub type RedsysRefundRequest = super::transformers::RedsysTransaction;
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct RedsysPaymentRequest {
-    pub ds_merchant_amount: MinorUnit,
+    pub ds_merchant_amount: StringMinorUnit,
     pub ds_merchant_currency: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ds_merchant_emv3ds: Option<RedsysEmvThreeDsRequestData>,
@@ -170,9 +170,11 @@ pub struct RedsysOperationRequest {
     pub ds_merchant_order: String,
     pub ds_merchant_merchantcode: Secret<String>,
     pub ds_merchant_terminal: Secret<String>,
+    // Redsys uses numeric ISO 4217 currency codes (e.g., "978" for EUR)
+    // not 3-letter codes, so we use String here
     pub ds_merchant_currency: String,
     pub ds_merchant_transactiontype: RedsysTransactionType,
-    pub ds_merchant_amount: MinorUnit,
+    pub ds_merchant_amount: StringMinorUnit,
 }
 
 /// SOAP XML messages container for sync operations

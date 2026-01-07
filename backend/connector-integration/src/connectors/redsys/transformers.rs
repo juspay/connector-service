@@ -916,7 +916,15 @@ where
             ds_merchant_merchantcode: auth.merchant_id.clone(),
             ds_merchant_terminal: auth.terminal_id.clone(),
             ds_merchant_order,
-            ds_merchant_amount: router_data.request.amount,
+            ds_merchant_amount: RedsysAmountConvertor::convert(
+                router_data.request.amount,
+                router_data
+                    .request
+                    .currency
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "currency",
+                    })?,
+            )?,
             ds_merchant_expirydate: card_data.expiry_date,
             ds_merchant_cvv2: card_data.cvv2,
         };
@@ -1156,7 +1164,15 @@ where
             ds_merchant_merchantcode: auth.merchant_id.clone(),
             ds_merchant_terminal: auth.terminal_id.clone(),
             ds_merchant_order,
-            ds_merchant_amount: router_data.request.amount,
+            ds_merchant_amount: RedsysAmountConvertor::convert(
+                router_data.request.amount,
+                router_data
+                    .request
+                    .currency
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "currency",
+                    })?,
+            )?,
             ds_merchant_expirydate: card_data.expiry_date,
             ds_merchant_cvv2: card_data.cvv2,
         };
