@@ -322,6 +322,7 @@ pub enum CardIssuer {
     JCB,
     CarteBlanche,
     CartesBancaires,
+    UnionPay,
 }
 
 // Helper function for extracting connector request reference ID
