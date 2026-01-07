@@ -48,6 +48,16 @@ impl GetnetPaymentMethod {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum GetnetCardBrand {
+    Mastercard,
+    Visa,
+    Amex,
+    Elo,
+    Hipercard,
+}
+
 #[derive(Debug, Clone)]
 pub struct GetnetAuthType {
     pub api_key: Secret<String>,
@@ -228,11 +238,16 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             security_code: card_data.card_cvc.clone(),
         };
 
+        let request_ref_id = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
         // Determine payment method based on capture method
         let payment_method = GetnetPaymentMethod::from_capture_method(item.request.capture_method);
 
         let payment = GetnetPayment {
-            payment_id: uuid::Uuid::new_v4().to_string(),
+            payment_id: request_ref_id.clone(),
             payment_method: payment_method.to_string(),
             transaction_type: TRANSACTION_TYPE_FULL.to_string(),
             number_installments: DEFAULT_INSTALLMENTS,
@@ -253,13 +268,8 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             payment,
         };
 
-        let request_ref_id = item
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-
         Ok(Self {
-            request_id: uuid::Uuid::new_v4().to_string(),
+            request_id: request_ref_id.clone(),
             idempotency_key: request_ref_id.clone(),
             order_id: request_ref_id,
             data,
@@ -278,7 +288,7 @@ pub struct GetnetAuthorizeResponse {
     pub received_at: Option<String>,
     pub transaction_id: Option<String>,
     pub authorization_code: Option<String>,
-    pub brand: Option<String>,
+    pub brand: Option<GetnetCardBrand>,
 }
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
@@ -426,11 +436,11 @@ pub struct GetnetSyncPaymentDetails {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetnetSyncCardDetails {
-    pub number: String,
-    pub brand: String,
-    pub expiration_year: String,
-    pub expiration_month: String,
-    pub cardholder_name: Option<String>,
+    pub number: Secret<String>,
+    pub brand: GetnetCardBrand,
+    pub expiration_year: Secret<String>,
+    pub expiration_month: Secret<String>,
+    pub cardholder_name: Option<Secret<String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
