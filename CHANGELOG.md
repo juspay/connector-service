@@ -4,6 +4,76 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.05.0
+
+### Features
+
+- **connector:**
+  - Trustpay Bank Transfer & Bank Redirect Payment Method ([#406](https://github.com/juspay/connector-service/pull/406)) ([`e8a2708`](https://github.com/juspay/connector-service/commit/e8a270876fd29a6cf6e5a65f07de5f906bb4a1a1))
+  - [PAYBOX] Connector Integration ([#387](https://github.com/juspay/connector-service/pull/387)) ([`70b74d8`](https://github.com/juspay/connector-service/commit/70b74d8412aa594771e8722f48b76ff38b9a8ba9))
+  - [LOONIO] Connector Integration ([#401](https://github.com/juspay/connector-service/pull/401)) ([`62ee8c0`](https://github.com/juspay/connector-service/commit/62ee8c0092c5a3656e601ea3b675b52adfb56fb3))
+- Adyen bankredirect payment method ([#400](https://github.com/juspay/connector-service/pull/400)) ([`bff3e26`](https://github.com/juspay/connector-service/commit/bff3e26bca3fb35d64f601cf3a8825a2f819b1b1))
+
+### Refactors
+
+- Refactor config override functionality ([#385](https://github.com/juspay/connector-service/pull/385)) ([`047fb05`](https://github.com/juspay/connector-service/commit/047fb05929cb1584100bf597a1eb511850192eca))
+
+**Full Changelog:** [`2026.01.01.0...2026.01.05.0`](https://github.com/juspay/connector-service/compare/2026.01.01.0...2026.01.05.0)
+
+- - -
+
+## 2026.01.01.0
+
+### Bug Fixes
+
+- Adyen url on non test mode for authorize,void,etc ([#402](https://github.com/juspay/connector-service/pull/402)) ([`e1a2e3c`](https://github.com/juspay/connector-service/commit/e1a2e3c4e2655a73859c38c9f42dee4097a8c493))
+
+**Full Changelog:** [`2025.12.31.0...2026.01.01.0`](https://github.com/juspay/connector-service/compare/2025.12.31.0...2026.01.01.0)
+
+- - -
+
+## 2025.12.31.0
+
+### Features
+
+- **connector:** [PAYPAL] Bank-Redirect ([#397](https://github.com/juspay/connector-service/pull/397)) ([`83c945f`](https://github.com/juspay/connector-service/commit/83c945fe302493e8d268895bcb3313254721b19c))
+- **core:** Add connector_order_reference_id for Psync ([#395](https://github.com/juspay/connector-service/pull/395)) ([`3dcfd30`](https://github.com/juspay/connector-service/commit/3dcfd30ef1405c81ba711c370397cabba277e854))
+
+**Full Changelog:** [`2025.12.30.0...2025.12.31.0`](https://github.com/juspay/connector-service/compare/2025.12.30.0...2025.12.31.0)
+
+- - -
+
+## 2025.12.30.0
+
+### Features
+
+- **connector:**
+  - [AIRWALLEX] Bank-Redirect ([#388](https://github.com/juspay/connector-service/pull/388)) ([`7e26d93`](https://github.com/juspay/connector-service/commit/7e26d9325acff64c11a9194c91b420f6295ab83e))
+  - [GLOBALPAY] Bank-Redirect ([#393](https://github.com/juspay/connector-service/pull/393)) ([`be59b37`](https://github.com/juspay/connector-service/commit/be59b3715966ee8282c19510c720c5c34bac5210))
+  - Refactor Calida ([#394](https://github.com/juspay/connector-service/pull/394)) ([`625d71f`](https://github.com/juspay/connector-service/commit/625d71f81a7d269e14047461f16a278f53601468))
+
+**Full Changelog:** [`2025.12.25.0...2025.12.30.0`](https://github.com/juspay/connector-service/compare/2025.12.25.0...2025.12.30.0)
+
+- - -
+
+## 2025.12.25.0
+
+### Features
+
+- **core:** Add support for NetworkTokenWithNTI and NetworkMandateId in RepeatPayment ([#389](https://github.com/juspay/connector-service/pull/389)) ([`a910df2`](https://github.com/juspay/connector-service/commit/a910df283e18aa625070dc9aea6cd31d83f7167e))
+
+### Bug Fixes
+
+- Diff check fixes for Dlocal ([#390](https://github.com/juspay/connector-service/pull/390)) ([`241cd4e`](https://github.com/juspay/connector-service/commit/241cd4e49d8b8094176eb10db91ddaa0d2f7f098))
+
+### Refactors
+
+- Made mandatory fields in authorize flow optional ([#386](https://github.com/juspay/connector-service/pull/386)) ([`ab2c078`](https://github.com/juspay/connector-service/commit/ab2c078e434d7b28bc63969dbd6ac9c3c37d498d))
+
+**Full Changelog:** [`2025.12.24.0...2025.12.25.0`](https://github.com/juspay/connector-service/compare/2025.12.24.0...2025.12.25.0)
+
+- - -
+
 ## 2025.12.24.0
 
 ### Features

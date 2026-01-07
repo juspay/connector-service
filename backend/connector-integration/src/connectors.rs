@@ -56,8 +56,8 @@ pub use self::braintree::Braintree;
 pub mod volt;
 pub use self::volt::Volt;
 
-pub mod bluecode;
-pub use self::bluecode::Bluecode;
+pub mod calida;
+pub use self::calida::Calida;
 
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;
@@ -161,6 +161,9 @@ pub use self::forte::Forte;
 pub mod shift4;
 pub use self::shift4::Shift4;
 
+pub mod paybox;
+pub use self::paybox::Paybox;
+
 pub mod nexixpay;
 pub use self::nexixpay::Nexixpay;
 
@@ -190,3 +193,6 @@ pub use self::payme::Payme;
 
 pub mod revolut;
 pub use self::revolut::Revolut;
+
+pub mod loonio;
+pub use self::loonio::Loonio;

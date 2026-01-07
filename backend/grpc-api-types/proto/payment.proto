@@ -525,7 +525,7 @@ enum Connector {
   PHONEPE = 92;
   CASHFREE = 93;
   PAYTM = 94;
-  BLUECODE = 95;
+  CALIDA = 95;
   PAYLOAD = 96;
   AUTHIPAY = 97;
   SILVERFLOW = 98;
@@ -535,6 +535,7 @@ enum Connector {
   BARCLAYCARD = 102;
   WORLDPAYXML = 103;
   REVOLUT = 104;
+  LOONIO = 105;
 }
 
 // Payment method types.
@@ -639,6 +640,8 @@ enum PaymentMethodType {
   INSTANT_BANK_TRANSFER = 97;
   PAY_PAL = 98;
   REVOLUT_PAY = 99;
+  INSTANT_BANK_TRANSFER_FINLAND = 100;
+  INSTANT_BANK_TRANSFER_POLAND = 101;
 }
 
 // Product type enumeration.
@@ -1587,6 +1590,9 @@ message PaymentServiceGetRequest {
   map<string, string> merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
   optional SecretString connector_metadata = 13; // Connector-specific metadata for the transaction
   optional SyncRequestType sync_type = 14; // Indicates the type of payment sync request
+
+  // Connector Reference Id
+  optional string connector_order_reference_id = 15; // Connector's reference id for order
 }
 
 // Response message for a payment status synchronization.
@@ -2172,6 +2178,8 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  optional SecretString merchant_account_id = 37; // Merchant account ID for the repeat payments
+  optional Currency merchant_configered_currency = 38; // Merchant configered currency for the repeat payments
 
   // Behavioral Flags and Preferences
   optional bool off_session = 16; // Indicates if off-session process

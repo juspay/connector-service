@@ -49,7 +49,7 @@ const MERCHANT_ID: &str = "merchant_1234";
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4111111111111111"; // Valid test card for Fiuu
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_EXP_YEAR: &str = "2050";
 const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
@@ -175,6 +175,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 

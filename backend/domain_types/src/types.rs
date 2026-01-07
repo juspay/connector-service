@@ -120,7 +120,15 @@ use crate::{
     utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
 };
 
-#[derive(Clone, serde::Deserialize, serde::Serialize, Debug, Default)]
+#[derive(
+    Clone,
+    serde::Deserialize,
+    serde::Serialize,
+    Debug,
+    Default,
+    PartialEq,
+    config_patch_derive::Patch,
+)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
@@ -144,7 +152,7 @@ pub struct Connectors {
     pub noon: ConnectorParams,
     pub braintree: ConnectorParams,
     pub volt: ConnectorParams,
-    pub bluecode: ConnectorParams,
+    pub calida: ConnectorParams,
     pub cryptopay: ConnectorParams,
     pub helcim: ConnectorParams,
     pub dlocal: ConnectorParams,
@@ -177,6 +185,7 @@ pub struct Connectors {
     pub jpmorgan: ConnectorParams,
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
+    pub paybox: ConnectorParams,
     pub barclaycard: ConnectorParams,
     pub nexixpay: ConnectorParams,
     pub airwallex: ConnectorParams,
@@ -188,9 +197,10 @@ pub struct Connectors {
     pub bambora: ConnectorParams,
     pub payme: ConnectorParams,
     pub revolut: ConnectorParams,
+    pub loonio: ConnectorParams,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParams {
     /// base url
     #[serde(default)]
@@ -214,7 +224,7 @@ impl ConnectorParams {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParamsWithMoreUrls {
     /// base url
     pub base_url: String,
@@ -245,7 +255,7 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, config_patch_derive::Patch)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
@@ -758,6 +768,16 @@ impl<
                 ) => Ok(Self::BankTransfer(Box::new(
                     payment_method_data::BankTransferData::MultibancoBankTransfer {},
                 ))),
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::InstantBankTransferFinland {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::InstantBankTransferPoland {},
+                    )))
+                }
                 // ============================================================================
                 // ONLINE BANKING - Direct variants
                 // ============================================================================
@@ -842,6 +862,27 @@ impl<
                 grpc_payment_types::payment_method::PaymentMethod::Blik(blik) => Ok(
                     Self::BankRedirect(payment_method_data::BankRedirectData::Blik {
                         blik_code: blik.blik_code,
+                    }),
+                ),
+                grpc_payment_types::payment_method::PaymentMethod::Interac(interac) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::Interac {
+                        country: match interac.country() {
+                            grpc_payment_types::CountryAlpha2::Unspecified => None,
+                            _ => Some(CountryAlpha2::foreign_try_from(interac.country())?),
+                        },
+                        email: match interac.email {
+                            Some(ref email_str) => Some(
+                                Email::try_from(email_str.clone().expose()).change_context(
+                                    ApplicationErrorResponse::BadRequest(ApiError {
+                                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: "Invalid email for Interac".to_owned(),
+                                        error_object: None,
+                                    }),
+                                )?,
+                            ),
+                            None => None,
+                        },
                     }),
                 ),
                 // ============================================================================
@@ -1051,6 +1092,19 @@ impl<
                     }))
                 }
 
+                // ============================================================================
+                // BANK REDIRECT - Trustly
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Trustly(trustly_data) => {
+                    let country = match trustly_data.country() {
+                        grpc_payment_types::CountryAlpha2::Unspecified => None,
+                        country_code => Some(CountryAlpha2::foreign_try_from(country_code)?),
+                    };
+                    Ok(Self::BankRedirect(
+                        payment_method_data::BankRedirectData::Trustly { country },
+                    ))
+                }
+
                 // Catch-all for unsupported variants
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
@@ -1167,6 +1221,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::Cashapp => {
                 Ok(Some(PaymentMethodType::Cashapp))
             }
+            grpc_api_types::payments::PaymentMethodType::SepaBankTransfer => {
+                Ok(Some(PaymentMethodType::SepaBankTransfer))
+            }
+            grpc_api_types::payments::PaymentMethodType::InstantBankTransfer => {
+                Ok(Some(PaymentMethodType::InstantBankTransfer))
+            }
+            grpc_api_types::payments::PaymentMethodType::InstantBankTransferFinland => {
+                Ok(Some(PaymentMethodType::InstantBankTransferFinland))
+            }
+            grpc_api_types::payments::PaymentMethodType::InstantBankTransferPoland => {
+                Ok(Some(PaymentMethodType::InstantBankTransferPoland))
+            }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
                 error_identifier: 400,
@@ -1242,6 +1308,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::SepaBankTransfer(_) => Ok(Some(PaymentMethodType::SepaBankTransfer)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BacsBankTransfer(_) => Ok(Some(PaymentMethodType::Bacs)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MultibancoBankTransfer(_) => Ok(Some(PaymentMethodType::Multibanco)),
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_) => Ok(Some(PaymentMethodType::InstantBankTransferFinland)),
+                grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_) => Ok(Some(PaymentMethodType::InstantBankTransferPoland)),
                 // ============================================================================
                 // ONLINE BANKING - PaymentMethodType mappings
                 // ============================================================================
@@ -1345,12 +1413,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     })))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Trustly(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Trustly is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::Trustly))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Pse(_) => {
                     Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1359,6 +1422,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         error_message: "PSE is not yet supported".to_owned(),
                         error_object: None,
                     })))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Interac(_) => {
+                    Ok(Some(PaymentMethodType::Interac))
                 }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -2936,7 +3002,7 @@ impl
             minor_amount_capturable: None,
             access_token,
             session_token: None,
-            reference_id: None,
+            reference_id: value.connector_order_reference_id.clone(),
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -3589,10 +3655,28 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransfer(
-                        _,
-                    )),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransfer(_)),
             } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Ideal(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Eps(_)),
+            } => Ok(Self::BankRedirect),
             _ => Ok(Self::Card), // Default fallback
         }
     }
@@ -7614,6 +7698,7 @@ impl<
         value: grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract values first to avoid partial move
+        let merchant_configered_currency = value.clone().merchant_configered_currency();
         let amount = value.amount;
         let minor_amount = value.minor_amount;
         let currency = value.currency();
@@ -7767,6 +7852,10 @@ impl<
             enable_partial_authorization: value.enable_partial_authorization,
             payment_method_data,
             authentication_data,
+            merchant_account_id: value.merchant_account_id,
+            merchant_configered_currency: Some(common_enums::Currency::foreign_try_from(
+                merchant_configered_currency,
+            )?),
         })
     }
 }

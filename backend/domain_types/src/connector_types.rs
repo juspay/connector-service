@@ -66,7 +66,7 @@ pub enum ConnectorEnum {
     Noon,
     Braintree,
     Volt,
-    Bluecode,
+    Calida,
     Cryptopay,
     Helcim,
     Dlocal,
@@ -98,6 +98,7 @@ pub enum ConnectorEnum {
     Iatapay,
     Nmi,
     Shift4,
+    Paybox,
     Barclaycard,
     Nexixpay,
     Airwallex,
@@ -109,6 +110,7 @@ pub enum ConnectorEnum {
     Bambora,
     Payme,
     Revolut,
+    Loonio,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -139,7 +141,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Mifinity => Ok(Self::Mifinity),
             grpc_api_types::payments::Connector::Braintree => Ok(Self::Braintree),
             grpc_api_types::payments::Connector::Volt => Ok(Self::Volt),
-            grpc_api_types::payments::Connector::Bluecode => Ok(Self::Bluecode),
+            grpc_api_types::payments::Connector::Calida => Ok(Self::Calida),
             grpc_api_types::payments::Connector::Cryptopay => Ok(Self::Cryptopay),
             grpc_api_types::payments::Connector::Helcim => Ok(Self::Helcim),
             grpc_api_types::payments::Connector::Dlocal => Ok(Self::Dlocal),
@@ -181,6 +183,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
             grpc_api_types::payments::Connector::Payme => Ok(Self::Payme),
             grpc_api_types::payments::Connector::Revolut => Ok(Self::Revolut),
+            grpc_api_types::payments::Connector::Loonio => Ok(Self::Loonio),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -841,6 +844,12 @@ impl PaymentFlowData {
         self.preprocessing_id
             .to_owned()
             .ok_or_else(missing_field_err("preprocessing_id"))
+    }
+
+    pub fn get_reference_id(&self) -> Result<String, Error> {
+        self.reference_id
+            .to_owned()
+            .ok_or_else(missing_field_err("reference_id"))
     }
 
     pub fn get_optional_billing_full_name(&self) -> Option<Secret<String>> {
@@ -2271,6 +2280,8 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub billing_descriptor: Option<BillingDescriptor>,
     pub payment_method_data: PaymentMethodData<T>,
     pub authentication_data: Option<router_request_types::AuthenticationData>,
+    pub merchant_account_id: Option<Secret<String>>,
+    pub merchant_configered_currency: Option<Currency>,
 }
 
 impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {

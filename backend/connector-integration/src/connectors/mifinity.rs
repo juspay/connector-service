@@ -251,7 +251,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             let merchant_id = &req.resource_common_data.merchant_id;
-            let payment_id = &req.resource_common_data.connector_request_reference_id;
+            let payment_id = req.resource_common_data.get_reference_id()?;
             Ok(format!(
                 "{}api/gateway/payment-status/payment_validation_key_{}_{}",
                 self.connector_base_url_payments(req),

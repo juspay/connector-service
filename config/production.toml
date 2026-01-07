@@ -21,6 +21,8 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+paybox.base_url = "https://ppps.paybox.com/PPPS.php"
+loonio.base_url = "https://loonio.ca/"
 getnet.base_url = "https://api.pre.globalgetnet.com"
 payme.base_url = "https://live.payme.io/api/"
 barclaycard.base_url = "https://api.smartpayfuse.barclaycard"
@@ -70,7 +72,7 @@ mifinity.base_url = "https://secure.mifinity.com/"
 braintree.base_url = "https://payments.braintree-api.com/graphql"
 volt.base_url = "https://gateway.volt.io"
 volt.secondary_base_url = "https://api.volt.io/"
-bluecode.base_url = "https://app.eorder.reloadhero.com/"
+calida.base_url = "https://app.eorder.reloadhero.com/"
 cryptopay.base_url = "https://business.cryptopay.me/"
 helcim.base_url = "https://api.helcim.com/"
 dlocal.base_url = "https://api.dlocal.com/"
