@@ -2280,6 +2280,8 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub billing_descriptor: Option<BillingDescriptor>,
     pub payment_method_data: PaymentMethodData<T>,
     pub authentication_data: Option<router_request_types::AuthenticationData>,
+    pub merchant_account_id: Option<Secret<String>>,
+    pub merchant_configered_currency: Option<Currency>,
 }
 
 impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
