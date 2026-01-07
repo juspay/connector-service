@@ -10,14 +10,15 @@ use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, types::StringMinorUnit,
+    errors::CustomResult, events, ext_traits::ByteSliceExt, pii::SecretSerdeValue,
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, SetupMandate, SubmitEvidence, Void,
-        VoidPC,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, SdkSessionToken, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -27,10 +28,10 @@ use domain_types::{
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RequestDetails, ResponseId, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
@@ -50,7 +51,6 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{self, is_mandate_supported, ConnectorValidation},
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers::{
@@ -71,6 +71,11 @@ pub(crate) mod headers {
 }
 
 // Type alias for non-generic trait implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Adyen<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Adyen<T>
 {
@@ -97,6 +102,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Adyen<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Adyen<T>
 {
@@ -131,7 +137,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Adyen<T>
+    connector_types::RepeatPaymentV2<T> for Adyen<T>
 {
 }
 
@@ -270,6 +276,25 @@ macros::create_all_prerequisites!(
     }
 );
 
+fn build_env_specific_endpoint(
+    base_url: &str,
+    test_mode: Option<bool>,
+    connector_metadata: &Option<SecretSerdeValue>,
+) -> CustomResult<String, errors::ConnectorError> {
+    if test_mode.unwrap_or(true) {
+        Ok(base_url.to_string())
+    } else {
+        let adyen_connector_metadata_object =
+            transformers::AdyenConnectorMetadataObject::try_from(connector_metadata)?;
+        let endpoint_prefix = adyen_connector_metadata_object.endpoint_prefix.ok_or(
+            errors::ConnectorError::InvalidConnectorConfig {
+                config: "metadata.endpoint_prefix",
+            },
+        )?;
+        Ok(base_url.replace("{{merchant_endpoint_prefix}}", &endpoint_prefix))
+    }
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Adyen<T>
 {
@@ -297,7 +322,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: adyen::AdyenErrorResponse = res
             .response
@@ -345,7 +370,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}/payments", self.connector_base_url_payments(req), ADYEN_API_VERSION))
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_payments(req),
+                req.resource_common_data.test_mode,
+                &req.resource_common_data.connector_meta_data,
+            )?;
+            Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
     }
 );
@@ -373,7 +403,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}/payments/details", self.connector_base_url_payments(req), ADYEN_API_VERSION))
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_payments(req),
+                req.resource_common_data.test_mode,
+                &req.resource_common_data.connector_meta_data,
+            )?;
+            Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/details"))
         }
     }
 );
@@ -405,7 +440,12 @@ macros::macro_connector_implementation!(
                 ResponseId::ConnectorTransactionId(id) => id,
                 _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into())
             };
-            Ok(format!("{}{}/payments/{}/captures", self.connector_base_url_payments(req), ADYEN_API_VERSION, id))
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_payments(req),
+                req.resource_common_data.test_mode,
+                &req.resource_common_data.connector_meta_data,
+            )?;
+            Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/{id}/captures"))
         }
     }
 );
@@ -454,7 +494,12 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let id = req.request.connector_transaction_id.clone();
-            Ok(format!("{}{}/payments/{}/cancels", self.connector_base_url_payments(req), ADYEN_API_VERSION, id))
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_payments(req),
+                req.resource_common_data.test_mode,
+                &req.resource_common_data.connector_meta_data,
+            )?;
+            Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/{id}/cancels"))
         }
     }
 );
@@ -482,6 +527,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/defendDispute"))
@@ -517,7 +563,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -557,6 +603,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Adyen<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Adyen<T>
 {
@@ -705,7 +761,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -722,7 +778,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -762,6 +818,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Adyen<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Adyen<T>
 {
@@ -822,10 +888,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::RefundWebhookDetailsResponse,
-        error_stack::Report<errors::ConnectorError>,
-    > {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
@@ -915,7 +978,15 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_payment_id = req.request.connector_transaction_id.clone();
-            Ok(format!("{}{}/payments/{}/refunds", self.connector_base_url_refunds(req), ADYEN_API_VERSION, connector_payment_id))
+
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_refunds(req),
+                req.resource_common_data.test_mode,
+                &req.resource_common_data.connector_meta_data,
+            )?;
+            Ok(format!(
+                "{endpoint}{ADYEN_API_VERSION}/payments/{connector_payment_id}/refunds",
+            ))
         }
     }
 );
@@ -943,7 +1014,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}/payments", self.connector_base_url_payments(req), ADYEN_API_VERSION))
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_payments(req),
+                req.resource_common_data.test_mode,
+                &req.resource_common_data.connector_meta_data,
+            )?;
+            Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
     }
 );
@@ -971,8 +1047,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
             let dispute_url = self.connector_base_url_disputes(req)
-                                  .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+                .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/acceptDispute"))
         }
     }
@@ -1001,8 +1078,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
             let dispute_url = self.connector_base_url_disputes(req)
-                                  .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+                .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"))
         }
     }
@@ -1033,22 +1111,7 @@ static ADYEN_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = Lazy
 
     adyen_supported_payment_methods.add(
         PaymentMethod::Card,
-        PaymentMethodType::Credit,
-        PaymentMethodDetails {
-            mandates: FeatureStatus::Supported,
-            refunds: FeatureStatus::Supported,
-            supported_capture_methods: adyen_supported_capture_methods.clone(),
-            specific_features: Some(PaymentMethodSpecificFeatures::Card(CardSpecificFeatures {
-                three_ds: FeatureStatus::Supported,
-                no_three_ds: FeatureStatus::Supported,
-                supported_card_networks: adyen_supported_card_network.clone(),
-            })),
-        },
-    );
-
-    adyen_supported_payment_methods.add(
-        PaymentMethod::Card,
-        PaymentMethodType::Debit,
+        PaymentMethodType::Card,
         PaymentMethodDetails {
             mandates: FeatureStatus::Supported,
             refunds: FeatureStatus::Supported,
@@ -1120,7 +1183,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        domain_types::connector_types::RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Adyen<T>
 {
@@ -1130,7 +1193,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        domain_types::connector_types::RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Adyen<T>
 {
@@ -1138,7 +1201,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static

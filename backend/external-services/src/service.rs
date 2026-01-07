@@ -1,7 +1,8 @@
-use std::{collections::HashMap, str::FromStr, time::Duration};
+use std::{collections::HashMap, str::FromStr, sync::RwLock, time::Duration};
 
 use common_enums::ApiClientError;
 use common_utils::{
+    consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
     ext_traits::AsyncExt,
     lineage,
     request::{Method, Request, RequestContent},
@@ -15,6 +16,13 @@ use domain_types::{
 };
 use hyperswitch_masking::Secret;
 use injector;
+
+/// Test context for mock server integration
+#[derive(Debug, Clone)]
+pub struct TestContext {
+    pub session_id: String,
+    pub mock_server_url: String,
+}
 
 pub trait ConnectorRequestReference {
     fn get_connector_request_reference_id(&self) -> &str;
@@ -126,6 +134,7 @@ pub struct EventProcessingParams<'a> {
         latency = Empty,
     )
 )]
+#[allow(clippy::too_many_arguments)]
 pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Resp>(
     proxy: &Proxy,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
@@ -134,6 +143,8 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     event_params: EventProcessingParams<'_>,
     token_data: Option<TokenData>,
     call_connector_action: common_enums::CallConnectorAction,
+    test_context: Option<TestContext>,
+    api_tag: Option<String>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -226,6 +237,34 @@ where
                 }
                 req
             });
+
+            // Apply test environment modifications if test context is provided
+            connector_request = connector_request.map(|mut req| {
+                test_context.as_ref().map(|test_ctx| {
+                    // Store original URL for x-api-url header
+                    let original_url = req.url.clone();
+
+                    // Replace URL with mock server URL
+                    req.url = test_ctx.mock_server_url.clone();
+
+                    // Add test headers
+                    req.add_header(X_API_URL, original_url.clone().into());
+                    req.add_header(X_SESSION_ID, test_ctx.session_id.clone().into());
+
+                    // Add API tag if provided
+                    api_tag.as_ref().map(|tag| {
+                        req.add_header(X_API_TAG, tag.clone().into());
+                    });
+
+                    tracing::info!(
+                        "Test mode enabled: redirected {} to {}",
+                        original_url,
+                        test_ctx.mock_server_url
+                    );
+                });
+                req
+            });
+
             let headers = connector_request
                 .as_ref()
                 .map(|connector_request| connector_request.headers.clone())
@@ -396,118 +435,38 @@ where
                         .observe(external_service_elapsed.as_secs_f64());
                     tracing::info!(?response, "response from connector");
 
-                    // Construct masked request data once for all events
+                    // Extract status code BEFORE creating event - one liner
+                    let status_code = response.as_ref().ok().map(|result| match result {
+                        Ok(body) | Err(body) => i32::from(body.status_code),
+                    });
+
+                    // Construct masked request for event
                     let masked_request_data = req.as_ref().and_then(|r| {
                         MaskedSerdeValue::from_masked_optional(r, "connector_request")
                     });
 
-                    match &response {
-                        Ok(Ok(body)) => {
-                            let res_body =
-                                serde_json::from_slice::<serde_json::Value>(&body.response).ok();
+                    let latency =
+                        u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX);
 
-                            let latency = u64::try_from(external_service_elapsed.as_millis())
-                                .unwrap_or(u64::MAX); // Convert to milliseconds
-                            let status_code = body.status_code;
+                    // Create single event (response_data will be set by connector)
+                    let mut event = Event {
+                        request_id: request_id.to_string(),
+                        timestamp: chrono::Utc::now().timestamp().into(),
+                        flow_type: event_params.flow_name,
+                        connector: event_params.connector_name.to_string(),
+                        url: Some(url.clone()),
+                        stage: EventStage::ConnectorCall,
+                        latency_ms: Some(latency),
+                        status_code,
+                        request_data: masked_request_data,
+                        response_data: None, // Will be set by connector via set_response_body
+                        headers: event_headers,
+                        additional_fields: HashMap::new(),
+                        lineage_ids: event_params.lineage_ids.to_owned(),
+                    };
+                    event.add_reference_id(event_params.reference_id.as_deref());
 
-                            // Emit success response event
-                            {
-                                let mut event = Event {
-                                    request_id: request_id.to_string(),
-                                    timestamp: chrono::Utc::now().timestamp().into(),
-                                    flow_type: event_params.flow_name,
-                                    connector: event_params.connector_name.to_string(),
-                                    url: Some(url.clone()),
-                                    stage: EventStage::ConnectorCall,
-                                    latency_ms: Some(latency),
-                                    status_code: Some(i32::from(status_code)),
-                                    request_data: masked_request_data.clone(),
-                                    response_data: res_body.as_ref().and_then(|r| {
-                                        MaskedSerdeValue::from_masked_optional(
-                                            r,
-                                            "connector_response",
-                                        )
-                                    }),
-                                    headers: event_headers,
-                                    additional_fields: HashMap::new(),
-                                    lineage_ids: event_params.lineage_ids.to_owned(),
-                                };
-                                event.add_reference_id(event_params.reference_id.as_deref());
-
-                                emit_event_with_config(event, event_params.event_config);
-                            }
-                        }
-                        Ok(Err(error_body)) => {
-                            let error_res_body =
-                                serde_json::from_slice::<serde_json::Value>(&error_body.response)
-                                    .ok();
-
-                            let latency = u64::try_from(external_service_elapsed.as_millis())
-                                .unwrap_or(u64::MAX);
-                            let status_code = error_body.status_code;
-
-                            // Emit error response event
-                            {
-                                let mut event = Event {
-                                    request_id: request_id.to_string(),
-                                    timestamp: chrono::Utc::now().timestamp().into(),
-                                    flow_type: event_params.flow_name,
-                                    connector: event_params.connector_name.to_string(),
-                                    url: Some(url.clone()),
-                                    stage: EventStage::ConnectorCall,
-                                    latency_ms: Some(latency),
-                                    status_code: Some(i32::from(status_code)),
-                                    request_data: masked_request_data.clone(),
-                                    response_data: error_res_body.as_ref().and_then(|r| {
-                                        MaskedSerdeValue::from_masked_optional(
-                                            r,
-                                            "connector_error_response",
-                                        )
-                                    }),
-                                    headers: event_headers,
-                                    additional_fields: HashMap::new(),
-                                    lineage_ids: event_params.lineage_ids.to_owned(),
-                                };
-                                event.add_reference_id(event_params.reference_id.as_deref());
-
-                                emit_event_with_config(event, event_params.event_config);
-                            }
-                        }
-                        Err(network_error) => {
-                            tracing::error!(
-                                "Network error occurred while calling connector {}: {:?}",
-                                event_params.connector_name,
-                                network_error
-                            );
-
-                            let latency = u64::try_from(external_service_elapsed.as_millis())
-                                .unwrap_or(u64::MAX);
-
-                            // Emit network error event
-                            {
-                                let mut event = Event {
-                                    request_id: request_id.to_string(),
-                                    timestamp: chrono::Utc::now().timestamp().into(),
-                                    flow_type: event_params.flow_name,
-                                    connector: event_params.connector_name.to_string(),
-                                    url: Some(url.clone()),
-                                    stage: EventStage::ConnectorCall,
-                                    latency_ms: Some(latency),
-                                    status_code: None,
-                                    request_data: masked_request_data.clone(),
-                                    response_data: None,
-                                    headers: event_headers,
-                                    additional_fields: HashMap::new(),
-                                    lineage_ids: event_params.lineage_ids.to_owned(),
-                                };
-                                event.add_reference_id(event_params.reference_id.as_deref());
-
-                                emit_event_with_config(event, event_params.event_config);
-                            }
-                        }
-                    }
-
-                    match response {
+                    let result = match response {
                         Ok(body) => {
                             let response = match body {
                                 Ok(body) => {
@@ -516,34 +475,6 @@ where
                                         "status_code",
                                         tracing::field::display(status_code),
                                     );
-                                    if let Ok(response) =
-                                        parse_json_with_bom_handling(&body.response)
-                                    {
-                                        let headers = body.headers.clone().unwrap_or_default();
-                                        let map = headers.iter().fold(
-                                            serde_json::Map::new(),
-                                            |mut acc, (left, right)| {
-                                                let header_value = if right.is_sensitive() {
-                                                    serde_json::Value::String(
-                                                        "*** alloc::string::String ***".to_string(),
-                                                    )
-                                                } else if let Ok(x) = right.to_str() {
-                                                    serde_json::Value::String(x.to_string())
-                                                } else {
-                                                    return acc;
-                                                };
-                                                acc.insert(left.as_str().to_string(), header_value);
-                                                acc
-                                            },
-                                        );
-                                        let header_map = serde_json::Value::Object(map);
-                                        tracing::Span::current().record(
-                                            "response.headers",
-                                            tracing::field::display(header_map),
-                                        );
-                                        tracing::Span::current().record("response.body", tracing::field::display(response.masked_serialize().unwrap_or(json!({ "error": "failed to mask serialize connector response"}))));
-                                    }
-
                                     let is_source_verified = connector.verify(&updated_router_data, interfaces::verification::ConnectorSourceVerificationSecrets::AuthHeaders(updated_router_data.connector_auth_type.clone()), &body.response)?;
 
                                     if !is_source_verified {
@@ -569,8 +500,22 @@ where
 
                                     let handle_response_result = connector.handle_response_v2(
                                         &updated_router_data,
-                                        None,
+                                        Some(&mut event),
                                         body.clone(),
+                                    );
+
+                                    // Log response body and headers using properly masked data from connector
+                                    if let Some(response_data) = &event.response_data {
+                                        tracing::Span::current().record(
+                                            "response.body",
+                                            tracing::field::display(response_data.inner()),
+                                        );
+                                    }
+
+                                    // Log response headers from event (already masked)
+                                    tracing::Span::current().record(
+                                        "response.headers",
+                                        tracing::field::debug(&event.headers),
                                     );
 
                                     match handle_response_result {
@@ -605,10 +550,14 @@ where
                                     }
 
                                     let error = match body.status_code {
-                                        500..=511 => {
-                                            connector.get_5xx_error_response(body.clone(), None)?
-                                        }
-                                        _ => connector.get_error_response_v2(body.clone(), None)?,
+                                        500..=511 => connector.get_5xx_error_response(
+                                            body.clone(),
+                                            Some(&mut event),
+                                        )?,
+                                        _ => connector.get_error_response_v2(
+                                            body.clone(),
+                                            Some(&mut event),
+                                        )?,
                                     };
                                     tracing::Span::current().record(
                                         "response.error_message",
@@ -628,7 +577,10 @@ where
                             tracing::Span::current().record("url", tracing::field::display(url));
                             Err(err.change_context(ConnectorError::ProcessingStepFailed(None)))
                         }
-                    }
+                    };
+
+                    emit_event_with_config(event, event_params.event_config);
+                    result
                 }
                 None => Ok(router_data),
             }
@@ -708,10 +660,73 @@ pub async fn call_connector_api(
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
             }
-            _ => client.post(url),
+            Method::Put => {
+                let client = client.put(url);
+                match request.body {
+                    Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
+                    Some(RequestContent::Xml(payload)) => {
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
+                        let xml_body = if body.starts_with('"') && body.ends_with('"') {
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
+                        } else {
+                            body
+                        };
+                        client.body(xml_body).header("Content-Type", "text/xml")
+                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
+                    _ => client,
+                }
+            }
+            Method::Patch => {
+                let client = client.patch(url);
+                match request.body {
+                    Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
+                    Some(RequestContent::Xml(payload)) => {
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
+                        let xml_body = if body.starts_with('"') && body.ends_with('"') {
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
+                        } else {
+                            body
+                        };
+                        client.body(xml_body).header("Content-Type", "text/xml")
+                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
+                    _ => client,
+                }
+            }
+            Method::Delete => {
+                let client = client.delete(url);
+                match request.body {
+                    Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
+                    Some(RequestContent::Xml(payload)) => {
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
+                        let xml_body = if body.starts_with('"') && body.ends_with('"') {
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
+                        } else {
+                            body
+                        };
+                        client.body(xml_body).header("Content-Type", "text/xml")
+                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
+                    _ => client,
+                }
+            }
         }
         .add_headers(headers)
     };
@@ -774,32 +789,90 @@ pub fn create_client(
     // }
 }
 
-static NON_PROXIED_CLIENT: OnceCell<Client> = OnceCell::new();
-static PROXIED_CLIENT: OnceCell<Client> = OnceCell::new();
+static DEFAULT_CLIENT: OnceCell<Client> = OnceCell::new();
+static PROXY_CLIENT_CACHE: OnceCell<RwLock<HashMap<Proxy, Client>>> = OnceCell::new();
+
+fn get_or_create_proxy_client(
+    cache: &RwLock<HashMap<Proxy, Client>>,
+    cache_key: Proxy,
+    proxy_config: &Proxy,
+    should_bypass_proxy: bool,
+) -> CustomResult<Client, ApiClientError> {
+    let read_result = cache
+        .read()
+        .ok()
+        .and_then(|read_lock| read_lock.get(&cache_key).cloned());
+
+    let client = match read_result {
+        Some(cached_client) => {
+            tracing::debug!("Retrieved cached proxy client for config: {:?}", cache_key);
+            cached_client
+        }
+        None => {
+            let mut write_lock = cache
+                .try_write()
+                .map_err(|_| ApiClientError::ClientConstructionFailed)?;
+
+            match write_lock.get(&cache_key) {
+                Some(cached_client) => {
+                    tracing::debug!(
+                        "Retrieved cached proxy client after write lock for config: {:?}",
+                        cache_key
+                    );
+                    cached_client.clone()
+                }
+                None => {
+                    tracing::info!("Creating new proxy client for config: {:?}", cache_key);
+
+                    let new_client = get_client_builder(proxy_config, should_bypass_proxy)?
+                        .build()
+                        .change_context(ApiClientError::ClientConstructionFailed)
+                        .attach_printable("Failed to construct proxy client")?;
+
+                    write_lock.insert(cache_key.clone(), new_client.clone());
+                    tracing::debug!("Cached new proxy client for config: {:?}", cache_key);
+                    new_client
+                }
+            }
+        }
+    };
+
+    Ok(client)
+}
 
 fn get_base_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
 ) -> CustomResult<Client, ApiClientError> {
-    Ok(if should_bypass_proxy
-        || (proxy_config.http_url.is_none() && proxy_config.https_url.is_none())
-    {
-        &NON_PROXIED_CLIENT
+    // Check if proxy configuration is provided using cache_key method
+    if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy) {
+        tracing::debug!(
+            "Using proxy-specific client cache with key: {:?}",
+            cache_key
+        );
+
+        let cache = PROXY_CLIENT_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+
+        let client =
+            get_or_create_proxy_client(cache, cache_key, proxy_config, should_bypass_proxy)?;
+
+        Ok(client)
     } else {
-        &PROXIED_CLIENT
+        tracing::debug!("No proxy configuration detected, using DEFAULT_CLIENT");
+
+        // Use DEFAULT_CLIENT for non-proxy scenarios
+        let client = DEFAULT_CLIENT
+            .get_or_try_init(|| {
+                tracing::info!("Initializing DEFAULT_CLIENT (no proxy configuration)");
+                get_client_builder(proxy_config, should_bypass_proxy)?
+                    .build()
+                    .change_context(ApiClientError::ClientConstructionFailed)
+                    .attach_printable("Failed to construct default client")
+            })?
+            .clone();
+
+        Ok(client)
     }
-    .get_or_try_init(|| {
-        get_client_builder(proxy_config, should_bypass_proxy)?
-            .build()
-            .change_context(ApiClientError::ClientConstructionFailed)
-            .inspect_err(|err| {
-                info_log(
-                    "ERROR",
-                    &json!(format!("Failed to construct base client. Error: {:?}", err)),
-                );
-            })
-    })?
-    .clone())
 }
 
 fn load_custom_ca_certificate_from_content(
@@ -976,11 +1049,23 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
     // Extract actual body content
     let body_content = match connector_request.body.as_ref() {
         Some(request) => {
-            let inner_value = request.get_inner_value();
-            serde_json::from_str(&inner_value.expose()).unwrap_or_else(|_| {
-                tracing::warn!("failed to parse JSON body in extract_raw_connector_request");
-                json!({ "error": "failed to parse JSON body" })
-            })
+            match request {
+                // For RawBytes (e.g., SOAP XML), use the string directly without JSON parsing
+                RequestContent::RawBytes(_) => {
+                    serde_json::Value::String(request.get_inner_value().expose())
+                }
+                // For other content types, try to parse as JSON
+                RequestContent::Json(_)
+                | RequestContent::FormUrlEncoded(_)
+                | RequestContent::FormData(_)
+                | RequestContent::Xml(_) => {
+                    let exposed_value = request.get_inner_value().expose();
+                    serde_json::from_str(&exposed_value).unwrap_or_else(|_| {
+                        tracing::warn!("failed to parse body as JSON, treating as string in extract_raw_connector_request");
+                        serde_json::Value::String(exposed_value)
+                    })
+                }
+            }
         }
         None => serde_json::Value::Null,
     };

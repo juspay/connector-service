@@ -15,7 +15,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::Date;
 
@@ -82,17 +82,10 @@ pub struct MifinityClient {
 pub struct MifinityAddress {
     address_line1: Secret<String>,
     country_code: enums::CountryAlpha2,
-    city: String,
+    city: Secret<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         MifinityRouterData<
             RouterDataV2<
@@ -291,18 +284,11 @@ pub struct MifinityPaymentsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct MifinityPayload {
     trace_id: String,
-    initialization_token: String,
+    initialization_token: Secret<String>,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -318,7 +304,7 @@ impl<
                     response: Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(trace_id.clone()),
                         redirection_data: Some(Box::new(RedirectForm::Mifinity {
-                            initialization_token,
+                            initialization_token: initialization_token.expose(),
                         })),
                         mandate_reference: None,
                         connector_metadata: None,

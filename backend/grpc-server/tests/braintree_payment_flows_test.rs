@@ -5,9 +5,9 @@
 use cards::CardNumber;
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -15,28 +15,21 @@ use std::{
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency,
-        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
-        RefundStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
+        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
+        RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 
 // Constants for Braintree connector
 const CONNECTOR_NAME: &str = "braintree";
 const AUTH_TYPE: &str = "signature-key";
 const MERCHANT_ID: &str = "merchant_17555143863";
-
-// Environment variable names for API credentials (can be set or overridden with
-// provided values)
-const BRAINTREE_API_KEY_ENV: &str = "TEST_BRAINTREE_API_KEY";
-const BRAINTREE_KEY1_ENV: &str = "TEST_BRAINTREE_KEY1";
-const BRAINTREE_API_SECRET_ENV: &str = "TEST_BRAINTREE_API_SECRET";
 
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
@@ -57,13 +50,17 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Braintree metadata headers to a request
 fn add_braintree_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key = env::var(BRAINTREE_API_KEY_ENV)
-        .expect("TEST_BRAINTREE_API_KEY environment variable is required");
-    let key1 =
-        env::var(BRAINTREE_KEY1_ENV).expect("TEST_BRAINTREE_KEY1 environment variable is required");
-    let api_secret = env::var(BRAINTREE_API_SECRET_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {BRAINTREE_API_SECRET_ENV} must be set"));
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load braintree credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for braintree"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -94,6 +91,18 @@ fn add_braintree_metadata<T>(request: &mut Request<T>) {
             .parse()
             .expect("Failed to parse x-request-id"),
     );
+
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-connector-request-reference-id",
+        format!("conn_ref_{}", get_timestamp())
+            .parse()
+            .expect("Failed to parse x-connector-request-reference-id"),
+    );
 }
 
 // Helper function to extract connector transaction ID from response
@@ -116,7 +125,7 @@ fn extract_refund_id(response: &RefundResponse) -> &String {
 fn create_payment_authorize_request(
     capture_method: CaptureMethod,
 ) -> PaymentServiceAuthorizeRequest {
-    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
@@ -128,7 +137,7 @@ fn create_payment_authorize_request(
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
     let mut metadata = HashMap::new();
     metadata.insert("merchant_account_id".to_string(), "Anand".to_string());
     PaymentServiceAuthorizeRequest {
@@ -136,9 +145,7 @@ fn create_payment_authorize_request(
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-                card_type: Some(card_details),
-            })),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some("https://duck.com".to_string()),
         email: Some(TEST_EMAIL.to_string().into()),
@@ -147,11 +154,11 @@ fn create_payment_authorize_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("braintree_test_{}", get_timestamp()))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         metadata,
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }
@@ -162,13 +169,21 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
-        request_ref_id: None,
-        // all_keys_required: None,
+        encoded_data: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(format!("braintree_sync_{}", get_timestamp()))),
+        }),
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
+        metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: None,
+        setup_future_usage: None,
+        sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 
@@ -243,8 +258,11 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp()))),
         }),
         browser_info: None,
+        test_mode: Some(true),
         refund_metadata,
         state: None,
+        merchant_account_metadata: HashMap::new(),
+        payment_method_type: None,
     }
 }
 
@@ -466,7 +484,9 @@ async fn test_payment_void() {
 }
 
 // Test refund flow - handles both success and error cases
+// Ignored as refund status in Settling or Settled state may take time in Braintree sandbox.
 #[tokio::test]
+#[ignore]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Add delay of 16 seconds
@@ -517,7 +537,9 @@ async fn test_refund() {
 }
 
 // Test refund sync flow - runs as a separate test since refund + sync is complex
+// Ignored as refund status in Settling or Settled state may take time in Braintree sandbox.
 #[tokio::test]
+#[ignore]
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {

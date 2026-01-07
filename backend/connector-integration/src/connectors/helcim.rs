@@ -1,24 +1,24 @@
 pub mod transformers;
 
 use common_utils::{
-    consts::NO_ERROR_CODE, errors::CustomResult, ext_traits::BytesExt, fp_utils::generate_id,
-    types::FloatMajorUnit,
+    consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::BytesExt,
+    fp_utils::generate_id, types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, DefendDispute, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
+        RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -31,7 +31,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use std::{
@@ -60,6 +59,11 @@ pub(crate) mod headers {
 }
 
 // Trait implementations with generic type parameters
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Helcim<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Helcim<T>
 {
@@ -123,7 +127,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Helcim<T>
+    connector_types::RepeatPaymentV2<T> for Helcim<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -287,7 +291,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: helcim::HelcimErrorResponse = res
             .response
@@ -516,7 +520,7 @@ macros::macro_connector_implementation!(
 // Stub implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -533,7 +537,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -550,7 +554,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -563,7 +567,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -575,7 +579,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -587,20 +591,24 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
             + Serialize,
     >
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Helcim<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Helcim<T>
 {
 }
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -617,7 +625,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -634,7 +642,7 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
+            + Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
@@ -684,6 +692,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Helcim<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Helcim<T>
 {
 }
@@ -803,7 +821,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Helcim<T>
 {
@@ -874,6 +892,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Helcim<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Helcim<T>
 {
 }

@@ -22,7 +22,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{PeekInterface, Secret, WithoutType};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret, WithoutType};
 use serde::{
     de::{self, Deserializer},
     Deserialize, Serialize,
@@ -73,11 +73,11 @@ impl Serialize for TransactionType {
         S: serde::Serializer,
     {
         let value = match self {
-            TransactionType::CcSale => "ccsale",
-            TransactionType::CcAuthOnly => "ccauthonly",
-            TransactionType::CcComplete => "cccomplete",
-            TransactionType::CcReturn => "ccreturn",
-            TransactionType::TxnQuery => "txnquery",
+            Self::CcSale => "ccsale",
+            Self::CcAuthOnly => "ccauthonly",
+            Self::CcComplete => "cccomplete",
+            Self::CcReturn => "ccreturn",
+            Self::TxnQuery => "txnquery",
         };
         serializer.serialize_str(value)
     }
@@ -86,12 +86,7 @@ impl Serialize for TransactionType {
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 pub struct CardPaymentRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub ssl_transaction_type: TransactionType,
     pub ssl_account_id: Secret<String>,
@@ -122,12 +117,7 @@ pub struct CardPaymentRequest<
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum ElavonPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardPaymentRequest<T>),
 }
@@ -151,14 +141,7 @@ fn get_avs_details_from_payment_address(
         .unwrap_or((None, None))
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
             RouterDataV2<
@@ -270,7 +253,7 @@ impl<
                     ssl_invoice_number: Some(router_data.resource_common_data.payment_id.clone()),
                 };
                 tracing::debug!(?card_req, "Elavon Card Payment Request");
-                Ok(ElavonPaymentsRequest::Card(card_req))
+                Ok(Self::Card(card_req))
             }
             _ => Err(report!(errors::ConnectorError::NotImplemented(
                 "Only card payments are supported for Elavon".to_string()
@@ -298,14 +281,7 @@ pub struct XMLRefundRequest(pub HashMap<String, Secret<String, WithoutType>>);
 pub struct XMLRSyncRequest(pub HashMap<String, Secret<String, WithoutType>>);
 
 // TryFrom implementation to convert from the router data to XMLElavonRequest
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
             RouterDataV2<
@@ -360,19 +336,12 @@ impl<
         let keys = result.keys().collect::<Vec<_>>();
         tracing::info!(form_keys=?keys, "Form data keys");
 
-        Ok(XMLElavonRequest(result))
+        Ok(Self(result))
     }
 }
 
 // TryFrom implementation for PSync flow using XMLPSyncRequest
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -416,7 +385,7 @@ impl<
         let keys = result.keys().collect::<Vec<_>>();
         tracing::info!(form_keys=?keys, "PSync XML data map keys");
 
-        Ok(XMLPSyncRequest(result))
+        Ok(Self(result))
     }
 }
 
@@ -433,9 +402,9 @@ impl TryFrom<String> for SslResult {
     type Error = errors::ConnectorError;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         match value.as_str() {
-            "0" => Ok(SslResult::Approved),
-            "1" => Ok(SslResult::Declined),
-            _ => Ok(SslResult::Other(value)),
+            "0" => Ok(Self::Approved),
+            "1" => Ok(Self::Declined),
+            _ => Ok(Self::Other(value)),
         }
     }
 }
@@ -448,7 +417,7 @@ pub struct PaymentResponse {
     pub ssl_token: Option<Secret<String>>,
     pub ssl_approval_code: Option<String>,
     pub ssl_transaction_type: Option<String>,
-    pub ssl_cvv2_response: Option<String>,
+    pub ssl_cvv2_response: Option<Secret<String>>,
     pub ssl_avs_response: Option<String>,
     pub ssl_token_response: Option<String>,
 }
@@ -506,15 +475,15 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
             #[serde(default)]
             ssl_result_message: Option<String>,
             #[serde(default)]
-            ssl_token: Option<String>,
+            ssl_token: Option<Secret<String>>,
             #[serde(default)]
-            ssl_token_response: Option<String>,
+            ssl_token_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_approval_code: Option<String>,
             #[serde(default)]
             ssl_transaction_type: Option<String>,
             #[serde(default)]
-            ssl_cvv2_response: Option<String>,
+            ssl_cvv2_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_avs_response: Option<String>,
         }
@@ -527,7 +496,7 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
                     ssl_result: SslResult::try_from(
                         flat_res
                             .ssl_result
-                            .expect("ssl_result checked to be Some(\\\"0\\\")"),
+                            .ok_or_else(|| de::Error::missing_field("ssl_result"))?,
                     )
                     .map_err(de::Error::custom)?,
                     ssl_txn_id: flat_res
@@ -536,17 +505,19 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
                     ssl_result_message: flat_res
                         .ssl_result_message
                         .ok_or_else(|| de::Error::missing_field("ssl_result_message"))?,
-                    ssl_token: flat_res.ssl_token.map(Secret::new),
+                    ssl_token: flat_res.ssl_token,
                     ssl_approval_code: flat_res.ssl_approval_code,
                     ssl_transaction_type: flat_res.ssl_transaction_type.clone(),
                     ssl_cvv2_response: flat_res.ssl_cvv2_response,
                     ssl_avs_response: flat_res.ssl_avs_response,
-                    ssl_token_response: flat_res.ssl_token_response,
+                    ssl_token_response: flat_res.ssl_token_response.map(|s| s.expose()),
                 })
             } else if flat_res.error_message.is_some() {
                 ElavonResult::Error(ElavonErrorResponse {
                     error_code: flat_res.error_code.or(flat_res.ssl_result.clone()),
-                    error_message: flat_res.error_message.expect("error_message checked"),
+                    error_message: flat_res
+                        .error_message
+                        .ok_or_else(|| de::Error::missing_field("error_message"))?,
                     error_name: flat_res.error_name,
                     ssl_txn_id: flat_res.ssl_txn_id,
                 })
@@ -590,15 +561,15 @@ impl<'de> Deserialize<'de> for ElavonCaptureResponse {
             #[serde(default)]
             ssl_result_message: Option<String>,
             #[serde(default)]
-            ssl_token: Option<String>,
+            ssl_token: Option<Secret<String>>,
             #[serde(default)]
-            ssl_token_response: Option<String>,
+            ssl_token_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_approval_code: Option<String>,
             #[serde(default)]
             ssl_transaction_type: Option<String>,
             #[serde(default)]
-            ssl_cvv2_response: Option<String>,
+            ssl_cvv2_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_avs_response: Option<String>,
         }
@@ -611,7 +582,7 @@ impl<'de> Deserialize<'de> for ElavonCaptureResponse {
                     ssl_result: SslResult::try_from(
                         flat_res
                             .ssl_result
-                            .expect("ssl_result checked to be Some(\\\"0\\\")"),
+                            .ok_or_else(|| de::Error::missing_field("ssl_result"))?,
                     )
                     .map_err(de::Error::custom)?,
                     ssl_txn_id: flat_res
@@ -620,17 +591,19 @@ impl<'de> Deserialize<'de> for ElavonCaptureResponse {
                     ssl_result_message: flat_res
                         .ssl_result_message
                         .ok_or_else(|| de::Error::missing_field("ssl_result_message"))?,
-                    ssl_token: flat_res.ssl_token.map(Secret::new),
+                    ssl_token: flat_res.ssl_token,
                     ssl_approval_code: flat_res.ssl_approval_code,
                     ssl_transaction_type: flat_res.ssl_transaction_type.clone(),
                     ssl_cvv2_response: flat_res.ssl_cvv2_response,
                     ssl_avs_response: flat_res.ssl_avs_response,
-                    ssl_token_response: flat_res.ssl_token_response,
+                    ssl_token_response: flat_res.ssl_token_response.map(|s| s.expose()),
                 })
             } else if flat_res.error_message.is_some() {
                 ElavonResult::Error(ElavonErrorResponse {
                     error_code: flat_res.error_code.or(flat_res.ssl_result.clone()),
-                    error_message: flat_res.error_message.expect("error_message checked"),
+                    error_message: flat_res
+                        .error_message
+                        .ok_or_else(|| de::Error::missing_field("error_message"))?,
                     error_name: flat_res.error_name,
                     ssl_txn_id: flat_res.ssl_txn_id,
                 })
@@ -674,15 +647,15 @@ impl<'de> Deserialize<'de> for ElavonRefundResponse {
             #[serde(default)]
             ssl_result_message: Option<String>,
             #[serde(default)]
-            ssl_token: Option<String>,
+            ssl_token: Option<Secret<String>>,
             #[serde(default)]
-            ssl_token_response: Option<String>,
+            ssl_token_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_approval_code: Option<String>,
             #[serde(default)]
             ssl_transaction_type: Option<String>,
             #[serde(default)]
-            ssl_cvv2_response: Option<String>,
+            ssl_cvv2_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_avs_response: Option<String>,
         }
@@ -695,7 +668,7 @@ impl<'de> Deserialize<'de> for ElavonRefundResponse {
                     ssl_result: SslResult::try_from(
                         flat_res
                             .ssl_result
-                            .expect("ssl_result checked to be Some(\\\"0\\\")"),
+                            .ok_or_else(|| de::Error::missing_field("ssl_result"))?,
                     )
                     .map_err(de::Error::custom)?,
                     ssl_txn_id: flat_res
@@ -704,17 +677,19 @@ impl<'de> Deserialize<'de> for ElavonRefundResponse {
                     ssl_result_message: flat_res
                         .ssl_result_message
                         .ok_or_else(|| de::Error::missing_field("ssl_result_message"))?,
-                    ssl_token: flat_res.ssl_token.map(Secret::new),
+                    ssl_token: flat_res.ssl_token,
                     ssl_approval_code: flat_res.ssl_approval_code,
                     ssl_transaction_type: flat_res.ssl_transaction_type.clone(),
                     ssl_cvv2_response: flat_res.ssl_cvv2_response,
                     ssl_avs_response: flat_res.ssl_avs_response,
-                    ssl_token_response: flat_res.ssl_token_response,
+                    ssl_token_response: flat_res.ssl_token_response.map(|s| s.expose()),
                 })
             } else if flat_res.error_message.is_some() {
                 ElavonResult::Error(ElavonErrorResponse {
                     error_code: flat_res.error_code.or(flat_res.ssl_result.clone()),
-                    error_message: flat_res.error_message.expect("error_message checked"),
+                    error_message: flat_res
+                        .error_message
+                        .ok_or_else(|| de::Error::missing_field("error_message"))?,
                     error_name: flat_res.error_name,
                     ssl_txn_id: flat_res.ssl_txn_id,
                 })
@@ -777,13 +752,7 @@ pub fn get_elavon_attempt_status(
 
 impl<
         F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
     > TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -871,14 +840,7 @@ pub struct SyncRequest {
     pub ssl_txn_id: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -940,14 +902,7 @@ pub struct ElavonCaptureRequest {
     pub ssl_txn_id: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -996,14 +951,7 @@ impl<
 }
 
 // Implementation for XMLCaptureRequest
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -1035,7 +983,7 @@ impl<
             Secret::<_, WithoutType>::new(xml_content),
         );
 
-        Ok(XMLCaptureRequest(result))
+        Ok(Self(result))
     }
 }
 
@@ -1130,14 +1078,7 @@ pub struct ElavonRefundRequest {
     pub ssl_txn_id: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for ElavonRefundRequest
@@ -1172,14 +1113,7 @@ impl<
 }
 
 // Implementation for XMLRefundRequest
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for XMLRefundRequest
@@ -1208,7 +1142,7 @@ impl<
             Secret::<_, WithoutType>::new(xml_content),
         );
 
-        Ok(XMLRefundRequest(result))
+        Ok(Self(result))
     }
 }
 
@@ -1281,14 +1215,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
 }
 
 // Implementation for Refund Sync
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1330,14 +1257,7 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
 }
 
 // Implementation for XMLRSyncRequest
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1369,7 +1289,7 @@ impl<
             Secret::<_, WithoutType>::new(xml_content),
         );
 
-        Ok(XMLRSyncRequest(result))
+        Ok(Self(result))
     }
 }
 
@@ -1506,7 +1426,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
             status_code: value.http_code,
         };
 
-        Ok(RouterDataV2 {
+        Ok(Self {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
                 status: final_status,

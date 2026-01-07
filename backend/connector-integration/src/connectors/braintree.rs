@@ -2,10 +2,11 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use base64::Engine;
-use common_enums::CurrencyUnit;
+use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    events,
     ext_traits::ByteSliceExt,
     types::StringMajorUnit,
     ParsingError,
@@ -14,8 +15,8 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
+        SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -24,8 +25,8 @@ use domain_types::{
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
@@ -39,15 +40,15 @@ use error_stack::Report;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers::{
     self as braintree, BraintreeCancelRequest, BraintreeCancelResponse, BraintreeCaptureRequest,
-    BraintreeCaptureResponse, BraintreePSyncRequest, BraintreePSyncResponse,
-    BraintreePaymentsRequest, BraintreePaymentsResponse, BraintreeRSyncRequest,
-    BraintreeRSyncResponse, BraintreeRefundRequest, BraintreeRefundResponse, BraintreeTokenRequest,
-    BraintreeTokenResponse,
+    BraintreeCaptureResponse, BraintreeClientTokenRequest, BraintreePSyncRequest,
+    BraintreePSyncResponse, BraintreePaymentsRequest, BraintreePaymentsResponse,
+    BraintreeRSyncRequest, BraintreeRSyncResponse, BraintreeRefundRequest, BraintreeRefundResponse,
+    BraintreeRepeatPaymentRequest, BraintreeRepeatPaymentResponse, BraintreeSessionResponse,
+    BraintreeTokenRequest, BraintreeTokenResponse,
 };
 
 use super::macros;
@@ -81,8 +82,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
-    {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = braintree::BraintreeAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         let auth_key = format!("{}:{}", auth.public_key.peek(), auth.private_key.peek());
@@ -96,7 +96,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: Result<braintree::ErrorResponses, Report<ParsingError>> =
             res.response.parse_struct("Braintree Error Response");
@@ -147,7 +147,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             }
             Err(_) => {
                 if let Some(event) = event_builder {
-                    event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}));
+                    event.set_connector_response(&serde_json::json!({"error": "Error response parsing failed", "status_code": res.status_code}));
                 }
                 domain_types::utils::handle_json_response_deserialization_failure(res, "braintree")
             }
@@ -156,6 +156,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 }
 
 //marker traits
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Braintree<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Braintree<T>
 {
@@ -213,8 +218,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Braintree<T>
 {
-    fn should_do_payment_method_token(&self) -> bool {
-        true
+    fn should_do_payment_method_token(
+        &self,
+        payment_method: PaymentMethod,
+        _payment_method_type: Option<PaymentMethodType>,
+    ) -> bool {
+        matches!(payment_method, PaymentMethod::Card)
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -226,7 +235,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Braintree<T>
+    connector_types::RepeatPaymentV2<T> for Braintree<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -297,6 +306,12 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
+            flow: SdkSessionToken,
+            request_body: BraintreeClientTokenRequest,
+            response_body: BraintreeSessionResponse,
+            router_data: RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData , PaymentsResponseData>,
+        ),
+        (
             flow: Refund,
             request_body: BraintreeRefundRequest,
             response_body: BraintreeRefundResponse,
@@ -307,6 +322,12 @@ macros::create_all_prerequisites!(
             request_body: BraintreeRSyncRequest,
             response_body: BraintreeRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: BraintreeRepeatPaymentRequest,
+            response_body: BraintreeRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -320,19 +341,19 @@ macros::create_all_prerequisites!(
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
-        let mut header = vec![
-            (
-                headers::CONTENT_TYPE.to_string(),
-                self.get_content_type().to_string().into(),
-            ),
-            (
-                BRAINTREE_VERSION.to_string(),
-                BRAINTREE_VERSION_VALUE.to_string().into(),
-            ),
-        ];
-        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut api_key);
-        Ok(header)
+            let mut header = vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    self.get_content_type().to_string().into(),
+                ),
+                (
+                    BRAINTREE_VERSION.to_string(),
+                    BRAINTREE_VERSION_VALUE.to_string().into(),
+                ),
+            ];
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
         }
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
@@ -375,6 +396,34 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Braintree,
+    curl_request: Json(BraintreeRepeatPaymentRequest),
+    curl_response: BraintreeRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(self.connector_base_url_payments(req).to_string())
         }
     }
 );
@@ -457,6 +506,34 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+             Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Braintree,
+    curl_request: Json(BraintreeClientTokenRequest),
+    curl_response: BraintreeSessionResponse,
+    flow_name: SdkSessionToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSdkSessionTokenData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData , PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData , PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
              Ok(self.connector_base_url_payments(req).to_string())
         }
@@ -723,14 +800,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
@@ -774,7 +844,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Braintree<T>
 {
@@ -787,12 +857,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         domain_types::connector_types::PaymentsCancelPostCaptureData,
         PaymentsResponseData,
     > for Braintree<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Braintree<T>
 {
 }
 
@@ -853,6 +917,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Braintree<T>
 {

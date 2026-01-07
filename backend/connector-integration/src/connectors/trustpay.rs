@@ -1,11 +1,13 @@
 use base64::Engine;
-use common_utils::{consts, errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
+use common_utils::{
+    consts, errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void, VoidPC,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -14,9 +16,10 @@ use domain_types::{
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -29,7 +32,6 @@ use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 
 use serde::Serialize;
@@ -39,18 +41,26 @@ pub mod transformers;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use transformers::{
-    self as trustpay, TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayErrorResponse,
-    TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
+    self as trustpay, RefundResponse, RefundResponse as RefundSyncResponse,
+    TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayErrorResponse,
+    TrustpayPaymentsRequest, TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
+    TrustpayPaymentsResponse, TrustpayRefundRequest,
 };
 
-use super::macros;
+use super::macros::{self, ContentTypeSelector};
 use crate::types::ResponseRouterData;
+use crate::utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping};
 
 // Local headers module
 mod headers {
     pub const CONTENT_TYPE: &str = "Content-Type";
     pub const AUTHORIZATION: &str = "Authorization";
     pub const X_API_KEY: &str = "X-Api-Key";
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Trustpay<T>
+{
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -84,8 +94,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Trustpay<T>
 {
-    fn should_do_access_token(&self) -> bool {
-        true
+    fn should_do_access_token(&self, payment_method: common_enums::PaymentMethod) -> bool {
+        matches!(
+            payment_method,
+            common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer
+        )
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -97,7 +110,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Trustpay<T>
+    connector_types::RepeatPaymentV2<T> for Trustpay<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -166,6 +179,23 @@ macros::create_all_prerequisites!(
             request_body: TrustpayAuthUpdateRequest,
             response_body: TrustpayAuthUpdateResponse,
             router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ),
+        (
+            flow: Authorize,
+            request_body: TrustpayPaymentsRequest<T>,
+            response_body: TrustpayPaymentsResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: TrustpayRefundRequest,
+            response_body: RefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            response_body: RefundSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [
@@ -211,6 +241,44 @@ macros::create_all_prerequisites!(
         }
         }
 
+        pub fn build_headers_for_refunds<F, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<F, RefundFlowData, Req, Res>,
+        {
+            match req.resource_common_data.payment_method {
+            Some(common_enums::PaymentMethod::BankRedirect) | Some(common_enums::PaymentMethod::BankTransfer) => {
+                let token = req
+                    .resource_common_data
+                    .get_access_token()
+                    .change_context(errors::ConnectorError::MissingRequiredField {
+                        field_name: "access_token",
+                    })?;
+                Ok(vec![
+                    (
+                        headers::CONTENT_TYPE.to_string(),
+                        "application/json".to_owned().into(),
+                    ),
+                    (
+                        headers::AUTHORIZATION.to_string(),
+                        format!("Bearer {token}").into_masked(),
+                    ),
+                ])
+            }
+            _ => {
+                let mut header = vec![(
+                    headers::CONTENT_TYPE.to_string(),
+                    self.get_content_type().to_string().into(),
+                )];
+                let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+                header.append(&mut api_key);
+                Ok(header)
+            }
+        }
+        }
+
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
@@ -223,6 +291,20 @@ macros::create_all_prerequisites!(
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.trustpay.base_url_bank_redirects
+        }
+
+        pub fn connector_base_url_bank_redirects_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.trustpay.base_url_bank_redirects
+        }
+
+        pub fn connector_base_url_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.trustpay.base_url
         }
 
         pub fn get_auth_header(
@@ -238,6 +320,90 @@ macros::create_all_prerequisites!(
         }
     }
 );
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorErrorTypeMapping for Trustpay<T>
+{
+    fn get_connector_error_type(
+        &self,
+        error_code: String,
+        error_message: String,
+    ) -> ConnectorErrorType {
+        match (error_code.as_str(), error_message.as_str()) {
+            // 2xx card api error codes and messages mapping
+            ("100.100.600", "Empty CVV for VISA, MASTER not allowed") => ConnectorErrorType::UserError,
+            ("100.350.100", "Referenced session is rejected (no action possible)") => ConnectorErrorType::TechnicalError,
+            ("100.380.401", "User authentication failed") => ConnectorErrorType::UserError,
+            ("100.380.501", "Risk management transaction timeout") => ConnectorErrorType::TechnicalError,
+            ("100.390.103", "PARes validation failed - problem with signature") => ConnectorErrorType::TechnicalError,
+            ("100.390.111", "Communication error to VISA/Mastercard Directory Server") => ConnectorErrorType::TechnicalError,
+            ("100.390.112", "Technical error in 3D system") => ConnectorErrorType::TechnicalError,
+            ("100.390.115", "Authentication failed due to invalid message format") => ConnectorErrorType::TechnicalError,
+            ("100.390.118", "Authentication failed due to suspected fraud") => ConnectorErrorType::UserError,
+            ("100.400.304", "Invalid input data") => ConnectorErrorType::UserError,
+            ("200.300.404", "Invalid or missing parameter") => ConnectorErrorType::UserError,
+            ("300.100.100", "Transaction declined (additional customer authentication required)") => ConnectorErrorType::UserError,
+            ("400.001.301", "Card not enrolled in 3DS") => ConnectorErrorType::UserError,
+            ("400.001.600", "Authentication error") => ConnectorErrorType::UserError,
+            ("400.001.601", "Transaction declined (auth. declined)") => ConnectorErrorType::UserError,
+            ("400.001.602", "Invalid transaction") => ConnectorErrorType::UserError,
+            ("400.001.603", "Invalid transaction") => ConnectorErrorType::UserError,
+            ("700.400.200", "Cannot refund (refund volume exceeded or tx reversed or invalid workflow)") => ConnectorErrorType::BusinessError,
+            ("700.500.001", "Referenced session contains too many transactions") => ConnectorErrorType::TechnicalError,
+            ("700.500.003", "Test accounts not allowed in production") => ConnectorErrorType::UserError,
+            ("800.100.151", "Transaction declined (invalid card)") => ConnectorErrorType::UserError,
+            ("800.100.152", "Transaction declined by authorization system") => ConnectorErrorType::UserError,
+            ("800.100.153", "Transaction declined (invalid CVV)") => ConnectorErrorType::UserError,
+            ("800.100.155", "Transaction declined (amount exceeds credit)") => ConnectorErrorType::UserError,
+            ("800.100.157", "Transaction declined (wrong expiry date)") => ConnectorErrorType::UserError,
+            ("800.100.162", "Transaction declined (limit exceeded)") => ConnectorErrorType::BusinessError,
+            ("800.100.163", "Transaction declined (maximum transaction frequency exceeded)") => ConnectorErrorType::BusinessError,
+            ("800.100.168", "Transaction declined (restricted card)") => ConnectorErrorType::UserError,
+            ("800.100.170", "Transaction declined (transaction not permitted)") => ConnectorErrorType::UserError,
+            ("800.100.172", "Transaction declined (account blocked)") => ConnectorErrorType::BusinessError,
+            ("800.100.190", "Transaction declined (invalid configuration data)") => ConnectorErrorType::BusinessError,
+            ("800.120.100", "Rejected by throttling") => ConnectorErrorType::TechnicalError,
+            ("800.300.401", "Bin blacklisted") => ConnectorErrorType::BusinessError,
+            ("800.700.100", "Transaction for the same session is currently being processed, please try again later") => ConnectorErrorType::TechnicalError,
+            ("900.100.300", "Timeout, uncertain result") => ConnectorErrorType::TechnicalError,
+            // 4xx error codes for cards api are unique and messages vary, so we are relying only on error code to decide an error type
+            ("4" | "5" | "6" | "7" | "8" | "9" | "10" | "11" | "12" | "13" | "14" | "15" | "16" | "17" | "18" | "19" | "26" | "34" | "39" | "48" | "52" | "85" | "86", _) => ConnectorErrorType::UserError,
+            ("21" | "22" | "23" | "30" | "31" | "32" | "35" | "37" | "40" | "41" | "45" | "46" | "49" | "50" | "56" | "60" | "67" | "81" | "82" | "83" | "84" | "87", _) => ConnectorErrorType::BusinessError,
+            ("59", _) => ConnectorErrorType::TechnicalError,
+            ("1", _) => ConnectorErrorType::UnknownError,
+            // Error codes for bank redirects api are unique and messages vary, so we are relying only on error code to decide an error type
+            ("1112008" | "1132000" | "1152000", _) => ConnectorErrorType::UserError,
+            ("1112009" | "1122006" | "1132001" | "1132002" | "1132003" | "1132004" | "1132005" | "1132006" | "1132008" | "1132009" | "1132010" | "1132011" | "1132012" | "1132013" | "1133000" | "1133001" | "1133002" | "1133003" | "1133004", _) => ConnectorErrorType::BusinessError,
+            ("1132014", _) => ConnectorErrorType::TechnicalError,
+            ("1132007", _) => ConnectorErrorType::UnknownError,
+            _ => ConnectorErrorType::UnknownError,
+        }
+    }
+}
+
+// Implement ContentTypeSelector for dynamic content type selection
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ContentTypeSelector<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for Trustpay<T>
+{
+    fn get_dynamic_content_type(
+        &self,
+        req: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<common_enums::DynamicContentType, errors::ConnectorError> {
+        match req.resource_common_data.payment_method {
+            common_enums::PaymentMethod::BankRedirect
+            | common_enums::PaymentMethod::BankTransfer => {
+                Ok(common_enums::DynamicContentType::Json)
+            }
+            _ => Ok(common_enums::DynamicContentType::FormUrlEncoded),
+        }
+    }
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Trustpay<T>
@@ -257,7 +423,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: Result<TrustpayErrorResponse, Report<common_utils::errors::ParsingError>> =
             res.response.parse_struct("trustpay ErrorResponse");
@@ -265,8 +431,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         match response {
             Ok(response_data) => {
                 if let Some(i) = event_builder {
-                    i.set_error_response_body(&response_data);
+                    i.set_connector_response(&response_data);
                 }
+                let error_list = response_data.errors.clone().unwrap_or_default();
+                let option_error_code_message =
+                    utils::get_error_code_error_message_based_on_priority(
+                        self.clone(),
+                        error_list.into_iter().map(|errors| errors.into()).collect(),
+                    );
                 let reason = response_data.errors.map(|errors| {
                     errors
                         .iter()
@@ -276,8 +448,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 });
                 Ok(ErrorResponse {
                     status_code: res.status_code,
-                    code: consts::NO_ERROR_CODE.to_string(),
-                    message: consts::NO_ERROR_CODE.to_string(),
+                    code: option_error_code_message
+                        .clone()
+                        .map(|error_code_message| error_code_message.error_code)
+                        .unwrap_or(consts::NO_ERROR_CODE.to_string()),
+                    message: option_error_code_message
+                        .map(|error_code_message| error_code_message.error_message)
+                        .unwrap_or(consts::NO_ERROR_MESSAGE.to_string()),
                     reason: reason
                         .or(response_data.description)
                         .or(response_data.payment_description),
@@ -290,7 +467,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             }
             Err(error_msg) => {
                 if let Some(event) = event_builder {
-                    event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
+                    event.set_connector_response(&serde_json::json!({"error": "Error response parsing failed", "status_code": res.status_code}))
                 };
                 tracing::error!(deserialization_error =? error_msg);
                 domain_types::utils::handle_json_response_deserialization_failure(res, "trustpay")
@@ -393,29 +570,146 @@ macros::macro_connector_implementation!(
     }
 );
 
+// Macro implementation for Authorize flow using dynamic content types
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Trustpay,
+    curl_request: Dynamic(TrustpayPaymentsRequest<T>),
+    curl_response: TrustpayPaymentsResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_for_payments(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            match req.resource_common_data.payment_method {
+                common_enums::PaymentMethod::BankRedirect
+                | common_enums::PaymentMethod::BankTransfer => Ok(format!(
+                    "{}{}",
+                    self.connector_base_url_bank_redirects_payments(req),
+                    "api/Payments/Payment"
+                )),
+                _ => Ok(format!(
+                    "{}{}",
+                    self.connector_base_url_payments(req),
+                    "api/v1/purchase"
+                )),
+            }
+        }
+    }
+);
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ContentTypeSelector<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Trustpay<T>
+{
+    fn get_dynamic_content_type(
+        &self,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> CustomResult<common_enums::DynamicContentType, errors::ConnectorError> {
+        match req.resource_common_data.payment_method {
+            Some(common_enums::PaymentMethod::BankRedirect)
+            | Some(common_enums::PaymentMethod::BankTransfer) => {
+                Ok(common_enums::DynamicContentType::Json)
+            }
+            _ => Ok(common_enums::DynamicContentType::FormUrlEncoded),
+        }
+    }
+}
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Trustpay,
+    curl_request: Dynamic(TrustpayRefundRequest),
+    curl_response: RefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_for_refunds(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+          match req.resource_common_data.payment_method {
+            Some(common_enums::PaymentMethod::BankRedirect) | Some(common_enums::PaymentMethod::BankTransfer) => Ok(format!(
+                "{}{}{}{}",
+                self.connector_base_url_bank_redirects_refunds(req),
+                "api/Payments/Payment/",
+                req.request.connector_transaction_id,
+                "/Refund"
+            )),
+            _ => Ok(format!("{}{}", self.connector_base_url_refunds(req), "api/v1/Refund")),
+        }
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Trustpay,
+    curl_response: RefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_for_refunds(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+             let id = req
+            .request
+            .connector_refund_id
+            .clone();
+        match req.resource_common_data.payment_method {
+            Some(common_enums::PaymentMethod::BankRedirect) | Some(common_enums::PaymentMethod::BankTransfer) => Ok(format!(
+                "{}{}/{}",
+                self.connector_base_url_bank_redirects_refunds(req), "api/Payments/Payment", id
+            )),
+            _ => Ok(format!(
+                "{}{}/{}",
+                self.connector_base_url_refunds(req),
+                "api/v1/instance",
+                id
+            )),
+        }
+        }
+    }
+);
+
 // Implementation for empty stubs - these will need to be properly implemented later
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Trustpay<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Trustpay<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Trustpay<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -484,26 +778,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Trustpay<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Trustpay<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -538,6 +818,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Trustpay<T>
 {
@@ -687,14 +977,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
@@ -710,15 +993,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Trustpay<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Trustpay<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Trustpay<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -756,6 +1043,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         VoidPC,
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Trustpay<T>
 {

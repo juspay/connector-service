@@ -1,6 +1,7 @@
-use std::{str::FromStr, sync::Arc};
-
+use crate::configs::ConfigPatch;
+use base64::{engine::general_purpose, Engine as _};
 use common_utils::{
+    config_patch::Patch,
     consts::{
         self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_SHADOW_MODE,
     },
@@ -12,7 +13,7 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
@@ -21,10 +22,11 @@ use domain_types::{
 use error_stack::{Report, ResultExt};
 use http::request::Request;
 use hyperswitch_masking;
+use serde_json::Value;
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tonic::metadata;
 
 use crate::{configs, error::ResultExtGrpc, request::RequestData};
-use std::collections::HashMap;
 
 // Helper function to map flow markers to flow names
 pub fn flow_marker_to_flow_name<F>() -> FlowName
@@ -69,6 +71,8 @@ where
         FlowName::Authenticate
     } else if type_id == std::any::TypeId::of::<PostAuthenticate>() {
         FlowName::PostAuthenticate
+    } else if type_id == std::any::TypeId::of::<SdkSessionToken>() {
+        FlowName::SdkSessionToken
     } else {
         tracing::warn!("Unknown flow marker type: {}", std::any::type_name::<F>());
         FlowName::Unknown
@@ -295,6 +299,97 @@ pub fn auth_from_metadata(
     }
 }
 
+pub fn merge_config_with_override(
+    config_override: String,
+    config: configs::Config,
+) -> CustomResult<Arc<configs::Config>, ApplicationErrorResponse> {
+    match config_override.trim().is_empty() {
+        true => Ok(Arc::new(config)),
+        false => {
+            let mut override_patch: ConfigPatch = serde_json::from_str(config_override.trim())
+                .map_err(|e| {
+                    Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "CANNOT_CONVERT_TO_JSON".into(),
+                        error_identifier: 400,
+                        error_message: format!("Cannot convert override config to JSON: {e}"),
+                        error_object: None,
+                    }))
+                })?;
+
+            if let Some(proxy_patch) = override_patch.proxy.as_mut() {
+                if let Some(cert_input) = proxy_patch
+                    .mitm_ca_cert
+                    .as_ref()
+                    .and_then(|value| value.as_ref())
+                {
+                    let cert_trimmed = cert_input.trim();
+
+                    let cert = if cert_trimmed.is_empty() {
+                        Err(Report::new(ApplicationErrorResponse::BadRequest(
+                            ApiError {
+                                sub_code: "INVALID_MITM_CA_CERT_BASE64".into(),
+                                error_identifier: 400,
+                                error_message: "proxy.mitm_ca_cert must be base64-encoded"
+                                    .to_string(),
+                                error_object: None,
+                            },
+                        )))
+                    } else {
+                        let sanitized: String = cert_trimmed.split_whitespace().collect();
+                        let decoded = general_purpose::STANDARD
+                            .decode(sanitized.as_bytes())
+                            .map_err(|e| {
+                                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_MITM_CA_CERT_BASE64".into(),
+                                    error_identifier: 400,
+                                    error_message: format!(
+                                        "Invalid base64 for proxy.mitm_ca_cert: {e}"
+                                    ),
+                                    error_object: None,
+                                }))
+                            })?;
+
+                        String::from_utf8(decoded).map_err(|e| {
+                            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_MITM_CA_CERT_UTF8".into(),
+                                error_identifier: 400,
+                                error_message: format!(
+                                    "Decoded proxy.mitm_ca_cert is not valid UTF-8: {e}"
+                                ),
+                                error_object: None,
+                            }))
+                        })
+                    }?;
+
+                    proxy_patch.mitm_ca_cert = Some(Some(cert));
+                }
+            }
+
+            let mut merged_config = config;
+            merged_config.apply(override_patch);
+
+            tracing::info!("Config override applied successfully");
+
+            Ok(Arc::new(merged_config))
+        }
+    }
+}
+
+pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
+    match (base_val, override_val) {
+        (Value::Object(base_map), Value::Object(override_map)) => {
+            let mut merged = base_map.clone();
+            for (key, override_value) in override_map {
+                let base_value = base_map.get(key).unwrap_or(&Value::Null);
+                merged.insert(key.clone(), merge_configs(override_value, base_value));
+            }
+            Value::Object(merged)
+        }
+        // override replaces base for primitive, null, or array
+        (_, override_val) => override_val.clone(),
+    }
+}
+
 fn parse_metadata<'a>(
     metadata: &'a metadata::MetadataMap,
     key: &str,
@@ -377,8 +472,6 @@ where
     T: serde::Serialize + std::fmt::Debug,
 {
     let current_span = tracing::Span::current();
-    // let duration = start_time.elapsed().as_millis();
-    //     current_span.record("response_time", duration);
 
     match &result {
         Ok(response) => {
@@ -387,7 +480,7 @@ where
             let res_ref = response.get_ref();
 
             // Try converting to JSON Value
-            if let Ok(serde_json::Value::Object(map)) = serde_json::to_value(res_ref) {
+            if let Ok(Value::Object(map)) = serde_json::to_value(res_ref) {
                 if let Some(status_val) = map.get("status") {
                     let status_num_opt = status_val.as_number();
                     let status_u32_opt: Option<u32> = status_num_opt
@@ -505,6 +598,27 @@ fn create_and_emit_grpc_event<R>(
     common_utils::emit_event_with_config(grpc_event, &config.events);
 }
 
+#[allow(clippy::result_large_err)]
+pub fn get_config_from_request<T>(
+    request: &tonic::Request<T>,
+) -> Result<Arc<configs::Config>, tonic::Status>
+where
+    T: serde::Serialize,
+{
+    match request.extensions().get::<Arc<configs::Config>>() {
+        Some(config) => {
+            tracing::info!("Using config from request extensions");
+            Ok(config.clone())
+        }
+        None => {
+            tracing::info!("Configuration not found in request extensions, using default config.");
+            Err(tonic::Status::internal(
+                "Configuration not found in request extensions",
+            ))
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! implement_connector_operation {
     (
@@ -526,6 +640,11 @@ macro_rules! implement_connector_operation {
             request: $crate::request::RequestData<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
+            let config = request
+                .extensions
+                .get::<std::sync::Arc<$crate::configs::Config>>()
+                .cloned()
+                .ok_or_else(|| tonic::Status::internal("Configuration not found in request extensions"))?;
             let service_name = request
                 .extensions
                 .get::<String>()
@@ -559,7 +678,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone(), &masked_metadata))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), config.connectors.clone(), &masked_metadata))
                 .into_grpc_status()?;
 
             // Create router data
@@ -576,26 +695,41 @@ macro_rules! implement_connector_operation {
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
 
-            // Execute connector processing
+            // Calculate flow name for dynamic flow-specific configurations
             let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+
+            // Get API tag for the current flow
+            // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
+            let api_tag = config
+                .api_tags
+                .get_tag(flow_name, None);
+
+            // Create test context if test mode is enabled
+            let test_context = config.test.create_test_context(&request_id).map_err(|e| {
+                tonic::Status::internal(format!("Test mode configuration error: {e}"))
+            })?;
+
+            // Execute connector processing
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
                 flow_name,
-                event_config: &self.config.events,
+                event_config: &config.events,
                 request_id: &request_id,
                 lineage_ids: &metadata_payload.lineage_ids,
                 reference_id: &metadata_payload.reference_id,
                 shadow_mode: metadata_payload.shadow_mode,
             };
             let response_result = external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
+                &config.proxy,
                 connector_integration,
                 router_data,
                 $all_keys_required,
                 event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             )
             .await
             .switch()

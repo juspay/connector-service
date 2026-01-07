@@ -21,7 +21,7 @@ use domain_types::{
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
 };
 
-use domain_types::errors::{self, ConnectorError};
+use domain_types::errors::ConnectorError;
 
 use common_utils::consts;
 
@@ -43,14 +43,7 @@ pub struct CryptopayPaymentsRequest {
     custom_id: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CryptopayRouterData<
             RouterDataV2<
@@ -117,7 +110,7 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     get_unimplemented_payment_method_error_message("CryptoPay"),
                 ))
             }
@@ -133,7 +126,7 @@ pub struct CryptopayAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for CryptopayAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         if let ConnectorAuthType::BodyKey { api_key, key1 } = auth_type {
             Ok(Self {
@@ -141,7 +134,7 @@ impl TryFrom<&ConnectorAuthType> for CryptopayAuthType {
                 api_secret: key1.to_owned(),
             })
         } else {
-            Err(errors::ConnectorError::FailedToObtainAuthType.into())
+            Err(ConnectorError::FailedToObtainAuthType.into())
         }
     }
 }
@@ -174,15 +167,8 @@ pub struct CryptopayPaymentsResponse {
     pub data: CryptopayPaymentResponseData,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;

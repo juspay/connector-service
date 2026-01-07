@@ -5,6 +5,7 @@ use common_enums::AttemptStatus;
 use common_utils::{
     crypto::{self, VerifySignature},
     errors::CustomResult,
+    events,
     ext_traits::ByteSliceExt,
     types::StringMajorUnit,
 };
@@ -12,8 +13,8 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void, VoidPC,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -23,9 +24,9 @@ use domain_types::{
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -37,7 +38,6 @@ use domain_types::{
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 pub mod transformers;
@@ -103,7 +103,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Noon<T>
+    connector_types::RepeatPaymentV2<T> for Noon<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -178,7 +178,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorError>> {
+    ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
         let details: noon::NoonWebhookEvent = request
             .body
             .parse_struct("NoonWebhookEvent")
@@ -205,12 +205,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
+    ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let algorithm = crypto::HmacSha512;
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(domain_types::errors::ConnectorError::WebhookSourceVerificationFailed)?,
+            None => Err(errors::ConnectorError::WebhookSourceVerificationFailed)?,
         };
 
         let signature =
@@ -232,11 +232,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
+        error_stack::Report<errors::ConnectorError>,
     > {
         Ok(domain_types::connector_types::WebhookDetailsResponse {
             resource_id: None,
-            status: common_enums::AttemptStatus::Unknown,
+            status: AttemptStatus::Unknown,
             connector_response_reference_id: None,
             error_code: None,
             error_message: None,
@@ -263,7 +263,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
             .attach_printable("Failed to parse webhook resource object from Noon webhook body")?;
 
-        Ok(Box::new(noon::NoonPaymentsResponse::from(resource)))
+        Ok(Box::new(NoonPaymentsResponse::from(resource)))
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -292,6 +292,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentPostAuthenticateV2<T> for Noon<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Noon<T>
 {
 }
 
@@ -417,7 +422,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: NoonErrorResponse = res
             .response
@@ -436,8 +441,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.result_code.to_string(),
-            message: response.class_description.clone(),
-            reason: Some(response.message.clone()),
+            message: response.message.clone(),
+            reason: Some(response.message),
             attempt_status,
             connector_transaction_id: None,
             network_advice_code: None,
@@ -529,7 +534,7 @@ macros::macro_connector_implementation!(
         Ok(format!(
             "{}payment/v1/order/getbyreference/{}",
             self.connector_base_url_payments(req),
-            req.resource_common_data.connector_request_reference_id
+            req.resource_common_data.get_reference_id()?
         ))
         }
     }
@@ -642,7 +647,7 @@ macros::macro_connector_implementation!(
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let request_ref_id = req.request.connector_refund_id.clone();
         // Validate the refund ID to prevent injection attacks
@@ -876,26 +881,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Noon<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Noon<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Noon<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
@@ -905,14 +907,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -953,6 +948,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Noon<T>
+{
+}
+
 // SourceVerification implementations for authentication flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -979,6 +984,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Noon<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Noon<T>
 {

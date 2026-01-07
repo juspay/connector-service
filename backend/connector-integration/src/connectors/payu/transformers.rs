@@ -54,7 +54,11 @@ where
     match value {
         Some(Value::Number(n)) => {
             if let Some(i) = n.as_i64() {
-                Ok(Some(PayuStatusValue::IntStatus(i as i32)))
+                i32::try_from(i)
+                    .ok()
+                    .map(PayuStatusValue::IntStatus)
+                    .map(Some)
+                    .ok_or_else(|| serde::de::Error::custom("status value out of range for i32"))
             } else {
                 Ok(None)
             }
@@ -115,7 +119,7 @@ pub struct PayuPaymentRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bankcode: Option<String>, // Bank code (TEZ, INTENT, TEZOMNI)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub vpa: Option<String>, // UPI VPA (for collect)
+    pub vpa: Option<Secret<String>>, // UPI VPA (for collect)
 
     // UPI specific fields
     pub txn_s2s_flow: String, // S2S flow type ("2" for UPI)
@@ -184,7 +188,7 @@ pub struct PayuPaymentResponse {
     #[serde(alias = "merchantName")]
     pub merchant_name: Option<String>, // Merchant display name
     #[serde(alias = "merchantVpa")]
-    pub merchant_vpa: Option<String>, // Merchant UPI VPA
+    pub merchant_vpa: Option<Secret<String>>, // Merchant UPI VPA
     pub amount: Option<String>, // Transaction amount
     #[serde(alias = "txnId")]
     pub txn_id: Option<String>, // Transaction ID
@@ -252,14 +256,7 @@ pub struct PayuErrorResponse {
 }
 
 // Request conversion with Framework Integration
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::PayuRouterData<
             RouterDataV2<
@@ -342,7 +339,7 @@ impl<
             // Payment method specific
             pg,
             bankcode,
-            vpa,
+            vpa: vpa.map(Secret::new),
 
             // UPI specific - corrected based on PayU docs
             txn_s2s_flow: s2s_flow,
@@ -420,8 +417,8 @@ pub struct PayuTransactionDetail {
     pub status: String, // Transaction status: "success", "failure", "pending", "cancel"
     pub firstname: Option<String>, // Customer first name
     pub lastname: Option<String>, // Customer last name
-    pub email: Option<String>, // Customer email
-    pub phone: Option<String>, // Customer phone
+    pub email: Option<Secret<String>>, // Customer email
+    pub phone: Option<Secret<String>>, // Customer phone
     pub productinfo: Option<String>, // Product description
     pub hash: Option<String>, // Response hash for verification
     pub field1: Option<String>, // UPI transaction ID
@@ -444,14 +441,7 @@ pub struct PayuTransactionDetail {
 }
 
 // PayU Sync Request conversion from RouterData
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::PayuRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -521,12 +511,11 @@ fn generate_payu_verify_hash(
     // Log hash string for debugging (remove in production)
     #[cfg(debug_assertions)]
     {
-        let masked_hash = format!(
-            "{}|***MASKED***",
-            hash_fields[..hash_fields.len() - 1].join("|")
-        );
-        tracing::debug!("PayU verify hash string (salt masked): {}", masked_hash);
-        tracing::debug!("PayU verify expected format: key|command|var1|salt");
+        if let Some(fields_without_last) = hash_fields.get(..hash_fields.len().saturating_sub(1)) {
+            let masked_hash = format!("{}|***MASKED***", fields_without_last.join("|"));
+            tracing::debug!("PayU verify hash string (salt masked): {}", masked_hash);
+            tracing::debug!("PayU verify expected format: key|command|var1|salt");
+        }
     }
 
     // Generate SHA-512 hash
@@ -539,12 +528,7 @@ fn generate_payu_verify_hash(
 // UDF field generation based on Haskell implementation
 // Implements the logic from getUdf1-getUdf5 functions and orderReference fields
 fn generate_udf_fields<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     payment_id: &str,
     merchant_id: &str,
@@ -597,12 +581,7 @@ fn generate_udf_fields<
 
 // UPI app name determination based on Haskell getUpiAppName implementation
 fn determine_upi_app_name<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<Option<String>, ConnectorError> {
@@ -638,12 +617,7 @@ fn determine_upi_app_name<
 // PayU flow determination based on Haskell getTxnS2SType implementation
 #[allow(clippy::type_complexity)]
 fn determine_upi_flow<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<(Option<String>, Option<String>, Option<String>, String), ConnectorError> {
@@ -693,12 +667,7 @@ fn determine_upi_flow<
 }
 
 pub fn is_upi_collect_flow<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     request: &PaymentsAuthorizeData<T>,
 ) -> bool {
@@ -745,12 +714,11 @@ fn generate_payu_hash(
     // Log hash string for debugging (remove in production)
     #[cfg(debug_assertions)]
     {
-        let masked_hash = format!(
-            "{}|***MASKED***",
-            hash_fields[..hash_fields.len() - 1].join("|")
-        );
-        tracing::debug!("PayU hash string (salt masked): {}", masked_hash);
-        tracing::debug!("PayU expected format from Haskell: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|udf6|udf7|udf8|udf9|udf10|salt");
+        if let Some(fields_without_last) = hash_fields.get(..hash_fields.len().saturating_sub(1)) {
+            let masked_hash = format!("{}|***MASKED***", fields_without_last.join("|"));
+            tracing::debug!("PayU hash string (salt masked): {}", masked_hash);
+            tracing::debug!("PayU expected format from Haskell: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|udf6|udf7|udf8|udf9|udf10|salt");
+        }
     }
 
     // Generate SHA-512 hash as PayU expects
@@ -761,39 +729,13 @@ fn generate_payu_hash(
 }
 
 // Response conversion with Framework Integration
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            PayuPaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PayuPaymentResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            PayuPaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PayuPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
 
         // Check if this is an error response first
@@ -911,22 +853,12 @@ impl<
 }
 
 // PayU Sync Response conversion to RouterData
-impl
-    TryFrom<
-        ResponseRouterData<
-            PayuSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<PayuSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            PayuSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PayuSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         let error_message = response
             .msg

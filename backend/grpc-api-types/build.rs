@@ -11,6 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a basic prost config and add your extern_path configuration
     let mut config = prost_build::Config::new();
     config.extern_path(".ucs.v2.CardNumberType", "::cards::CardNumber");
+    config.extern_path(".ucs.v2.NetworkTokenType", "::cards::NetworkToken");
     config.extern_path(
         ".ucs.v2.SecretString",
         "::hyperswitch_masking::Secret<String>",

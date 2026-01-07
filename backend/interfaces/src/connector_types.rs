@@ -12,10 +12,10 @@ use domain_types::{
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -41,7 +41,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + RefundV2
     + PaymentCapture
     + SetupMandateV2<T>
-    + RepeatPaymentV2
+    + RepeatPaymentV2<T>
     + AcceptDispute
     + RefundSyncV2
     + DisputeDefend
@@ -49,6 +49,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentPreAuthenticateV2<T>
     + PaymentAuthenticateV2<T>
     + PaymentPostAuthenticateV2<T>
+    + SdkSessionTokenV2
 {
 }
 
@@ -78,7 +79,7 @@ pub trait ValidationTrait {
         false
     }
 
-    fn should_do_access_token(&self) -> bool {
+    fn should_do_access_token(&self, _payment_method: PaymentMethod) -> bool {
         false
     }
 
@@ -86,7 +87,11 @@ pub trait ValidationTrait {
         false
     }
 
-    fn should_do_payment_method_token(&self) -> bool {
+    fn should_do_payment_method_token(
+        &self,
+        _payment_method: PaymentMethod,
+        _payment_method_type: Option<PaymentMethodType>,
+    ) -> bool {
         false
     }
 }
@@ -107,6 +112,16 @@ pub trait PaymentSessionToken:
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData,
+>
+{
+}
+
+pub trait SdkSessionTokenV2:
+    ConnectorIntegrationV2<
+    connector_flow::SdkSessionToken,
+    PaymentFlowData,
+    PaymentsSdkSessionTokenData,
+    PaymentsResponseData,
 >
 {
 }
@@ -191,11 +206,11 @@ pub trait SetupMandateV2<T: PaymentMethodDataTypes>:
 {
 }
 
-pub trait RepeatPaymentV2:
+pub trait RepeatPaymentV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::RepeatPayment,
     PaymentFlowData,
-    RepeatPaymentData,
+    RepeatPaymentData<T>,
     PaymentsResponseData,
 >
 {

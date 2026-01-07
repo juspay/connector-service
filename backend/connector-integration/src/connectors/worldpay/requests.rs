@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 pub struct WorldpayAuthorizeRequest<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
         + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
+        + Sync
+        + Send
         + 'static
-        + serde::Serialize,
+        + Serialize,
 > {
     pub transaction_reference: String,
     pub merchant: Merchant,
@@ -34,10 +34,10 @@ pub struct Merchant {
 pub struct Instruction<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
         + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
+        + Sync
+        + Send
         + 'static
-        + serde::Serialize,
+        + Serialize,
 > {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settlement: Option<AutoSettlement>,
@@ -97,10 +97,10 @@ pub enum StoredCardUsageType {
 pub enum PaymentInstrument<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
         + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
+        + Sync
+        + Send
         + 'static
-        + serde::Serialize,
+        + Serialize,
 > {
     Card(CardPayment<T>),
     CardToken(CardToken),
@@ -114,10 +114,10 @@ pub enum PaymentInstrument<
 pub struct CardPayment<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
         + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
+        + Sync
+        + Send
         + 'static
-        + serde::Serialize,
+        + Serialize,
 > {
     #[serde(flatten)]
     pub raw_card_details: RawCardDetails<T>,
@@ -133,10 +133,10 @@ pub struct CardPayment<
 pub struct RawCardDetails<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
         + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
+        + Sync
+        + Send
         + 'static
-        + serde::Serialize,
+        + Serialize,
 > {
     #[serde(rename = "type")]
     pub payment_type: PaymentType,
@@ -190,7 +190,7 @@ pub struct BillingAddress {
     pub address2: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub address3: Option<Secret<String>>,
-    pub city: String,
+    pub city: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<Secret<String>>,
     pub postal_code: Secret<String>,
@@ -355,16 +355,13 @@ pub struct SubMerchant {
     pub country_code: String,
     pub street: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tax_id: Option<String>,
+    pub tax_id: Option<Secret<String>>,
 }
 
 #[derive(Default, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct WorldpayPartialRequest {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub value: Option<PaymentValue>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reference: Option<String>,
+    pub value: PaymentValue,
+    pub reference: String,
 }
 
 // Type aliases to avoid duplicate template structs in macro generation

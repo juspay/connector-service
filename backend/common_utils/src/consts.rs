@@ -4,7 +4,7 @@
 // ID Generation and Length Constants
 // =============================================================================
 
-use serde::{de::IntoDeserializer, Deserialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
 
 pub const ID_LENGTH: usize = 20;
 
@@ -49,6 +49,17 @@ pub const X_CONNECTOR_SERVICE: &str = "connector-service";
 pub const X_FLOW_NAME: &str = "x-flow";
 /// Header key for shadow mode
 pub const X_SHADOW_MODE: &str = "x-shadow-mode";
+
+// =============================================================================
+// Test Environment Headers
+// =============================================================================
+
+/// Header key for session ID (test mode)
+pub const X_SESSION_ID: &str = "x-session-id";
+/// Header key for API URL (test mode)
+pub const X_API_URL: &str = "x-api-url";
+/// Header key for API tag (test mode)
+pub const X_API_TAG: &str = "x-api-tag";
 
 // =============================================================================
 // Authentication Headers (Internal)
@@ -137,7 +148,7 @@ pub const CONST_PRODUCTION: &str = "production";
 
 pub const ENV_PREFIX: &str = "CS";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, config_patch_derive::Patch)]
 #[serde(rename_all = "snake_case")]
 pub enum Env {
     Development,

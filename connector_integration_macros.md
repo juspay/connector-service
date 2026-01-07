@@ -442,7 +442,7 @@ impl ConnectorCommon for YourConnectorName {
     fn build_error_response(
         &self,
         res: Response, // hyperswitch_interfaces::types::Response
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         // Deserialize res.response (which is bytes::Bytes) into your
         // connector-specific error response struct (e.g., AdyenErrorResponse).

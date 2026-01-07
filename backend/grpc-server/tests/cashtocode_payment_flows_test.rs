@@ -4,18 +4,16 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
-use std::{
-    env,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        AuthenticationType, CaptureMethod, Currency, Identifier, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentStatus, RewardPaymentMethodType, RewardType,
+        AuthenticationType, CaptureMethod, ClassicReward, Currency, Identifier, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -33,18 +31,25 @@ const CONNECTOR_NAME: &str = "cashtocode";
 const AUTH_TYPE: &str = "currency-auth-key";
 const MERCHANT_ID: &str = "merchant_1234";
 
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const CASHTOCODE_AUTH_KEY_MAP_ENV: &str = "TEST_CASHTOCODE_AUTH_KEY_MAP";
-
 const TEST_EMAIL: &str = "customer@example.com";
 
 // Test data
 const TEST_AMOUNT: i64 = 1000;
 
 fn add_cashtocode_metadata<T>(request: &mut Request<T>) {
-    // Get auth key map from environment variables - throw error if not set
-    let auth_key_map = env::var(CASHTOCODE_AUTH_KEY_MAP_ENV)
-        .expect("TEST_CASHTOCODE_AUTH_KEY_MAP environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load cashtocode credentials");
+
+    let auth_key_map = match auth {
+        domain_types::router_data::ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
+            auth_key_map
+        }
+        _ => panic!("Expected CurrencyAuthKey auth type for cashtocode"),
+    };
+
+    // Serialize the auth_key_map to JSON for metadata
+    let auth_key_map_json =
+        serde_json::to_string(&auth_key_map).expect("Failed to serialize auth_key_map");
 
     request.metadata_mut().append(
         "x-connector",
@@ -55,7 +60,7 @@ fn add_cashtocode_metadata<T>(request: &mut Request<T>) {
         .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
     request.metadata_mut().append(
         "x-auth-key-map",
-        auth_key_map
+        auth_key_map_json
             .parse()
             .expect("Failed to parse x-auth-key-map"),
     );
@@ -78,10 +83,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Eur),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Reward(
-                RewardPaymentMethodType {
-                    reward_type: i32::from(RewardType::Classicreward),
-                },
+            payment_method: Some(payment_method::PaymentMethod::ClassicReward(
+                ClassicReward {},
             )),
         }),
         customer_id: Some("cust_1233".to_string()),
@@ -93,8 +96,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("cashtocode_test_{}", get_timestamp()))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         ..Default::default()
     }

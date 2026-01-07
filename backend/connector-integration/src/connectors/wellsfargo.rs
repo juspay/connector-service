@@ -3,7 +3,7 @@ pub mod transformers;
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt,
+    errors::CustomResult, ext_traits::ByteSliceExt, events,
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     request::Method,
     types::StringMajorUnit,
@@ -15,7 +15,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate,
         PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
-        CreateSessionToken,
+        CreateSessionToken, SdkSessionToken,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
@@ -27,7 +27,7 @@ use domain_types::{
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData,
-        SessionTokenResponseData,
+        SessionTokenResponseData, PaymentsSdkSessionTokenData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -41,7 +41,6 @@ use std::fmt::Debug;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
     self as wellsfargo, WellsfargoCaptureRequest, WellsfargoRefundRequest, WellsfargoVoidRequest, WellsfargoPaymentsRequest,
@@ -180,6 +179,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Wellsfargo<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Wellsfargo<T>
 {
 }
@@ -220,7 +224,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Wellsfargo<T>
+    connector_types::RepeatPaymentV2<T> for Wellsfargo<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -530,7 +534,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: Result<
             wellsfargo::WellsfargoErrorResponse,
@@ -608,7 +612,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 })
             }
             Ok(transformers::WellsfargoErrorResponse::AuthenticationError(response)) => {
-                event_builder.map(|i| i.set_error_response_body(&response));
+                event_builder.map(|i| i.set_connector_response(&response));
                 tracing::info!(connector_response=?response);
                 Ok(ErrorResponse {
                     status_code: res.status_code,
@@ -623,7 +627,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 })
             }
             Ok(transformers::WellsfargoErrorResponse::NotAvailableError(response)) => {
-                event_builder.map(|i| i.set_error_response_body(&response));
+                event_builder.map(|i| i.set_connector_response(&response));
                 tracing::info!(connector_response=?response);
                 let error_response = response
                     .errors
@@ -644,7 +648,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 })
             }
             Err(error_msg) => {
-                event_builder.map(|event| event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code})));
+                event_builder.map(|event| event.set_connector_response(&serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code})));
                 tracing::error!(deserialization_error =? error_msg);
                 domain_types::utils::handle_json_response_deserialization_failure(res, "wellsfargo")
             }
@@ -900,9 +904,9 @@ macros::macro_connector_implementation!(
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -917,9 +921,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -930,9 +934,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
@@ -942,9 +946,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
@@ -954,22 +958,22 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
     for Wellsfargo<T>
 {
 }
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -978,6 +982,23 @@ impl<
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Wellsfargo<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + Debug
+            + Sync
+            + Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Wellsfargo<T>
 {
 }
@@ -1047,7 +1068,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Wellsfargo<T>
 {
@@ -1059,6 +1080,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Wellsfargo<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Wellsfargo<T>
 {
 }

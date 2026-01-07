@@ -11,6 +11,7 @@ use domain_types::{
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{Secret, ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 use crate::types::ResponseRouterData;
 
 mod error_messages {
@@ -45,12 +46,11 @@ pub struct WellsfargoPaymentsRequest<T: PaymentMethodDataTypes> {
 pub struct ProcessingInformation {
     commerce_indicator: String,
     capture: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     action_list: Option<Vec<WellsfargoActionsList>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     action_token_types: Option<Vec<WellsfargoActionsTokenType>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     authorization_options: Option<WellsfargoAuthorizationOptions>,
+    capture_options: Option<WellsfargoCaptureOptions>,
+    payment_solution: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -98,7 +98,7 @@ pub struct BillTo {
     first_name: Option<Secret<String>>,
     last_name: Option<Secret<String>>,
     address1: Option<Secret<String>>,
-    locality: Option<String>,
+    locality: Option<Secret<String>>,
     administrative_area: Option<Secret<String>>,
     postal_code: Option<Secret<String>>,
     country: Option<common_enums::CountryAlpha2>,
@@ -267,6 +267,13 @@ pub struct WellsfargoPaymentInitiator {
 pub enum WellsfargoPaymentInitiatorTypes {
     Customer,
     Merchant,
+}
+
+/// Wells Fargo capture options
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoCaptureOptions {
+    partial_capture_indicator: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -482,9 +489,20 @@ fn convert_metadata_to_merchant_defined_info(metadata: serde_json::Value) -> Vec
     let mut vector = Vec::new();
     let mut iter = 1;
     for (key, value) in hashmap {
+        // Format the value with proper quoting
+        let value_str = match value {
+            serde_json::Value::String(s) => format!("\"{s}\""),
+            serde_json::Value::Bool(b) => format!("\"{b}\""),
+            serde_json::Value::Number(n) => n.to_string(),
+            serde_json::Value::Null => "null".to_string(),
+            serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
+                // For complex types, use the JSON string representation
+                format!("\"{}\"", value.to_string().replace('"', "'"))
+            }
+        };
         vector.push(MerchantDefinedInformation {
             key: iter,
-            value: format!("{key}={value}"),
+            value: format!("{key}={value_str}"),
         });
         iter += 1;
     }
@@ -582,7 +600,7 @@ fn build_consumer_authentication_information(
 // REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoPaymentsRequest
 
 // Specific implementation for Authorize flow
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<super::WellsfargoRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for WellsfargoPaymentsRequest<T>
 {
@@ -604,8 +622,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 // Use get_card_issuer for robust card type detection with fallback
                 let card_issuer = domain_types::utils::get_card_issuer(&(format!("{:?}", card_data.card_number.0)));
                 let card_type = match card_issuer {
-                    Ok(issuer) => Some(card_issuer_to_cybersource_code(issuer)),
-                    Err(_) => None,
+                    Ok(issuer) => card_issuer_to_cybersource_code(issuer),
+                    Err(_) => "001".to_string(), // Default to Visa
                 };
 
                 let card = Card {
@@ -613,7 +631,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     expiration_month: card_data.card_exp_month.clone(),
                     expiration_year: card_data.card_exp_year.clone(),
                     security_code: Some(card_data.card_cvc.clone()),
-                    card_type,
+                    card_type: Some(card_type),
                     _phantom: std::marker::PhantomData,
                 };
                 PaymentInformation::Cards(Box::new(CardPaymentInformation { card }))
@@ -684,7 +702,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 last_name: details.last_name.clone(),
                 address1: details.line1.clone(),
                 locality: details.city.clone(),
-                administrative_area: details.state.clone(),
+                administrative_area: details.to_state_code_as_optional().ok().flatten(),
                 postal_code: details.zip.clone(),
                 country: details.country,
                 email: email_secret.clone(),
@@ -726,11 +744,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             action_list: None,
             action_token_types: None,
             authorization_options: None,
+            capture_options: None,
+            payment_solution: None,
         };
 
         // Client reference - use payment_id from common data
         let client_reference_information = ClientReferenceInformation {
-            code: Some(common_data.payment_id.clone()),
+            code: Some(common_data.connector_request_reference_id.clone()),
         };
 
         // Merchant defined information from metadata
@@ -757,7 +777,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // CAPTURE REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoCaptureRequest
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<super::WellsfargoRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
     for WellsfargoCaptureRequest
 {
@@ -804,7 +824,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // VOID REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoVoidRequest
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<super::WellsfargoRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
     for WellsfargoVoidRequest
 {
@@ -869,7 +889,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // REFUND REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoRefundRequest
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<super::WellsfargoRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for WellsfargoRefundRequest
 {
@@ -915,7 +935,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // SETUPMANDATE REQUEST CONVERSION
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<super::WellsfargoRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>>
     for WellsfargoZeroMandateRequest<T>
 {
@@ -1001,6 +1021,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     stored_credential_used: None,
                 }),
             }),
+            capture_options: None,
+            payment_solution: None,
         };
 
         // Payment information from card
@@ -1356,6 +1378,7 @@ impl<T: PaymentMethodDataTypes>
                     domain_types::connector_types::MandateReference {
                         connector_mandate_id: Some(instrument.id.clone().expose()),
                         payment_method_id: None, // Could potentially use token_information.customer.id here if needed
+                        connector_mandate_request_reference_id: None,
                     }
                 });
 

@@ -310,6 +310,7 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             status: error.status.into(),
             error_message: error.error_message,
             error_code: error.error_code,
+            error_reason: None,
             status_code: error.status_code.unwrap_or(500),
             response_headers: std::collections::HashMap::new(),
             connector_metadata: std::collections::HashMap::new(),
@@ -317,8 +318,9 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             raw_connector_request: None,
             state: None,
             mandate_reference: None,
-            minor_amount_capturable: None,
+            minor_capturable_amount: None,
             minor_captured_amount: None,
+            minor_authorized_amount: None,
             captured_amount: None,
             connector_response: None,
         }
