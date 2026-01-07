@@ -1,8 +1,8 @@
+use cards::CardNumber;
 use common_utils::StringMinorUnit;
 use domain_types::router_response_types;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
-use cards::CardNumber;
 
 use super::{requests::RedsysThreeDsInfo, transformers::RedsysTransaction};
 
