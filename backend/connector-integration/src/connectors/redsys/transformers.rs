@@ -699,64 +699,55 @@ where
                 })?,
         )?;
 
-        if !router_data.request.enrolled_for_3ds {
-            Err(errors::ConnectorError::NotSupported {
-                message: "Non-3DS payments".to_string(),
-                connector: "redsys",
-            })?
+        let ds_merchant_emv3ds = Some(requests::RedsysEmvThreeDsRequestData::new(
+            requests::RedsysThreeDsInfo::CardData,
+        ));
+        let ds_merchant_transactiontype = if is_auto_capture {
+            requests::RedsysTransactionType::Payment
         } else {
-            let ds_merchant_emv3ds = Some(requests::RedsysEmvThreeDsRequestData::new(
-                requests::RedsysThreeDsInfo::CardData,
-            ));
-            let ds_merchant_transactiontype = if is_auto_capture {
-                requests::RedsysTransactionType::Payment
-            } else {
-                requests::RedsysTransactionType::Preauthorization
-            };
+            requests::RedsysTransactionType::Preauthorization
+        };
 
-            let connector_request_reference_id = router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone();
+        let connector_request_reference_id = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
 
-            let ds_merchant_order = if connector_request_reference_id.len() <= 12 {
-                Ok(connector_request_reference_id)
-            } else {
-                Err(errors::ConnectorError::MaxFieldLengthViolated {
-                    connector: "Redsys".to_string(),
-                    field_name: "ds_merchant_order".to_string(),
-                    max_length: 12,
-                    received_length: connector_request_reference_id.len(),
-                })
-            }?;
+        let ds_merchant_order = if connector_request_reference_id.len() <= 12 {
+            Ok(connector_request_reference_id)
+        } else {
+            Err(errors::ConnectorError::MaxFieldLengthViolated {
+                connector: "Redsys".to_string(),
+                field_name: "ds_merchant_order".to_string(),
+                max_length: 12,
+                received_length: connector_request_reference_id.len(),
+            })
+        }?;
 
-            let payment_request = requests::RedsysPaymentRequest {
-                ds_merchant_emv3ds,
-                ds_merchant_transactiontype,
-                ds_merchant_currency: router_data
-                    .request
-                    .currency
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "currency",
-                    })?
-                    .iso_4217()
-                    .to_owned(),
-                ds_merchant_pan: cards::CardNumber::try_from(
-                    card_data.card_number.peek().to_string(),
-                )
+        let payment_request = requests::RedsysPaymentRequest {
+            ds_merchant_emv3ds,
+            ds_merchant_transactiontype,
+            ds_merchant_currency: router_data
+                .request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?
+                .iso_4217()
+                .to_owned(),
+            ds_merchant_pan: cards::CardNumber::try_from(card_data.card_number.peek().to_string())
                 .change_context(errors::ConnectorError::RequestEncodingFailed)
                 .attach_printable("Invalid card number")?,
-                ds_merchant_merchantcode: auth.merchant_id.clone(),
-                ds_merchant_terminal: auth.terminal_id.clone(),
-                ds_merchant_order,
-                ds_merchant_amount: amount,
-                ds_merchant_expirydate: card_data.expiry_date,
-                ds_merchant_cvv2: card_data.cvv2,
-            };
+            ds_merchant_merchantcode: auth.merchant_id.clone(),
+            ds_merchant_terminal: auth.terminal_id.clone(),
+            ds_merchant_order,
+            ds_merchant_amount: amount,
+            ds_merchant_expirydate: card_data.expiry_date,
+            ds_merchant_cvv2: card_data.cvv2,
+        };
 
-            let transaction = Self::try_from((&payment_request, &auth))?;
-            Ok(transaction)
-        }
+        let transaction = Self::try_from((&payment_request, &auth))?;
+        Ok(transaction)
     }
 }
 
