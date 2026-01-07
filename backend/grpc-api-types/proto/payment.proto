@@ -535,8 +535,8 @@ enum Connector {
   BARCLAYCARD = 102;
   WORLDPAYXML = 103;
   REVOLUT = 104;
-  GIGADAT = 105;
-  LOONIO = 106;
+  LOONIO = 105;
+  GIGADAT = 106;
 }
 
 // Payment method types.

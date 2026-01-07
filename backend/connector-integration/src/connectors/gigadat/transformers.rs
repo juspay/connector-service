@@ -23,7 +23,6 @@ use serde::{Deserialize, Serialize};
 use crate::types::ResponseRouterData;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
-const CONNECTOR_BASE_URL: &str = "https://interac.express-connect.com/";
 
 // ===== CONNECTOR METADATA =====
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -342,7 +341,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GigadatPaymentsRespon
         // Build redirect URL
         let redirect_url = format!(
             "{}webflow?transaction={}&token={}",
-            CONNECTOR_BASE_URL,
+            router_data.resource_common_data.connectors.gigadat.base_url,
             router_data
                 .resource_common_data
                 .connector_request_reference_id,
