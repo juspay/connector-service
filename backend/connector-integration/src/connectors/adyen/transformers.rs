@@ -26,7 +26,9 @@ use domain_types::{
         BankRedirectData, Card, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber, WalletData,
     },
-    router_data::{ConnectorAuthType, ConnectorResponseData, ErrorResponse},
+    router_data::{
+        ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
+    },
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
     router_response_types::RedirectForm,
@@ -2713,14 +2715,7 @@ pub fn get_redirection_error_response(
         let network_advice_code = response
             .additional_data
             .as_ref()
-            .and_then(|data| data.merchant_advice_code.as_ref())
-            .and_then(|code| {
-                let mut parts = code.splitn(2, ':');
-                let first_part = parts.next()?.trim();
-                // Ensure there is a second part (meaning ':' was present).
-                parts.next()?;
-                Some(first_part.to_string())
-            });
+            .and_then(|data| data.extract_network_advice_code());
 
         Some(ErrorResponse {
             code: status.to_string(),
@@ -2814,7 +2809,7 @@ pub fn get_qr_code_response(
         status,
         error,
         payments_response_data,
-        txn_amount: None,
+        txn_amount: response.amount.map(|amount| amount.value),
         connector_response: None,
     })
 }
@@ -2822,7 +2817,7 @@ pub fn get_qr_code_response(
 pub fn get_webhook_response(
     response: AdyenWebhookResponse,
     is_manual_capture: bool,
-    _is_multiple_capture_psync_flow: bool,
+    is_multiple_capture_psync_flow: bool,
     status_code: u16,
 ) -> CustomResult<AdyenPaymentsResponseData, errors::ConnectorError> {
     let status = AttemptStatus::foreign_try_from((is_manual_capture, response.status.clone()))?;
@@ -2863,37 +2858,109 @@ pub fn get_webhook_response(
     };
 
     let txn_amount = response.amount.as_ref().map(|amount| amount.value);
+    let connector_response = build_connector_response(&response);
 
-    let mandate_reference = response
-        .recurring_detail_reference
-        .as_ref()
-        .map(|mandate_id| MandateReference {
-            connector_mandate_id: Some(mandate_id.clone().expose()),
-            payment_method_id: response.recurring_shopper_reference.clone(),
-            connector_mandate_request_reference_id: None,
-        });
-    let payments_response_data = PaymentsResponseData::TransactionResponse {
-        resource_id: ResponseId::ConnectorTransactionId(
-            response
-                .payment_reference
-                .unwrap_or(response.transaction_id),
-        ),
-        redirection_data: None,
-        mandate_reference: mandate_reference.map(Box::new),
-        connector_metadata: None,
-        network_txn_id: None,
-        connector_response_reference_id: Some(response.merchant_reference_id),
-        incremental_authorization_allowed: None,
-        status_code,
+    if is_multiple_capture_psync_flow {
+        let capture_sync_response_list =
+            utils::construct_captures_response_hashmap(vec![response.clone()])?;
+        Ok(AdyenPaymentsResponseData {
+            status,
+            error,
+            payments_response_data: PaymentsResponseData::MultipleCaptureResponse {
+                capture_sync_response_list,
+            },
+            txn_amount,
+            connector_response,
+        })
+    } else {
+        let mandate_reference = response
+            .recurring_detail_reference
+            .as_ref()
+            .map(|mandate_id| MandateReference {
+                connector_mandate_id: Some(mandate_id.clone().expose()),
+                payment_method_id: response.recurring_shopper_reference.clone(),
+                connector_mandate_request_reference_id: None,
+            });
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(
+                response
+                    .payment_reference
+                    .unwrap_or(response.transaction_id),
+            ),
+            redirection_data: None,
+            mandate_reference: mandate_reference.map(Box::new),
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: Some(response.merchant_reference_id),
+            incremental_authorization_allowed: None,
+            status_code,
+        };
+
+        Ok(AdyenPaymentsResponseData {
+            status,
+            error,
+            payments_response_data,
+            txn_amount,
+            connector_response,
+        })
+    }
+}
+
+fn build_connector_response(
+    adyen_webhook_response: &AdyenWebhookResponse,
+) -> Option<ConnectorResponseData> {
+    let extended_authentication_applied = match adyen_webhook_response.status {
+        AdyenWebhookStatus::AdjustedAuthorization => Some(true),
+        AdyenWebhookStatus::AdjustAuthorizationFailed => Some(false),
+        _ => None,
     };
 
-    Ok(AdyenPaymentsResponseData {
-        status,
-        error,
-        payments_response_data,
-        txn_amount,
-        connector_response: None,
-    })
+    let extended_authorization_last_applied_at = extended_authentication_applied
+        .filter(|val| *val)
+        .and(adyen_webhook_response.event_date);
+
+    let extend_authorization_response = ExtendedAuthorizationResponseData {
+        extended_authentication_applied,
+        capture_before: None,
+        extended_authorization_last_applied_at,
+    };
+
+    Some(ConnectorResponseData::new(
+        None,
+        None,
+        Some(extend_authorization_response),
+    ))
+}
+
+// Triggered in PSync handler of webhook response (parity with Hyperswitch)
+impl utils::MultipleCaptureSyncResponse for AdyenWebhookResponse {
+    fn get_connector_capture_id(&self) -> String {
+        self.transaction_id.clone()
+    }
+
+    fn get_capture_attempt_status(&self) -> AttemptStatus {
+        match self.status {
+            AdyenWebhookStatus::Captured => AttemptStatus::Charged,
+            _ => AttemptStatus::CaptureFailed,
+        }
+    }
+
+    fn is_capture_response(&self) -> bool {
+        matches!(
+            self.event_code,
+            WebhookEventCode::Capture | WebhookEventCode::CaptureFailed
+        )
+    }
+
+    fn get_connector_reference_id(&self) -> Option<String> {
+        Some(self.merchant_reference_id.clone())
+    }
+
+    fn get_amount_captured(
+        &self,
+    ) -> Result<Option<MinorUnit>, error_stack::Report<common_utils::errors::ParsingError>> {
+        Ok(self.amount.clone().map(|amount| amount.value))
+    }
 }
 
 pub fn get_redirection_response(
