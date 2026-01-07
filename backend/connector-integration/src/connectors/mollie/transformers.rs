@@ -661,13 +661,15 @@ impl<T: PaymentMethodDataTypes>
             card_data.card_exp_year.peek()
         );
 
-        // Extract browser info and get language - match Hyperswitch approach
-        let browser_info = item.request.browser_info.as_ref().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "browser_info",
-            },
-        )?;
-        let locale = browser_info.get_language()?;
+        // Extract browser info and get language - use default if not available
+        // Note: When called via UCS gRPC from Hyperswitch, browser_info may not be passed
+        // in the PaymentServiceCreatePaymentMethodTokenRequest proto (it doesn't have that field)
+        let locale = item
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|bi| bi.language.clone())
+            .unwrap_or_else(|| "en-US".to_string());
 
         Ok(Self {
             card_holder: card_data
