@@ -33,6 +33,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{Connectors, HasConnectors},
+    utils,
 };
 
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
@@ -56,8 +57,9 @@ use transformers::{
     CybersourcePaymentsResponse as CybersourceVoidResponse,
     CybersourcePaymentsResponse as CybersourceSetupMandateResponse,
     CybersourcePaymentsResponse as CybersourceRepeatPaymentResponse, CybersourceRefundRequest,
-    CybersourceRefundResponse, CybersourceRepeatPaymentRequest, CybersourceRsyncResponse,
-    CybersourceTransactionResponse, CybersourceVoidRequest, CybersourceZeroMandateRequest,
+    CybersourceRefundResponse, CybersourceRepeatPaymentRequest, CybersourceRevokeMandateResponse,
+    CybersourceRsyncResponse, CybersourceTransactionResponse, CybersourceVoidRequest,
+    CybersourceZeroMandateRequest,
 };
 
 use super::macros;
@@ -251,6 +253,11 @@ macros::create_all_prerequisites!(
             request_body: CybersourceRepeatPaymentRequest,
             response_body: CybersourceRepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: MandateRevoke,
+            response_body: CybersourceRevokeMandateResponse,
+            router_data: RouterDataV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>,
         )
     ],
     amount_converters: [
@@ -531,10 +538,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     event.set_connector_response(&serde_json::json!({"error": "Error response parsing failed", "status_code": res.status_code}))
                 };
                 tracing::error!(deserialization_error =? error_msg);
-                domain_types::utils::handle_json_response_deserialization_failure(
-                    res,
-                    "cybersource",
-                )
+                utils::handle_json_response_deserialization_failure(res, "cybersource")
             }
         }
     }
@@ -896,6 +900,39 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Cybersource,
+    curl_response: CybersourceRevokeMandateResponse,
+    flow_name: MandateRevoke,
+    resource_common_data: PaymentFlowData,
+    flow_request: MandateRevokeRequestData,
+    flow_response: MandateRevokeResponseData,
+    http_method: Delete,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_mandate_id =  req.request.connector_mandate_id.clone()
+                .ok_or_else(utils::missing_field_err("connector_mandate_id"))?;
+            Ok(format!(
+                "{}tms/v1/paymentinstruments/{}",
+                self.connector_base_url_payments(req),
+                connector_mandate_id.expose(),
+            ))
+        }
+    }
+);
+
 // Stub implementations for unsupported flows
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -970,15 +1007,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
-    > for Cybersource<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
     > for Cybersource<T>
 {
 }
