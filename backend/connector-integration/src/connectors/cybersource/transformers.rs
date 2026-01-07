@@ -3713,7 +3713,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 .status
                 .clone()
                 .unwrap_or(CybersourcePaymentStatus::StatusNotReceived),
-            true,
+            item.router_data.request.is_auto_capture()?,
         );
         let response =
             get_payment_response((&item.response, status, item.http_code)).map_err(|err| *err);
