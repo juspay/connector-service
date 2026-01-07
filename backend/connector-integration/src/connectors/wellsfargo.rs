@@ -3,31 +3,31 @@ pub mod transformers;
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, events,
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::CustomResult,
+    events,
+    ext_traits::ByteSliceExt,
     request::Method,
     types::StringMajorUnit,
-    };
-use time::OffsetDateTime;
-use url::Url;
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate,
-        PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
-        CreateSessionToken, SdkSessionToken,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData,
-        SessionTokenResponseData, PaymentsSdkSessionTokenData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -36,23 +36,24 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use serde::Serialize;
-use std::fmt::Debug;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
+use serde::Serialize;
+use std::fmt::Debug;
+use time::OffsetDateTime;
 use transformers::{
-    self as wellsfargo, WellsfargoCaptureRequest, WellsfargoRefundRequest, WellsfargoVoidRequest, WellsfargoPaymentsRequest,
-    WellsfargoPaymentsResponse,
-    WellsfargoPaymentsResponse as WellsfargoCaptureResponse,
+    self as wellsfargo, WellsfargoCaptureRequest, WellsfargoPaymentsRequest,
+    WellsfargoPaymentsResponse, WellsfargoPaymentsResponse as WellsfargoCaptureResponse,
     WellsfargoPaymentsResponse as WellsfargoVoidResponse,
     WellsfargoPaymentsResponse as WellsfargoPSyncResponse,
     WellsfargoPaymentsResponse as WellsfargoRefundResponse,
-    WellsfargoRSyncResponse as WellsfargoRefundSyncResponse,
     WellsfargoPaymentsResponse as WellsfargoSetupMandateResponse,
-    WellsfargoZeroMandateRequest,
+    WellsfargoRSyncResponse as WellsfargoRefundSyncResponse, WellsfargoRefundRequest,
+    WellsfargoVoidRequest, WellsfargoZeroMandateRequest,
 };
+use url::Url;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
@@ -93,88 +94,144 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Empty SourceVerification implementations for unimplemented flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
-    for Wellsfargo<T>
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
-    for Wellsfargo<T>
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
-    for Wellsfargo<T>
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Wellsfargo<T>
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
 {
 }
 
 // Empty ConnectorIntegrationV2 implementations for unimplemented flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
-    for Wellsfargo<T>
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
-    for Wellsfargo<T>
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
-    for Wellsfargo<T>
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Wellsfargo<T>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
 {
 }
 
 // Additional empty implementations for token, customer, and access token flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
-    for Wellsfargo<T>
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
-    for Wellsfargo<T>
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
-    for Wellsfargo<T>
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
-    for Wellsfargo<T>
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
-    for Wellsfargo<T>
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Wellsfargo<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
-    for Wellsfargo<T>
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Wellsfargo<T>
 {
 }
 
@@ -902,14 +959,7 @@ macros::macro_connector_implementation!(
 
 // Stub implementations for unsupported flows
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -919,64 +969,35 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Wellsfargo<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Wellsfargo<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Wellsfargo<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
-    for Wellsfargo<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
@@ -986,14 +1007,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         SdkSessionToken,
         PaymentFlowData,
