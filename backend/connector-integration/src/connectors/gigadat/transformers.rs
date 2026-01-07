@@ -1,5 +1,9 @@
 use common_enums::{AttemptStatus, Currency, RefundStatus};
-use common_utils::{id_type, request::Method};
+use common_utils::{
+    id_type,
+    request::Method,
+    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
+};
 use domain_types::{
     connector_flow::{Authorize, PSync, Refund},
     connector_types::{
@@ -139,7 +143,7 @@ pub struct GigadatPaymentsRequest {
     pub site: String,
     pub user_ip: Secret<String>,
     pub currency: Currency,
-    pub amount: f64,
+    pub amount: FloatMajorUnit,
     pub transaction_id: String,
     #[serde(rename = "type")]
     pub transaction_type: GigadatTransactionType,
@@ -180,7 +184,7 @@ pub struct GigadatSyncData {
 // ===== REFUND REQUEST =====
 #[derive(Default, Debug, Serialize)]
 pub struct GigadatRefundRequest {
-    pub amount: String,
+    pub amount: FloatMajorUnit,
     pub transaction_id: String,
     pub campaign_id: Secret<String>,
 }
@@ -255,12 +259,11 @@ impl<T: PaymentMethodDataTypes>
                     },
                 )?;
 
-                let email = billing
-                    .email
-                    .clone()
-                    .ok_or(ConnectorError::MissingRequiredField {
-                        field_name: "billing_address.email",
-                    })?;
+                let email = billing.email.clone().or(item.request.email.clone()).ok_or(
+                    ConnectorError::MissingRequiredField {
+                        field_name: "billing_address.email or email",
+                    },
+                )?;
 
                 let mobile = billing.get_phone_with_country_code().map_err(|_| {
                     ConnectorError::MissingRequiredField {
@@ -293,13 +296,9 @@ impl<T: PaymentMethodDataTypes>
                 // Determine sandbox mode
                 let sandbox = item.resource_common_data.test_mode.unwrap_or(false);
 
-                // Convert amount to StringMajorUnit (base unit string) and then to f64
-                let amount = domain_types::utils::to_currency_base_unit(
-                    item.request.minor_amount,
-                    item.request.currency,
-                )?
-                .parse::<f64>()
-                .change_context(ConnectorError::RequestEncodingFailed)?;
+                let amount = FloatMajorUnitForConnector
+                    .convert(item.request.minor_amount, item.request.currency)
+                    .change_context(ConnectorError::RequestEncodingFailed)?;
 
                 Ok(Self {
                     user_id: customer_id,
@@ -433,11 +432,9 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
     ) -> Result<Self, Self::Error> {
         let auth = GigadatAuthType::try_from(&item.connector_auth_type)?;
 
-        // Convert amount to StringMajorUnit (base unit string)
-        let amount = domain_types::utils::to_currency_base_unit(
-            item.request.minor_refund_amount,
-            item.request.currency,
-        )?;
+        let amount = FloatMajorUnitForConnector
+            .convert(item.request.minor_refund_amount, item.request.currency)
+            .change_context(ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
             amount,

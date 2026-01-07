@@ -2648,18 +2648,9 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             // Borrow value.address
             Some(address_value) => {
                 // address_value is &grpc_api_types::payments::PaymentAddress
-                let mut address_value_clone = (*address_value).clone();
-
-                // Inject email from top-level request if missing in billing address
-                if let Some(email) = &value.email {
-                    if let Some(billing) = &mut address_value_clone.billing_address {
-                        if billing.email.is_none() {
-                            billing.email = Some(email.clone());
-                        }
-                    }
-                }
-
-                PaymentAddress::foreign_try_from(address_value_clone)?
+                PaymentAddress::foreign_try_from(
+                    (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
+                )?
             }
             None => {
                 return Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -2676,11 +2667,8 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let mut merged_metadata = value.merchant_account_metadata.clone();
-        merged_metadata.extend(value.connector_metadata.clone());
-
         let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
-            convert_merchant_metadata_to_json(&merged_metadata),
+            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
         );
 
         let order_details = (!value.order_details.is_empty())
