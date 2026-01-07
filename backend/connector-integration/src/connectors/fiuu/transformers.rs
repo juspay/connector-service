@@ -12,12 +12,12 @@ use common_utils::{
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, Void},
     connector_types::{
         EventType, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, RepeatPaymentData,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -698,6 +698,97 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        &FiuuRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for FiuuPaymentRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: &FiuuRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let merchant_id = auth.merchant_id.peek().to_string();
+        let txn_currency = item.router_data.request.currency;
+        let converter = StringMajorUnitForConnector;
+        let amount = converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let txn_amount = amount;
+        let reference_no = item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+        let verify_key = auth.verify_key.peek().to_string();
+        let signature = calculate_signature(format!(
+            "{}{merchant_id}{reference_no}{verify_key}",
+            txn_amount.get_amount_as_string()
+        ))?;
+        let txn_type = match item.router_data.request.is_auto_capture()? {
+            true => TxnType::Sals,
+            false => TxnType::Auts,
+        };
+        let return_url = item.router_data.request.router_return_url.clone();
+        let notification_url = Some(
+            Url::parse(&item.router_data.request.get_webhook_url()?)
+                .change_context(ConnectorError::RequestEncodingFailed)?,
+        );
+        let payment_method_data = match &item
+            .router_data
+            .request
+            .mandate_reference
+        {
+            MandateReferenceId::NetworkMandateId(network_transaction_id) => {
+                match item.router_data.request.payment_method_data {
+                    PaymentMethodData::CardDetailsForNetworkTransactionId(ref raw_card_details) => {
+                        FiuuPaymentMethodData::try_from((raw_card_details, network_transaction_id.clone()))
+                    }
+                    _ => Err(ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("fiuu"),
+                    )
+                    .into()),
+                }
+            }
+            _ => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("fiuu"),
+            )
+            .into()),
+        }?;
+
+        Ok(Self {
+            merchant_id: auth.merchant_id,
+            reference_no,
+            txn_type,
+            txn_currency,
+            txn_amount,
+            return_url,
+            payment_method_data,
+            signature,
+            notification_url,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &Card<T>,
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -929,11 +1020,26 @@ pub struct ExtraParameters {
     pub token: Option<Secret<String>>,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
-    > TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+trait GetRequestIsAutoCapture {
+    fn is_auto_capture(&self) -> Result<bool, error_stack::Report<ConnectorError>>;
+}
+
+impl<T: PaymentMethodDataTypes> GetRequestIsAutoCapture for PaymentsAuthorizeData<T> {
+    fn is_auto_capture(&self) -> Result<bool, error_stack::Report<ConnectorError>> {
+        self.is_auto_capture()
+    }
+}
+
+impl<T: PaymentMethodDataTypes> GetRequestIsAutoCapture for RepeatPaymentData<T> {
+    fn is_auto_capture(&self) -> Result<bool, error_stack::Report<ConnectorError>> {
+        self.is_auto_capture()
+    }
+}
+
+impl<F, R> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, R, PaymentsResponseData>
+where
+    R: GetRequestIsAutoCapture,
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<FiuuPaymentsResponse, Self>) -> Result<Self, Self::Error> {
@@ -2259,7 +2365,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         }
     }
 }
-
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> GetFormData 
+    for FiuuPaymentRequest<T> {
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    }
+}
 impl GetFormData for FiuuPaymentSyncRequest {
     fn get_form_data(&self) -> reqwest::multipart::Form {
         build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
@@ -2305,6 +2416,51 @@ pub fn build_form_from_struct<T: Serialize>(
         form = form.text(key.clone(), value.clone());
     }
     Ok(form)
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiuuRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for FiuuPaymentRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: FiuuRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let optional_is_mit_flow = item.router_data.request.off_session;
+        let optional_is_nti_flow = item
+            .router_data
+            .request
+            .mandate_id
+            .as_ref()
+            .map(|mandate_id| mandate_id.is_network_transaction_id_flow());
+        match (optional_is_mit_flow, optional_is_nti_flow) {
+            (Some(true), Some(false)) => {
+                let recurring_request = FiuuMandateRequest::try_from(&item)?;
+                Ok(Self::FiuuMandateRequest(recurring_request))
+            }
+            _ => {
+                let payment_request: FiuuPaymentRequest<T> = FiuuPaymentRequest::try_from(&item)?;
+                Ok(Self::FiuuPaymentRequest(Box::new(payment_request)))
+            }
+        }
+    }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
