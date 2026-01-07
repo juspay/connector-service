@@ -3981,9 +3981,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         let pmt = router_data.request.payment_method_type;
         let is_manual_capture = false;
         // Unwrap the response wrapper to get AdyenPaymentResponse
-        let adyen_response = match response {
-            SetupMandateResponse(resp) => resp,
-        };
+        let SetupMandateResponse(adyen_response) = response;
 
         // Process response using existing helper functions (same as Authorize/RepeatPayment)
         let adyen_payments_response_data = match adyen_response {
@@ -4360,7 +4358,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .get_optional_billing_phone_number();
 
-        Ok(AdyenRepeatPaymentRequest(AdyenPaymentRequest {
+        Ok(Self(AdyenPaymentRequest {
             amount,
             merchant_account: auth_type.merchant_account,
             payment_method,
