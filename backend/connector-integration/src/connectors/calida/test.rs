@@ -30,11 +30,11 @@ mod tests {
         };
         use serde_json::json;
 
-        use crate::{connectors::Bluecode, types::ConnectorData};
+        use crate::{connectors::Calida, types::ConnectorData};
 
         #[test]
         fn test_build_request_valid() {
-            let api_key = "test_bluecode_api_key".to_string();
+            let api_key = "test_calida_api_key".to_string();
             let req: RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -89,8 +89,8 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     connectors: Connectors {
-                        bluecode: ConnectorParams {
-                            base_url: "https://api.bluecode.com/".to_string(),
+                        calida: ConnectorParams {
+                            base_url: "https://api.calida.com/".to_string(),
                             dispute_base_url: None,
                             ..Default::default()
                         },
@@ -133,7 +133,7 @@ mod tests {
                     browser_info: None,
                     order_category: None,
                     session_token: None,
-                    enrolled_for_3ds: false,
+                    enrolled_for_3ds: Some(false),
                     related_transaction_id: None,
                     payment_experience: None,
                     payment_method_type: None,
@@ -143,7 +143,7 @@ mod tests {
                         ))
                         .unwrap(),
                     ),
-                    request_incremental_authorization: false,
+                    request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
                     merchant_order_reference_id: None,
@@ -163,10 +163,10 @@ mod tests {
                 response: Err(ErrorResponse::default()),
             };
 
-            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Bluecode::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Calida::new());
             let connector_data = ConnectorData {
                 connector,
-                connector_name: ConnectorEnum::Bluecode,
+                connector_name: ConnectorEnum::Calida,
             };
 
             let connector_integration: BoxedConnectorIntegrationV2<
@@ -202,7 +202,7 @@ mod tests {
 
         #[test]
         fn test_build_request_missing_fields() {
-            let api_key = "test_bluecode_api_key_missing".to_string();
+            let api_key = "test_calida_api_key_missing".to_string();
             let req: RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -240,8 +240,8 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     connectors: Connectors {
-                        bluecode: ConnectorParams {
-                            base_url: "https://api.bluecode.com/".to_string(),
+                        calida: ConnectorParams {
+                            base_url: "https://api.calida.com/".to_string(),
                             dispute_base_url: None,
                             ..Default::default()
                         },
@@ -281,12 +281,12 @@ mod tests {
                     integrity_object: None,
                     order_category: None,
                     session_token: None,
-                    enrolled_for_3ds: false,
+                    enrolled_for_3ds: Some(false),
                     related_transaction_id: None,
                     payment_experience: None,
                     payment_method_type: None,
                     customer_id: None,
-                    request_incremental_authorization: false,
+                    request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(0),
                     merchant_order_reference_id: None,
@@ -306,10 +306,10 @@ mod tests {
                 response: Err(ErrorResponse::default()),
             };
 
-            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Bluecode::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Calida::new());
             let connector_data = ConnectorData {
                 connector,
-                connector_name: ConnectorEnum::Bluecode,
+                connector_name: ConnectorEnum::Calida,
             };
 
             let connector_integration: BoxedConnectorIntegrationV2<

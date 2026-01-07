@@ -123,7 +123,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Paypal<T>
+    connector_types::RepeatPaymentV2<T> for Paypal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -220,7 +220,7 @@ macros::create_all_prerequisites!(
             flow: RepeatPayment,
             request_body: PaypalRepeatPaymentRequest<T>,
             response_body: PaypalRepeatPaymentResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -515,9 +515,10 @@ macros::macro_connector_implementation!(
             let connector_metadata = req.resource_common_data.connector_meta_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
+            let reference_id = req.resource_common_data.get_reference_id()?;
             self.build_headers(
                 &access_token.access_token,
-                &req.resource_common_data.connector_request_reference_id,
+                &reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
             )
@@ -610,7 +611,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.metadata.clone().map(|m| m.expose()))?;
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_metadata.clone().map(|m| m.expose()))?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
                 ConnectorError::RequestEncodingFailedWithReason(
                     "Missing Authorize id".to_string(),
@@ -660,7 +661,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            let connector_metadata_value = req.request.metadata.clone().map(|secret| secret.expose());
+            let connector_metadata_value = req.request.connector_metadata.clone().map(|secret| secret.expose());
             let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(connector_metadata_value)?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
                 ConnectorError::RequestEncodingFailedWithReason(
@@ -819,7 +820,7 @@ macros::macro_connector_implementation!(
     curl_response: PaypalRepeatPaymentResponse,
     flow_name: RepeatPayment,
     resource_common_data: PaymentFlowData,
-    flow_request: RepeatPaymentData,
+    flow_request: RepeatPaymentData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
@@ -827,7 +828,7 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let access_token = req.resource_common_data
                 .access_token
@@ -845,7 +846,7 @@ macros::macro_connector_implementation!(
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}v2/checkout/orders", self.connector_base_url_payments(req)))
         }
@@ -1172,7 +1173,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Paypal<T>
 {

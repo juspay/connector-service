@@ -112,7 +112,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Billwerk<T>
+    connector_types::RepeatPaymentV2<T> for Billwerk<T>
 {
 }
 
@@ -209,8 +209,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Billwerk<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Billwerk<T>
 {
 }
 
@@ -426,7 +430,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Billwerk<T>
 {
@@ -747,7 +751,7 @@ macros::macro_connector_implementation!(
         Ok(format!(
             "{}v1/charge/{}",
             self.connector_base_url_payments(req),
-            req.resource_common_data.connector_request_reference_id.clone()
+            req.resource_common_data.get_reference_id()?
         ))
     }
 

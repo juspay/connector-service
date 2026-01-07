@@ -20,7 +20,7 @@ use domain_types::{
         BankRedirectData, BankTransferData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
     },
-    router_data::{ConnectorAuthType, ErrorResponse, NetworkTokenNumber},
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
@@ -84,7 +84,7 @@ pub enum TrustpayBankTransferPaymentMethod {
     InstantBankTransferPL,
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct MerchantIdentification {
     pub project_id: Secret<String>,
@@ -141,7 +141,7 @@ pub struct BankPaymentInformationResponse {
     pub amount: WebhookAmount,
 }
 
-#[derive(Debug, Serialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Eq, PartialEq)]
 pub struct CallbackURLs {
     pub success: String,
     pub cancel: String,
@@ -1081,7 +1081,7 @@ pub struct PaymentRequestBankTransfer {
 pub struct PaymentRequestNetworkToken {
     pub amount: StringMajorUnit,
     pub currency: enums::Currency,
-    pub pan: NetworkTokenNumber,
+    pub pan: cards::NetworkToken,
     #[serde(rename = "exp")]
     pub expiry_date: Secret<String>,
     #[serde(rename = "RedirectUrl")]

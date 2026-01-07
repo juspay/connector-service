@@ -351,7 +351,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             RouterDataV2<
                 domain_types::connector_flow::RepeatPayment,
                 PaymentFlowData,
-                domain_types::connector_types::RepeatPaymentData,
+                domain_types::connector_types::RepeatPaymentData<T>,
                 PaymentsResponseData,
             >,
             T,
@@ -365,7 +365,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             RouterDataV2<
                 domain_types::connector_flow::RepeatPayment,
                 PaymentFlowData,
-                domain_types::connector_types::RepeatPaymentData,
+                domain_types::connector_types::RepeatPaymentData<T>,
                 PaymentsResponseData,
             >,
             T,
@@ -593,11 +593,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 // RepeatPayment response - for recurring/mandate payments
-impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
+impl<
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        domain_types::connector_types::RepeatPaymentData<T>,
         PaymentsResponseData,
     >
 {

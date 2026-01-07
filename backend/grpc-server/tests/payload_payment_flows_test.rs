@@ -16,9 +16,10 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
+        identifier::IdType, mandate_reference_id::MandateIdType, payment_method,
+        payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
+        CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2, Currency,
+        CustomerAcceptance, FutureUsage, Identifier, MandateReferenceId, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
@@ -37,7 +38,7 @@ const MERCHANT_ID: &str = "merchant_payload_test";
 // Test card data
 const TEST_CARD_NUMBER: &str = "4111111111111111";
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_EXP_YEAR: &str = "2050";
 const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
@@ -145,8 +146,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("payload_test"))),
         }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         ..Default::default()
     }
@@ -171,6 +172,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
+        connector_order_reference_id: None,
     }
 }
 
@@ -242,10 +244,14 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
     let mut rng = rand::thread_rng();
     let unique_amount = rng.gen_range(1000..10000); // Amount between $10.00 and $100.00
 
-    let mandate_reference = MandateReference {
-        connector_mandate_request_reference_id: None,
-        mandate_id: Some(mandate_id.to_string()),
-        payment_method_id: None,
+    let mandate_reference = MandateReferenceId {
+        mandate_id_type: Some(MandateIdType::ConnectorMandateId(
+            ConnectorMandateReferenceId {
+                connector_mandate_request_reference_id: None,
+                connector_mandate_id: Some(mandate_id.to_string()),
+                payment_method_id: None,
+            },
+        )),
     };
 
     let mut metadata = HashMap::new();
@@ -259,7 +265,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("repeat"))),
         }),
-        mandate_reference: Some(mandate_reference),
+        mandate_reference_id: Some(mandate_reference),
         amount: unique_amount,
         currency: i32::from(Currency::Usd),
         minor_amount: unique_amount,
@@ -506,6 +512,7 @@ async fn test_authorize_capture_refund_rsync() {
             connector_metadata: None,
             setup_future_usage: None,
             sync_type: None,
+            connector_order_reference_id: None,
         };
         let mut rsync_grpc_request = Request::new(rsync_request);
         add_payload_metadata(&mut rsync_grpc_request);

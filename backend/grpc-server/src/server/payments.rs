@@ -3357,7 +3357,7 @@ impl PaymentService for Payments {
                         '_,
                         RepeatPayment,
                         PaymentFlowData,
-                        RepeatPaymentData,
+                        RepeatPaymentData<DefaultPCIHolder>,
                         PaymentsResponseData,
                     > = connector_data.connector.get_connector_integration_v2();
 
@@ -3377,7 +3377,7 @@ impl PaymentService for Payments {
                     let router_data: RouterDataV2<
                         RepeatPayment,
                         PaymentFlowData,
-                        RepeatPaymentData,
+                        RepeatPaymentData<DefaultPCIHolder>,
                         PaymentsResponseData,
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
