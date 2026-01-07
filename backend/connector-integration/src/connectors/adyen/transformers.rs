@@ -4280,7 +4280,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .card_exp_month
                                 .clone(),
                             expiry_year: card_details_for_network_transaction_id
-                                .card_exp_year
+                                .get_expiry_year_4_digit()
                                 .clone(),
                             cvc: None,
                             holder_name: test_holder_name.or(card_holder_name),
@@ -4520,7 +4520,7 @@ where
                                 .card_exp_month
                                 .clone(),
                             expiry_year: card_details_for_network_transaction_id
-                                .card_exp_year
+                                .get_expiry_year_4_digit()
                                 .clone(),
                             cvc: None,
                             holder_name: test_holder_name.or(card_holder_name),
