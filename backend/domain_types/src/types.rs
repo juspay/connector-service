@@ -7852,9 +7852,10 @@ impl<
             payment_method_data,
             authentication_data,
             merchant_account_id: value.merchant_account_id,
-            merchant_configered_currency: Some(common_enums::Currency::foreign_try_from(
-                merchant_configered_currency,
-            )?),
+            merchant_configered_currency: Some(
+                common_enums::Currency::foreign_try_from(merchant_configered_currency)
+                    .unwrap_or_default(),
+            ),
         })
     }
 }

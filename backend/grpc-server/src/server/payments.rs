@@ -4785,7 +4785,7 @@ pub fn generate_mandate_revoke_response(
             .into(),
             error_code: None,
             error_message: None,
-            status_code: 200,
+            status_code: 204,
             response_headers,
             network_txn_id: None,
             response_ref_id: None,
