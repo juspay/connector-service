@@ -40,6 +40,15 @@ pub const REDSYS_SOAP_ACTION: &str = "consultaOperaciones";
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
+// Specifies the type of transaction for XML requests
+pub mod transaction_type {
+    pub const PAYMENT: &str = "0";
+    pub const PREAUTHORIZATION: &str = "1";
+    pub const CONFIRMATION: &str = "2";
+    pub const REFUND: &str = "3";
+    pub const CANCELLATION: &str = "9";
+}
+
 // Common Structs
 /// Authentication credentials for Redsys connector
 pub struct RedsysAuthType {
@@ -1485,19 +1494,29 @@ pub fn get_transaction_type(
         | common_enums::AttemptStatus::Authorizing
         | common_enums::AttemptStatus::Authorized
         | common_enums::AttemptStatus::DeviceDataCollectionPending => match capture_method {
-            Some(common_enums::CaptureMethod::Automatic) | None => Ok("0".to_owned()),
-            Some(common_enums::CaptureMethod::Manual) => Ok("1".to_owned()),
+            Some(common_enums::CaptureMethod::Automatic) | None => {
+                Ok(transaction_type::PAYMENT.to_owned())
+            }
+            Some(common_enums::CaptureMethod::Manual) => {
+                Ok(transaction_type::PREAUTHORIZATION.to_owned())
+            }
             Some(capture_method) => Err(errors::ConnectorError::NotSupported {
                 message: capture_method.to_string(),
                 connector: "redsys",
             }),
         },
-        common_enums::AttemptStatus::VoidInitiated => Ok("9".to_owned()),
+        common_enums::AttemptStatus::VoidInitiated => Ok(transaction_type::CANCELLATION.to_owned()),
         common_enums::AttemptStatus::PartialChargedAndChargeable
-        | common_enums::AttemptStatus::CaptureInitiated => Ok("2".to_owned()),
+        | common_enums::AttemptStatus::CaptureInitiated => {
+            Ok(transaction_type::CONFIRMATION.to_owned())
+        }
         common_enums::AttemptStatus::Pending => match capture_method {
-            Some(common_enums::CaptureMethod::Automatic) | None => Ok("0".to_owned()),
-            Some(common_enums::CaptureMethod::Manual) => Ok("2".to_owned()),
+            Some(common_enums::CaptureMethod::Automatic) | None => {
+                Ok(transaction_type::PAYMENT.to_owned())
+            }
+            Some(common_enums::CaptureMethod::Manual) => {
+                Ok(transaction_type::CONFIRMATION.to_owned())
+            }
             Some(capture_method) => Err(errors::ConnectorError::NotSupported {
                 message: capture_method.to_string(),
                 connector: "redsys",
