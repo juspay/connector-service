@@ -869,7 +869,7 @@ message AuthenticationData {
   optional ExemptionIndicator exemption_indicator = 10;
 
   // Network-specific parameters for 3DS processing.
-  optional NetworkParams cb_network_params = 11;
+  optional NetworkParams network_params = 11;
 }
 
 // Details of customer acceptance for mandates or terms.
@@ -2282,10 +2282,10 @@ message PaymentServiceRepeatEverythingRequest {
   optional AuthenticationData authentication_data = 36; // Additional authentication data
 
   // Locale Information
-  optional string locale = 37; // Locale/language preference for the shopper (e.g., "en-US")
+  optional string locale = 39; // Locale/language preference for the shopper (e.g., "en-US")
 
   // Testing Data
-  optional SecretString connector_testing_data = 38; // Connector-specific testing data (JSON stringified)
+  optional SecretString connector_testing_data = 40; // Connector-specific testing data (JSON stringified)
 }
 
 // Container for recurring mandate payment data

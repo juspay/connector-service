@@ -3141,8 +3141,8 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             acs_transaction_id: value.acs_transaction_id,
             transaction_id: value.transaction_id,
             exemption_indicator,
-            cb_network_params: value
-                .cb_network_params
+            network_params: value
+                .network_params
                 .map(grpc_api_types::payments::NetworkParams::foreign_from),
         })
     }

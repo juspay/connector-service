@@ -1462,7 +1462,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             ) =>
                         {
                             let cartes_params = auth_data
-                                .cb_network_params
+                                .network_params
                                 .as_ref()
                                 .and_then(|net| net.cartes_bancaires.as_ref());
 

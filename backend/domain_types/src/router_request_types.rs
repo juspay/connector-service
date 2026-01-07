@@ -143,7 +143,7 @@ pub struct AuthenticationData {
     pub ds_trans_id: Option<String>,
     pub acs_transaction_id: Option<String>,
     pub transaction_id: Option<String>,
-    pub cb_network_params: Option<NetworkParams>,
+    pub network_params: Option<NetworkParams>,
     pub exemption_indicator: Option<common_enums::ExemptionIndicator>,
 }
 
@@ -161,7 +161,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             transaction_id,
             ucaf_collection_indicator,
             exemption_indicator,
-            cb_network_params,
+            network_params,
         } = value;
         let threeds_server_transaction_id =
             utils::extract_optional_connector_request_reference_id(&threeds_server_transaction_id);
@@ -212,7 +212,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             ds_trans_id: ds_transaction_id,
             acs_transaction_id,
             transaction_id,
-            cb_network_params: cb_network_params.map(NetworkParams::try_from).transpose()?,
+            network_params: network_params.map(NetworkParams::try_from).transpose()?,
             exemption_indicator: exemption_indicator
                 .map(payments::ExemptionIndicator::try_from)
                 .transpose()
@@ -284,8 +284,8 @@ impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
                 .exemption_indicator
                 .map(payments::ExemptionIndicator::foreign_from)
                 .map(i32::from),
-            cb_network_params: value
-                .cb_network_params
+            network_params: value
+                .network_params
                 .map(payments::NetworkParams::foreign_from),
         }
     }
