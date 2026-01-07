@@ -1,7 +1,7 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use crate::utils::extract_connector_request_reference_id;
+use crate::{connector_types, utils::extract_connector_request_reference_id};
 use common_enums::{
     CaptureMethod, CardNetwork, CountryAlpha2, FutureUsage, PaymentMethod, PaymentMethodType,
 };
@@ -283,6 +283,18 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for CaptureMethod {
             grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
             grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
             _ => Ok(Self::Automatic),
+        }
+    }
+}
+
+impl ForeignTryFrom<i32> for connector_types::ThreeDsCompletionIndicator {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(value: i32) -> Result<Self, error_stack::Report<Self::Error>> {
+        match grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value) {
+            Ok(grpc_api_types::payments::ThreeDsCompletionIndicator::Success) => Ok(Self::Success),
+            Ok(grpc_api_types::payments::ThreeDsCompletionIndicator::Failure) => Ok(Self::Failure),
+            _ => Ok(Self::NotAvailable),
         }
     }
 }
@@ -8867,7 +8879,9 @@ impl<
                     )
                 })
                 .transpose()?,
-            threeds_method_comp_ind: None,
+            threeds_method_comp_ind: value.threeds_method_comp_ind.and_then(|value| {
+                connector_types::ThreeDsCompletionIndicator::foreign_try_from(value).ok()
+            }),
         })
     }
 }

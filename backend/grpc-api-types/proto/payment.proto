@@ -154,6 +154,14 @@ enum AuthenticationType {
   NO_THREE_DS = 2; // No 3D Secure, or 3DS explicitly bypassed.
 }
 
+// Indicates if 3DS method data was successfully completed or not.
+enum ThreeDsCompletionIndicator {
+  THREE_DS_COMPLETION_INDICATOR_UNSPECIFIED = 0; // Default value
+  THREE_DS_COMPLETION_INDICATOR_SUCCESS = 1; // 3DS method successfully completed ("Y")
+  THREE_DS_COMPLETION_INDICATOR_FAILURE = 2; // 3DS method was not successful ("N")
+  THREE_DS_COMPLETION_INDICATOR_NOT_AVAILABLE = 3; // 3DS method URL was unavailable ("U")
+}
+
 // Indicates the transaction status from authentication/verification process.
 enum TransactionStatus {
   // Authentication/Account Verification Successful
@@ -2445,6 +2453,9 @@ message PaymentServicePostAuthenticateRequest {
 
   // Capture Settings
   optional CaptureMethod capture_method = 20; // Method for capturing the payment
+
+  // Indicates if 3DS method data was successfully completed or not
+  optional ThreeDsCompletionIndicator threeds_method_comp_ind = 21;
 }
 
 // Response message for post-authentication step
