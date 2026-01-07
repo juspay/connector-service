@@ -450,27 +450,79 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Payment Capture
-// Mollie does not support manual capture via a separate endpoint.
-// Instead, capture behavior is controlled via the 'captureMode' parameter
-// in the Create Payment request:
-// - captureMode: "automatic" (default) - captures immediately
-// - captureMode: "manual" - requires manual capture (but no API for this)
-// - captureDelay: "8 hours" - delays automatic capture by specified duration
-//
-// For manual capture scenarios, merchants should use the Mollie Dashboard.
+// POST /payments/{id}/captures - creates a capture for a manual capture payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Mollie<T>
 {
     fn get_headers(
         &self,
-        _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotSupported {
-            message: "Capture flow is not supported by Mollie. Mollie handles payment capture automatically based on the 'captureMode' parameter set during payment creation.".to_string(),
-            connector: "Mollie",
-        }
-        .into())
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+        header.append(&mut auth_header);
+        Ok(header)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        "application/json"
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let payment_id = req
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+        Ok(format!(
+            "{}/payments/{}/captures",
+            self.base_url(&req.resource_common_data.connectors),
+            payment_id
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let request = mollie::MollieCaptureRequest::try_from(req)?;
+        Ok(Some(RequestContent::Json(Box::new(request))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        _event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: mollie::MolliePaymentsResponse = res
+            .response
+            .parse_struct("MollieCaptureResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
     }
 }
 

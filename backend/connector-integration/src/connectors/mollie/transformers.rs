@@ -1,11 +1,12 @@
 use crate::types::ResponseRouterData;
 use common_utils::types::{AmountConvertor, StringMajorUnitForConnector};
 use domain_types::{
-    connector_flow::{Authorize, PSync, PaymentMethodToken, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -671,6 +672,13 @@ impl<T: PaymentMethodDataTypes>
             .and_then(|bi| bi.language.clone())
             .unwrap_or_else(|| "en-US".to_string());
 
+        // test_mode is required - error if not provided (matching Hyperswitch)
+        let testmode = item.resource_common_data.test_mode.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "test_mode",
+            },
+        )?;
+
         Ok(Self {
             card_holder: card_data
                 .card_holder_name
@@ -680,7 +688,7 @@ impl<T: PaymentMethodDataTypes>
             card_cvv: card_data.card_cvc.clone(),
             card_expiry_date: Secret::new(card_expiry_date),
             locale,
-            testmode: item.resource_common_data.test_mode.unwrap_or(false),
+            testmode,
             profile_token,
         })
     }
@@ -706,6 +714,78 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MollieCardTokenRespon
             }),
             resource_common_data: PaymentFlowData {
                 status: common_enums::AttemptStatus::Charged, // Tokenization successful
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== CAPTURE FLOW TYPES AND TRANSFORMERS =====
+
+// Mollie Capture Request structure
+// POST /payments/{id}/captures
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieCaptureRequest {
+    pub amount: Option<MollieAmount>,
+    pub description: String,
+}
+
+// Request transformer for Capture flow
+impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
+    for MollieCaptureRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        // Convert amount to string major unit format (e.g., "10.00" for $10.00)
+        let converter = StringMajorUnitForConnector;
+        let amount_value = converter
+            .convert(item.request.minor_amount_to_capture, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        Ok(Self {
+            amount: Some(MollieAmount {
+                currency: item.request.currency,
+                value: amount_value.get_amount_as_string(),
+            }),
+            description: item
+                .resource_common_data
+                .description
+                .clone()
+                .unwrap_or_else(|| "Payment capture".to_string()),
+        })
+    }
+}
+
+// Response transformer for Capture flow - reuses MolliePaymentsResponse
+impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<MolliePaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // Map status from Mollie response - NEVER HARDCODE
+        let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.id),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
