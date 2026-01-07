@@ -190,6 +190,42 @@ enum TransactionStatus {
   TRANSACTION_STATUS_INFORMATION_ONLY = 7; // "I"
 }
 
+// SCA (Strong Customer Authentication) exemption indicators.
+enum ExemptionIndicator {
+  // Unspecified/default value.
+  EXEMPTION_INDICATOR_UNSPECIFIED = 0;
+
+  // Low-value payment exemption (below regulatory threshold).
+  EXEMPTION_INDICATOR_LOW_VALUE = 1;
+
+  // Secure corporate payment (SCP) exemption.
+  EXEMPTION_INDICATOR_SECURE_CORPORATE_PAYMENT = 2;
+
+  // Trusted beneficiary or whitelist exemption.
+  EXEMPTION_INDICATOR_TRUSTED_LISTING = 3;
+
+  // Transaction Risk Analysis (TRA) exemption.
+  EXEMPTION_INDICATOR_TRANSACTION_RISK_ASSESSMENT = 4;
+
+  // 3DS server or ACS outage exemption.
+  EXEMPTION_INDICATOR_THREE_DS_OUTAGE = 5;
+
+  // SCA delegation exemption (authentication delegated to another party).
+  EXEMPTION_INDICATOR_SCA_DELEGATION = 6;
+
+  // Out of SCA scope (e.g., one-leg-out transactions).
+  EXEMPTION_INDICATOR_OUT_OF_SCA_SCOPE = 7;
+
+  // Other exemption reason not covered by known types.
+  EXEMPTION_INDICATOR_OTHER = 8;
+
+  // Low-risk program exemption (network-initiated low-risk flag).
+  EXEMPTION_INDICATOR_LOW_RISK_PROGRAM = 9;
+
+  // Recurring transaction exemption (subsequent payment in a series).
+  EXEMPTION_INDICATOR_RECURRING_OPERATION = 10;
+}
+
 // Preferred payment experience for the customer.
 enum PaymentExperience {
   PAYMENT_EXPERIENCE_UNSPECIFIED = 0; // Default value
@@ -782,6 +818,34 @@ message BillingDescriptor {
   optional string reference = 6;
 }
 
+// Algorithm used to generate CAVV (Cardholder Authentication Verification Value).
+enum CavvAlgorithm {
+  CAVV_ALGORITHM_UNSPECIFIED = 0;
+  CAVV_ALGORITHM_ZERO = 1;   // "00" — Reserved or unspecified
+  CAVV_ALGORITHM_ONE = 2;    // "01" — HMAC-based
+  CAVV_ALGORITHM_TWO = 3;    // "02" — RSA-based
+  CAVV_ALGORITHM_THREE = 4;  // "03" — Elliptic Curve
+  CAVV_ALGORITHM_FOUR = 5;   // "04" — Proprietary
+}
+
+// Cartes Bancaires network-specific parameters for 3DS.
+message CartesBancairesParams {
+  // Algorithm used to generate the CAVV value.
+  CavvAlgorithm cavv_algorithm = 1;
+
+  // Exemption indicator specific to Cartes Bancaires network.
+  string cb_exemption = 2;
+
+  // Cartes Bancaires risk score assigned during 3DS authentication.
+  int32 cb_score = 3;
+}
+
+// Network-level parameters for 3DS processing.
+message NetworkParams {
+  // Parameters specific to Cartes Bancaires network, if applicable.
+  optional CartesBancairesParams cartes_bancaires = 1;
+}
+
 // Additional authentication data, typically from 3DS.
 message AuthenticationData {
   // Electronic Commerce Indicator (ECI) from 3DS.
@@ -810,6 +874,12 @@ message AuthenticationData {
 
   // UCAF (Universal Cardholder Authentication Field) collection indicator.
   optional string ucaf_collection_indicator = 9;
+
+  // SCA exemption indicator for this authentication.
+  optional ExemptionIndicator exemption_indicator = 10;
+
+  // Network-specific parameters for 3DS processing.
+  optional NetworkParams network_params = 11;
 }
 
 // Details of customer acceptance for mandates or terms.
@@ -1439,6 +1509,9 @@ message PaymentServiceAuthorizeRequest {
 
   // Order Details
   repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
+
+  // Locale Information
+  optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
 }
 
 // Request message for authorizing a payment only (without setup flows).
@@ -1524,6 +1597,9 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Send the connector order identifier here if an order was created before authorize
   optional string connector_order_reference_id = 41; // Connector's reference id for order
+  
+   // Locale Information
+  optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
 }
 
 // Response message for a payment authorization.
@@ -2109,6 +2185,12 @@ message PaymentServiceRegisterRequest {
   optional string payment_method_token = 32;
   // Send the connector order identifier here if an order was created before authorize
   optional string order_id = 33;
+
+  // Locale Information
+  optional string locale =  45; // Locale/language preference for the shopper (e.g., "en-US")
+
+  // Testing Data
+  optional SecretString connector_testing_data = 46; // Connector-specific testing data (JSON stringified)
 }
 
 // Response message for a mandate setup operation.
@@ -2208,6 +2290,12 @@ message PaymentServiceRepeatEverythingRequest {
   optional MitCategory mit_category = 25; // Category of the MIT
 
   optional AuthenticationData authentication_data = 36; // Additional authentication data
+
+  // Locale Information
+  optional string locale = 39; // Locale/language preference for the shopper (e.g., "en-US")
+
+  // Testing Data
+  optional SecretString connector_testing_data = 40; // Connector-specific testing data (JSON stringified)
 }
 
 // Container for recurring mandate payment data

@@ -197,6 +197,7 @@ fn card_issuer_to_gateway(issuer: domain_types::utils::CardIssuer) -> Option<Gat
         // Unsupported card types will use CREDITCARD fallback
         domain_types::utils::CardIssuer::JCB
         | domain_types::utils::CardIssuer::CarteBlanche
+        | domain_types::utils::CardIssuer::UnionPay
         | domain_types::utils::CardIssuer::CartesBancaires => None,
     }
 }

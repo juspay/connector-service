@@ -58,6 +58,7 @@ fn card_issuer_to_string(card_issuer: CardIssuer) -> String {
         CardIssuer::CarteBlanche => "006",
         CardIssuer::JCB => "007",
         CardIssuer::CartesBancaires => "036",
+        CardIssuer::UnionPay => "062",
     };
     card_type.to_string()
 }
@@ -476,6 +477,8 @@ fn get_authentication_data_for_check_enrollment_response(
         ds_trans_id,
         acs_transaction_id: response.validate_response.acs_transaction_id,
         transaction_id: response.validate_response.xid,
+        exemption_indicator: None,
+        network_params: None,
     }
 }
 
@@ -507,6 +510,8 @@ fn get_authentication_data_for_validation_response(
         ds_trans_id,
         acs_transaction_id: response.validate_response.acs_transaction_id,
         transaction_id: response.validate_response.xid,
+        exemption_indicator: None,
+        network_params: None,
     }
 }
 
@@ -564,6 +569,8 @@ impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthI
             acs_transaction_id: _,
             transaction_id,
             ucaf_collection_indicator,
+            exemption_indicator: _,
+            network_params: _,
         } = value;
 
         Self {
