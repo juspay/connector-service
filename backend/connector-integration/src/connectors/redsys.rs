@@ -469,10 +469,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             req.request.capture_method,
         )?;
         let auth = transformers::RedsysAuthType::try_from(&req.connector_auth_type)?;
-        let connector_transaction_id = match &req.request.connector_transaction_id {
-            domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => Ok(id.clone()),
-            _ => Err(errors::ConnectorError::MissingConnectorTransactionID),
-        }?;
+        let connector_transaction_id = req
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
         let body =
             transformers::construct_sync_request(connector_transaction_id, transaction_type, auth)?;
 
