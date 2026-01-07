@@ -2891,7 +2891,11 @@ impl
             connector_customer: value.connector_customer_id,
             description: value.description,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: (!value.merchant_account_metadata.is_empty()).then(|| {
+                common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                    &value.merchant_account_metadata,
+                ))
+            }),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
