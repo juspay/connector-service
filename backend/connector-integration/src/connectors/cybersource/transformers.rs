@@ -13,16 +13,15 @@ use crate::{connectors::cybersource::CybersourceRouterData, types::ResponseRoute
 use cards;
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, MandateRevoke, PostAuthenticate, PreAuthenticate,
-        RepeatPayment, SetupMandate, Void,
+        Authenticate, Authorize, Capture, PostAuthenticate, PreAuthenticate, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
-        MandateReference, MandateReferenceId, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RecurringMandateData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RecurringMandateData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     payment_address::Address,
@@ -4957,56 +4956,5 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             capture_options: None,
             commerce_indicator,
         })
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum CybersourceRevokeMandateResponse {
-    Success(serde_json::Value),
-    Error(serde_json::Value),
-}
-
-impl TryFrom<ResponseRouterData<CybersourceRevokeMandateResponse, Self>>
-    for RouterDataV2<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    >
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<CybersourceRevokeMandateResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        match item.http_code {
-            204 => Ok(Self {
-                response: Ok(MandateRevokeResponseData {
-                    mandate_status: common_enums::MandateStatus::Revoked,
-                }),
-                ..item.router_data
-            }),
-            _ => {
-                let response_string = match item.response {
-                    CybersourceRevokeMandateResponse::Success(value)
-                    | CybersourceRevokeMandateResponse::Error(value) => value.to_string(),
-                };
-
-                Ok(Self {
-                    response: Err(ErrorResponse {
-                        code: NO_ERROR_CODE.to_string(),
-                        message: response_string.clone(),
-                        reason: Some(response_string),
-                        status_code: item.http_code,
-                        attempt_status: None,
-                        connector_transaction_id: None,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                    }),
-                    ..item.router_data
-                })
-            }
-        }
     }
 }

@@ -2095,7 +2095,7 @@ pub enum MitCategory {
     Resubmission,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, strum::Display)]
 #[serde(rename_all = "snake_case")]
 pub enum MandateStatus {
     #[default]

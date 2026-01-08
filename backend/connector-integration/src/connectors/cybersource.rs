@@ -57,9 +57,8 @@ use transformers::{
     CybersourcePaymentsResponse as CybersourceVoidResponse,
     CybersourcePaymentsResponse as CybersourceSetupMandateResponse,
     CybersourcePaymentsResponse as CybersourceRepeatPaymentResponse, CybersourceRefundRequest,
-    CybersourceRefundResponse, CybersourceRepeatPaymentRequest, CybersourceRevokeMandateResponse,
-    CybersourceRsyncResponse, CybersourceTransactionResponse, CybersourceVoidRequest,
-    CybersourceZeroMandateRequest,
+    CybersourceRefundResponse, CybersourceRepeatPaymentRequest, CybersourceRsyncResponse,
+    CybersourceTransactionResponse, CybersourceVoidRequest, CybersourceZeroMandateRequest,
 };
 
 use super::macros;
@@ -253,11 +252,6 @@ macros::create_all_prerequisites!(
             request_body: CybersourceRepeatPaymentRequest,
             response_body: CybersourceRepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: MandateRevoke,
-            response_body: CybersourceRevokeMandateResponse,
-            router_data: RouterDataV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>,
         )
     ],
     amount_converters: [
@@ -900,38 +894,127 @@ macros::macro_connector_implementation!(
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Cybersource,
-    curl_response: CybersourceRevokeMandateResponse,
-    flow_name: MandateRevoke,
-    resource_common_data: PaymentFlowData,
-    flow_request: MandateRevokeRequestData,
-    flow_response: MandateRevokeResponseData,
-    http_method: Delete,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_mandate_id =  req.request.connector_mandate_id.clone()
-                .ok_or_else(utils::missing_field_err("connector_mandate_id"))?;
-            Ok(format!(
-                "{}tms/v1/paymentinstruments/{}",
-                self.connector_base_url_payments(req),
-                connector_mandate_id.expose(),
-            ))
+// Manual implementation for MandateRevoke with correct event builder
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Cybersource<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            MandateRevoke,
+            PaymentFlowData,
+            MandateRevokeRequestData,
+            MandateRevokeResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        self.build_headers(req)
+    }
+    fn get_http_method(&self) -> Method {
+        Method::Delete
+    }
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
+    }
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            MandateRevoke,
+            PaymentFlowData,
+            MandateRevokeRequestData,
+            MandateRevokeResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let connector_mandate_id = req
+            .request
+            .connector_mandate_id
+            .clone()
+            .ok_or_else(utils::missing_field_err("connector_mandate_id"))?;
+        Ok(format!(
+            "{}tms/v1/paymentinstruments/{}",
+            self.connector_base_url_payments(req),
+            connector_mandate_id.expose(),
+        ))
+    }
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<
+            MandateRevoke,
+            PaymentFlowData,
+            MandateRevokeRequestData,
+            MandateRevokeResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
+        Ok(None)
+    }
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            MandateRevoke,
+            PaymentFlowData,
+            MandateRevokeRequestData,
+            MandateRevokeResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            MandateRevoke,
+            PaymentFlowData,
+            MandateRevokeRequestData,
+            MandateRevokeResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        if matches!(res.status_code, 204) {
+            event_builder.map(|i| i.set_connector_response(&serde_json::json!({"mandate_status": common_enums::MandateStatus::Revoked.to_string()})));
+            Ok(RouterDataV2 {
+                response: Ok(MandateRevokeResponseData {
+                    mandate_status: common_enums::MandateStatus::Revoked,
+                }),
+                ..data.clone()
+            })
+        } else {
+            // If http_code != 204 || http_code != 4xx, we dont know any other response scenario yet.
+            let response_value: serde_json::Value = serde_json::from_slice(&res.response)
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
+            let response_string = response_value.to_string();
+
+            event_builder.map(|i| {
+                i.set_connector_response(
+                    &serde_json::json!({"response_string": response_string.clone()}),
+                )
+            });
+            tracing::info!(connector_response=?response_string);
+
+            Ok(RouterDataV2 {
+                response: Err(ErrorResponse {
+                    code: NO_ERROR_CODE.to_string(),
+                    message: response_string.clone(),
+                    reason: Some(response_string),
+                    status_code: res.status_code,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+                ..data.clone()
+            })
         }
     }
-);
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
 
 // Stub implementations for unsupported flows
 
