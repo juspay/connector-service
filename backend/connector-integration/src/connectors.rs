@@ -161,6 +161,9 @@ pub use self::forte::Forte;
 pub mod shift4;
 pub use self::shift4::Shift4;
 
+pub mod paybox;
+pub use self::paybox::Paybox;
+
 pub mod nexixpay;
 pub use self::nexixpay::Nexixpay;
 
@@ -190,3 +193,9 @@ pub use self::payme::Payme;
 
 pub mod revolut;
 pub use self::revolut::Revolut;
+
+pub mod gigadat;
+pub use self::gigadat::Gigadat;
+
+pub mod loonio;
+pub use self::loonio::Loonio;
