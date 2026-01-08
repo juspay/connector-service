@@ -811,11 +811,12 @@ message BillingDescriptor {
 // Algorithm used to generate CAVV (Cardholder Authentication Verification Value).
 enum CavvAlgorithm {
   CAVV_ALGORITHM_UNSPECIFIED = 0;
-  CAVV_ALGORITHM_ZERO = 1;   // "00" — Reserved or unspecified
-  CAVV_ALGORITHM_ONE = 2;    // "01" — HMAC-based
-  CAVV_ALGORITHM_TWO = 3;    // "02" — RSA-based
-  CAVV_ALGORITHM_THREE = 4;  // "03" — Elliptic Curve
-  CAVV_ALGORITHM_FOUR = 5;   // "04" — Proprietary
+  CAVV_ALGORITHM_ZERO = 1;   // "00" — Reserved or unspecified algorithm.
+  CAVV_ALGORITHM_ONE = 2;    // "01" — HMAC-based algorithm.
+  CAVV_ALGORITHM_TWO = 3;    // "02" — RSA-based algorithm (standard 3DS cryptographic method).
+  CAVV_ALGORITHM_THREE = 4;  // "03" — Elliptic Curve algorithm.
+  CAVV_ALGORITHM_FOUR = 5;   // "04" — Proprietary algorithm defined by the card network.
+  CAVV_ALGORITHM_A = 6;      // "A" — Custom or network-defined algorithm indicator.
 }
 
 // Cartes Bancaires network-specific parameters for 3DS.
