@@ -322,6 +322,7 @@ pub enum CardIssuer {
     JCB,
     CarteBlanche,
     CartesBancaires,
+    UnionPay
 }
 
 // Helper function for extracting connector request reference ID
@@ -530,6 +531,7 @@ pub fn card_issuer_to_cybersource_code(card_issuer: CardIssuer) -> String {
         CardIssuer::CarteBlanche => "006",
         CardIssuer::JCB => "007",
         CardIssuer::CartesBancaires => "036",
+        CardIssuer::UnionPay => "062",
     };
     card_type.to_string()
 }

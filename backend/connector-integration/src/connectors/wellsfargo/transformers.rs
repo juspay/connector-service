@@ -50,8 +50,6 @@ pub struct WellsfargoPaymentsRequest<T: PaymentMethodDataTypes> {
     client_reference_information: ClientReferenceInformation,
     #[serde(skip_serializing_if = "Option::is_none")]
     merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    consumer_authentication_information: Option<ConsumerAuthenticationInformation>,
     #[serde(skip)]
     _phantom: std::marker::PhantomData<T>,
 }
@@ -135,36 +133,6 @@ pub struct ClientReferenceInformation {
     code: Option<String>,
 }
 
-/// Consumer authentication information for 3DS transactions
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ConsumerAuthenticationInformation {
-    /// Cardholder Authentication Verification Value
-    #[serde(skip_serializing_if = "Option::is_none")]
-    cavv: Option<Secret<String>>,
-    /// Electronic Commerce Indicator
-    #[serde(skip_serializing_if = "Option::is_none")]
-    eci: Option<String>,
-    /// 3DS Server Transaction ID (3DS 2.x)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    threeds_server_transaction_id: Option<String>,
-    /// Directory Server Transaction ID (3DS 2.x)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    ds_transaction_id: Option<String>,
-    /// ACS Transaction ID (3DS 2.x)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    acs_transaction_id: Option<String>,
-    /// 3DS Version (e.g., "2.1.0")
-    #[serde(skip_serializing_if = "Option::is_none")]
-    specification_version: Option<String>,
-    /// UCAF Collection Indicator (Mastercard)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    ucaf_collection_indicator: Option<String>,
-    /// Transaction ID (XID for 3DS 1.0)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    xid: Option<String>,
-}
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoCaptureRequest {
@@ -186,6 +154,8 @@ pub struct OrderInformationAmount {
 pub struct WellsfargoVoidRequest {
     client_reference_information: ClientReferenceInformation,
     reversal_information: ReversalInformation,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -541,38 +511,6 @@ fn get_commerce_indicator(
     CommerceIndicator::Internet
 }
 
-/// Converts AuthenticationData to ConsumerAuthenticationInformation for Wells Fargo
-/// Returns None if no 3DS data is present
-fn build_consumer_authentication_information(
-    authentication_data: &Option<domain_types::router_request_types::AuthenticationData>,
-) -> Option<ConsumerAuthenticationInformation> {
-    authentication_data.as_ref().and_then(|auth_data| {
-        let has_3ds_data = auth_data.cavv.is_some()
-            || auth_data.eci.is_some()
-            || auth_data.threeds_server_transaction_id.is_some()
-            || auth_data.ds_trans_id.is_some()
-            || auth_data.acs_transaction_id.is_some()
-            || auth_data.message_version.is_some()
-            || auth_data.ucaf_collection_indicator.is_some()
-            || auth_data.transaction_id.is_some();
-
-        if !has_3ds_data {
-            return None;
-        }
-
-        Some(ConsumerAuthenticationInformation {
-            cavv: auth_data.cavv.clone(),
-            eci: auth_data.eci.clone(),
-            threeds_server_transaction_id: auth_data.threeds_server_transaction_id.clone(),
-            ds_transaction_id: auth_data.ds_trans_id.clone(),
-            acs_transaction_id: auth_data.acs_transaction_id.clone(),
-            specification_version: auth_data.message_version.as_ref().map(|v| v.to_string()),
-            ucaf_collection_indicator: auth_data.ucaf_collection_indicator.clone(),
-            xid: auth_data.transaction_id.clone(),
-        })
-    })
-}
-
 // REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoPaymentsRequest
 
 // Specific implementation for Authorize flow
@@ -759,17 +697,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .clone()
             .map(convert_metadata_to_merchant_defined_info);
 
-        // Consumer authentication information from 3DS data
-        let consumer_authentication_information =
-            build_consumer_authentication_information(&request.authentication_data);
-
         Ok(Self {
             processing_information,
             payment_information,
             order_information,
             client_reference_information,
             merchant_defined_information,
-            consumer_authentication_information,
             _phantom: std::marker::PhantomData,
         })
     }
@@ -946,9 +879,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             code: Some(common_data.connector_request_reference_id.clone()),
         };
 
+        // Merchant defined information from metadata
+        let merchant_defined_information = request
+            .metadata
+            .clone()
+            .map(|m| convert_metadata_to_merchant_defined_info(m.expose()));
+
         Ok(Self {
             client_reference_information,
             reversal_information,
+            merchant_defined_information,
         })
     }
 }
