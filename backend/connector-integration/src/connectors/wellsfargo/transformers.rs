@@ -817,7 +817,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let billing = common_data.address.get_payment_billing();
         let bill_to = billing.map(|addr| {
             let phone_number = get_phone_number(Some(addr));
-            let email_secret = addr.email.clone().map(|e| Secret::new(e.expose().expose())).unwrap_or_else(|| Secret::new(String::new()));
+            let email_secret = addr
+                .email
+                .clone()
+                .map(|e| Secret::new(e.expose().expose()))
+                .unwrap_or_else(|| Secret::new(String::new()));
             addr.address
                 .as_ref()
                 .map(|details| BillTo {
