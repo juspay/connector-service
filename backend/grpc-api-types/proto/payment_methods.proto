@@ -723,10 +723,8 @@ message Sofort {
 
 // Trustly - European online banking payment method
 message Trustly {
-  // The customer's full name (required by Trustly)
-  optional SecretString shopper_name = 1;
   // The customer's country code (required by Trustly)
-  optional CountryAlpha2 country = 2;
+  optional CountryAlpha2 country = 1;
 }
 
 // Giropay - German bank transfer payment method

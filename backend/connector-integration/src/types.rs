@@ -75,6 +75,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Payload => Box::new(connectors::Payload::new()),
             ConnectorEnum::Paysafe => Box::new(connectors::Paysafe::new()),
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
+            ConnectorEnum::Gigadat => Box::new(connectors::Gigadat::new()),
             ConnectorEnum::Paybox => Box::new(connectors::Paybox::new()),
             ConnectorEnum::Loonio => Box::new(connectors::Loonio::new()),
             ConnectorEnum::Barclaycard => Box::new(connectors::Barclaycard::new()),

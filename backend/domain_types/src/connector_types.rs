@@ -109,6 +109,7 @@ pub enum ConnectorEnum {
     Bambora,
     Payme,
     Revolut,
+    Gigadat,
     Loonio,
 }
 
@@ -181,6 +182,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
             grpc_api_types::payments::Connector::Payme => Ok(Self::Payme),
             grpc_api_types::payments::Connector::Revolut => Ok(Self::Revolut),
+            grpc_api_types::payments::Connector::Gigadat => Ok(Self::Gigadat),
             grpc_api_types::payments::Connector::Loonio => Ok(Self::Loonio),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1080,6 +1082,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub connector_testing_data: Option<SecretSerdeValue>,
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
+    pub locale: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -2224,9 +2227,15 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
+    pub locale: Option<String>,
+    pub connector_testing_data: Option<SecretSerdeValue>,
 }
 
 impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
+    pub fn get_connector_testing_data(&self) -> Option<SecretSerdeValue> {
+        self.connector_testing_data.clone()
+    }
+
     pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
         self.browser_info
             .clone()
@@ -2292,9 +2301,17 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub billing_descriptor: Option<BillingDescriptor>,
     pub payment_method_data: PaymentMethodData<T>,
     pub authentication_data: Option<router_request_types::AuthenticationData>,
+    pub locale: Option<String>,
+    pub connector_testing_data: Option<SecretSerdeValue>,
+    pub merchant_account_id: Option<Secret<String>>,
+    pub merchant_configered_currency: Option<Currency>,
 }
 
 impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
+    pub fn get_connector_testing_data(&self) -> Option<SecretSerdeValue> {
+        self.connector_testing_data.clone()
+    }
+
     pub fn get_mandate_reference(&self) -> &MandateReferenceId {
         &self.mandate_reference
     }
