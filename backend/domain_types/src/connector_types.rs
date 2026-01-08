@@ -1536,6 +1536,7 @@ pub struct MandateRevokeRequestData {
 #[derive(Debug, Clone)]
 pub struct MandateRevokeResponseData {
     pub mandate_status: common_enums::MandateStatus,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Default, Clone)]

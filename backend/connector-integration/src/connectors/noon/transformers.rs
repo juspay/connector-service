@@ -827,6 +827,7 @@ impl TryFrom<ResponseRouterData<NoonRevokeMandateResponse, Self>>
             NoonRevokeStatus::Cancelled => Ok(Self {
                 response: Ok(MandateRevokeResponseData {
                     mandate_status: common_enums::MandateStatus::Revoked,
+                    status_code: item.http_code,
                 }),
                 ..item.router_data
             }),

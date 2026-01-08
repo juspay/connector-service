@@ -4756,18 +4756,8 @@ pub fn generate_mandate_revoke_response(
     let response_headers = router_data_v2
         .resource_common_data
         .get_connector_response_headers_as_map();
-
     match mandate_revoke_response {
         Ok(response) => Ok(PaymentServiceRevokeMandateResponse {
-            request_ref_id: Some(grpc_api_types::payments::Identifier {
-                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                    router_data_v2
-                        .resource_common_data
-                        .merchant_id
-                        .get_string_repr()
-                        .to_string(),
-                )),
-            }),
             status: match response.mandate_status {
                 common_enums::MandateStatus::Active => {
                     grpc_api_types::payments::MandateStatus::Active
@@ -4785,7 +4775,7 @@ pub fn generate_mandate_revoke_response(
             .into(),
             error_code: None,
             error_message: None,
-            status_code: 204,
+            status_code: response.status_code.into(),
             response_headers,
             network_txn_id: None,
             response_ref_id: None,
@@ -4793,22 +4783,17 @@ pub fn generate_mandate_revoke_response(
             raw_connector_request,
         }),
         Err(e) => Ok(PaymentServiceRevokeMandateResponse {
-            request_ref_id: Some(grpc_api_types::payments::Identifier {
-                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                    router_data_v2
-                        .resource_common_data
-                        .merchant_id
-                        .get_string_repr()
-                        .to_string(),
-                )),
-            }),
             status: grpc_api_types::payments::MandateStatus::Unspecified.into(), // Default status for failed revoke
             error_code: Some(e.code),
             error_message: Some(e.message),
             status_code: e.status_code.into(),
             response_headers,
             network_txn_id: None,
-            response_ref_id: None,
+            response_ref_id: e.connector_transaction_id.map(|id| {
+                grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                }
+            }),
             raw_connector_response,
             raw_connector_request,
         }),

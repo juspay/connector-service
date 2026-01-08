@@ -975,6 +975,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Ok(RouterDataV2 {
                 response: Ok(MandateRevokeResponseData {
                     mandate_status: common_enums::MandateStatus::Revoked,
+                    status_code: res.status_code,
                 }),
                 ..data.clone()
             })
