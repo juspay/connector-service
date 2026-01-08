@@ -491,6 +491,8 @@ fn get_preauthenticate_response(
         ds_trans_id: None,
         acs_transaction_id: None,
         transaction_id: None,
+        exemption_indicator: None,
+        network_params: None,
     });
 
     match &emv3ds.three_d_s_method_u_r_l {
@@ -587,6 +589,8 @@ fn get_payments_response(
         ds_trans_id: None,
         acs_transaction_id: None,
         transaction_id: None,
+        exemption_indicator: None,
+        network_params: None,
     });
 
     let ds_order = redsys_payments_response.ds_order.clone();
