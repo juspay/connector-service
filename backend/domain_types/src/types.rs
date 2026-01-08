@@ -5275,8 +5275,8 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // For void post capture operations, address information is typically not available or required
-        // Since this is a PaymentServiceVoidPostCaptureRequest, we use default address values
+        // For incremental authorization operations, address information is typically not available or required
+        // Since this is a PaymentServiceIncrementalAuthorizationRequest, we use default address values
         let address: PaymentAddress = PaymentAddress::new(
             None,        // shipping
             None,        // billing
