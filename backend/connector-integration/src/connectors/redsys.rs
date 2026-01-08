@@ -261,8 +261,14 @@ macros::create_all_prerequisites!(
 fn parse_sync_soap_response(
     response_bytes: &bytes::Bytes,
 ) -> CustomResult<responses::RedsysSyncResponse, errors::ConnectorError> {
-    let response_str = String::from_utf8(response_bytes.to_vec())
+    let mut response_str = String::from_utf8(response_bytes.to_vec())
         .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+    // Trim any leading/trailing whitespace and quotes that might cause XML parsing errors
+    response_str = response_str.trim().trim_matches('"').to_string();
+
+    // Unescape any escaped quotes (e.g., \" -> ")
+    response_str = response_str.replace("\\\"", "\"");
 
     // Preprocess: remove namespace prefixes and normalize element names for easier parsing
     let preprocessed = response_str
