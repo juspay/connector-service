@@ -4,6 +4,24 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.08.0
+
+### Features
+
+- **connector:**
+  - Braintree RepeatPayment Flow ([#399](https://github.com/juspay/connector-service/pull/399)) ([`27992ee`](https://github.com/juspay/connector-service/commit/27992eed49578cb2bbe413d63664ee88ffc3f113))
+  - [GIGADAT] Connector Integration ([#408](https://github.com/juspay/connector-service/pull/408)) ([`2d2fba5`](https://github.com/juspay/connector-service/commit/2d2fba54408355ad1cbff6b46a3e591106c73652))
+- Repeatpayment, nti flow for adyen ([#405](https://github.com/juspay/connector-service/pull/405)) ([`9df9321`](https://github.com/juspay/connector-service/commit/9df9321e23cb2d1735312ae32ed8a9f9ffd42b51))
+
+### Bug Fixes
+
+- Remove the parallel execution of test in Run test ([#412](https://github.com/juspay/connector-service/pull/412)) ([`50b72a1`](https://github.com/juspay/connector-service/commit/50b72a1db4cc6f21b6c05f459e8ed1a54577204a))
+- Remove unused field ([#411](https://github.com/juspay/connector-service/pull/411)) ([`ffd9846`](https://github.com/juspay/connector-service/commit/ffd984675d93281d5f7613d1c952186a36fa92f8))
+
+**Full Changelog:** [`2026.01.05.0...2026.01.08.0`](https://github.com/juspay/connector-service/compare/2026.01.05.0...2026.01.08.0)
+
+- - -
+
 ## 2026.01.05.0
 
 ### Features
