@@ -292,7 +292,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("GetnetErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-                .attach_printable("Failed to deserialize Getnet error response")?;
+            .attach_printable("Failed to deserialize Getnet error response")?;
 
         with_error_response_body!(event_builder, response);
 
