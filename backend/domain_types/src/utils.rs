@@ -517,3 +517,19 @@ pub fn convert_canada_state_to_code(state: &str) -> String {
         _ => state.to_string(),
     }
 }
+
+/// Convert CardIssuer to CyberSource card type code
+pub fn card_issuer_to_cybersource_code(card_issuer: CardIssuer) -> String {
+    let card_type = match card_issuer {
+        CardIssuer::AmericanExpress => "003",
+        CardIssuer::Master => "002",
+        CardIssuer::Maestro => "042",
+        CardIssuer::Visa => "001",
+        CardIssuer::Discover => "004",
+        CardIssuer::DinersClub => "005",
+        CardIssuer::CarteBlanche => "006",
+        CardIssuer::JCB => "007",
+        CardIssuer::CartesBancaires => "036",
+    };
+    card_type.to_string()
+}

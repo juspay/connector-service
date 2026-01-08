@@ -40,6 +40,7 @@ use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
+use ring::digest;
 use serde::Serialize;
 use std::fmt::Debug;
 use time::OffsetDateTime;
@@ -359,11 +360,10 @@ macros::create_all_prerequisites!(
         amount_converter: StringMajorUnit
     ],
     member_functions: {
-        fn generate_digest(&self, payload: &[u8]) -> String {
-            use sha2::{Digest, Sha256};
-            let mut hasher = Sha256::new();
-            hasher.update(payload);
-            BASE64_ENGINE.encode(hasher.finalize())
+        pub fn generate_digest(&self, payload: &[u8]) -> String {
+            println!("this is payload of hyperswitch: {payload:?}");
+            let payload_digest = digest::digest(&digest::SHA256, payload);
+            BASE64_ENGINE.encode(payload_digest)
         }
 
         fn generate_signature(

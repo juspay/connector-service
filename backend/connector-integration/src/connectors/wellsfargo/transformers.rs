@@ -12,6 +12,7 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
+    utils::card_issuer_to_cybersource_code,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -29,6 +30,16 @@ mod error_messages {
 }
 
 // REQUEST STRUCTURES
+
+/// Commerce indicator for Wells Fargo
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CommerceIndicator {
+    CardPresent,
+    Internet,
+    Phone,
+    International,
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,7 +59,7 @@ pub struct WellsfargoPaymentsRequest<T: PaymentMethodDataTypes> {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessingInformation {
-    commerce_indicator: String,
+    commerce_indicator: CommerceIndicator,
     capture: Option<bool>,
     action_list: Option<Vec<WellsfargoActionsList>>,
     action_token_types: Option<Vec<WellsfargoActionsTokenType>>,
@@ -157,14 +168,17 @@ pub struct ConsumerAuthenticationInformation {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoCaptureRequest {
+    processing_information: Option<ProcessingInformation>,
     order_information: OrderInformationAmount,
     client_reference_information: ClientReferenceInformation,
+    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderInformationAmount {
     amount_details: Amount,
+    bill_to: Option<BillTo>,
 }
 
 #[derive(Debug, Serialize)]
@@ -172,10 +186,6 @@ pub struct OrderInformationAmount {
 pub struct WellsfargoVoidRequest {
     client_reference_information: ClientReferenceInformation,
     reversal_information: ReversalInformation,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
-    // The connector documentation does not mention the merchantDefinedInformation field
-    // for Void requests. But this has been still added because it works!
 }
 
 #[derive(Debug, Serialize)]
@@ -209,17 +219,6 @@ impl From<WellsfargoRefundStatus> for RefundStatus {
         }
     }
 }
-
-// pub struct WellsfargoRefundRequest {
-//     order_information: OrderInformation,
-//     client_reference_information: ClientReferenceInformation,
-// }
-
-// pub struct WellsfargoRefundResponse {
-//     id: String,
-//     status: WellsfargoRefundStatus,
-//     error_information: Option<WellsfargoErrorInformation>,
-// }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -273,7 +272,8 @@ pub enum WellsfargoPaymentInitiatorTypes {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoCaptureOptions {
-    partial_capture_indicator: Option<bool>,
+    capture_sequence_number: Option<u8>,
+    total_capture_count: Option<u8>,
 }
 
 #[derive(Debug, Serialize)]
@@ -513,23 +513,6 @@ fn convert_metadata_to_merchant_defined_info(
     vector
 }
 
-/// Converts CardIssuer enum to CyberSource/Wells Fargo card type code
-fn card_issuer_to_cybersource_code(card_issuer: domain_types::utils::CardIssuer) -> String {
-    use domain_types::utils::CardIssuer;
-    match card_issuer {
-        CardIssuer::Visa => "001",
-        CardIssuer::Master => "002",
-        CardIssuer::AmericanExpress => "003",
-        CardIssuer::Discover => "004",
-        CardIssuer::DinersClub => "005",
-        CardIssuer::CarteBlanche => "006",
-        CardIssuer::JCB => "007",
-        CardIssuer::Maestro => "042",
-        CardIssuer::CartesBancaires => "036",
-    }
-    .to_string()
-}
-
 /// Extracts phone number with country code from address
 fn get_phone_number(
     address: Option<&domain_types::payment_address::Address>,
@@ -551,24 +534,11 @@ fn get_phone_number(
 /// - NotVerified/VerificationNotPerformed (A/U) → "spa" (partial protection)
 /// - Other/None → "internet" (merchant liable)
 fn get_commerce_indicator(
-    authentication_data: &Option<domain_types::router_request_types::AuthenticationData>,
-) -> String {
-    use common_enums::TransactionStatus;
-
-    match authentication_data {
-        Some(auth_data) => match auth_data.trans_status {
-            Some(TransactionStatus::Success) => "vbv".to_string(),
-            Some(TransactionStatus::NotVerified)
-            | Some(TransactionStatus::VerificationNotPerformed) => "spa".to_string(),
-            Some(TransactionStatus::Failure)
-            | Some(TransactionStatus::Rejected)
-            | Some(TransactionStatus::ChallengeRequired)
-            | Some(TransactionStatus::ChallengeRequiredDecoupledAuthentication)
-            | Some(TransactionStatus::InformationOnly)
-            | None => "internet".to_string(),
-        },
-        None => "internet".to_string(),
-    }
+    _authentication_data: &Option<domain_types::router_request_types::AuthenticationData>,
+) -> CommerceIndicator {
+    // For now, all e-commerce transactions use Internet indicator
+    // Future enhancements could differentiate based on authentication status
+    CommerceIndicator::Internet
 }
 
 /// Converts AuthenticationData to ConsumerAuthenticationInformation for Wells Fargo
@@ -843,16 +813,72 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             currency,
         };
 
-        let order_information = OrderInformationAmount { amount_details };
+        // Build bill_to if billing information is available
+        let billing = common_data.address.get_payment_billing();
+        let bill_to = billing.map(|addr| {
+            let phone_number = get_phone_number(Some(addr));
+            let email_secret = addr.email.clone().map(|e| Secret::new(e.expose().expose())).unwrap_or_else(|| Secret::new(String::new()));
+            addr.address
+                .as_ref()
+                .map(|details| BillTo {
+                    first_name: details.first_name.clone(),
+                    last_name: details.last_name.clone(),
+                    address1: details.line1.clone(),
+                    locality: details.city.clone(),
+                    administrative_area: details.to_state_code_as_optional().ok().flatten(),
+                    postal_code: details.zip.clone(),
+                    country: details.country,
+                    email: email_secret.clone(),
+                    phone_number: phone_number.clone(),
+                })
+                .unwrap_or_else(|| BillTo {
+                    first_name: None,
+                    last_name: None,
+                    address1: None,
+                    locality: None,
+                    administrative_area: None,
+                    postal_code: None,
+                    country: None,
+                    email: email_secret,
+                    phone_number,
+                })
+        });
 
-        // Client reference - use payment_id from common data
-        let client_reference_information = ClientReferenceInformation {
-            code: Some(common_data.payment_id.clone()),
+        let order_information = OrderInformationAmount {
+            amount_details,
+            bill_to,
         };
 
+        // Client reference - use connector_request_reference_id from common data
+        let client_reference_information = ClientReferenceInformation {
+            code: Some(common_data.connector_request_reference_id.clone()),
+        };
+
+        // Processing information with capture options
+        let processing_information = ProcessingInformation {
+            commerce_indicator: CommerceIndicator::Internet,
+            capture: None,
+            action_list: None,
+            action_token_types: None,
+            authorization_options: None,
+            capture_options: Some(WellsfargoCaptureOptions {
+                capture_sequence_number: Some(1),
+                total_capture_count: Some(1),
+            }),
+            payment_solution: None,
+        };
+
+        // Merchant defined information from metadata
+        let merchant_defined_information = request
+            .metadata
+            .clone()
+            .map(|m| convert_metadata_to_merchant_defined_info(m.expose()));
+
         Ok(Self {
+            processing_information: Some(processing_information),
             order_information,
             client_reference_information,
+            merchant_defined_information,
         })
     }
 }
@@ -912,19 +938,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .unwrap_or_else(|| "Cancellation requested".to_string()),
         };
 
-        // Client reference - use payment_id from common data
         let client_reference_information = ClientReferenceInformation {
-            code: Some(common_data.payment_id.clone()),
+            code: Some(common_data.connector_request_reference_id.clone()),
         };
-
-        // Merchant defined information from metadata
-        // Note: PaymentVoidData in UCS v2 doesn't have metadata field, so set to None
-        let merchant_defined_information = None;
 
         Ok(Self {
             client_reference_information,
             reversal_information,
-            merchant_defined_information,
         })
     }
 }
@@ -966,7 +986,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             currency,
         };
 
-        let order_information = OrderInformationAmount { amount_details };
+        let order_information = OrderInformationAmount {
+            amount_details,
+            bill_to: None, // Refund doesn't need bill_to
+        };
 
         // Client reference - use refund_id from request
         let client_reference_information = ClientReferenceInformation {
@@ -1078,7 +1101,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Processing information for mandate
         let processing_information = ProcessingInformation {
-            commerce_indicator: "internet".to_string(),
+            commerce_indicator: CommerceIndicator::Internet,
             capture: Some(false),
             action_list: Some(vec![WellsfargoActionsList::TokenCreate]),
             action_token_types: Some(vec![
