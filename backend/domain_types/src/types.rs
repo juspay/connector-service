@@ -3240,7 +3240,7 @@ impl ForeignFrom<common_enums::CavvAlgorithm> for grpc_api_types::payments::Cavv
             common_enums::CavvAlgorithm::Two => Self::Two,
             common_enums::CavvAlgorithm::Three => Self::Three,
             common_enums::CavvAlgorithm::Four => Self::Four,
-            common_enums::CavvAlgorithm::A => Self::Four,
+            common_enums::CavvAlgorithm::A => Self::A,
         }
     }
 }
@@ -3253,6 +3253,7 @@ impl ForeignFrom<grpc_api_types::payments::CavvAlgorithm> for common_enums::Cavv
             grpc_api_types::payments::CavvAlgorithm::Two => Self::Two,
             grpc_api_types::payments::CavvAlgorithm::Three => Self::Three,
             grpc_api_types::payments::CavvAlgorithm::Four => Self::Four,
+            grpc_api_types::payments::CavvAlgorithm::A => Self::A,
             grpc_api_types::payments::CavvAlgorithm::Unspecified => Self::Zero,
         }
     }
