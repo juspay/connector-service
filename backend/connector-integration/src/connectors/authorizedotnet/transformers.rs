@@ -75,26 +75,32 @@ fn get_refund_credit_card_payment(
         })?
         .peek();
 
-    // Extract creditCard field (which might be a JSON string)
-    let credit_card_str = metadata
-        .get("creditCard")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                field_name: "creditCard"
-            })
-        })?;
-
-    // Parse the JSON string to get card details
-    let credit_card: serde_json::Value = serde_json::from_str(credit_card_str)
-        .inspect_err(|e| {
-            tracing::error!(
-                error = %e,
-                credit_card_str = %credit_card_str,
-                "Failed to parse credit card JSON"
-            );
+    // Extract creditCard field (stringified JSON or JSON object)
+    let credit_card_value = metadata.get("creditCard").ok_or_else(|| {
+        error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+            field_name: "creditCard"
         })
-        .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?;
+    })?;
+
+    let credit_card: serde_json::Value = match credit_card_value {
+        serde_json::Value::String(credit_card_str) => serde_json::from_str(credit_card_str)
+            .inspect_err(|e| {
+                tracing::error!(
+                    error = %e,
+                    credit_card_str = %credit_card_str,
+                    "Failed to parse credit card JSON"
+                );
+            })
+            .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?,
+        serde_json::Value::Object(_) => credit_card_value.clone(),
+        _ => {
+            return Err(error_stack::report!(
+                HsInterfacesConnectorError::MissingRequiredField {
+                    field_name: "creditCard"
+                }
+            ))
+        }
+    };
 
     let card_number = credit_card
         .get("cardNumber")
@@ -1991,7 +1997,14 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                         .first()
                         .map(|m| m.text.clone())
                         .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-                    reason: None,
+                    reason: Some(
+                        response
+                            .messages
+                            .message
+                            .first()
+                            .map(|m| m.text.clone())
+                            .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                    ),
                     attempt_status: Some(status),
                     connector_transaction_id: None,
                     network_decline_code: None,
@@ -2078,8 +2091,8 @@ fn create_error_response(
     ErrorResponse {
         status_code: http_status_code,
         code: error_code,
-        message: error_message,
-        reason: None,
+        message: error_message.clone(),
+        reason: Some(error_message),
         attempt_status: Some(status),
         connector_transaction_id,
         network_decline_code: None,
@@ -2532,7 +2545,14 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                         .first()
                         .map(|m| m.text.clone())
                         .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-                    reason: None,
+                    reason: Some(
+                        response
+                            .messages
+                            .message
+                            .first()
+                            .map(|m| m.text.clone())
+                            .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                    ),
                     attempt_status: Some(AttemptStatus::Failure),
                     connector_transaction_id: None,
                     network_decline_code: None,
@@ -2746,7 +2766,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .first()
                     .map(|m| m.text.clone())
                     .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-                reason: None,
+                reason: Some(
+                    response
+                        .messages
+                        .message
+                        .first()
+                        .map(|m| m.text.clone())
+                        .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                ),
                 attempt_status: Some(AttemptStatus::Failure),
                 connector_transaction_id: None,
                 network_decline_code: None,
@@ -3127,7 +3154,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
                         status_code: http_code,
                         code: error_code.to_string(),
                         message: error_text.to_string(),
-                        reason: None,
+                        reason: Some(error_text.to_string()),
                         attempt_status: None,
                         connector_transaction_id: None,
                         network_decline_code: None,
@@ -3141,7 +3168,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
                     status_code: http_code,
                     code: error_code.to_string(),
                     message: error_text.to_string(),
-                    reason: None,
+                    reason: Some(error_text.to_string()),
                     attempt_status: None,
                     connector_transaction_id: None,
                     network_decline_code: None,
