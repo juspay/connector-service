@@ -2334,10 +2334,6 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
             | MandateReferenceId::NetworkTokenWithNTI(_) => None,
         }
     }
-    pub fn get_connector_mandate_id(&self) -> Result<String, Error> {
-        self.connector_mandate_id()
-            .ok_or_else(missing_field_err("connector_mandate_id"))
-    }
 }
 
 #[derive(Debug, Clone)]

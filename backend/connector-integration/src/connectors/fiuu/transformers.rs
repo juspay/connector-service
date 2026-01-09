@@ -278,7 +278,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_billing_full_name()?;
 
         let email = item.router_data.resource_common_data.get_billing_email()?;
-        let token = Secret::new(item.router_data.request.get_connector_mandate_id()?);
+        let token = Secret::new(item.router_data.request.connector_mandate_id().ok_or_else(
+            || ConnectorError::MissingRequiredField {
+                field_name: "connector_mandate_id",
+            },
+        )?);
         let verify_key = auth.verify_key;
         let recurring_request = FiuuRecurringRequest {
             record_type: record_type.clone(),
@@ -783,7 +787,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (mps_token_status, customer_email) =
             if item.request.is_customer_initiated_mandate_payment() {
-                (Some(1), Some(item.resource_common_data.get_billing_email()?))
+                (
+                    Some(1),
+                    Some(item.resource_common_data.get_billing_email()?),
+                )
             } else {
                 (Some(3), None)
             };
