@@ -140,9 +140,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         metadata: {
-            let mut metadata = std::collections::HashMap::new();
-            metadata.insert("connector_meta_data".to_string(), connector_meta_data);
-            metadata
+            let mut metadata_map = std::collections::HashMap::new();
+            metadata_map.insert("connector_meta_data".to_string(), connector_meta_data);
+            let metadata_json = serde_json::to_string(&metadata_map).unwrap();
+            Some(Secret::new(metadata_json))
         },
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
@@ -164,8 +165,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Eur),
         state: None,
-        metadata: std::collections::HashMap::new(),
-        merchant_account_metadata: std::collections::HashMap::new(),
+        metadata: None,
+        merchant_account_metadata: None,
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,

@@ -44,35 +44,20 @@ fn extract_headers_from_metadata(
     }
 }
 
-/// Convert merchant_account_metadata HashMap to JSON Value, deserializing string values that contain JSON
-fn convert_merchant_metadata_to_json(metadata: &HashMap<String, String>) -> serde_json::Value {
-    let metadata_map = metadata
-        .iter()
-        .fold(serde_json::Map::new(), |mut map, (key, value)| {
-            // Try to parse the value as JSON first, if it fails, treat it as a plain string
-            let json_value = serde_json::from_str::<serde_json::Value>(value)
-                .inspect_err(|e| {
-                    tracing::debug!("Failed to parse metadata as JSON for key `{}`: {}", key, e);
-                })
-                .unwrap_or_else(|_| serde_json::Value::String(value.clone()));
-            map.insert(key.clone(), json_value);
-            map
-        });
-    serde_json::Value::Object(metadata_map)
-}
-
-/// Convert HashMap to JSON Value, deserializing string values that contain JSON
-fn convert_metadata_to_json(metadata: &HashMap<String, String>) -> serde_json::Value {
-    let metadata_map = metadata
-        .iter()
-        .fold(serde_json::Map::new(), |mut map, (key, value)| {
-            // Try to parse the value as JSON first, if it fails, treat it as a plain string
-            let json_value = serde_json::from_str::<serde_json::Value>(value)
-                .unwrap_or_else(|_| serde_json::Value::String(value.clone()));
-            map.insert(key.clone(), json_value);
-            map
-        });
-    serde_json::Value::Object(metadata_map)
+/// Helper function to parse Option<Secret<String>> metadata to serde_json::Value
+/// Properly handles parsing JSON or returning Null if None
+fn parse_secretstring_metadata(
+    metadata: Option<Secret<String>>,
+) -> Result<serde_json::Value, error_stack::Report<ApplicationErrorResponse>> {
+    metadata.map_or(Ok(serde_json::Value::Null), |secret| {
+        let raw = secret.expose();
+        serde_json::from_str(&raw).change_context(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "INVALID CONNECTOR METADATA".to_string(),
+            error_identifier: 400,
+            error_message: "Failed to parse connector metadata".to_string(),
+            error_object: None,
+        }))
+    })
 }
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
@@ -1769,15 +1754,13 @@ impl<
         };
         let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
 
-        // Extract merchant_account_id from metadata before moving it
-        let merchant_account_id = value.metadata.get("merchant_account_id").cloned();
-
         // Store merchant_account_metadata for connector use
-        let merchant_account_metadata = (!value.merchant_account_metadata.is_empty()).then(|| {
-            common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                &value.merchant_account_metadata,
-            ))
-        });
+        let merchant_account_metadata =
+            parse_secretstring_metadata(value.clone().merchant_account_metadata)?;
+        let merchant_account_id = merchant_account_metadata
+            .get("merchant_account_id")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         let setup_future_usage = match value.setup_future_usage() {
             grpc_payment_types::FutureUsage::Unspecified => None,
@@ -1905,17 +1888,7 @@ impl<
                     error_object: None,
                 }))?,
             request_incremental_authorization: value.request_incremental_authorization,
-            metadata: if value.metadata.is_empty() {
-                None
-            } else {
-                Some(serde_json::Value::Object(
-                    value
-                        .metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            },
+            metadata: Some(parse_secretstring_metadata(value.metadata)?),
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
             shipping_cost,
@@ -1930,7 +1903,7 @@ impl<
                 .map(MandateData::foreign_try_from)
                 .transpose()?,
             request_extended_authorization: value.request_extended_authorization,
-            merchant_account_metadata,
+            merchant_account_metadata: Some(merchant_account_metadata.into()),
             connector_testing_data,
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
@@ -1972,16 +1945,13 @@ impl<
             None => None,
         };
         let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
-
-        // Extract merchant_account_id from metadata before moving it
-        let merchant_account_id = value.metadata.get("merchant_account_id").cloned();
-
         // Store merchant_account_metadata for connector use
-        let merchant_account_metadata = (!value.merchant_account_metadata.is_empty()).then(|| {
-            common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                &value.merchant_account_metadata,
-            ))
-        });
+        let merchant_account_metadata =
+            parse_secretstring_metadata(value.clone().merchant_account_metadata)?;
+        let merchant_account_id = merchant_account_metadata
+            .get("merchant_account_id")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         let setup_future_usage = match value.setup_future_usage() {
             grpc_payment_types::FutureUsage::Unspecified => None,
@@ -2109,11 +2079,7 @@ impl<
                     error_object: None,
                 }))?,
             request_incremental_authorization: value.request_incremental_authorization,
-            metadata: if value.metadata.is_empty() {
-                None
-            } else {
-                Some(convert_metadata_to_json(&value.metadata))
-            },
+            metadata: Some(parse_secretstring_metadata(value.metadata)?),
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
             shipping_cost,
@@ -2128,7 +2094,7 @@ impl<
                 .map(MandateData::foreign_try_from)
                 .transpose()?,
             request_extended_authorization: value.request_extended_authorization,
-            merchant_account_metadata,
+            merchant_account_metadata: Some(merchant_account_metadata.into()),
             connector_testing_data,
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
@@ -2667,7 +2633,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         let vault_headers = extract_headers_from_metadata(metadata);
 
         let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
-            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+            parse_secretstring_metadata(value.merchant_account_metadata)?,
         );
 
         let order_details = (!value.order_details.is_empty())
@@ -2710,12 +2676,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_customer: value.connector_customer_id,
             description: value.description,
             return_url: value.return_url.clone(),
-            connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()?
-                .or(Some(connector_meta_data)) // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
-            },
+            connector_meta_data: Some(connector_meta_data),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -2782,7 +2743,7 @@ impl
         let vault_headers = extract_headers_from_metadata(metadata);
 
         let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
-            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+            parse_secretstring_metadata(value.merchant_account_metadata)?,
         );
 
         let order_details = (!value.order_details.is_empty())
@@ -2829,12 +2790,7 @@ impl
             connector_customer: value.connector_customer_id,
             description: value.description,
             return_url: value.return_url.clone(),
-            connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()?
-                .or(Some(connector_meta_data)) // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
-            },
+            connector_meta_data: Some(connector_meta_data),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -3043,7 +2999,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
         let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
-            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+            parse_secretstring_metadata(value.merchant_account_metadata)?,
         );
 
         Ok(Self {
@@ -3258,7 +3214,7 @@ pub fn generate_create_order_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
                 state: None,
                 captured_amount: None,
                 minor_captured_amount: None,
@@ -3300,7 +3256,7 @@ pub fn generate_create_order_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
                 raw_connector_response,
                 raw_connector_request,
                 state: None,
@@ -3316,27 +3272,12 @@ pub fn generate_create_order_response(
     Ok(response)
 }
 
-/// Helper function to convert connector_metadata from serde_json::Value to HashMap<String, String>
-/// Properly handles different JSON value types (String, Number, Bool)
-fn convert_connector_metadata_to_hashmap(
+/// Helper function to convert connector_metadata from serde_json::Value to Option<Secret<String>>
+/// Serializes the JSON value to a string for transmission via gRPC
+fn convert_connector_metadata_to_secret_string(
     connector_metadata: Option<serde_json::Value>,
-) -> HashMap<String, String> {
-    connector_metadata
-        .and_then(|value| value.as_object().cloned())
-        .map(|map| {
-            map.into_iter()
-                .map(|(k, v)| {
-                    let value_str = match v {
-                        serde_json::Value::String(s) => s,
-                        serde_json::Value::Number(n) => n.to_string(),
-                        serde_json::Value::Bool(b) => b.to_string(),
-                        _ => v.to_string(),
-                    };
-                    (k, value_str)
-                })
-                .collect()
-        })
-        .unwrap_or_default()
+) -> Option<Secret<String>> {
+    connector_metadata.and_then(|value| serde_json::to_string(&value).ok().map(Secret::new))
 }
 
 pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
@@ -3471,7 +3412,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                             }
                         }
                     ).transpose()?,
-                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
+                    connector_metadata: convert_connector_metadata_to_secret_string(connector_metadata),
                     network_txn_id,
                     response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -3544,7 +3485,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 response_headers,
                 raw_connector_response,
                 raw_connector_request,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
                 state,
                 captured_amount: None,
                 minor_captured_amount: None,
@@ -3734,22 +3675,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             }
         };
 
-        let connector_metadata = value
-            .connector_metadata
-            .map(|metadata| serde_json::from_str(&metadata.expose()))
-            .transpose()
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID CONNECTOR METADATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Failed to parse connector metadata".to_owned(),
-                error_object: None,
-            }))?;
+        let connector_metadata = parse_secretstring_metadata(value.connector_metadata)?;
 
         Ok(Self {
             connector_transaction_id,
             encoded_data: value.encoded_data,
             capture_method,
-            connector_metadata,
+            connector_metadata: Some(connector_metadata.into()),
             sync_type,
             mandate_id: None,
             payment_method_type: None,
@@ -4011,7 +3943,9 @@ pub fn generate_payment_void_response(
                     state,
                     mandate_reference: mandate_reference_grpc,
                     incremental_authorization_allowed,
-                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
+                    connector_metadata: convert_connector_metadata_to_secret_string(
+                        connector_metadata,
+                    ),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -4056,7 +3990,7 @@ pub fn generate_payment_void_response(
                 raw_connector_request,
                 mandate_reference: None,
                 incremental_authorization_allowed: None,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
             })
         }
     }
@@ -4297,7 +4231,7 @@ pub fn generate_payment_sync_response(
                     email: None,
                     connector_customer_id: None,
                     merchant_order_reference_id: None,
-                    metadata: HashMap::new(),
+                    metadata: None,
                     status_code: status_code as u32,
                     raw_connector_response,
                     response_headers: router_data_v2
@@ -4358,7 +4292,7 @@ pub fn generate_payment_sync_response(
                 email: None,
                 connector_customer_id: None,
                 merchant_order_reference_id: None,
-                metadata: HashMap::new(),
+                metadata: None,
                 raw_connector_response,
                 status_code: e.status_code as u32,
                 response_headers: router_data_v2
@@ -4397,35 +4331,15 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             connector_refund_id: value.refund_id.clone(),
             reason: value.refund_reason.clone(),
             refund_status: common_enums::RefundStatus::Pending,
-            refund_connector_metadata: (!value.refund_metadata.is_empty()).then(|| {
-                Secret::new(serde_json::Value::Object(
-                    value
-                        .refund_metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            }),
+            refund_connector_metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.refund_metadata)?,
+            )),
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
             split_refunds: None,
-            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
-                .then(|| {
-                    serde_json::to_value(&value.merchant_account_metadata)
-                        .map(common_utils::pii::SecretSerdeValue::new)
-                        .map_err(|_| {
-                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                                ApiError {
-                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                    error_identifier: 500,
-                                    error_message: "Failed to serialize merchant_account_metadata"
-                                        .to_owned(),
-                                    error_object: None,
-                                },
-                            ))
-                        })
-                })
-                .transpose()?,
+            merchant_account_metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.merchant_account_metadata)?,
+            )),
         })
     }
 }
@@ -4452,14 +4366,9 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
-        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
-            .then(|| {
-                serde_json::to_value(&value.merchant_account_metadata)
-                    .map(common_utils::pii::SecretSerdeValue::new)
-            })
-            .transpose()
-            .ok()
-            .flatten();
+        let connector_meta_data = Some(common_utils::pii::SecretSerdeValue::new(
+            parse_secretstring_metadata(value.merchant_account_metadata)?,
+        ));
 
         let payment_method = value
             .payment_method_type
@@ -4518,14 +4427,9 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
-        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
-            .then(|| {
-                serde_json::to_value(&value.merchant_account_metadata)
-                    .map(common_utils::pii::SecretSerdeValue::new)
-            })
-            .transpose()
-            .ok()
-            .flatten();
+        let connector_meta_data = Some(common_utils::pii::SecretSerdeValue::new(
+            parse_secretstring_metadata(value.refund_metadata)?,
+        ));
 
         let payment_method = value
             .payment_method_type
@@ -4922,8 +4826,8 @@ pub fn generate_refund_sync_response(
                 customer_name: None,
                 email: None,
                 merchant_order_reference_id: None,
-                metadata: HashMap::new(),
-                refund_metadata: HashMap::new(),
+                metadata: None,
+                refund_metadata: None,
                 raw_connector_response,
                 status_code: response.status_code as u32,
                 response_headers,
@@ -4974,8 +4878,8 @@ pub fn generate_refund_sync_response(
                 email: None,
                 raw_connector_response,
                 merchant_order_reference_id: None,
-                metadata: HashMap::new(),
-                refund_metadata: HashMap::new(),
+                metadata: None,
+                refund_metadata: None,
                 status_code: e.status_code as u32,
                 response_headers,
                 state: None,
@@ -5050,7 +4954,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             email: None,
             connector_customer_id: None,
             merchant_order_reference_id: None,
-            metadata: HashMap::new(),
+            metadata: None,
             status_code: value.status_code as u32,
             raw_connector_response: None,
             response_headers,
@@ -5087,15 +4991,17 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                     _ => None,
                 })
                 .unwrap_or_default(),
-            metadata: (!value.metadata.is_empty())
-                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.metadata))),
+            metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.metadata)?,
+            )),
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
             integrity_object: None,
             amount,
             currency,
-            connector_metadata: (!value.connector_metadata.is_empty())
-                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.connector_metadata))),
+            connector_metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.connector_metadata)?,
+            )),
         })
     }
 }
@@ -5243,8 +5149,8 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             customer_name: None,
             email: None,
             merchant_order_reference_id: None,
-            metadata: HashMap::new(),
-            refund_metadata: HashMap::new(),
+            metadata: None,
+            refund_metadata: None,
             status_code: value.status_code as u32,
             response_headers,
             state: None,
@@ -5336,12 +5242,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
             refund_amount: value.refund_amount,
-            connector_metadata: Some(convert_merchant_metadata_to_json(&value.connector_metadata)),
-            refund_connector_metadata: {
-                value.refund_metadata.get("refund_metadata").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()?
-            },
+            connector_metadata: Some(parse_secretstring_metadata(value.connector_metadata)?),
+            refund_connector_metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.refund_metadata)?,
+            )),
             minor_payment_amount,
             minor_refund_amount,
             refund_status: common_enums::RefundStatus::Pending,
@@ -5360,23 +5264,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .transpose()?,
             integrity_object: None,
             split_refunds: None,
-            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
-                .then(|| {
-                    serde_json::to_value(&value.merchant_account_metadata)
-                        .map(common_utils::pii::SecretSerdeValue::new)
-                        .map_err(|_| {
-                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                                ApiError {
-                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                    error_identifier: 500,
-                                    error_message: "Failed to serialize merchant_account_metadata"
-                                        .to_owned(),
-                                    error_object: None,
-                                },
-                            ))
-                        })
-                })
-                .transpose()?,
+            merchant_account_metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.merchant_account_metadata)?,
+            )),
         })
     }
 }
@@ -5567,8 +5457,8 @@ pub fn generate_refund_response(
                 email: None,
                 merchant_order_reference_id: None,
                 raw_connector_response,
-                metadata: HashMap::new(),
-                refund_metadata: HashMap::new(),
+                metadata: None,
+                refund_metadata: None,
                 status_code: response.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data
@@ -5610,8 +5500,8 @@ pub fn generate_refund_response(
                 email: None,
                 raw_connector_response,
                 merchant_order_reference_id: None,
-                metadata: HashMap::new(),
-                refund_metadata: HashMap::new(),
+                metadata: None,
+                refund_metadata: None,
                 status_code: e.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data
@@ -5707,16 +5597,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
-            metadata: (!value.metadata.is_empty())
-                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.metadata))),
+            metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.metadata)?,
+            )),
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             integrity_object: None,
             capture_method,
-            connector_metadata: (!value.connector_metadata.is_empty())
-                .then(|| Secret::new(convert_merchant_metadata_to_json(&value.connector_metadata))),
+            connector_metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.connector_metadata)?,
+            )),
         })
     }
 }
@@ -5799,7 +5691,7 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
         let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
-            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+            parse_secretstring_metadata(value.merchant_account_metadata)?,
         );
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -5999,7 +5891,9 @@ pub fn generate_payment_capture_response(
                         .resource_common_data
                         .minor_amount_captured
                         .map(|amount_captured| amount_captured.get_amount_as_i64()),
-                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
+                    connector_metadata: convert_connector_metadata_to_secret_string(
+                        connector_metadata,
+                    ),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -6046,7 +5940,7 @@ pub fn generate_payment_capture_response(
                 mandate_reference: None,
                 captured_amount: None,
                 minor_captured_amount: None,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
             })
         }
     }
@@ -6093,6 +5987,11 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+        let metadata = parse_secretstring_metadata(value.metadata)?;
+        let description = metadata
+            .get("description")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -6116,7 +6015,7 @@ impl
                     error_object: None,
                 }))?,
             connector_customer: value.connector_customer_id,
-            description: value.metadata.get("description").cloned(),
+            description,
             return_url: None,
             connector_meta_data: None,
             amount_captured: None,
@@ -6239,17 +6138,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             return_url: value.return_url.clone(),
             payment_method_type: None,
             request_incremental_authorization: false,
-            metadata: if value.metadata.is_empty() {
-                None
-            } else {
-                Some(serde_json::Value::Object(
-                    value
-                        .metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            },
+            metadata: Some(parse_secretstring_metadata(value.metadata)?),
             complete_authorize_url: None,
             capture_method: None,
             integrity_object: None,
@@ -6268,11 +6157,9 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                 }))?,
             billing_descriptor,
             merchant_order_reference_id: value.merchant_order_reference_id,
-            merchant_account_metadata: (!value.merchant_account_metadata.is_empty()).then(|| {
-                common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                    &value.merchant_account_metadata,
-                ))
-            }),
+            merchant_account_metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.merchant_account_metadata)?,
+            )),
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
         })
@@ -6588,7 +6475,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     state,
                     raw_connector_request,
                     connector_response,
-                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
+                    connector_metadata: convert_connector_metadata_to_secret_string(connector_metadata),
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -6634,7 +6521,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 state,
                 raw_connector_request,
                 connector_response: None,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
             }
         }
     };
@@ -6783,8 +6670,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
             amount: common_utils::types::MinorUnit::new(value.amount),
             currency,
             integrity_object: None,
-            metadata: (!value.metadata.is_empty())
-                .then(|| serde_json::to_value(value.metadata.clone()).unwrap_or_default()),
+            metadata: Some(parse_secretstring_metadata(value.metadata)?),
             webhook_url: value.webhook_url,
         })
     }
@@ -6818,22 +6704,9 @@ impl
         );
 
         // Create connector metadata from the metadata field if present
-        let connector_meta_data = (!value.metadata.is_empty())
-            .then(|| {
-                serde_json::to_value(&value.metadata)
-                    .map(common_utils::pii::SecretSerdeValue::new)
-                    .map_err(|_| {
-                        error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                            ApiError {
-                                sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                error_identifier: 500,
-                                error_message: "Failed to serialize metadata".to_owned(),
-                                error_object: None,
-                            },
-                        ))
-                    })
-            })
-            .transpose()?;
+        let connector_meta_data = Some(common_utils::pii::SecretSerdeValue::new(
+            parse_secretstring_metadata(value.merchant_account_metadata)?,
+        ));
 
         // Extract access token from state if present
         let access_token = value
@@ -7390,11 +7263,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodT
             setup_mandate_details: None,
             integrity_object: None,
             split_payments: None,
-            merchant_account_metadata: (!value.merchant_account_metadata.is_empty()).then(|| {
-                common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                    &value.merchant_account_metadata,
-                ))
-            }),
+            merchant_account_metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.merchant_account_metadata)?,
+            )),
         })
     }
 }
@@ -7804,15 +7675,9 @@ impl<
             minor_amount: common_utils::types::MinorUnit::new(minor_amount),
             currency: common_enums::Currency::foreign_try_from(currency)?,
             merchant_order_reference_id,
-            metadata: (!value.metadata.is_empty()).then(|| {
-                Secret::new(serde_json::Value::Object(
-                    value
-                        .metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            }),
+            metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.metadata)?,
+            )),
             webhook_url,
             router_return_url: value.return_url,
             integrity_object: None,
@@ -7823,11 +7688,9 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             payment_method_type,
-            merchant_account_metadata: (!value.merchant_account_metadata.is_empty()).then(|| {
-                common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                    &value.merchant_account_metadata,
-                ))
-            }),
+            merchant_account_metadata: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.merchant_account_metadata)?,
+            )),
             off_session: value.off_session,
             split_payments: None,
             recurring_mandate_payment_data: value.recurring_mandate_payment_data.map(|v| {
@@ -7998,7 +7861,9 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                             id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                         }
                     }),
-                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
+                    connector_metadata: convert_connector_metadata_to_secret_string(
+                        connector_metadata,
+                    ),
                     mandate_reference: mandate_reference.map(|m| {
                         grpc_api_types::payments::MandateReference {
                             mandate_id: m.connector_mandate_id,
@@ -8063,7 +7928,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                             id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                         }
                     }),
-                    connector_metadata: HashMap::new(),
+                    connector_metadata: None,
                     raw_connector_response: None,
                     status_code: err.status_code as u32,
                     response_headers: router_data_v2
@@ -8644,7 +8509,7 @@ impl<
 
         // Create redirect response from metadata if present
         // This is used to pass connector-specific data (e.g., collectionReference for Worldpay)
-        let redirect_response = if !value.metadata.is_empty() {
+        let redirect_response = if value.metadata.is_some() {
             let params_string = serde_urlencoded::to_string(&value.metadata).change_context(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_METADATA".to_owned(),
@@ -8974,13 +8839,9 @@ impl
             connector_customer: None,
             description: None,
             return_url: value.return_url.clone(),
-            connector_meta_data: {
-                (!value.merchant_account_metadata.is_empty()).then(|| {
-                    common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                        &value.merchant_account_metadata,
-                    ))
-                })
-            },
+            connector_meta_data: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.merchant_account_metadata)?,
+            )),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -9037,6 +8898,12 @@ impl
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
+        let metadata = parse_secretstring_metadata(value.metadata)?;
+        let description = metadata
+            .get("description")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -9052,15 +8919,11 @@ impl
             ),
             customer_id: None,
             connector_customer: None,
-            description: value.metadata.get("description").cloned(),
+            description,
             return_url: value.return_url.clone(),
-            connector_meta_data: {
-                (!value.merchant_account_metadata.is_empty()).then(|| {
-                    common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                        &value.merchant_account_metadata,
-                    ))
-                })
-            },
+            connector_meta_data: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.merchant_account_metadata)?,
+            )),
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,
@@ -9123,6 +8986,12 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
+        let metadata = parse_secretstring_metadata(value.metadata)?;
+        let description = metadata
+            .get("description")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -9138,15 +9007,11 @@ impl
             ),
             customer_id: None,
             connector_customer: None,
-            description: value.metadata.get("description").cloned(),
+            description,
             return_url: value.return_url.clone(),
-            connector_meta_data: {
-                (!value.merchant_account_metadata.is_empty()).then(|| {
-                    common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                        &value.merchant_account_metadata,
-                    ))
-                })
-            },
+            connector_meta_data: Some(common_utils::pii::SecretSerdeValue::new(
+                parse_secretstring_metadata(value.merchant_account_metadata)?,
+            )),
             amount_captured: None,
             minor_amount_captured: None,
             access_token,
