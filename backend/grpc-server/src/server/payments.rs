@@ -163,6 +163,11 @@ trait PaymentOperationsInternal {
         request: RequestData<PaymentServiceSdkSessionTokenRequest>,
     ) -> Result<tonic::Response<PaymentServiceSdkSessionTokenResponse>, tonic::Status>;
 
+    async fn internal_mandate_revoke(
+        &self,
+        request: RequestData<PaymentServiceRevokeMandateRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRevokeMandateResponse>, tonic::Status>;
+
     async fn internal_pre_authenticate(
         &self,
         request: RequestData<PaymentServicePreAuthenticateRequest>,
@@ -1762,6 +1767,21 @@ impl PaymentOperationsInternal for Payments {
         request_data_constructor: PaymentsSdkSessionTokenData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
         generate_response_fn: generate_payment_sdk_session_token_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
+        fn_name: internal_mandate_revoke,
+        log_prefix: "MANDATE_REVOKE",
+        request_type: PaymentServiceRevokeMandateRequest,
+        response_type: PaymentServiceRevokeMandateResponse,
+        flow_marker: MandateRevoke,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: MandateRevokeRequestData,
+        response_data_type: MandateRevokeResponseData,
+        request_data_constructor: MandateRevokeRequestData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_mandate_revoke_response,
         all_keys_required: None
     );
 
@@ -3487,7 +3507,6 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceRevokeMandateRequest>,
     ) -> Result<tonic::Response<PaymentServiceRevokeMandateResponse>, tonic::Status> {
-        info!("MANDATE_REVOKE_FLOW: initiated");
         let service_name = request
             .extensions()
             .get::<String>()
@@ -3498,104 +3517,8 @@ impl PaymentService for Payments {
             request,
             &service_name,
             config.clone(),
-            FlowName::MandateRevoke,
-            |request_data| {
-                let service_name = service_name.clone();
-                Box::pin(async move {
-                    let payload = request_data.payload;
-                    let metadata_payload = request_data.extracted_metadata;
-                    let (connector, request_id, lineage_ids) = (
-                        metadata_payload.connector,
-                        metadata_payload.request_id,
-                        metadata_payload.lineage_ids,
-                    );
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
-
-                    //get connector data
-                    let connector_data: ConnectorData<DefaultPCIHolder> =
-                        ConnectorData::get_connector_by_name(&connector);
-
-                    // Get connector integration
-                    let connector_integration: BoxedConnectorIntegrationV2<
-                        '_,
-                        MandateRevoke,
-                        PaymentFlowData,
-                        MandateRevokeRequestData,
-                        MandateRevokeResponseData,
-                    > = connector_data.connector.get_connector_integration_v2();
-
-                    // Create payment flow data
-                    let payment_flow_data = PaymentFlowData::foreign_try_from((
-                        payload.clone(),
-                        config.connectors.clone(),
-                        &request_data.masked_metadata,
-                    ))
-                    .map_err(|e| e.into_grpc_status())?;
-
-                    // Create mandate revoke data
-                    let mandate_revoke_data =
-                        MandateRevokeRequestData::foreign_try_from(payload.clone())
-                            .map_err(|e| e.into_grpc_status())?;
-
-                    // Create router data
-                    let router_data: RouterDataV2<
-                        MandateRevoke,
-                        PaymentFlowData,
-                        MandateRevokeRequestData,
-                        MandateRevokeResponseData,
-                    > = RouterDataV2 {
-                        flow: std::marker::PhantomData,
-                        resource_common_data: payment_flow_data,
-                        connector_auth_type: connector_auth_details.clone(),
-                        request: mandate_revoke_data.clone(),
-                        response: Err(ErrorResponse::default()),
-                    };
-                    let event_params = EventProcessingParams {
-                        connector_name: &connector.to_string(),
-                        service_name: &service_name,
-                        flow_name: FlowName::MandateRevoke,
-                        event_config: &config.events,
-                        request_id: &request_id,
-                        lineage_ids: &lineage_ids,
-                        reference_id: &metadata_payload.reference_id,
-                        shadow_mode: metadata_payload.shadow_mode,
-                    };
-                    // Get API tag for RepeatPayment flow
-                    let api_tag = config.api_tags.get_tag(
-                        FlowName::MandateRevoke,
-                        mandate_revoke_data.payment_method_type,
-                    );
-
-                    // Create test context if test mode is enabled
-                    let test_context =
-                        config.test.create_test_context(&request_id).map_err(|e| {
-                            tonic::Status::internal(format!("Test mode configuration error: {e}"))
-                        })?;
-
-                    let response = Box::pin(
-                        external_services::service::execute_connector_processing_step(
-                            &config.proxy,
-                            connector_integration,
-                            router_data,
-                            None,
-                            event_params,
-                            None, // token_data - None for non-proxy payments
-                            common_enums::CallConnectorAction::Trigger,
-                            test_context,
-                            api_tag,
-                        ),
-                    )
-                    .await
-                    .switch()
-                    .map_err(|e| e.into_grpc_status())?;
-
-                    // Generate response
-                    let mandate_revoke_response = generate_mandate_revoke_response(response)
-                        .map_err(|e| e.into_grpc_status())?;
-
-                    Ok(tonic::Response::new(mandate_revoke_response))
-                })
-            },
+            FlowName::Authenticate,
+            |request_data| async move { self.internal_mandate_revoke(request_data).await },
         )
         .await
     }
@@ -4842,6 +4765,7 @@ pub fn generate_mandate_revoke_response(
             .into(),
             error_code: None,
             error_message: None,
+            error_reason: None,
             status_code: response.status_code.into(),
             response_headers,
             network_txn_id: None,
@@ -4853,6 +4777,7 @@ pub fn generate_mandate_revoke_response(
             status: grpc_api_types::payments::MandateStatus::Unspecified.into(), // Default status for failed revoke
             error_code: Some(e.code),
             error_message: Some(e.message),
+            error_reason: e.reason,
             status_code: e.status_code.into(),
             response_headers,
             network_txn_id: None,

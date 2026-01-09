@@ -2373,18 +2373,19 @@ message PaymentServiceRevokeMandateResponse {
   MandateStatus status = 1; // Current status of the mandate
   optional string error_code = 2; // Error code if the mandate failed
   optional string error_message = 3; // Error message if the mandate failed
-  uint32 status_code = 4; // HTTP status code from the connector
-  map<string, string> response_headers = 5; // Optional HTTP response headers from the connector
+  optional string error_reason = 4; // Detailed reason for the error
+  uint32 status_code = 5; // HTTP status code from the connector
+  map<string, string> response_headers = 6; // Optional HTTP response headers from the connector
 
   // Transaction Details
-  optional string network_txn_id = 6; // Transaction ID from the mandate network
-  optional Identifier response_ref_id = 7; // Reference ID from the connector response
+  optional string network_txn_id = 7; // Transaction ID from the mandate network
+  optional Identifier response_ref_id = 8; // Reference ID from the connector response
 
   // Raw Response
-  optional SecretString raw_connector_response = 8; // Raw response from the connector for debugging
+  optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
 
   // Raw Request
-  optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 10; // Raw request to the connector for debugging
 }
 
 // -------------------------
