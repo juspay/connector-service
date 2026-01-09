@@ -196,6 +196,7 @@ mod tests {
                     enable_overcapture: None,
                     merchant_account_metadata: None,
                     enable_partial_authorization: None,
+                    locale: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -357,6 +358,7 @@ mod tests {
                     enable_overcapture: None,
                     merchant_account_metadata: None,
                     enable_partial_authorization: None,
+                    locale: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -492,6 +494,7 @@ mod tests {
                     merchant_account_metadata: None,
                     billing_descriptor: None,
                     enable_partial_authorization: None,
+                    locale: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -672,6 +675,7 @@ mod tests {
                     merchant_account_metadata: None,
                     billing_descriptor: None,
                     enable_partial_authorization: None,
+                    locale: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -996,6 +1000,7 @@ mod tests {
                 merchant_account_metadata: None,
                 billing_descriptor: None,
                 enable_partial_authorization: None,
+                locale: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1187,6 +1192,7 @@ mod tests {
                 merchant_account_metadata: None,
                 billing_descriptor: None,
                 enable_partial_authorization: None,
+                locale: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1594,6 +1600,7 @@ mod tests {
                     enable_overcapture: None,
                     merchant_account_metadata: None,
                     enable_partial_authorization: None,
+                    locale: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),
