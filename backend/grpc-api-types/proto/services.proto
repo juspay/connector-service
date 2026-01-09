@@ -48,6 +48,9 @@ service PaymentService {
   // Processes a repeat payment using existing mandate (MIT - Merchant Initiated Transaction).
   rpc RepeatEverything(PaymentServiceRepeatEverythingRequest) returns (PaymentServiceRepeatEverythingResponse);
 
+  // Revokes an existing mandate.
+  rpc MandateRevoke(PaymentServiceRevokeMandateRequest) returns (PaymentServiceRevokeMandateResponse);
+
   // Creates a new dispute.
   rpc Dispute(PaymentServiceDisputeRequest) returns (DisputeResponse);
 
