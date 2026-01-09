@@ -91,6 +91,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Powertranz => Box::new(connectors::Powertranz::new()),
             ConnectorEnum::Jpmorgan => Box::new(connectors::Jpmorgan::new()),
             ConnectorEnum::Revolut => Box::new(connectors::Revolut::new()),
+            ConnectorEnum::Wellsfargo => Box::new(connectors::Wellsfargo::new()),
         }
     }
 }
