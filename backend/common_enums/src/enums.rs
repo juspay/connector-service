@@ -2094,3 +2094,13 @@ pub enum MitCategory {
     /// A retried MIT after a previous transaction failed or was declined.
     Resubmission,
 }
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, strum::Display)]
+#[serde(rename_all = "snake_case")]
+pub enum MandateStatus {
+    #[default]
+    Active,
+    Inactive,
+    Pending,
+    Revoked,
+}

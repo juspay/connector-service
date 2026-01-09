@@ -19,9 +19,10 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse,
     PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
     PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRegisterRequest,
-    PaymentServiceRegisterResponse, PaymentServiceSdkSessionTokenRequest,
-    PaymentServiceSdkSessionTokenResponse, PaymentServiceVoidPostCaptureResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
+    PaymentServiceRegisterResponse, PaymentServiceRevokeMandateRequest,
+    PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
+    PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -89,10 +90,10 @@ use crate::{
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         GpayAllowedPaymentMethods, GpayBillingAddressFormat, GpaySessionTokenResponse,
-        MandateReferenceId, MultipleCaptureRequestData, NetworkTokenWithNTIRef, NextActionCall,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        MandateReferenceId, MandateRevokeRequestData, MultipleCaptureRequestData,
+        NetworkTokenWithNTIRef, NextActionCall, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
@@ -8169,9 +8170,10 @@ impl<
                     .map(common_utils::pii::SecretSerdeValue::new)
             }),
             merchant_account_id: value.merchant_account_id,
-            merchant_configered_currency: Some(common_enums::Currency::foreign_try_from(
-                merchant_configered_currency,
-            )?),
+            merchant_configered_currency: Some(
+                common_enums::Currency::foreign_try_from(merchant_configered_currency)
+                    .unwrap_or_default(),
+            ),
         })
     }
 }
@@ -9480,6 +9482,80 @@ impl
             connector_response_headers: None,
             vault_headers,
             raw_connector_request: None,
+            minor_amount_capturable: None,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+            minor_amount_authorized: None,
+        })
+    }
+}
+
+// Conversion implementations for MandateRevoke flow
+impl ForeignTryFrom<PaymentServiceRevokeMandateRequest> for MandateRevokeRequestData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: PaymentServiceRevokeMandateRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            mandate_id: Secret::new(value.mandate_id),
+            connector_mandate_id: value.connector_mandate_id.map(Secret::new),
+            payment_method_type: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        PaymentServiceRevokeMandateRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            PaymentServiceRevokeMandateRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "MANDATE_REVOKE_ID".to_string(),
+            attempt_id: "MANDATE_REVOKE_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, // Default for mandate operations
+            address: PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
+            customer_id: None,
+            connector_customer: None,
+            description: Some("Mandate revoke operation".to_string()),
+            return_url: None,
+            connector_meta_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
             minor_amount_capturable: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
