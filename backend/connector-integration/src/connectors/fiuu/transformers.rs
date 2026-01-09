@@ -9,7 +9,7 @@ use common_utils::{
     ext_traits::Encode,
     pii::Email,
     request::Method,
-    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
+    types::{AmountConvertor, StringMajorUnit},
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, Void},
@@ -265,8 +265,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
         let currency = item.router_data.request.currency;
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
@@ -503,8 +504,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let txn_currency = item.router_data.request.currency;
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
@@ -705,8 +707,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let txn_currency = item.router_data.request.currency;
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
@@ -1282,8 +1285,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek().to_string();
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
@@ -1492,7 +1496,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(ConnectorError::MissingConnectorTransactionID)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let verify_key = auth.verify_key.peek().to_string();
-        let amount = StringMajorUnitForConnector
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.amount,
                 item.router_data.request.currency,
@@ -1775,8 +1781,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek().to_string();
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
