@@ -717,12 +717,7 @@ impl Payments {
                     None,
                 )
             })?;
-
-        // NOTE: For authorize_only (granular flow), payment_method_token should be passed
-        // in the request from Hyperswitch. The token is already extracted in PaymentFlowData::foreign_try_from().
-        // Hyperswitch is expected to call create_payment_method_token first, then call authorize_only with the token.
-        // We DO NOT call handle_payment_method_token here to maintain the granular separation of concerns.
-
+            
         // Construct router data
         let router_data = RouterDataV2::<
             Authorize,
