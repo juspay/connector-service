@@ -11,21 +11,23 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        self, Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -37,8 +39,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
-    connector_types as interface_connector_types,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 
 mod requests;
@@ -59,122 +60,132 @@ pub(crate) mod headers {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::ConnectorServiceTrait<T> for Redsys<T>
+    connector_types::ConnectorServiceTrait<T> for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentAuthorizeV2<T> for Redsys<T>
+    connector_types::PaymentAuthorizeV2<T> for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentSyncV2 for Redsys<T>
+    connector_types::PaymentIncrementalAuthorization for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentVoidV2 for Redsys<T>
+    connector_types::PaymentSyncV2 for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentCapture for Redsys<T>
+    connector_types::PaymentVoidV2 for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::RefundV2 for Redsys<T>
+    connector_types::PaymentCapture for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::RefundSyncV2 for Redsys<T>
+    connector_types::RefundV2 for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentPreAuthenticateV2<T> for Redsys<T>
+    connector_types::RefundSyncV2 for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentAuthenticateV2<T> for Redsys<T>
+    connector_types::PaymentPreAuthenticateV2<T> for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentPostAuthenticateV2<T> for Redsys<T>
+    connector_types::PaymentAuthenticateV2<T> for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::ValidationTrait for Redsys<T>
+    connector_types::PaymentPostAuthenticateV2<T> for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentOrderCreate for Redsys<T>
+    connector_types::ValidationTrait for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::SetupMandateV2<T> for Redsys<T>
+    connector_types::PaymentOrderCreate for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::RepeatPaymentV2<T> for Redsys<T>
+    connector_types::SetupMandateV2<T> for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::AcceptDispute for Redsys<T>
+    connector_types::RepeatPaymentV2<T> for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::SubmitEvidenceV2 for Redsys<T>
+    connector_types::AcceptDispute for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::DisputeDefend for Redsys<T>
+    connector_types::SubmitEvidenceV2 for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentSessionToken for Redsys<T>
+    connector_types::DisputeDefend for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentVoidPostCaptureV2 for Redsys<T>
+    connector_types::PaymentSessionToken for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentTokenV2<T> for Redsys<T>
+    connector_types::PaymentVoidPostCaptureV2 for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::CreateConnectorCustomer for Redsys<T>
+    connector_types::MandateRevokeV2 for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::PaymentAccessToken for Redsys<T>
+    connector_types::PaymentTokenV2<T> for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::IncomingWebhook for Redsys<T>
+    connector_types::CreateConnectorCustomer for Redsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interface_connector_types::SdkSessionTokenV2 for Redsys<T>
+    connector_types::PaymentAccessToken for Redsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Redsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Redsys<T>
 {
 }
 
@@ -880,7 +891,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        connector_flow::PaymentMethodToken,
+        PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
@@ -930,10 +941,30 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        connector_flow::CreateConnectorCustomer,
+        CreateConnectorCustomer,
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Redsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Redsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
     > for Redsys<T>
 {
 }
@@ -1012,7 +1043,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::CreateConnectorCustomer,
+        CreateConnectorCustomer,
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
@@ -1060,10 +1091,30 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::PaymentMethodToken,
+        PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
+    > for Redsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Redsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
     > for Redsys<T>
 {
 }

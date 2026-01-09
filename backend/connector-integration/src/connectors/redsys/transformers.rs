@@ -3,10 +3,12 @@ use std::str::FromStr;
 use crate::{
     connectors::redsys::{RedsysAmountConvertor, RedsysRouterData},
     types::ResponseRouterData,
+    utils,
 };
 use base64::Engine;
 use common_enums::enums;
 use common_utils::{
+    consts::BASE64_ENGINE,
     crypto::{self, EncodeMessage, SignMessage},
     ext_traits::Encode,
 };
@@ -32,7 +34,6 @@ use serde::{Deserialize, Serialize};
 
 use super::{requests, responses};
 
-pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 pub const SIGNATURE_VERSION: &str = "HMAC_SHA256_V1";
 pub const DS_VERSION: &str = "0.0";
 pub const XMLNS_WEB_URL: &str = "http://webservices.apl02.redsys.es";
@@ -420,8 +421,7 @@ fn to_connector_response_data<T>(connector_response: &str) -> Result<T, Error>
 where
     T: serde::de::DeserializeOwned,
 {
-    let decoded_bytes = BASE64_ENGINE
-        .decode(connector_response)
+    let decoded_bytes = utils::safe_base64_decode(connector_response.to_string())
         .change_context(errors::ConnectorError::ResponseDeserializationFailed)
         .attach_printable("Failed to decode Base64")?;
 

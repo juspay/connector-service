@@ -51,6 +51,24 @@ pub const X_FLOW_NAME: &str = "x-flow";
 pub const X_SHADOW_MODE: &str = "x-shadow-mode";
 
 // =============================================================================
+// Base64 engine
+// =============================================================================
+
+/// General purpose base64 engine
+pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
+/// General purpose base64 engine standard nopad
+pub const BASE64_ENGINE_STD_NO_PAD: base64::engine::GeneralPurpose =
+    base64::engine::general_purpose::STANDARD_NO_PAD;
+
+/// URL Safe base64 engine
+pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose =
+    base64::engine::general_purpose::URL_SAFE;
+
+/// URL Safe base64 engine without padding
+pub const BASE64_ENGINE_URL_SAFE_NO_PAD: base64::engine::GeneralPurpose =
+    base64::engine::general_purpose::URL_SAFE_NO_PAD;
+
+// =============================================================================
 // Test Environment Headers
 // =============================================================================
 
