@@ -8,8 +8,8 @@ use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
-        RepeatPayment, SdkSessionToken, SetupMandate, Void, VoidPC,
+        CreateSessionToken, IncrementalAuthorization, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, Refund, RepeatPayment, SdkSessionToken, SetupMandate, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -17,10 +17,11 @@ use domain_types::{
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
-        RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -28,9 +29,10 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types,
     types::{
-        generate_payment_capture_response, generate_payment_sdk_session_token_response,
-        generate_payment_sync_response, generate_payment_void_post_capture_response,
-        generate_payment_void_response, generate_refund_response, generate_repeat_payment_response,
+        generate_payment_capture_response, generate_payment_incremental_authorization_response,
+        generate_payment_sdk_session_token_response, generate_payment_sync_response,
+        generate_payment_void_post_capture_response, generate_payment_void_response,
+        generate_refund_response, generate_repeat_payment_response,
         generate_setup_mandate_response,
     },
     utils::{ForeignFrom, ForeignTryFrom},
@@ -47,6 +49,7 @@ use grpc_api_types::payments::{
     PaymentServiceCreatePaymentMethodTokenRequest, PaymentServiceCreatePaymentMethodTokenResponse,
     PaymentServiceCreateSessionTokenRequest, PaymentServiceCreateSessionTokenResponse,
     PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
+    PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
     PaymentServicePostAuthenticateRequest, PaymentServicePostAuthenticateResponse,
     PaymentServicePreAuthenticateRequest, PaymentServicePreAuthenticateResponse,
     PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
@@ -172,6 +175,11 @@ trait PaymentOperationsInternal {
         &self,
         request: RequestData<PaymentServicePostAuthenticateRequest>,
     ) -> Result<tonic::Response<PaymentServicePostAuthenticateResponse>, tonic::Status>;
+
+    async fn internal_incremental_authorization(
+        &self,
+        request: RequestData<PaymentServiceIncrementalAuthorizationRequest>,
+    ) -> Result<tonic::Response<PaymentServiceIncrementalAuthorizationResponse>, tonic::Status>;
 
     async fn internal_create_order(
         &self,
@@ -1802,6 +1810,21 @@ impl PaymentOperationsInternal for Payments {
         request_data_constructor: PaymentsPostAuthenticateData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
         generate_response_fn: generate_payment_post_authenticate_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
+        fn_name: internal_incremental_authorization,
+        log_prefix: "INCREMENTAL_AUTHORIZATION",
+        request_type: PaymentServiceIncrementalAuthorizationRequest,
+        response_type: PaymentServiceIncrementalAuthorizationResponse,
+        flow_marker: IncrementalAuthorization,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentsIncrementalAuthorizationData,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentsIncrementalAuthorizationData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_payment_incremental_authorization_response,
         all_keys_required: None
     );
 
@@ -3561,6 +3584,50 @@ impl PaymentService for Payments {
             config.clone(),
             FlowName::PostAuthenticate,
             |request_data| async move { self.internal_post_authenticate(request_data).await },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "incremental_authorization",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::IncrementalAuthorization.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::IncrementalAuthorization.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn incremental_authorization(
+        &self,
+        request: tonic::Request<PaymentServiceIncrementalAuthorizationRequest>,
+    ) -> Result<tonic::Response<PaymentServiceIncrementalAuthorizationResponse>, tonic::Status>
+    {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::IncrementalAuthorization,
+            |request_data: RequestData<PaymentServiceIncrementalAuthorizationRequest>| async move {
+                self.internal_incremental_authorization(request_data).await
+            },
         )
         .await
     }

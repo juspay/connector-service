@@ -4,6 +4,21 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.09.0
+
+### Features
+
+- Add granular Claude rules for connector integration ([#365](https://github.com/juspay/connector-service/pull/365)) ([`144e5f2`](https://github.com/juspay/connector-service/commit/144e5f257bcf39ba7c5e0ca95cceb48b871ee37d))
+
+### Bug Fixes
+
+- Added Capture Method in Cybersource Repeat Payment Response ([#415](https://github.com/juspay/connector-service/pull/415)) ([`e67b4cc`](https://github.com/juspay/connector-service/commit/e67b4cc37a1fd7604865f4229f469e37e7960a49))
+- CavvAlgorithm in proto missing field ([#416](https://github.com/juspay/connector-service/pull/416)) ([`4c40835`](https://github.com/juspay/connector-service/commit/4c408357ae80d7c0fd868ed9cc920fccb23dfc88))
+
+**Full Changelog:** [`2026.01.08.0...2026.01.09.0`](https://github.com/juspay/connector-service/compare/2026.01.08.0...2026.01.09.0)
+
+- - -
+
 ## 2026.01.08.0
 
 ### Features
