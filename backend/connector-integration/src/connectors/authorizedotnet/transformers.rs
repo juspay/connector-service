@@ -1813,20 +1813,6 @@ impl<
                 // Build connector_metadata from account_number
                 let connector_metadata = build_connector_metadata(transaction_response);
 
-                // Extract mandate_reference from transaction_response.profile (RepeatPayment returns profile info)
-                let mandate_reference =
-                    transaction_response
-                        .profile
-                        .as_ref()
-                        .map(|profile| MandateReference {
-                            connector_mandate_id: Some(format!(
-                                "{}-{}",
-                                profile.customer_profile_id, profile.customer_payment_profile_id
-                            )),
-                            payment_method_id: None,
-                            connector_mandate_request_reference_id: None,
-                        });
-
                 match error {
                     Some(err) => Err(err),
                     None => Ok(PaymentsResponseData::TransactionResponse {
@@ -1834,7 +1820,7 @@ impl<
                             transaction_response.transaction_id.clone(),
                         ),
                         redirection_data: None,
-                        mandate_reference: mandate_reference.map(Box::new),
+                        mandate_reference: None,
                         connector_metadata,
                         network_txn_id: transaction_response
                             .network_trans_id
