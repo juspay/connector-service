@@ -9,7 +9,7 @@ use common_utils::{
     ext_traits::Encode,
     pii::Email,
     request::Method,
-    types::{AmountConvertor, StringMajorUnit},
+    types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, Void},
@@ -478,7 +478,7 @@ pub fn calculate_signature(
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &FiuuRouterData<
+        FiuuRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -491,7 +491,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: &FiuuRouterData<
+        item: FiuuRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -2449,36 +2449,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Ok(Self::FiuuPaymentRequest(Box::new(payment_request)))
             }
         }
-    }
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiuuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for FiuuPaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: FiuuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let payment_request: FiuuPaymentRequest<T> = FiuuPaymentRequest::try_from(&item)?;
-        Ok(Self::FiuuPaymentRequest(Box::new(payment_request)))
     }
 }
 

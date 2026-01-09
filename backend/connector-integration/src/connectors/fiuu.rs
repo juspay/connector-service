@@ -51,8 +51,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::{error, info, warn};
 use transformers::{
-    self as fiuu, FiuuPaymentCancelRequest, FiuuPaymentCancelResponse, FiuuPaymentResponse,
-    FiuuPaymentSyncRequest, FiuuPaymentsRequest, FiuuPaymentsRequest as FiuuRepeatPaymentsRequest,
+    self as fiuu, FiuuPaymentCancelRequest, FiuuPaymentCancelResponse, FiuuPaymentRequest,
+    FiuuPaymentResponse, FiuuPaymentSyncRequest, FiuuPaymentsRequest as FiuuRepeatPaymentsRequest,
     FiuuPaymentsResponse, FiuuPaymentsResponse as FiuuRepeatPaymentsResponse, FiuuRefundRequest,
     FiuuRefundResponse, FiuuRefundSyncRequest, FiuuRefundSyncResponse, FiuuWebhooksResponse,
     PaymentCaptureRequest, PaymentCaptureResponse,
@@ -216,7 +216,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: FiuuPaymentsRequest<T>,
+            request_body: FiuuPaymentRequest<T>,
             response_body: FiuuPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -384,7 +384,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Fiuu,
-    curl_request: FormData(FiuuPaymentsRequest<T>),
+    curl_request: FormData(FiuuPaymentRequest<T>),
     curl_response: FiuuPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
