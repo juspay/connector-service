@@ -206,9 +206,12 @@ fn create_payment_authorize_request(
         }
     });
 
-    let mut merchant_account_metadata = HashMap::new();
+    let mut merchant_account_metadata_map = HashMap::new();
     // Serialize the entire JSON structure as the value for "account_id" key
-    merchant_account_metadata.insert("account_id".to_string(), metadata_json.to_string());
+    merchant_account_metadata_map.insert("account_id".to_string(), metadata_json.to_string());
+
+    let merchant_account_metadata_json =
+        serde_json::to_string(&merchant_account_metadata_map).unwrap();
 
     PaymentServiceAuthorizeRequest {
         amount: TEST_AMOUNT,
@@ -247,7 +250,7 @@ fn create_payment_authorize_request(
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
-        merchant_account_metadata,
+        merchant_account_metadata: Some(Secret::new(merchant_account_metadata_json)),
         ..Default::default()
     }
 }
@@ -264,8 +267,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
-        metadata: HashMap::new(),
-        merchant_account_metadata: HashMap::new(),
+        metadata: None,
+        merchant_account_metadata: None,
         connector_metadata: None,
         setup_future_usage: None,
         encoded_data: None,
@@ -318,8 +321,10 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
 
 // Helper function to create a refund sync request
 fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
-    let mut refund_metadata = HashMap::new();
-    refund_metadata.insert("account_id".to_string(), "1002696790".to_string());
+    let mut refund_metadata_map = HashMap::new();
+    refund_metadata_map.insert("account_id".to_string(), "1002696790".to_string());
+
+    let refund_metadata_json = serde_json::to_string(&refund_metadata_map).unwrap();
 
     RefundServiceGetRequest {
         transaction_id: Some(Identifier {
@@ -332,7 +337,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         }),
         browser_info: None,
         test_mode: Some(true),
-        refund_metadata,
+        refund_metadata: Some(Secret::new(refund_metadata_json)),
         merchant_account_metadata: Default::default(),
         state: None,
         payment_method_type: None,
