@@ -4,11 +4,14 @@ extend-ignore-re = [
     "[0-9a-f]{7,40}", # ignore git commit hashes
 ]
 
+[default.extend-words]
+ede = "ede" # Encrypt-Decrypt-Encrypt (Triple DES EDE mode)
+
 [default.extend-identifiers]
 ACI = "ACI" # Name of a connector
 BA = "BA" # Bosnia and Herzegovina country code
 ACTIVITE = "ACTIVITE" # French translation of activity
-AUTORISATION = "AUTORISATION" # French translation of authorization 
+AUTORISATION = "AUTORISATION" # French translation of authorization
 CAF = "CAF" # Central African Republic (ISO 3166-1 alpha-3)
 FO = "FO" # Faroe Islands (the) country code
 JOD = "JOD" # Jordan
@@ -25,4 +28,3 @@ jus = "jus" # Juspay
 FPR = "FPR" # Fraud Prevention Rules
 Eto = "Eto" # Gigadat transaction type
 Cpi = "Cpi" # Gigadat transaction type
-

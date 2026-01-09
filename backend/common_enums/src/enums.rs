@@ -2095,6 +2095,15 @@ pub enum MitCategory {
     Resubmission,
 }
 
+/// Padding schemes used for cryptographic operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CryptoPadding {
+    /// PKCS7 padding - adds bytes equal to the number of padding bytes needed
+    PKCS7,
+    /// Zero padding - pads with null bytes
+    ZeroPadding,
+}
+
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, strum::Display)]
 #[serde(rename_all = "snake_case")]
 pub enum MandateStatus {

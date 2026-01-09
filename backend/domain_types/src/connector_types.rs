@@ -93,6 +93,7 @@ pub enum ConnectorEnum {
     Billwerk,
     Hipay,
     Trustpayments,
+    Redsys,
     Globalpay,
     Nuvei,
     Iatapay,
@@ -173,6 +174,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Nmi => Ok(Self::Nmi),
             grpc_api_types::payments::Connector::Shift4 => Ok(Self::Shift4),
             grpc_api_types::payments::Connector::Barclaycard => Ok(Self::Barclaycard),
+            grpc_api_types::payments::Connector::Redsys => Ok(Self::Redsys),
             grpc_api_types::payments::Connector::Nexixpay => Ok(Self::Nexixpay),
             grpc_api_types::payments::Connector::Airwallex => Ok(Self::Airwallex),
             grpc_api_types::payments::Connector::Tsys => Ok(Self::Tsys),
@@ -1332,12 +1334,14 @@ pub enum PaymentsResponseData {
         status_code: u16,
     },
     PreAuthenticateResponse {
+        authentication_data: Option<router_request_types::AuthenticationData>,
         /// For Device Data Collection
         redirection_data: Option<Box<RedirectForm>>,
         connector_response_reference_id: Option<String>,
         status_code: u16,
     },
     AuthenticateResponse {
+        resource_id: Option<ResponseId>,
         /// For friction flow
         redirection_data: Option<Box<RedirectForm>>,
         /// For frictionles flow
@@ -1431,6 +1435,22 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+}
+
+impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(ConnectorError::CaptureMethodNotSupported.into())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1445,6 +1465,35 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+    pub authentication_data: Option<router_request_types::AuthenticationData>,
+}
+
+impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(ConnectorError::CaptureMethodNotSupported.into())
+            }
+        }
+    }
+
+    pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
+    }
+
+    pub fn get_continue_redirection_url(&self) -> Result<Url, Error> {
+        self.continue_redirection_url
+            .clone()
+            .ok_or_else(missing_field_err("continue_redirection_url"))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1472,6 +1521,20 @@ pub struct PaymentsSdkSessionTokenData {
     pub payment_method_type: Option<PaymentMethodType>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+/// Indicates if 3DS method data was successfully completed or not
+pub enum ThreeDsCompletionIndicator {
+    /// 3DS method successfully completed
+    #[serde(rename = "Y")]
+    Success,
+    /// 3DS method was not successful
+    #[serde(rename = "N")]
+    Failure,
+    /// 3DS method URL was unavailable
+    #[serde(rename = "U")]
+    NotAvailable,
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
@@ -1481,9 +1544,27 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
+    pub authentication_data: Option<router_request_types::AuthenticationData>,
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+    pub threeds_method_comp_ind: Option<ThreeDsCompletionIndicator>,
+}
+
+impl<T: PaymentMethodDataTypes> PaymentsPostAuthenticateData<T> {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(ConnectorError::CaptureMethodNotSupported.into())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

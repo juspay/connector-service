@@ -4281,6 +4281,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 redirection_data,
                 connector_response_reference_id,
                 status_code,
+                authentication_data,
             } => PaymentServicePreAuthenticateResponse {
                 transaction_id: None,
                 redirection_data: redirection_data
@@ -4384,6 +4385,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 network_advice_code: None,
                 network_error_message: None,
                 state: None,
+                authentication_data: authentication_data.map(ForeignFrom::foreign_from),
             },
             _ => {
                 return Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -4421,6 +4423,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 raw_connector_response,
                 connector_metadata: HashMap::new(),
                 state: None,
+                authentication_data: None,
             }
         }
     };
@@ -4504,6 +4507,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::AuthenticateResponse {
+                resource_id,
                 redirection_data,
                 authentication_data,
                 connector_response_reference_id,
@@ -4514,7 +4518,9 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
                 }),
-                transaction_id: None,
+                transaction_id: resource_id
+                    .map(grpc_api_types::payments::Identifier::foreign_try_from)
+                    .transpose()?,
                 redirection_data: redirection_data
                     .map(|form| match *form {
                         router_response_types::RedirectForm::Form {

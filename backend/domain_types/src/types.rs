@@ -1,7 +1,7 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use crate::utils::extract_connector_request_reference_id;
+use crate::{connector_types, utils::extract_connector_request_reference_id};
 use common_enums::{
     CaptureMethod, CardNetwork, CountryAlpha2, FutureUsage, PaymentMethod, PaymentMethodType,
 };
@@ -190,6 +190,7 @@ pub struct Connectors {
     pub shift4: ConnectorParams,
     pub paybox: ConnectorParams,
     pub barclaycard: ConnectorParams,
+    pub redsys: ConnectorParams,
     pub nexixpay: ConnectorParams,
     pub airwallex: ConnectorParams,
     pub worldpayxml: ConnectorParams,
@@ -296,6 +297,18 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for CaptureMethod {
             grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
             grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
             _ => Ok(Self::Automatic),
+        }
+    }
+}
+
+impl ForeignTryFrom<i32> for connector_types::ThreeDsCompletionIndicator {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(value: i32) -> Result<Self, error_stack::Report<Self::Error>> {
+        match grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value) {
+            Ok(grpc_api_types::payments::ThreeDsCompletionIndicator::Success) => Ok(Self::Success),
+            Ok(grpc_api_types::payments::ThreeDsCompletionIndicator::Failure) => Ok(Self::Failure),
+            _ => Ok(Self::NotAvailable),
         }
     }
 }
@@ -3811,16 +3824,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         let capture_method = Some(CaptureMethod::foreign_try_from(value.capture_method())?);
         let currency = common_enums::Currency::foreign_try_from(value.currency())?;
         let amount = common_utils::types::MinorUnit::new(value.amount);
-        // Create ResponseId from resource_id
+        // Create ResponseId from connector_order_reference_id
         let connector_transaction_id = ResponseId::ConnectorTransactionId(
             value
-                .transaction_id
+                .connector_order_reference_id
                 .clone()
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
                 .unwrap_or_default(),
         );
 
@@ -9055,6 +9063,14 @@ impl<
                 .transpose()?,
             enrolled_for_3ds,
             redirect_response,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
         })
     }
 }
@@ -9161,6 +9177,18 @@ impl<
                 .transpose()?,
             enrolled_for_3ds: false,
             redirect_response,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
+            authentication_data: value
+                .authentication_data
+                .map(router_request_types::AuthenticationData::try_from)
+                .transpose()?,
         })
     }
 }
@@ -9266,6 +9294,21 @@ impl<
                 .transpose()?,
             enrolled_for_3ds: false,
             redirect_response,
+            authentication_data: value
+                .authentication_data
+                .map(router_request_types::AuthenticationData::try_from)
+                .transpose()?,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
+            threeds_method_comp_ind: value.threeds_method_comp_ind.and_then(|value| {
+                connector_types::ThreeDsCompletionIndicator::foreign_try_from(value).ok()
+            }),
         })
     }
 }
