@@ -781,7 +781,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
         ),
     ) -> Result<Self, Self::Error> {
-        let (mps_token_status, customer_email) = (Some(3), None);
+        let (mps_token_status, customer_email) =
+            if item.request.is_customer_initiated_mandate_payment() {
+                (Some(1), Some(item.resource_common_data.get_billing_email()?))
+            } else {
+                (Some(3), None)
+            };
         let non_3ds = match item.resource_common_data.is_three_ds() {
             false => 1,
             true => 0,
