@@ -534,7 +534,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let notification_url = Some(
             Url::parse(&item.router_data.request.get_webhook_url()?)
-                .change_context(ConnectorError::RequestEncodingFailed)?,
+                .change_context(ConnectorError::ParsingFailed)?,
         );
 
         let payment_method_data = match item.router_data.request.payment_method_data {
@@ -733,7 +733,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let return_url = item.router_data.request.router_return_url.clone();
         let notification_url = Some(
             Url::parse(&item.router_data.request.get_webhook_url()?)
-                .change_context(ConnectorError::RequestEncodingFailed)?,
+                .change_context(ConnectorError::ParsingFailed)?,
         );
         let payment_method_data = match &item.router_data.request.mandate_reference {
             MandateReferenceId::NetworkMandateId(network_transaction_id) => {
@@ -1315,7 +1315,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ))?,
             notify_url: Some(
                 Url::parse(&item.router_data.request.get_webhook_url()?)
-                    .change_context(ConnectorError::RequestEncodingFailed)?,
+                    .change_context(ConnectorError::ParsingFailed)?,
             ),
         })
     }
