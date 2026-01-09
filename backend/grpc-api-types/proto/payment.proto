@@ -2438,6 +2438,17 @@ message PaymentServicePreAuthenticateResponse {
   optional string error_code = 3; // Error code if the pre-authentication failed
   optional string error_message = 4; // Error message if the pre-authentication failed
   optional string error_reason = 14; // Detailed reason for the error
+
+  // Network-level error details for retry logic (from card schemes/acquirers)
+  // This field can be returned for both approved and refused Mastercard payments.
+  // This code provides additional information about the type of transaction or the reason why the payment failed.
+  // If the payment failed, the network advice code gives guidance on if and when you can retry the payment.
+  optional string network_advice_code = 15;
+  // For card errors resulting from a card issuer decline, a brand specific 2, 3, or 4 digit code which indicates the reason the authorization failed.
+  optional string network_decline_code = 16;
+  // A string indicating how to proceed with an network error if payment gateway provide one. This is used to understand the network error code better.
+  optional string network_error_message = 17;
+
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
 
@@ -2510,6 +2521,17 @@ message PaymentServiceAuthenticateResponse {
   optional string error_code = 3; // Error code if the authentication failed
   optional string error_message = 4; // Error message if the authentication failed
   optional string error_reason = 14; // Detailed reason for the error
+
+  // Network-level error details for retry logic (from card schemes/acquirers)
+  // This field can be returned for both approved and refused Mastercard payments.
+  // This code provides additional information about the type of transaction or the reason why the payment failed.
+  // If the payment failed, the network advice code gives guidance on if and when you can retry the payment.
+  optional string network_advice_code = 15;
+  // For card errors resulting from a card issuer decline, a brand specific 2, 3, or 4 digit code which indicates the reason the authorization failed.
+  optional string network_decline_code = 16;
+  // A string indicating how to proceed with an network error if payment gateway provide one. This is used to understand the network error code better.
+  optional string network_error_message = 17;
+
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
 
@@ -2586,6 +2608,17 @@ message PaymentServicePostAuthenticateResponse {
   optional string error_code = 3; // Error code if the post-authentication failed
   optional string error_message = 4; // Error message if the post-authentication failed
   optional string error_reason = 15; // Detailed reason for the error
+
+  // Network-level error details for retry logic (from card schemes/acquirers)
+  // This field can be returned for both approved and refused Mastercard payments.
+  // This code provides additional information about the type of transaction or the reason why the payment failed.
+  // If the payment failed, the network advice code gives guidance on if and when you can retry the payment.
+  optional string network_advice_code = 16;
+  // For card errors resulting from a card issuer decline, a brand specific 2, 3, or 4 digit code which indicates the reason the authorization failed.
+  optional string network_decline_code = 17;
+  // A string indicating how to proceed with an network error if payment gateway provide one. This is used to understand the network error code better.
+  optional string network_error_message = 18;
+
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
 
