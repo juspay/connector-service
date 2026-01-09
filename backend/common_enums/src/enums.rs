@@ -2103,3 +2103,13 @@ pub enum CryptoPadding {
     /// Zero padding - pads with null bytes
     ZeroPadding,
 }
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, strum::Display)]
+#[serde(rename_all = "snake_case")]
+pub enum MandateStatus {
+    #[default]
+    Active,
+    Inactive,
+    Pending,
+    Revoked,
+}

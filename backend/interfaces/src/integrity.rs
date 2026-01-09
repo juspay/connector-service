@@ -9,11 +9,12 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData, DisputeDefendData,
-    PaymentCreateOrderData, PaymentMethodTokenizationData, PaymentVoidData,
-    PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-    PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-    PaymentsSdkSessionTokenData, PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData,
-    SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
+    MandateRevokeRequestData, PaymentCreateOrderData, PaymentMethodTokenizationData,
+    PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+    PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData,
+    PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
+    SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
@@ -21,6 +22,7 @@ use domain_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
         AuthoriseIntegrityObject, CaptureIntegrityObject, CreateConnectorCustomerIntegrityObject,
         CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
+        IncrementalAuthorizationIntegrityObject, MandateRevokeIntegrityObject,
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
         PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
@@ -167,6 +169,8 @@ impl_check_integrity!(PaymentsPostAuthenticateData<S>);
 impl_check_integrity!(PaymentsPreAuthenticateData<S>);
 impl_check_integrity!(ConnectorCustomerData);
 impl_check_integrity!(PaymentsSdkSessionTokenData);
+impl_check_integrity!(PaymentsIncrementalAuthorizationData);
+impl_check_integrity!(MandateRevokeRequestData);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -357,6 +361,18 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject>
     }
 }
 
+impl GetIntegrityObject<MandateRevokeIntegrityObject> for MandateRevokeRequestData {
+    fn get_response_integrity_object(&self) -> Option<MandateRevokeIntegrityObject> {
+        None // Mandate revoke responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> MandateRevokeIntegrityObject {
+        MandateRevokeIntegrityObject {
+            mandate_id: self.mandate_id.clone(),
+        }
+    }
+}
+
 impl GetIntegrityObject<SessionTokenIntegrityObject> for SessionTokenRequestData {
     fn get_response_integrity_object(&self) -> Option<SessionTokenIntegrityObject> {
         None // Session token responses don't have integrity objects
@@ -389,6 +405,18 @@ impl GetIntegrityObject<SdkSessionTokenIntegrityObject> for PaymentsSdkSessionTo
 
     fn get_request_integrity_object(&self) -> SdkSessionTokenIntegrityObject {
         SdkSessionTokenIntegrityObject {}
+    }
+}
+
+impl GetIntegrityObject<IncrementalAuthorizationIntegrityObject>
+    for PaymentsIncrementalAuthorizationData
+{
+    fn get_response_integrity_object(&self) -> Option<IncrementalAuthorizationIntegrityObject> {
+        None // Incremental authorization responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> IncrementalAuthorizationIntegrityObject {
+        IncrementalAuthorizationIntegrityObject {}
     }
 }
 
@@ -851,6 +879,28 @@ impl FlowIntegrity for RepeatPaymentIntegrityObject {
     }
 }
 
+impl FlowIntegrity for MandateRevokeIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.mandate_id != res_integrity_object.mandate_id {
+            mismatched_fields.push(format_mismatch(
+                "mandate_id",
+                &req_integrity_object.mandate_id.expose(),
+                &res_integrity_object.mandate_id.expose(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
 impl FlowIntegrity for SessionTokenIntegrityObject {
     type IntegrityObject = Self;
 
@@ -1032,6 +1082,18 @@ impl FlowIntegrity for PostAuthenticateIntegrityObject {
         }
 
         check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for IncrementalAuthorizationIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        _req_integrity_object: Self,
+        _res_integrity_object: Self,
+        _connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        Ok(())
     }
 }
 

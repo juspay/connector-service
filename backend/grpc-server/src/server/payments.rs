@@ -8,15 +8,17 @@ use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
-        RepeatPayment, SdkSessionToken, SetupMandate, Void, VoidPC,
+        CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
+        Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorResponseHeaders, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        ConnectorCustomerResponse, ConnectorResponseHeaders, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
         RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
@@ -28,9 +30,10 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types,
     types::{
-        generate_payment_capture_response, generate_payment_sdk_session_token_response,
-        generate_payment_sync_response, generate_payment_void_post_capture_response,
-        generate_payment_void_response, generate_refund_response, generate_repeat_payment_response,
+        generate_payment_capture_response, generate_payment_incremental_authorization_response,
+        generate_payment_sdk_session_token_response, generate_payment_sync_response,
+        generate_payment_void_post_capture_response, generate_payment_void_response,
+        generate_refund_response, generate_repeat_payment_response,
         generate_setup_mandate_response,
     },
     utils::{ForeignFrom, ForeignTryFrom},
@@ -47,10 +50,12 @@ use grpc_api_types::payments::{
     PaymentServiceCreatePaymentMethodTokenRequest, PaymentServiceCreatePaymentMethodTokenResponse,
     PaymentServiceCreateSessionTokenRequest, PaymentServiceCreateSessionTokenResponse,
     PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
+    PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
     PaymentServicePostAuthenticateRequest, PaymentServicePostAuthenticateResponse,
     PaymentServicePreAuthenticateRequest, PaymentServicePreAuthenticateResponse,
     PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
+    PaymentServiceRevokeMandateRequest, PaymentServiceRevokeMandateResponse,
     PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse,
     PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse,
@@ -158,6 +163,11 @@ trait PaymentOperationsInternal {
         request: RequestData<PaymentServiceSdkSessionTokenRequest>,
     ) -> Result<tonic::Response<PaymentServiceSdkSessionTokenResponse>, tonic::Status>;
 
+    async fn internal_mandate_revoke(
+        &self,
+        request: RequestData<PaymentServiceRevokeMandateRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRevokeMandateResponse>, tonic::Status>;
+
     async fn internal_pre_authenticate(
         &self,
         request: RequestData<PaymentServicePreAuthenticateRequest>,
@@ -172,6 +182,11 @@ trait PaymentOperationsInternal {
         &self,
         request: RequestData<PaymentServicePostAuthenticateRequest>,
     ) -> Result<tonic::Response<PaymentServicePostAuthenticateResponse>, tonic::Status>;
+
+    async fn internal_incremental_authorization(
+        &self,
+        request: RequestData<PaymentServiceIncrementalAuthorizationRequest>,
+    ) -> Result<tonic::Response<PaymentServiceIncrementalAuthorizationResponse>, tonic::Status>;
 
     async fn internal_create_order(
         &self,
@@ -1756,6 +1771,21 @@ impl PaymentOperationsInternal for Payments {
     );
 
     implement_connector_operation!(
+        fn_name: internal_mandate_revoke,
+        log_prefix: "MANDATE_REVOKE",
+        request_type: PaymentServiceRevokeMandateRequest,
+        response_type: PaymentServiceRevokeMandateResponse,
+        flow_marker: MandateRevoke,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: MandateRevokeRequestData,
+        response_data_type: MandateRevokeResponseData,
+        request_data_constructor: MandateRevokeRequestData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_mandate_revoke_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
         fn_name: internal_pre_authenticate,
         log_prefix: "PRE_AUTHENTICATE",
         request_type: PaymentServicePreAuthenticateRequest,
@@ -1797,6 +1827,21 @@ impl PaymentOperationsInternal for Payments {
         request_data_constructor: PaymentsPostAuthenticateData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
         generate_response_fn: generate_payment_post_authenticate_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
+        fn_name: internal_incremental_authorization,
+        log_prefix: "INCREMENTAL_AUTHORIZATION",
+        request_type: PaymentServiceIncrementalAuthorizationRequest,
+        response_type: PaymentServiceIncrementalAuthorizationResponse,
+        flow_marker: IncrementalAuthorization,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentsIncrementalAuthorizationData,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentsIncrementalAuthorizationData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_payment_incremental_authorization_response,
         all_keys_required: None
     );
 
@@ -3438,6 +3483,47 @@ impl PaymentService for Payments {
     }
 
     #[tracing::instrument(
+        name = "mandate_revoke",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::MandateRevoke.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::MandateRevoke.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn mandate_revoke(
+        &self,
+        request: tonic::Request<PaymentServiceRevokeMandateRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRevokeMandateResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::Authenticate,
+            |request_data| async move { self.internal_mandate_revoke(request_data).await },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
         name = "pre_authenticate",
         fields(
             name = common_utils::consts::NAME,
@@ -3556,6 +3642,50 @@ impl PaymentService for Payments {
             config.clone(),
             FlowName::PostAuthenticate,
             |request_data| async move { self.internal_post_authenticate(request_data).await },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "incremental_authorization",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::IncrementalAuthorization.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::IncrementalAuthorization.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn incremental_authorization(
+        &self,
+        request: tonic::Request<PaymentServiceIncrementalAuthorizationRequest>,
+    ) -> Result<tonic::Response<PaymentServiceIncrementalAuthorizationResponse>, tonic::Status>
+    {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::IncrementalAuthorization,
+            |request_data: RequestData<PaymentServiceIncrementalAuthorizationRequest>| async move {
+                self.internal_incremental_authorization(request_data).await
+            },
         )
         .await
     }
@@ -4251,6 +4381,9 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: status_code.into(),
                 response_headers,
                 network_txn_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
                 state: None,
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
             },
@@ -4282,6 +4415,9 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 error_reason: err.reason,
+                network_decline_code: err.network_decline_code,
+                network_advice_code: err.network_advice_code,
+                network_error_message: err.network_error_message,
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
@@ -4476,6 +4612,9 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: status_code.into(),
                 response_headers,
                 network_txn_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
                 state: None,
             },
             _ => {
@@ -4507,6 +4646,9 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 error_reason: err.reason,
+                network_decline_code: err.network_decline_code,
+                network_advice_code: err.network_advice_code,
+                network_error_message: err.network_error_message,
                 status_code: err.status_code.into(),
                 raw_connector_response,
                 response_headers,
@@ -4561,6 +4703,9 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 raw_connector_response,
                 status_code: status_code.into(),
                 response_headers,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
                 state: None,
             },
             _ => {
@@ -4593,6 +4738,9 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 error_reason: err.reason,
+                network_decline_code: err.network_decline_code,
+                network_advice_code: err.network_advice_code,
+                network_error_message: err.network_error_message,
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
@@ -4602,4 +4750,68 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
         }
     };
     Ok(response)
+}
+
+pub fn generate_mandate_revoke_response(
+    router_data_v2: RouterDataV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    >,
+) -> Result<PaymentServiceRevokeMandateResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let mandate_revoke_response = router_data_v2.response;
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
+    match mandate_revoke_response {
+        Ok(response) => Ok(PaymentServiceRevokeMandateResponse {
+            status: match response.mandate_status {
+                common_enums::MandateStatus::Active => {
+                    grpc_api_types::payments::MandateStatus::Active
+                }
+                common_enums::MandateStatus::Inactive => {
+                    grpc_api_types::payments::MandateStatus::MandateInactive
+                }
+                common_enums::MandateStatus::Pending => {
+                    grpc_api_types::payments::MandateStatus::MandatePending
+                }
+                common_enums::MandateStatus::Revoked => {
+                    grpc_api_types::payments::MandateStatus::Revoked
+                }
+            }
+            .into(),
+            error_code: None,
+            error_message: None,
+            error_reason: None,
+            status_code: response.status_code.into(),
+            response_headers,
+            network_txn_id: None,
+            response_ref_id: None,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+        Err(e) => Ok(PaymentServiceRevokeMandateResponse {
+            status: grpc_api_types::payments::MandateStatus::MandateRevokeFailed.into(), // Default status for failed revoke
+            error_code: Some(e.code),
+            error_message: Some(e.message),
+            error_reason: e.reason,
+            status_code: e.status_code.into(),
+            response_headers,
+            network_txn_id: None,
+            response_ref_id: e.connector_transaction_id.map(|id| {
+                grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                }
+            }),
+            raw_connector_response,
+            raw_connector_request,
+        }),
+    }
 }

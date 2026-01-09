@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use common_enums::{
-    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentChannel,
-    PaymentMethod, PaymentMethodType,
+    AttemptStatus, AuthenticationType, AuthorizationStatus, Currency, DisputeStatus, EventClass,
+    PaymentChannel, PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
     errors,
@@ -1357,6 +1357,11 @@ pub enum PaymentsResponseData {
     MultipleCaptureResponse {
         capture_sync_response_list: HashMap<String, CaptureSyncResponse>,
     },
+    IncrementalAuthorizationResponse {
+        status: AuthorizationStatus,
+        connector_authorization_id: Option<String>,
+        status_code: u16,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1492,6 +1497,15 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
 }
 
 #[derive(Debug, Clone)]
+pub struct PaymentsIncrementalAuthorizationData {
+    pub minor_amount: MinorUnit,
+    pub currency: Currency,
+    pub reason: Option<String>,
+    pub connector_transaction_id: ResponseId,
+    pub connector_metadata: Option<SecretSerdeValue>,
+}
+
+#[derive(Debug, Clone)]
 pub struct PaymentsSdkSessionTokenData {
     pub amount: MinorUnit,
     pub currency: Currency,
@@ -1605,6 +1619,19 @@ pub struct ConnectorCustomerData {
 #[derive(Debug, Clone)]
 pub struct ConnectorCustomerResponse {
     pub connector_customer_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct MandateRevokeRequestData {
+    pub mandate_id: Secret<String>,
+    pub connector_mandate_id: Option<Secret<String>>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MandateRevokeResponseData {
+    pub mandate_status: common_enums::MandateStatus,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Default, Clone)]
