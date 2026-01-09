@@ -199,6 +199,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         domain_types::connector_flow::PostAuthenticate,
         PaymentFlowData,
@@ -344,6 +349,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::PaymentCreateOrderData,
         domain_types::connector_types::PaymentCreateOrderResponse,
+    > for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::MandateRevoke,
+        PaymentFlowData,
+        domain_types::connector_types::MandateRevokeRequestData,
+        domain_types::connector_types::MandateRevokeResponseData,
     > for Barclaycard<T>
 {
 }
@@ -922,6 +937,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::PaymentCreateOrderData,
         domain_types::connector_types::PaymentCreateOrderResponse,
+    > for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::MandateRevoke,
+        PaymentFlowData,
+        domain_types::connector_types::MandateRevokeRequestData,
+        domain_types::connector_types::MandateRevokeResponseData,
     > for Barclaycard<T>
 {
 }
