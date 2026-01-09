@@ -483,7 +483,7 @@ fn get_preauthenticate_response(
 
     let authentication_data = Some(domain_types::router_request_types::AuthenticationData {
         threeds_server_transaction_id: Some(three_d_s_server_trans_i_d.clone()),
-        message_version: Some(semantic_version),
+        message_version: Some(semantic_version.clone()),
         trans_status: None,
         eci: None,
         cavv: None,
@@ -501,7 +501,7 @@ fn get_preauthenticate_response(
             &three_d_s_server_trans_i_d,
             three_ds_method_url,
             continue_redirection_url,
-            authentication_data,
+            semantic_version,
         ),
         None => build_threeds_exempt_response(response_data, authentication_data),
     }
@@ -512,7 +512,7 @@ fn build_threeds_invoke_response(
     three_d_s_server_trans_i_d: &str,
     three_ds_method_url: &str,
     continue_redirection_url: Option<&url::Url>,
-    authentication_data: Option<domain_types::router_request_types::AuthenticationData>,
+    protocol_version: common_utils::types::SemanticVersion,
 ) -> Result<responses::PreAuthenticateResponseData, Error> {
     let notification_url = continue_redirection_url.map(|url| url.to_string()).ok_or(
         errors::ConnectorError::MissingRequiredField {
@@ -531,8 +531,19 @@ fn build_threeds_invoke_response(
 
     let three_ds_method_data = BASE64_ENGINE.encode(&three_ds_data_string);
 
-    let mut form_fields = std::collections::HashMap::new();
-    form_fields.insert("threeDSMethodData".to_string(), three_ds_method_data);
+    let three_ds_invoke_data = requests::RedsysThreeDsInvokeData {
+        three_ds_method_url: three_ds_method_url.to_string(),
+        three_ds_method_data: three_ds_method_data.clone(),
+        message_version: protocol_version,
+        three_d_s_server_trans_i_d: three_d_s_server_trans_i_d.to_string(),
+        three_ds_method_data_submission: true.to_string(),
+    };
+
+    // Serialize to JSON, then deserialize to HashMap<String, String>
+    let json = serde_json::to_value(&three_ds_invoke_data)
+        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+    let form_fields: std::collections::HashMap<String, String> = serde_json::from_value(json)
+        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
     let redirect_form = Some(Box::new(router_response_types::RedirectForm::Form {
         endpoint: three_ds_method_url.to_string(),
@@ -544,7 +555,7 @@ fn build_threeds_invoke_response(
         redirection_data: redirect_form,
         connector_meta_data: None,
         response_ref_id: Some(response_data.ds_order.clone()),
-        authentication_data,
+        authentication_data: None,
     })
 }
 

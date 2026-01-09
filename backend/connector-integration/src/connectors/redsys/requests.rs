@@ -228,3 +228,14 @@ pub struct RedsysThreedsInvokeRequest {
     #[serde(rename = "threeDSMethodNotificationURL")]
     pub three_d_s_method_notification_u_r_l: String,
 }
+
+// serialize to camel case and try to convert it to hashmap<string, string>
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RedsysThreeDsInvokeData {
+    pub three_ds_method_url: String,
+    pub three_ds_method_data: String,
+    pub message_version: common_utils::types::SemanticVersion,
+    pub three_d_s_server_trans_i_d: String,
+    pub three_ds_method_data_submission: String,
+}
