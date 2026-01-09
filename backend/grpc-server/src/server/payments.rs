@@ -4774,7 +4774,7 @@ pub fn generate_mandate_revoke_response(
             raw_connector_request,
         }),
         Err(e) => Ok(PaymentServiceRevokeMandateResponse {
-            status: grpc_api_types::payments::MandateStatus::Unspecified.into(), // Default status for failed revoke
+            status: grpc_api_types::payments::MandateStatus::MandateRevokeFailed.into(), // Default status for failed revoke
             error_code: Some(e.code),
             error_message: Some(e.message),
             error_reason: e.reason,

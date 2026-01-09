@@ -114,11 +114,11 @@ enum DisputeStatus {
 
 // Status of a mandate.
 enum MandateStatus {
-  MANDATE_STATUS_UNSPECIFIED = 0; // Default value
+  MANDATE_PENDING = 0;
   ACTIVE = 1;
   MANDATE_INACTIVE = 2;
-  MANDATE_PENDING = 3;
-  REVOKED = 4;
+  REVOKED = 3;
+  MANDATE_REVOKE_FAILED = 4;
 }
 
 // Method for capturing a payment.
