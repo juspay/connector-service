@@ -3345,6 +3345,9 @@ pub fn generate_create_order_response(
                 error_message: None,
                 error_code: None,
                 error_reason: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
                 status_code: 200,
                 raw_connector_response,
                 raw_connector_request,
@@ -3389,6 +3392,9 @@ pub fn generate_create_order_response(
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 error_reason: err.reason,
+                network_decline_code: err.network_decline_code,
+                network_advice_code: err.network_advice_code,
+                network_error_message: err.network_error_message,
                 status_code: err.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data
@@ -3575,6 +3581,9 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     error_message: None,
                     error_code: None,
                     error_reason: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                     raw_connector_response,
                     raw_connector_request,
                     status_code: status_code as u32,
@@ -3633,6 +3642,9 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 error_reason: err.reason,
+                network_decline_code: err.network_decline_code,
+                network_advice_code: err.network_advice_code,
+                network_error_message: err.network_error_message,
                 status_code: err.status_code as u32,
                 response_headers,
                 raw_connector_response,
@@ -4378,6 +4390,9 @@ pub fn generate_payment_sync_response(
                     error_code: None,
                     error_message: None,
                     error_reason: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                     network_txn_id,
                     response_ref_id: connector_response_reference_id.map(|id| {
                         grpc_api_types::payments::Identifier {
@@ -4446,6 +4461,9 @@ pub fn generate_payment_sync_response(
                 error_message: Some(e.message),
                 error_code: Some(e.code),
                 error_reason: e.reason,
+                network_decline_code: e.network_decline_code,
+                network_advice_code: e.network_advice_code,
+                network_error_message: e.network_error_message,
                 network_txn_id: None,
                 response_ref_id: None,
                 amount: None,
@@ -5132,6 +5150,9 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             error_code: value.error_code,
             error_message: value.error_message,
             error_reason: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
             network_txn_id: value.network_txn_id,
             response_ref_id: value.connector_response_reference_id.map(|id| {
                 grpc_api_types::payments::Identifier {
@@ -8311,6 +8332,9 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                     error_code: None,
                     error_message: None,
                     error_reason: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                     network_txn_id,
                     response_ref_id: connector_response_reference_id.map(|id| {
                         grpc_api_types::payments::Identifier {
@@ -8376,6 +8400,9 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                     error_code: Some(err.code),
                     error_message: Some(err.message),
                     error_reason: err.reason,
+                    network_decline_code: err.network_decline_code,
+                    network_advice_code: err.network_advice_code,
+                    network_error_message: err.network_error_message,
                     network_txn_id: None,
                     response_ref_id: err.connector_transaction_id.map(|id| {
                         grpc_api_types::payments::Identifier {
