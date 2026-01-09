@@ -12,12 +12,15 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
-    utils::card_issuer_to_cybersource_code,
+    utils::CardIssuer,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+
+// Re-export from common utils for use in this connector
+pub use crate::utils::{convert_metadata_to_merchant_defined_info, MerchantDefinedInformation};
 
 mod error_messages {
     pub const PAYMENT_FAILED: &str = "Payment failed";
@@ -50,8 +53,6 @@ pub struct WellsfargoPaymentsRequest<T: PaymentMethodDataTypes> {
     client_reference_information: ClientReferenceInformation,
     #[serde(skip_serializing_if = "Option::is_none")]
     merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
-    #[serde(skip)]
-    _phantom: std::marker::PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -87,8 +88,6 @@ pub struct Card<T: PaymentMethodDataTypes> {
     security_code: Option<Secret<String>>,
     #[serde(rename = "type")]
     card_type: Option<String>,
-    #[serde(skip)]
-    _phantom: std::marker::PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -118,13 +117,6 @@ pub struct BillTo {
     email: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     phone_number: Option<Secret<String>>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MerchantDefinedInformation {
-    key: u8,
-    value: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -253,8 +245,6 @@ pub struct WellsfargoZeroMandateRequest<T: PaymentMethodDataTypes> {
     payment_information: PaymentInformation<T>,
     order_information: OrderInformationWithBill,
     client_reference_information: ClientReferenceInformation,
-    #[serde(skip)]
-    _phantom: std::marker::PhantomData<T>,
 }
 
 // RESPONSE STRUCTURES
@@ -454,61 +444,22 @@ impl TryFrom<&domain_types::router_data::ConnectorAuthType> for WellsfargoAuthTy
 
 // HELPER FUNCTIONS
 
-/// Converts metadata JSON to Wells Fargo MerchantDefinedInformation format
-fn convert_metadata_to_merchant_defined_info(
-    metadata: serde_json::Value,
-) -> Vec<MerchantDefinedInformation> {
-    let hashmap: std::collections::BTreeMap<String, serde_json::Value> =
-        serde_json::from_str(&metadata.to_string()).unwrap_or(std::collections::BTreeMap::new());
-    let mut vector = Vec::new();
-    let mut iter = 1;
-    for (key, value) in hashmap {
-        // Format the value with proper quoting
-        let value_str = match value {
-            serde_json::Value::String(s) => format!("\"{s}\""),
-            serde_json::Value::Bool(b) => format!("\"{b}\""),
-            serde_json::Value::Number(n) => n.to_string(),
-            serde_json::Value::Null => "null".to_string(),
-            serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
-                // For complex types, use the JSON string representation
-                format!("\"{}\"", value.to_string().replace('"', "'"))
-            }
-        };
-        vector.push(MerchantDefinedInformation {
-            key: iter,
-            value: format!("{key}={value_str}"),
-        });
-        iter += 1;
-    }
-    vector
-}
-
-/// Extracts phone number with country code from address
-fn get_phone_number(
-    address: Option<&domain_types::payment_address::Address>,
-) -> Option<Secret<String>> {
-    address
-        .and_then(|addr| addr.phone.as_ref())
-        .and_then(|phone| {
-            phone.number.as_ref().and_then(|number| {
-                phone
-                    .country_code
-                    .as_ref()
-                    .map(|cc| Secret::new(format!("{}{}", cc, number.peek())))
-            })
-        })
-}
-
-/// Determines Wells Fargo commerce indicator based on 3DS authentication status
-/// - Success (Y) → "vbv" (liability shift to issuer)
-/// - NotVerified/VerificationNotPerformed (A/U) → "spa" (partial protection)
-/// - Other/None → "internet" (merchant liable)
-fn get_commerce_indicator(
-    _authentication_data: &Option<domain_types::router_request_types::AuthenticationData>,
-) -> CommerceIndicator {
-    // For now, all e-commerce transactions use Internet indicator
-    // Future enhancements could differentiate based on authentication status
-    CommerceIndicator::Internet
+/// Convert CardIssuer to CyberSource card type code
+/// This is a local implementation for Wells Fargo only to avoid
+/// affecting other connectors when new card types are added to the shared CardIssuer enum
+fn card_issuer_to_cybersource_code(card_issuer: CardIssuer) -> String {
+    let card_type = match card_issuer {
+        CardIssuer::AmericanExpress => "003",
+        CardIssuer::Master => "002",
+        CardIssuer::Maestro => "042",
+        CardIssuer::Visa => "001",
+        CardIssuer::Discover => "004",
+        CardIssuer::DinersClub => "005",
+        CardIssuer::CarteBlanche => "006",
+        CardIssuer::JCB => "007",
+        CardIssuer::CartesBancaires => "036",
+    };
+    card_type.to_string()
 }
 
 // REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoPaymentsRequest
@@ -565,7 +516,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     expiration_year: card_data.card_exp_year.clone(),
                     security_code: Some(card_data.card_cvc.clone()),
                     card_type: Some(card_type),
-                    _phantom: std::marker::PhantomData,
                 };
                 PaymentInformation::Cards(Box::new(CardPaymentInformation { card }))
             }
@@ -628,7 +578,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let bill_to = billing
             .map(|addr| {
-                let phone_number = get_phone_number(Some(addr));
+                let phone_number = addr.get_phone_with_country_code().ok();
                 addr.address
                     .as_ref()
                     .map(|details| BillTo {
@@ -673,9 +623,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             bill_to,
         };
 
-        // Processing information - set commerce indicator based on 3DS authentication
+        // Processing information
         let processing_information = ProcessingInformation {
-            commerce_indicator: get_commerce_indicator(&request.authentication_data),
+            commerce_indicator: CommerceIndicator::Internet,
             capture: request
                 .capture_method
                 .map(|method| matches!(method, common_enums::CaptureMethod::Automatic)),
@@ -703,7 +653,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             order_information,
             client_reference_information,
             merchant_defined_information,
-            _phantom: std::marker::PhantomData,
         })
     }
 }
@@ -749,7 +698,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Build bill_to if billing information is available
         let billing = common_data.address.get_payment_billing();
         let bill_to = billing.map(|addr| {
-            let phone_number = get_phone_number(Some(addr));
+            let phone_number = addr.get_phone_with_country_code().ok();
             let email_secret = addr
                 .email
                 .clone()
@@ -993,7 +942,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let bill_to = billing_address
             .map(|addr| {
-                let phone_number = get_phone_number(Some(addr));
+                let phone_number = addr.get_phone_with_country_code().ok();
                 addr.address
                     .as_ref()
                     .map(|addr_details| BillTo {
@@ -1073,7 +1022,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         expiration_year: card_data.card_exp_year.clone(),
                         security_code: Some(card_data.card_cvc.clone()),
                         card_type: None,
-                        _phantom: std::marker::PhantomData,
                     },
                 }))
             }
@@ -1095,7 +1043,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_information,
             order_information,
             client_reference_information,
-            _phantom: std::marker::PhantomData,
         })
     }
 }

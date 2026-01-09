@@ -361,7 +361,6 @@ macros::create_all_prerequisites!(
     ],
     member_functions: {
         pub fn generate_digest(&self, payload: &[u8]) -> String {
-            println!("this is payload of hyperswitch: {payload:?}");
             let payload_digest = digest::digest(&digest::SHA256, payload);
             BASE64_ENGINE.encode(payload_digest)
         }
