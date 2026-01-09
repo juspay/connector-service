@@ -460,6 +460,9 @@ pub struct PostAuthenticateIntegrityObject {
 pub struct SdkSessionTokenIntegrityObject {}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct IncrementalAuthorizationIntegrityObject {}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MandateRevokeIntegrityObject {
     pub mandate_id: Secret<String>,
 }
