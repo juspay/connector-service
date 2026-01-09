@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+gigadat.base_url = "https://interac.express-connect.com/"
 paybox.base_url = "https://ppps.paybox.com/PPPS.php"
 loonio.base_url = "https://loonio.ca/"
 getnet.base_url = "https://api.pre.globalgetnet.com"
