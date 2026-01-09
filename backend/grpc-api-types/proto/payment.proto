@@ -68,6 +68,15 @@ enum PaymentStatus {
   UNRESOLVED = 19;    // Status could not be determined
 }
 
+// Status of a payment authorization.
+enum AuthorizationStatus {
+  AUTHORIZATION_STATUS_UNSPECIFIED = 0; // Default value
+  AUTHORIZATION_SUCCESS = 1;
+  AUTHORIZATION_FAILURE = 2;
+  AUTHORIZATION_PROCESSING = 3;
+  AUTHORIZATION_UNRESOLVED = 4;
+}
+
 // Status of generic operations (non-payment specific).
 enum OperationStatus {
   OPERATION_STATUS_UNSPECIFIED = 0; // Default value
@@ -2564,6 +2573,42 @@ message PaymentServicePostAuthenticateResponse {
 
   // Raw Response
   optional SecretString raw_connector_response = 14; // Raw response from the connector for debugging
+}
+
+// Request message for incremental authorization
+message PaymentServiceIncrementalAuthorizationRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  Identifier transaction_id = 2; // Renamed from connector_request_reference_id
+
+  // Amount Information
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+
+  // Optional Fields
+  optional string reason = 5; // Reason for the incremental authorization
+
+  // Metadata
+  optional SecretString connector_metadata = 6; // Connector-specific metadata for the transaction
+
+  // State Information
+  optional ConnectorState state = 7; // State data for access token storage and other connector-specific state
+}
+
+// Response message for incremental authorization
+message PaymentServiceIncrementalAuthorizationResponse {
+  // Identification
+  optional string connector_authorization_id = 1; // Connector's authorization ID
+
+  // Status Information
+  AuthorizationStatus status = 2; // Status of the incremental authorization attempt
+  optional string error_code = 3; // Error code if the incremental authorization failed
+  optional string error_message = 4; // Error message if the incremental authorization failed
+  optional string error_reason = 5; // Detailed reason for the error
+  uint32 status_code = 6; // HTTP status code from the connector
+  map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
+  // State Information
+  optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
 }
 
 // Request message for creating a session token
