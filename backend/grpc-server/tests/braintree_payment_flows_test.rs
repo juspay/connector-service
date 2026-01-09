@@ -138,9 +138,12 @@ fn create_payment_authorize_request(
         bank_code: None,
         nick_name: None,
     };
-    let mut metadata_map = HashMap::new();
-    metadata_map.insert("merchant_account_id".to_string(), "Anand".to_string());
-    let metadata_json = serde_json::to_string(&metadata_map).unwrap();
+    let mut merchant_account_metadata_map = HashMap::new();
+    merchant_account_metadata_map.insert("merchant_account_id".to_string(), "Anand".to_string());
+    merchant_account_metadata_map.insert("merchant_config_currency".to_string(), "USD".to_string());
+    merchant_account_metadata_map.insert("currency".to_string(), "USD".to_string());
+    let merchant_account_metadata_map_json =
+        serde_json::to_string(&merchant_account_metadata_map).unwrap();
     PaymentServiceAuthorizeRequest {
         amount: TEST_AMOUNT,
         minor_amount: TEST_AMOUNT,
@@ -158,7 +161,8 @@ fn create_payment_authorize_request(
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
-        metadata: Some(Secret::new(metadata_json)),
+        metadata: None,
+        merchant_account_metadata: Some(Secret::new(merchant_account_metadata_map_json)),
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
