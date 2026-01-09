@@ -61,6 +61,9 @@ pub struct VoidPC;
 #[derive(Debug, Clone)]
 pub struct SdkSessionToken;
 
+#[derive(Debug, Clone)]
+pub struct IncrementalAuthorization;
+
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
@@ -87,4 +90,5 @@ pub enum FlowName {
     Authenticate,
     PostAuthenticate,
     SdkSessionToken,
+    IncrementalAuthorization,
 }
