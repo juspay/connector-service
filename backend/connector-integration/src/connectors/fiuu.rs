@@ -21,15 +21,15 @@ use domain_types::{
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, MandateReferenceId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -51,10 +51,10 @@ use serde_json::Value;
 use tracing::{error, info, warn};
 use transformers::{
     self as fiuu, FiuuPaymentCancelRequest, FiuuPaymentCancelResponse, FiuuPaymentResponse,
-    FiuuPaymentSyncRequest, FiuuPaymentsRequest, FiuuPaymentsResponse, FiuuRefundRequest,
+    FiuuPaymentSyncRequest, FiuuPaymentsRequest, FiuuPaymentsRequest as FiuuRepeatPaymentsRequest,
+    FiuuPaymentsResponse, FiuuPaymentsResponse as FiuuRepeatPaymentsResponse, FiuuRefundRequest,
     FiuuRefundResponse, FiuuRefundSyncRequest, FiuuRefundSyncResponse, FiuuWebhooksResponse,
-    PaymentCaptureRequest, PaymentCaptureResponse, FiuuPaymentRequest as FiuuRepeatPaymentsRequest,
-    FiuuPaymentsResponse as FiuuRepeatPaymentsResponse,
+    PaymentCaptureRequest, PaymentCaptureResponse,
 };
 
 use super::macros;
@@ -378,25 +378,10 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let optional_is_mit_flow = req.request.off_session;
-            let optional_is_nti_flow = req
-                .request
-                .mandate_id
-                .as_ref()
-                .map(|mandate_id| mandate_id.is_network_transaction_id_flow());
-            let url = match (optional_is_mit_flow, optional_is_nti_flow) {
-                (Some(true), Some(false)) => format!(
-                    "{}/RMS/API/Recurring/input_v7.php",
-                    self.connector_base_url_payments(req)
-                ),
-                _ => {
-                    format!(
-                        "{}RMS/API/Direct/1.4.0/index.php",
-                        self.connector_base_url_payments(req)
-                    )
-                }
-            };
-            Ok(url)
+            Ok(format!(
+                "{}RMS/API/Direct/1.4.0/index.php",
+                self.connector_base_url_payments(req)
+            ))
         }
     }
 );
@@ -424,10 +409,22 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}RMS/API/Direct/1.4.0/index.php",
-                self.connector_base_url_payments(req)
-            ))
+            let url = match req.request.mandate_reference {
+                MandateReferenceId::ConnectorMandateId(_) =>{
+                    format!(
+                        "{}/RMS/API/Recurring/input_v7.php",
+                        self.connector_base_url_payments(req)
+                    )
+                }
+                MandateReferenceId::NetworkMandateId(_)
+                | MandateReferenceId::NetworkTokenWithNTI(_) => {
+                    format!(
+                        "{}RMS/API/Direct/1.4.0/index.php",
+                        self.connector_base_url_payments(req)
+                    )
+                }
+            };
+            Ok(url)
         }
     }
 );
