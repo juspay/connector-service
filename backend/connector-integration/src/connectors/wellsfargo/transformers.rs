@@ -58,11 +58,11 @@ pub struct WellsfargoPaymentsRequest<T: PaymentMethodDataTypes> {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessingInformation {
-    commerce_indicator: CommerceIndicator,
-    capture: Option<bool>,
     action_list: Option<Vec<WellsfargoActionsList>>,
     action_token_types: Option<Vec<WellsfargoActionsTokenType>>,
     authorization_options: Option<WellsfargoAuthorizationOptions>,
+    commerce_indicator: CommerceIndicator,
+    capture: Option<bool>,
     capture_options: Option<WellsfargoCaptureOptions>,
     payment_solution: Option<String>,
 }
@@ -504,7 +504,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentMethodData::Card(card_data) => {
                 // Use get_card_issuer for robust card type detection with fallback
                 let card_issuer = domain_types::utils::get_card_issuer(
-                    &(format!("{:?}", card_data.card_number.0)),
+                    card_data.card_number.peek(),
                 );
                 let card_type = match card_issuer {
                     Ok(issuer) => card_issuer_to_cybersource_code(issuer),
