@@ -724,7 +724,7 @@ impl Payments {
                     None,
                 )
             })?;
-            
+
         // Construct router data
         let router_data = RouterDataV2::<
             Authorize,

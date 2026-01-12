@@ -1,5 +1,8 @@
 use crate::types::ResponseRouterData;
-use common_utils::types::{AmountConvertor, StringMajorUnitForConnector};
+use common_utils::{
+    pii::Email,
+    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -29,10 +32,6 @@ impl TryFrom<&ConnectorAuthType> for MollieAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
-                api_key: api_key.to_owned(),
-                profile_token: None,
-            }),
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
                 api_key: api_key.to_owned(),
                 profile_token: Some(key1.to_owned()),
@@ -59,7 +58,7 @@ pub struct MollieErrorResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MollieAmount {
     pub currency: common_enums::Currency,
-    pub value: String,
+    pub value: StringMajorUnit,
 }
 
 // Mollie Metadata structure - used in payments and refunds
@@ -113,7 +112,7 @@ pub struct MollieAddress {
     pub street_and_number: Secret<String>,
     pub postal_code: Secret<String>,
     pub city: String,
-    pub region: Option<String>,
+    pub region: Option<Secret<String>>,
     pub country: common_enums::CountryAlpha2,
 }
 
@@ -233,7 +232,7 @@ impl<T: PaymentMethodDataTypes>
         Ok(Self {
             amount: MollieAmount {
                 currency: item.request.currency,
-                value: amount_value.get_amount_as_string(),
+                value: amount_value,
             },
             description: item
                 .resource_common_data
@@ -485,7 +484,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         Ok(Self {
             amount: MollieAmount {
                 currency: item.request.currency,
-                value: amount_value.get_amount_as_string(),
+                value: amount_value,
             },
             description: item
                 .request
@@ -577,9 +576,9 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MollieCustomerRequest {
-    pub name: String,
+    pub name: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
+    pub email: Option<Email>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
 }
@@ -591,8 +590,8 @@ pub struct MollieCustomerResponse {
     pub id: String,       // cust_xxx format
     pub resource: String, // "customer"
     pub mode: String,     // "test" or "live"
-    pub name: String,
-    pub email: Option<String>, // Optional - can be null
+    pub name: Option<Secret<String>>,
+    pub email: Option<Email>, // Optional - can be null
     pub created_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
@@ -656,11 +655,9 @@ impl<T: PaymentMethodDataTypes>
                 })?;
 
         // Format expiry date as "MM/YY" (required by Mollie Components API)
-        let card_expiry_date = format!(
-            "{}/{}",
-            card_data.card_exp_month.peek(),
-            card_data.card_exp_year.peek()
-        );
+        // Using CardData util for consistent formatting
+        let card_expiry_date =
+            card_data.get_card_expiry_month_year_2_digit_with_delimiter("/".to_string())?;
 
         // Extract browser info and get language - use default if not available
         // Note: When called via UCS gRPC from Hyperswitch, browser_info may not be passed
@@ -686,7 +683,7 @@ impl<T: PaymentMethodDataTypes>
                 .unwrap_or_else(|| Secret::new("Cardholder".to_string())),
             card_number: card_data.card_number.clone(),
             card_cvv: card_data.card_cvc.clone(),
-            card_expiry_date: Secret::new(card_expiry_date),
+            card_expiry_date,
             locale,
             testmode,
             profile_token,
@@ -750,7 +747,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         Ok(Self {
             amount: Some(MollieAmount {
                 currency: item.request.currency,
-                value: amount_value.get_amount_as_string(),
+                value: amount_value,
             }),
             description: item
                 .resource_common_data
