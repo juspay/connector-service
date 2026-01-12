@@ -933,7 +933,7 @@ impl
             .and_then(|metadata| metadata.as_object())
             .map(|obj| {
                 obj.iter()
-                    .map(|(k, v)| (k.clone(), v.as_str().unwrap_or_default().to_string()))
+                    .map(|(k, v)| (k.clone(), json_value_to_string(v)))
                     .collect::<HashMap<String, String>>()
             })
             .unwrap_or_default();
@@ -1425,7 +1425,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .and_then(|metadata| metadata.as_object())
             .map(|obj| {
                 obj.iter()
-                    .map(|(k, v)| (k.clone(), v.as_str().unwrap_or_default().to_string()))
+                    .map(|(k, v)| (k.clone(), json_value_to_string(v)))
                     .collect::<HashMap<String, String>>()
             })
             .unwrap_or_default();
@@ -1629,4 +1629,11 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
         e
     })
     .ok()
+}
+
+pub fn json_value_to_string(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::String(s) => s.clone(),
+        _ => value.to_string(), // For Number, Bool, Null, Object, Array - serialize as JSON
+    }
 }
