@@ -98,6 +98,14 @@ message PaymentMethod {
     MultibancoBankTransfer multibanco_bank_transfer = 94;      // Multibanco - Portuguese payment method
     InstantBankTransferFinland instant_bank_transfer_finland = 95;         // Finland's instant bank transfer
     InstantBankTransferPoland instant_bank_transfer_poland = 96;           // Poland's instant bank transfer
+    PixPayment pix = 97;                                       // PIX - Brazilian instant payment
+    PermataBankTransfer permata_bank_transfer = 130;           // Permata Bank transfer in Indonesia
+    BCABankTransfer bca_bank_transfer = 131;                   // BCA Bank transfer in Indonesia
+    BNIVaBankTransfer bni_va_bank_transfer = 132;              // BNI VA Bank transfer in Indonesia
+    BRIVaBankTransfer bri_va_bank_transfer = 133;              // BRI VA Bank transfer in Indonesia
+    CIMBVaBankTransfer cimb_va_bank_transfer = 134;            // CIMB VA Bank transfer in Indonesia
+    DanamonVaBankTransfer danamon_va_bank_transfer = 135;      // Danamon VA Bank transfer in Indonesia
+    MandiriVaBankTransfer mandiri_va_bank_transfer = 136;      // Mandiri VA Bank transfer in Indonesia
 
     // DIRECT DEBIT (100-109)
     Ach ach = 100;                                              // Ach - Automated Clearing House
@@ -641,7 +649,10 @@ message InstantBankTransferPoland {
   // Fields will be added as needed for instant bank transfers poland
 }
 
-/*
+// ============================================================================
+// INDONESIAN BANK TRANSFERS (Doku Integration)
+// ============================================================================
+
 // BCA Bank Transfer - Bank Central Asia transfer in Indonesia
 message BCABankTransfer {
   // Fields will be added as needed for BCA Bank Transfer integration
@@ -651,7 +662,31 @@ message BCABankTransfer {
 message PermataBankTransfer {
   // Fields will be added as needed for Permata Bank Transfer integration
 }
-*/
+
+// BNI VA Bank Transfer - BNI Virtual Account transfer in Indonesia
+message BNIVaBankTransfer {
+  // Fields will be added as needed for BNI VA Bank Transfer integration
+}
+
+// BRI VA Bank Transfer - BRI Virtual Account transfer in Indonesia
+message BRIVaBankTransfer {
+  // Fields will be added as needed for BRI VA Bank Transfer integration
+}
+
+// CIMB VA Bank Transfer - CIMB Virtual Account transfer in Indonesia
+message CIMBVaBankTransfer {
+  // Fields will be added as needed for CIMB VA Bank Transfer integration
+}
+
+// Danamon VA Bank Transfer - Danamon Virtual Account transfer in Indonesia
+message DanamonVaBankTransfer {
+  // Fields will be added as needed for Danamon VA Bank Transfer integration
+}
+
+// Mandiri VA Bank Transfer - Mandiri Virtual Account transfer in Indonesia
+message MandiriVaBankTransfer {
+  // Fields will be added as needed for Mandiri VA Bank Transfer integration
+}
 
 // ============================================================================
 // ONLINE BANKING PAYMENT METHODS
