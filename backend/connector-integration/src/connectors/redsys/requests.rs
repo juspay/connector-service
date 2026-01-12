@@ -179,12 +179,10 @@ pub struct RedsysOperationRequest {
 
 /// SOAP XML messages container for sync operations
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct Messages {
-    #[serde(rename = "Version")]
     pub version: RedsysVersionData,
-    #[serde(rename = "Signature")]
     pub signature: String,
-    #[serde(rename = "SignatureVersion")]
     pub signature_version: String,
 }
 
@@ -200,8 +198,8 @@ pub struct RedsysVersionData {
 
 /// Message wrapper containing transaction data
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct Message {
-    #[serde(rename = "Transaction")]
     pub transaction: RedsysSyncRequest,
 }
 
@@ -222,10 +220,9 @@ pub struct RedsysSyncRequest {
 /// Request for invoking 3DS method redirect
 /// Used to build the Base64-encoded threeDSMethodData POST body
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RedsysThreedsInvokeRequest {
-    #[serde(rename = "threeDSServerTransID")]
     pub three_d_s_server_trans_i_d: String,
-    #[serde(rename = "threeDSMethodNotificationURL")]
     pub three_d_s_method_notification_u_r_l: String,
 }
 

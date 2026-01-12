@@ -269,75 +269,6 @@ macros::create_all_prerequisites!(
     }
 );
 
-fn parse_sync_soap_response(
-    response_bytes: &bytes::Bytes,
-) -> CustomResult<responses::RedsysSyncResponse, errors::ConnectorError> {
-    let mut response_str = String::from_utf8(response_bytes.to_vec())
-        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-    // Trim any leading/trailing whitespace and quotes that might cause XML parsing errors
-    response_str = response_str.trim().trim_matches('"').to_string();
-
-    // Unescape any escaped quotes (e.g., \" -> ")
-    response_str = response_str.replace("\\\"", "\"");
-
-    // Preprocess: remove namespace prefixes and normalize element names for easier parsing
-    let preprocessed = response_str
-        .replace("soapenv:Envelope", "Envelope")
-        .replace("soapenv:Header", "Header")
-        .replace("soapenv:Body", "Body")
-        .replace(
-            "p259:consultaOperacionesResponse",
-            "consultaOperacionesResponse",
-        )
-        .replace("xmlns:soapenv", "xmlns_soapenv")
-        .replace("xmlns:soapenc", "xmlns_soapenc")
-        .replace("xmlns:xsd", "xmlns_xsd")
-        .replace("xmlns:xsi", "xmlns_xsi")
-        .replace("xmlns:p259", "xmlns_p259");
-
-    // Parse the outer SOAP envelope
-    let envelope: responses::RedsysSoapEnvelope = preprocessed
-        .as_str()
-        .parse_xml()
-        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-        .attach_printable("Failed to parse SOAP envelope")?;
-
-    // Get the HTML-escaped inner XML content
-    let escaped_inner = &envelope
-        .body
-        .consulta_operaciones_response
-        .consulta_operaciones_return;
-
-    // Decode HTML entities
-    let decoded_inner = escaped_inner
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&amp;", "&");
-
-    // Parse the inner Messages XML
-    let messages: responses::MessagesResponseData = decoded_inner
-        .as_str()
-        .parse_xml()
-        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-        .attach_printable("Failed to parse inner Messages XML")?;
-
-    // Construct the full response
-    Ok(responses::RedsysSyncResponse {
-        body: responses::RedsysSyncResponseBody {
-            consultaoperacionesresponse: responses::ConsultaOperacionesResponse {
-                xmlns_p259: envelope
-                    .body
-                    .consulta_operaciones_response
-                    .xmlns_p259
-                    .clone(),
-                consultaoperacionesreturn: responses::ConsultaOperacionesReturn { messages },
-            },
-        },
-    })
-}
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Redsys<T>
 {
@@ -529,7 +460,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         errors::ConnectorError,
     > {
-        let response: responses::RedsysSyncResponse = parse_sync_soap_response(&res.response)
+        let response = String::from_utf8(res.response.to_vec())
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
+        let response = response_data
+            .parse_xml::<responses::RedsysSyncResponse>()
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         let router_data: RouterDataV2<
@@ -703,7 +638,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         errors::ConnectorError,
     > {
-        let response: responses::RedsysSyncResponse = parse_sync_soap_response(&res.response)
+        let response = String::from_utf8(res.response.to_vec())
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
+        let response = response_data
+            .parse_xml::<responses::RedsysSyncResponse>()
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         let router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> =

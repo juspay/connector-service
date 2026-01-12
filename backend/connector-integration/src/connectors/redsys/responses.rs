@@ -93,43 +93,6 @@ pub struct RedsysErrorResponse {
     pub error_code_description: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename = "Envelope")]
-pub struct RedsysSoapEnvelope {
-    #[serde(rename = "@xmlns_soapenv")]
-    pub xmlns_soapenv: Option<String>,
-    #[serde(rename = "@xmlns_soapenc")]
-    pub xmlns_soapenc: Option<String>,
-    #[serde(rename = "@xmlns_xsd")]
-    pub xmlns_xsd: Option<String>,
-    #[serde(rename = "@xmlns_xsi")]
-    pub xmlns_xsi: Option<String>,
-    #[serde(rename = "Header")]
-    pub header: Option<SoapHeader>,
-    #[serde(rename = "Body")]
-    pub body: SoapBody,
-}
-
-/// SOAP Header (usually empty)
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SoapHeader {}
-
-/// SOAP Body containing the consultaOperacionesResponse
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SoapBody {
-    #[serde(rename = "consultaOperacionesResponse")]
-    pub consulta_operaciones_response: SoapConsultaOperacionesResponse,
-}
-
-/// The consultaOperacionesResponse element
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SoapConsultaOperacionesResponse {
-    #[serde(rename = "@xmlns_p259")]
-    pub xmlns_p259: String,
-    #[serde(rename = "consultaOperacionesReturn")]
-    pub consulta_operaciones_return: String, // This contains HTML-escaped XML
-}
-
 /// The final RedsysSyncResponse structure used by transformers
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RedsysSyncResponse {
@@ -161,68 +124,52 @@ pub struct ConsultaOperacionesReturn {
 
 /// Messages wrapper in sync response
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename = "Messages")]
+#[serde(rename_all = "lowercase")]
 pub struct MessagesResponseData {
-    #[serde(rename = "Version")]
     pub version: VersionResponseData,
-    #[serde(rename = "Signature")]
     pub signature: Option<String>,
 }
 
 /// Version wrapper containing message data
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub struct VersionResponseData {
-    #[serde(rename = "@Ds_Version")]
+    #[serde(rename = "@ds_version")]
     pub ds_version: String,
-    #[serde(rename = "Message")]
     pub message: MessageResponseType,
 }
 
-/// Message type that contains either response data or error
-/// Since XML parser doesn't support enums, we use Option for both
-/// and validate that exactly one is present
+// The response will contain either a sync transaction data or error data.
+// Since the XML parser does not support enums for this case, we use Option to handle both scenarios.
+// If both are present or both are absent, an error is thrown.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MessageResponseType {
-    #[serde(rename = "Response")]
     pub response: Option<RedsysSyncResponseData>,
-    #[serde(rename = "ErrorMsg")]
     pub errormsg: Option<SyncErrorCode>,
 }
 
 /// Error code from sync response
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SyncErrorCode {
-    #[serde(rename = "Ds_ErrorCode")]
     pub ds_errorcode: String,
 }
 
 /// Sync response transaction data
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RedsysSyncResponseData {
-    #[serde(rename = "Ds_MerchantCode")]
     pub ds_merchantcode: Option<String>,
-    #[serde(rename = "Ds_Terminal")]
     pub ds_terminal: Option<String>,
-    #[serde(rename = "Ds_Order")]
     pub ds_order: String,
-    #[serde(rename = "Ds_TransactionType")]
     pub ds_transactiontype: String,
-    #[serde(rename = "Ds_Date")]
     pub ds_date: Option<String>,
-    #[serde(rename = "Ds_Hour")]
     pub ds_hour: Option<String>,
-    #[serde(rename = "Ds_Amount")]
     pub ds_amount: Option<StringMinorUnit>,
-    #[serde(rename = "Ds_Currency")]
     // Redsys uses numeric ISO 4217 currency codes (e.g., "978" for EUR)
     // not 3-letter codes, so we use String here
     pub ds_currency: Option<String>,
-    #[serde(rename = "Ds_SecurePayment")]
     pub ds_securepayment: Option<String>,
-    #[serde(rename = "Ds_State")]
     pub ds_state: Option<String>,
-    #[serde(rename = "Ds_Response")]
     pub ds_response: Option<DsResponse>,
-    #[serde(rename = "Ds_AuthorisationCode")]
     pub ds_authorisationcode: Option<String>,
 }
