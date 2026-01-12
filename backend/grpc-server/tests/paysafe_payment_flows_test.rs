@@ -201,7 +201,7 @@ fn create_payment_authorize_request(
     let metadata_json = serde_json::json!({
         "card": {
             "USD": {
-                "no_three_ds": "1002696790"
+                "no_three_ds": 1002696790
             }
         }
     });
