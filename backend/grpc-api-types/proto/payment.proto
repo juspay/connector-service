@@ -2660,12 +2660,6 @@ message PaymentServicePostAuthenticateRequest {
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
   map<string, string> connector_metadata = 19; // Connector-specific metadata for the transaction
-
-  // Capture Settings
-  optional CaptureMethod capture_method = 20; // Method for capturing the payment
-
-  // Indicates if 3DS method data was successfully completed or not
-  optional ThreeDsCompletionIndicator threeds_method_comp_ind = 21;
 }
 
 // Response message for post-authentication step

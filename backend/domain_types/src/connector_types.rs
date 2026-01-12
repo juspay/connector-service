@@ -1547,27 +1547,9 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
-    pub authentication_data: Option<router_request_types::AuthenticationData>,
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
-    pub capture_method: Option<common_enums::CaptureMethod>,
-    pub threeds_method_comp_ind: Option<ThreeDsCompletionIndicator>,
-}
-
-impl<T: PaymentMethodDataTypes> PaymentsPostAuthenticateData<T> {
-    pub fn is_auto_capture(&self) -> Result<bool, Error> {
-        match self.capture_method {
-            Some(common_enums::CaptureMethod::Automatic)
-            | None
-            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
-            Some(common_enums::CaptureMethod::Manual) => Ok(false),
-            Some(common_enums::CaptureMethod::ManualMultiple)
-            | Some(common_enums::CaptureMethod::Scheduled) => {
-                Err(ConnectorError::CaptureMethodNotSupported.into())
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

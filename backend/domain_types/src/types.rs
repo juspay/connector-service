@@ -9329,21 +9329,6 @@ impl<
                 .transpose()?,
             enrolled_for_3ds: false,
             redirect_response,
-            authentication_data: value
-                .authentication_data
-                .map(router_request_types::AuthenticationData::try_from)
-                .transpose()?,
-            capture_method: value
-                .capture_method
-                .map(|cm| {
-                    CaptureMethod::foreign_try_from(
-                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
-                    )
-                })
-                .transpose()?,
-            threeds_method_comp_ind: value.threeds_method_comp_ind.and_then(|value| {
-                connector_types::ThreeDsCompletionIndicator::foreign_try_from(value).ok()
-            }),
         })
     }
 }
