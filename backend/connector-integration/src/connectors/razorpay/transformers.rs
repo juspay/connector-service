@@ -23,15 +23,6 @@ use tracing::info;
 
 pub const NEXT_ACTION_DATA: &str = "nextActionData";
 
-/// Helper function to convert serde_json::Value to String for metadata
-/// Handles all JSON value types: String, Number, Bool, Null, Object, Array
-pub fn json_value_to_string(value: &serde_json::Value) -> String {
-    match value {
-        serde_json::Value::String(s) => s.clone(),
-        _ => value.to_string(), // For Number, Bool, Null, Object, Array - serialize as JSON
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NextActionData {
     WaitScreenInstructions,
@@ -934,10 +925,6 @@ impl
 
         let converted_amount = item.amount;
         // Extract metadata as a HashMap
-        info!(
-            "RazorpayOrderRequest - Raw metadata from request: {:?}",
-            item.router_data.request.metadata
-        );
         let metadata_map = item
             .router_data
             .request
@@ -950,10 +937,6 @@ impl
                     .collect::<HashMap<String, String>>()
             })
             .unwrap_or_default();
-        info!(
-            "RazorpayOrderRequest - Final metadata_map: {:?}",
-            metadata_map
-        );
 
         Ok(Self {
             amount: converted_amount,
@@ -1434,10 +1417,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Extract metadata as a HashMap
-        info!(
-            "RazorpayWebCollectRequest - Raw metadata from request: {:?}",
-            item.router_data.request.metadata
-        );
         let metadata_map = item
             .router_data
             .request
@@ -1450,10 +1429,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .collect::<HashMap<String, String>>()
             })
             .unwrap_or_default();
-        info!(
-            "RazorpayWebCollectRequest - Final metadata_map: {:?}",
-            metadata_map
-        );
 
         Ok(Self {
             currency: item.router_data.request.currency.to_string(),
@@ -1654,4 +1629,11 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
         e
     })
     .ok()
+}
+
+pub fn json_value_to_string(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::String(s) => s.clone(),
+        _ => value.to_string(), // For Number, Bool, Null, Object, Array - serialize as JSON
+    }
 }
