@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.12.1
+
+### Bug Fixes
+
+- **connector:** Fix Razorpay metadata to accept all values ([#418](https://github.com/juspay/connector-service/pull/418)) ([`4006a76`](https://github.com/juspay/connector-service/commit/4006a76b00ada9e9038a57a49a97f09e3ac9c4ce))
+
+**Full Changelog:** [`2026.01.12.0...2026.01.12.1`](https://github.com/juspay/connector-service/compare/2026.01.12.0...2026.01.12.1)
+
+- - -
+
 ## 2026.01.12.0
 
 ### Features
