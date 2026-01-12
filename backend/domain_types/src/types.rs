@@ -50,12 +50,13 @@ fn extract_headers_from_metadata(
 /// Properly handles parsing JSON or returning Null if None
 fn parse_secretstring_metadata(
     secret: Secret<String>,
+    field_name: &'static str,
 ) -> Result<serde_json::Value, error_stack::Report<ApplicationErrorResponse>> {
     let raw = secret.expose();
     serde_json::from_str(&raw).change_context(ApplicationErrorResponse::BadRequest(ApiError {
-        sub_code: "INVALID CONNECTOR METADATA".to_string(),
+        sub_code: format!("INVALID {}", field_name.to_uppercase()),
         error_identifier: 400,
-        error_message: "Failed to parse connector metadata".to_string(),
+        error_message: format!("Failed to parse {}", field_name.to_lowercase()),
         error_object: None,
     }))
 }
@@ -1760,7 +1761,7 @@ impl<
         let merchant_account_metadata = value
             .clone()
             .merchant_account_metadata
-            .map(parse_secretstring_metadata)
+            .map(|m| parse_secretstring_metadata(m, "merchant account metadata"))
             .transpose()?;
         let merchant_account_id = merchant_account_metadata
             .as_ref()
@@ -1896,7 +1897,7 @@ impl<
             request_incremental_authorization: value.request_incremental_authorization,
             metadata: value
                 .metadata
-                .map(parse_secretstring_metadata)
+                .map(|m| parse_secretstring_metadata(m, "metadata"))
                 .transpose()?,
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
@@ -1959,7 +1960,7 @@ impl<
         let merchant_account_metadata = value
             .clone()
             .merchant_account_metadata
-            .map(parse_secretstring_metadata)
+            .map(|m| parse_secretstring_metadata(m, "merchant account metadata"))
             .transpose()?;
         let merchant_account_id = merchant_account_metadata
             .as_ref()
@@ -2095,7 +2096,7 @@ impl<
             request_incremental_authorization: value.request_incremental_authorization,
             metadata: value
                 .metadata
-                .map(parse_secretstring_metadata)
+                .map(|m| parse_secretstring_metadata(m, "metadata"))
                 .transpose()?,
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
@@ -2652,7 +2653,10 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
 
         let connector_meta_data = value
             .merchant_account_metadata
-            .map(|m| parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new))
+            .map(|m| {
+                parse_secretstring_metadata(m, "merchant account metadata")
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
             .transpose()?;
 
         let order_details = (!value.order_details.is_empty())
@@ -2763,7 +2767,10 @@ impl
 
         let connector_meta_data = value
             .merchant_account_metadata
-            .map(|m| parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new))
+            .map(|m| {
+                parse_secretstring_metadata(m, "merchant account metadata")
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
             .transpose()?;
 
         let order_details = (!value.order_details.is_empty())
@@ -2901,7 +2908,8 @@ impl
             connector_meta_data: value
                 .merchant_account_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "merchant account metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             amount_captured: None,
@@ -3025,7 +3033,10 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .map(AccessTokenResponseData::from);
         let connector_meta_data = value
             .merchant_account_metadata
-            .map(|m| parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new))
+            .map(|m| {
+                parse_secretstring_metadata(m, "merchant account metadata")
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
             .transpose()?;
 
         Ok(Self {
@@ -3798,7 +3809,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
 
         let connector_metadata = value
             .merchant_account_metadata
-            .map(|m| parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new))
+            .map(|m| {
+                parse_secretstring_metadata(m, "merchant account metadata")
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
             .transpose()?;
 
         Ok(Self {
@@ -4477,7 +4491,8 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             refund_connector_metadata: value
                 .refund_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "refund metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             all_keys_required: None, // Field not available in new proto structure
@@ -4486,7 +4501,8 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "merchant account metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
         })
@@ -4517,7 +4533,10 @@ impl
 
         let connector_meta_data = value
             .merchant_account_metadata
-            .map(|m| parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new))
+            .map(|m| {
+                parse_secretstring_metadata(m, "merchant account metadata")
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
             .transpose()?;
 
         let payment_method = value
@@ -4579,7 +4598,10 @@ impl
 
         let connector_meta_data = value
             .refund_metadata
-            .map(|m| parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new))
+            .map(|m| {
+                parse_secretstring_metadata(m, "refund metadata")
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
             .transpose()?;
 
         let payment_method = value
@@ -5148,7 +5170,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             metadata: value
                 .metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             cancellation_reason: value.cancellation_reason,
@@ -5159,7 +5182,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             connector_metadata: value
                 .connector_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "connector metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
         })
@@ -5520,12 +5544,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             refund_amount: value.refund_amount,
             connector_metadata: value
                 .connector_metadata
-                .map(parse_secretstring_metadata)
+                .map(|m| parse_secretstring_metadata(m, "connector metadata"))
                 .transpose()?,
             refund_connector_metadata: value
                 .refund_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "refund metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             minor_payment_amount,
@@ -5549,7 +5574,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "merchant account metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
         })
@@ -5885,7 +5911,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             metadata: value
                 .metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             browser_info: value
@@ -5897,7 +5924,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             connector_metadata: value
                 .connector_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "connector metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
         })
@@ -5983,7 +6011,10 @@ impl
             .map(AccessTokenResponseData::from);
         let connector_meta_data = value
             .merchant_account_metadata
-            .map(|m| parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new))
+            .map(|m| {
+                parse_secretstring_metadata(m, "merchant account metadata")
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
             .transpose()?;
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -6365,7 +6396,7 @@ impl
             .map(AccessTokenResponseData::from);
         let metadata = value
             .metadata
-            .map(parse_secretstring_metadata)
+            .map(|m| parse_secretstring_metadata(m, "metadata"))
             .transpose()?;
         let description = metadata
             .as_ref()
@@ -6521,7 +6552,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             request_incremental_authorization: false,
             metadata: value
                 .metadata
-                .map(parse_secretstring_metadata)
+                .map(|m| parse_secretstring_metadata(m, "metadata"))
                 .transpose()?,
             complete_authorize_url: None,
             capture_method: None,
@@ -6544,7 +6575,8 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "merchant account metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             payment_channel,
@@ -7065,7 +7097,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
             integrity_object: None,
             metadata: value
                 .metadata
-                .map(parse_secretstring_metadata)
+                .map(|m| parse_secretstring_metadata(m, "metadata"))
                 .transpose()?,
             webhook_url: value.webhook_url,
         })
@@ -7102,7 +7134,10 @@ impl
         // Create connector metadata from the metadata field if present
         let connector_meta_data = value
             .merchant_account_metadata
-            .map(|m| parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new))
+            .map(|m| {
+                parse_secretstring_metadata(m, "merchant account metadata")
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
             .transpose()?;
 
         // Extract access token from state if present
@@ -7663,7 +7698,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodT
             merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "merchant account metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
         })
@@ -8083,7 +8119,8 @@ impl<
             metadata: value
                 .metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             webhook_url,
@@ -8099,7 +8136,8 @@ impl<
             merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "merchant account metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             off_session: value.off_session,
@@ -9263,7 +9301,8 @@ impl
             connector_meta_data: value
                 .merchant_account_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "merchant account metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             amount_captured: None,
@@ -9324,7 +9363,7 @@ impl
 
         let metadata = value
             .metadata
-            .map(parse_secretstring_metadata)
+            .map(|m| parse_secretstring_metadata(m, "metadata"))
             .transpose()?;
         let description = metadata
             .as_ref()
@@ -9352,7 +9391,8 @@ impl
             connector_meta_data: value
                 .merchant_account_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "merchant account metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             amount_captured: None,
@@ -9419,7 +9459,7 @@ impl
 
         let metadata = value
             .metadata
-            .map(parse_secretstring_metadata)
+            .map(|m| parse_secretstring_metadata(m, "metadata"))
             .transpose()?;
         let description = metadata
             .as_ref()
@@ -9447,7 +9487,8 @@ impl
             connector_meta_data: value
                 .merchant_account_metadata
                 .map(|m| {
-                    parse_secretstring_metadata(m).map(common_utils::pii::SecretSerdeValue::new)
+                    parse_secretstring_metadata(m, "merchant account metadata")
+                        .map(common_utils::pii::SecretSerdeValue::new)
                 })
                 .transpose()?,
             amount_captured: None,
