@@ -458,7 +458,7 @@ fn card_issuer_to_cybersource_code(card_issuer: CardIssuer) -> String {
         CardIssuer::CarteBlanche => "006",
         CardIssuer::JCB => "007",
         CardIssuer::CartesBancaires => "036",
-        _ => "001", // Default to Visa for unknown card types
+        CardIssuer::UnionPay => "062",
     };
     card_type.to_string()
 }
