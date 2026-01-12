@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 pub type RedsysPreAuthenticateRequest = super::transformers::RedsysTransaction;
 pub type RedsysAuthenticateRequest = super::transformers::RedsysTransaction;
-pub type RedsysPostAuthenticateRequest = super::transformers::RedsysTransaction;
+pub type RedsysAuthorizeRequest = super::transformers::RedsysTransaction;
 pub type RedsysCaptureRequest = super::transformers::RedsysTransaction;
 pub type RedsysVoidRequest = super::transformers::RedsysTransaction;
 pub type RedsysRefundRequest = super::transformers::RedsysTransaction;

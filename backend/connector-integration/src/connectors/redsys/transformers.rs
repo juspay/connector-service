@@ -14,13 +14,12 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authenticate, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, Void,
+        Authenticate, Authorize, Capture, PSync, PreAuthenticate, RSync, Refund, Void,
     },
     connector_types::{
-        self, PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        self, PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -1013,20 +1012,20 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
     }
 }
 
-// PostAuthenticate
+// Authorize
 
 impl<T>
     TryFrom<
         RedsysRouterData<
             RouterDataV2<
-                PostAuthenticate,
+                Authorize,
                 PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
+                PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
             T,
         >,
-    > for requests::RedsysPostAuthenticateRequest
+    > for requests::RedsysAuthorizeRequest
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     T::Inner: Clone,
@@ -1036,9 +1035,9 @@ where
     fn try_from(
         item: RedsysRouterData<
             RouterDataV2<
-                PostAuthenticate,
+                Authorize,
                 PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
+                PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
             T,
@@ -1046,9 +1045,9 @@ where
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        let card_data = requests::RedsysCardData::try_from(
-            &item.router_data.request.payment_method_data.clone(),
-        )?;
+        let card_data = requests::RedsysCardData::try_from(&Some(
+            item.router_data.request.payment_method_data.clone(),
+        ))?;
         let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
 
         let redirect_response = router_data.request.redirect_response.as_ref().ok_or(
@@ -1164,14 +1163,7 @@ where
         let payment_request = requests::RedsysPaymentRequest {
             ds_merchant_emv3ds: Some(emv3ds_data),
             ds_merchant_transactiontype,
-            ds_merchant_currency: router_data
-                .request
-                .currency
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "currency",
-                })?
-                .iso_4217()
-                .to_owned(),
+            ds_merchant_currency: router_data.request.currency.iso_4217().to_owned(),
             ds_merchant_pan: cards::CardNumber::try_from(card_data.card_number.peek().to_string())
                 .change_context(errors::ConnectorError::RequestEncodingFailed)
                 .attach_printable("Invalid card number")?,
@@ -1180,11 +1172,7 @@ where
             ds_merchant_order,
             ds_merchant_amount: RedsysAmountConvertor::convert(
                 router_data.request.amount,
-                router_data.request.currency.ok_or(
-                    errors::ConnectorError::MissingRequiredField {
-                        field_name: "currency",
-                    },
-                )?,
+                router_data.request.currency,
             )?,
             ds_merchant_expirydate: card_data.expiry_date,
             ds_merchant_cvv2: card_data.cvv2,
@@ -1196,12 +1184,7 @@ where
 }
 
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
-    for RouterDataV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    >
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = Error;
 
@@ -1237,7 +1220,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                             network_error_message: None,
                         })
                     } else {
-                        Ok(PaymentsResponseData::PostAuthenticateResponse {
+                        Ok(PaymentsResponseData::AuthenticateResponse {
+                            resource_id: Some(ResponseId::ConnectorTransactionId(
+                                response_data.ds_order.clone(),
+                            )),
+                            redirection_data: None,
                             authentication_data: None,
                             connector_response_reference_id: Some(response_data.ds_order.clone()),
                             status_code: item.http_code,

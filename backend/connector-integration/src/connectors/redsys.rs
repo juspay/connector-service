@@ -47,11 +47,11 @@ mod responses;
 pub mod transformers;
 
 use requests::{
-    RedsysAuthenticateRequest, RedsysCaptureRequest, RedsysPostAuthenticateRequest,
+    RedsysAuthenticateRequest, RedsysAuthorizeRequest, RedsysCaptureRequest,
     RedsysPreAuthenticateRequest, RedsysRefundRequest, RedsysVoidRequest,
 };
 use responses::{
-    RedsysAuthenticateResponse, RedsysCaptureResponse, RedsysPostAuthenticateResponse,
+    RedsysAuthenticateResponse, RedsysAuthorizeResponse, RedsysCaptureResponse,
     RedsysPreAuthenticateResponse, RedsysRefundResponse, RedsysVoidResponse,
 };
 
@@ -217,10 +217,10 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
-            flow: PostAuthenticate,
-            request_body: RedsysPostAuthenticateRequest,
-            response_body: RedsysPostAuthenticateResponse,
-            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+            flow: Authorize,
+            request_body: RedsysAuthorizeRequest,
+            response_body: RedsysAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: Capture,
@@ -447,11 +447,11 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Redsys,
-    curl_request: Json(RedsysPostAuthenticateRequest),
-    curl_response: RedsysPostAuthenticateResponse,
-    flow_name: PostAuthenticate,
+    curl_request: Json(RedsysAuthorizeRequest),
+    curl_response: RedsysAuthorizeResponse,
+    flow_name: Authorize,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsPostAuthenticateData<T>,
+    flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
@@ -459,14 +459,14 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
-            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/sis/rest/trataPeticionREST", self.connector_base_url_payments(req)))
         }
@@ -1053,30 +1053,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        Authorize,
+        PostAuthenticate,
         PaymentFlowData,
-        PaymentsAuthorizeData<T>,
+        PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
     > for Redsys<T>
 {
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-        if !req.resource_common_data.is_three_ds() {
-            Err(errors::ConnectorError::NotSupported {
-                message: "Redsys only supports 3DS authentication flows".to_string(),
-                connector: "redsys",
-            })?
-        }
-
-        Err(errors::ConnectorError::NotImplemented("Authorize flow".to_string()).into())
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

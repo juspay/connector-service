@@ -1613,9 +1613,18 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Send the connector order identifier here if an order was created before authorize
   optional string connector_order_reference_id = 41; // Connector's reference id for order
-  
-   // Locale Information
+
+  // Locale Information
   optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
+
+  // URL for Redirection
+  optional string continue_redirection_url = 46; // URL to complete authorization
+
+  // Indicates if 3DS method data was successfully completed or not
+  optional ThreeDsCompletionIndicator threeds_method_comp_ind = 47;
+
+  // Redirection Information after DDC step
+  optional RedirectionResponse redirection_response = 48; // Redirection Response from client browser
 }
 
 // Response message for a payment authorization.

@@ -1085,6 +1085,9 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
     pub locale: Option<String>,
+    pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub threeds_method_comp_ind: Option<ThreeDsCompletionIndicator>,
+    pub continue_redirection_url: Option<Url>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {

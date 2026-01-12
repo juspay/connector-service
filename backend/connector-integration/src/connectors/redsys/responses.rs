@@ -7,7 +7,7 @@ use super::{requests::RedsysThreeDsInfo, transformers::RedsysTransaction};
 
 pub type RedsysPreAuthenticateResponse = RedsysResponse;
 pub type RedsysAuthenticateResponse = RedsysResponse;
-pub type RedsysPostAuthenticateResponse = RedsysResponse;
+pub type RedsysAuthorizeResponse = RedsysResponse;
 pub type RedsysCaptureResponse = RedsysResponse;
 pub type RedsysVoidResponse = RedsysResponse;
 pub type RedsysRefundResponse = RedsysResponse;
