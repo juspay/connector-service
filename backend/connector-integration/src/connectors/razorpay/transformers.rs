@@ -23,6 +23,15 @@ use tracing::info;
 
 pub const NEXT_ACTION_DATA: &str = "nextActionData";
 
+/// Helper function to convert serde_json::Value to String for metadata
+/// Handles all JSON value types: String, Number, Bool, Null, Object, Array
+pub fn json_value_to_string(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::String(s) => s.clone(),
+        _ => value.to_string(), // For Number, Bool, Null, Object, Array - serialize as JSON
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NextActionData {
     WaitScreenInstructions,
@@ -925,6 +934,10 @@ impl
 
         let converted_amount = item.amount;
         // Extract metadata as a HashMap
+        info!(
+            "RazorpayOrderRequest - Raw metadata from request: {:?}",
+            item.router_data.request.metadata
+        );
         let metadata_map = item
             .router_data
             .request
@@ -933,10 +946,14 @@ impl
             .and_then(|metadata| metadata.as_object())
             .map(|obj| {
                 obj.iter()
-                    .map(|(k, v)| (k.clone(), v.as_str().unwrap_or_default().to_string()))
+                    .map(|(k, v)| (k.clone(), json_value_to_string(v)))
                     .collect::<HashMap<String, String>>()
             })
             .unwrap_or_default();
+        info!(
+            "RazorpayOrderRequest - Final metadata_map: {:?}",
+            metadata_map
+        );
 
         Ok(Self {
             amount: converted_amount,
@@ -1417,6 +1434,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Extract metadata as a HashMap
+        info!(
+            "RazorpayWebCollectRequest - Raw metadata from request: {:?}",
+            item.router_data.request.metadata
+        );
         let metadata_map = item
             .router_data
             .request
@@ -1425,10 +1446,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .and_then(|metadata| metadata.as_object())
             .map(|obj| {
                 obj.iter()
-                    .map(|(k, v)| (k.clone(), v.as_str().unwrap_or_default().to_string()))
+                    .map(|(k, v)| (k.clone(), json_value_to_string(v)))
                     .collect::<HashMap<String, String>>()
             })
             .unwrap_or_default();
+        info!(
+            "RazorpayWebCollectRequest - Final metadata_map: {:?}",
+            metadata_map
+        );
 
         Ok(Self {
             currency: item.router_data.request.currency.to_string(),
