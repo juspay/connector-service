@@ -12,8 +12,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
-        IncrementalAuthorization, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate,
-        RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
@@ -75,6 +76,8 @@ where
         FlowName::SdkSessionToken
     } else if type_id == std::any::TypeId::of::<IncrementalAuthorization>() {
         FlowName::IncrementalAuthorization
+    } else if type_id == std::any::TypeId::of::<MandateRevoke>() {
+        FlowName::MandateRevoke
     } else {
         tracing::warn!("Unknown flow marker type: {}", std::any::type_name::<F>());
         FlowName::Unknown

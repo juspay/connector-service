@@ -8,10 +8,11 @@ use domain_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        EventType, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        EventType, MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
@@ -52,6 +53,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentPostAuthenticateV2<T>
     + SdkSessionTokenV2
     + PaymentIncrementalAuthorization
+    + MandateRevokeV2
 {
 }
 
@@ -214,6 +216,16 @@ pub trait RepeatPaymentV2<T: PaymentMethodDataTypes>:
     PaymentFlowData,
     RepeatPaymentData<T>,
     PaymentsResponseData,
+>
+{
+}
+
+pub trait MandateRevokeV2:
+    ConnectorIntegrationV2<
+    connector_flow::MandateRevoke,
+    PaymentFlowData,
+    MandateRevokeRequestData,
+    MandateRevokeResponseData,
 >
 {
 }

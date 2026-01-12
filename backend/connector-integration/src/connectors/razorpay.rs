@@ -16,14 +16,15 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, PSync,
-        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, SdkSessionToken,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
@@ -208,6 +209,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentPostAuthenticateV2<T> for Razorpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Razorpay<T>
 {
 }
 impl<T> Razorpay<T> {
@@ -1316,6 +1322,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Razorpay<T>
+{
+}
+
 impl connector_types::ConnectorValidation for Razorpay<DefaultPCIHolder> {
     fn validate_mandate_payment(
         &self,
@@ -1459,6 +1475,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Razorpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Razorpay<T>
 {
 }

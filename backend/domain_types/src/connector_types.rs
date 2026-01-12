@@ -106,6 +106,7 @@ pub enum ConnectorEnum {
     Tsys,
     Bankofamerica,
     Powertranz,
+    Getnet,
     Jpmorgan,
     Bambora,
     Payme,
@@ -180,6 +181,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Tsys => Ok(Self::Tsys),
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
             grpc_api_types::payments::Connector::Powertranz => Ok(Self::Powertranz),
+            grpc_api_types::payments::Connector::Getnet => Ok(Self::Getnet),
             grpc_api_types::payments::Connector::Jpmorgan => Ok(Self::Jpmorgan),
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
             grpc_api_types::payments::Connector::Payme => Ok(Self::Payme),
@@ -1540,6 +1542,19 @@ pub struct ConnectorCustomerData {
 #[derive(Debug, Clone)]
 pub struct ConnectorCustomerResponse {
     pub connector_customer_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct MandateRevokeRequestData {
+    pub mandate_id: Secret<String>,
+    pub connector_mandate_id: Option<Secret<String>>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MandateRevokeResponseData {
+    pub mandate_status: common_enums::MandateStatus,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Default, Clone)]

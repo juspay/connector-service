@@ -2,8 +2,9 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
+use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, types::FloatMajorUnit};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::MinorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -32,22 +33,17 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Maskable;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
 use transformers::{
-    NmiCaptureRequest, NmiPaymentsRequest, NmiRefundRequest, NmiRefundSyncRequest, NmiSyncRequest,
-    NmiVoidRequest, StandardResponse, SyncResponse,
+    self as getnet, GetnetAccessTokenRequest, GetnetAccessTokenResponse, GetnetAuthorizeRequest,
+    GetnetAuthorizeResponse, GetnetCaptureRequest, GetnetCaptureResponse, GetnetRefundRequest,
+    GetnetRefundResponse, GetnetRefundSyncResponse, GetnetSyncResponse, GetnetVoidRequest,
+    GetnetVoidResponse,
 };
-
-// Type aliases to avoid duplicate templating in macros
-pub type NmiCaptureResponse = StandardResponse;
-pub type NmiVoidResponse = StandardResponse;
-pub type NmiRefundResponse = StandardResponse;
-pub type NmiPSyncResponse = SyncResponse;
-pub type NmiRSyncResponse = SyncResponse;
 
 use super::macros;
 use crate::types::ResponseRouterData;
@@ -55,258 +51,247 @@ use crate::with_error_response_body;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
+    pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const X_TRANSACTION_CHANNEL_ENTRY: &str = "x-transaction-channel-entry";
 }
 
-pub(crate) mod endpoints {
-    pub(crate) const TRANSACT: &str = "/api/transact.php";
-    pub(crate) const QUERY: &str = "/api/query.php";
-}
-
-// ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
+const TRANSACTION_CHANNEL_ENTRY_DEFAULT: &str = "XX";
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Nmi<T>
+    connector_types::ConnectorServiceTrait<T> for Getnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Nmi<T>
+    connector_types::PaymentAuthorizeV2<T> for Getnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Nmi<T>
+    connector_types::PaymentSyncV2 for Getnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Nmi<T>
+    connector_types::PaymentVoidV2 for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Nmi<T>
+    connector_types::PaymentVoidPostCaptureV2 for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Nmi<T>
+    connector_types::PaymentCapture for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Nmi<T>
+    connector_types::PaymentIncrementalAuthorization for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Nmi<T>
+    connector_types::RefundV2 for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Nmi<T>
+    connector_types::RefundSyncV2 for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Nmi<T>
+    connector_types::SetupMandateV2<T> for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Nmi<T>
+    connector_types::RepeatPaymentV2<T> for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Nmi<T>
+    connector_types::MandateRevokeV2 for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2<T> for Nmi<T>
+    connector_types::PaymentOrderCreate for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Nmi<T>
+    connector_types::PaymentSessionToken for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Nmi<T>
+    connector_types::PaymentTokenV2<T> for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentIncrementalAuthorization for Nmi<T>
+    connector_types::PaymentAccessToken for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Nmi<T>
+    connector_types::SdkSessionTokenV2 for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Nmi<T>
+    connector_types::PaymentPreAuthenticateV2<T> for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Nmi<T>
+    connector_types::PaymentAuthenticateV2<T> for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Nmi<T>
+    connector_types::PaymentPostAuthenticateV2<T> for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for Nmi<T>
+    connector_types::AcceptDispute for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Nmi<T>
+    connector_types::DisputeDefend for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Nmi<T>
+    connector_types::SubmitEvidenceV2 for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Nmi<T>
+    connector_types::IncomingWebhook for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Nmi<T>
+    connector_types::ValidationTrait for Getnet<T>
 {
+    fn should_do_access_token(&self, _payment_method: common_enums::PaymentMethod) -> bool {
+        true
+    }
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Nmi<T>
+    connector_types::CreateConnectorCustomer for Getnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Nmi<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::MandateRevokeV2 for Nmi<T>
-{
-}
-// ===== CREATE CONNECTOR STRUCT WITH MACROS =====
+
 macros::create_all_prerequisites!(
-    connector_name: Nmi,
+    connector_name: Getnet,
     generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: NmiPaymentsRequest<T>,
-            response_body: StandardResponse,
+            request_body: GetnetAuthorizeRequest<T>,
+            response_body: GetnetAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: NmiCaptureRequest,
-            response_body: NmiCaptureResponse,
+            request_body: GetnetCaptureRequest,
+            response_body: GetnetCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
-            flow: Void,
-            request_body: NmiVoidRequest,
-            response_body: NmiVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: Refund,
-            request_body: NmiRefundRequest,
-            response_body: NmiRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
-        (
             flow: PSync,
-            request_body: NmiSyncRequest,
-            response_body: NmiPSyncResponse,
+            response_body: GetnetSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
+            flow: Refund,
+            request_body: GetnetRefundRequest,
+            response_body: GetnetRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
             flow: RSync,
-            request_body: NmiRefundSyncRequest,
-            response_body: NmiRSyncResponse,
+            response_body: GetnetRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: Void,
+            request_body: GetnetVoidRequest,
+            response_body: GetnetVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateAccessToken,
+            request_body: GetnetAccessTokenRequest,
+            response_body: GetnetAccessTokenResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         )
     ],
     amount_converters: [
-        amount_converter: FloatMajorUnit
+        amount_converter: MinorUnit
     ],
     member_functions: {
-        fn preprocess_response_bytes<F, FCD, Req, Res>(
+        pub fn build_headers(
             &self,
-            _req: &RouterDataV2<F, FCD, Req, Res>,
-            bytes: bytes::Bytes,
-        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-            // NMI returns different response formats:
-            // - XML for query endpoints (PSync/RSync)
-            // - URL-encoded for transact endpoints (Authorize/Capture/Refund/Void)
-            let response_str = std::str::from_utf8(&bytes)
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            // Check if response is XML (PSync/RSync return XML)
-            if response_str.trim().starts_with("<?xml") || response_str.trim().starts_with("<") {
-                // Parse XML to struct, then serialize back to JSON
-                let xml_response: SyncResponse = quick_xml::de::from_str(response_str)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-                    .attach_printable("Failed to parse XML response from NMI query endpoint")?;
-
-                let json_bytes = serde_json::to_vec(&xml_response)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-                    .attach_printable("Failed to convert XML response to JSON")?;
-
-                Ok(bytes::Bytes::from(json_bytes))
-            } else {
-                // URL-encoded response - parse and convert to JSON
-                let url_encoded_response: StandardResponse = serde_urlencoded::from_bytes(&bytes)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-                    .attach_printable("Failed to parse URL-encoded response from NMI transact endpoint")?;
-
-                let json_bytes = serde_json::to_vec(&url_encoded_response)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-                    .attach_printable("Failed to convert URL-encoded response to JSON")?;
-
-                Ok(bytes::Bytes::from(json_bytes))
-            }
+            access_token: &str,
+        ) -> Vec<(String, Maskable<String>)> {
+            vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    self.common_get_content_type().to_string().into(),
+                ),
+                (
+                    headers::AUTHORIZATION.to_string(),
+                    format!("Bearer {access_token}").into(),
+                ),
+                (
+                    headers::X_TRANSACTION_CHANNEL_ENTRY.to_string(),
+                    TRANSACTION_CHANNEL_ENTRY_DEFAULT.to_string().into(),
+                ),
+            ]
         }
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.nmi.base_url
+            &req.resource_common_data.connectors.getnet.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.nmi.base_url
+            &req.resource_common_data.connectors.getnet.base_url
         }
     }
 );
 
-// ===== CONNECTOR COMMON IMPLEMENTATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Nmi<T>
+    for Getnet<T>
 {
     fn id(&self) -> &'static str {
-        "nmi"
+        "getnet"
     }
 
     fn get_currency_unit(&self) -> CurrencyUnit {
-        // NMI uses base currency units (dollars, not cents)
-        CurrencyUnit::Base
+        CurrencyUnit::Minor
     }
 
     fn common_get_content_type(&self) -> &'static str {
-        "application/x-www-form-urlencoded"
+        "application/json"
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.nmi.base_url.as_ref()
+        &connectors.getnet.base_url
     }
 
     fn build_error_response(
@@ -314,19 +299,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        // Parse URL-encoded error response
-        let response: StandardResponse = serde_urlencoded::from_bytes(&res.response)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response: getnet::GetnetErrorResponse = res
+            .response
+            .parse_struct("GetnetErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+            .attach_printable("Failed to deserialize Getnet error response")?;
 
         with_error_response_body!(event_builder, response);
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.response_code.clone(),
-            message: response.responsetext.clone(),
-            reason: Some(response.responsetext),
+            code: response.code.unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
+            message: response.message.clone(),
+            reason: Some(response.message),
             attempt_status: None,
-            connector_transaction_id: Some(response.transactionid),
+            connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
@@ -334,215 +321,267 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-// ===== MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS =====
-// Authorize flow
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Nmi,
-    curl_request: FormUrlEncoded(NmiPaymentsRequest),
-    curl_response: StandardResponse,
+    connector: Getnet,
+    curl_request: Json(GetnetAuthorizeRequest),
+    curl_response: GetnetAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            )])
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)
+                .attach_printable("Failed to obtain access token")?;
+            Ok(self.build_headers(&access_token))
         }
+
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}", self.connector_base_url_payments(req), endpoints::TRANSACT))
+            Ok(format!("{}/dpm/payments-gwproxy/v2/payments", self.connector_base_url_payments(req)))
         }
     }
 );
 
-// Payment Sync
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Nmi,
-    curl_request: FormUrlEncoded(NmiSyncRequest),
-    curl_response: NmiPSyncResponse,
-    flow_name: PSync,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    preprocess_response: true,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            )])
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}", self.connector_base_url_payments(req), endpoints::QUERY))
-        }
-    }
-);
-
-// Payment Capture
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Nmi,
-    curl_request: FormUrlEncoded(NmiCaptureRequest),
-    curl_response: StandardResponse,
+    connector: Getnet,
+    curl_request: Json(GetnetCaptureRequest),
+    curl_response: GetnetCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            )])
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)
+                .attach_printable("Failed to obtain access token")?;
+            Ok(self.build_headers(&access_token))
         }
+
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}", self.connector_base_url_payments(req), endpoints::TRANSACT))
+            Ok(format!("{}/dpm/payments-gwproxy/v2/payments/capture", self.connector_base_url_payments(req)))
         }
     }
 );
 
-// Payment Void
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Nmi,
-    curl_request: FormUrlEncoded(NmiVoidRequest),
-    curl_response: NmiVoidResponse,
-    flow_name: Void,
+    connector: Getnet,
+    curl_response: GetnetSyncResponse,
+    flow_name: PSync,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentVoidData,
+    flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
-    http_method: Post,
-    preprocess_response: true,
+    http_method: Get,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            )])
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)
+                .attach_printable("Failed to obtain access token")?;
+            Ok(self.build_headers(&access_token))
         }
+
         fn get_url(
             &self,
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}", self.connector_base_url_payments(req), endpoints::TRANSACT))
+            let payment_id = req.request.connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)
+                .attach_printable("Missing connector transaction ID")?;
+            Ok(format!("{}/dpm/hub-payment-info/v1/payments/info/{}", self.connector_base_url_payments(req), payment_id))
         }
     }
 );
 
-// Refund
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Nmi,
-    curl_request: FormUrlEncoded(NmiRefundRequest),
-    curl_response: NmiRefundResponse,
+    connector: Getnet,
+    curl_request: Json(GetnetRefundRequest),
+    curl_response: GetnetRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
     flow_response: RefundsResponseData,
     http_method: Post,
-    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            )])
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)
+                .attach_printable("Failed to obtain access token")?;
+            Ok(self.build_headers(&access_token))
         }
+
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}", self.connector_base_url_refunds(req), endpoints::TRANSACT))
+            Ok(format!("{}/dpm/payments-gwproxy/v2/payments/cancel", self.connector_base_url_refunds(req)))
         }
     }
 );
 
-// Refund Sync
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Nmi,
-    curl_request: FormUrlEncoded(NmiRefundSyncRequest),
-    curl_response: NmiRSyncResponse,
-    flow_name: RSync,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundSyncData,
-    flow_response: RefundsResponseData,
+    connector: Getnet,
+    curl_request: Json(GetnetVoidRequest),
+    curl_response: GetnetVoidResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            )])
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)
+                .attach_printable("Failed to obtain access token")?;
+            Ok(self.build_headers(&access_token))
         }
+
         fn get_url(
             &self,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}", self.connector_base_url_refunds(req), endpoints::QUERY))
+            Ok(format!("{}/dpm/payments-gwproxy/v2/payments/cancel", self.connector_base_url_payments(req)))
         }
     }
 );
 
-// ===== EMPTY CONNECTOR INTEGRATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         VoidPC,
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Getnet<T>
+{
+}
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Getnet,
+    curl_response: GetnetRefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let access_token = req.resource_common_data.get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)
+                .attach_printable("Failed to obtain access token")?;
+            Ok(self.build_headers(&access_token))
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let payment_id = req.request.connector_transaction_id.clone();
+            Ok(format!("{}/dpm/hub-payment-info/v1/payments/info/{}", self.connector_base_url_refunds(req), payment_id))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Getnet,
+    curl_request: FormUrlEncoded(GetnetAccessTokenRequest),
+    curl_response: GetnetAccessTokenResponse,
+    flow_name: CreateAccessToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: AccessTokenRequestData,
+    flow_response: AccessTokenResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = getnet::GetnetAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)
+                .attach_printable("Failed to obtain access token")?;
+
+            // Generate Base64(client_id:client_secret) for Basic Auth
+            let auth_value = format!("{}:{}", auth.api_key.peek(), auth.api_secret.peek());
+            let encoded_auth = base64::engine::general_purpose::STANDARD.encode(auth_value.as_bytes());
+
+            Ok(vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/x-www-form-urlencoded".to_string().into(),
+                ),
+                (
+                    headers::AUTHORIZATION.to_string(),
+                    format!("Basic {encoded_auth}").into_masked(),
+                ),
+            ])
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/authentication/oauth2/access_token", self.connector_base_url_payments(req)))
+        }
+
+    }
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -550,7 +589,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -560,115 +599,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         RepeatPaymentData<T>,
         PaymentsResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -678,18 +609,115 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         MandateRevokeRequestData,
         MandateRevokeResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
-// ===== SOURCE VERIFICATION IMPLEMENTATIONS =====
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Getnet<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Authorize,
         PaymentFlowData,
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -699,7 +727,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -709,7 +737,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -719,7 +747,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -729,97 +757,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        RSync,
-        RefundFlowData,
-        RefundSyncData,
-        RefundsResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SetupMandate,
+        IncrementalAuthorization,
         PaymentFlowData,
-        SetupMandateRequestData<T>,
+        PaymentsIncrementalAuthorizationData,
         PaymentsResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        DefendDispute,
-        DisputeFlowData,
-        DisputeDefendData,
-        DisputeResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -829,7 +777,107 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
-    > for Nmi<T>
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Getnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Getnet<T>
 {
 }
 
@@ -839,7 +887,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -849,7 +897,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -859,7 +907,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -869,17 +917,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
-    > for Nmi<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
 
@@ -889,15 +927,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
-    > for Nmi<T>
+    > for Getnet<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        MandateRevoke,
+        domain_types::connector_flow::CreateConnectorCustomer,
         PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Nmi<T>
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Getnet<T>
 {
 }
