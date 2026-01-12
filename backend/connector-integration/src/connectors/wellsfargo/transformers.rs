@@ -503,9 +503,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let payment_information = match &request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Use get_card_issuer for robust card type detection with fallback
-                let card_issuer = domain_types::utils::get_card_issuer(
-                    card_data.card_number.peek(),
-                );
+                let card_issuer =
+                    domain_types::utils::get_card_issuer(card_data.card_number.peek());
                 let card_type = match card_issuer {
                     Ok(issuer) => card_issuer_to_cybersource_code(issuer),
                     Err(_) => "001".to_string(), // Default to Visa
