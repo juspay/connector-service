@@ -1968,10 +1968,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = get_amount_data(&item);
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
-        let (recurring_processing_model, store_payment_method, shopper_reference) =
-            get_recurring_processing_model(&item.router_data)?;
-        let browser_info = get_browser_info(&item.router_data)?;
-        let additional_data = get_additional_data(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from((bank_transfer_data, &item.router_data))?,
@@ -2002,8 +1998,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .resource_common_data
             .get_optional_billing_phone_number();
-        let country_code =
-            get_country_code(item.router_data.resource_common_data.get_optional_billing());
         Ok(Self {
             amount,
             merchant_account: auth_type.merchant_account,
@@ -2015,14 +2009,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             return_url,
             shopper_interaction,
-            recurring_processing_model,
-            browser_info,
-            additional_data,
+            recurring_processing_model: None,
+            browser_info: None,
+            additional_data: None,
             mpi_data: None,
             telephone_number,
-            shopper_name: get_shopper_name(
-                item.router_data.resource_common_data.get_optional_billing(),
-            ),
+            shopper_name: None,
             shopper_email: item
                 .router_data
                 .resource_common_data
@@ -2031,10 +2023,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             social_security_number: None,
             billing_address,
             delivery_address,
-            country_code,
-            line_items: Some(get_line_items(&item)),
-            shopper_reference,
-            store_payment_method,
+            country_code: None,
+            line_items: None,
+            shopper_reference: None,
+            store_payment_method: None,
             channel: None,
             shopper_statement: item
                 .router_data
