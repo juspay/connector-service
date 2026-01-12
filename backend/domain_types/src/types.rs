@@ -196,6 +196,7 @@ pub struct Connectors {
     pub tsys: ConnectorParams,
     pub bankofamerica: ConnectorParams,
     pub powertranz: ConnectorParams,
+    pub getnet: ConnectorParams,
     pub bambora: ConnectorParams,
     pub payme: ConnectorParams,
     pub revolut: ConnectorParams,
