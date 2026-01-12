@@ -2305,7 +2305,7 @@ message PaymentServiceRepeatEverythingRequest {
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
   optional SecretString merchant_account_id = 37; // Merchant account ID for the repeat payments
-  optional Currency merchant_configered_currency = 38; // Merchant configered currency for the repeat payments
+  optional Currency merchant_configured_currency = 38; // Merchant configured currency for the repeat payments
 
   // Behavioral Flags and Preferences
   optional bool off_session = 16; // Indicates if off-session process
