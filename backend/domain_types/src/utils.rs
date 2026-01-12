@@ -517,4 +517,3 @@ pub fn convert_canada_state_to_code(state: &str) -> String {
         _ => state.to_string(),
     }
 }
-
