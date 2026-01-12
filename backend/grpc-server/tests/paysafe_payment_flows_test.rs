@@ -198,20 +198,16 @@ fn create_payment_authorize_request(
     // This gets converted to connector_meta_data in domain_types
     // The structure should match PaysafeConnectorMetadataObject which has:
     // { "account_id": { "card": { "USD": { "no_three_ds": "..." } } } }
-    let metadata_json = serde_json::json!({
-        "card": {
-            "USD": {
-                "no_three_ds": 1002696790
+    let merchant_account_metadata_json = serde_json::json!({
+        "account_id": {
+            "card": {
+                "USD": {
+                    "no_three_ds": "1002696790"
+                }
             }
         }
-    });
-
-    let mut merchant_account_metadata_map = HashMap::new();
-    // Serialize the entire JSON structure as the value for "account_id" key
-    merchant_account_metadata_map.insert("account_id".to_string(), metadata_json.to_string());
-
-    let merchant_account_metadata_json =
-        serde_json::to_string(&merchant_account_metadata_map).unwrap();
+    })
+    .to_string();
 
     PaymentServiceAuthorizeRequest {
         amount: TEST_AMOUNT,
