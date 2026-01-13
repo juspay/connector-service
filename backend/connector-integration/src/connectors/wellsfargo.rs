@@ -456,7 +456,8 @@ macros::create_all_prerequisites!(
                 .decode(api_secret.as_bytes())
                 .change_context(errors::ConnectorError::InvalidConnectorConfig {
                     config: "connector_account_details.api_secret",
-                })?;
+                })
+                .attach_printable("Failed to decode base64-encoded API secret")?;
 
             // Use ring::hmac for HMAC-SHA256
             let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, &key_value);
@@ -481,7 +482,8 @@ macros::create_all_prerequisites!(
 
             let base_url = &req.resource_common_data.connectors.wellsfargo.base_url;
             let wellsfargo_host = Url::parse(base_url)
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                .change_context(errors::ConnectorError::RequestEncodingFailed)
+                .attach_printable("Failed to parse Wells Fargo base URL for payments")?;
             let host = wellsfargo_host
                 .host_str()
                 .ok_or(errors::ConnectorError::RequestEncodingFailed)?;
@@ -561,7 +563,8 @@ macros::create_all_prerequisites!(
 
             let base_url = &req.resource_common_data.connectors.wellsfargo.base_url;
             let wellsfargo_host = Url::parse(base_url)
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                .change_context(errors::ConnectorError::RequestEncodingFailed)
+                .attach_printable("Failed to parse Wells Fargo base URL for refunds")?;
             let host = wellsfargo_host
                 .host_str()
                 .ok_or(errors::ConnectorError::RequestEncodingFailed)?;
@@ -818,7 +821,8 @@ macros::macro_connector_implementation!(
             let connector_payment_id = req.request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)
+                .attach_printable("Missing connector transaction ID for capture")?;
 
             Ok(format!(
                 "{}pts/v2/payments/{}/captures",
@@ -927,7 +931,8 @@ macros::macro_connector_implementation!(
             let connector_payment_id = req.request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)
+                .attach_printable("Missing connector transaction ID for payment sync")?;
 
             Ok(format!(
                 "{}pts/v2/payments/{}",

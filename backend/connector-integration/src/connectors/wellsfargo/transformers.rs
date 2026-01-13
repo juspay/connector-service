@@ -501,7 +501,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     domain_types::utils::get_card_issuer(card_data.card_number.peek())
                         .change_context(errors::ConnectorError::MissingRequiredField {
                             field_name: "card_type",
-                        })?;
+                        })
+                        .attach_printable("Unable to determine card issuer from card number")?;
                 let card_type = card_issuer_to_string(card_issuer);
 
                 let card = Card {
@@ -549,7 +550,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+            .change_context(errors::ConnectorError::AmountConversionFailed)
+            .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
         let amount_details = Amount {
             total_amount,
@@ -682,7 +684,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+            .change_context(errors::ConnectorError::AmountConversionFailed)
+            .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
         let amount_details = Amount {
             total_amount,
@@ -802,7 +805,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+            .change_context(errors::ConnectorError::AmountConversionFailed)
+            .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
         let amount_details = Amount {
             total_amount,
@@ -866,7 +870,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+            .change_context(errors::ConnectorError::AmountConversionFailed)
+            .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
         let amount_details = Amount {
             total_amount,
@@ -1017,7 +1022,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     domain_types::utils::get_card_issuer(card_data.card_number.peek())
                         .change_context(errors::ConnectorError::MissingRequiredField {
                             field_name: "card_type",
-                        })?;
+                        })
+                        .attach_printable("Unable to determine card issuer from card number")?;
                 let card_type = card_issuer_to_string(card_issuer);
                 PaymentInformation::Cards(Box::new(CardPaymentInformation {
                     card: Card {
