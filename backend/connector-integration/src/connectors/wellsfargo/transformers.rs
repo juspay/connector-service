@@ -1,5 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
+use common_utils::consts;
 use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
     connector_flow::{Authorize, Capture, RSync, Refund, SetupMandate, Void},
@@ -21,16 +22,6 @@ use std::fmt::Debug;
 
 // Re-export from common utils for use in this connector
 pub use crate::utils::{convert_metadata_to_merchant_defined_info, MerchantDefinedInformation};
-
-mod error_messages {
-    pub const PAYMENT_FAILED: &str = "Payment failed";
-    pub const CAPTURE_FAILED: &str = "Capture failed";
-    pub const VOID_FAILED: &str = "Void failed";
-    pub const REFUND_FAILED: &str = "Refund failed";
-    pub const SETUP_MANDATE_FAILED: &str = "Setup mandate failed";
-    pub const REFUND_SYNC_FAILED: &str = "Refund sync failed";
-    pub const MISSING_APPLICATION_INFO: &str = "Missing application_information in response";
-}
 
 // REQUEST STRUCTURES
 
@@ -207,19 +198,24 @@ pub enum WellsfargoActionsTokenType {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoAuthorizationOptions {
-    #[serde(skip_serializing_if = "Option::is_none")]
     initiator: Option<WellsfargoPaymentInitiator>,
+    merchant_initiated_transaction: Option<MerchantInitiatedTransaction>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MerchantInitiatedTransaction {
+    reason: Option<String>,
+    previous_transaction_id: Option<Secret<String>>,
+    original_authorized_amount: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoPaymentInitiator {
     #[serde(rename = "type")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     initiator_type: Option<WellsfargoPaymentInitiatorTypes>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     credential_stored_on_file: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     stored_credential_used: Option<bool>,
 }
 
@@ -234,8 +230,8 @@ pub enum WellsfargoPaymentInitiatorTypes {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoCaptureOptions {
-    capture_sequence_number: Option<u8>,
-    total_capture_count: Option<u8>,
+    capture_sequence_number: u32,
+    total_capture_count: u32,
 }
 
 #[derive(Debug, Serialize)]
@@ -447,7 +443,7 @@ impl TryFrom<&domain_types::router_data::ConnectorAuthType> for WellsfargoAuthTy
 /// Convert CardIssuer to CyberSource card type code
 /// This is a local implementation for Wells Fargo only to avoid
 /// affecting other connectors when new card types are added to the shared CardIssuer enum
-fn card_issuer_to_cybersource_code(card_issuer: CardIssuer) -> String {
+fn card_issuer_to_string(card_issuer: CardIssuer) -> String {
     let card_type = match card_issuer {
         CardIssuer::AmericanExpress => "003",
         CardIssuer::Master => "002",
@@ -506,7 +502,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let card_issuer =
                     domain_types::utils::get_card_issuer(card_data.card_number.peek());
                 let card_type = match card_issuer {
-                    Ok(issuer) => card_issuer_to_cybersource_code(issuer),
+                    Ok(issuer) => card_issuer_to_string(issuer),
                     Err(_) => "001".to_string(), // Default to Visa
                 };
 
@@ -541,7 +537,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::MobilePayment(_) => Err(errors::ConnectorError::NotSupported {
-                message: "Payment method not supported by Wellsfargo".to_string(),
+                message: "Payment method".to_string(),
                 connector: "Wellsfargo",
             })?,
         };
@@ -748,8 +744,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             action_token_types: None,
             authorization_options: None,
             capture_options: Some(WellsfargoCaptureOptions {
-                capture_sequence_number: Some(1),
-                total_capture_count: Some(1),
+                capture_sequence_number: 1,
+                total_capture_count: 1,
             }),
             payment_solution: None,
         };
@@ -950,7 +946,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         last_name: addr_details.last_name.clone(),
                         address1: addr_details.line1.clone(),
                         locality: addr_details.city.clone(),
-                        administrative_area: addr_details.state.clone(),
+                        administrative_area: addr_details.to_state_code_as_optional().ok().flatten(),
                         postal_code: addr_details.zip.clone(),
                         country: addr_details.country,
                         email: email_secret.clone(),
@@ -1007,6 +1003,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     credential_stored_on_file: Some(true),
                     stored_credential_used: None,
                 }),
+                merchant_initiated_transaction: None,
             }),
             capture_options: None,
             payment_solution: None,
@@ -1015,13 +1012,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Payment information from card
         let payment_information = match &request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
+                let card_issuer = domain_types::utils::get_card_issuer(card_data.card_number.peek());
+                let card_type = match card_issuer {
+                    Ok(issuer) => card_issuer_to_string(issuer),
+                    Err(_) => "001".to_string(), // Default to Visa
+                };
                 PaymentInformation::Cards(Box::new(CardPaymentInformation {
                     card: Card {
                         number: card_data.card_number.clone(),
                         expiration_month: card_data.card_exp_month.clone(),
                         expiration_year: card_data.card_exp_year.clone(),
                         security_code: Some(card_data.card_cvc.clone()),
-                        card_type: None,
+                        card_type: Some(card_type),
                     },
                 }))
             }
@@ -1035,7 +1037,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Client reference - use payment_id
         let client_reference_information = ClientReferenceInformation {
-            code: Some(common_data.payment_id.clone()),
+            code: Some(common_data.connector_request_reference_id.clone()),
         };
 
         Ok(Self {
@@ -1102,7 +1104,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                         .as_ref()
                         .and_then(|info| info.reason.clone())
                 })
-                .unwrap_or_else(|| error_messages::PAYMENT_FAILED.to_string());
+                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
 
             let error_code = response
                 .error_information
@@ -1192,7 +1194,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                         .as_ref()
                         .and_then(|info| info.reason.clone())
                 })
-                .unwrap_or_else(|| error_messages::PAYMENT_FAILED.to_string());
+                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
 
             let error_code = response
                 .error_information
@@ -1270,7 +1272,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                         .as_ref()
                         .and_then(|info| info.reason.clone())
                 })
-                .unwrap_or_else(|| error_messages::CAPTURE_FAILED.to_string());
+                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
 
             let error_code = response
                 .error_information
@@ -1348,7 +1350,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                         .as_ref()
                         .and_then(|info| info.reason.clone())
                 })
-                .unwrap_or_else(|| error_messages::VOID_FAILED.to_string());
+                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
 
             let error_code = response
                 .error_information
@@ -1447,7 +1449,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                         .as_ref()
                         .and_then(|info| info.reason.clone())
                 })
-                .unwrap_or_else(|| error_messages::SETUP_MANDATE_FAILED.to_string());
+                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
 
             let error_code = response
                 .error_information
@@ -1594,7 +1596,7 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                                 .error_information
                                 .as_ref()
                                 .and_then(|info| info.message.clone())
-                                .unwrap_or_else(|| error_messages::REFUND_FAILED.to_string()),
+                                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
                             reason: response
                                 .error_information
                                 .as_ref()
@@ -1627,7 +1629,7 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                         message: error_info
                             .message
                             .clone()
-                            .unwrap_or_else(|| error_messages::REFUND_SYNC_FAILED.to_string()),
+                            .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
                         reason: error_info.message.clone(),
                         status_code: item.http_code,
                         attempt_status: None,
@@ -1641,7 +1643,7 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                     Err(ErrorResponse {
                         code: "UNKNOWN_STATUS".to_string(),
                         message: "Unable to determine refund status".to_string(),
-                        reason: Some(error_messages::MISSING_APPLICATION_INFO.to_string()),
+                        reason: Some(consts::NO_ERROR_MESSAGE.to_string()),
                         status_code: item.http_code,
                         attempt_status: None,
                         connector_transaction_id: Some(response.id.clone()),
