@@ -4577,8 +4577,8 @@ impl
             .map(AccessTokenResponseData::from);
 
         let connector_meta_data = value
-            .refund_metadata
-            .map(|m| ForeignTryFrom::foreign_try_from((m, "refund metadata")))
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
 
         let payment_method = value
