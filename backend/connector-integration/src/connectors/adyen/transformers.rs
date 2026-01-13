@@ -3059,11 +3059,8 @@ pub fn get_qr_code_response(
         None
     };
 
-    let connector_metadata = response.action.qr_code_url.clone().map(|url| {
-        serde_json::json!({
-            "qr_code_url": url
-        })
-    });
+    // Generate QR metadata matching Hyperswitch implementation
+    let connector_metadata = get_qr_metadata(&response)?;
 
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: match response.psp_reference.as_ref() {
@@ -3089,6 +3086,62 @@ pub fn get_qr_code_response(
         txn_amount: response.amount.map(|amount| amount.value),
         connector_response: None,
     })
+}
+
+/// Get QR code metadata for Pix and other QR-based payment methods
+/// Matches Hyperswitch's get_qr_metadata implementation
+fn get_qr_metadata(
+    response: &QrCodeResponseResponse,
+) -> CustomResult<Option<serde_json::Value>, errors::ConnectorError> {
+    use crate::connectors::fiuu::transformers::{QrCodeInformation, QrImage};
+    use common_utils::ext_traits::Encode;
+
+    // Generate QR code image from qr_code_data
+    let image_data = QrImage::new_from_data(response.action.qr_code_data.clone())
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
+
+    let image_data_url = Url::parse(image_data.data.as_str()).ok();
+    let qr_code_url = response.action.qr_code_url.clone();
+
+    // Extract pix expiration date and convert to timestamp in milliseconds
+    let display_to_timestamp = response
+        .additional_data
+        .as_ref()
+        .and_then(|additional_data| additional_data.pix_expiration_date)
+        .map(|time| {
+            // Convert PrimitiveDateTime to Unix timestamp in milliseconds
+            time.assume_utc().unix_timestamp() * 1000
+        });
+
+    if let (Some(image_data_url), Some(qr_code_url)) = (image_data_url.clone(), qr_code_url.clone())
+    {
+        let qr_code_info = QrCodeInformation::QrCodeUrl {
+            image_data_url,
+            qr_code_url,
+            display_to_timestamp,
+        };
+        Some(qr_code_info.encode_to_value())
+            .transpose()
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    } else if let (None, Some(qr_code_url)) = (image_data_url.clone(), qr_code_url.clone()) {
+        let qr_code_info = QrCodeInformation::QrCodeImageUrl {
+            qr_code_url,
+            display_to_timestamp,
+        };
+        Some(qr_code_info.encode_to_value())
+            .transpose()
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    } else if let (Some(image_data_url), None) = (image_data_url, qr_code_url) {
+        let qr_code_info = QrCodeInformation::QrDataUrl {
+            image_data_url,
+            display_to_timestamp,
+        };
+        Some(qr_code_info.encode_to_value())
+            .transpose()
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    } else {
+        Ok(None)
+    }
 }
 
 pub fn get_webhook_response(
