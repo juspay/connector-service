@@ -300,7 +300,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            merchant_user_id: None, //TODO: Check why default cust_id is being set
+            merchant_user_id: router_data
+                .resource_common_data
+                .customer_id
+                .clone()
+                .map(|id| Secret::new(id.get_string_repr().to_string())),
             amount: amount_in_minor_units,
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,
@@ -448,7 +452,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            merchant_user_id: None, //TODO: Check why default cust_id is being set
+            merchant_user_id: router_data
+                .resource_common_data
+                .customer_id
+                .clone()
+                .map(|id| Secret::new(id.get_string_repr().to_string())),
             amount: amount_in_minor_units,
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,
