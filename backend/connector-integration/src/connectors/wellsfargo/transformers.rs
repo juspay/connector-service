@@ -10,7 +10,7 @@ use domain_types::{
         ResponseId, SetupMandateRequestData,
     },
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     utils::CardIssuer,
@@ -488,8 +488,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        use domain_types::payment_method_data::PaymentMethodData;
-
         // Access the router_data directly
         let router_data = &item.router_data;
         let request = &router_data.request;
@@ -498,13 +496,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Get payment method data
         let payment_information = match &request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                // Use get_card_issuer for robust card type detection with fallback
+                // Use get_card_issuer for robust card type detection
                 let card_issuer =
-                    domain_types::utils::get_card_issuer(card_data.card_number.peek());
-                let card_type = match card_issuer {
-                    Ok(issuer) => card_issuer_to_string(issuer),
-                    Err(_) => "001".to_string(), // Default to Visa
-                };
+                    domain_types::utils::get_card_issuer(card_data.card_number.peek())
+                        .change_context(errors::ConnectorError::MissingRequiredField {
+                            field_name: "card_type",
+                        })?;
+                let card_type = card_issuer_to_string(card_issuer);
 
                 let card = Card {
                     number: card_data.card_number.clone(),
@@ -1014,13 +1012,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Payment information from card
         let payment_information = match &request.payment_method_data {
-            domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
+            PaymentMethodData::Card(card_data) => {
                 let card_issuer =
-                    domain_types::utils::get_card_issuer(card_data.card_number.peek());
-                let card_type = match card_issuer {
-                    Ok(issuer) => card_issuer_to_string(issuer),
-                    Err(_) => "001".to_string(), // Default to Visa
-                };
+                    domain_types::utils::get_card_issuer(card_data.card_number.peek())
+                        .change_context(errors::ConnectorError::MissingRequiredField {
+                            field_name: "card_type",
+                        })?;
+                let card_type = card_issuer_to_string(card_issuer);
                 PaymentInformation::Cards(Box::new(CardPaymentInformation {
                     card: Card {
                         number: card_data.card_number.clone(),
