@@ -63,6 +63,7 @@ use grpc_api_types::payments::{
     WebhookTransformationStatus,
 };
 use hyperswitch_masking::ExposeInterface;
+use hyperswitch_masking::Secret;
 use injector::{TokenData, VaultConnectors};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
@@ -894,10 +895,12 @@ impl Payments {
             amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
             integrity_object: None,
-            metadata: payload
-                .metadata
-                .clone()
-                .map(|m| serde_json::to_value(m).unwrap_or_default()),
+            metadata: payload.metadata.clone().map(|m| {
+                let metadata = m.expose();
+                let value =
+                    serde_json::from_str::<serde_json::Value>(&metadata).unwrap_or_default();
+                Secret::new(value)
+            }),
             webhook_url: payload.webhook_url.clone(),
         };
 
@@ -1017,10 +1020,12 @@ impl Payments {
             amount: common_utils::types::MinorUnit::new(0),
             currency,
             integrity_object: None,
-            metadata: payload
-                .metadata
-                .clone()
-                .map(|m| serde_json::to_value(m).unwrap_or_default()),
+            metadata: payload.metadata.clone().map(|m| {
+                let metadata = m.expose();
+                let value =
+                    serde_json::from_str::<serde_json::Value>(&metadata).unwrap_or_default();
+                Secret::new(value)
+            }),
             webhook_url: payload.webhook_url.clone(),
         };
 
