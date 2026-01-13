@@ -580,6 +580,9 @@ message PixPayment {
   
   // Destination bank account ID
   optional string destination_bank_account_id = 5;
+  
+  // Session expiry date for Pix QR code (ISO 8601 format, max 5 days from now for Adyen)
+  optional string expiry_date = 6;
 }
 
 // PromptPay - Thai QR code payment system

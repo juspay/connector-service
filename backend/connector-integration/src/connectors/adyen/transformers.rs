@@ -1983,6 +1983,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .resource_common_data
             .get_optional_billing_phone_number();
+
+        // Extract Pix-specific fields (session_validity and social_security_number)
+        // This aligns with Hyperswitch implementation for Adyen Pix payments
+        let (session_validity, social_security_number) = match bank_transfer_data {
+            BankTransferData::Pix {
+                cpf,
+                cnpj,
+                expiry_date,
+                ..
+            } => {
+                // Validate expiry_date doesn't exceed 5 days from now (Adyen requirement)
+                if let Some(expiry) = expiry_date {
+                    let now = OffsetDateTime::now_utc();
+                    let max_expiry = now + Duration::days(5);
+                    let max_expiry_primitive =
+                        PrimitiveDateTime::new(max_expiry.date(), max_expiry.time());
+
+                    if *expiry > max_expiry_primitive {
+                        return Err(errors::ConnectorError::InvalidDataFormat {
+                            field_name: "expiry_date cannot be more than 5 days from now",
+                        }
+                        .into());
+                    }
+                }
+
+                // Use CPF or CNPJ as social security number (Brazilian tax ID)
+                (*expiry_date, cpf.clone().or_else(|| cnpj.clone()))
+            }
+            _ => (None, None),
+        };
+
         Ok(Self {
             amount,
             merchant_account: auth_type.merchant_account,
@@ -2005,7 +2036,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .get_optional_billing_email(),
             shopper_locale: item.router_data.request.locale.clone(),
-            social_security_number: None,
+            social_security_number,
             billing_address,
             delivery_address,
             country_code: None,
@@ -2031,7 +2062,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .map(|value| Secret::new(filter_adyen_metadata(value))),
             platform_chargeback_logic,
-            session_validity: None,
+            session_validity,
         })
     }
 }
@@ -2476,7 +2507,7 @@ impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for AttemptStatus {
 fn get_adyen_payment_status(
     is_manual_capture: bool,
     adyen_status: AdyenStatus,
-    _pmt: Option<common_enums::PaymentMethodType>,
+    pmt: Option<common_enums::PaymentMethodType>,
 ) -> AttemptStatus {
     match adyen_status {
         AdyenStatus::AuthenticationFinished => AttemptStatus::AuthenticationSuccessful,
@@ -2491,7 +2522,12 @@ fn get_adyen_payment_status(
         | AdyenStatus::RedirectShopper
         | AdyenStatus::PresentToShopper => AttemptStatus::AuthenticationPending,
         AdyenStatus::Error | AdyenStatus::Refused => AttemptStatus::Failure,
-        AdyenStatus::Pending => AttemptStatus::Pending,
+        // Pix returns Pending status but requires customer action (QR code)
+        // so we map it to AuthenticationPending like Hyperswitch does
+        AdyenStatus::Pending => match pmt {
+            Some(common_enums::PaymentMethodType::Pix) => AttemptStatus::AuthenticationPending,
+            _ => AttemptStatus::Pending,
+        },
     }
 }
 

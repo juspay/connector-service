@@ -1112,6 +1112,18 @@ impl<
                 // INDONESIAN BANK TRANSFERS - Doku Integration
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::Pix(pix_data) => {
+                    // Parse expiry_date from ISO 8601 string if provided
+                    let expiry_date = pix_data
+                        .expiry_date
+                        .as_ref()
+                        .and_then(|date_str| {
+                            time::PrimitiveDateTime::parse(
+                                date_str,
+                                &time::format_description::well_known::Iso8601::DEFAULT,
+                            )
+                            .ok()
+                        });
+
                     Ok(Self::BankTransfer(Box::new(
                         payment_method_data::BankTransferData::Pix {
                             pix_key: pix_data.pix_key,
@@ -1119,6 +1131,7 @@ impl<
                             cnpj: pix_data.cnpj,
                             source_bank_account_id: None,
                             destination_bank_account_id: None,
+                            expiry_date,
                         },
                     )))
                 }
