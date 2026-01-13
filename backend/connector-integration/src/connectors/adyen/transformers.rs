@@ -1764,9 +1764,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             additional_data,
             mpi_data: None,
             telephone_number,
-            shopper_name: get_shopper_name(
-                item.router_data.resource_common_data.get_optional_billing(),
-            ),
+            shopper_name: None,
             shopper_email: item
                 .router_data
                 .resource_common_data
@@ -4441,10 +4439,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             additional_data,
             shopper_reference: shopper_reference.clone(),
             store_payment_method,
-            shopper_name: get_shopper_name(
-                item.router_data.resource_common_data.get_optional_billing(),
-            ),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            shopper_name: None,
             shopper_locale: item.router_data.request.locale.clone(),
             shopper_email: item
                 .router_data
