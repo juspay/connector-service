@@ -8034,7 +8034,7 @@ impl<
         let merchant_configured_currency = match value.merchant_configered_currency {
             None => None,
             Some(_) => Some(common_enums::Currency::foreign_try_from(
-                value.clone().merchant_configered_currency(),
+                value.merchant_configered_currency(),
             )?),
         };
         let amount = value.amount;
