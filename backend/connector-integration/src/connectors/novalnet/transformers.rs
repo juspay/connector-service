@@ -671,6 +671,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -767,6 +771,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -859,6 +867,10 @@ impl<
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -1343,6 +1355,10 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -1423,6 +1439,10 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -1618,6 +1638,10 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
