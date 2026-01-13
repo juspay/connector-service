@@ -685,7 +685,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let merchant_defined_information = request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata.expose()));
 
         Ok(Self {
             processing_information,
