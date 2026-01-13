@@ -1,11 +1,12 @@
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
 use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, MandateRevoke, Refund, SetupMandate, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
+        MandateReference, MandateReferenceId, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     mandates::MandateDataType,
@@ -725,6 +726,40 @@ pub struct NoonRevokeMandateRequest {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
+        NoonRouterData<
+            RouterDataV2<
+                MandateRevoke,
+                PaymentFlowData,
+                MandateRevokeRequestData,
+                MandateRevokeResponseData,
+            >,
+            T,
+        >,
+    > for NoonRevokeMandateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: NoonRouterData<
+            RouterDataV2<
+                MandateRevoke,
+                PaymentFlowData,
+                MandateRevokeRequestData,
+                MandateRevokeResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            api_operation: NoonApiOperations::CancelSubscription,
+            subscription: NoonSubscriptionObject {
+                identifier: item.router_data.request.mandate_id,
+            },
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
         NoonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for NoonPaymentsActionRequest
 {
@@ -773,6 +808,31 @@ pub struct NoonRevokeMandateResult {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NoonRevokeMandateResponse {
     result: NoonRevokeMandateResult,
+}
+
+impl TryFrom<ResponseRouterData<NoonRevokeMandateResponse, Self>>
+    for RouterDataV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<NoonRevokeMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response.result.subscription.status {
+            NoonRevokeStatus::Cancelled => Ok(Self {
+                response: Ok(MandateRevokeResponseData {
+                    mandate_status: common_enums::MandateStatus::Revoked,
+                    status_code: item.http_code,
+                }),
+                ..item.router_data
+            }),
+        }
+    }
 }
 
 #[derive(Debug, Default, Deserialize, Clone, Serialize)]

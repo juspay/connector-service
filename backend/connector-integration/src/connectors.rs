@@ -182,6 +182,9 @@ pub use self::bankofamerica::Bankofamerica;
 pub mod powertranz;
 pub use self::powertranz::Powertranz;
 
+pub mod getnet;
+pub use self::getnet::Getnet;
+
 pub mod bambora;
 pub use self::bambora::Bambora;
 
@@ -190,6 +193,9 @@ pub use self::payme::Payme;
 
 pub mod revolut;
 pub use self::revolut::Revolut;
+
+pub mod gigadat;
+pub use self::gigadat::Gigadat;
 
 pub mod loonio;
 pub use self::loonio::Loonio;

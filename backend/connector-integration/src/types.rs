@@ -75,6 +75,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Payload => Box::new(connectors::Payload::new()),
             ConnectorEnum::Paysafe => Box::new(connectors::Paysafe::new()),
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
+            ConnectorEnum::Gigadat => Box::new(connectors::Gigadat::new()),
             ConnectorEnum::Paybox => Box::new(connectors::Paybox::new()),
             ConnectorEnum::Loonio => Box::new(connectors::Loonio::new()),
             ConnectorEnum::Barclaycard => Box::new(connectors::Barclaycard::new()),
@@ -88,6 +89,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Tsys => Box::new(connectors::Tsys::new()),
             ConnectorEnum::Bankofamerica => Box::new(connectors::Bankofamerica::new()),
             ConnectorEnum::Powertranz => Box::new(connectors::Powertranz::new()),
+            ConnectorEnum::Getnet => Box::new(connectors::Getnet::new()),
             ConnectorEnum::Jpmorgan => Box::new(connectors::Jpmorgan::new()),
             ConnectorEnum::Revolut => Box::new(connectors::Revolut::new()),
         }

@@ -68,6 +68,15 @@ enum PaymentStatus {
   UNRESOLVED = 19;    // Status could not be determined
 }
 
+// Status of a payment authorization.
+enum AuthorizationStatus {
+  AUTHORIZATION_STATUS_UNSPECIFIED = 0; // Default value
+  AUTHORIZATION_SUCCESS = 1;
+  AUTHORIZATION_FAILURE = 2;
+  AUTHORIZATION_PROCESSING = 3;
+  AUTHORIZATION_UNRESOLVED = 4;
+}
+
 // Status of generic operations (non-payment specific).
 enum OperationStatus {
   OPERATION_STATUS_UNSPECIFIED = 0; // Default value
@@ -101,6 +110,15 @@ enum DisputeStatus {
   DISPUTE_CHALLENGED = 5;         // Dispute is being challenged with evidence
   DISPUTE_WON = 6;
   DISPUTE_LOST = 7;
+}
+
+// Status of a mandate.
+enum MandateStatus {
+  MANDATE_PENDING = 0;
+  ACTIVE = 1;
+  MANDATE_INACTIVE = 2;
+  REVOKED = 3;
+  MANDATE_REVOKE_FAILED = 4;
 }
 
 // Method for capturing a payment.
@@ -179,6 +197,42 @@ enum TransactionStatus {
 
   // Informational Only; 3DS Requestor challenge preference acknowledged
   TRANSACTION_STATUS_INFORMATION_ONLY = 7; // "I"
+}
+
+// SCA (Strong Customer Authentication) exemption indicators.
+enum ExemptionIndicator {
+  // Unspecified/default value.
+  EXEMPTION_INDICATOR_UNSPECIFIED = 0;
+
+  // Low-value payment exemption (below regulatory threshold).
+  EXEMPTION_INDICATOR_LOW_VALUE = 1;
+
+  // Secure corporate payment (SCP) exemption.
+  EXEMPTION_INDICATOR_SECURE_CORPORATE_PAYMENT = 2;
+
+  // Trusted beneficiary or whitelist exemption.
+  EXEMPTION_INDICATOR_TRUSTED_LISTING = 3;
+
+  // Transaction Risk Analysis (TRA) exemption.
+  EXEMPTION_INDICATOR_TRANSACTION_RISK_ASSESSMENT = 4;
+
+  // 3DS server or ACS outage exemption.
+  EXEMPTION_INDICATOR_THREE_DS_OUTAGE = 5;
+
+  // SCA delegation exemption (authentication delegated to another party).
+  EXEMPTION_INDICATOR_SCA_DELEGATION = 6;
+
+  // Out of SCA scope (e.g., one-leg-out transactions).
+  EXEMPTION_INDICATOR_OUT_OF_SCA_SCOPE = 7;
+
+  // Other exemption reason not covered by known types.
+  EXEMPTION_INDICATOR_OTHER = 8;
+
+  // Low-risk program exemption (network-initiated low-risk flag).
+  EXEMPTION_INDICATOR_LOW_RISK_PROGRAM = 9;
+
+  // Recurring transaction exemption (subsequent payment in a series).
+  EXEMPTION_INDICATOR_RECURRING_OPERATION = 10;
 }
 
 // Preferred payment experience for the customer.
@@ -536,6 +590,7 @@ enum Connector {
   WORLDPAYXML = 103;
   REVOLUT = 104;
   LOONIO = 105;
+  GIGADAT = 106;
 }
 
 // Payment method types.
@@ -772,6 +827,35 @@ message BillingDescriptor {
   optional string reference = 6;
 }
 
+// Algorithm used to generate CAVV (Cardholder Authentication Verification Value).
+enum CavvAlgorithm {
+  CAVV_ALGORITHM_UNSPECIFIED = 0;
+  CAVV_ALGORITHM_ZERO = 1;   // "00" — Reserved or unspecified algorithm.
+  CAVV_ALGORITHM_ONE = 2;    // "01" — HMAC-based algorithm.
+  CAVV_ALGORITHM_TWO = 3;    // "02" — RSA-based algorithm (standard 3DS cryptographic method).
+  CAVV_ALGORITHM_THREE = 4;  // "03" — Elliptic Curve algorithm.
+  CAVV_ALGORITHM_FOUR = 5;   // "04" — Proprietary algorithm defined by the card network.
+  CAVV_ALGORITHM_A = 6;      // "A" — Custom or network-defined algorithm indicator.
+}
+
+// Cartes Bancaires network-specific parameters for 3DS.
+message CartesBancairesParams {
+  // Algorithm used to generate the CAVV value.
+  CavvAlgorithm cavv_algorithm = 1;
+
+  // Exemption indicator specific to Cartes Bancaires network.
+  string cb_exemption = 2;
+
+  // Cartes Bancaires risk score assigned during 3DS authentication.
+  int32 cb_score = 3;
+}
+
+// Network-level parameters for 3DS processing.
+message NetworkParams {
+  // Parameters specific to Cartes Bancaires network, if applicable.
+  optional CartesBancairesParams cartes_bancaires = 1;
+}
+
 // Additional authentication data, typically from 3DS.
 message AuthenticationData {
   // Electronic Commerce Indicator (ECI) from 3DS.
@@ -800,6 +884,12 @@ message AuthenticationData {
 
   // UCAF (Universal Cardholder Authentication Field) collection indicator.
   optional string ucaf_collection_indicator = 9;
+
+  // SCA exemption indicator for this authentication.
+  optional ExemptionIndicator exemption_indicator = 10;
+
+  // Network-specific parameters for 3DS processing.
+  optional NetworkParams network_params = 11;
 }
 
 // Details of customer acceptance for mandates or terms.
@@ -1437,6 +1527,9 @@ message PaymentServiceAuthorizeRequest {
 
   // Order Details
   repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
+
+  // Locale Information
+  optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
 }
 
 // Request message for authorizing a payment only (without setup flows).
@@ -1522,6 +1615,9 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Send the connector order identifier here if an order was created before authorize
   optional string connector_order_reference_id = 41; // Connector's reference id for order
+  
+   // Locale Information
+  optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
 }
 
 // Response message for a payment authorization.
@@ -1534,6 +1630,17 @@ message PaymentServiceAuthorizeResponse {
   optional string error_code = 3; // Error code if the authorization failed
   optional string error_message = 4; // Error message if the authorization failed
   optional string error_reason = 20; // Detailed reason for the error
+
+  // Network-level error details for retry logic (from card schemes/acquirers)
+  // This field can be returned for both approved and refused Mastercard payments.
+  // This code provides additional information about the type of transaction or the reason why the payment failed.
+  // If the payment failed, the network advice code gives guidance on if and when you can retry the payment.
+  optional string network_advice_code = 23;
+  // For card errors resulting from a card issuer decline, a brand specific 2, 3, or 4 digit code which indicates the reason the authorization failed.
+  optional string network_decline_code = 22;
+  // A string indicating how to proceed with an network error if payment gateway provide one. This is used to understand the network error code better.
+  optional string network_error_message = 24;
+
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
 
@@ -1613,6 +1720,17 @@ message PaymentServiceGetResponse {
   optional string error_code = 3; // Error code if synchronization encountered an issue
   optional string error_message = 4; // Error message if synchronization encountered an issue
   optional string error_reason = 31; // Detailed reason for the error
+
+  // Network-level error details for retry logic (from card schemes/acquirers)
+  // This field can be returned for both approved and refused Mastercard payments.
+  // This code provides additional information about the type of transaction or the reason why the payment failed.
+  // If the payment failed, the network advice code gives guidance on if and when you can retry the payment.
+  optional string network_advice_code = 33;
+  // For card errors resulting from a card issuer decline, a brand specific 2, 3, or 4 digit code which indicates the reason the authorization failed.
+  optional string network_decline_code = 32;
+  // A string indicating how to proceed with an network error if payment gateway provide one. This is used to understand the network error code better.
+  optional string network_error_message = 34;
+
   uint32 status_code = 26; // HTTP status code from the connector
   map<string, string> response_headers = 27; // Optional HTTP response headers from the connector
 
@@ -1693,6 +1811,7 @@ message PaymentServiceVoidResponse {
   optional string error_code = 3; // Error code if the void operation failed
   optional string error_message = 4; // Error message if the void operation failed
   optional string error_reason = 13; // Detailed reason for the error
+
   uint32 status_code = 6; // HTTP status code from the connector
   map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
 
@@ -1744,6 +1863,7 @@ message PaymentServiceVoidPostCaptureResponse {
   optional string error_code = 3; // Error code if the void post-capture operation failed
   optional string error_message = 4; // Error message if the void post-capture operation failed
   optional string error_reason = 8; // Detailed reason for the error
+
   uint32 status_code = 6; // HTTP status code from the connector
   map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
 
@@ -2107,6 +2227,12 @@ message PaymentServiceRegisterRequest {
   optional string payment_method_token = 32;
   // Send the connector order identifier here if an order was created before authorize
   optional string order_id = 33;
+
+  // Locale Information
+  optional string locale =  45; // Locale/language preference for the shopper (e.g., "en-US")
+
+  // Testing Data
+  optional SecretString connector_testing_data = 46; // Connector-specific testing data (JSON stringified)
 }
 
 // Response message for a mandate setup operation.
@@ -2186,6 +2312,8 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  optional SecretString merchant_account_id = 37; // Merchant account ID for the repeat payments
+  optional Currency merchant_configered_currency = 38; // Merchant configered currency for the repeat payments
 
   // Behavioral Flags and Preferences
   optional bool off_session = 16; // Indicates if off-session process
@@ -2204,6 +2332,12 @@ message PaymentServiceRepeatEverythingRequest {
   optional MitCategory mit_category = 25; // Category of the MIT
 
   optional AuthenticationData authentication_data = 36; // Additional authentication data
+
+  // Locale Information
+  optional string locale = 39; // Locale/language preference for the shopper (e.g., "en-US")
+
+  // Testing Data
+  optional SecretString connector_testing_data = 40; // Connector-specific testing data (JSON stringified)
 }
 
 // Container for recurring mandate payment data
@@ -2225,6 +2359,17 @@ message PaymentServiceRepeatEverythingResponse {
   optional string error_code = 3; // Error code if the payment failed
   optional string error_message = 4; // Error message if the payment failed
   optional string error_reason = 17; // Detailed reason for the error
+
+  // Network-level error details for retry logic (from card schemes/acquirers)
+  // This field can be returned for both approved and refused Mastercard payments.
+  // This code provides additional information about the type of transaction or the reason why the payment failed.
+  // If the payment failed, the network advice code gives guidance on if and when you can retry the payment.
+  optional string network_advice_code = 19;
+  // For card errors resulting from a card issuer decline, a brand specific 2, 3, or 4 digit code which indicates the reason the authorization failed.
+  optional string network_decline_code = 20;
+  // A string indicating how to proceed with an network error if payment gateway provide one. This is used to understand the network error code better.
+  optional string network_error_message = 21;
+
   uint32 status_code = 8; // HTTP status code from the connector
   map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
 
@@ -2253,6 +2398,37 @@ message PaymentServiceRepeatEverythingResponse {
 
   // Authorization Details
   optional bool incremental_authorization_allowed = 18; // Indicates if incremental authorization is allowed
+}
+
+// Request message for a mandate revoke operation.
+message PaymentServiceRevokeMandateRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Mandate Details
+  string mandate_id = 2; // unique identifier for the mandate.
+  optional string connector_mandate_id = 3;
+}
+
+// Response message for a mandate revoke operation.
+message PaymentServiceRevokeMandateResponse {
+  // Status Information
+  MandateStatus status = 1; // Current status of the mandate
+  optional string error_code = 2; // Error code if the mandate failed
+  optional string error_message = 3; // Error message if the mandate failed
+  optional string error_reason = 4; // Detailed reason for the error
+  uint32 status_code = 5; // HTTP status code from the connector
+  map<string, string> response_headers = 6; // Optional HTTP response headers from the connector
+
+  // Transaction Details
+  optional string network_txn_id = 7; // Transaction ID from the mandate network
+  optional Identifier response_ref_id = 8; // Reference ID from the connector response
+
+  // Raw Response
+  optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional SecretString raw_connector_request = 10; // Raw request to the connector for debugging
 }
 
 // -------------------------
@@ -2310,6 +2486,17 @@ message PaymentServicePreAuthenticateResponse {
   optional string error_code = 3; // Error code if the pre-authentication failed
   optional string error_message = 4; // Error message if the pre-authentication failed
   optional string error_reason = 14; // Detailed reason for the error
+
+  // Network-level error details for retry logic (from card schemes/acquirers)
+  // This field can be returned for both approved and refused Mastercard payments.
+  // This code provides additional information about the type of transaction or the reason why the payment failed.
+  // If the payment failed, the network advice code gives guidance on if and when you can retry the payment.
+  optional string network_advice_code = 15;
+  // For card errors resulting from a card issuer decline, a brand specific 2, 3, or 4 digit code which indicates the reason the authorization failed.
+  optional string network_decline_code = 16;
+  // A string indicating how to proceed with an network error if payment gateway provide one. This is used to understand the network error code better.
+  optional string network_error_message = 17;
+
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
 
@@ -2382,6 +2569,17 @@ message PaymentServiceAuthenticateResponse {
   optional string error_code = 3; // Error code if the authentication failed
   optional string error_message = 4; // Error message if the authentication failed
   optional string error_reason = 14; // Detailed reason for the error
+
+  // Network-level error details for retry logic (from card schemes/acquirers)
+  // This field can be returned for both approved and refused Mastercard payments.
+  // This code provides additional information about the type of transaction or the reason why the payment failed.
+  // If the payment failed, the network advice code gives guidance on if and when you can retry the payment.
+  optional string network_advice_code = 15;
+  // For card errors resulting from a card issuer decline, a brand specific 2, 3, or 4 digit code which indicates the reason the authorization failed.
+  optional string network_decline_code = 16;
+  // A string indicating how to proceed with an network error if payment gateway provide one. This is used to understand the network error code better.
+  optional string network_error_message = 17;
+
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
 
@@ -2458,6 +2656,17 @@ message PaymentServicePostAuthenticateResponse {
   optional string error_code = 3; // Error code if the post-authentication failed
   optional string error_message = 4; // Error message if the post-authentication failed
   optional string error_reason = 15; // Detailed reason for the error
+
+  // Network-level error details for retry logic (from card schemes/acquirers)
+  // This field can be returned for both approved and refused Mastercard payments.
+  // This code provides additional information about the type of transaction or the reason why the payment failed.
+  // If the payment failed, the network advice code gives guidance on if and when you can retry the payment.
+  optional string network_advice_code = 16;
+  // For card errors resulting from a card issuer decline, a brand specific 2, 3, or 4 digit code which indicates the reason the authorization failed.
+  optional string network_decline_code = 17;
+  // A string indicating how to proceed with an network error if payment gateway provide one. This is used to understand the network error code better.
+  optional string network_error_message = 18;
+
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
 
@@ -2480,6 +2689,42 @@ message PaymentServicePostAuthenticateResponse {
 
   // Raw Response
   optional SecretString raw_connector_response = 14; // Raw response from the connector for debugging
+}
+
+// Request message for incremental authorization
+message PaymentServiceIncrementalAuthorizationRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  Identifier transaction_id = 2; // Renamed from connector_request_reference_id
+
+  // Amount Information
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+
+  // Optional Fields
+  optional string reason = 5; // Reason for the incremental authorization
+
+  // Metadata
+  optional SecretString connector_metadata = 6; // Connector-specific metadata for the transaction
+
+  // State Information
+  optional ConnectorState state = 7; // State data for access token storage and other connector-specific state
+}
+
+// Response message for incremental authorization
+message PaymentServiceIncrementalAuthorizationResponse {
+  // Identification
+  optional string connector_authorization_id = 1; // Connector's authorization ID
+
+  // Status Information
+  AuthorizationStatus status = 2; // Status of the incremental authorization attempt
+  optional string error_code = 3; // Error code if the incremental authorization failed
+  optional string error_message = 4; // Error message if the incremental authorization failed
+  optional string error_reason = 5; // Detailed reason for the error
+  uint32 status_code = 6; // HTTP status code from the connector
+  map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
+  // State Information
+  optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
 }
 
 // Request message for creating a session token
