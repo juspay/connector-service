@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.13.0
+
+### Features
+
+- **connector:** [GETNETGLOBAL] Connector Integration ([#381](https://github.com/juspay/connector-service/pull/381)) ([`a648f45`](https://github.com/juspay/connector-service/commit/a648f45d93309a083c90f59f73d4f2f5a95effb1))
+
+**Full Changelog:** [`2026.01.12.1...2026.01.13.0`](https://github.com/juspay/connector-service/compare/2026.01.12.1...2026.01.13.0)
+
+- - -
+
 ## 2026.01.12.1
 
 ### Bug Fixes
