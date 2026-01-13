@@ -1431,24 +1431,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let billing_address = item
-            .resource_common_data
-            .address
-            .get_payment_method_billing();
-        let first_name = billing_address
-            .and_then(|b| b.get_optional_first_name())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "billing.first_name",
-            })?;
-        let last_name = billing_address.and_then(|b| b.get_optional_last_name());
-        let shopper_email = item
-            .request
-            .email
-            .clone()
-            .or_else(|| billing_address.and_then(|b| b.email.clone()))
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "email",
-            })?;
+        let first_name = item.resource_common_data.get_billing_first_name()?;
+        let last_name = item.resource_common_data.get_optional_billing_last_name();
+        let shopper_email = item.resource_common_data.get_billing_email()?;
         Ok(Self {
             first_name,
             last_name,
