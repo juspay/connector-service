@@ -40,7 +40,7 @@ use domain_types::{
     utils::{to_currency_base_unit, CardIssuer},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 pub const REFUND_VOIDED: &str = "Refund request has been voided.";
@@ -131,12 +131,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             bill_to: Some(bill_to),
         };
         let connector_merchant_config = CybersourceConnectorMetadataObject::try_from(
-            &item
-                .router_data
-                .request
-                .metadata
-                .clone()
-                .map(pii::SecretSerdeValue::new),
+            &item.router_data.request.metadata.clone(),
         )?;
 
         let (action_list, action_token_types, authorization_options) = (
@@ -1295,6 +1290,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(utils::convert_metadata_to_merchant_defined_info);
 
         let consumer_authentication_information = item
@@ -1381,6 +1377,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
@@ -1491,6 +1488,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
@@ -1587,6 +1585,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(utils::convert_metadata_to_merchant_defined_info);
         let ucaf_collection_indicator = match apple_pay_wallet_data
             .payment_method
@@ -1694,6 +1693,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
@@ -1785,6 +1785,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(utils::convert_metadata_to_merchant_defined_info);
 
         let ucaf_collection_indicator =
@@ -1905,6 +1906,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(utils::convert_metadata_to_merchant_defined_info);
 
         let ucaf_collection_indicator =
@@ -1997,6 +1999,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
@@ -2152,7 +2155,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             ));
                             let merchant_defined_information =
                                 item.router_data.request.metadata.clone().map(|metadata| {
-                                    utils::convert_metadata_to_merchant_defined_info(metadata)
+                                    utils::convert_metadata_to_merchant_defined_info(
+                                        metadata.expose(),
+                                    )
                                 });
                             let ucaf_collection_indicator = match apple_pay_data
                                 .payment_method

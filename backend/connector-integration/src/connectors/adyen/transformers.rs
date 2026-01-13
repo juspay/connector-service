@@ -35,7 +35,7 @@ use domain_types::{
     utils as domain_utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 use url::Url;
@@ -1442,7 +1442,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let additional_data = get_additional_data(&item.router_data);
 
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
         let store = adyen_metadata.store.clone(); // no split payment support yet
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
@@ -1552,7 +1553,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .clone()
-                .map(|value| Secret::new(filter_adyen_metadata(value))),
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
             platform_chargeback_logic,
             session_validity: None,
         })
@@ -1600,7 +1601,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let return_url = item.router_data.request.get_router_return_url()?;
         let additional_data = get_additional_data(&item.router_data);
 
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
         let country_code =
@@ -1670,7 +1672,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .clone()
-                .map(|value| Secret::new(filter_adyen_metadata(value))),
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
             platform_chargeback_logic,
             session_validity: None,
         })
@@ -1726,7 +1728,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_payment_billing(),
         )
         .and_then(Result::ok);
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
 
         let (store, splits) = match item.router_data.request.split_payments.as_ref() {
             Some(_split_payment) => {
@@ -1794,7 +1797,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .clone()
-                .map(|value| Secret::new(filter_adyen_metadata(value))),
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
             platform_chargeback_logic,
             session_validity: None,
         })
@@ -3471,7 +3474,12 @@ fn get_additional_data<
         }
         _ => (None, None),
     };
-    let riskdata = item.request.metadata.clone().and_then(get_risk_data);
+    let riskdata = item
+        .request
+        .metadata
+        .clone()
+        .expose_option()
+        .and_then(get_risk_data);
 
     let execute_three_d = if matches!(
         item.resource_common_data.auth_type,
@@ -3897,7 +3905,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let additional_data = get_additional_data_for_setup_mandate(&item.router_data);
 
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
@@ -4205,7 +4214,12 @@ fn get_additional_data_for_setup_mandate<
         }
         _ => (None, None),
     };
-    let riskdata = item.request.metadata.clone().and_then(get_risk_data);
+    let riskdata = item
+        .request
+        .metadata
+        .clone()
+        .expose_option()
+        .and_then(get_risk_data);
 
     let execute_three_d = if matches!(
         item.resource_common_data.auth_type,
