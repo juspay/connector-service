@@ -1,6 +1,9 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
-use common_utils::types::{FloatMajorUnit, StringMajorUnit};
+use common_utils::{
+    request::Method,
+    types::{FloatMajorUnit, StringMajorUnit},
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -12,9 +15,11 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 #[derive(Debug, Clone)]
 pub struct AirwallexAuthType {
@@ -74,16 +79,31 @@ pub struct AirwallexPaymentRequest {
 }
 
 #[derive(Debug, Serialize)]
-pub struct AirwallexPaymentMethod {
-    pub card: AirwallexCardData,
-    #[serde(rename = "type")]
-    pub payment_method_type: AirwallexPaymentType,
+#[serde(untagged)]
+pub enum AirwallexPaymentMethod {
+    Card(AirwallexCardData),
+    BankRedirect(AirwallexBankRedirectData),
+}
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum AirwallexBankRedirectData {
+    Ideal(AirwallexIdealData),
+    Trustly(AirwallexTrustlyData),
+    Blik(AirwallexBlikData),
 }
 
 // Removed old AirwallexPaymentMethodData enum - now using individual Option fields for cleaner serialization
 
 #[derive(Debug, Serialize)]
 pub struct AirwallexCardData {
+    pub card: AirwallexCardDetails,
+    #[serde(rename = "type")]
+    pub payment_method_type: AirwallexPaymentType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexCardDetails {
     pub number: Secret<String>,
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
@@ -107,6 +127,45 @@ pub enum AirwallexPaymentType {
     Ideal,
     Skrill,
     BankTransfer,
+}
+
+// BankRedirect-specific data structures
+#[derive(Debug, Serialize)]
+pub struct AirwallexIdealData {
+    pub ideal: AirwallexIdealDetails,
+    #[serde(rename = "type")]
+    pub payment_method_type: AirwallexPaymentType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexIdealDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bank_name: Option<common_enums::BankNames>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexTrustlyData {
+    pub trustly: AirwallexTrustlyDetails,
+    #[serde(rename = "type")]
+    pub payment_method_type: AirwallexPaymentType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexTrustlyDetails {
+    pub shopper_name: Secret<String>,
+    pub country_code: common_enums::CountryAlpha2,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexBlikData {
+    pub blik: AirwallexBlikDetails,
+    #[serde(rename = "type")]
+    pub payment_method_type: AirwallexPaymentType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexBlikDetails {
+    pub shopper_name: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -157,8 +216,8 @@ pub struct AirwallexConfirmRequest {
 }
 
 // Helper function to extract device data from browser info (matching Hyperswitch pattern)
-fn get_device_data<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
-    request: &domain_types::connector_types::PaymentsAuthorizeData<T>,
+fn get_device_data<T: PaymentMethodDataTypes>(
+    request: &PaymentsAuthorizeData<T>,
 ) -> Result<Option<AirwallexDeviceData>, error_stack::Report<errors::ConnectorError>> {
     let browser_info = match request.get_browser_info() {
         Ok(info) => info,
@@ -207,14 +266,7 @@ fn get_device_data<T: domain_types::payment_method_data::PaymentMethodDataTypes>
 }
 
 // Implementation for new unified request type
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::AirwallexRouterData<
             RouterDataV2<
@@ -244,8 +296,8 @@ impl<
 
         let payment_method = match item.router_data.request.payment_method_data.clone() {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
-                AirwallexPaymentMethod {
-                    card: AirwallexCardData {
+                AirwallexPaymentMethod::Card(AirwallexCardData {
+                    card: AirwallexCardDetails {
                         number: Secret::new(card_data.card_number.peek().to_string()),
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: card_data.get_expiry_year_4_digit(),
@@ -255,8 +307,66 @@ impl<
                             .map(|name| Secret::new(name.expose())),
                     },
                     payment_method_type: AirwallexPaymentType::Card,
-                }
+                })
             }
+            domain_types::payment_method_data::PaymentMethodData::BankRedirect(
+                bank_redirect_data,
+            ) => match bank_redirect_data {
+                domain_types::payment_method_data::BankRedirectData::Ideal { bank_name } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Ideal(
+                        AirwallexIdealData {
+                            ideal: AirwallexIdealDetails { bank_name },
+                            payment_method_type: AirwallexPaymentType::Ideal,
+                        },
+                    ))
+                }
+                domain_types::payment_method_data::BankRedirectData::Trustly { .. } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Trustly(
+                        AirwallexTrustlyData {
+                            trustly: AirwallexTrustlyDetails {
+                                shopper_name: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_full_name()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "shopper_name",
+                                    })?,
+                                country_code: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_country()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "country_code",
+                                    })?,
+                            },
+                            payment_method_type: AirwallexPaymentType::Trustly,
+                        },
+                    ))
+                }
+                domain_types::payment_method_data::BankRedirectData::Blik { blik_code: _ } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Blik(
+                        AirwallexBlikData {
+                            blik: AirwallexBlikDetails {
+                                shopper_name: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_full_name()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "shopper_name",
+                                    })?,
+                            },
+                            payment_method_type: AirwallexPaymentType::Blik,
+                        },
+                    ))
+                }
+                _ => {
+                    return Err(errors::ConnectorError::NotSupported {
+                        message: "Bank Redirect Payment Method".to_string(),
+                        connector: "Airwallex",
+                    }
+                    .into())
+                }
+            },
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
                     message: "Payment Method".to_string(),
@@ -336,7 +446,7 @@ pub type AirwallexSyncResponse = AirwallexPaymentsResponse;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AirwallexPaymentAttempt {
     pub id: Option<String>,
-    pub status: Option<AirwallexPaymentStatus>,
+    pub status: Option<String>, // Changed from AirwallexPaymentStatus to String to handle different values
     pub amount: Option<FloatMajorUnit>,
     pub payment_method: Option<AirwallexPaymentMethodInfo>,
     pub authorization_code: Option<String>,
@@ -367,6 +477,15 @@ pub struct AirwallexPaymentMethodInfo {
     #[serde(rename = "type")]
     pub method_type: String,
     pub card: Option<AirwallexCardInfo>,
+    // Bank redirect fields
+    pub blik: Option<Secret<serde_json::Value>>, // For BLIK payment method details
+    pub ideal: Option<Secret<serde_json::Value>>, // For iDEAL payment method details
+    pub trustly: Option<Secret<serde_json::Value>>, // For Trustly payment method details
+    // Additional payment method fields
+    pub id: Option<String>,
+    pub status: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -382,13 +501,8 @@ pub struct AirwallexCardInfo {
 pub struct AirwallexNextAction {
     #[serde(rename = "type")]
     pub action_type: String,
-    pub redirect_to_url: Option<AirwallexRedirectAction>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct AirwallexRedirectAction {
-    pub redirect_url: String,
-    pub return_url: String,
+    pub method: Option<String>,
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -431,37 +545,28 @@ fn get_payment_status(
 }
 
 // New response transformer that addresses PR #240 critical issues
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            AirwallexPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AirwallexPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<AirwallexPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_payment_status(&item.response.status, &item.response.next_action);
 
-        // Handle 3DS redirection for customer action required
-        // For now, set to None - will be implemented in a separate flow
-        let redirection_data = None;
+        // Handle redirection for bank redirects and 3DS
+        let redirection_data = item.response.next_action.as_ref().and_then(|next_action| {
+            if next_action.action_type == "redirect" {
+                next_action.url.as_ref().and_then(|url_str| {
+                    Url::parse(url_str)
+                        .ok()
+                        .map(|url| Box::new(RedirectForm::from((url, Method::Get))))
+                })
+            } else {
+                None
+            }
+        });
 
         // Extract network transaction ID for network response fields (PR #240 Issue #4)
         let network_txn_id = item
@@ -492,21 +597,13 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            AirwallexSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<AirwallexSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AirwallexSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<AirwallexSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Use the same simple status mapping as hyperswitch
         let status = get_payment_status(&item.response.status, &item.response.next_action);
@@ -560,14 +657,7 @@ pub struct AirwallexCaptureRequest {
 pub type AirwallexCaptureResponse = AirwallexPaymentsResponse;
 
 // Request transformer for Capture flow
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::AirwallexRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -596,8 +686,7 @@ impl<
             )
             .map_err(|e| {
                 errors::ConnectorError::RequestEncodingFailedWithReason(format!(
-                    "Amount conversion failed: {}",
-                    e
+                    "Amount conversion failed: {e}"
                 ))
             })?;
 
@@ -614,21 +703,13 @@ impl<
 }
 
 // Response transformer for Capture flow - addresses PR #240 critical issues
-impl
-    TryFrom<
-        ResponseRouterData<
-            AirwallexCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<AirwallexCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AirwallexCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<AirwallexCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Use the same simple status mapping as hyperswitch
         let status = get_payment_status(&item.response.status, &item.response.next_action);
@@ -709,14 +790,7 @@ pub enum AirwallexRefundStatus {
 }
 
 // Request transformer for Refund flow
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::AirwallexRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -746,8 +820,7 @@ impl<
             )
             .map_err(|e| {
                 errors::ConnectorError::RequestEncodingFailedWithReason(format!(
-                    "Amount conversion failed: {}",
-                    e
+                    "Amount conversion failed: {e}"
                 ))
             })?;
 
@@ -769,21 +842,13 @@ impl<
 }
 
 // Response transformer for Refund flow - addresses PR #240 critical issues
-impl
-    TryFrom<
-        ResponseRouterData<
-            AirwallexRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<AirwallexRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AirwallexRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<AirwallexRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = RefundStatus::from(item.response.status);
 
@@ -808,21 +873,13 @@ impl
 pub type AirwallexRefundSyncResponse = AirwallexRefundResponse;
 
 // Response transformer for RSync flow - addresses PR #240 critical issues
-impl
-    TryFrom<
-        ResponseRouterData<
-            AirwallexRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<AirwallexRefundSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AirwallexRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<AirwallexRefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = RefundStatus::from(item.response.status);
 
@@ -865,14 +922,7 @@ pub struct AirwallexVoidRequest {
 pub type AirwallexVoidResponse = AirwallexPaymentsResponse;
 
 // Request transformer for Void flow
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::AirwallexRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -912,21 +962,13 @@ impl<
 }
 
 // Response transformer for Void flow - addresses PR #240 critical issues
-impl
-    TryFrom<
-        ResponseRouterData<
-            AirwallexVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<AirwallexVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AirwallexVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<AirwallexVoidResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_payment_status(&item.response.status, &item.response.next_action);
 
@@ -973,14 +1015,7 @@ impl
 // The Airwallex API is trusted to return correct status (following Hyperswitch pattern)
 
 // Implementation for confirm request type (2-step flow)
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::AirwallexRouterData<
             RouterDataV2<
@@ -1010,8 +1045,8 @@ impl<
 
         let payment_method = match item.router_data.request.payment_method_data.clone() {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
-                AirwallexPaymentMethod {
-                    card: AirwallexCardData {
+                AirwallexPaymentMethod::Card(AirwallexCardData {
+                    card: AirwallexCardDetails {
                         number: Secret::new(card_data.card_number.peek().to_string()),
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: card_data.get_expiry_year_4_digit(),
@@ -1021,8 +1056,66 @@ impl<
                             .map(|name| Secret::new(name.expose())),
                     },
                     payment_method_type: AirwallexPaymentType::Card,
-                }
+                })
             }
+            domain_types::payment_method_data::PaymentMethodData::BankRedirect(
+                bank_redirect_data,
+            ) => match bank_redirect_data {
+                domain_types::payment_method_data::BankRedirectData::Ideal { bank_name } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Ideal(
+                        AirwallexIdealData {
+                            ideal: AirwallexIdealDetails { bank_name },
+                            payment_method_type: AirwallexPaymentType::Ideal,
+                        },
+                    ))
+                }
+                domain_types::payment_method_data::BankRedirectData::Trustly { .. } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Trustly(
+                        AirwallexTrustlyData {
+                            trustly: AirwallexTrustlyDetails {
+                                shopper_name: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_full_name()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "shopper_name",
+                                    })?,
+                                country_code: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_country()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "country_code",
+                                    })?,
+                            },
+                            payment_method_type: AirwallexPaymentType::Trustly,
+                        },
+                    ))
+                }
+                domain_types::payment_method_data::BankRedirectData::Blik { blik_code: _ } => {
+                    AirwallexPaymentMethod::BankRedirect(AirwallexBankRedirectData::Blik(
+                        AirwallexBlikData {
+                            blik: AirwallexBlikDetails {
+                                shopper_name: item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_billing_full_name()
+                                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                                        field_name: "shopper_name",
+                                    })?,
+                            },
+                            payment_method_type: AirwallexPaymentType::Blik,
+                        },
+                    ))
+                }
+                _ => {
+                    return Err(errors::ConnectorError::NotSupported {
+                        message: "Bank Redirect Payment Method".to_string(),
+                        connector: "Airwallex",
+                    }
+                    .into())
+                }
+            },
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
                     message: "Payment Method".to_string(),
@@ -1131,14 +1224,7 @@ pub struct AirwallexIntentResponse {
 }
 
 // Request transformer for CreateOrder flow
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::AirwallexRouterData<
             RouterDataV2<
@@ -1180,8 +1266,7 @@ impl<
             )
             .map_err(|e| {
                 errors::ConnectorError::RequestEncodingFailedWithReason(format!(
-                    "Amount conversion failed: {}",
-                    e
+                    "Amount conversion failed: {e}"
                 ))
             })?;
 
@@ -1212,18 +1297,7 @@ impl<
 }
 
 // Response transformer for CreateOrder flow
-impl
-    TryFrom<
-        crate::types::ResponseRouterData<
-            AirwallexIntentResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateOrder,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentCreateOrderData,
-                domain_types::connector_types::PaymentCreateOrderResponse,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<AirwallexIntentResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::CreateOrder,
         PaymentFlowData,
@@ -1234,35 +1308,23 @@ impl
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::types::ResponseRouterData<
-            AirwallexIntentResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateOrder,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentCreateOrderData,
-                domain_types::connector_types::PaymentCreateOrderResponse,
-            >,
-        >,
+        item: ResponseRouterData<AirwallexIntentResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let mut router_data = item.router_data;
 
         // Map intent status to order status
         let status = match item.response.status {
-            AirwallexPaymentStatus::RequiresPaymentMethod => {
-                common_enums::AttemptStatus::PaymentMethodAwaited
-            }
-            AirwallexPaymentStatus::RequiresCustomerAction => {
-                common_enums::AttemptStatus::AuthenticationPending
-            }
-            AirwallexPaymentStatus::Processing => common_enums::AttemptStatus::Pending,
-            AirwallexPaymentStatus::Succeeded => common_enums::AttemptStatus::Charged,
-            AirwallexPaymentStatus::Settled => common_enums::AttemptStatus::Charged,
-            AirwallexPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
-            AirwallexPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
-            AirwallexPaymentStatus::RequiresCapture => common_enums::AttemptStatus::Authorized,
-            AirwallexPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
-            AirwallexPaymentStatus::Paid => common_enums::AttemptStatus::Charged,
-            AirwallexPaymentStatus::CaptureRequested => common_enums::AttemptStatus::Charged,
+            AirwallexPaymentStatus::RequiresPaymentMethod => AttemptStatus::PaymentMethodAwaited,
+            AirwallexPaymentStatus::RequiresCustomerAction => AttemptStatus::AuthenticationPending,
+            AirwallexPaymentStatus::Processing => AttemptStatus::Pending,
+            AirwallexPaymentStatus::Succeeded => AttemptStatus::Charged,
+            AirwallexPaymentStatus::Settled => AttemptStatus::Charged,
+            AirwallexPaymentStatus::Failed => AttemptStatus::Failure,
+            AirwallexPaymentStatus::Cancelled => AttemptStatus::Voided,
+            AirwallexPaymentStatus::RequiresCapture => AttemptStatus::Authorized,
+            AirwallexPaymentStatus::Authorized => AttemptStatus::Authorized,
+            AirwallexPaymentStatus::Paid => AttemptStatus::Charged,
+            AirwallexPaymentStatus::CaptureRequested => AttemptStatus::Charged,
         };
 
         router_data.response = Ok(domain_types::connector_types::PaymentCreateOrderResponse {
@@ -1281,19 +1343,12 @@ impl
 }
 
 // Access Token Request Transformer
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::AirwallexRouterData<
             RouterDataV2<
                 domain_types::connector_flow::CreateAccessToken,
-                domain_types::connector_types::PaymentFlowData,
+                PaymentFlowData,
                 domain_types::connector_types::AccessTokenRequestData,
                 domain_types::connector_types::AccessTokenResponseData,
             >,
@@ -1307,7 +1362,7 @@ impl<
         _item: super::AirwallexRouterData<
             RouterDataV2<
                 domain_types::connector_flow::CreateAccessToken,
-                domain_types::connector_types::PaymentFlowData,
+                PaymentFlowData,
                 domain_types::connector_types::AccessTokenRequestData,
                 domain_types::connector_types::AccessTokenResponseData,
             >,
@@ -1323,21 +1378,10 @@ impl<
 }
 
 // Access Token Response Transformer
-impl
-    TryFrom<
-        crate::types::ResponseRouterData<
-            AirwallexAccessTokenResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                domain_types::connector_types::AccessTokenResponseData,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<AirwallexAccessTokenResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::CreateAccessToken,
-        domain_types::connector_types::PaymentFlowData,
+        PaymentFlowData,
         domain_types::connector_types::AccessTokenRequestData,
         domain_types::connector_types::AccessTokenResponseData,
     >
@@ -1345,15 +1389,7 @@ impl
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::types::ResponseRouterData<
-            AirwallexAccessTokenResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                domain_types::connector_types::AccessTokenResponseData,
-            >,
-        >,
+        item: ResponseRouterData<AirwallexAccessTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let mut router_data = item.router_data;
 

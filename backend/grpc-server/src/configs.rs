@@ -1,11 +1,18 @@
 use std::path::PathBuf;
 
-use common_utils::{consts, events::EventConfig, metadata::HeaderMaskingConfig};
-use domain_types::types::{Connectors, Proxy};
+use common_utils::{
+    consts,
+    events::{EventConfig, EventConfigPatch},
+    metadata::{HeaderMaskingConfig, HeaderMaskingConfigPatch},
+};
+use domain_types::types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch};
 
-use crate::{error::ConfigurationError, logger::config::Log};
+use crate::{
+    error::ConfigurationError,
+    logger::config::{Log, LogPatch},
+};
 use serde::{Deserialize, Serialize};
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, config_patch_derive::Patch)]
 pub struct Config {
     pub common: Common,
     pub server: Server,
@@ -25,7 +32,7 @@ pub struct Config {
     pub api_tags: ApiTagConfig,
 }
 
-#[derive(Clone, Deserialize, Debug, Default, Serialize)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct LineageConfig {
     /// Enable processing of x-lineage-ids header
     pub enabled: bool,
@@ -46,7 +53,7 @@ fn default_lineage_prefix() -> String {
 }
 
 /// Test mode configuration for mock server integration
-#[derive(Clone, Deserialize, Debug, Default, Serialize)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct TestConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -91,7 +98,7 @@ impl TestConfig {
 /// ```
 ///
 /// Note: Config crate lowercases env var keys, lookup is case-insensitive
-#[derive(Clone, Deserialize, Debug, Default, Serialize)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct ApiTagConfig {
     #[serde(default)]
     pub tags: std::collections::HashMap<String, String>,
@@ -126,7 +133,7 @@ impl ApiTagConfig {
                 result
             },
             |pmt| {
-                let composite_key = format!("{}_{:?}", flow_str, pmt).to_lowercase();
+                let composite_key = format!("{flow_str}_{pmt:?}").to_lowercase();
                 let result = self.tags.get(&composite_key).cloned();
                 if result.is_none() {
                     tracing::debug!(
@@ -141,7 +148,7 @@ impl ApiTagConfig {
     }
 }
 
-#[derive(Clone, Deserialize, Debug, Serialize)]
+#[derive(Clone, Deserialize, Debug, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct Common {
     pub environment: consts::Env,
 }
@@ -155,7 +162,7 @@ impl Common {
     }
 }
 
-#[derive(Clone, Deserialize, Debug, Serialize)]
+#[derive(Clone, Deserialize, Debug, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct Server {
     pub host: String,
     pub port: u16,
@@ -163,13 +170,13 @@ pub struct Server {
     pub type_: ServiceType,
 }
 
-#[derive(Clone, Deserialize, Debug, Serialize)]
+#[derive(Clone, Deserialize, Debug, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct MetricsServer {
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 #[serde(rename_all = "snake_case")]
 pub enum ServiceType {
     #[default]

@@ -21,7 +21,7 @@ use serde_json::Value;
 use std::{collections::HashMap, str::FromStr};
 pub use xml_utils::preprocess_xml_response_bytes;
 
-type Error = error_stack::Report<errors::ConnectorError>;
+type Error = Report<errors::ConnectorError>;
 use common_enums::enums;
 use serde::{Deserialize, Serialize};
 
@@ -47,9 +47,8 @@ pub trait PaymentsAuthorizeRequestData {
     fn get_router_return_url(&self) -> Result<String, Error>;
 }
 
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
-    > PaymentsAuthorizeRequestData for PaymentsAuthorizeData<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static>
+    PaymentsAuthorizeRequestData for PaymentsAuthorizeData<T>
 {
     fn get_router_return_url(&self) -> Result<String, Error> {
         self.router_return_url
@@ -60,7 +59,7 @@ impl<
 
 pub fn missing_field_err(
     message: &'static str,
-) -> Box<dyn Fn() -> error_stack::Report<errors::ConnectorError> + 'static> {
+) -> Box<dyn Fn() -> Report<errors::ConnectorError> + 'static> {
     Box::new(move || {
         errors::ConnectorError::MissingRequiredField {
             field_name: message,
@@ -182,7 +181,7 @@ impl<T: PaymentMethodDataTypes> SplitPaymentData for PaymentsAuthorizeData<T> {
     }
 }
 
-impl SplitPaymentData for RepeatPaymentData {
+impl<T: PaymentMethodDataTypes> SplitPaymentData for RepeatPaymentData<T> {
     fn get_split_payment_data(
         &self,
     ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
@@ -222,7 +221,7 @@ pub fn serialize_to_xml_string_with_root<T: Serialize>(
         .change_context(errors::ConnectorError::RequestEncodingFailed)
         .attach_printable("Failed to serialize XML with root")?;
 
-    let full_xml = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>{}", xml_content);
+    let full_xml = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>{xml_content}");
     Ok(full_xml)
 }
 
@@ -288,7 +287,7 @@ pub trait MultipleCaptureSyncResponse {
     fn get_connector_reference_id(&self) -> Option<String> {
         None
     }
-    fn get_amount_captured(&self) -> Result<Option<MinorUnit>, error_stack::Report<ParsingError>>;
+    fn get_amount_captured(&self) -> Result<Option<MinorUnit>, Report<ParsingError>>;
 }
 
 pub(crate) fn construct_captures_response_hashmap<T>(
@@ -355,17 +354,55 @@ pub struct MerchantDefinedInformation {
 /// - Input is already valid JSON (serde_json::Value), so parsing rarely fails
 /// - Better to continue payment without metadata than to fail the entire payment
 pub fn convert_metadata_to_merchant_defined_info(
-    metadata: serde_json::Value,
+    metadata: Value,
 ) -> Vec<MerchantDefinedInformation> {
-    serde_json::from_str::<std::collections::BTreeMap<String, serde_json::Value>>(
-        &metadata.to_string(),
-    )
-    .unwrap_or_default()
-    .into_iter()
-    .enumerate()
-    .map(|(index, (key, value))| MerchantDefinedInformation {
-        key: (index + 1) as u8,
-        value: format!("{key}={value}"),
-    })
-    .collect()
+    serde_json::from_str::<std::collections::BTreeMap<String, Value>>(&metadata.to_string())
+        .unwrap_or_default()
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, (key, value))| {
+            u8::try_from(index + 1)
+                .ok()
+                .map(|key_num| MerchantDefinedInformation {
+                    key: key_num,
+                    value: format!("{key}={value}"),
+                })
+        })
+        .collect()
+}
+
+/// Convert state/province to 2-letter code based on country
+/// Returns None if the state is already 2 letters or if conversion is not needed
+/// Returns Some(code) if successfully converted from full name to abbreviation
+pub fn get_state_code_for_country(
+    state: &Secret<String>,
+    country: Option<common_enums::CountryAlpha2>,
+) -> Option<Secret<String>> {
+    let state_str = state.peek();
+
+    // If already 2 letters, return as-is (already a code)
+    if state_str.len() == 2 {
+        Some(state.clone())
+    } else if state_str.is_empty() {
+        // If empty, return None
+        None
+    } else {
+        // Convert based on country
+        match country {
+            Some(common_enums::CountryAlpha2::US) => {
+                // Try to convert US state name to abbreviation
+                common_enums::UsStatesAbbreviation::from_state_name(state_str)
+                    .map(|abbr| Secret::new(abbr.to_string()))
+            }
+            Some(common_enums::CountryAlpha2::CA) => {
+                // Try to convert Canada province name to abbreviation
+                common_enums::CanadaStatesAbbreviation::from_province_name(state_str)
+                    .map(|abbr| Secret::new(abbr.to_string()))
+            }
+            _ => {
+                // For other countries, return the state as-is if it's not empty
+                Some(state.clone())
+            }
+        }
+    }
 }

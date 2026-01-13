@@ -136,8 +136,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             id_type: Some(IdType::Id(format!("mifinity_test_{}", get_timestamp()))),
         }),
         customer_id: Some("Test_customer".to_string()),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         metadata: {
             let mut metadata = std::collections::HashMap::new();
@@ -164,8 +164,12 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Eur),
         state: None,
+        metadata: std::collections::HashMap::new(),
+        merchant_account_metadata: std::collections::HashMap::new(),
         connector_metadata: None,
         setup_future_usage: None,
+        sync_type: None,
+        connector_order_reference_id: Some(transaction_id.to_string()),
     }
 }
 

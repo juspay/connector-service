@@ -8,11 +8,11 @@ use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, Method};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, IncrementalAuthorization, PSync, RSync, Refund, Void},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -54,6 +54,26 @@ pub(crate) mod headers {
 macros::create_amount_converter_wrapper!(connector_name: Barclaycard, amount_type: StringMajorUnit);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Barclaycard<T>
 {
 }
@@ -79,12 +99,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentIncrementalAuthorization for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Barclaycard<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Barclaycard<T>
+    connector_types::RepeatPaymentV2<T> for Barclaycard<T>
 {
 }
 
@@ -174,6 +199,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         domain_types::connector_flow::PostAuthenticate,
         PaymentFlowData,
@@ -237,7 +267,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        domain_types::connector_types::RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Barclaycard<T>
 {
@@ -319,6 +349,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::PaymentCreateOrderData,
         domain_types::connector_types::PaymentCreateOrderResponse,
+    > for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::MandateRevoke,
+        PaymentFlowData,
+        domain_types::connector_types::MandateRevokeRequestData,
+        domain_types::connector_types::MandateRevokeResponseData,
     > for Barclaycard<T>
 {
 }
@@ -815,7 +855,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        domain_types::connector_types::RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Barclaycard<T>
 {
@@ -897,6 +937,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::PaymentCreateOrderData,
         domain_types::connector_types::PaymentCreateOrderResponse,
+    > for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::MandateRevoke,
+        PaymentFlowData,
+        domain_types::connector_types::MandateRevokeRequestData,
+        domain_types::connector_types::MandateRevokeResponseData,
     > for Barclaycard<T>
 {
 }

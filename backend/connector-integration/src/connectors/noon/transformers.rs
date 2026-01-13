@@ -1,13 +1,14 @@
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
 use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, MandateRevoke, Refund, SetupMandate, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
+        MandateReference, MandateReferenceId, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId, SetupMandateRequestData,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     mandates::MandateDataType,
     payment_method_data::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -139,14 +140,8 @@ pub struct NoonSubscription {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NoonCard<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct NoonCard<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+{
     name_on_card: Option<Secret<String>>,
     number_plain: RawCardNumber<T>,
     expiry_month: Secret<String>,
@@ -216,12 +211,7 @@ pub struct NoonPayPal {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "UPPERCASE")]
 pub enum NoonPaymentData<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(NoonCard<T>),
     Subscription(NoonSubscription),
@@ -242,12 +232,7 @@ pub enum NoonApiOperations {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoonPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     api_operation: NoonApiOperations,
     order: NoonOrder,
@@ -257,14 +242,7 @@ pub struct NoonPaymentsRequest<
     billing: Option<NoonBilling>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NoonRouterData<
             RouterDataV2<
@@ -337,7 +315,7 @@ impl<
                             };
                             let payment_token = payment_token_data
                                 .encode_to_string_of_json()
-                                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                                .change_context(ConnectorError::RequestEncodingFailed)?;
 
                             Ok(NoonPaymentData::ApplePay(NoonApplePay {
                                 payment_info: Secret::new(payment_token),
@@ -373,7 +351,7 @@ impl<
                         | WalletData::SwishQr(_)
                         | WalletData::Mifinity(_)
                         | WalletData::BluecodeRedirect { .. }
-                        | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+                        | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         )),
                     },
@@ -394,14 +372,14 @@ impl<
                     | PaymentMethodData::CardToken(_)
                     | PaymentMethodData::NetworkToken(_)
                     | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                        Err(errors::ConnectorError::NotImplemented(
+                        Err(ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         ))
                     }
                 }?,
                 Some(item.request.currency),
                 Some(item.request.order_category.clone().ok_or(
-                    errors::ConnectorError::MissingRequiredField {
+                    ConnectorError::MissingRequiredField {
                         field_name: "order_category",
                     },
                 )?),
@@ -479,7 +457,7 @@ pub struct NoonAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for NoonAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey {
@@ -491,7 +469,7 @@ impl TryFrom<&ConnectorAuthType> for NoonAuthType {
                 application_identifier: api_secret.to_owned(),
                 business_identifier: key1.to_owned(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
@@ -665,14 +643,7 @@ pub struct NoonPaymentsActionRequest {
     transaction: NoonActionTransaction,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NoonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -721,14 +692,7 @@ pub struct NoonPaymentsCancelRequest {
     order: NoonActionOrder,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NoonRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -760,14 +724,41 @@ pub struct NoonRevokeMandateRequest {
     subscription: NoonSubscriptionObject,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        NoonRouterData<
+            RouterDataV2<
+                MandateRevoke,
+                PaymentFlowData,
+                MandateRevokeRequestData,
+                MandateRevokeResponseData,
+            >,
+            T,
+        >,
+    > for NoonRevokeMandateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: NoonRouterData<
+            RouterDataV2<
+                MandateRevoke,
+                PaymentFlowData,
+                MandateRevokeRequestData,
+                MandateRevokeResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            api_operation: NoonApiOperations::CancelSubscription,
+            subscription: NoonSubscriptionObject {
+                identifier: item.router_data.request.mandate_id,
+            },
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NoonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for NoonPaymentsActionRequest
@@ -817,6 +808,31 @@ pub struct NoonRevokeMandateResult {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NoonRevokeMandateResponse {
     result: NoonRevokeMandateResult,
+}
+
+impl TryFrom<ResponseRouterData<NoonRevokeMandateResponse, Self>>
+    for RouterDataV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<NoonRevokeMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response.result.subscription.status {
+            NoonRevokeStatus::Cancelled => Ok(Self {
+                response: Ok(MandateRevokeResponseData {
+                    mandate_status: common_enums::MandateStatus::Revoked,
+                    status_code: item.http_code,
+                }),
+                ..item.router_data
+            }),
+        }
+    }
 }
 
 #[derive(Debug, Default, Deserialize, Clone, Serialize)]
@@ -930,7 +946,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             .transactions
             .iter()
             .find(|transaction| transaction.transaction_reference.is_some())
-            .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorError::ResponseHandlingFailed)?;
 
         let refund_status = enums::RefundStatus::from(noon_transaction.status.to_owned());
         let response = if utils::is_refund_failure(refund_status) {
@@ -1037,22 +1053,10 @@ pub struct NoonErrorResponse {
 
 #[derive(Debug, Serialize)]
 pub struct SetupMandateRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(NoonPaymentsRequest<T>);
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NoonRouterData<
             RouterDataV2<
@@ -1096,14 +1100,14 @@ impl<
                             None,
                         )
                     } else {
-                        return Err(errors::ConnectorError::MissingRequiredField {
+                        return Err(ConnectorError::MissingRequiredField {
                             field_name: "connector_mandate_id",
                         }
                         .into());
                     }
                 }
                 _ => {
-                    return Err(errors::ConnectorError::MissingRequiredField {
+                    return Err(ConnectorError::MissingRequiredField {
                         field_name: "connector_mandate_id",
                     }
                     .into());
@@ -1143,7 +1147,7 @@ impl<
                             };
                             let payment_token = payment_token_data
                                 .encode_to_string_of_json()
-                                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                                .change_context(ConnectorError::RequestEncodingFailed)?;
 
                             Ok(NoonPaymentData::ApplePay(NoonApplePay {
                                 payment_info: Secret::new(payment_token),
@@ -1179,7 +1183,7 @@ impl<
                         | WalletData::SwishQr(_)
                         | WalletData::BluecodeRedirect { .. }
                         | WalletData::Mifinity(_)
-                        | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+                        | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         )),
                     },
@@ -1200,7 +1204,7 @@ impl<
                     | PaymentMethodData::CardToken(_)
                     | PaymentMethodData::NetworkToken(_)
                     | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                        Err(errors::ConnectorError::NotImplemented(
+                        Err(ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         ))
                     }
@@ -1214,7 +1218,7 @@ impl<
                         .and_then(|metadata| metadata.get("order_category"))
                         .and_then(|value| value.as_str())
                         .map(|s| s.to_string())
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                        .ok_or(ConnectorError::MissingRequiredField {
                             field_name: "order_category in metadata",
                         })?,
                 ),
@@ -1296,7 +1300,7 @@ impl<
             Some(common_enums::CaptureMethod::Manual) => NoonPaymentActions::Authorize,
             Some(_) => NoonPaymentActions::Authorize,
         };
-        Ok(SetupMandateRequest(NoonPaymentsRequest {
+        Ok(Self(NoonPaymentsRequest {
             api_operation: NoonApiOperations::Initiate,
             order,
             billing,
@@ -1323,15 +1327,8 @@ pub struct SetupMandateResponse {
     pub result: NoonPaymentsResponseResult,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
