@@ -2319,7 +2319,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub locale: Option<String>,
     pub connector_testing_data: Option<SecretSerdeValue>,
     pub merchant_account_id: Option<Secret<String>>,
-    pub merchant_configered_currency: Option<Currency>,
+    pub merchant_configured_currency: Option<Currency>,
 }
 
 impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {

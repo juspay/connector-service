@@ -8031,7 +8031,12 @@ impl<
         value: grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract values first to avoid partial move
-        let merchant_configered_currency = value.clone().merchant_configered_currency();
+        let merchant_configured_currency = match value.merchant_configered_currency {
+            None => None,
+            Some(_) => Some(common_enums::Currency::foreign_try_from(
+                value.merchant_configered_currency(),
+            )?),
+        };
         let amount = value.amount;
         let minor_amount = value.minor_amount;
         let currency = value.currency();
@@ -8192,10 +8197,7 @@ impl<
                     .map(common_utils::pii::SecretSerdeValue::new)
             }),
             merchant_account_id: value.merchant_account_id,
-            merchant_configered_currency: Some(
-                common_enums::Currency::foreign_try_from(merchant_configered_currency)
-                    .unwrap_or_default(),
-            ),
+            merchant_configured_currency,
         })
     }
 }
