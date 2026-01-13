@@ -894,11 +894,10 @@ impl Payments {
             amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
             integrity_object: None,
-            metadata: if payload.metadata.is_none() {
-                None
-            } else {
-                Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
-            },
+            metadata: payload
+                .metadata
+                .clone()
+                .map(|m| serde_json::to_value(m).unwrap_or_default()),
             webhook_url: payload.webhook_url.clone(),
         };
 
@@ -1018,11 +1017,10 @@ impl Payments {
             amount: common_utils::types::MinorUnit::new(0),
             currency,
             integrity_object: None,
-            metadata: if payload.metadata.is_none() {
-                None
-            } else {
-                Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
-            },
+            metadata: payload
+                .metadata
+                .clone()
+                .map(|m| serde_json::to_value(m).unwrap_or_default()),
             webhook_url: payload.webhook_url.clone(),
         };
 
