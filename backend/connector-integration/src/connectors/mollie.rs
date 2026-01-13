@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
 use common_utils::{
-    errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent,
+    errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -39,7 +39,11 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
-use transformers as mollie;
+use transformers::{
+    self as mollie, MollieCaptureRequest, MollieCaptureResponse, MollieCardTokenRequest,
+    MollieCardTokenResponse, MolliePSyncResponse, MolliePaymentsRequest, MolliePaymentsResponse,
+    MollieRSyncResponse, MollieRefundRequest, MollieRefundResponse, MollieVoidResponse,
+};
 
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
@@ -49,18 +53,70 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-#[derive(Debug, Clone)]
-pub struct Mollie<T: PaymentMethodDataTypes> {
-    payment_method_type: std::marker::PhantomData<T>,
-}
+use super::macros;
 
-impl<T: PaymentMethodDataTypes> Mollie<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            payment_method_type: std::marker::PhantomData,
+macros::create_all_prerequisites!(
+    connector_name: Mollie,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: MolliePaymentsRequest,
+            response_body: MolliePaymentsResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: MollieCaptureRequest,
+            response_body: MollieCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: MollieRefundRequest,
+            response_body: MollieRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: PSync,
+            response_body: MolliePSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Void,
+            response_body: MollieVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: RSync,
+            response_body: MollieRSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: PaymentMethodToken,
+            request_body: MollieCardTokenRequest<T>,
+            response_body: MollieCardTokenResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        )
+    ],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+    ],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            )];
+            let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut auth_header);
+            Ok(header)
         }
     }
-}
+);
 
 // ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
 // Main service trait - aggregates all other traits
@@ -213,241 +269,108 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS =====
 // Primary authorize implementation - customize as needed
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Mollie<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
+    connector: Mollie,
+    curl_request: Json(MolliePaymentsRequest),
+    curl_response: MolliePaymentsResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}/payments",
+                self.base_url(&req.resource_common_data.connectors)
+            ))
+        }
     }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}/payments",
-            self.base_url(&req.resource_common_data.connectors)
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let request = mollie::MolliePaymentsRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(request))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: mollie::MolliePaymentsResponse = res
-            .response
-            .parse_struct("MolliePaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // ===== EMPTY IMPLEMENTATIONS FOR OTHER FLOWS =====
 // Implement these as needed for your connector
 
 // Payment Sync
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Mollie<T>
-{
-    fn get_http_method(&self) -> common_utils::request::Method {
-        common_utils::request::Method::Get
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
+    connector: Mollie,
+    curl_response: MolliePSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<
+                PSync,
+                PaymentFlowData,
+                PaymentsSyncData,
+                PaymentsResponseData,
+            >,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let payment_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            Ok(format!(
+                "{}/payments/{}",
+                self.base_url(&req.resource_common_data.connectors),
+                payment_id
+            ))
+        }
     }
+);
 
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
+    connector: Mollie,
+    curl_response: MollieVoidResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Delete,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<
+                Void,
+                PaymentFlowData,
+                PaymentVoidData,
+                PaymentsResponseData,
+            >,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let payment_id = req
+                .request
+                .connector_transaction_id
+                .clone();
+            Ok(format!(
+                "{}/payments/{}",
+                self.base_url(&req.resource_common_data.connectors),
+                payment_id
+            ))
+        }
     }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let payment_id = req
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-        Ok(format!(
-            "{}/payments/{}",
-            self.base_url(&req.resource_common_data.connectors),
-            payment_id
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: mollie::MolliePaymentsResponse = res
-            .response
-            .parse_struct("MolliePaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Payment Void
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Mollie<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let payment_id = req.request.connector_transaction_id.clone();
-        Ok(format!(
-            "{}/payments/{}",
-            self.base_url(&req.resource_common_data.connectors),
-            payment_id
-        ))
-    }
-
-    fn get_http_method(&self) -> common_utils::request::Method {
-        common_utils::request::Method::Delete
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: mollie::MolliePaymentsResponse = res
-            .response
-            .parse_struct("MolliePaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // Payment Void Post Capture
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -462,221 +385,107 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Payment Capture
 // POST /payments/{id}/captures - creates a capture for a manual capture payment
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Mollie<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
+    connector: Mollie,
+    curl_request: Json(MollieCaptureRequest),
+    curl_response: MollieCaptureResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<
+                Capture,
+                PaymentFlowData,
+                PaymentsCaptureData,
+                PaymentsResponseData,
+            >,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let payment_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            Ok(format!(
+                "{}/payments/{}/captures",
+                self.base_url(&req.resource_common_data.connectors),
+                payment_id
+            ))
+        }
     }
+);
 
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
+    connector: Mollie,
+    curl_request: Json(MollieRefundRequest),
+    curl_response: MollieRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<
+                Refund,
+                RefundFlowData,
+                RefundsData,
+                RefundsResponseData,
+            >,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let payment_id = req.request.connector_transaction_id.clone();
+            Ok(format!(
+                "{}/payments/{}/refunds",
+                self.base_url(&req.resource_common_data.connectors),
+                payment_id
+            ))
+        }
     }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let payment_id = req
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-        Ok(format!(
-            "{}/payments/{}/captures",
-            self.base_url(&req.resource_common_data.connectors),
-            payment_id
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let request = mollie::MollieCaptureRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(request))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: mollie::MolliePaymentsResponse = res
-            .response
-            .parse_struct("MollieCaptureResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Refund
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Mollie<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let payment_id = req.request.connector_transaction_id.clone();
-        Ok(format!(
-            "{}/payments/{}/refunds",
-            self.base_url(&req.resource_common_data.connectors),
-            payment_id
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let request = mollie::MollieRefundRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(request))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: mollie::MollieRefundResponse = res
-            .response
-            .parse_struct("MollieRefundResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // Refund Sync
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Mollie<T>
-{
-    fn get_http_method(&self) -> common_utils::request::Method {
-        common_utils::request::Method::Get
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
+    connector: Mollie,
+    curl_response: MollieRSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<
+                RSync,
+                RefundFlowData,
+                RefundSyncData,
+                RefundsResponseData,
+            >,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let payment_id = req.request.connector_transaction_id.clone();
+            let refund_id = req.request.connector_refund_id.clone();
+            Ok(format!(
+                "{}/payments/{}/refunds/{}",
+                self.base_url(&req.resource_common_data.connectors),
+                payment_id,
+                refund_id
+            ))
+        }
     }
-
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let payment_id = req.request.connector_transaction_id.clone();
-        let refund_id = req.request.connector_refund_id.clone();
-        Ok(format!(
-            "{}/payments/{}/refunds/{}",
-            self.base_url(&req.resource_common_data.connectors),
-            payment_id,
-            refund_id
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: mollie::MollieRefundResponse = res
-            .response
-            .parse_struct("MollieRefundResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // Setup Mandate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -776,111 +585,42 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Payment Token (required by PaymentTokenV2 trait)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Mollie<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
+    connector: Mollie,
+    curl_request: Json(MollieCardTokenRequest<T>),
+    curl_response: MollieCardTokenResponse,
+    flow_name: PaymentMethodToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentMethodTokenizationData<T>,
+    flow_response: PaymentMethodTokenResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            // Use Mollie Components API (secondary_base_url) for card tokenization
+            let secondary_base_url = req
+                .resource_common_data
+                .connectors
+                .mollie
+                .secondary_base_url
+                .as_ref()
+                .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+                    config: "secondary_base_url",
+                })?;
+            Ok(format!("{}card-tokens", secondary_base_url))
+        }
     }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        // Use Mollie Components API (secondary_base_url) for card tokenization
-        let secondary_base_url = req
-            .resource_common_data
-            .connectors
-            .mollie
-            .secondary_base_url
-            .as_ref()
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "secondary_base_url",
-            })?;
-        Ok(format!("{}card-tokens", secondary_base_url))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
-        >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_req = mollie::MollieCardTokenRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(connector_req))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
-        >,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
-        >,
-        errors::ConnectorError,
-    > {
-        let response: mollie::MollieCardTokenResponse = res
-            .response
-            .parse_struct("MollieCardTokenResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // Access Token (required by PaymentAccessToken trait)
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

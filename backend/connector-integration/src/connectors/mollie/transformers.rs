@@ -1,4 +1,4 @@
-use crate::types::ResponseRouterData;
+use crate::{connectors::mollie::MollieRouterData, types::ResponseRouterData};
 use common_utils::{
     pii::Email,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
@@ -133,21 +133,33 @@ pub enum MollieCaptureMode {
     Automatic,
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        MollieRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for MolliePaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: MollieRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
+        let item = item.router_data;
         // Convert amount to string major unit format (e.g., "10.00" for $10.00)
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
@@ -178,7 +190,7 @@ impl<T: PaymentMethodDataTypes>
                         let address = billing.address.as_ref()?;
                         let line1 = address.line1.as_ref()?.peek().to_string();
                         let street_and_number = match address.line2.as_ref() {
-                            Some(line2) => format!("{},{}", line1, line2.peek()),
+                            Some(line2) => format!("{},{}", line1, line2.peek() as &String),
                             None => line1,
                         };
 
@@ -467,14 +479,20 @@ fn map_mollie_refund_status_to_refund_status(
 }
 
 // Request transformer for Refund flow
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
-    for MollieRefundRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        MollieRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for MollieRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        item: MollieRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
+        let item = item.router_data;
         // Convert amount to string major unit format (e.g., "10.00" for $10.00)
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
@@ -611,33 +629,40 @@ pub struct MollieCardTokenRequest<T: PaymentMethodDataTypes> {
 }
 
 // Mollie Card Token Response structure
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MollieCardTokenResponse {
     pub card_token: Secret<String>, // tkn_xxx format
 }
 
 // Request transformer for PaymentMethodToken flow - Card Token Request
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &RouterDataV2<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
+        MollieRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
         >,
     > for MollieCardTokenRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
+        item: MollieRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
+        let item = item.router_data;
         // Extract card data from payment method
         let card_data = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
@@ -730,14 +755,23 @@ pub struct MollieCaptureRequest {
 }
 
 // Request transformer for Capture flow
-impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
-    for MollieCaptureRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        MollieRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for MollieCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        item: MollieRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
+        let item = item.router_data;
         // Convert amount to string major unit format (e.g., "10.00" for $10.00)
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
@@ -789,3 +823,9 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
         })
     }
 }
+
+// Type aliases for reused response types to avoid macro redefinition errors
+pub type MollieCaptureResponse = MolliePaymentsResponse;
+pub type MolliePSyncResponse = MolliePaymentsResponse;
+pub type MollieVoidResponse = MolliePaymentsResponse;
+pub type MollieRSyncResponse = MollieRefundResponse;
