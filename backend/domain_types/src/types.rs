@@ -401,13 +401,32 @@ impl<
                     Ok(Self::Card(card))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(
-                    _card_redirect,
-                ) => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Card redirect payments are not yet supported".to_owned(),
-                    error_object: None,
-                }))),
+                    card_redirect,
+                ) => {
+                    let card_redirect_data = match card_redirect.r#type() {
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Knet => {
+                            payment_method_data::CardRedirectData::Knet {}
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Benefit => {
+                            payment_method_data::CardRedirectData::Benefit {}
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::MomoAtm => {
+                            payment_method_data::CardRedirectData::MomoAtm {}
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::CardRedirect => {
+                            payment_method_data::CardRedirectData::CardRedirect {}
+                        }
+                        _ => {
+                            return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card redirect type is not supported".to_owned(),
+                                error_object: None,
+                            })))
+                        }
+                    };
+                    Ok(Self::CardRedirect(card_redirect_data))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Token(_token) => {
                     Ok(Self::CardToken(payment_method_data::CardToken {
                         card_holder_name: None,
@@ -1264,13 +1283,22 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(_) => {
                     Ok(Some(PaymentMethodType::Card))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Card redirect payments are not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(card_redirect) => {
+    match card_redirect.r#type() {
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Knet => {
+                            Ok(Some(PaymentMethodType::Knet))
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Benefit => {
+                            Ok(Some(PaymentMethodType::Benefit))
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::MomoAtm => {
+                            Ok(Some(PaymentMethodType::MomoAtm))
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::CardRedirect => {
+                            Ok(Some(PaymentMethodType::CardRedirect))
+                        }
+                        _ => Ok(Some(PaymentMethodType::CardRedirect)),
+                    }
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Token(_) => {
                     Ok(None)
