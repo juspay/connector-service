@@ -1197,53 +1197,29 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                     &transaction.ds_merchant_parameters.clone().expose(),
                 )?;
 
-                if let Some(ds_response) = response_data.ds_response {
-                    let attempt_status = get_redsys_attempt_status(
-                        ds_response.clone(),
-                        item.router_data.request.capture_method,
-                    )?;
+                let auth_data = item.router_data.request.authentication_data.clone();
 
-                    let response = if domain_types::utils::is_payment_failure(attempt_status) {
-                        let error_message = response_data
-                            .ds_response_description
-                            .unwrap_or_else(|| ds_response.0.clone());
+                let (authenticate_response, status, ds_order) = get_payments_response(
+                    response_data,
+                    item.router_data.request.capture_method,
+                    auth_data,
+                    item.http_code,
+                )?;
 
-                        Err(domain_types::router_data::ErrorResponse {
-                            code: ds_response.0.clone(),
-                            message: error_message.clone(),
-                            reason: Some(error_message),
-                            status_code: item.http_code,
-                            attempt_status: None,
-                            connector_transaction_id: Some(response_data.ds_order.clone()),
-                            network_decline_code: None,
-                            network_advice_code: None,
-                            network_error_message: None,
-                        })
-                    } else {
-                        Ok(PaymentsResponseData::AuthenticateResponse {
-                            resource_id: Some(ResponseId::ConnectorTransactionId(
-                                response_data.ds_order.clone(),
-                            )),
-                            redirection_data: None,
-                            authentication_data: None,
-                            connector_response_reference_id: Some(response_data.ds_order.clone()),
-                            status_code: item.http_code,
-                        })
-                    };
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                    status,
+                        connector_meta_data: item
+                            .router_data
+                            .resource_common_data
+                            .connector_meta_data,
+                        reference_id: Some(ds_order),
 
-                    Ok(Self {
-                        resource_common_data: PaymentFlowData {
-                            status: attempt_status,
-                            reference_id: Some(response_data.ds_order.clone()),
-                            ..item.router_data.resource_common_data
-                        },
-                        response,
-                        ..item.router_data
-                    })
-                } else {
-                    Err(errors::ConnectorError::ResponseHandlingFailed)
-                        .attach_printable("Missing ds_response in final payment result")?
-                }
+                        ..item.router_data.resource_common_data
+                    },
+                    response: authenticate_response,
+                    ..item.router_data
+                })
             }
             responses::RedsysResponse::RedsysErrorResponse(ref err) => Ok(Self {
                 resource_common_data: PaymentFlowData {
