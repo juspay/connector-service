@@ -217,7 +217,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         address: None,
         connector_customer_id: None,
         description: None,
-        merchant_configered_currency: Some(i32::from(Currency::Usd)),
+        merchant_configured_currency: Some(i32::from(Currency::Usd)),
         ..Default::default()
     }
 }
