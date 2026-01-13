@@ -1208,7 +1208,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
 
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                    status,
+                        status,
                         connector_meta_data: item
                             .router_data
                             .resource_common_data
