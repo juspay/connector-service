@@ -8031,10 +8031,10 @@ impl<
         value: grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract values first to avoid partial move
-        let merchant_configured_currency = match value.merchant_configured_currency {
+        let merchant_configured_currency = match value.merchant_configered_currency {
             None => None,
             Some(_) => Some(common_enums::Currency::foreign_try_from(
-                value.clone().merchant_configured_currency(),
+                value.clone().merchant_configered_currency(),
             )?),
         };
         let amount = value.amount;
