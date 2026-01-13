@@ -164,7 +164,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
             .convert(item.request.amount, item.request.currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to convert amount to string major unit")?;
 
         // Extract payment method data based on payment method type
         let payment_method_data = match &item.request.payment_method_data {
@@ -210,9 +211,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }))
             }
             _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Payment method not supported".to_string(),
-                )
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Payment method ".to_string(),
+                    connector: "mollie",
+                }
                 .into());
             }
         };
@@ -250,7 +252,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .description
                 .clone()
-                .unwrap_or_else(|| "Payment".to_string()),
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "description",
+                })?,
             redirect_url: item.request.router_return_url.clone().unwrap_or_default(),
             // Use empty string for webhook_url since we can't support webhook callbacks
             // in test environment (localhost is unreachable from Mollie's servers).
@@ -317,18 +321,18 @@ pub struct MolliePaymentsResponse {
     pub links: MollieLinks,
 }
 
-// Status mapping function - CRITICAL: NEVER HARDCODE STATUS VALUES
-fn map_mollie_payment_status_to_attempt_status(
-    status: &MolliePaymentStatus,
-) -> common_enums::AttemptStatus {
-    match status {
-        MolliePaymentStatus::Open => common_enums::AttemptStatus::AuthenticationPending,
-        MolliePaymentStatus::Pending => common_enums::AttemptStatus::Pending,
-        MolliePaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
-        MolliePaymentStatus::Paid => common_enums::AttemptStatus::Charged,
-        MolliePaymentStatus::Canceled => common_enums::AttemptStatus::Voided,
-        MolliePaymentStatus::Expired => common_enums::AttemptStatus::Failure,
-        MolliePaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+// Status mapping implementation - CRITICAL: NEVER HARDCODE STATUS VALUES
+impl MolliePaymentStatus {
+    fn to_attempt_status(&self) -> common_enums::AttemptStatus {
+        match self {
+            Self::Open => common_enums::AttemptStatus::AuthenticationPending,
+            Self::Pending => common_enums::AttemptStatus::Pending,
+            Self::Authorized => common_enums::AttemptStatus::Authorized,
+            Self::Paid => common_enums::AttemptStatus::Charged,
+            Self::Canceled => common_enums::AttemptStatus::Voided,
+            Self::Expired => common_enums::AttemptStatus::Failure,
+            Self::Failed => common_enums::AttemptStatus::Failure,
+        }
     }
 }
 
@@ -341,7 +345,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MolliePaymentsRespons
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
-        let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
+        let status = item.response.status.to_attempt_status();
 
         // Extract redirection URL if available
         let redirection_data = item.response.links.checkout.as_ref().and_then(|checkout| {
@@ -383,7 +387,7 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
-        let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
+        let status = item.response.status.to_attempt_status();
 
         // Extract redirection URL if available
         let redirection_data = item.response.links.checkout.as_ref().and_then(|checkout| {
@@ -422,7 +426,7 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
 #[serde(rename_all = "camelCase")]
 pub struct MollieRefundRequest {
     pub amount: MollieAmount,
-    pub description: String,
+    pub description: Option<String>,
     pub metadata: MollieMetadata,
 }
 
@@ -464,17 +468,17 @@ pub struct MollieRefundResponse {
     pub links: MollieRefundLinks,
 }
 
-// Refund status mapping function - CRITICAL: NEVER HARDCODE STATUS VALUES
-fn map_mollie_refund_status_to_refund_status(
-    status: &MollieRefundStatus,
-) -> common_enums::RefundStatus {
-    match status {
-        MollieRefundStatus::Queued => common_enums::RefundStatus::Pending,
-        MollieRefundStatus::Pending => common_enums::RefundStatus::Pending,
-        MollieRefundStatus::Processing => common_enums::RefundStatus::Pending,
-        MollieRefundStatus::Refunded => common_enums::RefundStatus::Success,
-        MollieRefundStatus::Failed => common_enums::RefundStatus::Failure,
-        MollieRefundStatus::Canceled => common_enums::RefundStatus::Failure,
+// Refund status mapping implementation - CRITICAL: NEVER HARDCODE STATUS VALUES
+impl MollieRefundStatus {
+    fn to_refund_status(&self) -> common_enums::RefundStatus {
+        match self {
+            Self::Queued => common_enums::RefundStatus::Pending,
+            Self::Pending => common_enums::RefundStatus::Pending,
+            Self::Processing => common_enums::RefundStatus::Pending,
+            Self::Refunded => common_enums::RefundStatus::Success,
+            Self::Failed => common_enums::RefundStatus::Failure,
+            Self::Canceled => common_enums::RefundStatus::Failure,
+        }
     }
 }
 
@@ -504,11 +508,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 currency: item.request.currency,
                 value: amount_value,
             },
-            description: item
-                .request
-                .reason
-                .clone()
-                .unwrap_or_else(|| "Refund".to_string()),
+            description: item.request.reason.to_owned(),
             metadata: MollieMetadata {
                 order_id: item.request.refund_id.clone(),
             },
@@ -526,7 +526,7 @@ impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id.clone(),
-                refund_status: map_mollie_refund_status_to_refund_status(&item.response.status),
+                refund_status: item.response.status.to_refund_status(),
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -544,7 +544,7 @@ impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id.clone(),
-                refund_status: map_mollie_refund_status_to_refund_status(&item.response.status),
+                refund_status: item.response.status.to_refund_status(),
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -566,7 +566,7 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
         // Status "canceled" maps to AttemptStatus::Voided
-        let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
+        let status = item.response.status.to_attempt_status();
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -787,7 +787,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .description
                 .clone()
-                .unwrap_or_else(|| "Payment capture".to_string()),
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "description",
+                })?,
         })
     }
 }
@@ -802,7 +804,7 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
-        let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
+        let status = item.response.status.to_attempt_status();
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
