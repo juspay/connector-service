@@ -1962,6 +1962,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             AdyenPaymentMethod::try_from((bank_debit_data, &item.router_data))?,
         ));
 
+        let mut billing_address = billing_address;
+        // For ACH bank debit, override state_or_province with state code (e.g., "CA" instead of "California")
+        if let domain_types::payment_method_data::BankDebitData::AchBankDebit { .. } =
+            bank_debit_data
+        {
+            if let Some(addr) = billing_address.as_mut() {
+                if let Some(billing) = item.router_data.resource_common_data.get_optional_billing()
+                {
+                    if let Some(address) = billing.address.as_ref() {
+                        if let Ok(Some(state_code)) = address.to_state_code_as_optional() {
+                            addr.state_or_province = Some(state_code);
+                        }
+                    }
+                }
+            }
+        }
+
         Ok(Self {
             amount,
             merchant_account: auth_type.merchant_account,
@@ -1981,9 +1998,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .router_data
                 .resource_common_data
                 .get_optional_billing_phone_number(),
-            shopper_name: get_shopper_name(
-                item.router_data.resource_common_data.get_optional_billing(),
-            ),
+            shopper_name: None,
             shopper_email: item
                 .router_data
                 .resource_common_data
@@ -1998,7 +2013,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .and_then(Result::ok),
             country_code,
-            line_items: Some(get_line_items(&item)),
+            line_items: None,
             shopper_reference,
             store_payment_method,
             channel: None,
