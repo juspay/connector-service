@@ -62,6 +62,23 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
+// Trait to unify PaymentFlowData and RefundFlowData for header building
+pub trait FlowDataBase {
+    fn get_connectors(&self) -> &Connectors;
+}
+
+impl FlowDataBase for PaymentFlowData {
+    fn get_connectors(&self) -> &Connectors {
+        &self.connectors
+    }
+}
+
+impl FlowDataBase for RefundFlowData {
+    fn get_connectors(&self) -> &Connectors {
+        &self.connectors
+    }
+}
+
 use error_stack::{Report, ResultExt};
 
 // Trait implementations with generic type parameters
@@ -466,18 +483,19 @@ macros::create_all_prerequisites!(
             ))
         }
 
-        pub fn build_headers<F, Req, Res>(
+        pub fn build_headers<F, FlowData, Req, Res>(
             &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+            req: &RouterDataV2<F, FlowData, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
         where
-            Self: ConnectorIntegrationV2<F, PaymentFlowData, Req, Res>,
+            Self: ConnectorIntegrationV2<F, FlowData, Req, Res>,
+            FlowData: FlowDataBase,
         {
             let date = OffsetDateTime::now_utc();
             let auth = transformers::WellsfargoAuthType::try_from(&req.connector_auth_type)?;
             let merchant_account = auth.merchant_account.clone().expose();
 
-            let base_url = &req.resource_common_data.connectors.wellsfargo.base_url;
+            let base_url = &req.resource_common_data.get_connectors().wellsfargo.base_url;
             let wellsfargo_host = Url::parse(base_url)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)
                 .attach_printable("Failed to parse Wells Fargo base URL")?;
@@ -533,85 +551,14 @@ macros::create_all_prerequisites!(
             Ok(headers)
         }
 
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
+        pub fn connector_base_url<'a, F, FlowData, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.wellsfargo.base_url
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.wellsfargo.base_url
-        }
-
-        pub fn build_headers_refunds<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+            req: &'a RouterDataV2<F, FlowData, Req, Res>,
+        ) -> &'a str
         where
-            Self: ConnectorIntegrationV2<F, RefundFlowData, Req, Res>,
+            FlowData: FlowDataBase,
         {
-            let date = OffsetDateTime::now_utc();
-            let auth = transformers::WellsfargoAuthType::try_from(&req.connector_auth_type)?;
-            let merchant_account = auth.merchant_account.clone().expose();
-
-            let base_url = &req.resource_common_data.connectors.wellsfargo.base_url;
-            let wellsfargo_host = Url::parse(base_url)
-                .change_context(errors::ConnectorError::RequestEncodingFailed)
-                .attach_printable("Failed to parse Wells Fargo base URL")?;
-            let host = wellsfargo_host
-                .host_str()
-                .ok_or(errors::ConnectorError::RequestEncodingFailed)?;
-
-            // Get the request body for digest calculation
-            let request_body = self.get_request_body(req)?;
-            let sha256 = if let Some(body) = request_body {
-                let body_string = body.get_inner_value();
-                self.generate_digest(body_string.expose().as_bytes())
-            } else {
-                String::new()
-            };
-
-            // Get URL path
-            let url = self.get_url(req)?;
-            let path: String = url.chars().skip(base_url.len() - 1).collect();
-
-            let http_method = self.get_http_method();
-            let signature = self.generate_signature(
-                auth,
-                host.to_string(),
-                &path,
-                &sha256,
-                date,
-                http_method,
-            )?;
-
-            let mut headers = vec![
-                (
-                    headers::CONTENT_TYPE.to_string(),
-                    self.get_content_type().to_string().into(),
-                ),
-                (
-                    headers::ACCEPT.to_string(),
-                    "application/hal+json;charset=utf-8".to_string().into(),
-                ),
-                ("v-c-merchant-id".to_string(), merchant_account.into_masked()),
-                ("Date".to_string(), date.to_string().into()),
-                ("Host".to_string(), host.to_string().into()),
-                ("Signature".to_string(), signature.into_masked()),
-            ];
-
-            if matches!(http_method, Method::Post | Method::Put | Method::Patch) {
-                headers.push((
-                    "Digest".to_string(),
-                    format!("SHA-256={sha256}").into_masked(),
-                ));
-            }
-
-            Ok(headers)
+            &req.resource_common_data.get_connectors().wellsfargo.base_url
         }
     }
 );
@@ -785,7 +732,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}pts/v2/payments/",
-                self.connector_base_url_payments(req)
+                self.connector_base_url(req)
             ))
         }
     }
@@ -823,7 +770,7 @@ macros::macro_connector_implementation!(
 
             Ok(format!(
                 "{}pts/v2/payments/{}/captures",
-                self.connector_base_url_payments(req),
+                self.connector_base_url(req),
                 connector_payment_id
             ))
         }
@@ -860,7 +807,7 @@ macros::macro_connector_implementation!(
 
             Ok(format!(
                 "{}pts/v2/payments/{}/reversals",
-                self.connector_base_url_payments(req),
+                self.connector_base_url(req),
                 connector_payment_id
             ))
         }
@@ -885,7 +832,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers_refunds(req)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
@@ -895,7 +842,7 @@ macros::macro_connector_implementation!(
 
             Ok(format!(
                 "{}pts/v2/payments/{}/refunds",
-                self.connector_base_url_refunds(req),
+                self.connector_base_url(req),
                 connector_transaction_id
             ))
         }
@@ -933,7 +880,7 @@ macros::macro_connector_implementation!(
 
             Ok(format!(
                 "{}pts/v2/payments/{}",
-                self.connector_base_url_payments(req),
+                self.connector_base_url(req),
                 connector_payment_id
             ))
         }
@@ -957,7 +904,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers_refunds(req)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
@@ -967,7 +914,7 @@ macros::macro_connector_implementation!(
 
             Ok(format!(
                 "{}tss/v2/transactions/{}",
-                self.connector_base_url_refunds(req),
+                self.connector_base_url(req),
                 connector_refund_id
             ))
         }
@@ -1000,7 +947,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}pts/v2/payments",
-                self.connector_base_url_payments(req)
+                self.connector_base_url(req)
             ))
         }
     }
