@@ -428,7 +428,6 @@ macros::create_all_prerequisites!(
 
             let is_post_method = matches!(http_method, Method::Post);
             let is_patch_method = matches!(http_method, Method::Patch);
-            let is_delete_method = matches!(http_method, Method::Delete);
             let digest_str = if is_post_method || is_patch_method {
                 "digest "
             } else {
@@ -437,14 +436,12 @@ macros::create_all_prerequisites!(
 
             let headers_str = format!("host date (request-target) {digest_str}v-c-merchant-id");
 
-            let request_target = if is_post_method {
-                format!("(request-target): post {resource}\ndigest: SHA-256={payload}\n")
-            } else if is_patch_method {
-                format!("(request-target): patch {resource}\ndigest: SHA-256={payload}\n")
-            } else if is_delete_method {
-                format!("(request-target): delete {resource}\n")
-            } else {
-                format!("(request-target): get {resource}\n")
+            let request_target = match http_method {
+                Method::Post => format!("(request-target): post {resource}\ndigest: SHA-256={payload}\n"),
+                Method::Patch => format!("(request-target): patch {resource}\ndigest: SHA-256={payload}\n"),
+                Method::Delete => format!("(request-target): delete {resource}\n"),
+                Method::Get => format!("(request-target): get {resource}\n"),
+                _ => format!("(request-target): {http_method} {resource}\n"),
             };
 
             let signature_string = format!(
@@ -483,7 +480,7 @@ macros::create_all_prerequisites!(
             let base_url = &req.resource_common_data.connectors.wellsfargo.base_url;
             let wellsfargo_host = Url::parse(base_url)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)
-                .attach_printable("Failed to parse Wells Fargo base URL for payments")?;
+                .attach_printable("Failed to parse Wells Fargo base URL")?;
             let host = wellsfargo_host
                 .host_str()
                 .ok_or(errors::ConnectorError::RequestEncodingFailed)?;
@@ -564,7 +561,7 @@ macros::create_all_prerequisites!(
             let base_url = &req.resource_common_data.connectors.wellsfargo.base_url;
             let wellsfargo_host = Url::parse(base_url)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)
-                .attach_printable("Failed to parse Wells Fargo base URL for refunds")?;
+                .attach_printable("Failed to parse Wells Fargo base URL")?;
             let host = wellsfargo_host
                 .host_str()
                 .ok_or(errors::ConnectorError::RequestEncodingFailed)?;

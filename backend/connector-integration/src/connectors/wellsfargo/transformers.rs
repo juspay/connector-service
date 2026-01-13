@@ -462,6 +462,47 @@ fn card_issuer_to_string(card_issuer: CardIssuer) -> String {
     card_type.to_string()
 }
 
+/// Helper function to build error response from Wellsfargo response
+/// Used across all response transformations to avoid code duplication
+fn build_error_response(
+    response: &WellsfargoPaymentsResponse,
+    http_code: u16,
+    status: Option<AttemptStatus>,
+    default_error_message: &str,
+) -> ErrorResponse {
+    let error_message = response
+        .error_information
+        .as_ref()
+        .and_then(|info| info.message.clone())
+        .or_else(|| {
+            response
+                .error_information
+                .as_ref()
+                .and_then(|info| info.reason.clone())
+        })
+        .unwrap_or_else(|| default_error_message.to_string());
+
+    let error_code = response
+        .error_information
+        .as_ref()
+        .and_then(|info| info.reason.clone());
+
+    ErrorResponse {
+        code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
+        message: error_message.clone(),
+        reason: Some(error_message),
+        status_code: http_code,
+        attempt_status: status,
+        connector_transaction_id: Some(response.id.clone()),
+        network_decline_code: response
+            .processor_information
+            .as_ref()
+            .and_then(|info| info.response_code.clone()),
+        network_advice_code: None,
+        network_error_message: None,
+    }
+}
+
 // REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoPaymentsRequest
 
 // Specific implementation for Authorize flow
@@ -1104,38 +1145,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                 status_code: item.http_code,
             })
         } else {
-            // Build error response
-            let error_message = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.message.clone())
-                .or_else(|| {
-                    response
-                        .error_information
-                        .as_ref()
-                        .and_then(|info| info.reason.clone())
-                })
-                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
-
-            let error_code = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.reason.clone());
-
-            Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
-                message: error_message.clone(),
-                reason: Some(error_message),
-                status_code: item.http_code,
-                attempt_status: Some(status),
-                connector_transaction_id: Some(response.id.clone()),
-                network_decline_code: response
-                    .processor_information
-                    .as_ref()
-                    .and_then(|info| info.response_code.clone()),
-                network_advice_code: None,
-                network_error_message: None,
-            })
+            // Build error response using helper function
+            Err(build_error_response(
+                response,
+                item.http_code,
+                Some(status),
+                consts::NO_ERROR_MESSAGE,
+            ))
         };
 
         Ok(Self {
@@ -1194,38 +1210,13 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 status_code: item.http_code,
             })
         } else {
-            // Build error response
-            let error_message = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.message.clone())
-                .or_else(|| {
-                    response
-                        .error_information
-                        .as_ref()
-                        .and_then(|info| info.reason.clone())
-                })
-                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
-
-            let error_code = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.reason.clone());
-
-            Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
-                message: error_message.clone(),
-                reason: Some(error_message),
-                status_code: item.http_code,
-                attempt_status: Some(status),
-                connector_transaction_id: Some(response.id.clone()),
-                network_decline_code: response
-                    .processor_information
-                    .as_ref()
-                    .and_then(|info| info.response_code.clone()),
-                network_advice_code: None,
-                network_error_message: None,
-            })
+            // Build error response using helper function
+            Err(build_error_response(
+                response,
+                item.http_code,
+                Some(status),
+                consts::NO_ERROR_MESSAGE,
+            ))
         };
 
         Ok(Self {
@@ -1272,38 +1263,13 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 status_code: item.http_code,
             })
         } else {
-            // Build error response
-            let error_message = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.message.clone())
-                .or_else(|| {
-                    response
-                        .error_information
-                        .as_ref()
-                        .and_then(|info| info.reason.clone())
-                })
-                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
-
-            let error_code = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.reason.clone());
-
-            Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
-                message: error_message.clone(),
-                reason: Some(error_message),
-                status_code: item.http_code,
-                attempt_status: Some(status),
-                connector_transaction_id: Some(response.id.clone()),
-                network_decline_code: response
-                    .processor_information
-                    .as_ref()
-                    .and_then(|info| info.response_code.clone()),
-                network_advice_code: None,
-                network_error_message: None,
-            })
+            // Build error response using helper function
+            Err(build_error_response(
+                response,
+                item.http_code,
+                Some(status),
+                consts::NO_ERROR_MESSAGE,
+            ))
         };
 
         Ok(Self {
@@ -1350,38 +1316,13 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 status_code: item.http_code,
             })
         } else {
-            // Build error response
-            let error_message = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.message.clone())
-                .or_else(|| {
-                    response
-                        .error_information
-                        .as_ref()
-                        .and_then(|info| info.reason.clone())
-                })
-                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
-
-            let error_code = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.reason.clone());
-
-            Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
-                message: error_message.clone(),
-                reason: Some(error_message),
-                status_code: item.http_code,
-                attempt_status: Some(status),
-                connector_transaction_id: Some(response.id.clone()),
-                network_decline_code: response
-                    .processor_information
-                    .as_ref()
-                    .and_then(|info| info.response_code.clone()),
-                network_advice_code: None,
-                network_error_message: None,
-            })
+            // Build error response using helper function
+            Err(build_error_response(
+                response,
+                item.http_code,
+                Some(status),
+                consts::NO_ERROR_MESSAGE,
+            ))
         };
 
         Ok(Self {
@@ -1449,38 +1390,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                 status_code: item.http_code,
             })
         } else {
-            // Build error response
-            let error_message = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.message.clone())
-                .or_else(|| {
-                    response
-                        .error_information
-                        .as_ref()
-                        .and_then(|info| info.reason.clone())
-                })
-                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
-
-            let error_code = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.reason.clone());
-
-            Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
-                message: error_message.clone(),
-                reason: Some(error_message),
-                status_code: item.http_code,
-                attempt_status: Some(status),
-                connector_transaction_id: Some(response.id.clone()),
-                network_decline_code: response
-                    .processor_information
-                    .as_ref()
-                    .and_then(|info| info.response_code.clone()),
-                network_advice_code: None,
-                network_error_message: None,
-            })
+            // Build error response using helper function
+            Err(build_error_response(
+                response,
+                item.http_code,
+                Some(status),
+                consts::NO_ERROR_MESSAGE,
+            ))
         };
 
         Ok(Self {
@@ -1515,38 +1431,13 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 status_code: item.http_code,
             })
         } else {
-            // Build error response
-            let error_message = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.message.clone())
-                .or_else(|| {
-                    response
-                        .error_information
-                        .as_ref()
-                        .and_then(|info| info.reason.clone())
-                })
-                .unwrap_or_else(|| "Refund failed".to_string());
-
-            let error_code = response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.reason.clone());
-
-            Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
-                message: error_message.clone(),
-                reason: Some(error_message),
-                status_code: item.http_code,
-                attempt_status: None, // Refunds don't have attempt status
-                connector_transaction_id: Some(response.id.clone()),
-                network_decline_code: response
-                    .processor_information
-                    .as_ref()
-                    .and_then(|info| info.response_code.clone()),
-                network_advice_code: None,
-                network_error_message: None,
-            })
+            // Build error response using helper function
+            Err(build_error_response(
+                response,
+                item.http_code,
+                None,
+                "Refund failed",
+            ))
         };
 
         Ok(Self {
