@@ -23,6 +23,9 @@ use std::fmt::Debug;
 // Re-export from common utils for use in this connector
 pub use crate::utils::{convert_metadata_to_merchant_defined_info, MerchantDefinedInformation};
 
+// Type alias for WellsfargoRouterData to avoid using super::
+pub type WellsFargoRouterData<RD, T> = super::WellsfargoRouterData<RD, T>;
+
 // REQUEST STRUCTURES
 
 /// Commerce indicator for Wells Fargo
@@ -464,7 +467,7 @@ fn card_issuer_to_string(card_issuer: CardIssuer) -> String {
 // Specific implementation for Authorize flow
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::WellsfargoRouterData<
+        WellsFargoRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -478,7 +481,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::WellsfargoRouterData<
+        item: WellsFargoRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -657,7 +660,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::WellsfargoRouterData<
+        WellsFargoRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
         >,
@@ -666,7 +669,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::WellsfargoRouterData<
+        item: WellsFargoRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
         >,
@@ -770,7 +773,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::WellsfargoRouterData<
+        WellsFargoRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
@@ -779,7 +782,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::WellsfargoRouterData<
+        item: WellsFargoRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
@@ -844,7 +847,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::WellsfargoRouterData<
+        WellsFargoRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
@@ -853,7 +856,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::WellsfargoRouterData<
+        item: WellsFargoRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
@@ -899,7 +902,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::WellsfargoRouterData<
+        WellsFargoRouterData<
             RouterDataV2<
                 SetupMandate,
                 PaymentFlowData,
@@ -913,7 +916,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::WellsfargoRouterData<
+        item: WellsFargoRouterData<
             RouterDataV2<
                 SetupMandate,
                 PaymentFlowData,
