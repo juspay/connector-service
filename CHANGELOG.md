@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.13.1
+
+### Bug Fixes
+
+- RepeatPayment Merchant configured Currency Handling ([#422](https://github.com/juspay/connector-service/pull/422)) ([`4cef8ef`](https://github.com/juspay/connector-service/commit/4cef8ef84ede9adac78eac27c557d161af36f306))
+
+**Full Changelog:** [`2026.01.13.0...2026.01.13.1`](https://github.com/juspay/connector-service/compare/2026.01.13.0...2026.01.13.1)
+
+- - -
+
 ## 2026.01.13.0
 
 ### Features
