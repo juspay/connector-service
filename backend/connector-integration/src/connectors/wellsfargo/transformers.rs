@@ -946,7 +946,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         last_name: addr_details.last_name.clone(),
                         address1: addr_details.line1.clone(),
                         locality: addr_details.city.clone(),
-                        administrative_area: addr_details.to_state_code_as_optional().ok().flatten(),
+                        administrative_area: addr_details
+                            .to_state_code_as_optional()
+                            .ok()
+                            .flatten(),
                         postal_code: addr_details.zip.clone(),
                         country: addr_details.country,
                         email: email_secret.clone(),
@@ -1012,7 +1015,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Payment information from card
         let payment_information = match &request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
-                let card_issuer = domain_types::utils::get_card_issuer(card_data.card_number.peek());
+                let card_issuer =
+                    domain_types::utils::get_card_issuer(card_data.card_number.peek());
                 let card_type = match card_issuer {
                     Ok(issuer) => card_issuer_to_string(issuer),
                     Err(_) => "001".to_string(), // Default to Visa
@@ -1112,7 +1116,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                 .and_then(|info| info.reason.clone());
 
             Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                 message: error_message.clone(),
                 reason: Some(error_message),
                 status_code: item.http_code,
@@ -1202,7 +1206,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 .and_then(|info| info.reason.clone());
 
             Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                 message: error_message.clone(),
                 reason: Some(error_message),
                 status_code: item.http_code,
@@ -1280,7 +1284,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 .and_then(|info| info.reason.clone());
 
             Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                 message: error_message.clone(),
                 reason: Some(error_message),
                 status_code: item.http_code,
@@ -1358,7 +1362,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 .and_then(|info| info.reason.clone());
 
             Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                 message: error_message.clone(),
                 reason: Some(error_message),
                 status_code: item.http_code,
@@ -1457,7 +1461,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                 .and_then(|info| info.reason.clone());
 
             Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                 message: error_message.clone(),
                 reason: Some(error_message),
                 status_code: item.http_code,
@@ -1523,7 +1527,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 .and_then(|info| info.reason.clone());
 
             Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                 message: error_message.clone(),
                 reason: Some(error_message),
                 status_code: item.http_code,
@@ -1574,9 +1578,9 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                     // Special handling for VOIDED status
                     if refund_status == WellsfargoRefundStatus::Voided {
                         Err(ErrorResponse {
-                            code: "REFUND_VOIDED".to_string(),
-                            message: "Refund has been voided".to_string(),
-                            reason: Some("Refund has been voided".to_string()),
+                            code: consts::REFUND_VOIDED.to_string(),
+                            message: consts::REFUND_VOIDED.to_string(),
+                            reason: Some(consts::REFUND_VOIDED.to_string()),
                             status_code: item.http_code,
                             attempt_status: None,
                             connector_transaction_id: Some(response.id.clone()),
@@ -1591,7 +1595,7 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                                 .error_information
                                 .as_ref()
                                 .and_then(|info| info.reason.clone())
-                                .unwrap_or_else(|| "REFUND_FAILED".to_string()),
+                                .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                             message: response
                                 .error_information
                                 .as_ref()
@@ -1625,7 +1629,7 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                         code: error_info
                             .reason
                             .clone()
-                            .unwrap_or_else(|| "DECLINED".to_string()),
+                            .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                         message: error_info
                             .message
                             .clone()
@@ -1641,7 +1645,7 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                 } else {
                     // No status and no error - return unknown status error
                     Err(ErrorResponse {
-                        code: "UNKNOWN_STATUS".to_string(),
+                        code: consts::NO_ERROR_CODE.to_string(),
                         message: "Unable to determine refund status".to_string(),
                         reason: Some(consts::NO_ERROR_MESSAGE.to_string()),
                         status_code: item.http_code,
