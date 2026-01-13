@@ -182,6 +182,9 @@ pub use self::bankofamerica::Bankofamerica;
 pub mod powertranz;
 pub use self::powertranz::Powertranz;
 
+pub mod getnet;
+pub use self::getnet::Getnet;
+
 pub mod bambora;
 pub use self::bambora::Bambora;
 
