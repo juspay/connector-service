@@ -190,7 +190,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         let address = billing.address.as_ref()?;
                         let line1 = address.line1.as_ref()?.peek().to_string();
                         let street_and_number = match address.line2.as_ref() {
-                            Some(line2) => format!("{},{}", line1, line2.peek() as &String),
+                            Some(line2) => format!("{},{}", line1, line2.peek().as_str()),
                             None => line1,
                         };
 
