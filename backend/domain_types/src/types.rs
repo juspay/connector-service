@@ -3859,11 +3859,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         let capture_method = Some(CaptureMethod::foreign_try_from(value.capture_method())?);
         let currency = common_enums::Currency::foreign_try_from(value.currency())?;
         let amount = common_utils::types::MinorUnit::new(value.amount);
-        // Create ResponseId from connector_order_reference_id
+        // Create ResponseId from resource_id
         let connector_transaction_id = ResponseId::ConnectorTransactionId(
             value
-                .connector_order_reference_id
+                .transaction_id
                 .clone()
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
                 .unwrap_or_default(),
         );
 
