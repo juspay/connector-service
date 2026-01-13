@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.13.2
+
+### Bug Fixes
+
+- Adyen shoppername to none for bankredirect, repeatpayment ([#423](https://github.com/juspay/connector-service/pull/423)) ([`938d6f2`](https://github.com/juspay/connector-service/commit/938d6f2b9d0e5f76a5dec2320e4b35f455c61633))
+
+**Full Changelog:** [`2026.01.13.1...2026.01.13.2`](https://github.com/juspay/connector-service/compare/2026.01.13.1...2026.01.13.2)
+
+- - -
+
 ## 2026.01.13.1
 
 ### Bug Fixes
