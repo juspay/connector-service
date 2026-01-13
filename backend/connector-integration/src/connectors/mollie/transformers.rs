@@ -248,13 +248,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 currency: item.request.currency,
                 value: amount_value,
             },
-            description: item
-                .resource_common_data
-                .description
-                .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+            description: item.resource_common_data.description.clone().ok_or(
+                errors::ConnectorError::MissingRequiredField {
                     field_name: "description",
-                })?,
+                },
+            )?,
             redirect_url: item.request.router_return_url.clone().unwrap_or_default(),
             // Use empty string for webhook_url since we can't support webhook callbacks
             // in test environment (localhost is unreachable from Mollie's servers).
@@ -783,13 +781,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 currency: item.request.currency,
                 value: amount_value,
             }),
-            description: item
-                .resource_common_data
-                .description
-                .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+            description: item.resource_common_data.description.clone().ok_or(
+                errors::ConnectorError::MissingRequiredField {
                     field_name: "description",
-                })?,
+                },
+            )?,
         })
     }
 }
