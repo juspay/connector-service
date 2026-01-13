@@ -550,7 +550,7 @@ fn generate_udf_fields<
     // Helper function to get string value from metadata
     let get_metadata_field = |field: &str| -> Option<String> {
         metadata
-            .and_then(|m| m.get(field))
+            .and_then(|m| m.peek().get(field))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
     };
