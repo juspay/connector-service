@@ -202,3 +202,6 @@ pub use self::gigadat::Gigadat;
 
 pub mod loonio;
 pub use self::loonio::Loonio;
+
+pub mod wellsfargo;
+pub use self::wellsfargo::Wellsfargo;
