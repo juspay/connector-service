@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.14.0
+
+### Features
+
+- **core:** Changed Metadata Type to SecretString ([#382](https://github.com/juspay/connector-service/pull/382)) ([`4c315ff`](https://github.com/juspay/connector-service/commit/4c315ff38101b12ce25849424b80d94835946e26))
+
+**Full Changelog:** [`2026.01.13.2...2026.01.14.0`](https://github.com/juspay/connector-service/compare/2026.01.13.2...2026.01.14.0)
+
+- - -
+
 ## 2026.01.13.2
 
 ### Bug Fixes
