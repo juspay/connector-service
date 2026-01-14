@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.13.2-hotfix1
+
+### Bug Fixes
+
+- RouterData diff fix for Novalnet & Cashtocode ([#425](https://github.com/juspay/connector-service/pull/425)) ([`6254cb5`](https://github.com/juspay/connector-service/commit/6254cb5d4425984a0f7f32c954b1622fb6f39973))
+
+**Full Changelog:** [`2026.01.13.2...2026.01.13.2-hotfix1`](https://github.com/juspay/connector-service/compare/2026.01.13.2...2026.01.13.2-hotfix1)
+
+- - -
+
 ## 2026.01.13.2
 
 ### Bug Fixes
