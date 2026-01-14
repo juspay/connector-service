@@ -19,8 +19,8 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::connectors::paysafe::PaysafeRouterData;
 use crate::types::ResponseRouterData;
+use crate::{connectors::paysafe::PaysafeRouterData, utils};
 
 pub use super::requests::*;
 pub use super::responses::*;
@@ -233,17 +233,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        let metadata: PaysafeConnectorMetadataObject = router_data
-            .request
-            .merchant_account_metadata
-            .clone()
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "merchant_account_metadata",
-            })?
-            .parse_value("PaysafeConnectorMetadataObject")
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "merchant_account_metadata",
-            })?;
+        let metadata: PaysafeConnectorMetadataObject = utils::to_connector_meta_from_secret(
+            item.router_data.request.merchant_account_metadata.clone(),
+        )
+        .change_context(errors::ConnectorError::InvalidConnectorConfig {
+            config: "merchant_connector_account.metadata",
+        })?;
 
         let currency = router_data.request.currency;
         let amount = router_data.request.amount;
@@ -397,17 +392,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let amount = router_data.request.minor_amount;
 
-        let metadata: PaysafeConnectorMetadataObject = router_data
-            .request
-            .merchant_account_metadata
-            .clone()
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "merchant_account_metadata",
-            })?
-            .parse_value("PaysafeConnectorMetadataObject")
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "merchant_account_metadata",
-            })?;
+        let metadata: PaysafeConnectorMetadataObject = utils::to_connector_meta_from_secret(
+            item.router_data.request.merchant_account_metadata.clone(),
+        )
+        .change_context(errors::ConnectorError::InvalidConnectorConfig {
+            config: "merchant_connector_account.metadata",
+        })?;
 
         let payment_handle_token: Secret<String> = router_data
             .resource_common_data

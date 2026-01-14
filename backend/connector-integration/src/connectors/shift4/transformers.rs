@@ -17,7 +17,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -283,7 +283,7 @@ impl<T: PaymentMethodDataTypes>
             currency: item.request.currency,
             captured,
             description: item.resource_common_data.description.clone(),
-            metadata: item.request.metadata.clone(),
+            metadata: item.request.metadata.clone().expose_option(),
             payment_method,
         })
     }
