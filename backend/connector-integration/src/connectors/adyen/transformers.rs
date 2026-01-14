@@ -23,8 +23,8 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankRedirectData, Card, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, WalletData,
+        BankDebitData, BankRedirectData, Card, DefaultPCIHolder, PaymentMethodData,
+        PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -1419,14 +1419,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
-        &domain_types::payment_method_data::BankDebitData,
+        &BankDebitData,
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     )> for AdyenPaymentMethod<T>
 {
     type Error = Error;
     fn try_from(
         (bank_debit_data, item): (
-            &domain_types::payment_method_data::BankDebitData,
+            &BankDebitData,
             &RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -1436,7 +1436,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         ),
     ) -> Result<Self, Self::Error> {
         match bank_debit_data {
-            domain_types::payment_method_data::BankDebitData::AchBankDebit {
+            BankDebitData::AchBankDebit {
                 account_number,
                 routing_number,
                 ..
@@ -1445,13 +1445,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 bank_location_id: routing_number.clone(),
                 owner_name: item.resource_common_data.get_billing_full_name()?,
             }))),
-            domain_types::payment_method_data::BankDebitData::SepaBankDebit { iban, .. } => {
+            BankDebitData::SepaBankDebit { iban, .. } => {
                 Ok(Self::SepaDirectDebit(Box::new(SepaDirectDebitData {
                     owner_name: item.resource_common_data.get_billing_full_name()?,
                     iban_number: iban.clone(),
                 })))
             }
-            domain_types::payment_method_data::BankDebitData::BacsBankDebit {
+            BankDebitData::BacsBankDebit {
                 account_number,
                 sort_code,
                 ..
@@ -1469,7 +1469,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .unwrap_or(item.resource_common_data.get_billing_full_name()?),
                 })))
             }
-            domain_types::payment_method_data::BankDebitData::BecsBankDebit { .. } => {
+            BankDebitData::BecsBankDebit { .. } => {
                 Err(errors::ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Adyen"),
                 )
@@ -1908,7 +1908,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-        &domain_types::payment_method_data::BankDebitData,
+        &BankDebitData,
     )> for AdyenPaymentRequest<T>
 {
     type Error = Error;
@@ -1923,7 +1923,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 >,
                 T,
             >,
-            &domain_types::payment_method_data::BankDebitData,
+            &BankDebitData,
         ),
     ) -> Result<Self, Self::Error> {
         let (item, bank_debit_data) = value;
@@ -1937,18 +1937,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let billing_address =
             get_address_info(item.router_data.resource_common_data.get_optional_billing())
                 .and_then(Result::ok);
-
-        let testing_data = item
-            .router_data
-            .request
-            .get_connector_testing_data()
-            .map(AdyenTestingData::try_from)
-            .transpose()?;
-        let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
-        let _card_holder_name = test_holder_name.or(item
-            .router_data
-            .resource_common_data
-            .get_optional_billing_full_name());
 
         let additional_data = get_additional_data(&item.router_data);
 
@@ -1965,17 +1953,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let mut billing_address = billing_address;
         // For ACH bank debit, override state_or_province with state code (e.g., "CA" instead of "California")
-        if let domain_types::payment_method_data::BankDebitData::AchBankDebit { .. } =
+        if let BankDebitData::AchBankDebit { .. } =
             bank_debit_data
         {
             if let Some(addr) = billing_address.as_mut() {
-                if let Some(billing) = item.router_data.resource_common_data.get_optional_billing()
-                {
-                    if let Some(address) = billing.address.as_ref() {
-                        if let Ok(Some(state_code)) = address.to_state_code_as_optional() {
-                            addr.state_or_province = Some(state_code);
-                        }
-                    }
+                if let Ok(state_code) = item.router_data.resource_common_data.get_billing_state_code() {
+                    addr.state_or_province = Some(state_code);
                 }
             }
         }
