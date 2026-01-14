@@ -1915,7 +1915,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_payment_billing(),
         )
         .and_then(Result::ok);
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
 
         let (store, splits) = match item.router_data.request.split_payments.as_ref() {
             Some(_split_payment) => {
@@ -1985,6 +1985,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .clone()
+                .expose_option()
                 .map(|value| Secret::new(filter_adyen_metadata(value))),
             platform_chargeback_logic,
             session_validity: None,
@@ -4243,7 +4244,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let additional_data = get_additional_data_for_setup_mandate(&item.router_data);
 
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
