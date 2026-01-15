@@ -765,6 +765,15 @@ impl PaymentFlowData {
             })
     }
 
+    pub fn get_billing_state_code(&self) -> Result<Secret<String>, Error> {
+        self.get_optional_billing()
+            .and_then(|billing| billing.address.as_ref())
+            .and_then(|address| address.to_state_code_as_optional().ok().flatten())
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.state",
+            ))
+    }
+
     pub fn get_optional_billing_first_name(&self) -> Option<Secret<String>> {
         self.address
             .get_payment_method_billing()
