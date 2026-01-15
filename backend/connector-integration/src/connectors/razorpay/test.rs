@@ -197,6 +197,7 @@ mod tests {
                     merchant_account_metadata: None,
                     enable_partial_authorization: None,
                     locale: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -359,6 +360,7 @@ mod tests {
                     merchant_account_metadata: None,
                     enable_partial_authorization: None,
                     locale: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -495,6 +497,7 @@ mod tests {
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -676,6 +679,7 @@ mod tests {
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1001,6 +1005,7 @@ mod tests {
                 billing_descriptor: None,
                 enable_partial_authorization: None,
                 locale: None,
+                tokenization: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1193,6 +1198,7 @@ mod tests {
                 billing_descriptor: None,
                 enable_partial_authorization: None,
                 locale: None,
+                tokenization: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1601,6 +1607,7 @@ mod tests {
                     merchant_account_metadata: None,
                     enable_partial_authorization: None,
                     locale: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),
