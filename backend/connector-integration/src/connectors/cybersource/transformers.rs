@@ -2950,6 +2950,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                             .unwrap_or(info_response.id.clone()),
                     ),
                     status_code: item.http_code,
+                    authentication_data: None,
                 }),
                 ..item.router_data
             }),
@@ -3244,6 +3245,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                             ..item.router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::AuthenticateResponse {
+                            resource_id: None,
                             redirection_data: redirection_data.map(Box::new),
                             connector_response_reference_id,
                             authentication_data: Some(

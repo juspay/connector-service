@@ -890,7 +890,7 @@ pub enum ConnectorError {
     InvalidDateFormat,
     #[error("Date Formatting Failed")]
     DateFormattingFailed,
-    #[error("Invalid Data format")]
+    #[error("Invalid Data format: {field_name}")]
     InvalidDataFormat { field_name: &'static str },
     #[error("Payment Method data / Payment Method Type / Payment Experience Mismatch ")]
     MismatchedPaymentData,
@@ -926,6 +926,13 @@ pub enum ConnectorError {
     },
     #[error("Field {fields} doesn't match with the ones used during mandate creation")]
     MandatePaymentDataMismatch { fields: String },
+    #[error("Field '{field_name}' is too long for connector '{connector}'")]
+    MaxFieldLengthViolated {
+        connector: String,
+        field_name: String,
+        max_length: usize,
+        received_length: usize,
+    },
 }
 
 impl ConnectorError {
