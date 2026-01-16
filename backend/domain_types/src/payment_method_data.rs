@@ -444,6 +444,8 @@ pub enum BankTransferData {
         source_bank_account_id: Option<MaskedBankAccount>,
         /// Destination bank account UUID.
         destination_bank_account_id: Option<MaskedBankAccount>,
+        /// Session expiry date for Pix QR code (max 5 days from now for Adyen)
+        expiry_date: Option<time::PrimitiveDateTime>,
     },
     Pse {},
     LocalBankTransfer {
