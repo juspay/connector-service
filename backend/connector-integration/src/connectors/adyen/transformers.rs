@@ -1723,12 +1723,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             shopper_reference,
             store_payment_method,
             channel: None,
-            shopper_statement: item
-                .router_data
-                .request
-                .billing_descriptor
-                .clone()
-                .and_then(|descriptor| descriptor.statement_descriptor),
+            shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store: None,
@@ -1848,12 +1843,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             shopper_reference,
             store_payment_method,
             channel: None,
-            shopper_statement: item
-                .router_data
-                .request
-                .billing_descriptor
-                .clone()
-                .and_then(|descriptor| descriptor.statement_descriptor),
+            shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store,
@@ -1911,8 +1901,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let billing_address = get_address_info(
             item.router_data
                 .resource_common_data
-                .address
-                .get_payment_billing(),
+                .get_optional_billing(),
         )
         .and_then(Result::ok);
         let adyen_metadata =
@@ -1961,7 +1950,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .router_data
                 .resource_common_data
                 .get_optional_billing_email(),
-            shopper_locale: Some("en".to_string()),
+            shopper_locale: item.router_data.request.locale.clone(),
             social_security_number: None,
             billing_address,
             delivery_address,
@@ -1970,12 +1959,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             shopper_reference: None,
             store_payment_method: None,
             channel: None,
-            shopper_statement: item
-                .router_data
-                .request
-                .billing_descriptor
-                .clone()
-                .and_then(|descriptor| descriptor.statement_descriptor),
+            shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store,
@@ -4060,8 +4044,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 None => None,
             },
         };
-        let (recurring_processing_model, store_payment_method, _) =
-            get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
+        let (_, store_payment_method, _) = get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
 
         let return_url = item
             .router_data
@@ -4117,7 +4100,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             return_url,
             shopper_interaction,
-            recurring_processing_model,
+            recurring_processing_model: None,
             browser_info: get_browser_info_for_setup_mandate(&item.router_data)?,
             additional_data,
             mpi_data: None,
@@ -4221,8 +4204,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 None => None,
             },
         };
-        let (recurring_processing_model, store_payment_method, _) =
-            get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
+        let (_, store_payment_method, _) = get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
 
         let return_url = item
             .router_data
@@ -4265,7 +4247,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             return_url,
             shopper_interaction,
-            recurring_processing_model,
+            recurring_processing_model:None,
             browser_info: get_browser_info_for_setup_mandate(&item.router_data)?,
             additional_data,
             mpi_data: None,

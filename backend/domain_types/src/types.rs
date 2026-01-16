@@ -4698,6 +4698,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::Boleto => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethodType::Oxxo => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethodType::CardRedirect => Ok(Self::CardRedirect),
+            grpc_api_types::payments::PaymentMethodType::MomoAtm => Ok(Self::CardRedirect),
 
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "UNSUPPORTED_PAYMENT_METHOD_TYPE".to_owned(),
