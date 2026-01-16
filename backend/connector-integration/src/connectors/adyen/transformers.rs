@@ -1793,13 +1793,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let adyen_metadata =
             get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
 
-        let (store, splits) = match item.router_data.request.split_payments.as_ref() {
-            Some(_split_payment) => {
-                // todo: Handle split payments if needed
-                (adyen_metadata.store.clone(), None)
-            }
-            _ => (adyen_metadata.store.clone(), None),
-        };
+        let (store, splits) = get_adyen_split_request(
+            &item.router_data.request.metadata,
+            &adyen_metadata.store,
+            item.router_data.request.currency,
+        );
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
@@ -1898,22 +1896,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from((card_redirect_data, &item.router_data))?,
         ));
-        let billing_address = get_address_info(
-            item.router_data
-                .resource_common_data
-                .get_optional_billing(),
-        )
-        .and_then(Result::ok);
+        let billing_address =
+            get_address_info(item.router_data.resource_common_data.get_optional_billing())
+                .and_then(Result::ok);
         let adyen_metadata =
             get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
 
-        let (store, splits) = match item.router_data.request.split_payments.as_ref() {
-            Some(_split_payment) => {
-                // todo: Handle split payments if needed
-                (adyen_metadata.store.clone(), None)
-            }
-            _ => (adyen_metadata.store.clone(), None),
-        };
+        let (store, splits) = get_adyen_split_request(
+            &item.router_data.request.metadata,
+            &adyen_metadata.store,
+            item.router_data.request.currency,
+        );
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
@@ -4044,7 +4037,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 None => None,
             },
         };
-        let (_, store_payment_method, _) = get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
+        let (_, store_payment_method, _) =
+            get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
 
         let return_url = item
             .router_data
@@ -4204,7 +4198,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 None => None,
             },
         };
-        let (_, store_payment_method, _) = get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
+        let (_, store_payment_method, _) =
+            get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
 
         let return_url = item
             .router_data
@@ -4247,7 +4242,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             return_url,
             shopper_interaction,
-            recurring_processing_model:None,
+            recurring_processing_model: None,
             browser_info: get_browser_info_for_setup_mandate(&item.router_data)?,
             additional_data,
             mpi_data: None,
@@ -5314,6 +5309,24 @@ struct AdyenMetadata {
     pub platform_chargeback_logic: Option<AdyenPlatformChargeBackLogicMetadata>,
 }
 
+/// Local struct for Adyen split payment data (extracted from metadata)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AdyenSplitPaymentRequest {
+    pub store: Option<String>,
+    pub split_items: Vec<AdyenSplitItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AdyenSplitItem {
+    pub amount: Option<MinorUnit>,
+    pub reference: String,
+    pub split_type: AdyenSplitType,
+    pub account: Option<String>,
+    pub description: Option<String>,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AdyenConnectorMetadataObject {
     pub endpoint_prefix: Option<String>,
@@ -5358,6 +5371,41 @@ pub fn get_device_fingerprint(metadata: serde_json::Value) -> Option<Secret<Stri
         .get("device_fingerprint")
         .and_then(|v| v.as_str())
         .map(|fingerprint| Secret::new(fingerprint.to_string()))
+}
+
+/// Helper function to convert split payment data to Adyen split request format
+/// This extracts Adyen split payment data from metadata and converts it to the API format
+/// Also falls back to the store from AdyenMetadata if no split payment data is provided
+fn get_adyen_split_request(
+    metadata: &Option<SecretSerdeValue>,
+    adyen_store: &Option<String>,
+    currency: common_enums::Currency,
+) -> (Option<String>, Option<Vec<AdyenSplitData>>) {
+    metadata
+        .as_ref()
+        .and_then(|secret| {
+            serde_json::from_value::<AdyenSplitPaymentRequest>(secret.clone().expose()).ok()
+        })
+        .map(|split_request| {
+            let splits: Vec<AdyenSplitData> = split_request
+                .split_items
+                .into_iter()
+                .map(|split_item| {
+                    let amount = split_item.amount.map(|value| Amount { currency, value });
+                    AdyenSplitData {
+                        amount,
+                        reference: split_item.reference,
+                        split_type: split_item.split_type,
+                        account: split_item.account,
+                        description: split_item.description,
+                    }
+                })
+                .collect();
+            // Use store from split request, falling back to adyen_metadata.store
+            let store = split_request.store.clone().or_else(|| adyen_store.clone());
+            (store, Some(splits))
+        })
+        .unwrap_or_else(|| (adyen_store.clone(), None))
 }
 
 fn get_browser_info<
