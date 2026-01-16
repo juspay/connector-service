@@ -2104,3 +2104,26 @@ pub enum MandateStatus {
     Pending,
     Revoked,
 }
+
+/// The type of tokenization to use for the payment method
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    Deserialize,
+    Serialize,
+    strum::Display,
+    strum::EnumString,
+    ToSchema,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum Tokenization {
+    /// Skip PSP-level tokenization
+    SkipPsp,
+    /// Tokenize at PSP Level
+    TokenizeAtPsp,
+}
