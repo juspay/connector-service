@@ -344,7 +344,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.worldpayvantiv.base_url.as_ref()
+        connectors.get_config().worldpayvantiv.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -436,7 +436,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            let base_url = &req.resource_common_data.connectors.worldpayvantiv.base_url;
+            let base_url = &req.resource_common_data.connectors.get_config().worldpayvantiv.base_url;
             base_url.to_string()
         }
 
@@ -444,7 +444,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.worldpayvantiv.base_url.to_string()
+            req.resource_common_data.connectors.get_config().worldpayvantiv.base_url.to_string()
         }
 
         pub fn get_auth_header(
@@ -518,9 +518,9 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorError> {
             let txn_id = req.request.get_connector_transaction_id()
                 .change_context(ConnectorError::MissingConnectorTransactionID)?;
-            let secondary_base_url = req.resource_common_data.connectors.worldpayvantiv.secondary_base_url
+            let secondary_base_url = req.resource_common_data.connectors.get_config().worldpayvantiv.secondary_base_url
                 .as_ref()
-                .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
+                .unwrap_or(&req.resource_common_data.connectors.get_config().worldpayvantiv.base_url);
             Ok(format!(
                 "{secondary_base_url}/reports/dtrPaymentStatus/{txn_id}"
             ))
@@ -852,10 +852,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let secondary_base_url = req
             .resource_common_data
             .connectors
+            .get_config()
             .worldpayvantiv
             .secondary_base_url
             .as_ref()
-            .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
+            .unwrap_or(
+                &req.resource_common_data
+                    .connectors
+                    .get_config()
+                    .worldpayvantiv
+                    .base_url,
+            );
         Ok(format!(
             "{secondary_base_url}/reports/dtrPaymentStatus/{refund_id}"
         ))

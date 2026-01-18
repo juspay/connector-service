@@ -644,14 +644,14 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.billwerk.base_url
+            &req.resource_common_data.connectors.get_config().billwerk.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.billwerk.base_url
+            &req.resource_common_data.connectors.get_config().billwerk.base_url
         }
     }
 );
@@ -672,7 +672,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.billwerk.base_url.as_ref()
+        connectors.get_config().billwerk.base_url.as_ref()
     }
 
     fn get_auth_header(
@@ -741,7 +741,7 @@ macros::macro_connector_implementation!(
         req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
     ) -> CustomResult<String, errors::ConnectorError> {
 
-        let base_url = req.resource_common_data.connectors.billwerk
+        let base_url = req.resource_common_data.connectors.get_config().billwerk
             .secondary_base_url
             .as_ref()
             .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;

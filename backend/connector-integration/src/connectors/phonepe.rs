@@ -196,21 +196,21 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.phonepe.base_url.to_string()
+            req.resource_common_data.connectors.get_config().phonepe.base_url.to_string()
         }
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.phonepe.base_url
+            &req.resource_common_data.connectors.get_config().phonepe.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.phonepe.base_url
+            &req.resource_common_data.connectors.get_config().phonepe.base_url
         }
 
         pub fn build_headers<F, FCD, Req, Res>(
@@ -379,7 +379,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.phonepe.base_url.as_ref()
+        connectors.get_config().phonepe.base_url.as_ref()
     }
 
     fn build_error_response(

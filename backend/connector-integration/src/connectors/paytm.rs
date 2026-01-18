@@ -78,7 +78,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.paytm.base_url.to_string()
+            req.resource_common_data.connectors.get_config().paytm.base_url.to_string()
         }
 
 
@@ -375,7 +375,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.paytm.base_url
+        &connectors.get_config().paytm.base_url
     }
 
     fn get_auth_header(

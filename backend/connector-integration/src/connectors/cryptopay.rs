@@ -121,7 +121,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.cryptopay.base_url.as_ref()
+        connectors.get_config().cryptopay.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -354,7 +354,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.cryptopay.base_url
+            &req.resource_common_data.connectors.get_config().cryptopay.base_url
         }
     }
 );

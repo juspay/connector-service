@@ -124,7 +124,15 @@ use crate::{
 };
 
 /// Configuration set for all connectors (sandbox or production)
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, Default, PartialEq, config_patch_derive::Patch)]
+#[derive(
+    Debug,
+    Clone,
+    serde::Deserialize,
+    serde::Serialize,
+    Default,
+    PartialEq,
+    config_patch_derive::Patch,
+)]
 pub struct ConnectorConfigSet {
     pub adyen: ConnectorParams,
     pub forte: ConnectorParams,
@@ -205,13 +213,14 @@ pub struct ConnectorConfigSet {
     config_patch_derive::Patch,
 )]
 pub struct Connectors {
+    pub test_mode: bool,
     pub sandbox: ConnectorConfigSet,
     pub production: ConnectorConfigSet,
 }
 
 impl Connectors {
-    pub fn get_config(&self, test_mode: bool) -> &ConnectorConfigSet {
-        if test_mode {
+    pub fn get_config(&self) -> &ConnectorConfigSet {
+        if self.test_mode {
             &self.sandbox
         } else {
             &self.production

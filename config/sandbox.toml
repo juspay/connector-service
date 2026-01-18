@@ -1,6 +1,7 @@
 [common]
 environment = "sandbox"
 
+[connectors]
 test_mode = true
 
 [log.console]

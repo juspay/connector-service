@@ -225,7 +225,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.mifinity.base_url
+            &req.resource_common_data.connectors.get_config().mifinity.base_url
         }
     }
 );
@@ -693,7 +693,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.mifinity.base_url.as_ref()
+        connectors.get_config().mifinity.base_url.as_ref()
     }
 
     fn get_auth_header(

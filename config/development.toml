@@ -1,6 +1,7 @@
 [common]
 environment = "development"
 
+[connectors]
 test_mode = true
 
 [log.console]

@@ -210,7 +210,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.globalpay.base_url
+            &req.resource_common_data.connectors.get_config().globalpay.base_url
         }
 
         /// Get base URL for refund endpoints
@@ -218,7 +218,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.globalpay.base_url
+            &req.resource_common_data.connectors.get_config().globalpay.base_url
         }
     }
 );
@@ -721,7 +721,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             AccessTokenResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = &req.resource_common_data.connectors.globalpay.base_url;
+        let base_url = &req
+            .resource_common_data
+            .connectors
+            .get_config()
+            .globalpay
+            .base_url;
         Ok(format!("{base_url}/accesstoken"))
     }
 
@@ -1089,7 +1094,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.globalpay.base_url.as_ref()
+        connectors.get_config().globalpay.base_url.as_ref()
     }
 
     fn get_auth_header(

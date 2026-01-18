@@ -417,14 +417,14 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.worldpayxml.base_url
+            &req.resource_common_data.connectors.get_config().worldpayxml.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.worldpayxml.base_url
+            &req.resource_common_data.connectors.get_config().worldpayxml.base_url
         }
 
         pub fn build_auth_header(
@@ -902,7 +902,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.worldpayxml.base_url.as_ref()
+        connectors.get_config().worldpayxml.base_url.as_ref()
     }
 
     fn get_auth_header(

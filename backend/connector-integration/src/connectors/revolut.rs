@@ -738,7 +738,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.revolut.base_url
+        &connectors.get_config().revolut.base_url
     }
 
     fn build_error_response(
@@ -858,7 +858,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.revolut.base_url.to_string()
+            req.resource_common_data.connectors.get_config().revolut.base_url.to_string()
         }
     }
 );
@@ -1000,7 +1000,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let order_id = req.request.connector_transaction_id.clone();
-            let base_url = req.resource_common_data.connectors.revolut.base_url.to_string();
+            let base_url = req.resource_common_data.connectors.get_config().revolut.base_url.to_string();
             Ok(format!("{base_url}/api/orders/{order_id}/refund"))
         }
     }
@@ -1042,7 +1042,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let order_id = req.request.connector_refund_id.clone();
-            let base_url = req.resource_common_data.connectors.revolut.base_url.to_string();
+            let base_url = req.resource_common_data.connectors.get_config().revolut.base_url.to_string();
             Ok(format!("{base_url}/api/orders/{order_id}"))
         }
     }

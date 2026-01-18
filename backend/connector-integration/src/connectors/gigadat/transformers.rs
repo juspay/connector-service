@@ -341,7 +341,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GigadatPaymentsRespon
         // Build redirect URL
         let redirect_url = format!(
             "{}webflow?transaction={}&token={}",
-            router_data.resource_common_data.connectors.gigadat.base_url,
+            router_data
+                .resource_common_data
+                .connectors
+                .get_config()
+                .gigadat
+                .base_url,
             router_data
                 .resource_common_data
                 .connector_request_reference_id,

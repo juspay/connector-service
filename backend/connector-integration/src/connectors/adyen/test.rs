@@ -17,7 +17,7 @@ mod tests {
             payment_method_data::{DefaultPCIHolder, PaymentMethodData, RawCardNumber},
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
-            types::{ConnectorParams, Connectors},
+            types::{ConnectorConfigSet, ConnectorParams, Connectors},
         };
         use hyperswitch_masking::Secret;
         use interfaces::{
@@ -66,12 +66,18 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     connectors: Connectors {
-                        adyen: ConnectorParams {
+                        test_mode: true,
+                        sandbox: ConnectorConfigSet {
+                            adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                             ..Default::default()
                         },
                         ..Default::default()
+                        },
+                        production: ConnectorConfigSet {
+                            ..Default::default()
+                        }
                     },
                     external_latency: None,
                     connector_response_headers: None,
@@ -253,12 +259,18 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     connectors: Connectors {
-                        adyen: ConnectorParams {
+                        test_mode: true,
+                        sandbox: ConnectorConfigSet {
+                            adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                             ..Default::default()
                         },
                         ..Default::default()
+                        },
+                        production: ConnectorConfigSet {
+                            ..Default::default()
+                        }
                     },
                     external_latency: None,
                     connector_response_headers: None,

@@ -235,7 +235,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.cashfree.base_url.to_string()
+            req.resource_common_data.connectors.get_config().cashfree.base_url.to_string()
         }
     }
 );
@@ -316,7 +316,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.cashfree.base_url
+        &connectors.get_config().cashfree.base_url
     }
 
     fn get_auth_header(

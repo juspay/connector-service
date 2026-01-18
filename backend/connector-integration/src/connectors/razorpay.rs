@@ -246,7 +246,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )])
     }
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.razorpay.base_url.as_ref()
+        connectors.get_config().razorpay.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -348,7 +348,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        let base_url = &req
+            .resource_common_data
+            .connectors
+            .get_config()
+            .razorpay
+            .base_url;
 
         // For UPI payments, use the specific UPI endpoint
         match &req.request.payment_method_data {
@@ -519,7 +524,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        let base_url = &req
+            .resource_common_data
+            .connectors
+            .get_config()
+            .razorpay
+            .base_url;
 
         // Check if request_ref_id is provided to determine URL pattern
         match &req.resource_common_data.reference_id {
@@ -627,7 +637,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<String, errors::ConnectorError> {
         Ok(format!(
             "{}v1/orders",
-            req.resource_common_data.connectors.razorpay.base_url
+            req.resource_common_data
+                .connectors
+                .get_config()
+                .razorpay
+                .base_url
         ))
     }
 
@@ -730,7 +744,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let refund_id = req.request.connector_refund_id.clone();
         Ok(format!(
             "{}v1/refunds/{}",
-            req.resource_common_data.connectors.razorpay.base_url, refund_id
+            req.resource_common_data
+                .connectors
+                .get_config()
+                .razorpay
+                .base_url,
+            refund_id
         ))
     }
 
@@ -894,7 +913,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let connector_payment_id = req.request.connector_transaction_id.clone();
         Ok(format!(
             "{}v1/payments/{}/refund",
-            req.resource_common_data.connectors.razorpay.base_url, connector_payment_id
+            req.resource_common_data
+                .connectors
+                .get_config()
+                .razorpay
+                .base_url,
+            connector_payment_id
         ))
     }
 
@@ -986,7 +1010,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         Ok(format!(
             "{}v1/payments/{}/capture",
-            req.resource_common_data.connectors.razorpay.base_url, id
+            req.resource_common_data
+                .connectors
+                .get_config()
+                .razorpay
+                .base_url,
+            id
         ))
     }
 

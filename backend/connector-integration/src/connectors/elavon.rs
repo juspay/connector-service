@@ -360,7 +360,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
+                req.resource_common_data.connectors.get_config().elavon.base_url
             ))
         }
     }
@@ -393,7 +393,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
+                req.resource_common_data.connectors.get_config().elavon.base_url
             ))
         }
     }
@@ -436,7 +436,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
+                req.resource_common_data.connectors.get_config().elavon.base_url
             ))
         }
     }
@@ -469,7 +469,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
+                req.resource_common_data.connectors.get_config().elavon.base_url
             ))
         }
     }
@@ -502,7 +502,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
+                req.resource_common_data.connectors.get_config().elavon.base_url
             ))
         }
     }

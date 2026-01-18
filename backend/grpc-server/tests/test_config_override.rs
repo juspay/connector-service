@@ -349,20 +349,36 @@ mod unit {
         });
         let new_config = apply_override(override_json);
         assert_eq!(
-            new_config.connectors.razorpay.base_url.as_str(),
+            new_config
+                .connectors
+                .get_config()
+                .razorpay
+                .base_url
+                .as_str(),
             "https://razorpay.example"
         );
         assert_eq!(
-            new_config.connectors.razorpay.dispute_base_url.as_deref(),
+            new_config
+                .connectors
+                .get_config()
+                .razorpay
+                .dispute_base_url
+                .as_deref(),
             Some("https://dispute.razorpay.example")
         );
         assert_eq!(
-            new_config.connectors.trustpay.base_url.as_str(),
+            new_config
+                .connectors
+                .get_config()
+                .trustpay
+                .base_url
+                .as_str(),
             "https://trustpay.example"
         );
         assert_eq!(
             new_config
                 .connectors
+                .get_config()
                 .trustpay
                 .base_url_bank_redirects
                 .as_str(),
