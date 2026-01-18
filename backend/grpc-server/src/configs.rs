@@ -19,6 +19,7 @@ pub struct Config {
     pub metrics: MetricsServer,
     pub log: Log,
     pub proxy: Proxy,
+    pub test_mode: bool,
     pub connectors: Connectors,
     #[serde(default)]
     pub events: EventConfig,

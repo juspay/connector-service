@@ -123,26 +123,18 @@ use crate::{
     utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
 };
 
-#[derive(
-    Clone,
-    serde::Deserialize,
-    serde::Serialize,
-    Debug,
-    Default,
-    PartialEq,
-    config_patch_derive::Patch,
-)]
-pub struct Connectors {
-    // Added pub
+/// Configuration set for all connectors (sandbox or production)
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, Default, PartialEq, config_patch_derive::Patch)]
+pub struct ConnectorConfigSet {
     pub adyen: ConnectorParams,
     pub forte: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub razorpayv2: ConnectorParams,
     pub fiserv: ConnectorParams,
-    pub elavon: ConnectorParams, // Add your connector params
+    pub elavon: ConnectorParams,
     pub xendit: ConnectorParams,
     pub checkout: ConnectorParams,
-    pub authorizedotnet: ConnectorParams, // Add your connector params
+    pub authorizedotnet: ConnectorParams,
     pub mifinity: ConnectorParams,
     pub phonepe: ConnectorParams,
     pub cashfree: ConnectorParams,
@@ -201,6 +193,30 @@ pub struct Connectors {
     pub revolut: ConnectorParams,
     pub gigadat: ConnectorParams,
     pub loonio: ConnectorParams,
+}
+
+#[derive(
+    Clone,
+    serde::Deserialize,
+    serde::Serialize,
+    Debug,
+    Default,
+    PartialEq,
+    config_patch_derive::Patch,
+)]
+pub struct Connectors {
+    pub sandbox: ConnectorConfigSet,
+    pub production: ConnectorConfigSet,
+}
+
+impl Connectors {
+    pub fn get_config(&self, test_mode: bool) -> &ConnectorConfigSet {
+        if test_mode {
+            &self.sandbox
+        } else {
+            &self.production
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
