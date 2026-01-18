@@ -642,7 +642,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let content_header = utils::get_http_header("Content-type", &headers)
                     .attach_printable("Missing content type in headers")
                     .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
-                let response: FiuuPaymentResponse = if content_header.to_lowercase()
+                let response: FiuuPaymentResponse = if content_header
+                    .to_lowercase()
+                    .replace(' ', "")
                     == "text/plain;charset=utf-8"
                 {
                     parse_response(&res.response)

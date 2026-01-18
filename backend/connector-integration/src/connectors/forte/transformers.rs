@@ -15,7 +15,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeOptionInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{types::ResponseRouterData, utils as OtherUtils};
@@ -649,7 +649,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let trn_id = match item.router_data.request.connector_metadata.clone() {
+        let trn_id = match item
+            .router_data
+            .request
+            .connector_metadata
+            .clone()
+            .expose_option()
+        {
             Some(metadata) => metadata.as_str().map(|id| id.to_string()),
             None => None,
         }

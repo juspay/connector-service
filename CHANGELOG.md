@@ -4,6 +4,76 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.15.0
+
+### Features
+
+- **wellsfargo:** Connector integration ([#252](https://github.com/juspay/connector-service/pull/252)) ([`4794eff`](https://github.com/juspay/connector-service/commit/4794effbfde7f3cb4ca3a3356e1ff874a837677f))
+
+**Full Changelog:** [`2026.01.14.1...2026.01.15.0`](https://github.com/juspay/connector-service/compare/2026.01.14.1...2026.01.15.0)
+
+- - -
+
+## 2026.01.14.1
+
+### Bug Fixes
+
+- RouterData diff fix for Novalnet & Cashtocode ([#424](https://github.com/juspay/connector-service/pull/424)) ([`3795371`](https://github.com/juspay/connector-service/commit/379537121aca364ece9b2d55421772c5927ea11c))
+
+**Full Changelog:** [`2026.01.14.0...2026.01.14.1`](https://github.com/juspay/connector-service/compare/2026.01.14.0...2026.01.14.1)
+
+- - -
+
+## 2026.01.14.0
+
+### Features
+
+- **core:** Changed Metadata Type to SecretString ([#382](https://github.com/juspay/connector-service/pull/382)) ([`4c315ff`](https://github.com/juspay/connector-service/commit/4c315ff38101b12ce25849424b80d94835946e26))
+
+**Full Changelog:** [`2026.01.13.2...2026.01.14.0`](https://github.com/juspay/connector-service/compare/2026.01.13.2...2026.01.14.0)
+
+- - -
+
+## 2026.01.13.2
+
+### Bug Fixes
+
+- Adyen shoppername to none for bankredirect, repeatpayment ([#423](https://github.com/juspay/connector-service/pull/423)) ([`938d6f2`](https://github.com/juspay/connector-service/commit/938d6f2b9d0e5f76a5dec2320e4b35f455c61633))
+
+**Full Changelog:** [`2026.01.13.1...2026.01.13.2`](https://github.com/juspay/connector-service/compare/2026.01.13.1...2026.01.13.2)
+
+- - -
+
+## 2026.01.13.1
+
+### Bug Fixes
+
+- RepeatPayment Merchant configured Currency Handling ([#422](https://github.com/juspay/connector-service/pull/422)) ([`4cef8ef`](https://github.com/juspay/connector-service/commit/4cef8ef84ede9adac78eac27c557d161af36f306))
+
+**Full Changelog:** [`2026.01.13.0...2026.01.13.1`](https://github.com/juspay/connector-service/compare/2026.01.13.0...2026.01.13.1)
+
+- - -
+
+## 2026.01.13.0
+
+### Features
+
+- **connector:** [GETNETGLOBAL] Connector Integration ([#381](https://github.com/juspay/connector-service/pull/381)) ([`a648f45`](https://github.com/juspay/connector-service/commit/a648f45d93309a083c90f59f73d4f2f5a95effb1))
+
+**Full Changelog:** [`2026.01.12.1...2026.01.13.0`](https://github.com/juspay/connector-service/compare/2026.01.12.1...2026.01.13.0)
+
+- - -
+
+## 2026.01.12.1
+
+### Bug Fixes
+
+- **connector:** Fix Razorpay metadata to accept all values ([#418](https://github.com/juspay/connector-service/pull/418)) ([`4006a76`](https://github.com/juspay/connector-service/commit/4006a76b00ada9e9038a57a49a97f09e3ac9c4ce))
+
+**Full Changelog:** [`2026.01.12.0...2026.01.12.1`](https://github.com/juspay/connector-service/compare/2026.01.12.0...2026.01.12.1)
+
+- - -
+
 ## 2026.01.12.0
 
 ### Features

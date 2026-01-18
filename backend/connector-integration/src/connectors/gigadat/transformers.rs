@@ -220,7 +220,7 @@ impl<T: PaymentMethodDataTypes>
             item.request
                 .metadata
                 .as_ref()
-                .and_then(|m| m.get("site"))
+                .and_then(|m| m.peek().get("site"))
                 .and_then(|v| v.as_str())
                 .map(|site| GigadatConnectorMetadataObject {
                     site: site.to_string(),

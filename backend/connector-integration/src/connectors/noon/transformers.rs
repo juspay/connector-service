@@ -18,7 +18,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::NoonRouterData;
@@ -426,7 +426,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_request_reference_id
                 .clone(),
             name,
-            nvp: item.request.metadata.as_ref().map(NoonOrderNvp::new),
+            nvp: item
+                .request
+                .metadata
+                .as_ref()
+                .map(|m| NoonOrderNvp::new(m.peek())),
             ip_address,
         };
         let payment_action = if item.request.is_auto_capture()? {
@@ -1215,7 +1219,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.request
                         .metadata
                         .as_ref()
-                        .and_then(|metadata| metadata.get("order_category"))
+                        .and_then(|metadata| metadata.peek().get("order_category"))
                         .and_then(|value| value.as_str())
                         .map(|s| s.to_string())
                         .ok_or(ConnectorError::MissingRequiredField {
@@ -1290,7 +1294,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_request_reference_id
                 .clone(),
             name,
-            nvp: item.request.metadata.as_ref().map(NoonOrderNvp::new),
+            nvp: item
+                .request
+                .metadata
+                .as_ref()
+                .map(|m| NoonOrderNvp::new(m.peek())),
             ip_address,
         };
         let payment_action = match item.request.capture_method {

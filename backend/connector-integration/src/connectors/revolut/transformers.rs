@@ -594,7 +594,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }),
             cancel_authorised_after: None,
             location_id: None,
-            metadata: router_data.request.metadata.clone().map(Secret::new),
+            metadata: router_data.request.metadata.clone(),
             industry_data: None,
             merchant_order_data,
             upcoming_payment_data: None,
@@ -796,11 +796,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 ),
                 url: None,
             }),
-            metadata: router_data
-                .request
-                .connector_metadata
-                .clone()
-                .map(Secret::new),
+            metadata: router_data.request.connector_metadata.clone(),
             description: router_data.request.reason.clone(),
         })
     }

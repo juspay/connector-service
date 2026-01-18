@@ -179,6 +179,7 @@ mod tests {
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -330,6 +331,7 @@ mod tests {
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

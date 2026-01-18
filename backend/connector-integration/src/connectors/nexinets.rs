@@ -29,7 +29,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
@@ -474,7 +474,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let meta: nexinets::NexinetsPaymentsMetadata =
-            utils::to_connector_meta(req.request.connector_metadata.clone())?;
+            utils::to_connector_meta(req.request.connector_metadata.clone().expose_option())?;
         let order_id = nexinets::get_order_id(&meta)?;
 
             Ok(format!(
