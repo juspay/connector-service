@@ -1288,7 +1288,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         }
                         _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "UNSUPPORTED_CARD_REDIRECT_TYPE".to_owned(),
-                            error_identifier: 404,
+                            error_identifier: 400,
                             error_message: "Card redirect type is not supported".to_owned(),
                             error_object: None,
                         }))),
@@ -4703,6 +4703,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::Boleto => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethodType::Oxxo => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethodType::CardRedirect => Ok(Self::CardRedirect),
+            grpc_api_types::payments::PaymentMethodType::Knet => Ok(Self::CardRedirect),
+            grpc_api_types::payments::PaymentMethodType::Benefit => Ok(Self::CardRedirect),
             grpc_api_types::payments::PaymentMethodType::MomoAtm => Ok(Self::CardRedirect),
 
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {

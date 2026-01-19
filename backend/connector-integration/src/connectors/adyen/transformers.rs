@@ -5370,8 +5370,7 @@ fn get_adyen_split_request(
                     }
                 })
                 .collect();
-            // Use store from split request, falling back to adyen_metadata.store
-            let store = split_request.store.clone().or_else(|| adyen_store.clone());
+            let store = split_request.store.clone().or(adyen_store.clone());
             (store, Some(splits))
         })
         .unwrap_or_else(|| (adyen_store.clone(), None))
