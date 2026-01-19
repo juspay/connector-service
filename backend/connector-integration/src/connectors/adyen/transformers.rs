@@ -1959,12 +1959,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // For ACH bank debit, override state_or_province with state code (e.g., "CA" instead of "California")
         if let BankDebitData::AchBankDebit { .. } = bank_debit_data {
             if let Some(addr) = billing_address.as_mut() {
-                if let Ok(state_code) = item
-                    .router_data
-                    .resource_common_data
-                    .get_billing_state_code()
-                {
-                    addr.state_or_province = Some(state_code);
+                if let (Some(_billing), Some(address)) = (
+                    item.router_data.resource_common_data.get_optional_billing(),
+                    item.router_data
+                        .resource_common_data
+                        .get_optional_billing()
+                        .and_then(|b| b.address.as_ref()),
+                ) {
+                    if let Ok(state_code) = address.to_state_code() {
+                        addr.state_or_province = Some(state_code);
+                    }
                 }
             }
         }
