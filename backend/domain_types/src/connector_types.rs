@@ -12,7 +12,7 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use time::PrimitiveDateTime;
@@ -36,7 +36,10 @@ use crate::{
         ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
         PaymentMethodTypeMetadata, SupportedPaymentMethods,
     },
-    utils::{missing_field_err, Error, ForeignTryFrom},
+    utils::{
+        convert_canada_state_to_code, convert_us_state_to_code, missing_field_err, Error,
+        ForeignTryFrom,
+    },
 };
 use url::Url;
 
@@ -766,12 +769,30 @@ impl PaymentFlowData {
     }
 
     pub fn get_billing_state_code(&self) -> Result<Secret<String>, Error> {
-        self.get_optional_billing()
-            .and_then(|billing| billing.address.as_ref())
-            .and_then(|address| address.to_state_code_as_optional().ok().flatten())
-            .ok_or_else(missing_field_err(
-                "payment_method_data.billing.address.state",
-            ))
+        // Get billing address
+        let billing = self
+            .get_optional_billing()
+            .ok_or_else(missing_field_err("payment_method_data.billing"))?;
+
+        let address = billing
+            .address
+            .as_ref()
+            .ok_or_else(missing_field_err("payment_method_data.billing.address"))?;
+
+        // Get country and state
+        let country = address.get_country()?;
+        let state = address.get_state()?;
+
+        // Apply country-specific state code conversion
+        match country {
+            common_enums::CountryAlpha2::US => Ok(Secret::new(convert_us_state_to_code(
+                &state.peek().to_string(),
+            ))),
+            common_enums::CountryAlpha2::CA => Ok(Secret::new(convert_canada_state_to_code(
+                &state.peek().to_string(),
+            ))),
+            _ => Ok(state.clone()),
+        }
     }
 
     pub fn get_optional_billing_first_name(&self) -> Option<Secret<String>> {
