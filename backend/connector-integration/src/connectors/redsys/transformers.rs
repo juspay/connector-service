@@ -575,6 +575,7 @@ fn get_payments_response(
     capture_method: Option<enums::CaptureMethod>,
     authentication_data: Option<domain_types::router_request_types::AuthenticationData>,
     http_code: u16,
+    use_transaction_response: bool,
 ) -> Result<
     (
         Result<PaymentsResponseData, domain_types::router_data::ErrorResponse>,
@@ -620,6 +621,19 @@ fn get_payments_response(
                 network_decline_code: None,
                 network_error_message: None,
             })
+        } else if use_transaction_response {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    redsys_payments_response.ds_order.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(redsys_payments_response.ds_order.clone()),
+                incremental_authorization_allowed: None,
+                status_code: http_code,
+            })
         } else {
             Ok(PaymentsResponseData::AuthenticateResponse {
                 resource_id: Some(ResponseId::ConnectorTransactionId(
@@ -638,15 +652,31 @@ fn get_payments_response(
             .ds_emv3ds
             .map(|ds_emv3ds| build_threeds_form(&ds_emv3ds))
             .transpose()?;
-        let response = Ok(PaymentsResponseData::AuthenticateResponse {
-            resource_id: Some(ResponseId::ConnectorTransactionId(
-                redsys_payments_response.ds_order.clone(),
-            )),
-            redirection_data: redirection_form.map(Box::new),
-            authentication_data,
-            connector_response_reference_id: Some(redsys_payments_response.ds_order.clone()),
-            status_code: http_code,
-        });
+
+        let response = if use_transaction_response {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    redsys_payments_response.ds_order.clone(),
+                ),
+                redirection_data: redirection_form.map(Box::new),
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(redsys_payments_response.ds_order.clone()),
+                incremental_authorization_allowed: None,
+                status_code: http_code,
+            })
+        } else {
+            Ok(PaymentsResponseData::AuthenticateResponse {
+                resource_id: Some(ResponseId::ConnectorTransactionId(
+                    redsys_payments_response.ds_order.clone(),
+                )),
+                redirection_data: redirection_form.map(Box::new),
+                authentication_data,
+                connector_response_reference_id: Some(redsys_payments_response.ds_order.clone()),
+                status_code: http_code,
+            })
+        };
 
         Ok((
             response,
@@ -973,6 +1003,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                     item.router_data.request.capture_method,
                     auth_data,
                     item.http_code,
+                    false,
                 )?;
 
                 Ok(Self {
@@ -1204,6 +1235,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                     item.router_data.request.capture_method,
                     auth_data,
                     item.http_code,
+                    true,
                 )?;
 
                 Ok(Self {
