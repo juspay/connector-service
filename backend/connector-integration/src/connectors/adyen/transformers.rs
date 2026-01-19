@@ -1749,7 +1749,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let additional_data = get_additional_data(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-            AdyenPaymentMethod::try_from(bank_redirect_data)?,
+            AdyenPaymentMethod::try_from((bank_redirect_data, &item.router_data))?,
         ));
         let (shopper_locale, country) = get_redirect_extra_details(&item.router_data)?;
         let billing_address = get_address_info(

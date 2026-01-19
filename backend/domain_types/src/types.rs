@@ -405,11 +405,11 @@ impl<
                         grpc_api_types::payments::card_redirect::CardRedirectType::CardRedirect => {
                             payment_method_data::CardRedirectData::CardRedirect {}
                         }
-                        _ => {
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Unspecified => {
                             return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                sub_code: "UNSPECIFIED_CARD_REDIRECT_TYPE".to_owned(),
                                 error_identifier: 400,
-                                error_message: "Card redirect type is not supported".to_owned(),
+                                error_message: "Card redirect type cannot be unspecified".to_owned(),
                                 error_object: None,
                             })))
                         }
@@ -1286,12 +1286,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         grpc_api_types::payments::card_redirect::CardRedirectType::CardRedirect => {
                             Ok(Some(PaymentMethodType::CardRedirect))
                         }
-                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "UNSUPPORTED_CARD_REDIRECT_TYPE".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Card redirect type is not supported".to_owned(),
-                            error_object: None,
-                        }))),
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Unspecified => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSPECIFIED_CARD_REDIRECT_TYPE".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card redirect type cannot be unspecified".to_owned(),
+                                error_object: None,
+                            })))
+                        }
                     }
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Token(_) => {
