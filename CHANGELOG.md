@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.13.2-hotfix2
+
+### Bug Fixes
+
+- RouterData diff fix for Fiuu PSync ([#428](https://github.com/juspay/connector-service/pull/428)) ([`ab70afe`](https://github.com/juspay/connector-service/commit/ab70afe812392d0d7afbfc6b337b8fb175a15e65))
+
+**Full Changelog:** [`2026.01.13.2-hotfix1...2026.01.13.2-hotfix2`](https://github.com/juspay/connector-service/compare/2026.01.13.2-hotfix1...2026.01.13.2-hotfix2)
+
+- - -
+
 ## 2026.01.13.2-hotfix1
 
 ### Bug Fixes
