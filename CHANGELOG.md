@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.19.0
+
+### Features
+
+- **connector:** Refactored Cybersource Mandate Payments ([#426](https://github.com/juspay/connector-service/pull/426)) ([`488a70a`](https://github.com/juspay/connector-service/commit/488a70a294eb9c33c83c85e7ab897e3553299842))
+
+### Bug Fixes
+
+- RouterData diff fix for Fiuu PSync ([#427](https://github.com/juspay/connector-service/pull/427)) ([`e48db9a`](https://github.com/juspay/connector-service/commit/e48db9ae2f44c28d06ee04f7548e0c648681bdd7))
+
+**Full Changelog:** [`2026.01.15.0...2026.01.19.0`](https://github.com/juspay/connector-service/compare/2026.01.15.0...2026.01.19.0)
+
+- - -
+
 ## 2026.01.15.0
 
 ### Features
