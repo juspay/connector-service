@@ -196,17 +196,26 @@ pub struct RedsysVersionData {
     pub message: Message,
 }
 
-/// Message wrapper containing transaction data
+/// Message wrapper containing the actual message type
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename = "Message")]
 pub struct Message {
-    pub transaction: RedsysSyncRequest,
+    #[serde(flatten)]
+    pub content: MessageContent,
 }
 
-/// Sync request for querying transaction status
+/// The actual message content (Transaction or Monitor)
 #[derive(Debug, Serialize)]
-#[serde(rename = "Transaction")]
-pub struct RedsysSyncRequest {
+pub enum MessageContent {
+    #[serde(rename = "Transaction")]
+    Transaction(RedsysTransactionRequest),
+    #[serde(rename = "Monitor")]
+    Monitor(RedsysMonitorRequest),
+}
+
+/// Transaction request for querying transaction status
+#[derive(Debug, Serialize)]
+pub struct RedsysTransactionRequest {
     #[serde(rename = "Ds_MerchantCode")]
     pub ds_merchant_code: Secret<String>,
     #[serde(rename = "Ds_Terminal")]
@@ -215,6 +224,17 @@ pub struct RedsysSyncRequest {
     pub ds_order: String,
     #[serde(rename = "Ds_TransactionType")]
     pub ds_transaction_type: String,
+}
+
+/// Monitor request (simpler - no transaction type needed)
+#[derive(Debug, Serialize)]
+pub struct RedsysMonitorRequest {
+    #[serde(rename = "Ds_MerchantCode")]
+    pub ds_merchant_code: Secret<String>,
+    #[serde(rename = "Ds_Terminal")]
+    pub ds_terminal: Secret<String>,
+    #[serde(rename = "Ds_Order")]
+    pub ds_order: String,
 }
 
 /// Request for invoking 3DS method redirect

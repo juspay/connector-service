@@ -144,7 +144,7 @@ pub struct VersionResponseData {
 // If both are present or both are absent, an error is thrown.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MessageResponseType {
-    pub response: Option<RedsysSyncResponseData>,
+    pub response: Option<Vec<RedsysSyncResponseData>>,
     pub errormsg: Option<SyncErrorCode>,
 }
 
@@ -152,6 +152,31 @@ pub struct MessageResponseType {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SyncErrorCode {
     pub ds_errorcode: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DsState {
+    /// Requested
+    S,
+    /// Authorizing
+    P,
+    /// Authenticating
+    A,
+    /// Completed
+    F,
+    /// No response / Technical Error
+    T,
+    /// Transfer, direct debit, or PayPal in progress
+    E,
+    /// Direct debit downloaded.
+    D,
+    /// Online transfer
+    L,
+    /// Redirected to a wallet
+    W,
+    /// Redirected to Iupay
+    O,
 }
 
 /// Sync response transaction data
@@ -169,7 +194,7 @@ pub struct RedsysSyncResponseData {
     // not 3-letter codes, so we use String here
     pub ds_currency: Option<String>,
     pub ds_securepayment: Option<String>,
-    pub ds_state: Option<String>,
+    pub ds_state: Option<DsState>,
     pub ds_response: Option<DsResponse>,
     pub ds_authorisationcode: Option<String>,
 }

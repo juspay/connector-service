@@ -412,10 +412,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-        let transaction_type = transformers::get_transaction_type(
-            req.resource_common_data.status,
-            req.request.capture_method,
-        )?;
+        let transaction_type = None;
         let auth = transformers::RedsysAuthType::try_from(&req.connector_auth_type)?;
         let connector_transaction_id = req
             .resource_common_data
@@ -596,7 +593,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-        let transaction_type = "3".to_owned();
+        let transaction_type = Some("3".to_owned());
         let auth = transformers::RedsysAuthType::try_from(&req.connector_auth_type)?;
         let connector_transaction_id = req.request.connector_transaction_id.clone();
         let body =

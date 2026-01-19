@@ -1636,6 +1636,7 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 48; // Redirection Response from client browser
+
   // Tokenization configuration  
   optional Tokenization tokenization_strategy = 49; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
 }
@@ -2846,13 +2847,13 @@ message RefundServiceGetRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
 
-// Metadata
+  // Metadata
   optional SecretString refund_metadata = 7; // Metadata specific to the refund sync
 
   // State Information
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
 
-// Account-Specific Configuration
+  // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 9; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 
   // Environment Configuration

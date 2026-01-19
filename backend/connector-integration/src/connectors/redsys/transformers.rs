@@ -1498,69 +1498,65 @@ impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
 
 // PSync
 
-pub fn get_transaction_type(
-    status: common_enums::AttemptStatus,
-    capture_method: Option<common_enums::CaptureMethod>,
-) -> Result<String, errors::ConnectorError> {
-    match status {
-        common_enums::AttemptStatus::AuthenticationPending
-        | common_enums::AttemptStatus::AuthenticationSuccessful
-        | common_enums::AttemptStatus::Started
-        | common_enums::AttemptStatus::Authorizing
-        | common_enums::AttemptStatus::Authorized
-        | common_enums::AttemptStatus::DeviceDataCollectionPending => match capture_method {
-            Some(common_enums::CaptureMethod::Automatic) | None => {
-                Ok(transaction_type::PAYMENT.to_owned())
+fn find_latest_response(
+    responses: Vec<responses::RedsysSyncResponseData>,
+) -> Option<responses::RedsysSyncResponseData> {
+    responses
+        .into_iter()
+        .filter(|response_data| response_data.ds_date.is_some() && response_data.ds_hour.is_some())
+        .max_by(|current_response_data, next_response_data| {
+            match current_response_data
+                .ds_date
+                .cmp(&next_response_data.ds_date)
+            {
+                std::cmp::Ordering::Equal => match current_response_data
+                    .ds_hour
+                    .cmp(&next_response_data.ds_hour)
+                {
+                    std::cmp::Ordering::Equal => {
+                        // Higher transaction type number wins i.e., later operations (like refunds) override earlier ones
+                        current_response_data
+                            .ds_transactiontype
+                            .cmp(&next_response_data.ds_transactiontype)
+                    }
+                    other => other,
+                },
+                other => other,
             }
-            Some(common_enums::CaptureMethod::Manual) => {
-                Ok(transaction_type::PREAUTHORIZATION.to_owned())
-            }
-            Some(capture_method) => Err(errors::ConnectorError::NotSupported {
-                message: capture_method.to_string(),
-                connector: "redsys",
-            }),
-        },
-        common_enums::AttemptStatus::VoidInitiated => Ok(transaction_type::CANCELLATION.to_owned()),
-        common_enums::AttemptStatus::PartialChargedAndChargeable
-        | common_enums::AttemptStatus::CaptureInitiated => {
-            Ok(transaction_type::CONFIRMATION.to_owned())
-        }
-        common_enums::AttemptStatus::Pending => match capture_method {
-            Some(common_enums::CaptureMethod::Automatic) | None => {
-                Ok(transaction_type::PAYMENT.to_owned())
-            }
-            Some(common_enums::CaptureMethod::Manual) => {
-                Ok(transaction_type::CONFIRMATION.to_owned())
-            }
-            Some(capture_method) => Err(errors::ConnectorError::NotSupported {
-                message: capture_method.to_string(),
-                connector: "redsys",
-            }),
-        },
-        other_attempt_status => Err(errors::ConnectorError::NotSupported {
-            message: format!("Payment sync after terminal status: {other_attempt_status} payment"),
-            connector: "redsys",
-        }),
-    }
+        })
 }
 
 pub fn construct_sync_request(
     order_id: String,
-    transaction_type: String,
+    transaction_type: Option<String>,
     auth: RedsysAuthType,
 ) -> Result<Vec<u8>, Error> {
-    let transaction_data = requests::RedsysSyncRequest {
-        ds_merchant_code: auth.merchant_id,
-        ds_terminal: auth.terminal_id,
-        ds_transaction_type: transaction_type,
-        ds_order: order_id.clone(),
+    let sync_message = if transaction_type.is_some() {
+        requests::Message {
+            content: requests::MessageContent::Transaction(requests::RedsysTransactionRequest {
+                ds_merchant_code: auth.merchant_id,
+                ds_terminal: auth.terminal_id,
+                ds_transaction_type: transaction_type.ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "transaction_type",
+                    },
+                )?,
+                ds_order: order_id.clone(),
+            }),
+        }
+    } else {
+        requests::Message {
+            content: requests::MessageContent::Monitor(requests::RedsysMonitorRequest {
+                ds_merchant_code: auth.merchant_id,
+                ds_terminal: auth.terminal_id,
+                ds_order: order_id.clone(),
+            }),
+        }
     };
 
     let version = requests::RedsysVersionData {
         ds_version: DS_VERSION.to_owned(),
-        message: requests::Message {
-            transaction: transaction_data,
-        },
+        message: sync_message,
     };
 
     let version_data = quick_xml::se::to_string(&version)
@@ -1603,40 +1599,61 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
             .message;
 
         let (status, response) = match (message_data.response, message_data.errormsg) {
-            (Some(response), None) => {
-                if let Some(ds_response) = response.ds_response {
-                    let attempt_status = get_redsys_attempt_status(
-                        ds_response.clone(),
-                        item.router_data.request.capture_method,
-                    )?;
-
-                    let payment_response = Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(response.ds_order.clone()),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: Some(response.ds_order.clone()),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    });
-                    (attempt_status, payment_response)
+            (Some(responses), None) => {
+                if let Some(latest_response) = find_latest_response(responses) {
+                    if let Some(ds_response) = latest_response.ds_response {
+                        let attempt_status = get_redsys_attempt_status(
+                            ds_response.clone(),
+                            item.router_data.request.capture_method,
+                        )?;
+                        let payment_response = Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                latest_response.ds_order.clone(),
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: Some(latest_response.ds_order.clone()),
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        });
+                        (attempt_status, payment_response)
+                    } else {
+                        // No ds_response - use existing status
+                        let payment_response = Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                latest_response.ds_order.clone(),
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: Some(latest_response.ds_order.clone()),
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        });
+                        (
+                            item.router_data.resource_common_data.status,
+                            payment_response,
+                        )
+                    }
                 } else {
-                    let payment_response = Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(response.ds_order.clone()),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: Some(response.ds_order.clone()),
-                        incremental_authorization_allowed: None,
+                    // NEW: No valid responses found
+                    let error_response = Err(domain_types::router_data::ErrorResponse {
+                        code: "NO_VALID_RESPONSES".to_string(),
+                        message: "No valid responses found in Monitor query".to_string(),
+                        reason: Some(
+                            "Monitor query returned no responses with valid date/hour".to_string(),
+                        ),
                         status_code: item.http_code,
+                        attempt_status: None,
+                        connector_transaction_id: None,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
                     });
-
-                    (
-                        item.router_data.resource_common_data.status,
-                        payment_response,
-                    )
+                    (item.router_data.resource_common_data.status, error_response)
                 }
             }
             (None, Some(errormsg)) => {
@@ -1774,6 +1791,41 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
             .message;
 
         let response = match (message_data.response, message_data.errormsg) {
+            (Some(responses), None) => {
+                // NEW: Use latest response for consistency (even for RSync)
+                if let Some(latest_response) = find_latest_response(responses) {
+                    if let Some(ds_response) = latest_response.ds_response {
+                        let refund_status =
+                            common_enums::RefundStatus::try_from(ds_response.clone())?;
+                        Ok(RefundsResponseData {
+                            connector_refund_id: latest_response.ds_order,
+                            refund_status,
+                            status_code: item.http_code,
+                        })
+                    } else {
+                        Ok(RefundsResponseData {
+                            connector_refund_id: latest_response.ds_order,
+                            refund_status: common_enums::RefundStatus::Pending,
+                            status_code: item.http_code,
+                        })
+                    }
+                } else {
+                    Err(domain_types::router_data::ErrorResponse {
+                        code: "NO_VALID_RESPONSES".to_string(),
+                        message: "No valid responses found in Monitor/Transaction query"
+                            .to_string(),
+                        reason: Some(
+                            "Query returned no responses with valid date/hour".to_string(),
+                        ),
+                        status_code: item.http_code,
+                        attempt_status: None,
+                        connector_transaction_id: None,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    })
+                }
+            }
             (None, Some(errormsg)) => {
                 let error_code = errormsg.ds_errorcode.clone();
                 Err(domain_types::router_data::ErrorResponse {
@@ -1787,23 +1839,6 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                     network_advice_code: None,
                     network_error_message: None,
                 })
-            }
-            (Some(response), None) => {
-                if let Some(ds_response) = response.ds_response {
-                    let refund_status = common_enums::RefundStatus::try_from(ds_response.clone())?;
-
-                    Ok(RefundsResponseData {
-                        connector_refund_id: response.ds_order,
-                        refund_status,
-                        status_code: item.http_code,
-                    })
-                } else {
-                    Ok(RefundsResponseData {
-                        connector_refund_id: response.ds_order,
-                        refund_status: common_enums::RefundStatus::Pending,
-                        status_code: item.http_code,
-                    })
-                }
             }
             (Some(_), Some(_)) | (None, None) => {
                 Err(errors::ConnectorError::ResponseHandlingFailed)?
