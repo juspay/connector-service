@@ -190,6 +190,7 @@ pub struct Connectors {
     pub revolut: ConnectorParams,
     pub gigadat: ConnectorParams,
     pub loonio: ConnectorParams,
+    pub wellsfargo: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -323,6 +324,28 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
                     sub_code: "UNSPECIFIED_CARD_NETWORK".to_owned(),
                     error_identifier: 401,
                     error_message: "Card network must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::Tokenization> for common_enums::Tokenization {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::Tokenization,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::Tokenization::SkipPsp => Ok(Self::SkipPsp),
+            grpc_api_types::payments::Tokenization::TokenizeAtPsp => Ok(Self::TokenizeAtPsp),
+            grpc_api_types::payments::Tokenization::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_TOKENIZATION_STRATEGY".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Tokenization strategy must be specified".to_owned(),
                     error_object: None,
                 })
                 .into())
@@ -1842,6 +1865,12 @@ impl<
                 value.payment_channel(),
             )?),
         };
+        let tokenization = match value.tokenization_strategy {
+            None => None,
+            Some(_) => Some(common_enums::Tokenization::foreign_try_from(
+                value.tokenization_strategy(),
+            )?),
+        };
 
         Ok(Self {
             authentication_data,
@@ -1939,6 +1968,7 @@ impl<
             continue_redirection_url: None,
             redirect_response: None,
             threeds_method_comp_ind: None,
+            tokenization,
         })
     }
 }
@@ -2059,6 +2089,12 @@ impl<
                         .collect(),
                 ))),
             });
+        let tokenization = match value.tokenization_strategy {
+            None => None,
+            Some(_) => Some(common_enums::Tokenization::foreign_try_from(
+                value.tokenization_strategy(),
+            )?),
+        };
 
         Ok(Self {
             authentication_data,
@@ -2169,6 +2205,7 @@ impl<
             threeds_method_comp_ind: value.threeds_method_comp_ind.and_then(|value| {
                 connector_types::ThreeDsCompletionIndicator::foreign_try_from(value).ok()
             }),
+            tokenization,
         })
     }
 }
@@ -8026,7 +8063,6 @@ impl<
                     error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
                         error_identifier: 400,
-
                         error_message: "Invalid email".to_owned(),
                         error_object: None,
                     }))

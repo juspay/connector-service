@@ -1063,12 +1063,42 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             &item.router_data.resource_common_data.connector_meta_data,
         )?;
 
-        let (action_list, action_token_types, authorization_options) =
-            if item.router_data.request.setup_future_usage
-                == Some(common_enums::FutureUsage::OffSession)
-                && (item.router_data.request.customer_acceptance.is_some())
-            {
-                (
+        let (action_list, action_token_types, authorization_options) = if item
+            .router_data
+            .request
+            .setup_future_usage
+            == Some(common_enums::FutureUsage::OffSession)
+            && (item.router_data.request.customer_acceptance.is_some()
+                || item
+                    .router_data
+                    .request
+                    .setup_mandate_details
+                    .clone()
+                    .is_some_and(|mandate_details| mandate_details.customer_acceptance.is_some()))
+        {
+            let skip_psp_tokenization = matches!(
+                item.router_data.request.tokenization,
+                Some(common_enums::Tokenization::SkipPsp)
+            );
+            match skip_psp_tokenization {
+                true => {
+                    // COMPLETELY SKIP TOKENIZATION - don't send any tokenization fields
+                    (
+                        None,
+                        None,
+                        Some(CybersourceAuthorizationOptions {
+                            initiator: Some(CybersourcePaymentInitiator {
+                                initiator_type: Some(CybersourcePaymentInitiatorTypes::Customer),
+                                credential_stored_on_file: Some(false),
+                                stored_credential_used: None,
+                            }),
+                            ignore_avs_result: connector_merchant_config.disable_avs,
+                            ignore_cv_result: connector_merchant_config.disable_cvn,
+                            merchant_initiated_transaction: None,
+                        }),
+                    )
+                }
+                false => (
                     Some(vec![CybersourceActionsList::TokenCreate]),
                     Some(vec![
                         CybersourceActionsTokenType::PaymentInstrument,
@@ -1084,26 +1114,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         ignore_cv_result: connector_merchant_config.disable_cvn,
                         merchant_initiated_transaction: None,
                     }),
-                )
-            } else {
-                (
-                    None,
-                    None,
-                    Some(CybersourceAuthorizationOptions {
-                        initiator: None,
-                        merchant_initiated_transaction: None,
-                        ignore_avs_result: connector_merchant_config.disable_avs,
-                        ignore_cv_result: connector_merchant_config.disable_cvn,
-                    }),
-                )
-            };
+                ),
+            }
+        } else {
+            (
+                None,
+                None,
+                Some(CybersourceAuthorizationOptions {
+                    initiator: None,
+                    merchant_initiated_transaction: None,
+                    ignore_avs_result: connector_merchant_config.disable_avs,
+                    ignore_cv_result: connector_merchant_config.disable_cvn,
+                }),
+            )
+        };
         // this logic is for external authenticated card
         let commerce_indicator_for_external_authentication = item
             .router_data
             .request
             .authentication_data
             .as_ref()
-            .and_then(|authentication_data| authentication_data.eci.clone());
+            .and_then(|authn_data| {
+                authn_data
+                    .eci
+                    .clone()
+                    .map(|eci| get_commerce_indicator_for_external_authentication(network, eci))
+            });
 
         Ok(Self {
             capture: Some(matches!(
@@ -4452,6 +4488,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .resource_common_data
             .get_optional_billing_email()
+            .or(item.router_data.request.get_optional_email())
             .and_then(|email| {
                 build_bill_to(
                     item.router_data.resource_common_data.get_optional_billing(),
@@ -4951,6 +4988,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
+        // this logic is for external authenticated card
+        let commerce_indicator_for_external_authentication = item
+            .router_data
+            .request
+            .authentication_data
+            .as_ref()
+            .and_then(|authn_data| {
+                authn_data
+                    .eci
+                    .clone()
+                    .map(|eci| get_commerce_indicator_for_external_authentication(network, eci))
+            });
+
         Ok(Self {
             capture: Some(matches!(
                 item.router_data.request.capture_method,
@@ -4961,7 +5011,58 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             action_token_types,
             authorization_options,
             capture_options: None,
-            commerce_indicator,
+            commerce_indicator: commerce_indicator_for_external_authentication
+                .unwrap_or(commerce_indicator),
         })
     }
+}
+
+fn get_commerce_indicator_for_external_authentication(
+    card_network: Option<String>,
+    eci: String,
+) -> String {
+    let card_network_lower_case = card_network
+        .as_ref()
+        .map(|card_network| card_network.to_lowercase());
+    match eci.as_str() {
+        "00" | "01" | "02" => {
+            if matches!(
+                card_network_lower_case.as_deref(),
+                Some("mastercard") | Some("maestro")
+            ) {
+                "spa"
+            } else {
+                "internet"
+            }
+        }
+        "05" => match card_network_lower_case.as_deref() {
+            Some("amex") => "aesk",
+            Some("discover") => "dipb",
+            Some("mastercard") => "spa",
+            Some("visa") => "vbv",
+            Some("diners") => "pb",
+            Some("upi") => "up3ds",
+            _ => "internet",
+        },
+        "06" => match card_network_lower_case.as_deref() {
+            Some("amex") => "aesk_attempted",
+            Some("discover") => "dipb_attempted",
+            Some("mastercard") => "spa",
+            Some("visa") => "vbv_attempted",
+            Some("diners") => "pb_attempted",
+            Some("upi") => "up3ds_attempted",
+            _ => "internet",
+        },
+        "07" => match card_network_lower_case.as_deref() {
+            Some("amex") => "internet",
+            Some("discover") => "internet",
+            Some("mastercard") => "spa",
+            Some("visa") => "vbv_failure",
+            Some("diners") => "internet",
+            Some("upi") => "up3ds_failure",
+            _ => "internet",
+        },
+        _ => "vbv_failure",
+    }
+    .to_string()
 }

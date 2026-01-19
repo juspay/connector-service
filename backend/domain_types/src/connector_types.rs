@@ -113,6 +113,7 @@ pub enum ConnectorEnum {
     Revolut,
     Gigadat,
     Loonio,
+    Wellsfargo,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -188,6 +189,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Revolut => Ok(Self::Revolut),
             grpc_api_types::payments::Connector::Gigadat => Ok(Self::Gigadat),
             grpc_api_types::payments::Connector::Loonio => Ok(Self::Loonio),
+            grpc_api_types::payments::Connector::Wellsfargo => Ok(Self::Wellsfargo),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1090,6 +1092,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub redirect_response: Option<ContinueRedirectionResponse>,
     pub threeds_method_comp_ind: Option<ThreeDsCompletionIndicator>,
     pub continue_redirection_url: Option<Url>,
+    pub tokenization: Option<common_enums::Tokenization>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -2448,6 +2451,9 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => None,
         }
+    }
+    pub fn get_optional_email(&self) -> Option<Email> {
+        self.email.clone()
     }
 }
 

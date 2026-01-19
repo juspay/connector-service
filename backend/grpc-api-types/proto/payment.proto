@@ -724,6 +724,14 @@ enum DisputeStage {
   PRE_ARBITRATION = 3;
 }
 
+// Tokenization options for payment processing  
+enum Tokenization {  
+  TOKENIZATION_UNSPECIFIED = 0;  
+  TOKENIZATION_TOKENIZE_AT_PSP = 1;  // Use default tokenization behavior  
+  TOKENIZATION_SKIP_PSP = 2;  // Skip PSP-side token creation  
+}
+
+
 // Represents a physical address with contact information.
 message Address {
   // Personal Information
@@ -1528,6 +1536,9 @@ message PaymentServiceAuthorizeRequest {
 
   // Locale Information
   optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
+
+  // Tokenization configuration  
+  optional Tokenization tokenization_strategy = 46; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
 }
 
 // Request message for authorizing a payment only (without setup flows).
@@ -1625,6 +1636,8 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 48; // Redirection Response from client browser
+  // Tokenization configuration  
+  optional Tokenization tokenization_strategy = 49; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
 }
 
 // Response message for a payment authorization.

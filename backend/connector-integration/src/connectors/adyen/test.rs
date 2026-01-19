@@ -176,6 +176,7 @@ mod tests {
                     continue_redirection_url: None,
                     redirect_response: None,
                     threeds_method_comp_ind: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -324,6 +325,7 @@ mod tests {
                     continue_redirection_url: None,
                     redirect_response: None,
                     threeds_method_comp_ind: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
