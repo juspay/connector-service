@@ -63,6 +63,7 @@ use grpc_api_types::payments::{
     WebhookTransformationStatus,
 };
 use hyperswitch_masking::ExposeInterface;
+use hyperswitch_masking::Secret;
 use injector::{TokenData, VaultConnectors};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
@@ -894,11 +895,12 @@ impl Payments {
             amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
             integrity_object: None,
-            metadata: if payload.metadata.is_empty() {
-                None
-            } else {
-                Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
-            },
+            metadata: payload.metadata.clone().map(|m| {
+                let metadata = m.expose();
+                let value =
+                    serde_json::from_str::<serde_json::Value>(&metadata).unwrap_or_default();
+                Secret::new(value)
+            }),
             webhook_url: payload.webhook_url.clone(),
         };
 
@@ -1018,11 +1020,12 @@ impl Payments {
             amount: common_utils::types::MinorUnit::new(0),
             currency,
             integrity_object: None,
-            metadata: if payload.metadata.is_empty() {
-                None
-            } else {
-                Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
-            },
+            metadata: payload.metadata.clone().map(|m| {
+                let metadata = m.expose();
+                let value =
+                    serde_json::from_str::<serde_json::Value>(&metadata).unwrap_or_default();
+                Secret::new(value)
+            }),
             webhook_url: payload.webhook_url.clone(),
         };
 
@@ -4366,7 +4369,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                         }))?,
                     })
                     .transpose()?,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
                 response_ref_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -4419,7 +4422,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
                 state: None,
             }
         }
@@ -4596,7 +4599,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                         }))?,
                     })
                     .transpose()?,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
                 status: grpc_status.into(),
                 error_message: None,
@@ -4646,7 +4649,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code.into(),
                 raw_connector_response,
                 response_headers,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
                 state: None,
             }
         }
@@ -4681,7 +4684,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
             } => PaymentServicePostAuthenticateResponse {
                 transaction_id: None,
                 redirection_data: None,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
                 network_txn_id: None,
                 response_ref_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
@@ -4738,7 +4741,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
-                connector_metadata: HashMap::new(),
+                connector_metadata: None,
                 state: None,
             }
         }
