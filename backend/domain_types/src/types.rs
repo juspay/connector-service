@@ -1286,7 +1286,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         grpc_api_types::payments::card_redirect::CardRedirectType::CardRedirect => {
                             Ok(Some(PaymentMethodType::CardRedirect))
                         }
-                        _ => Ok(Some(PaymentMethodType::CardRedirect)),
+                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "UNSUPPORTED_CARD_REDIRECT_TYPE".to_owned(),
+                            error_identifier: 404,
+                            error_message: "Card redirect type is not supported".to_owned(),
+                            error_object: None,
+                        }))),
                     }
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Token(_) => {

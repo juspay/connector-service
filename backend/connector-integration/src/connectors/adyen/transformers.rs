@@ -1391,23 +1391,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<(
-        &CardRedirectData,
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    )> for AdyenPaymentMethod<T>
+    TryFrom<&CardRedirectData> for AdyenPaymentMethod<T>
 {
     type Error = Error;
-    fn try_from(
-        (card_redirect_data, _item): (
-            &CardRedirectData,
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        ),
-    ) -> Result<Self, Self::Error> {
+
+    fn try_from(card_redirect_data: &CardRedirectData) -> Result<Self, Self::Error> {
         match card_redirect_data {
             CardRedirectData::Knet {} => Ok(Self::Knet),
             CardRedirectData::Benefit {} => Ok(Self::Benefit),
@@ -1420,33 +1408,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<(
-        &CardRedirectData,
-        &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    )> for AdyenPaymentMethod<T>
+    TryFrom<&BankRedirectData> for AdyenPaymentMethod<T>
 {
     type Error = Error;
-    fn try_from(
-        (card_redirect_data, _item): (
-            &CardRedirectData,
-            &RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        ),
-    ) -> Result<Self, Self::Error> {
-        match card_redirect_data {
-            CardRedirectData::Knet {} => Ok(Self::Knet),
-            CardRedirectData::Benefit {} => Ok(Self::Benefit),
-            CardRedirectData::MomoAtm {} => Ok(Self::MomoAtm),
-            CardRedirectData::CardRedirect {} => Err(errors::ConnectorError::NotImplemented(
+
+    fn try_from(bank_redirect_data: &BankRedirectData) -> Result<Self, Self::Error> {
+        match bank_redirect_data {
+            BankRedirectData::Trustly { .. } => Ok(Self::Trustly),
+            _ => Err(errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
         }
@@ -1780,7 +1749,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let additional_data = get_additional_data(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-            AdyenPaymentMethod::try_from((bank_redirect_data, &item.router_data))?,
+            AdyenPaymentMethod::try_from(bank_redirect_data)?,
         ));
         let (shopper_locale, country) = get_redirect_extra_details(&item.router_data)?;
         let billing_address = get_address_info(
@@ -1894,7 +1863,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-            AdyenPaymentMethod::try_from((card_redirect_data, &item.router_data))?,
+            AdyenPaymentMethod::try_from(card_redirect_data)?,
         ));
         let billing_address =
             get_address_info(item.router_data.resource_common_data.get_optional_billing())
@@ -4228,7 +4197,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-            AdyenPaymentMethod::try_from((card_redirect_data, &item.router_data))?,
+            AdyenPaymentMethod::try_from(card_redirect_data)?,
         ));
 
         Ok(Self(AdyenPaymentRequest {
