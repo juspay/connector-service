@@ -112,6 +112,7 @@ pub enum ConnectorEnum {
     Revolut,
     Gigadat,
     Loonio,
+    Hyperpg,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -186,6 +187,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Revolut => Ok(Self::Revolut),
             grpc_api_types::payments::Connector::Gigadat => Ok(Self::Gigadat),
             grpc_api_types::payments::Connector::Loonio => Ok(Self::Loonio),
+            grpc_api_types::payments::Connector::Hyperpg => Ok(Self::Hyperpg),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),

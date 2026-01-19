@@ -202,6 +202,7 @@ pub struct Connectors {
     pub revolut: ConnectorParams,
     pub gigadat: ConnectorParams,
     pub loonio: ConnectorParams,
+    pub hyperpg: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]

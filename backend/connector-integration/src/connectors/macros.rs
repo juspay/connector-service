@@ -311,6 +311,7 @@ macro_rules! expand_fn_handle_response {
         > {
             use error_stack::ResultExt;
             paste::paste! {let bridge = self.[< $flow:snake >];}
+            println!("Preprocessing response as per connector configuration.{:?}", res.response);
 
             // Apply preprocessing if specified in the macro
             let response_bytes = self

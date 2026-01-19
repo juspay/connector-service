@@ -199,3 +199,6 @@ pub use self::gigadat::Gigadat;
 
 pub mod loonio;
 pub use self::loonio::Loonio;
+
+pub mod hyperpg;
+pub use self::hyperpg::Hyperpg;

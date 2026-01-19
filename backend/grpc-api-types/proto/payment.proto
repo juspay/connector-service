@@ -591,6 +591,7 @@ enum Connector {
   REVOLUT = 104;
   LOONIO = 105;
   GIGADAT = 106;
+  HYPERPG = 107;
 }
 
 // Payment method types.
