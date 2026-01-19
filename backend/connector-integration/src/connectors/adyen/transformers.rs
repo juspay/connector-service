@@ -1955,23 +1955,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             AdyenPaymentMethod::try_from((bank_debit_data, &item.router_data))?,
         ));
 
-        let mut billing_address = billing_address;
         // For ACH bank debit, override state_or_province with state code (e.g., "CA" instead of "California")
-        if let BankDebitData::AchBankDebit { .. } = bank_debit_data {
-            if let Some(addr) = billing_address.as_mut() {
-                if let (Some(_billing), Some(address)) = (
-                    item.router_data.resource_common_data.get_optional_billing(),
-                    item.router_data
-                        .resource_common_data
-                        .get_optional_billing()
-                        .and_then(|b| b.address.as_ref()),
-                ) {
-                    if let Ok(state_code) = address.to_state_code() {
-                        addr.state_or_province = Some(state_code);
-                    }
-                }
-            }
-        }
+        let billing_address = match bank_debit_data {
+            BankDebitData::AchBankDebit { .. } => billing_address.map(|mut addr| {
+                addr.state_or_province = item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing()
+                    .and_then(|b| b.address.as_ref())
+                    .and_then(|address| address.to_state_code_as_optional().ok().flatten())
+                    .or(addr.state_or_province);
+                addr
+            }),
+            BankDebitData::SepaBankDebit { .. }
+            | BankDebitData::BacsBankDebit { .. }
+            | BankDebitData::BecsBankDebit { .. } => billing_address,
+        };
 
         Ok(Self {
             amount,
