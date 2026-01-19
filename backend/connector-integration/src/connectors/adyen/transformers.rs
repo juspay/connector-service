@@ -4,7 +4,7 @@ use common_enums::{self, AttemptStatus, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
-    ext_traits::{ByteSliceExt, OptionExt, ValueExt},
+    ext_traits::{ByteSliceExt, Encode, OptionExt, ValueExt},
     request::Method,
     types::{MinorUnit, SemanticVersion},
     SecretSerdeValue,
@@ -42,6 +42,7 @@ use url::Url;
 
 use super::AdyenRouterData;
 use crate::{
+    connectors::fiuu::transformers::{QrCodeInformation, QrImage},
     types::ResponseRouterData,
     utils::{self, is_manual_capture, to_connector_meta_from_secret},
 };
@@ -1994,19 +1995,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 ..
             } => {
                 // Validate expiry_date doesn't exceed 5 days from now (Adyen requirement)
-                if let Some(expiry) = expiry_date {
-                    let now = OffsetDateTime::now_utc();
-                    let max_expiry = now + Duration::days(5);
-                    let max_expiry_primitive =
-                        PrimitiveDateTime::new(max_expiry.date(), max_expiry.time());
+                expiry_date
+                    .map(|expiry| -> CustomResult<(), errors::ConnectorError> {
+                        let now = OffsetDateTime::now_utc();
+                        let max_expiry = now + Duration::days(5);
+                        let max_expiry_primitive =
+                            PrimitiveDateTime::new(max_expiry.date(), max_expiry.time());
 
-                    if *expiry > max_expiry_primitive {
-                        return Err(errors::ConnectorError::InvalidDataFormat {
-                            field_name: "expiry_date cannot be more than 5 days from now",
+                        if expiry > max_expiry_primitive {
+                            Err(errors::ConnectorError::InvalidDataFormat {
+                                field_name: "expiry_date cannot be more than 5 days from now",
+                            }
+                            .into())
+                        } else {
+                            Ok(())
                         }
-                        .into());
-                    }
-                }
+                    })
+                    .transpose()?;
 
                 // Use CPF or CNPJ as social security number (Brazilian tax ID)
                 (*expiry_date, cpf.clone().or_else(|| cnpj.clone()))
@@ -3093,9 +3098,6 @@ pub fn get_qr_code_response(
 fn get_qr_metadata(
     response: &QrCodeResponseResponse,
 ) -> CustomResult<Option<serde_json::Value>, errors::ConnectorError> {
-    use crate::connectors::fiuu::transformers::{QrCodeInformation, QrImage};
-    use common_utils::ext_traits::Encode;
-
     // Generate QR code image from qr_code_data
     let image_data = QrImage::new_from_data(response.action.qr_code_data.clone())
         .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
@@ -3113,35 +3115,27 @@ fn get_qr_metadata(
             time.assume_utc().unix_timestamp() * 1000
         });
 
-    if let (Some(image_data_url), Some(qr_code_url)) = (image_data_url.clone(), qr_code_url.clone())
-    {
-        let qr_code_info = QrCodeInformation::QrCodeUrl {
+    let qr_code_info = match (image_data_url, qr_code_url) {
+        (Some(image_data_url), Some(qr_code_url)) => Some(QrCodeInformation::QrCodeUrl {
             image_data_url,
             qr_code_url,
             display_to_timestamp,
-        };
-        Some(qr_code_info.encode_to_value())
-            .transpose()
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    } else if let (None, Some(qr_code_url)) = (image_data_url.clone(), qr_code_url.clone()) {
-        let qr_code_info = QrCodeInformation::QrCodeImageUrl {
+        }),
+        (None, Some(qr_code_url)) => Some(QrCodeInformation::QrCodeImageUrl {
             qr_code_url,
             display_to_timestamp,
-        };
-        Some(qr_code_info.encode_to_value())
-            .transpose()
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    } else if let (Some(image_data_url), None) = (image_data_url, qr_code_url) {
-        let qr_code_info = QrCodeInformation::QrDataUrl {
+        }),
+        (Some(image_data_url), None) => Some(QrCodeInformation::QrDataUrl {
             image_data_url,
             display_to_timestamp,
-        };
-        Some(qr_code_info.encode_to_value())
-            .transpose()
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    } else {
-        Ok(None)
-    }
+        }),
+        (None, None) => None,
+    };
+
+    qr_code_info
+        .map(|info| info.encode_to_value())
+        .transpose()
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
 }
 
 pub fn get_webhook_response(
