@@ -1469,12 +1469,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .unwrap_or(item.resource_common_data.get_billing_full_name()?),
                 })))
             }
-            BankDebitData::BecsBankDebit { .. } => {
-                Err(errors::ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("Adyen"),
-                )
-                .into())
-            }
+            BankDebitData::BecsBankDebit { .. } => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Adyen"),
+            )
+            .into()),
         }
     }
 }
@@ -1940,7 +1938,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let additional_data = get_additional_data(&item.router_data);
 
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata = get_adyen_metadata(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|secret| secret.expose()),
+        );
         let store = adyen_metadata.store.clone();
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
@@ -1953,11 +1957,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let mut billing_address = billing_address;
         // For ACH bank debit, override state_or_province with state code (e.g., "CA" instead of "California")
-        if let BankDebitData::AchBankDebit { .. } =
-            bank_debit_data
-        {
+        if let BankDebitData::AchBankDebit { .. } = bank_debit_data {
             if let Some(addr) = billing_address.as_mut() {
-                if let Ok(state_code) = item.router_data.resource_common_data.get_billing_state_code() {
+                if let Ok(state_code) = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_state_code()
+                {
                     addr.state_or_province = Some(state_code);
                 }
             }
@@ -2017,7 +2023,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .clone()
-                .map(|value| Secret::new(filter_adyen_metadata(value))),
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
             platform_chargeback_logic,
             session_validity: None,
         })
