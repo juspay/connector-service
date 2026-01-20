@@ -23,8 +23,8 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankDebitData, BankRedirectData, BankTransferData, Card, DefaultPCIHolder, CardRedirectData,
-        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+        BankDebitData, BankRedirectData, BankTransferData, Card, CardRedirectData,
+        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
