@@ -6813,6 +6813,16 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         })
         .transpose()?;
 
+    // Set amount_captured based on status - only if Charged/PartialCharged
+    let captured_amount = match status {
+        common_enums::AttemptStatus::Charged
+        | common_enums::AttemptStatus::PartialCharged
+        | common_enums::AttemptStatus::PartialChargedAndChargeable => router_data_v2.request.amount,
+        _ => None,
+    };
+
+    let minor_captured_amount = captured_amount;
+
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -6892,6 +6902,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     raw_connector_request,
                     connector_response,
                     connector_metadata: convert_connector_metadata_to_secret_string(connector_metadata),
+                    captured_amount,
+                    minor_captured_amount,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -6938,6 +6950,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 raw_connector_request,
                 connector_response: None,
                 connector_metadata: None,
+                captured_amount: None,
+                minor_captured_amount: None,
             }
         }
     };
@@ -8007,12 +8021,6 @@ impl<
         let payment_method_type =
             <Option<PaymentMethodType>>::foreign_try_from(value.payment_method_type())?;
         let capture_method = value.capture_method();
-        let setup_future_usage = match value.setup_future_usage() {
-            grpc_payment_types::FutureUsage::Unspecified => None,
-            _ => Some(common_enums::FutureUsage::foreign_try_from(
-                value.setup_future_usage(),
-            )?),
-        };
         let merchant_order_reference_id = value.merchant_order_reference_id;
         let webhook_url = value.webhook_url;
 
@@ -8155,7 +8163,6 @@ impl<
             }),
             merchant_account_id: value.merchant_account_id,
             merchant_configured_currency,
-            setup_future_usage,
         })
     }
 }

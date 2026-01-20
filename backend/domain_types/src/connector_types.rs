@@ -2326,7 +2326,6 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub connector_testing_data: Option<SecretSerdeValue>,
     pub merchant_account_id: Option<Secret<String>>,
     pub merchant_configured_currency: Option<Currency>,
-    pub setup_future_usage: Option<common_enums::FutureUsage>,
 }
 
 impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
