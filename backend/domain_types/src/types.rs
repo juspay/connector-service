@@ -8007,6 +8007,12 @@ impl<
         let payment_method_type =
             <Option<PaymentMethodType>>::foreign_try_from(value.payment_method_type())?;
         let capture_method = value.capture_method();
+        let setup_future_usage = match value.setup_future_usage() {
+            grpc_payment_types::FutureUsage::Unspecified => None,
+            _ => Some(common_enums::FutureUsage::foreign_try_from(
+                value.setup_future_usage(),
+            )?),
+        };
         let merchant_order_reference_id = value.merchant_order_reference_id;
         let webhook_url = value.webhook_url;
 
@@ -8149,6 +8155,7 @@ impl<
             }),
             merchant_account_id: value.merchant_account_id,
             merchant_configured_currency,
+            setup_future_usage,
         })
     }
 }

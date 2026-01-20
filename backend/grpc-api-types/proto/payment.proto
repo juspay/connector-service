@@ -2324,6 +2324,7 @@ message PaymentServiceRepeatEverythingRequest {
   // Behavioral Flags and Preferences
   optional bool off_session = 16; // Indicates if off-session process
   optional bool enable_partial_authorization = 23; // Indicates if partial authorization is enabled
+  optional FutureUsage setup_future_usage = 41; // Indicates future usage intention
 
   // State Information
   optional ConnectorState state = 22; // State data for access token storage and other connector-specific state
