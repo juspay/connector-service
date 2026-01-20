@@ -3392,7 +3392,7 @@ fn get_recurring_processing_model_for_repeat_payment<
     match (item.request.setup_future_usage, item.request.off_session) {
         // Setup for future off-session usage
         (Some(common_enums::FutureUsage::OffSession), _) => {
-            // For repeat payments with setup_future_usage, we want to store the payment method
+            // RepeatPaymentData always has mandate_reference
             let store_payment_method = true;
             let shopper_reference =
                 shopper_reference.ok_or(errors::ConnectorError::MissingRequiredField {
@@ -3404,8 +3404,8 @@ fn get_recurring_processing_model_for_repeat_payment<
                 Some(shopper_reference),
             ))
         }
-        // Off-session payment (default for repeat payments)
-        (_, Some(true)) | (None, _) => {
+        // Off-session payment
+        (_, Some(true)) => {
             let shopper_reference =
                 shopper_reference.ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "connector_customer_id",
@@ -3416,18 +3416,8 @@ fn get_recurring_processing_model_for_repeat_payment<
                 Some(shopper_reference),
             ))
         }
-        // On-session payment with saved card (CVV flow)
-        _ => {
-            let shopper_reference =
-                shopper_reference.ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_customer_id",
-                })?;
-            Ok((
-                Some(AdyenRecurringModel::UnscheduledCardOnFile),
-                None,
-                Some(shopper_reference),
-            ))
-        }
+        // On-session payment
+        _ => Ok((None, None, shopper_reference)),
     }
 }
 
