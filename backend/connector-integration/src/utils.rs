@@ -1,3 +1,4 @@
+pub mod qr_code;
 pub mod xml_utils;
 use common_utils::{
     errors::{ParsingError, ReportSwitchExt},
