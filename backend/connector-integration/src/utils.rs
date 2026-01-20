@@ -7,7 +7,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_types::{
-        CaptureSyncResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsSyncData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData,
     },
@@ -405,43 +405,5 @@ pub fn get_state_code_for_country(
                 Some(state.clone())
             }
         }
-    }
-}
-
-pub trait BillingData {
-    fn get_billing_first_name(&self) -> Result<Secret<String>, Error>;
-    fn get_optional_billing_last_name(&self) -> Option<Secret<String>>;
-    fn get_billing_email(&self) -> Result<common_utils::pii::Email, Error>;
-}
-
-impl BillingData for PaymentFlowData {
-    fn get_billing_first_name(&self) -> Result<Secret<String>, Error> {
-        self.address
-            .get_payment_method_billing()
-            .and_then(|billing_address| {
-                billing_address
-                    .address
-                    .as_ref()
-                    .and_then(|address| address.first_name.clone())
-            })
-            .ok_or_else(missing_field_err("billing.first_name"))
-    }
-
-    fn get_optional_billing_last_name(&self) -> Option<Secret<String>> {
-        self.address
-            .get_payment_method_billing()
-            .and_then(|billing_address| {
-                billing_address
-                    .address
-                    .as_ref()
-                    .and_then(|address| address.last_name.clone())
-            })
-    }
-
-    fn get_billing_email(&self) -> Result<common_utils::pii::Email, Error> {
-        self.address
-            .get_payment_method_billing()
-            .and_then(|billing_address| billing_address.email.clone())
-            .ok_or_else(missing_field_err("payment_method_data.billing.email"))
     }
 }
