@@ -401,6 +401,48 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    From<
+        &PaypalRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for ShippingAddress
+{
+    fn from(
+        item: &PaypalRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Self {
+        Self {
+            address: get_address_info(
+                item.router_data
+                    .resource_common_data
+                    .get_optional_shipping(),
+            ),
+            name: Some(ShippingName {
+                full_name: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_shipping()
+                    .and_then(|inner_data| inner_data.address.as_ref())
+                    .and_then(|inner_data| inner_data.first_name.clone()),
+            }),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct PaypalUpdateOrderRequest(Vec<Operation>);
 
@@ -2713,6 +2755,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        let shipping_address = ShippingAddress::from(&item);
         let item_details = vec![ItemDetails::try_from(&item)?];
 
         let purchase_units = vec![PurchaseUnitRequest {
@@ -2721,7 +2764,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             invoice_id: Some(connector_request_reference_id),
             amount,
             payee,
-            shipping: None,
+            shipping: Some(shipping_address),
             items: item_details,
         }];
 
