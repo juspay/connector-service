@@ -14,10 +14,10 @@ option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/
 // HTTP methods.
 enum HttpMethod {
   HTTP_METHOD_UNSPECIFIED = 0; // Default, unspecified HTTP method.
-  GET = 1; // HTTP GET method.
-  POST = 2; // HTTP POST method.
-  PUT = 3; // HTTP PUT method.
-  DELETE = 4; // HTTP DELETE method.
+  GET = 1;                     // HTTP GET method.
+  POST = 2;                    // HTTP POST method.
+  PUT = 3;                     // HTTP PUT method.
+  DELETE = 4;                  // HTTP DELETE method.
 }
 
 // Status of a payment attempt.
@@ -26,9 +26,9 @@ enum PaymentStatus {
 
   // Initial states
   STARTED = 1;
-  PAYMENT_METHOD_AWAITED = 22; // Waiting for customer to provide payment method
+  PAYMENT_METHOD_AWAITED = 22;    // Waiting for customer to provide payment method
   DEVICE_DATA_COLLECTION_PENDING = 24; // Waiting for device data collection
-  CONFIRMATION_AWAITED = 23; // Waiting for customer confirmation
+  CONFIRMATION_AWAITED = 23;      // Waiting for customer confirmation
 
   // Authentication flow
   AUTHENTICATION_PENDING = 4;
@@ -63,9 +63,9 @@ enum PaymentStatus {
 
   // Terminal/fallback states
   ROUTER_DECLINED = 3;
-  PENDING = 20; // General pending state
-  FAILURE = 21; // General failure state
-  UNRESOLVED = 19; // Status could not be determined
+  PENDING = 20;       // General pending state
+  FAILURE = 21;       // General failure state
+  UNRESOLVED = 19;    // Status could not be determined
 }
 
 // Status of a payment authorization.
@@ -80,9 +80,9 @@ enum AuthorizationStatus {
 // Status of generic operations (non-payment specific).
 enum OperationStatus {
   OPERATION_STATUS_UNSPECIFIED = 0; // Default value
-  OPERATION_STATUS_SUCCESS = 1; // Operation completed successfully
-  OPERATION_STATUS_FAILURE = 2; // Operation failed
-  OPERATION_STATUS_PENDING = 3; // Operation is in progress
+  OPERATION_STATUS_SUCCESS = 1;     // Operation completed successfully
+  OPERATION_STATUS_FAILURE = 2;     // Operation failed
+  OPERATION_STATUS_PENDING = 3;     // Operation is in progress
   OPERATION_STATUS_AUTHENTICATION_FAILED = 4; // Authentication/authorization failed
   OPERATION_STATUS_RATE_LIMITED = 5; // Rate limit exceeded
   OPERATION_STATUS_INVALID_REQUEST = 6; // Invalid request parameters
@@ -94,7 +94,7 @@ enum OperationStatus {
 enum RefundStatus {
   REFUND_STATUS_UNSPECIFIED = 0; // Default value
   REFUND_FAILURE = 1;
-  REFUND_MANUAL_REVIEW = 2; // Refund requires manual review
+  REFUND_MANUAL_REVIEW = 2;      // Refund requires manual review
   REFUND_PENDING = 3;
   REFUND_SUCCESS = 4;
   REFUND_TRANSACTION_FAILURE = 5; // Failure at the transaction level for the refund
@@ -107,7 +107,7 @@ enum DisputeStatus {
   DISPUTE_EXPIRED = 2;
   DISPUTE_ACCEPTED = 3;
   DISPUTE_CANCELLED = 4;
-  DISPUTE_CHALLENGED = 5; // Dispute is being challenged with evidence
+  DISPUTE_CHALLENGED = 5;         // Dispute is being challenged with evidence
   DISPUTE_WON = 6;
   DISPUTE_LOST = 7;
 }
@@ -124,23 +124,23 @@ enum MandateStatus {
 // Method for capturing a payment.
 enum CaptureMethod {
   CAPTURE_METHOD_UNSPECIFIED = 0; // Default value
-  AUTOMATIC = 1; // Capture is done automatically after authorization.
-  MANUAL = 2; // Capture must be triggered manually.
-  MANUAL_MULTIPLE = 3; // Multiple manual captures are possible.
-  SCHEDULED = 4; // Capture is scheduled for a later time.
-  SEQUENTIAL_AUTOMATIC = 5; // Sequential automatic captures.
+  AUTOMATIC = 1;                  // Capture is done automatically after authorization.
+  MANUAL = 2;                     // Capture must be triggered manually.
+  MANUAL_MULTIPLE = 3;            // Multiple manual captures are possible.
+  SCHEDULED = 4;                  // Capture is scheduled for a later time.
+  SEQUENTIAL_AUTOMATIC = 5;       // Sequential automatic captures.
 }
 
 // Indicates how a payment method might be used in the future.
 enum FutureUsage {
-  FUTURE_USAGE_UNSPECIFIED = 0; // Default value
-  OFF_SESSION = 1; // For merchant-initiated transactions (e.g., subscriptions).
-  ON_SESSION = 2; // For customer-initiated transactions.
+  FUTURE_USAGE_UNSPECIFIED = 0;   // Default value
+  OFF_SESSION = 1;                // For merchant-initiated transactions (e.g., subscriptions).
+  ON_SESSION = 2;                 // For customer-initiated transactions.
 }
 
 // Indicates the category of MIT.
 enum MitCategory {
-  MIT_CATEGORY_UNSPECIFIED = 0; // Default value
+  MIT_CATEGORY_UNSPECIFIED = 0;   // Default value
   // A fixed purchase amount split into multiple scheduled payments until the total is paid.
   INSTALLMENT_MIT = 1;
   // Merchant-initiated transaction using stored credentials, but not tied to a fixed schedule
@@ -153,7 +153,7 @@ enum MitCategory {
 
 // Indicates the type of payment sync request.
 enum SyncRequestType {
-  SYNC_REQUEST_TYPE_UNSPECIFIED = 0; // Default value
+  SYNC_REQUEST_TYPE_UNSPECIFIED = 0;   // Default value
   SINGLE_PAYMENT_SYNC = 1;
   MULTIPLE_CAPTURE_SYNC = 2;
 }
@@ -161,15 +161,15 @@ enum SyncRequestType {
 // Type of acceptance.
 enum AcceptanceType {
   ACCEPTANCE_TYPE_UNSPECIFIED = 0; // Default value
-  ONLINE = 1; // Acceptance was given online.
-  OFFLINE = 2; // Acceptance was given offline.
+  ONLINE = 1;                      // Acceptance was given online.
+  OFFLINE = 2;                     // Acceptance was given offline.
 }
 
 // Type of authentication used for a payment.
 enum AuthenticationType {
   AUTHENTICATION_TYPE_UNSPECIFIED = 0; // Default value
-  THREE_DS = 1; // 3D Secure authentication.
-  NO_THREE_DS = 2; // No 3D Secure, or 3DS explicitly bypassed.
+  THREE_DS = 1;                        // 3D Secure authentication.
+  NO_THREE_DS = 2;                     // No 3D Secure, or 3DS explicitly bypassed.
 }
 
 // Indicates if 3DS method data was successfully completed or not.
@@ -183,19 +183,19 @@ enum ThreeDsCompletionIndicator {
 // Indicates the transaction status from authentication/verification process.
 enum TransactionStatus {
   // Authentication/Account Verification Successful
-  TRANSACTION_STATUS_SUCCESS = 0; // "Y"
+  TRANSACTION_STATUS_SUCCESS = 0;        // "Y"
 
   // Not Authenticated/Account Not Verified; Transaction denied
-  TRANSACTION_STATUS_FAILURE = 1; // "N"
+  TRANSACTION_STATUS_FAILURE = 1;        // "N"
 
   // Authentication/Account Verification Could Not Be Performed; Technical or other problem
   TRANSACTION_STATUS_VERIFICATION_NOT_PERFORMED = 2; // "U"
 
   // Attempts Processing Performed; Not Authenticated/Verified, but proof of attempted authentication/verification is provided
-  TRANSACTION_STATUS_NOT_VERIFIED = 3; // "A"
+  TRANSACTION_STATUS_NOT_VERIFIED = 3;   // "A"
 
   // Authentication/Account Verification Rejected; Issuer is rejecting authentication/verification
-  TRANSACTION_STATUS_REJECTED = 4; // "R"
+  TRANSACTION_STATUS_REJECTED = 4;       // "R"
 
   // Challenge Required; Additional authentication is required using the Challenge Request (CReq) / Challenge Response (CRes)
   TRANSACTION_STATUS_CHALLENGE_REQUIRED = 5; // "C"
@@ -246,14 +246,14 @@ enum ExemptionIndicator {
 // Preferred payment experience for the customer.
 enum PaymentExperience {
   PAYMENT_EXPERIENCE_UNSPECIFIED = 0; // Default value
-  REDIRECT_TO_URL = 1; // Redirect customer to a URL.
-  INVOKE_SDK_CLIENT = 2; // Invoke a client-side SDK.
-  DISPLAY_QR_CODE = 3; // Display a QR code.
-  ONE_CLICK = 4; // One-click payment experience.
-  LINK_WALLET = 5; // Link a digital wallet.
-  INVOKE_PAYMENT_APP = 6; // Invoke a payment application.
-  DISPLAY_WAIT_SCREEN = 7; // Display a waiting screen.
-  COLLECT_OTP = 8; // Collect an OTP from the customer.
+  REDIRECT_TO_URL = 1;                // Redirect customer to a URL.
+  INVOKE_SDK_CLIENT = 2;              // Invoke a client-side SDK.
+  DISPLAY_QR_CODE = 3;                // Display a QR code.
+  ONE_CLICK = 4;                      // One-click payment experience.
+  LINK_WALLET = 5;                    // Link a digital wallet.
+  INVOKE_PAYMENT_APP = 6;             // Invoke a payment application.
+  DISPLAY_WAIT_SCREEN = 7;            // Display a waiting screen.
+  COLLECT_OTP = 8;                    // Collect an OTP from the customer.
 }
 
 // Describes the channel through which the payment was initiated..
@@ -269,59 +269,59 @@ enum WebhookEventType {
   INCOMING_WEBHOOK_EVENT_UNSPECIFIED = 0; // Default unspecified event
 
   // Payment intent events
-  PAYMENT_INTENT_FAILURE = 1; // Authorization + Capture failure
-  PAYMENT_INTENT_SUCCESS = 2; // Authorization + Capture success
-  PAYMENT_INTENT_PROCESSING = 3; // Payment intent is processing
-  PAYMENT_INTENT_PARTIALLY_FUNDED = 4; // Payment intent is partially funded
-  PAYMENT_INTENT_CANCELLED = 5; // Payment intent cancelled
-  PAYMENT_INTENT_CANCEL_FAILURE = 6; // Payment intent cancel failure
+  PAYMENT_INTENT_FAILURE = 1;              // Authorization + Capture failure
+  PAYMENT_INTENT_SUCCESS = 2;              // Authorization + Capture success
+  PAYMENT_INTENT_PROCESSING = 3;           // Payment intent is processing
+  PAYMENT_INTENT_PARTIALLY_FUNDED = 4;     // Payment intent is partially funded
+  PAYMENT_INTENT_CANCELLED = 5;            // Payment intent cancelled
+  PAYMENT_INTENT_CANCEL_FAILURE = 6;       // Payment intent cancel failure
   PAYMENT_INTENT_AUTHORIZATION_SUCCESS = 7; // Authorization success
   PAYMENT_INTENT_AUTHORIZATION_FAILURE = 8; // Authorization failure
-  PAYMENT_INTENT_CAPTURE_SUCCESS = 9; // Capture success
-  PAYMENT_INTENT_CAPTURE_FAILURE = 10; // Capture failure
-  PAYMENT_INTENT_EXPIRED = 11; // Payment intent expired
-  PAYMENT_ACTION_REQUIRED = 12; // Payment requires additional action
+  PAYMENT_INTENT_CAPTURE_SUCCESS = 9;      // Capture success
+  PAYMENT_INTENT_CAPTURE_FAILURE = 10;     // Capture failure
+  PAYMENT_INTENT_EXPIRED = 11;             // Payment intent expired
+  PAYMENT_ACTION_REQUIRED = 12;            // Payment requires additional action
 
-  SOURCE_CHARGEABLE = 13; // Source is chargeable
-  SOURCE_TRANSACTION_CREATED = 14; // Source transaction created
+  SOURCE_CHARGEABLE = 13;                  // Source is chargeable
+  SOURCE_TRANSACTION_CREATED = 14;         // Source transaction created
 
   // Refund events
-  WEBHOOK_REFUND_FAILURE = 15; // Refund failure
-  WEBHOOK_REFUND_SUCCESS = 16; // Refund success
+  WEBHOOK_REFUND_FAILURE = 15;                     // Refund failure
+  WEBHOOK_REFUND_SUCCESS = 16;                     // Refund success
 
   // Dispute events
-  WEBHOOK_DISPUTE_OPENED = 17; // Dispute opened
-  WEBHOOK_DISPUTE_EXPIRED = 18; // Dispute expired
-  WEBHOOK_DISPUTE_ACCEPTED = 19; // Dispute accepted
-  WEBHOOK_DISPUTE_CANCELLED = 20; // Dispute cancelled
-  WEBHOOK_DISPUTE_CHALLENGED = 21; // Dispute challenged
-  WEBHOOK_DISPUTE_WON = 22; // Dispute successfully challenged by merchant
-  WEBHOOK_DISPUTE_LOST = 23; // Dispute unsuccessfully challenged
+  WEBHOOK_DISPUTE_OPENED = 17;                     // Dispute opened
+  WEBHOOK_DISPUTE_EXPIRED = 18;                    // Dispute expired
+  WEBHOOK_DISPUTE_ACCEPTED = 19;                   // Dispute accepted
+  WEBHOOK_DISPUTE_CANCELLED = 20;                  // Dispute cancelled
+  WEBHOOK_DISPUTE_CHALLENGED = 21;                 // Dispute challenged
+  WEBHOOK_DISPUTE_WON = 22;                        // Dispute successfully challenged by merchant
+  WEBHOOK_DISPUTE_LOST = 23;                       // Dispute unsuccessfully challenged
 
   // Mandate events
-  MANDATE_ACTIVE = 24; // Mandate is active
-  MANDATE_REVOKED = 25; // Mandate revoked
+  MANDATE_ACTIVE = 24;                     // Mandate is active
+  MANDATE_REVOKED = 25;                    // Mandate revoked
 
   // Misc events
-  ENDPOINT_VERIFICATION = 26; // Endpoint verification
-  EXTERNAL_AUTHENTICATION_ARES = 27; // External authentication ARes
-  FRM_APPROVED = 28; // Fraud risk management approved
-  FRM_REJECTED = 29; // Fraud risk management rejected
+  ENDPOINT_VERIFICATION = 26;              // Endpoint verification
+  EXTERNAL_AUTHENTICATION_ARES = 27;       // External authentication ARes
+  FRM_APPROVED = 28;                       // Fraud risk management approved
+  FRM_REJECTED = 29;                       // Fraud risk management rejected
 
   // Payout events
-  PAYOUT_SUCCESS = 30; // Payout success
-  PAYOUT_FAILURE = 31; // Payout failure
-  PAYOUT_PROCESSING = 32; // Payout processing
-  PAYOUT_CANCELLED = 33; // Payout cancelled
-  PAYOUT_CREATED = 34; // Payout created
-  PAYOUT_EXPIRED = 35; // Payout expired
-  PAYOUT_REVERSED = 36; // Payout reversed
+  PAYOUT_SUCCESS = 30;                     // Payout success
+  PAYOUT_FAILURE = 31;                     // Payout failure
+  PAYOUT_PROCESSING = 32;                  // Payout processing
+  PAYOUT_CANCELLED = 33;                   // Payout cancelled
+  PAYOUT_CREATED = 34;                     // Payout created
+  PAYOUT_EXPIRED = 35;                     // Payout expired
+  PAYOUT_REVERSED = 36;                    // Payout reversed
 
   // Recovery events
-  RECOVERY_PAYMENT_FAILURE = 37; // Recovery payment failure
-  RECOVERY_PAYMENT_SUCCESS = 38; // Recovery payment success
-  RECOVERY_PAYMENT_PENDING = 39; // Recovery payment pending
-  RECOVERY_INVOICE_CANCEL = 40; // Recovery invoice cancelled
+  RECOVERY_PAYMENT_FAILURE = 37;           // Recovery payment failure
+  RECOVERY_PAYMENT_SUCCESS = 38;           // Recovery payment success
+  RECOVERY_PAYMENT_PENDING = 39;           // Recovery payment pending
+  RECOVERY_INVOICE_CANCEL = 40;            // Recovery invoice cancelled
 }
 
 // Enum for currency codes (ISO 4217).
@@ -845,12 +845,12 @@ message BillingDescriptor {
 // Algorithm used to generate CAVV (Cardholder Authentication Verification Value).
 enum CavvAlgorithm {
   CAVV_ALGORITHM_UNSPECIFIED = 0;
-  CAVV_ALGORITHM_ZERO = 1; // "00" — Reserved or unspecified algorithm.
-  CAVV_ALGORITHM_ONE = 2; // "01" — HMAC-based algorithm.
-  CAVV_ALGORITHM_TWO = 3; // "02" — RSA-based algorithm (standard 3DS cryptographic method).
-  CAVV_ALGORITHM_THREE = 4; // "03" — Elliptic Curve algorithm.
-  CAVV_ALGORITHM_FOUR = 5; // "04" — Proprietary algorithm defined by the card network.
-  CAVV_ALGORITHM_A = 6; // "A" — Custom or network-defined algorithm indicator.
+  CAVV_ALGORITHM_ZERO = 1;   // "00" — Reserved or unspecified algorithm.
+  CAVV_ALGORITHM_ONE = 2;    // "01" — HMAC-based algorithm.
+  CAVV_ALGORITHM_TWO = 3;    // "02" — RSA-based algorithm (standard 3DS cryptographic method).
+  CAVV_ALGORITHM_THREE = 4;  // "03" — Elliptic Curve algorithm.
+  CAVV_ALGORITHM_FOUR = 5;   // "04" — Proprietary algorithm defined by the card network.
+  CAVV_ALGORITHM_A = 6;      // "A" — Custom or network-defined algorithm indicator.
 }
 
 // Cartes Bancaires network-specific parameters for 3DS.
@@ -1127,17 +1127,17 @@ message MultipleCaptureRequestData {
 
 // Type of evidence that can be submitted for a dispute.
 enum EvidenceType {
-  EVIDENCE_TYPE_UNSPECIFIED = 0; // Default value
-  CANCELLATION_POLICY = 1; // Cancellation policy document
-  CUSTOMER_COMMUNICATION = 2; // Communication with customer
-  CUSTOMER_SIGNATURE = 3; // Customer signature document
-  RECEIPT = 4; // Receipt or proof of purchase
-  REFUND_POLICY = 5; // Refund policy document
-  SERVICE_DOCUMENTATION = 6; // Service documentation
-  SHIPPING_DOCUMENTATION = 7; // Shipping documentation
-  INVOICE_SHOWING_DISTINCT_TRANSACTIONS = 8; // Invoice showing distinct transactions
-  RECURRING_TRANSACTION_AGREEMENT = 9; // Recurring transaction agreement
-  UNCATEGORIZED_FILE = 10; // Uncategorized evidence file
+  EVIDENCE_TYPE_UNSPECIFIED = 0;              // Default value
+  CANCELLATION_POLICY = 1;                    // Cancellation policy document
+  CUSTOMER_COMMUNICATION = 2;                 // Communication with customer
+  CUSTOMER_SIGNATURE = 3;                     // Customer signature document
+  RECEIPT = 4;                                // Receipt or proof of purchase
+  REFUND_POLICY = 5;                         // Refund policy document
+  SERVICE_DOCUMENTATION = 6;                  // Service documentation
+  SHIPPING_DOCUMENTATION = 7;                // Shipping documentation
+  INVOICE_SHOWING_DISTINCT_TRANSACTIONS = 8;  // Invoice showing distinct transactions
+  RECURRING_TRANSACTION_AGREEMENT = 9;        // Recurring transaction agreement
+  UNCATEGORIZED_FILE = 10;                   // Uncategorized evidence file
 }
 
 // Represents a single piece of evidence for a dispute.
@@ -1624,8 +1624,8 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Send the connector order identifier here if an order was created before authorize
   optional string connector_order_reference_id = 41; // Connector's reference id for order
-
-  // Locale Information
+  
+   // Locale Information
   optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
 
   // URL for Redirection
@@ -1903,7 +1903,7 @@ message PaymentServiceSdkSessionTokenRequest {
   int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
   optional int64 order_tax_amount = 5; // Tax amount for the order
   optional int64 shipping_cost = 6; // Cost of shipping for the order
-
+  
   // Payment Method Type
   optional PaymentMethodType payment_method_type = 7; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
 
@@ -2023,10 +2023,10 @@ message PaymentServiceCreateOrderRequest {
 
 // Response message for create order operation.
 message PaymentServiceCreateOrderResponse {
-  // Identification
+// Identification
   Identifier order_id = 1; // Identifier for the create order response
 
-  // Status Information
+// Status Information
   PaymentStatus status = 2; // Status of the payment after the capture attempt
   optional string error_code = 3; // Error code if the capture failed
   optional string error_message = 4; // Error message if the capture failed
@@ -2076,7 +2076,7 @@ message PaymentServiceRefundRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 18; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-
+  
   // Environment Configuration
   optional bool test_mode = 19; // A boolean value to indicate if the connector is in Test mode
 
@@ -2238,7 +2238,7 @@ message PaymentServiceRegisterRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 30; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-
+  
   optional BillingDescriptor billing_descriptor = 42; // Billing Descriptor information to be sent to the payment gateway
 
   // State Information
@@ -2250,7 +2250,7 @@ message PaymentServiceRegisterRequest {
   optional string order_id = 33;
 
   // Locale Information
-  optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
+  optional string locale =  45; // Locale/language preference for the shopper (e.g., "en-US")
 
   // Testing Data
   optional SecretString connector_testing_data = 46; // Connector-specific testing data (JSON stringified)
@@ -2306,7 +2306,7 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Optional payment Method Information (required for network transaction flows)
   optional PaymentMethod payment_method = 35;
-
+  
   // Optional fields
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   optional SecretString metadata = 7; // Additional metadata for the connector
@@ -2344,7 +2344,7 @@ message PaymentServiceRepeatEverythingRequest {
   optional ConnectorState state = 22; // State data for access token storage and other connector-specific state
 
   optional RecurringMandatePaymentData recurring_mandate_payment_data = 9; // Mandate payment details
-
+  
   // Shipping Cost
   optional int64 shipping_cost = 34; // Shipping cost in minor units (e.g., cents)
 
@@ -2394,7 +2394,7 @@ message PaymentServiceRepeatEverythingResponse {
   uint32 status_code = 8; // HTTP status code from the connector
   map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
 
-  // Metadata
+    // Metadata
   optional SecretString connector_metadata = 13; // Connector-specific metadata for the transaction
 
   // Transaction Details
@@ -2425,7 +2425,7 @@ message PaymentServiceRepeatEverythingResponse {
 message PaymentServiceRevokeMandateRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
-
+  
   // Mandate Details
   string mandate_id = 2; // unique identifier for the mandate.
   optional string connector_mandate_id = 3;
@@ -2808,8 +2808,8 @@ message PaymentServiceTransformRequest {
 // Status of webhook transformation process
 enum WebhookTransformationStatus {
   WEBHOOK_TRANSFORMATION_STATUS_UNSPECIFIED = 0; // Default value
-  COMPLETE = 1; // Transformation completed successfully
-  INCOMPLETE = 2; // Transformation incomplete, requires psync call
+  COMPLETE = 1;     // Transformation completed successfully
+  INCOMPLETE = 2;   // Transformation incomplete, requires psync call
 }
 
 // Response message for PaymentService.Transform RPC
@@ -2847,15 +2847,15 @@ message RefundServiceGetRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
 
-  // Metadata
+// Metadata
   optional SecretString refund_metadata = 7; // Metadata specific to the refund sync
 
-  // State Information
+// State Information
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
 
-  // Account-Specific Configuration
+// Account-Specific Configuration
   optional SecretString merchant_account_metadata = 9; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-
+  
   // Environment Configuration
   optional bool test_mode = 10; // A boolean value to indicate if the connector is in Test mode
 
