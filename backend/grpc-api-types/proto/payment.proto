@@ -1034,6 +1034,9 @@ message RedirectForm {
 
     // Braintree-specific redirection data for SDK-based flows.  
     BraintreeData braintree = 4;
+
+    // Mifinity-specific redirection data for SDK-based flows.  
+    MifinityData mifinity = 5;
   }
 }
 
@@ -1075,6 +1078,12 @@ message BraintreeData {
   // URL for completing the authorization flow  
   string acs_url = 4;  
 }  
+
+// Represents Mifinity-specific redirection data  
+message MifinityData {  
+  // Initialization token for Mifinity SDK initialization
+  string initialization_token = 1;
+} 
 
 // Details of an HTTP request, typically for incoming webhooks.
 message RequestDetails {
