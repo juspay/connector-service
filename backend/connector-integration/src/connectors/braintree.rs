@@ -397,7 +397,7 @@ macros::create_all_prerequisites!(
     }
 );
 
-// Manual implementation for Authorize with conditional resonse body
+// Manual implementation for Authorize with conditional response body
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         Authorize,
