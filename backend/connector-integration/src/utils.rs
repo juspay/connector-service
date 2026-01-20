@@ -1,3 +1,4 @@
+pub mod qr_code;
 pub mod xml_utils;
 use common_utils::{
     errors::{ParsingError, ReportSwitchExt},
@@ -7,9 +8,8 @@ use common_utils::{
 };
 use domain_types::{
     connector_types::{
-        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsSyncData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData,
+        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsSyncData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,

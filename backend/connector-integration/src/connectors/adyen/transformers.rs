@@ -42,9 +42,12 @@ use url::Url;
 
 use super::AdyenRouterData;
 use crate::{
-    connectors::fiuu::transformers::{QrCodeInformation, QrImage},
     types::ResponseRouterData,
-    utils::{self, is_manual_capture, to_connector_meta_from_secret},
+    utils::{
+        self, is_manual_capture,
+        qr_code::{QrCodeInformation, QrImage},
+        to_connector_meta_from_secret,
+    },
 };
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -1939,13 +1942,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let adyen_metadata =
             get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
 
-        let (store, splits) = match item.router_data.request.split_payments.as_ref() {
-            Some(_split_payment) => {
-                // todo: Handle split payments if needed
-                (adyen_metadata.store.clone(), None)
-            }
-            _ => (adyen_metadata.store.clone(), None),
-        };
+        // Split payments not currently handled for bank transfers
+        let store = adyen_metadata.store.clone();
+        let splits = None;
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
@@ -2198,10 +2197,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let adyen_metadata =
             get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
 
-        let (store, splits) = match item.router_data.request.split_payments.as_ref() {
-            Some(_split_payment) => (adyen_metadata.store.clone(), None),
-            _ => (adyen_metadata.store.clone(), None),
-        };
+        // Split payments not currently handled for bank transfers
+        let store = adyen_metadata.store.clone();
+        let splits = None;
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
