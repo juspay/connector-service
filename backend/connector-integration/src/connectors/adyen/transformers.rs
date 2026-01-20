@@ -23,8 +23,8 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankRedirectData, BankDebitData, BankTransferData, Card, DefaultPCIHolder, PaymentMethodData,
-        PaymentMethodDataTypes, RawCardNumber, WalletData,
+        BankDebitData, BankRedirectData, BankTransferData, Card, DefaultPCIHolder,
+        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -2195,7 +2195,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_payment_billing(),
         )
         .and_then(Result::ok);
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
 
         let (store, splits) = match item.router_data.request.split_payments.as_ref() {
             Some(_split_payment) => (adyen_metadata.store.clone(), None),
@@ -2295,7 +2296,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .clone()
-                .map(|value| Secret::new(filter_adyen_metadata(value))),
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
             platform_chargeback_logic,
             session_validity,
         })
@@ -2370,11 +2371,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::BankTransfer(ref bank_transfer) => {
                     Self::try_from((item, bank_transfer.as_ref()))
                 }
-                PaymentMethodData::PayLater(_)
-                | PaymentMethodData::BankDebit(_)
                 PaymentMethodData::BankDebit(ref bank_debit) => Self::try_from((item, bank_debit)),
                 PaymentMethodData::PayLater(_)
-                | PaymentMethodData::BankTransfer(_)
                 | PaymentMethodData::CardRedirect(_)
                 | PaymentMethodData::Voucher(_)
                 | PaymentMethodData::GiftCard(_)
