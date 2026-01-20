@@ -1031,6 +1031,9 @@ message RedirectForm {
 
     // URI for direct redirection (e.g., UPI deep links).
     UriData uri = 3;
+
+    // Braintree-specific redirection data for SDK-based flows.  
+    BraintreeData braintree = 4;
   }
 }
 
@@ -1057,6 +1060,21 @@ message UriData {
   // The URI for redirection (e.g., UPI deep link).
   string uri = 1;
 }
+
+// Represents Braintree-specific redirection data  
+message BraintreeData {  
+  // Client token for Braintree SDK initialization  
+  string client_token = 1;  
+    
+  // Tokenized payment method identifier  
+  string card_token = 2;  
+    
+  // Bank Identification Number for card verification  
+  string bin = 3;  
+    
+  // URL for completing the authorization flow  
+  string acs_url = 4;  
+}  
 
 // Details of an HTTP request, typically for incoming webhooks.
 message RequestDetails {

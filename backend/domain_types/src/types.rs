@@ -3558,6 +3558,18 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                                         ))
                                     })
                                 },
+                                router_response_types::RedirectForm::Braintree { client_token, card_token, bin,  acs_url } => {
+                                    Ok(grpc_api_types::payments::RedirectForm {
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Braintree(
+                                            grpc_api_types::payments::BraintreeData {
+                                               client_token,
+                                               card_token,
+                                               bin,
+                                               acs_url,
+                                            }
+                                        ))
+                                    })
+                                },
                                 _ => Err(
                                     ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_RESPONSE".to_owned(),
