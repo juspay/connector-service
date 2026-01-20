@@ -2252,6 +2252,10 @@ message PaymentServiceRegisterResponse {
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
 
+  // Captured Amount Details
+  optional int64 captured_amount = 17; // Amount that has been captured
+  optional int64 minor_captured_amount = 18; // Captured amount in minor currency units
+
   // State Information
   optional ConnectorState state = 12; // State data for access token storage and other connector-specific state
 
@@ -2310,7 +2314,6 @@ message PaymentServiceRepeatEverythingRequest {
   // Behavioral Flags and Preferences
   optional bool off_session = 16; // Indicates if off-session process
   optional bool enable_partial_authorization = 23; // Indicates if partial authorization is enabled
-  optional FutureUsage setup_future_usage = 41; // Indicates future usage intention
 
   // State Information
   optional ConnectorState state = 22; // State data for access token storage and other connector-specific state

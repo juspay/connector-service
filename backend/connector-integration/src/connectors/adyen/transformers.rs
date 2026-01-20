@@ -3389,23 +3389,9 @@ fn get_recurring_processing_model_for_repeat_payment<
 ) -> Result<RecurringDetails, Error> {
     let shopper_reference = item.resource_common_data.get_connector_customer_id().ok();
 
-    match (item.request.setup_future_usage, item.request.off_session) {
-        // Setup for future off-session usage
-        (Some(common_enums::FutureUsage::OffSession), _) => {
-            // RepeatPaymentData always has mandate_reference
-            let store_payment_method = true;
-            let shopper_reference =
-                shopper_reference.ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_customer_id",
-                })?;
-            Ok((
-                Some(AdyenRecurringModel::UnscheduledCardOnFile),
-                Some(store_payment_method),
-                Some(shopper_reference),
-            ))
-        }
+    match item.request.off_session {
         // Off-session payment
-        (_, Some(true)) => {
+        Some(true) => {
             let shopper_reference =
                 shopper_reference.ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "connector_customer_id",
