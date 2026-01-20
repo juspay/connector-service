@@ -1087,6 +1087,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
     pub locale: Option<String>,
+    pub tokenization: Option<common_enums::Tokenization>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -2384,6 +2385,9 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => None,
         }
+    }
+    pub fn get_optional_email(&self) -> Option<Email> {
+        self.email.clone()
     }
 }
 
