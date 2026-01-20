@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.13.2-hotfix3
+
+### Bug Fixes
+
+- Add secondary base url for Fiuu ([#436](https://github.com/juspay/connector-service/pull/436)) ([`b602242`](https://github.com/juspay/connector-service/commit/b602242995c7da94125598db43b5a4aedec1a328))
+
+**Full Changelog:** [`2026.01.13.2-hotfix2...2026.01.13.2-hotfix3`](https://github.com/juspay/connector-service/compare/2026.01.13.2-hotfix2...2026.01.13.2-hotfix3)
+
+- - -
+
 ## 2026.01.13.2-hotfix2
 
 ### Bug Fixes
