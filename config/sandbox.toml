@@ -1,9 +1,6 @@
 [common]
 environment = "sandbox"
 
-[connectors]
-test_mode = true
-
 [log.console]
 enabled = true
 level = "TRACE"
@@ -22,6 +19,9 @@ port = 8080
 idle_pool_connection_timeout = 90               # Timeout for idle pool connections (defaults to 90s)
 bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
+
+[connectors]
+environment = "sandbox"
 
 [connectors.sandbox]
 gigadat.base_url = "https://interac.express-connect.com/"

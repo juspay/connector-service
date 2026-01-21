@@ -110,26 +110,26 @@ use crate::{
     utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
 };
 
-/// Configuration set for all connectors (sandbox or production)
 #[derive(
-    Debug,
     Clone,
     serde::Deserialize,
     serde::Serialize,
+    Debug,
     Default,
     PartialEq,
     config_patch_derive::Patch,
 )]
 pub struct ConnectorConfigSet {
+    // Added pub
     pub adyen: ConnectorParams,
     pub forte: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub razorpayv2: ConnectorParams,
     pub fiserv: ConnectorParams,
-    pub elavon: ConnectorParams,
+    pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
     pub checkout: ConnectorParams,
-    pub authorizedotnet: ConnectorParams,
+    pub authorizedotnet: ConnectorParams, // Add your connector params
     pub mifinity: ConnectorParams,
     pub phonepe: ConnectorParams,
     pub cashfree: ConnectorParams,
@@ -192,6 +192,20 @@ pub struct ConnectorConfigSet {
     pub wellsfargo: ConnectorParams,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize, config_patch_derive::Patch)]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectorEnvironment {
+    Sandbox,
+    Production,
+}
+
+// Implement default for backward compatibility
+impl Default for ConnectorEnvironment {
+    fn default() -> Self {
+        Self::Sandbox
+    }
+}
+
 #[derive(
     Clone,
     serde::Deserialize,
@@ -202,17 +216,16 @@ pub struct ConnectorConfigSet {
     config_patch_derive::Patch,
 )]
 pub struct Connectors {
-    pub test_mode: bool,
+    pub environment: ConnectorEnvironment,
     pub sandbox: ConnectorConfigSet,
     pub production: ConnectorConfigSet,
 }
 
 impl Connectors {
     pub fn get_config(&self) -> &ConnectorConfigSet {
-        if self.test_mode {
-            &self.sandbox
-        } else {
-            &self.production
+        match self.environment {
+            ConnectorEnvironment::Sandbox => &self.sandbox,
+            ConnectorEnvironment::Production => &self.production,
         }
     }
 }

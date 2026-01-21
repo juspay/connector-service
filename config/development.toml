@@ -1,9 +1,6 @@
 [common]
 environment = "development"
 
-[connectors]
-test_mode = true
-
 [log.console]
 enabled = true
 level = "TRACE"
@@ -44,6 +41,9 @@ mock_server_url = "http://localhost:3000/mockGateway"
 #
 [api_tags.tags]
 psync = "GW_TXN_SYNC"
+
+[connectors]
+environment = "sandbox"
 
 [connectors.sandbox]
 gigadat.base_url = "https://interac.express-connect.com/"
