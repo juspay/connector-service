@@ -1032,6 +1032,12 @@ message RedirectForm {
 
     // URI for direct redirection (e.g., UPI deep links).
     UriData uri = 3;
+
+    // Braintree-specific redirection data for SDK-based flows.  
+    BraintreeData braintree = 4;
+
+    // Mifinity-specific redirection data for SDK-based flows.  
+    MifinityData mifinity = 5;
   }
 }
 
@@ -1058,6 +1064,27 @@ message UriData {
   // The URI for redirection (e.g., UPI deep link).
   string uri = 1;
 }
+
+// Represents Braintree-specific redirection data  
+message BraintreeData {  
+  // Client token for Braintree SDK initialization  
+  string client_token = 1;  
+    
+  // Tokenized payment method identifier  
+  string card_token = 2;  
+    
+  // Bank Identification Number for card verification  
+  string bin = 3;  
+    
+  // URL for completing the authorization flow  
+  string acs_url = 4;  
+}  
+
+// Represents Mifinity-specific redirection data  
+message MifinityData {  
+  // Initialization token for Mifinity SDK initialization
+  string initialization_token = 1;
+} 
 
 // Details of an HTTP request, typically for incoming webhooks.
 message RequestDetails {
@@ -2266,6 +2293,10 @@ message PaymentServiceRegisterResponse {
 
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
+
+  // Captured Amount Details
+  optional int64 captured_amount = 17; // Amount that has been captured
+  optional int64 minor_captured_amount = 18; // Captured amount in minor currency units
 
   // State Information
   optional ConnectorState state = 12; // State data for access token storage and other connector-specific state

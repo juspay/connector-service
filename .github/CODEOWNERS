@@ -17,7 +17,7 @@ backend/grpc-server/src/server/ @juspay/connector-service-core
 
 backend/domain_types/ @juspay/connector-service-framework
 backend/external-services/ @juspay/connector-service-framework
-backend/grpc-api-types/ @juspay/connector-service-framework
+backend/grpc-api-types/ @juspay/connector-service-proto-maintainers
 backend/grpc-server/ @juspay/connector-service-framework
 backend/examples/ @juspay/connector-service-framework
 config/ @juspay/connector-service-framework
