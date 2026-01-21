@@ -290,13 +290,15 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for CaptureMethod {
     }
 }
 
-impl ForeignTryFrom<i32> for connector_types::ThreeDsCompletionIndicator {
+impl ForeignTryFrom<grpc_api_types::payments::ThreeDsCompletionIndicator> for connector_types::ThreeDsCompletionIndicator {
     type Error = ApplicationErrorResponse;
 
-    fn foreign_try_from(value: i32) -> Result<Self, error_stack::Report<Self::Error>> {
-        match grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value) {
-            Ok(grpc_api_types::payments::ThreeDsCompletionIndicator::Success) => Ok(Self::Success),
-            Ok(grpc_api_types::payments::ThreeDsCompletionIndicator::Failure) => Ok(Self::Failure),
+    fn foreign_try_from(
+        value: grpc_api_types::payments::ThreeDsCompletionIndicator,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::ThreeDsCompletionIndicator::Success => Ok(Self::Success),
+            grpc_api_types::payments::ThreeDsCompletionIndicator::Failure => Ok(Self::Failure),
             _ => Ok(Self::NotAvailable),
         }
     }
@@ -2203,7 +2205,12 @@ impl<
                 .transpose()?,
             redirect_response,
             threeds_method_comp_ind: value.threeds_method_comp_ind.and_then(|value| {
-                connector_types::ThreeDsCompletionIndicator::foreign_try_from(value).ok()
+                grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value)
+                    .ok()
+                    .and_then(|indicator| {
+                        connector_types::ThreeDsCompletionIndicator::foreign_try_from(indicator)
+                            .ok()
+                    })
             }),
             tokenization,
         })
