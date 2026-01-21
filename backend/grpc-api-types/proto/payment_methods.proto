@@ -24,6 +24,11 @@ enum CardNetwork {
   RUPAY = 10;
 }
 
+// Paysafecard - Prepaid payment method
+message PaySafeCard {
+  // Fields will be added as needed for Paysafecard integration
+}
+
 // ============================================================================
 // COMPOSITE MESSAGES
 // ============================================================================
@@ -1005,11 +1010,6 @@ message OXXO {
 // PagoEfectivo - Peruvian cash payment method
 message PagoEfectivo {
   // Fields will be added as needed for PagoEfectivo integration
-}
-
-// Paysafecard - Prepaid payment method
-message PaySafeCard {
-  // Fields will be added as needed for Paysafecard integration
 }
 
 // 7-Eleven - Convenience store payment
