@@ -123,7 +123,8 @@ message PaymentMethod {
     NetworkTokenData network_token = 121; // Network token data
     
     // GIFT CARDS (130-139)
-    Givex givex = 130;                                         // Givex gift card
+    Givex givex = 137;                                         // Givex gift card
+    PaySafeCard pay_safe_card = 138;                           // Paysafecard - Prepaid payment method
   }
 }
 
