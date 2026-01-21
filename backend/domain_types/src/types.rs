@@ -290,7 +290,9 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for CaptureMethod {
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::ThreeDsCompletionIndicator> for connector_types::ThreeDsCompletionIndicator {
+impl ForeignTryFrom<grpc_api_types::payments::ThreeDsCompletionIndicator>
+    for connector_types::ThreeDsCompletionIndicator
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
