@@ -1,6 +1,7 @@
 use grpc_server::{self, app, configs, logger};
 
 #[allow(clippy::expect_used)]
+#[allow(clippy::unwrap_in_result)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Build tokio runtime with increased thread stack size
     // Default tokio stack is ~8MB; we increase to 32MB for safety
