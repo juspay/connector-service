@@ -14,7 +14,7 @@ mod tests {
         payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},
         router_request_types::BrowserInformation,
         router_response_types::Response,
-        types::ConnectorConfigSet,
+        types::{ConnectorConfigSet, ConnectorEnvironment},
     };
     use interfaces::{
         connector_integration_v2::ConnectorIntegrationV2,
@@ -42,7 +42,7 @@ mod tests {
             router_data_v2::RouterDataV2,
             router_request_types::BrowserInformation,
             router_response_types::Response,
-            types::{ConnectorConfigSet, ConnectorParams, Connectors},
+            types::{ConnectorConfigSet, ConnectorEnvironment, ConnectorParams, Connectors},
         };
         use interfaces::{
             connector_integration_v2::ConnectorIntegrationV2,
@@ -100,7 +100,7 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        test_mode: true,
+                        environment: ConnectorEnvironment::Sandbox,
                         sandbox: ConnectorConfigSet {
                             razorpay: ConnectorParams {
                                 base_url: "https://api.razorpay.com/".to_string(),
@@ -290,7 +290,7 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        test_mode: true,
+                        environment: ConnectorEnvironment::Sandbox,
                         sandbox: ConnectorConfigSet {
                             razorpay: ConnectorParams {
                                 base_url: "https://api.razorpay.com/".to_string(),
@@ -433,7 +433,7 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        test_mode: true,
+                        environment: ConnectorEnvironment::Sandbox,
                         sandbox: ConnectorConfigSet {
                             razorpay: ConnectorParams {
                                 base_url: "https://api.razorpay.com/".to_string(),
@@ -598,7 +598,7 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        test_mode: true,
+                        environment: ConnectorEnvironment::Sandbox,
                         sandbox: ConnectorConfigSet {
                             razorpay: ConnectorParams {
                                 base_url: "https://api.razorpay.com/".to_string(),
@@ -934,7 +934,7 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    test_mode: true,
+                    environment: ConnectorEnvironment::Sandbox,
                     sandbox: ConnectorConfigSet {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1133,7 +1133,7 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    test_mode: true,
+                    environment: ConnectorEnvironment::Sandbox,
                     sandbox: ConnectorConfigSet {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1271,7 +1271,7 @@ mod tests {
             payment_address::{Address, PhoneDetails},
             payment_method_data::DefaultPCIHolder,
             router_data::ConnectorAuthType,
-            types::{ConnectorConfigSet, ConnectorParams, Connectors},
+            types::{ConnectorConfigSet, ConnectorEnvironment, ConnectorParams, Connectors},
         };
         use interfaces::connector_types::BoxedConnector;
         use serde_json::{to_value, Value};
@@ -1335,7 +1335,7 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        test_mode: true,
+                        environment: ConnectorEnvironment::Sandbox,
                         sandbox: ConnectorConfigSet {
                             razorpay: ConnectorParams {
                                 base_url: "https://api.razorpay.com/".to_string(),
@@ -1456,7 +1456,7 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        test_mode: true,
+                        environment: ConnectorEnvironment::Sandbox,
                         sandbox: ConnectorConfigSet {
                             razorpay: ConnectorParams {
                                 base_url: "https://api.razorpay.com/".to_string(),
@@ -1580,7 +1580,7 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        test_mode: true,
+                        environment: ConnectorEnvironment::Sandbox,
                         sandbox: ConnectorConfigSet {
                             razorpay: ConnectorParams {
                                 base_url: "https://api.razorpay.com/".to_string(),
@@ -1743,7 +1743,7 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    test_mode: true,
+                    environment: ConnectorEnvironment::Sandbox,
                     sandbox: ConnectorConfigSet {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1877,7 +1877,7 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    test_mode: true,
+                    environment: ConnectorEnvironment::Sandbox,
                     sandbox: ConnectorConfigSet {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1999,7 +1999,7 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    test_mode: true,
+                    environment: ConnectorEnvironment::Sandbox,
                     sandbox: ConnectorConfigSet {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),

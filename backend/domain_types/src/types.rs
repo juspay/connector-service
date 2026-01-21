@@ -199,21 +199,8 @@ pub enum ConnectorEnvironment {
     Production,
 }
 
-// Implement default for backward compatibility
-impl Default for ConnectorEnvironment {
-    fn default() -> Self {
-        Self::Sandbox
-    }
-}
-
 #[derive(
-    Clone,
-    serde::Deserialize,
-    serde::Serialize,
-    Debug,
-    Default,
-    PartialEq,
-    config_patch_derive::Patch,
+    Clone, serde::Deserialize, serde::Serialize, Debug, PartialEq, config_patch_derive::Patch,
 )]
 pub struct Connectors {
     pub environment: ConnectorEnvironment,
