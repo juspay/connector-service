@@ -1377,14 +1377,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = Error;
     fn try_from(gift_card_data: &GiftCardData) -> Result<Self, Self::Error> {
         match gift_card_data {
-            GiftCardData::PaySafeCard {} => Ok(AdyenPaymentMethod::PaySafeCard),
+            GiftCardData::PaySafeCard {} => Ok(Self::PaySafeCard),
             GiftCardData::Givex(givex_data) => {
                 let gift_card_pm = AdyenGiftCardData {
                     brand: GiftCardBrand::Givex,
                     number: givex_data.number.clone(),
                     cvc: givex_data.cvc.clone(),
                 };
-                Ok(AdyenPaymentMethod::AdyenGiftCard(Box::new(gift_card_pm)))
+                Ok(Self::AdyenGiftCard(Box::new(gift_card_pm)))
             }
         }
     }
