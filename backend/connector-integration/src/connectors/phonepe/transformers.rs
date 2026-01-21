@@ -511,9 +511,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         if response.success {
             if let Some(data) = &response.data {
-            if let Some(instrument_response) = &data.instrument_response {
+                if let Some(instrument_response) = &data.instrument_response {
                     // Detect UPI mode from instrument response
-                    let upi_mode = determine_upi_mode(instrument_response, data.response_code.as_ref());
+                    let upi_mode =
+                        determine_upi_mode(instrument_response, data.response_code.as_ref());
 
                     // Handle different UPI flow responses
                     let (redirect_form, connector_metadata) =
@@ -569,9 +570,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     // Success but no instrument response - try fallback detection from response_code
                     let upi_mode = data.response_code.as_ref().and_then(|code| {
                         if code == "CREDIT_ACCOUNT_NOT_ALLOWED_FOR_SENDER" {
-                            Some("UPICC".to_string())
+                            Some("UPI_CC".to_string())
                         } else if code == "PAY0071" {
-                            Some("UPICL".to_string())
+                            Some("UPI_CL".to_string())
                         } else {
                             None
                         }
@@ -744,9 +745,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &wrapper.router_data;
         let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_transaction_id = &router_data
-            .resource_common_data
-            .connector_request_reference_id;
+        let merchant_transaction_id = router_data.resource_common_data.get_reference_id()?;
 
         // Generate checksum for status API - use IRCTC endpoint if merchant is IRCTC
         let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
@@ -789,9 +788,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = item.router_data;
         let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_transaction_id = &router_data
-            .resource_common_data
-            .connector_request_reference_id;
+        let merchant_transaction_id = router_data.resource_common_data.get_reference_id()?;
 
         // Generate checksum for status API - use IRCTC endpoint if merchant is IRCTC
         let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
@@ -978,14 +975,14 @@ fn determine_upi_mode(
 
     // PRIMARY CL DETECTION
     if instrument_response.upi_credit_line == Some(true) {
-        return Some("UPICL".to_string());
+        return Some("UPI_CL".to_string());
     }
 
     // PRIMARY CC DETECTION
     if instrument_response.account_type.as_deref() == Some("CREDIT")
         && instrument_response.card_network.as_deref() == Some("RUPAY")
     {
-        return Some("UPICC".to_string());
+        return Some("UPI_CC".to_string());
     }
 
     // ACCOUNT DETECTION
@@ -995,12 +992,12 @@ fn determine_upi_mode(
 
     // FALLBACK CC DETECTION (from response code)
     if response_code == Some(&"CREDIT_ACCOUNT_NOT_ALLOWED_FOR_SENDER".to_string()) {
-        return Some("UPICC".to_string());
+        return Some("UPI_CC".to_string());
     }
 
     // FALLBACK CL DETECTION (from response code)
     if response_code == Some(&"PAY0071".to_string()) {
-        return Some("UPICL".to_string());
+        return Some("UPI_CL".to_string());
     }
 
     None
@@ -1018,7 +1015,7 @@ fn extract_upi_mode_from_sync_data(sync_data: &PhonepeSyncResponseData) -> Optio
                     .and_then(|v| v.as_bool())
                     == Some(true)
                 {
-                    return Some("UPICL".to_string());
+                    return Some("UPI_CL".to_string());
                 }
 
                 // Check accountType + cardNetwork for CC
@@ -1030,7 +1027,7 @@ fn extract_upi_mode_from_sync_data(sync_data: &PhonepeSyncResponseData) -> Optio
                     .and_then(|v| v.as_str());
 
                 if account_type == Some("CREDIT") && card_network == Some("RUPAY") {
-                    return Some("UPICC".to_string());
+                    return Some("UPI_CC".to_string());
                 }
 
                 // Check for SAVINGS account
@@ -1045,11 +1042,11 @@ fn extract_upi_mode_from_sync_data(sync_data: &PhonepeSyncResponseData) -> Optio
     if sync_data.account_type.as_deref() == Some("CREDIT")
         && sync_data.card_network.as_deref() == Some("RUPAY")
     {
-        return Some("UPICC".to_string());
+        return Some("UPI_CC".to_string());
     }
 
     if sync_data.upi_credit_line == Some(true) {
-        return Some("UPICL".to_string());
+        return Some("UPI_CL".to_string());
     }
 
     if sync_data.account_type.as_deref() == Some("SAVINGS") {
@@ -1058,11 +1055,11 @@ fn extract_upi_mode_from_sync_data(sync_data: &PhonepeSyncResponseData) -> Optio
 
     // Fallback from response_code
     if sync_data.response_code.as_deref() == Some("CREDIT_ACCOUNT_NOT_ALLOWED_FOR_SENDER") {
-        return Some("UPICC".to_string());
+        return Some("UPI_CC".to_string());
     }
 
     if sync_data.response_code.as_deref() == Some("PAY0071") {
-        return Some("UPICL".to_string());
+        return Some("UPI_CL".to_string());
     }
 
     None
