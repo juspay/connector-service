@@ -1120,10 +1120,10 @@ where
                 field_name: "authentication_data.message_version",
             })?;
 
-        // Determine if this is invoke case based on threeds_method_comp_ind:
+        // Determine if this is invoke case based on threeds_completion_indicator:
         // - Success/Failure means 3DS method was invoked (invoke case)
         // - NotAvailable means no 3DS method URL was present (exempt case)
-        let threeds_comp_ind = router_data.request.threeds_method_comp_ind.clone();
+        let threeds_completion_indicator = router_data.request.threeds_method_comp_ind.clone();
 
         let emv3ds_data = match redirect_payload_value {
             Some(payload) => requests::RedsysEmvThreeDsRequestData::new(
@@ -1133,7 +1133,7 @@ where
             .set_three_d_s_cres(payload.cres)
             .set_billing_data(billing_data)?
             .set_shipping_data(shipping_data)?,
-            None => match threeds_comp_ind {
+            None => match threeds_completion_indicator {
                 Some(comp_ind) => {
                     let three_d_s_comp_ind = requests::RedsysThreeDSCompInd::from(comp_ind);
                     let browser_info = router_data.request.browser_info.clone().ok_or(
@@ -1162,7 +1162,7 @@ where
                 }
                 None => {
                     return Err(errors::ConnectorError::MissingRequiredField {
-                        field_name: "threeds_method_comp_ind",
+                        field_name: "threeds_completion_indicator",
                     })?;
                 }
             },

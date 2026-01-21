@@ -1632,7 +1632,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional string continue_redirection_url = 46; // URL to complete authorization
 
   // Indicates if 3DS method data was successfully completed or not
-  optional ThreeDsCompletionIndicator threeds_method_comp_ind = 47;
+  optional ThreeDsCompletionIndicator threeds_completion_indicator = 47;
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 48; // Redirection Response from client browser

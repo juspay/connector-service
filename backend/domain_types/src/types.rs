@@ -2206,7 +2206,7 @@ impl<
                 })
                 .transpose()?,
             redirect_response,
-            threeds_method_comp_ind: value.threeds_method_comp_ind.and_then(|value| {
+            threeds_method_comp_ind: value.threeds_completion_indicator.and_then(|value| {
                 grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value)
                     .ok()
                     .and_then(|indicator| {
