@@ -1218,6 +1218,12 @@ impl<
                     )))
                 }
 
+                grpc_api_types::payments::payment_method::PaymentMethod::PaySafeCard(_) => {
+                    Ok(Self::GiftCard(Box::new(
+                        payment_method_data::GiftCardData::PaySafeCard {},
+                    )))
+                }
+
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                     error_identifier: 400,
@@ -1485,12 +1491,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     })))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::PaySafeCard(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Gift card payments are not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::PaySafeCard))
                 }
                 // ============================================================================
                 // UNSUPPORTED ONLINE BANKING - Direct error generation
