@@ -44,12 +44,13 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as braintree, BraintreeCancelRequest, BraintreeCancelResponse, BraintreeCaptureRequest,
-    BraintreeCaptureResponse, BraintreeClientTokenRequest, BraintreePSyncRequest,
-    BraintreePSyncResponse, BraintreePaymentsRequest, BraintreePaymentsResponse,
-    BraintreeRSyncRequest, BraintreeRSyncResponse, BraintreeRefundRequest, BraintreeRefundResponse,
-    BraintreeRepeatPaymentRequest, BraintreeRepeatPaymentResponse, BraintreeSessionResponse,
-    BraintreeTokenRequest, BraintreeTokenResponse,
+    self as braintree, BraintreeAuthResponse, BraintreeCancelRequest, BraintreeCancelResponse,
+    BraintreeCaptureRequest, BraintreeCaptureResponse, BraintreeClientTokenRequest,
+    BraintreePSyncRequest, BraintreePSyncResponse, BraintreePaymentsRequest,
+    BraintreePaymentsResponse, BraintreeRSyncRequest, BraintreeRSyncResponse,
+    BraintreeRefundRequest, BraintreeRefundResponse, BraintreeRepeatPaymentRequest,
+    BraintreeRepeatPaymentResponse, BraintreeSessionResponse, BraintreeTokenRequest,
+    BraintreeTokenResponse,
 };
 
 use super::macros;
@@ -312,12 +313,6 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ),
         (
-            flow: Authorize,
-            request_body: BraintreePaymentsRequest,
-            response_body: BraintreePaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
             flow: PSync,
             request_body: BraintreePSyncRequest,
             response_body: BraintreePSyncResponse,
@@ -402,33 +397,117 @@ macros::create_all_prerequisites!(
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Braintree,
-    curl_request: Json(BraintreePaymentsRequest),
-    curl_response: BraintreePaymentsResponse,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+// Manual implementation for Authorize with conditional response body
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    > for Braintree<T>
+{
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
+    }
+
+    fn get_http_method(&self) -> common_utils::request::Method {
+        common_utils::request::Method::Post
+    }
+
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        self.build_headers(req)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
         Ok(self.connector_base_url_payments(req).to_string())
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
+        let connector_router_data = BraintreeRouterData {
+            connector: self.to_owned(),
+            router_data: req.to_owned(),
+        };
+        let connector_req: BraintreePaymentsRequest =
+            BraintreePaymentsRequest::try_from(connector_router_data)?;
+        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
+            connector_req,
+        ))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        match data.request.is_auto_capture()? {
+            true => {
+                let response: BraintreePaymentsResponse = res
+                    .response
+                    .parse_struct("Braintree PaymentsResponse")
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                event_builder.map(|i| i.set_connector_response(&response));
+                RouterDataV2::try_from(ResponseRouterData {
+                    response,
+                    router_data: data.clone(),
+                    http_code: res.status_code,
+                })
+            }
+            false => {
+                let response: BraintreeAuthResponse = res
+                    .response
+                    .parse_struct("Braintree AuthResponse")
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                event_builder.map(|i| i.set_connector_response(&response));
+                RouterDataV2::try_from(ResponseRouterData {
+                    response,
+                    router_data: data.clone(),
+                    http_code: res.status_code,
+                })
+            }
         }
     }
-);
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],

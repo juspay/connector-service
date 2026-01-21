@@ -1,7 +1,7 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use crate::utils::extract_connector_request_reference_id;
+use crate::{connector_types, utils::extract_connector_request_reference_id};
 use common_enums::{
     CaptureMethod, CardNetwork, CountryAlpha2, FutureUsage, PaymentMethod, PaymentMethodType,
 };
@@ -177,6 +177,7 @@ pub struct Connectors {
     pub shift4: ConnectorParams,
     pub paybox: ConnectorParams,
     pub barclaycard: ConnectorParams,
+    pub redsys: ConnectorParams,
     pub nexixpay: ConnectorParams,
     pub mollie: ConnectorParams,
     pub airwallex: ConnectorParams,
@@ -290,6 +291,22 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for CaptureMethod {
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::ThreeDsCompletionIndicator>
+    for connector_types::ThreeDsCompletionIndicator
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::ThreeDsCompletionIndicator,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::ThreeDsCompletionIndicator::Success => Ok(Self::Success),
+            grpc_api_types::payments::ThreeDsCompletionIndicator::Failure => Ok(Self::Failure),
+            _ => Ok(Self::NotAvailable),
+        }
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
     type Error = ApplicationErrorResponse;
 
@@ -312,6 +329,28 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
                     sub_code: "UNSPECIFIED_CARD_NETWORK".to_owned(),
                     error_identifier: 401,
                     error_message: "Card network must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::Tokenization> for common_enums::Tokenization {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::Tokenization,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::Tokenization::SkipPsp => Ok(Self::SkipPsp),
+            grpc_api_types::payments::Tokenization::TokenizeAtPsp => Ok(Self::TokenizeAtPsp),
+            grpc_api_types::payments::Tokenization::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_TOKENIZATION_STRATEGY".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Tokenization strategy must be specified".to_owned(),
                     error_object: None,
                 })
                 .into())
@@ -391,13 +430,32 @@ impl<
                     Ok(Self::Card(card))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(
-                    _card_redirect,
-                ) => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Card redirect payments are not yet supported".to_owned(),
-                    error_object: None,
-                }))),
+                    card_redirect,
+                ) => {
+                    let card_redirect_data = match card_redirect.r#type() {
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Knet => {
+                            payment_method_data::CardRedirectData::Knet {}
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Benefit => {
+                            payment_method_data::CardRedirectData::Benefit {}
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::MomoAtm => {
+                            payment_method_data::CardRedirectData::MomoAtm {}
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::CardRedirect => {
+                            payment_method_data::CardRedirectData::CardRedirect {}
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Unspecified => {
+                            return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSPECIFIED_CARD_REDIRECT_TYPE".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card redirect type cannot be unspecified".to_owned(),
+                                error_object: None,
+                            })))
+                        }
+                    };
+                    Ok(Self::CardRedirect(card_redirect_data))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Token(_token) => {
                     Ok(Self::CardToken(payment_method_data::CardToken {
                         card_holder_name: None,
@@ -1098,7 +1156,69 @@ impl<
                     ))
                 }
 
-                // Catch-all for unsupported variants
+                // ============================================================================
+                // INDONESIAN BANK TRANSFERS - Doku Integration
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Pix(pix_data) => {
+                    // Parse expiry_date from ISO 8601 string if provided
+                    let expiry_date = pix_data
+                        .expiry_date
+                        .as_ref()
+                        .and_then(|date_str| {
+                            time::PrimitiveDateTime::parse(
+                                date_str,
+                                &time::format_description::well_known::Iso8601::DEFAULT,
+                            )
+                            .ok()
+                        });
+
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::Pix {
+                            pix_key: pix_data.pix_key,
+                            cpf: pix_data.cpf,
+                            cnpj: pix_data.cnpj,
+                            source_bank_account_id: None,
+                            destination_bank_account_id: None,
+                            expiry_date,
+                        },
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PermataBankTransfer(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::PermataBankTransfer {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::BcaBankTransfer(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::BcaBankTransfer {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::BniVaBankTransfer(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::BniVaBankTransfer {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::BriVaBankTransfer(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::BriVaBankTransfer {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::CimbVaBankTransfer(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::CimbVaBankTransfer {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::DanamonVaBankTransfer(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::DanamonVaBankTransfer {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::MandiriVaBankTransfer(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::MandiriVaBankTransfer {},
+                    )))
+                }
+
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                     error_identifier: 400,
@@ -1254,13 +1374,29 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(_) => {
                     Ok(Some(PaymentMethodType::Card))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Card redirect payments are not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(card_redirect) => {
+    match card_redirect.r#type() {
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Knet => {
+                            Ok(Some(PaymentMethodType::Knet))
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Benefit => {
+                            Ok(Some(PaymentMethodType::Benefit))
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::MomoAtm => {
+                            Ok(Some(PaymentMethodType::MomoAtm))
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::CardRedirect => {
+                            Ok(Some(PaymentMethodType::CardRedirect))
+                        }
+                        grpc_api_types::payments::card_redirect::CardRedirectType::Unspecified => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSPECIFIED_CARD_REDIRECT_TYPE".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card redirect type cannot be unspecified".to_owned(),
+                                error_object: None,
+                            })))
+                        }
+                    }
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Token(_) => {
                     Ok(None)
@@ -1419,6 +1555,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Interac(_) => {
                     Ok(Some(PaymentMethodType::Interac))
                 }
+                // ============================================================================
+                // INDONESIAN BANK TRANSFERS - PaymentMethodType mappings
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Pix(_) => Ok(Some(PaymentMethodType::Pix)),
+                grpc_api_types::payments::payment_method::PaymentMethod::PermataBankTransfer(_) => Ok(Some(PaymentMethodType::PermataBankTransfer)),
+                grpc_api_types::payments::payment_method::PaymentMethod::BcaBankTransfer(_) => Ok(Some(PaymentMethodType::BcaBankTransfer)),
+                grpc_api_types::payments::payment_method::PaymentMethod::BniVaBankTransfer(_) => Ok(Some(PaymentMethodType::BniVa)),
+                grpc_api_types::payments::payment_method::PaymentMethod::BriVaBankTransfer(_) => Ok(Some(PaymentMethodType::BriVa)),
+                grpc_api_types::payments::payment_method::PaymentMethod::CimbVaBankTransfer(_) => Ok(Some(PaymentMethodType::CimbVa)),
+                grpc_api_types::payments::payment_method::PaymentMethod::DanamonVaBankTransfer(_) => Ok(Some(PaymentMethodType::DanamonVa)),
+                grpc_api_types::payments::payment_method::PaymentMethod::MandiriVaBankTransfer(_) => Ok(Some(PaymentMethodType::MandiriVa)),
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1831,6 +1978,12 @@ impl<
                 value.payment_channel(),
             )?),
         };
+        let tokenization = match value.tokenization_strategy {
+            None => None,
+            Some(_) => Some(common_enums::Tokenization::foreign_try_from(
+                value.tokenization_strategy(),
+            )?),
+        };
 
         Ok(Self {
             authentication_data,
@@ -1924,6 +2077,11 @@ impl<
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
+            // Below fields are set in AuthorizeOnly Flow
+            continue_redirection_url: None,
+            redirect_response: None,
+            threeds_method_comp_ind: None,
+            tokenization,
         })
     }
 }
@@ -2031,6 +2189,26 @@ impl<
             )?),
         };
 
+        let redirect_response = value
+            .redirection_response
+            .clone()
+            .map(|redirection_response| ContinueRedirectionResponse {
+                params: redirection_response.params.map(Secret::new),
+                payload: Some(Secret::new(serde_json::Value::Object(
+                    redirection_response
+                        .payload
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))),
+            });
+        let tokenization = match value.tokenization_strategy {
+            None => None,
+            Some(_) => Some(common_enums::Tokenization::foreign_try_from(
+                value.tokenization_strategy(),
+            )?),
+        };
+
         Ok(Self {
             authentication_data,
             capture_method: Some(CaptureMethod::foreign_try_from(value.capture_method())?),
@@ -2123,6 +2301,29 @@ impl<
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
+            continue_redirection_url: value
+                .continue_redirection_url
+                .map(|url_str| {
+                    url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
+                        ApiError {
+                            sub_code: "INVALID_URL".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid continue redirection URL".to_owned(),
+                            error_object: None,
+                        },
+                    ))
+                })
+                .transpose()?,
+            redirect_response,
+            threeds_method_comp_ind: value.threeds_completion_indicator.and_then(|value| {
+                grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value)
+                    .ok()
+                    .and_then(|indicator| {
+                        connector_types::ThreeDsCompletionIndicator::foreign_try_from(indicator)
+                            .ok()
+                    })
+            }),
+            tokenization,
         })
     }
 }
@@ -3515,9 +3716,21 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                                 },
                                 router_response_types::RedirectForm::Mifinity { initialization_token } => {
                                     Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri: initialization_token,
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Mifinity(
+                                            grpc_api_types::payments::MifinityData {
+                                                initialization_token,
+                                            }
+                                        ))
+                                    })
+                                },
+                                router_response_types::RedirectForm::Braintree { client_token, card_token, bin,  acs_url } => {
+                                    Ok(grpc_api_types::payments::RedirectForm {
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Braintree(
+                                            grpc_api_types::payments::BraintreeData {
+                                               client_token,
+                                               card_token,
+                                               bin,
+                                               acs_url,
                                             }
                                         ))
                                     })
@@ -4671,6 +4884,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::Boleto => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethodType::Oxxo => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethodType::CardRedirect => Ok(Self::CardRedirect),
+            grpc_api_types::payments::PaymentMethodType::Knet => Ok(Self::CardRedirect),
+            grpc_api_types::payments::PaymentMethodType::Benefit => Ok(Self::CardRedirect),
+            grpc_api_types::payments::PaymentMethodType::MomoAtm => Ok(Self::CardRedirect),
 
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "UNSUPPORTED_PAYMENT_METHOD_TYPE".to_owned(),
@@ -6777,6 +6993,16 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         })
         .transpose()?;
 
+    // Set amount_captured based on status - only if Charged/PartialCharged
+    let captured_amount = match status {
+        common_enums::AttemptStatus::Charged
+        | common_enums::AttemptStatus::PartialCharged
+        | common_enums::AttemptStatus::PartialChargedAndChargeable => router_data_v2.request.amount,
+        _ => None,
+    };
+
+    let minor_captured_amount = captured_amount;
+
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -6856,6 +7082,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     raw_connector_request,
                     connector_response,
                     connector_metadata: convert_connector_metadata_to_secret_string(connector_metadata),
+                    captured_amount,
+                    minor_captured_amount,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -6902,6 +7130,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 raw_connector_request,
                 connector_response: None,
                 connector_metadata: None,
+                captured_amount: None,
+                minor_captured_amount: None,
             }
         }
     };
@@ -7980,7 +8210,6 @@ impl<
                     error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
                         error_identifier: 400,
-
                         error_message: "Invalid email".to_owned(),
                         error_object: None,
                     }))
@@ -8976,6 +9205,14 @@ impl<
                 .transpose()?,
             enrolled_for_3ds,
             redirect_response,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
         })
     }
 }
@@ -9082,6 +9319,18 @@ impl<
                 .transpose()?,
             enrolled_for_3ds: false,
             redirect_response,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
+            authentication_data: value
+                .authentication_data
+                .map(router_request_types::AuthenticationData::try_from)
+                .transpose()?,
         })
     }
 }
