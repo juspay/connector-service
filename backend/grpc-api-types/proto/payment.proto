@@ -172,6 +172,14 @@ enum AuthenticationType {
   NO_THREE_DS = 2;                     // No 3D Secure, or 3DS explicitly bypassed.
 }
 
+// Indicates if 3DS method data was successfully completed or not.
+enum ThreeDsCompletionIndicator {
+  THREE_DS_COMPLETION_INDICATOR_UNSPECIFIED = 0; // Default value
+  THREE_DS_COMPLETION_INDICATOR_SUCCESS = 1; // 3DS method successfully completed ("Y")
+  THREE_DS_COMPLETION_INDICATOR_FAILURE = 2; // 3DS method was not successful ("N")
+  THREE_DS_COMPLETION_INDICATOR_NOT_AVAILABLE = 3; // 3DS method URL was unavailable ("U")
+}
+
 // Indicates the transaction status from authentication/verification process.
 enum TransactionStatus {
   // Authentication/Account Verification Successful
@@ -315,7 +323,6 @@ enum WebhookEventType {
   RECOVERY_PAYMENT_PENDING = 39;           // Recovery payment pending
   RECOVERY_INVOICE_CANCEL = 40;            // Recovery invoice cancelled
 }
-
 
 // Enum for currency codes (ISO 4217).
 enum Currency {
@@ -969,7 +976,6 @@ message Identifier {
     google.protobuf.Empty no_response_id_marker = 3;
   }
 }
-
 
 // Reference to a payment mandate.
 message MandateReference {
@@ -1649,8 +1655,17 @@ message PaymentServiceAuthorizeOnlyRequest {
    // Locale Information
   optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
 
+  // URL for Redirection
+  optional string continue_redirection_url = 46; // URL to complete authorization
+
+  // Indicates if 3DS method data was successfully completed or not
+  optional ThreeDsCompletionIndicator threeds_completion_indicator = 47;
+
+  // Redirection Information after DDC step
+  optional RedirectionResponse redirection_response = 48; // Redirection Response from client browser
+
   // Tokenization configuration  
-  optional Tokenization tokenization_strategy = 46; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
+  optional Tokenization tokenization_strategy = 49; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
 }
 
 // Response message for a payment authorization.
@@ -2509,6 +2524,9 @@ message PaymentServicePreAuthenticateRequest {
   // State Information
   optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
 
+  // Capture Settings
+  optional CaptureMethod capture_method = 19; // Method for capturing the payment
+
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
@@ -2550,6 +2568,9 @@ message PaymentServicePreAuthenticateResponse {
 
   // Raw Response
   optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Authentication Results
+  optional AuthenticationData authentication_data = 8; // Authentication data from the connector
 }
 
 // Request message for authentication step
@@ -2591,6 +2612,9 @@ message PaymentServiceAuthenticateRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 16; // Redirection Response from client browser
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 13; // Method for capturing the payment
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
