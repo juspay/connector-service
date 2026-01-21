@@ -12,7 +12,7 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use time::PrimitiveDateTime;
@@ -112,6 +112,7 @@ pub enum ConnectorEnum {
     Revolut,
     Gigadat,
     Loonio,
+    Wellsfargo,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -186,6 +187,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Revolut => Ok(Self::Revolut),
             grpc_api_types::payments::Connector::Gigadat => Ok(Self::Gigadat),
             grpc_api_types::payments::Connector::Loonio => Ok(Self::Loonio),
+            grpc_api_types::payments::Connector::Wellsfargo => Ok(Self::Wellsfargo),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1063,7 +1065,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_method_type: Option<PaymentMethodType>,
     pub customer_id: Option<CustomerId>,
     pub request_incremental_authorization: Option<bool>,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<SecretSerdeValue>,
     pub authentication_data: Option<router_request_types::AuthenticationData>,
     pub split_payments: Option<SplitPaymentsRequest>,
     // New amount for amount frame work
@@ -1085,6 +1087,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
     pub locale: Option<String>,
+    pub tokenization: Option<common_enums::Tokenization>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -1243,13 +1246,16 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn get_metadata_as_object(&self) -> Option<SecretSerdeValue> {
-        self.metadata.clone().and_then(|meta_data| match meta_data {
-            serde_json::Value::Null
-            | serde_json::Value::Bool(_)
-            | serde_json::Value::Number(_)
-            | serde_json::Value::String(_)
-            | serde_json::Value::Array(_) => None,
-            serde_json::Value::Object(_) => Some(meta_data.into()),
+        self.metadata.clone().and_then(|meta_data| {
+            let inner = meta_data.expose();
+            match inner {
+                serde_json::Value::Null
+                | serde_json::Value::Bool(_)
+                | serde_json::Value::Number(_)
+                | serde_json::Value::String(_)
+                | serde_json::Value::Array(_) => None,
+                serde_json::Value::Object(_) => Some(SecretSerdeValue::new(inner)),
+            }
         })
     }
 
@@ -1391,7 +1397,7 @@ pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
     pub currency: Currency,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
 }
 
@@ -2107,7 +2113,7 @@ pub struct RefundsData {
     pub reason: Option<String>,
     pub webhook_url: Option<String>,
     pub refund_amount: i64,
-    pub connector_metadata: Option<serde_json::Value>,
+    pub connector_metadata: Option<SecretSerdeValue>,
     pub refund_connector_metadata: Option<SecretSerdeValue>,
     pub minor_payment_amount: MinorUnit,
     pub minor_refund_amount: MinorUnit,
@@ -2134,7 +2140,7 @@ impl RefundsData {
             .clone()
             .ok_or_else(missing_field_err("webhook_url"))
     }
-    pub fn get_connector_metadata(&self) -> Result<serde_json::Value, Error> {
+    pub fn get_connector_metadata(&self) -> Result<SecretSerdeValue, Error> {
         self.connector_metadata
             .clone()
             .ok_or_else(missing_field_err("connector_metadata"))
@@ -2231,7 +2237,7 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub return_url: Option<String>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub request_incremental_authorization: bool,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<SecretSerdeValue>,
     pub complete_authorize_url: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub merchant_order_reference_id: Option<String>,
@@ -2379,6 +2385,9 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => None,
         }
+    }
+    pub fn get_optional_email(&self) -> Option<Email> {
+        self.email.clone()
     }
 }
 

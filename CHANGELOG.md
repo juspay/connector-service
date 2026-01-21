@@ -4,6 +4,88 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.21.0
+
+### Features
+
+- **connector:**
+  - [Adyen] Implement Bank debits ([#421](https://github.com/juspay/connector-service/pull/421)) ([`0d3bc38`](https://github.com/juspay/connector-service/commit/0d3bc38022474571a45e8c259b940be421b2b1be))
+  - [NovalNet] Implement Bank Debits ([#432](https://github.com/juspay/connector-service/pull/432)) ([`8aa92fa`](https://github.com/juspay/connector-service/commit/8aa92faa01a4cc14ac27ece85b4c78f21c4b9b2e))
+  - [ADYEN] card redirect Integration ([#419](https://github.com/juspay/connector-service/pull/419)) ([`6b41d6a`](https://github.com/juspay/connector-service/commit/6b41d6a3a7fc93f92cb08d14c3a3d40319ce69dd))
+- Add bank transfer support in adyen ([#420](https://github.com/juspay/connector-service/pull/420)) ([`d3cc4fe`](https://github.com/juspay/connector-service/commit/d3cc4fe1330311118d230a866f59d0a3638c404d))
+
+### Bug Fixes
+
+- Add secondary base url for Fiuu ([#435](https://github.com/juspay/connector-service/pull/435)) ([`0895852`](https://github.com/juspay/connector-service/commit/0895852c024b85036dda553c23b29f2dfd0164c3))
+
+**Full Changelog:** [`2026.01.19.0...2026.01.21.0`](https://github.com/juspay/connector-service/compare/2026.01.19.0...2026.01.21.0)
+
+- - -
+
+## 2026.01.19.0
+
+### Features
+
+- **connector:** Refactored Cybersource Mandate Payments ([#426](https://github.com/juspay/connector-service/pull/426)) ([`488a70a`](https://github.com/juspay/connector-service/commit/488a70a294eb9c33c83c85e7ab897e3553299842))
+
+### Bug Fixes
+
+- RouterData diff fix for Fiuu PSync ([#427](https://github.com/juspay/connector-service/pull/427)) ([`e48db9a`](https://github.com/juspay/connector-service/commit/e48db9ae2f44c28d06ee04f7548e0c648681bdd7))
+
+**Full Changelog:** [`2026.01.15.0...2026.01.19.0`](https://github.com/juspay/connector-service/compare/2026.01.15.0...2026.01.19.0)
+
+- - -
+
+## 2026.01.15.0
+
+### Features
+
+- **wellsfargo:** Connector integration ([#252](https://github.com/juspay/connector-service/pull/252)) ([`4794eff`](https://github.com/juspay/connector-service/commit/4794effbfde7f3cb4ca3a3356e1ff874a837677f))
+
+**Full Changelog:** [`2026.01.14.1...2026.01.15.0`](https://github.com/juspay/connector-service/compare/2026.01.14.1...2026.01.15.0)
+
+- - -
+
+## 2026.01.14.1
+
+### Bug Fixes
+
+- RouterData diff fix for Novalnet & Cashtocode ([#424](https://github.com/juspay/connector-service/pull/424)) ([`3795371`](https://github.com/juspay/connector-service/commit/379537121aca364ece9b2d55421772c5927ea11c))
+
+**Full Changelog:** [`2026.01.14.0...2026.01.14.1`](https://github.com/juspay/connector-service/compare/2026.01.14.0...2026.01.14.1)
+
+- - -
+
+## 2026.01.14.0
+
+### Features
+
+- **core:** Changed Metadata Type to SecretString ([#382](https://github.com/juspay/connector-service/pull/382)) ([`4c315ff`](https://github.com/juspay/connector-service/commit/4c315ff38101b12ce25849424b80d94835946e26))
+
+**Full Changelog:** [`2026.01.13.2...2026.01.14.0`](https://github.com/juspay/connector-service/compare/2026.01.13.2...2026.01.14.0)
+
+- - -
+
+## 2026.01.13.2
+
+### Bug Fixes
+
+- Adyen shoppername to none for bankredirect, repeatpayment ([#423](https://github.com/juspay/connector-service/pull/423)) ([`938d6f2`](https://github.com/juspay/connector-service/commit/938d6f2b9d0e5f76a5dec2320e4b35f455c61633))
+
+**Full Changelog:** [`2026.01.13.1...2026.01.13.2`](https://github.com/juspay/connector-service/compare/2026.01.13.1...2026.01.13.2)
+
+- - -
+
+## 2026.01.13.1
+
+### Bug Fixes
+
+- RepeatPayment Merchant configured Currency Handling ([#422](https://github.com/juspay/connector-service/pull/422)) ([`4cef8ef`](https://github.com/juspay/connector-service/commit/4cef8ef84ede9adac78eac27c557d161af36f306))
+
+**Full Changelog:** [`2026.01.13.0...2026.01.13.1`](https://github.com/juspay/connector-service/compare/2026.01.13.0...2026.01.13.1)
+
+- - -
+
 ## 2026.01.13.0
 
 ### Features

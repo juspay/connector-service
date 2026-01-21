@@ -930,7 +930,7 @@ impl
             .request
             .metadata
             .as_ref()
-            .and_then(|metadata| metadata.as_object())
+            .and_then(|metadata| metadata.peek().as_object())
             .map(|obj| {
                 obj.iter()
                     .map(|(k, v)| (k.clone(), json_value_to_string(v)))
@@ -1422,7 +1422,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .as_ref()
-            .and_then(|metadata| metadata.as_object())
+            .and_then(|metadata| metadata.peek().as_object())
             .map(|obj| {
                 obj.iter()
                     .map(|(k, v)| (k.clone(), json_value_to_string(v)))

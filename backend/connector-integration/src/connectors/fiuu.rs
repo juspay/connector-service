@@ -333,11 +333,34 @@ macros::create_all_prerequisites!(
             &req.resource_common_data.connectors.fiuu.base_url
         }
 
+        pub fn connector_secondary_base_url_payments<'a, F, Req, Res>(
+            &'a self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> CustomResult<&'a str, errors::ConnectorError> {
+            let base_url = req
+                .resource_common_data
+                .connectors
+                .fiuu
+                .secondary_base_url
+                .as_deref()
+                .ok_or(errors::ConnectorError::InvalidConnectorConfig { config: "secondary_base_url" })?;
+
+            Ok(base_url)
+        }
+
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.fiuu.base_url
+        ) -> CustomResult<&'a str, errors::ConnectorError> {
+            let base_url = req
+                .resource_common_data
+                .connectors
+                .fiuu
+                .secondary_base_url
+                .as_deref()
+                .ok_or(errors::ConnectorError::InvalidConnectorConfig { config: "secondary_base_url" })?;
+
+            Ok(base_url)
         }
     }
 );
@@ -486,7 +509,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}RMS/API/capstxn/index.php",
-                self.connector_base_url_payments(req)
+                self.connector_secondary_base_url_payments(req)?
             ))
         }
     }
@@ -519,7 +542,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}RMS/API/refundAPI/refund.php",
-                self.connector_base_url_payments(req)
+                self.connector_secondary_base_url_payments(req)?
             ))
         }
     }
@@ -551,7 +574,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}RMS/API/refundAPI/index.php",
-                self.connector_base_url_refunds(req)
+                self.connector_base_url_refunds(req)?
             ))
         }
     }
@@ -582,7 +605,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}RMS/API/refundAPI/q_by_txn.php",
-                self.connector_base_url_refunds(req)
+                self.connector_base_url_refunds(req)?
             ))
         }
     }
@@ -606,7 +629,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<String, errors::ConnectorError> {
         Ok(format!(
             "{}RMS/API/gate-query/index.php",
-            self.connector_base_url_payments(req)
+            self.connector_secondary_base_url_payments(req)?
         ))
     }
 
@@ -642,7 +665,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let content_header = utils::get_http_header("Content-type", &headers)
                     .attach_printable("Missing content type in headers")
                     .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
-                let response: FiuuPaymentResponse = if content_header.to_lowercase()
+                let response: FiuuPaymentResponse = if content_header
+                    .to_lowercase()
+                    .replace(' ', "")
                     == "text/plain;charset=utf-8"
                 {
                     parse_response(&res.response)
