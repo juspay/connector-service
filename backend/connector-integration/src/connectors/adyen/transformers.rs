@@ -2529,10 +2529,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             AdyenPaymentMethod::try_from(gift_card_data)?,
         ));
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
-        let (recurring_processing_model, store_payment_method, shopper_reference) =
-            get_recurring_processing_model(&item.router_data)?;
         let return_url = item.router_data.request.get_router_return_url()?;
-        let additional_data = get_additional_data(&item.router_data);
 
         let adyen_metadata =
             get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
@@ -2551,8 +2548,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_optional_shipping(),
         )
         .and_then(Result::ok);
-        let country_code =
-            get_country_code(item.router_data.resource_common_data.get_optional_billing());
 
         Ok(Self {
             amount,
@@ -2565,20 +2560,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             return_url,
             shopper_interaction,
-            recurring_processing_model,
+            recurring_processing_model: None,
             browser_info: None,
-            additional_data,
+            additional_data: None,
             mpi_data: None,
             telephone_number: item
                 .router_data
                 .resource_common_data
                 .get_optional_billing_phone_number(),
-            shopper_name: get_shopper_name(
-                item.router_data
-                    .resource_common_data
-                    .address
-                    .get_payment_billing(),
-            ),
+            shopper_name: None,
             shopper_email: item
                 .router_data
                 .resource_common_data
@@ -2587,10 +2577,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             social_security_number: None,
             billing_address,
             delivery_address,
-            country_code,
+            country_code: None,
             line_items: None,
-            shopper_reference,
-            store_payment_method,
+            shopper_reference: None,
+            store_payment_method: None,
             channel: None,
             shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
