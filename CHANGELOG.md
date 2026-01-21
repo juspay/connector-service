@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.13.2-hotfix4
+
+### Bug Fixes
+
+- Diff fix for adyen and paypal repeat payments ([#439](https://github.com/juspay/connector-service/pull/439)) ([`8a81b2e`](https://github.com/juspay/connector-service/commit/8a81b2eea229345bef5ee2beb90e05bbc8881dfa))
+
+**Full Changelog:** [`2026.01.13.2-hotfix3...2026.01.13.2-hotfix4`](https://github.com/juspay/connector-service/compare/2026.01.13.2-hotfix3...2026.01.13.2-hotfix4)
+
+- - -
+
 ## 2026.01.13.2-hotfix3
 
 ### Bug Fixes
