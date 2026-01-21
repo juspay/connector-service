@@ -188,6 +188,8 @@ pub enum AdyenPaymentMethod<
     OpenBankingUK(Box<OpenBankingUKData>),
     #[serde(rename = "giftcard")]
     AdyenGiftCard(Box<AdyenGiftCardData>),
+    #[serde(rename = "paysafecard")]
+    PaySafeCard,
     #[serde(rename = "trustly")]
     Trustly,
     // Bank transfer payment methods (Indonesian banks via Doku)
@@ -1375,9 +1377,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = Error;
     fn try_from(gift_card_data: &GiftCardData) -> Result<Self, Self::Error> {
         match gift_card_data {
-            GiftCardData::PaySafeCard {} => Err(errors::ConnectorError::NotImplemented(
-                "PaySafeCard for Adyen".into(),
-            ))?,
+            GiftCardData::PaySafeCard {} => Ok(AdyenPaymentMethod::PaySafeCard),
             GiftCardData::Givex(givex_data) => {
                 let gift_card_pm = AdyenGiftCardData {
                     brand: GiftCardBrand::Givex,
