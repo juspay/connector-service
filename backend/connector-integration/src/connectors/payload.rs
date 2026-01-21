@@ -945,6 +945,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Webhook implementation
+#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Payload<T>
 {
@@ -970,11 +971,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(request.body.to_vec())
     }
 
-    fn verify_webhook_source(
+    async fn verify_webhook_source(
         &self,
         request: domain_types::connector_types::RequestDetails,
         connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
+        _base_url: Option<&str>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let algorithm = common_utils::crypto::Sha256;
 

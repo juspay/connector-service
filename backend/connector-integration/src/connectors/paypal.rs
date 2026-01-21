@@ -167,24 +167,158 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::DisputeDefend for Paypal<T>
 {
 }
+#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Paypal<T>
 {
-    fn verify_webhook_source(
+    async fn verify_webhook_source(
         &self,
-        _request: domain_types::connector_types::RequestDetails,
-        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        request: domain_types::connector_types::RequestDetails,
+        connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        connector_account_details: Option<ConnectorAuthType>,
+        base_url: Option<&str>,
     ) -> Result<bool, error_stack::Report<ConnectorError>> {
-        // NOTE: PayPal webhook source verification in Hyperswitch is done via PayPal's
-        // "verify-webhook-signature" API using transmission headers + webhook_id.
-        //
-        // UCS's `IncomingWebhook::verify_webhook_source` is synchronous today, so we cannot
-        // safely perform an outbound HTTP call here.
-        //
-        // We'll return `false` (unverified) and still allow the webhook transformation to
-        // proceed (HS can decide whether verification is mandatory).
-        Ok(false)
+        // PayPal webhook source verification requires calling PayPal's verify-webhook-signature API
+        let base_url = base_url.ok_or(ConnectorError::MissingRequiredField {
+            field_name: "base_url",
+        })?;
+
+        let webhook_secrets = connector_webhook_secret.ok_or(ConnectorError::MissingRequiredField {
+            field_name: "connector_webhook_secret",
+        })?;
+
+        let connector_auth = connector_account_details.ok_or(ConnectorError::MissingRequiredField {
+            field_name: "connector_account_details",
+        })?;
+
+        // Extract webhook_id from secrets
+        let webhook_id = String::from_utf8(webhook_secrets.secret.to_vec())
+            .change_context(ConnectorError::WebhookVerificationSecretNotFound)
+            .attach_printable("Could not convert webhook secret to UTF-8")?;
+
+        // Extract transmission headers from request
+        // Note: In UCS, headers are HashMap<String, String>, not HeaderMap
+        let transmission_id = request
+            .headers
+            .get(paypal::webhook_headers::PAYPAL_TRANSMISSION_ID)
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: paypal::webhook_headers::PAYPAL_TRANSMISSION_ID,
+            })?
+            .clone();
+
+        let transmission_time = request
+            .headers
+            .get(paypal::webhook_headers::PAYPAL_TRANSMISSION_TIME)
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: paypal::webhook_headers::PAYPAL_TRANSMISSION_TIME,
+            })?
+            .clone();
+
+        let cert_url = request
+            .headers
+            .get(paypal::webhook_headers::PAYPAL_CERT_URL)
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: paypal::webhook_headers::PAYPAL_CERT_URL,
+            })?
+            .clone();
+
+        let transmission_sig = request
+            .headers
+            .get(paypal::webhook_headers::PAYPAL_TRANSMISSION_SIG)
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: paypal::webhook_headers::PAYPAL_TRANSMISSION_SIG,
+            })?
+            .clone();
+
+        let auth_algo = request
+            .headers
+            .get(paypal::webhook_headers::PAYPAL_AUTH_ALGO)
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: paypal::webhook_headers::PAYPAL_AUTH_ALGO,
+            })?
+            .clone();
+
+        // Parse webhook body as JSON
+        let webhook_event: serde_json::Value = serde_json::from_slice(&request.body)
+            .change_context(ConnectorError::WebhookBodyDecodingFailed)?;
+
+        // Build verification request
+        let verification_request = paypal::PaypalSourceVerificationRequest {
+            transmission_id,
+            transmission_time,
+            cert_url,
+            transmission_sig,
+            auth_algo,
+            webhook_id,
+            webhook_event,
+        };
+
+        // Get access token for API call
+        let auth = paypal::PaypalAuthType::try_from(&connector_auth)
+            .change_context(ConnectorError::FailedToObtainAuthType)?;
+
+        // Extract credentials from PaypalAuthType enum
+        let credentials = match auth {
+            paypal::PaypalAuthType::AuthWithDetails(creds) => creds,
+            paypal::PaypalAuthType::TemporaryAuth => {
+                return Err(error_stack::report!(ConnectorError::FailedToObtainAuthType))
+                    .attach_printable("TemporaryAuth not supported for webhook verification");
+            }
+        };
+
+        let client_id = credentials.get_client_id().expose();
+        let client_secret = credentials.get_client_secret().expose();
+
+        // Get access token from PayPal OAuth endpoint
+        let token_url = format!("{}v1/oauth2/token", base_url);
+        let client = reqwest::Client::new();
+        let token_response = client
+            .post(&token_url)
+            .basic_auth(client_id, Some(client_secret))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body("grant_type=client_credentials")
+            .send()
+            .await
+            .change_context(ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to get PayPal access token")?;
+
+        if !token_response.status().is_success() {
+            return Err(error_stack::report!(ConnectorError::RequestEncodingFailed))
+                .attach_printable("PayPal access token request failed");
+        }
+
+        let token_data: paypal::PaypalAccessTokenResponse = token_response
+            .json()
+            .await
+            .change_context(ConnectorError::ResponseDeserializationFailed)
+            .attach_printable("Failed to parse PayPal access token response")?;
+
+        // Call PayPal verify-webhook-signature endpoint
+        let verify_url = format!("{}v1/notifications/verify-webhook-signature", base_url);
+        let verify_response = client
+            .post(&verify_url)
+            .header("Authorization", format!("Bearer {}", token_data.access_token))
+            .header("Content-Type", "application/json")
+            .json(&verification_request)
+            .send()
+            .await
+            .change_context(ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Failed to call PayPal verify-webhook-signature")?;
+
+        if !verify_response.status().is_success() {
+            return Ok(false);
+        }
+
+        let verification_result: paypal::PaypalSourceVerificationResponse = verify_response
+            .json()
+            .await
+            .change_context(ConnectorError::ResponseDeserializationFailed)
+            .attach_printable("Failed to parse PayPal verification response")?;
+
+        Ok(matches!(
+            verification_result.verification_status,
+            paypal::PaypalSourceVerificationStatus::Success
+        ))
     }
 
     fn get_event_type(

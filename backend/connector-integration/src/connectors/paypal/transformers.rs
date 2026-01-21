@@ -2987,3 +2987,37 @@ pub enum OutcomeCode {
     DENIED,
     NONE,
 }
+
+// ----------------------------------------------------------------------------
+// Webhook Source Verification
+// ----------------------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+pub struct PaypalSourceVerificationRequest {
+    pub transmission_id: String,
+    pub transmission_time: String,
+    pub cert_url: String,
+    pub transmission_sig: String,
+    pub auth_algo: String,
+    pub webhook_id: String,
+    pub webhook_event: serde_json::Value,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct PaypalSourceVerificationResponse {
+    pub verification_status: PaypalSourceVerificationStatus,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PaypalSourceVerificationStatus {
+    Success,
+    Failure,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct PaypalAccessTokenResponse {
+    pub access_token: String,
+    pub token_type: String,
+    pub expires_in: u64,
+}

@@ -300,12 +300,16 @@ pub trait PaymentIncrementalAuthorization:
 {
 }
 
+use async_trait::async_trait;
+
+#[async_trait]
 pub trait IncomingWebhook {
-    fn verify_webhook_source(
+    async fn verify_webhook_source(
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
+        _base_url: Option<&str>,
     ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
         Ok(false)
     }

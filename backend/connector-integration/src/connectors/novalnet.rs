@@ -599,6 +599,7 @@ macros::macro_connector_implementation!(
     }
 );
 
+#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Novalnet<T>
 {
@@ -663,11 +664,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(message.into_bytes())
     }
 
-    fn verify_webhook_source(
+    async fn verify_webhook_source(
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
+        _base_url: Option<&str>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let algorithm = crypto::Sha256;
 
