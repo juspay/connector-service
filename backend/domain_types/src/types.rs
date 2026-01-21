@@ -3659,9 +3659,21 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                                 },
                                 router_response_types::RedirectForm::Mifinity { initialization_token } => {
                                     Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri: initialization_token,
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Mifinity(
+                                            grpc_api_types::payments::MifinityData {
+                                                initialization_token,
+                                            }
+                                        ))
+                                    })
+                                },
+                                router_response_types::RedirectForm::Braintree { client_token, card_token, bin,  acs_url } => {
+                                    Ok(grpc_api_types::payments::RedirectForm {
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Braintree(
+                                            grpc_api_types::payments::BraintreeData {
+                                               client_token,
+                                               card_token,
+                                               bin,
+                                               acs_url,
                                             }
                                         ))
                                     })
