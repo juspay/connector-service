@@ -1217,6 +1217,42 @@ static ADYEN_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = Lazy
         },
     );
 
+    // Bank Debit - ACH
+    adyen_supported_payment_methods.add(
+        PaymentMethod::BankDebit,
+        PaymentMethodType::Ach,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::Supported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: adyen_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
+    // Bank Debit - SEPA
+    adyen_supported_payment_methods.add(
+        PaymentMethod::BankDebit,
+        PaymentMethodType::Sepa,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::Supported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: adyen_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
+    // Bank Debit - BACS
+    adyen_supported_payment_methods.add(
+        PaymentMethod::BankDebit,
+        PaymentMethodType::Bacs,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::Supported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: adyen_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
     adyen_supported_payment_methods
 });
 
@@ -1248,7 +1284,12 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
         pm_type: Option<PaymentMethodType>,
         pm_data: PaymentMethodData<DefaultPCIHolder>,
     ) -> CustomResult<(), errors::ConnectorError> {
-        let mandate_supported_pmd = std::collections::HashSet::from([PaymentMethodDataType::Card]);
+        let mandate_supported_pmd = std::collections::HashSet::from([
+            PaymentMethodDataType::Card,
+            PaymentMethodDataType::AchBankDebit,
+            PaymentMethodDataType::SepaBankDebit,
+            PaymentMethodDataType::BecsBankDebit,
+        ]);
         is_mandate_supported(pm_data, pm_type, mandate_supported_pmd, self.id())
     }
 
