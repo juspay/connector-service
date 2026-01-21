@@ -4097,19 +4097,24 @@ fn get_recurring_processing_model_for_repeat_payment<
 >(
     item: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
 ) -> Result<RecurringDetails, Error> {
-    // For repeat payments (MIT flows), it's always off-session
-    let shopper_reference = item
-        .resource_common_data
-        .get_connector_customer_id()
-        .ok()
-        .ok_or(errors::ConnectorError::MissingRequiredField {
-            field_name: "connector_customer_id",
-        })?;
-    Ok((
-        Some(AdyenRecurringModel::UnscheduledCardOnFile),
-        None, // store_payment_method is None for repeat payments
-        Some(shopper_reference),
-    ))
+    let shopper_reference = item.resource_common_data.get_connector_customer_id().ok();
+
+    match item.request.off_session {
+        // Off-session payment
+        Some(true) => {
+            let shopper_reference =
+                shopper_reference.ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_customer_id",
+                })?;
+            Ok((
+                Some(AdyenRecurringModel::UnscheduledCardOnFile),
+                None,
+                Some(shopper_reference),
+            ))
+        }
+        // On-session payment
+        _ => Ok((None, None, shopper_reference)),
+    }
 }
 
 fn get_recurring_processing_model<
@@ -5163,10 +5168,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             shopper_name: None,
             shopper_locale: item.router_data.request.locale.clone(),
-            shopper_email: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_email(),
+            shopper_email: None,
             shopper_statement: get_shopper_statement_for_repeat_payment(&item.router_data),
             social_security_number: None,
             telephone_number,
