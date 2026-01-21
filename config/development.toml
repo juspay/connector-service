@@ -84,6 +84,8 @@ authorizedotnet.base_url = "https://apitest.authorize.net/xml/v1/request.api"
 phonepe.base_url = "https://api-preprod.phonepe.com/apis/hermes/"
 cashfree.base_url = "https://sandbox.cashfree.com/"
 fiuu.base_url = "https://sandbox.merchant.razer.com/"
+fiuu.secondary_base_url = "https://sandbox.merchant.razer.com/"
+fiuu.third_base_url = "https://api.merchant.razer.com/"
 payload.base_url = "https://api.payload.com"
 payu.base_url = "https://test.payu.in/"
 paytm.base_url = "https://securestage.paytmpayments.com/"
@@ -120,6 +122,7 @@ tsys.base_url = "https://stagegw.transnox.com/"
 bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
 revolut.base_url = "https://sandbox-merchant.revolut.com/"
+wellsfargo.base_url = "https://apitest.cybersource.com/"
 
 # Generic Events Configuration
 [events]

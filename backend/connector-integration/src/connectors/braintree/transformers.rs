@@ -573,9 +573,9 @@ pub struct AuthResponse {
 #[serde(untagged)]
 pub enum BraintreeAuthResponse {
     AuthResponse(Box<AuthResponse>),
-    WalletAuthResponse(Box<WalletAuthResponse>),
     ClientTokenResponse(Box<ClientTokenResponse>),
     ErrorResponse(Box<ErrorResponse>),
+    WalletAuthResponse(Box<WalletAuthResponse>),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -836,9 +836,9 @@ impl From<BraintreePaymentStatus> for enums::AttemptStatus {
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<BraintreePaymentsResponse, Self>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -852,42 +852,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }),
             BraintreePaymentsResponse::PaymentsResponse(payment_response) => {
                 let transaction_data = payment_response.data.charge_credit_card.transaction;
-                let status = enums::AttemptStatus::from(transaction_data.status.clone());
-                let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(create_failure_error_response(
-                        transaction_data.status,
-                        Some(transaction_data.id),
-                        item.http_code,
-                    ))
-                } else {
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
-                        redirection_data: None,
-                        mandate_reference: transaction_data.payment_method.as_ref().map(|pm| {
-                            Box::new(MandateReference {
-                                connector_mandate_id: Some(pm.id.clone().expose()),
-                                payment_method_id: None,
-                                connector_mandate_request_reference_id: None,
-                            })
-                        }),
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: None,
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    })
-                };
-                Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    response,
-                    ..item.router_data
-                })
-            }
-            BraintreePaymentsResponse::AuthResponse(auth_response) => {
-                let transaction_data = auth_response.data.authorize_credit_card.transaction;
                 let status = enums::AttemptStatus::from(transaction_data.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
                     Err(create_failure_error_response(
@@ -1047,7 +1011,6 @@ pub struct WalletAuthDataResponse {
 pub enum BraintreePaymentsResponse {
     PaymentsResponse(Box<PaymentsResponse>),
     WalletPaymentsResponse(Box<WalletPaymentsResponse>),
-    AuthResponse(Box<AuthResponse>),
     ClientTokenResponse(Box<ClientTokenResponse>),
     ErrorResponse(Box<ErrorResponse>),
 }
@@ -2583,7 +2546,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Some(merchant_config_currency),
         ) = (
             item.router_data.request.merchant_account_id.clone(),
-            item.router_data.request.merchant_configered_currency,
+            item.router_data.request.merchant_configured_currency,
         ) {
             info!(
                 "BRAINTREE: Picking merchant_account_id and merchant_config_currency from repeatpayments request"

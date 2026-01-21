@@ -18,7 +18,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{
-        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
     },
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -55,6 +55,8 @@ pub enum NovalNetPaymentTypes {
     PAYPAL,
     GOOGLEPAY,
     APPLEPAY,
+    #[serde(rename = "DIRECT_DEBIT_SEPA")]
+    DirectDebitSepa,
 }
 
 #[derive(Default, Debug, Serialize, Clone)]
@@ -106,6 +108,12 @@ pub struct NovalnetMandate {
     token: Secret<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NovalnetSepaDebit {
+    account_holder: Secret<String>,
+    iban: Secret<String>,
+}
+
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct NovalnetGooglePay {
     wallet_data: Secret<String>,
@@ -126,6 +134,7 @@ pub enum NovalNetPaymentData<
     GooglePay(NovalnetGooglePay),
     ApplePay(NovalnetApplePay),
     MandatePayment(NovalnetMandate),
+    Sepa(NovalnetSepaDebit),
 }
 
 #[derive(Default, Debug, Serialize, Clone)]
@@ -175,6 +184,7 @@ impl TryFrom<&common_enums::PaymentMethodType> for NovalNetPaymentTypes {
             common_enums::PaymentMethodType::Card => Ok(Self::CREDITCARD),
             common_enums::PaymentMethodType::GooglePay => Ok(Self::GOOGLEPAY),
             common_enums::PaymentMethodType::Paypal => Ok(Self::PAYPAL),
+            common_enums::PaymentMethodType::Sepa => Ok(Self::DirectDebitSepa),
             _ => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Novalnet"),
             ))?,
@@ -453,6 +463,67 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )
                 .into()),
             },
+            PaymentMethodData::BankDebit(ref bank_debit_data) => {
+                let payment_type = NovalNetPaymentTypes::try_from(
+                    &item
+                        .router_data
+                        .request
+                        .payment_method_type
+                        .ok_or(ConnectorError::MissingPaymentMethodType)?,
+                )?;
+
+                let (iban, account_holder) = match bank_debit_data {
+                    BankDebitData::SepaBankDebit {
+                        iban,
+                        bank_account_holder_name,
+                    } => {
+                        let account_holder = match bank_account_holder_name {
+                            Some(name) => name.clone(),
+                            None => item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_full_name()?,
+                        };
+                        (iban.clone(), account_holder)
+                    }
+                    BankDebitData::AchBankDebit { .. }
+                    | BankDebitData::BecsBankDebit { .. }
+                    | BankDebitData::BacsBankDebit { .. } => {
+                        return Err(ConnectorError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("novalnet"),
+                        )
+                        .into());
+                    }
+                };
+
+                let transaction = NovalnetPaymentsRequestTransaction {
+                    test_mode,
+                    payment_type,
+                    amount: NovalNetAmount::StringMinor(amount.clone()),
+                    currency: item.router_data.request.currency,
+                    order_no: item
+                        .router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                    hook_url: Some(hook_url),
+                    return_url: Some(return_url.clone()),
+                    error_return_url: Some(return_url.clone()),
+                    payment_data: Some(NovalNetPaymentData::Sepa(NovalnetSepaDebit {
+                        account_holder: account_holder.clone(),
+                        iban,
+                    })),
+                    enforce_3d,
+                    create_token,
+                };
+
+                Ok(Self {
+                    merchant,
+                    transaction,
+                    customer,
+                    custom,
+                })
+            }
             _ => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("novalnet"),
             )
@@ -671,6 +742,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -767,6 +842,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -859,6 +938,10 @@ impl<
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -1343,6 +1426,10 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -1423,6 +1510,10 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })
@@ -1618,6 +1709,10 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
             NovalnetAPIStatus::Failure => {
                 let response = Err(get_error_response(item.response.result, item.http_code));
                 Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: common_enums::AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
                     response,
                     ..item.router_data
                 })

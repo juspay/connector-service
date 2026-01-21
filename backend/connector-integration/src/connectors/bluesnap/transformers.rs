@@ -14,7 +14,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::Serialize;
 
 use super::{requests, responses};
@@ -249,7 +249,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .as_ref()
                 .map(|metadata| BluesnapMetadata {
-                    meta_data: convert_metadata_to_request_metadata(metadata.clone()),
+                    meta_data: convert_metadata_to_request_metadata(metadata.clone().expose()),
                 });
 
         let amount = super::BluesnapAmountConvertor::convert(
