@@ -6844,16 +6844,6 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         })
         .transpose()?;
 
-    // Set amount_captured based on status - only if Charged/PartialCharged
-    let captured_amount = match status {
-        common_enums::AttemptStatus::Charged
-        | common_enums::AttemptStatus::PartialCharged
-        | common_enums::AttemptStatus::PartialChargedAndChargeable => router_data_v2.request.amount,
-        _ => None,
-    };
-
-    let minor_captured_amount = captured_amount;
-
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -6933,8 +6923,6 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     raw_connector_request,
                     connector_response,
                     connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
-                    captured_amount,
-                    minor_captured_amount,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -6981,8 +6969,6 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 raw_connector_request,
                 connector_response: None,
                 connector_metadata: HashMap::new(),
-                captured_amount: None,
-                minor_captured_amount: None,
             }
         }
     };

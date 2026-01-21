@@ -2252,10 +2252,6 @@ message PaymentServiceRegisterResponse {
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
 
-  // Captured Amount Details
-  optional int64 captured_amount = 17; // Amount that has been captured
-  optional int64 minor_captured_amount = 18; // Captured amount in minor currency units
-
   // State Information
   optional ConnectorState state = 12; // State data for access token storage and other connector-specific state
 
