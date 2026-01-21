@@ -1474,6 +1474,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CardDetailsForNetworkTransactionId(_) => Ok(Some(PaymentMethodType::Card)),
                 grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(_) => Ok(Some(PaymentMethodType::Card)),
                 // ============================================================================
+                // GIFT CARDS
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Givex(_) => {
+                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Gift card payments are not yet supported".to_owned(),
+                        error_object: None,
+                    })))
+                }
+                // ============================================================================
                 // UNSUPPORTED ONLINE BANKING - Direct error generation
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingThailand(_) => {
