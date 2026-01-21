@@ -170,6 +170,293 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Paypal<T>
 {
+    fn verify_webhook_source(
+        &self,
+        _request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<ConnectorError>> {
+        // NOTE: PayPal webhook source verification in Hyperswitch is done via PayPal's
+        // "verify-webhook-signature" API using transmission headers + webhook_id.
+        //
+        // UCS's `IncomingWebhook::verify_webhook_source` is synchronous today, so we cannot
+        // safely perform an outbound HTTP call here.
+        //
+        // We'll return `false` (unverified) and still allow the webhook transformation to
+        // proceed (HS can decide whether verification is mandatory).
+        Ok(false)
+    }
+
+    fn get_event_type(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<ConnectorError>> {
+        let payload: paypal::PaypalWebooksEventType = request
+            .body
+            .parse_struct("PaypalWebooksEventType")
+            .change_context(ConnectorError::WebhookEventTypeNotFound)?;
+
+        let outcome_code = match payload.event_type {
+            paypal::PaypalWebhookEventType::CustomerDisputeResolved => Some(
+                request
+                    .body
+                    .parse_struct::<paypal::DisputeOutcome>("PaypalDisputeOutcome")
+                    .change_context(ConnectorError::WebhookEventTypeNotFound)?
+                    .outcome_code,
+            ),
+            _ => None,
+        };
+
+        Ok(get_paypal_event_type(payload.event_type, outcome_code))
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::WebhookDetailsResponse,
+        error_stack::Report<ConnectorError>,
+    > {
+        let request_body_copy = request.body.clone();
+        let details: paypal::PaypalWebhooksBody =
+            request
+                .body
+                .parse_struct("PaypalWebhooksBody")
+                .change_context(ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let status = get_paypal_payment_webhook_status(details.event_type);
+
+        let resource_id = match details.resource {
+            paypal::PaypalResource::PaypalCardWebhooks(resource) => Some(
+                domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                    resource.supplementary_data.related_ids.order_id,
+                ),
+            ),
+            paypal::PaypalResource::PaypalRedirectsWebhooks(resource) => {
+                Some(domain_types::connector_types::ResponseId::ConnectorTransactionId(resource.id))
+            }
+            _ => None,
+        };
+
+        Ok(domain_types::connector_types::WebhookDetailsResponse {
+            resource_id,
+            status,
+            connector_response_reference_id: None,
+            mandate_reference: None,
+            error_code: None,
+            error_message: None,
+            error_reason: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
+            response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            amount_captured: None,
+            minor_amount_captured: None,
+            network_txn_id: None,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::RefundWebhookDetailsResponse,
+        error_stack::Report<ConnectorError>,
+    > {
+        let request_body_copy = request.body.clone();
+        let details: paypal::PaypalWebhooksBody =
+            request
+                .body
+                .parse_struct("PaypalWebhooksBody")
+                .change_context(ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let (connector_refund_id, refund_status) = match (details.resource, details.event_type) {
+            (
+                paypal::PaypalResource::PaypalRefundWebhooks(resource),
+                paypal::PaypalWebhookEventType::PaymentCaptureRefunded,
+            ) => (Some(resource.id), common_enums::RefundStatus::Success),
+            (paypal::PaypalResource::PaypalRefundWebhooks(resource), _) => {
+                (Some(resource.id), common_enums::RefundStatus::Pending)
+            }
+            _ => (None, common_enums::RefundStatus::Pending),
+        };
+
+        Ok(
+            domain_types::connector_types::RefundWebhookDetailsResponse {
+                connector_refund_id,
+                status: refund_status,
+                connector_response_reference_id: None,
+                error_code: None,
+                error_message: None,
+                raw_connector_response: Some(
+                    String::from_utf8_lossy(&request_body_copy).to_string(),
+                ),
+                status_code: 200,
+                response_headers: None,
+            },
+        )
+    }
+
+    fn process_dispute_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::DisputeWebhookDetailsResponse,
+        error_stack::Report<ConnectorError>,
+    > {
+        let request_body_copy = request.body.clone();
+        let details: paypal::PaypalWebhooksBody =
+            request
+                .body
+                .parse_struct("PaypalWebhooksBody")
+                .change_context(ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let dispute = match details.resource {
+            paypal::PaypalResource::PaypalDisputeWebhooks(payload) => payload,
+            _ => Err(error_stack::report!(
+                ConnectorError::WebhookBodyDecodingFailed
+            ))
+            .attach_printable("Expected PayPal dispute webhook resource")?,
+        };
+
+        let amount_minor = domain_types::utils::convert_back_amount_to_minor_units(
+            &common_utils::types::StringMajorUnitForConnector,
+            dispute.dispute_amount.value,
+            dispute.dispute_amount.currency_code,
+        )?;
+        let amount = domain_types::utils::convert_amount(
+            &common_utils::types::StringMinorUnitForConnector,
+            amount_minor,
+            dispute.dispute_amount.currency_code,
+        )?;
+
+        let status = match details.event_type {
+            paypal::PaypalWebhookEventType::CustomerDisputeCreated => {
+                common_enums::DisputeStatus::DisputeOpened
+            }
+            paypal::PaypalWebhookEventType::RiskDisputeCreated => {
+                common_enums::DisputeStatus::DisputeAccepted
+            }
+            paypal::PaypalWebhookEventType::CustomerDisputeResolved => dispute
+                .dispute_outcome
+                .as_ref()
+                .map(|o| get_paypal_dispute_status_from_outcome(&o.outcome_code))
+                .unwrap_or(common_enums::DisputeStatus::DisputeCancelled),
+            _ => common_enums::DisputeStatus::DisputeOpened,
+        };
+
+        let stage = match dispute.dispute_life_cycle_stage {
+            paypal::DisputeLifeCycleStage::Inquiry => common_enums::DisputeStage::PreDispute,
+            paypal::DisputeLifeCycleStage::Chargeback => common_enums::DisputeStage::Dispute,
+            paypal::DisputeLifeCycleStage::PreArbitration
+            | paypal::DisputeLifeCycleStage::Arbitration => {
+                common_enums::DisputeStage::PreArbitration
+            }
+        };
+
+        Ok(
+            domain_types::connector_types::DisputeWebhookDetailsResponse {
+                amount,
+                currency: dispute.dispute_amount.currency_code,
+                dispute_id: dispute.dispute_id,
+                status,
+                stage,
+                connector_response_reference_id: None,
+                dispute_message: dispute.reason,
+                raw_connector_response: Some(
+                    String::from_utf8_lossy(&request_body_copy).to_string(),
+                ),
+                status_code: 200,
+                response_headers: None,
+                connector_reason_code: None,
+            },
+        )
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<ConnectorError>,
+    > {
+        let details: paypal::PaypalWebhooksBody =
+            request
+                .body
+                .parse_struct("PaypalWebhooksBody")
+                .change_context(ConnectorError::WebhookBodyDecodingFailed)?;
+        Ok(Box::new(details))
+    }
+}
+
+fn get_paypal_event_type(
+    event: paypal::PaypalWebhookEventType,
+    outcome: Option<paypal::OutcomeCode>,
+) -> domain_types::connector_types::EventType {
+    use domain_types::connector_types::EventType as E;
+    match event {
+        paypal::PaypalWebhookEventType::PaymentCaptureCompleted
+        | paypal::PaypalWebhookEventType::CheckoutOrderCompleted => E::PaymentIntentSuccess,
+        paypal::PaypalWebhookEventType::PaymentCapturePending
+        | paypal::PaypalWebhookEventType::CheckoutOrderProcessed => E::PaymentIntentProcessing,
+        paypal::PaypalWebhookEventType::PaymentCaptureDeclined => E::PaymentIntentFailure,
+        paypal::PaypalWebhookEventType::PaymentCaptureRefunded => E::RefundSuccess,
+        paypal::PaypalWebhookEventType::CustomerDisputeCreated => E::DisputeOpened,
+        paypal::PaypalWebhookEventType::RiskDisputeCreated => E::DisputeAccepted,
+        paypal::PaypalWebhookEventType::CustomerDisputeResolved => outcome
+            .map(|o| match o {
+                paypal::OutcomeCode::ResolvedBuyerFavour => E::DisputeLost,
+                paypal::OutcomeCode::ResolvedSellerFavour => E::DisputeWon,
+                paypal::OutcomeCode::CanceledByBuyer => E::DisputeCancelled,
+                paypal::OutcomeCode::ACCEPTED => E::DisputeAccepted,
+                paypal::OutcomeCode::DENIED | paypal::OutcomeCode::NONE => E::DisputeCancelled,
+                paypal::OutcomeCode::ResolvedWithPayout => E::IncomingWebhookEventUnspecified,
+            })
+            .unwrap_or(E::IncomingWebhookEventUnspecified),
+        _ => E::IncomingWebhookEventUnspecified,
+    }
+}
+
+fn get_paypal_payment_webhook_status(
+    event: paypal::PaypalWebhookEventType,
+) -> common_enums::AttemptStatus {
+    match event {
+        paypal::PaypalWebhookEventType::PaymentCaptureCompleted
+        | paypal::PaypalWebhookEventType::CheckoutOrderCompleted => {
+            common_enums::AttemptStatus::Charged
+        }
+        paypal::PaypalWebhookEventType::PaymentCapturePending
+        | paypal::PaypalWebhookEventType::CheckoutOrderProcessed => {
+            common_enums::AttemptStatus::Pending
+        }
+        paypal::PaypalWebhookEventType::PaymentCaptureDeclined => {
+            common_enums::AttemptStatus::Failure
+        }
+        _ => common_enums::AttemptStatus::Pending,
+    }
+}
+
+fn get_paypal_dispute_status_from_outcome(
+    outcome: &paypal::OutcomeCode,
+) -> common_enums::DisputeStatus {
+    match outcome {
+        paypal::OutcomeCode::ResolvedBuyerFavour => common_enums::DisputeStatus::DisputeLost,
+        paypal::OutcomeCode::ResolvedSellerFavour => common_enums::DisputeStatus::DisputeWon,
+        paypal::OutcomeCode::CanceledByBuyer => common_enums::DisputeStatus::DisputeCancelled,
+        paypal::OutcomeCode::ACCEPTED => common_enums::DisputeStatus::DisputeAccepted,
+        paypal::OutcomeCode::DENIED | paypal::OutcomeCode::NONE => {
+            common_enums::DisputeStatus::DisputeCancelled
+        }
+        paypal::OutcomeCode::ResolvedWithPayout => common_enums::DisputeStatus::DisputeCancelled,
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for Paypal<T>

@@ -2852,3 +2852,138 @@ pub struct PaypalPaymentErrorResponse {
     pub debug_id: Option<String>,
     pub details: Option<Vec<ErrorDetails>>,
 }
+
+// ----------------------------------------------------------------------------
+// Webhooks (Payments / Refunds / Disputes)
+// ----------------------------------------------------------------------------
+
+pub mod webhook_headers {
+    // PayPal transmission headers used for signature verification
+    pub const PAYPAL_TRANSMISSION_ID: &str = "paypal-transmission-id";
+    pub const PAYPAL_TRANSMISSION_TIME: &str = "paypal-transmission-time";
+    pub const PAYPAL_CERT_URL: &str = "paypal-cert-url";
+    pub const PAYPAL_TRANSMISSION_SIG: &str = "paypal-transmission-sig";
+    pub const PAYPAL_AUTH_ALGO: &str = "paypal-auth-algo";
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct PaypalWebhooksBody {
+    pub event_type: PaypalWebhookEventType,
+    pub resource: PaypalResource,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct PaypalWebooksEventType {
+    pub event_type: PaypalWebhookEventType,
+}
+
+#[derive(Clone, Deserialize, Debug, strum::Display, Serialize)]
+pub enum PaypalWebhookEventType {
+    #[serde(rename = "PAYMENT.CAPTURE.COMPLETED")]
+    PaymentCaptureCompleted,
+    #[serde(rename = "PAYMENT.CAPTURE.PENDING")]
+    PaymentCapturePending,
+    #[serde(rename = "PAYMENT.CAPTURE.DECLINED")]
+    PaymentCaptureDeclined,
+    #[serde(rename = "PAYMENT.CAPTURE.REFUNDED")]
+    PaymentCaptureRefunded,
+
+    #[serde(rename = "CHECKOUT.ORDER.COMPLETED")]
+    CheckoutOrderCompleted,
+    #[serde(rename = "CHECKOUT.ORDER.PROCESSED")]
+    CheckoutOrderProcessed,
+    #[serde(rename = "CHECKOUT.ORDER.APPROVED")]
+    CheckoutOrderApproved,
+
+    #[serde(rename = "CUSTOMER.DISPUTE.CREATED")]
+    CustomerDisputeCreated,
+    #[serde(rename = "CUSTOMER.DISPUTE.RESOLVED")]
+    CustomerDisputeResolved,
+    #[serde(rename = "CUSTOMER.DISPUTE.UPDATED")]
+    CustomerDisputedUpdated,
+    #[serde(rename = "RISK.DISPUTE.CREATED")]
+    RiskDisputeCreated,
+
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+#[serde(untagged)]
+pub enum PaypalResource {
+    PaypalCardWebhooks(Box<PaypalCardWebhooks>),
+    PaypalRedirectsWebhooks(Box<PaypalRedirectsWebhooks>),
+    PaypalRefundWebhooks(Box<PaypalRefundWebhooks>),
+    PaypalDisputeWebhooks(Box<PaypalDisputeWebhooks>),
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct PaypalRefundWebhooks {
+    pub id: String,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct PaypalCardWebhooks {
+    pub supplementary_data: PaypalSupplementaryData,
+    pub amount: OrderAmount,
+    pub invoice_id: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct PaypalRedirectsWebhooks {
+    pub purchase_units: Vec<PurchaseUnitItem>,
+    pub id: String,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct PaypalDisputeWebhooks {
+    pub dispute_id: String,
+    pub disputed_transactions: Vec<DisputeTransaction>,
+    pub dispute_amount: OrderAmount,
+    pub dispute_outcome: Option<DisputeOutcome>,
+    pub dispute_life_cycle_stage: DisputeLifeCycleStage,
+    pub status: DisputeStatus,
+    pub reason: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct DisputeTransaction {
+    pub seller_transaction_id: String,
+}
+
+#[derive(Clone, Deserialize, Debug, strum::Display, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DisputeLifeCycleStage {
+    Inquiry,
+    Chargeback,
+    PreArbitration,
+    Arbitration,
+}
+
+#[derive(Deserialize, Debug, strum::Display, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DisputeStatus {
+    Open,
+    WaitingForBuyerResponse,
+    WaitingForSellerResponse,
+    UnderReview,
+    Resolved,
+    Other,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct DisputeOutcome {
+    pub outcome_code: OutcomeCode,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum OutcomeCode {
+    ResolvedBuyerFavour,
+    ResolvedSellerFavour,
+    ResolvedWithPayout,
+    CanceledByBuyer,
+    ACCEPTED,
+    DENIED,
+    NONE,
+}
