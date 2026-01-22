@@ -4,6 +4,26 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.22.0
+
+### Features
+
+- **connector:**
+  - Braintree Card 3DS PaymentMethod ([#433](https://github.com/juspay/connector-service/pull/433)) ([`c5d2a1a`](https://github.com/juspay/connector-service/commit/c5d2a1a0c336b80899514bd1a8681eda0d9d83ef))
+  - [redsys] integrate 3ds card, refund, void, capture ([#309](https://github.com/juspay/connector-service/pull/309)) ([`322985c`](https://github.com/juspay/connector-service/commit/322985c518b61470042c1eaa2537748d559741fb))
+
+### Bug Fixes
+
+- Diff fix for adyen and paypal repeat payments ([#434](https://github.com/juspay/connector-service/pull/434)) ([`38448d9`](https://github.com/juspay/connector-service/commit/38448d94435e44ed91a37d2eca36e0b777752ac9))
+
+### Miscellaneous Tasks
+
+- Proto code owners ([#438](https://github.com/juspay/connector-service/pull/438)) ([`25b68fe`](https://github.com/juspay/connector-service/commit/25b68fe65a6d681cfb6b2cd0b0831d2d585106f0))
+
+**Full Changelog:** [`2026.01.21.0...2026.01.22.0`](https://github.com/juspay/connector-service/compare/2026.01.21.0...2026.01.22.0)
+
+- - -
+
 ## 2026.01.21.0
 
 ### Features
