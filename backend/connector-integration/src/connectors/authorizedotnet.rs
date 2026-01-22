@@ -332,7 +332,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
         error_stack::Report<ConnectorError>,
     > {
-        let payload: transformers::AuthorizedotnetWebhookObjectId = request
+        let payload: AuthorizedotnetWebhookObjectId = request
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
             .change_context(ConnectorError::WebhookResourceObjectNotFound)
@@ -341,7 +341,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?;
 
         Ok(Box::new(
-            transformers::AuthorizedotnetPSyncResponse::try_from(payload)
+            AuthorizedotnetPSyncResponse::try_from(payload)
                 .change_context(ConnectorError::WebhookResourceObjectNotFound)
                 .attach_printable("Failed to convert webhook payload to sync response format")?,
         ))
