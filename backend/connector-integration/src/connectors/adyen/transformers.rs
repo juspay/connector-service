@@ -1053,6 +1053,8 @@ impl TryFrom<&common_enums::PaymentMethodType> for PaymentType {
 
             common_enums::PaymentMethodType::Paypal => Ok(Self::Paypal),
             common_enums::PaymentMethodType::Pix => Ok(Self::Pix),
+            common_enums::PaymentMethodType::Givex => Ok(Self::Giftcard),
+            common_enums::PaymentMethodType::PaySafeCard => Ok(Self::PaySafeCard),
             _ => Err(errors::ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Adyen"),
             ))?,
