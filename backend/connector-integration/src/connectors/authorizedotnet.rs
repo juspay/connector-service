@@ -324,6 +324,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             response_headers: None,
         })
     }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<ConnectorError>,
+    > {
+        let payload: transformers::AuthorizedotnetWebhookObjectId = request
+            .body
+            .parse_struct("AuthorizedotnetWebhookObjectId")
+            .change_context(ConnectorError::WebhookResourceObjectNotFound)
+            .attach_printable_lazy(|| {
+                "Failed to parse Authorize.Net webhook resource object from body"
+            })?;
+
+        Ok(Box::new(
+            transformers::AuthorizedotnetPSyncResponse::try_from(payload)
+                .change_context(ConnectorError::WebhookResourceObjectNotFound)
+                .attach_printable("Failed to convert webhook payload to sync response format")?,
+        ))
+    }
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     SubmitEvidenceV2 for Authorizedotnet<T>
