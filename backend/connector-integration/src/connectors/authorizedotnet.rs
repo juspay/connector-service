@@ -416,7 +416,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.authorizedotnet.base_url.as_ref()
+        connectors.get_config().authorizedotnet.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -550,7 +550,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            let base_url = &req.resource_common_data.connectors.authorizedotnet.base_url;
+            let base_url = &req.resource_common_data.connectors.get_config().authorizedotnet.base_url;
             base_url.to_string()
         }
 
@@ -558,7 +558,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.authorizedotnet.base_url.to_string()
+            req.resource_common_data.connectors.get_config().authorizedotnet.base_url.to_string()
         }
     }
 );

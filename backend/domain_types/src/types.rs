@@ -119,7 +119,7 @@ use crate::{
     PartialEq,
     config_patch_derive::Patch,
 )]
-pub struct Connectors {
+pub struct ConnectorConfigSet {
     // Added pub
     pub adyen: ConnectorParams,
     pub forte: ConnectorParams,
@@ -191,6 +191,31 @@ pub struct Connectors {
     pub gigadat: ConnectorParams,
     pub loonio: ConnectorParams,
     pub wellsfargo: ConnectorParams,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize, config_patch_derive::Patch)]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectorEnvironment {
+    Sandbox,
+    Production,
+}
+
+#[derive(
+    Clone, serde::Deserialize, serde::Serialize, Debug, PartialEq, config_patch_derive::Patch,
+)]
+pub struct Connectors {
+    pub environment: ConnectorEnvironment,
+    pub sandbox: ConnectorConfigSet,
+    pub production: ConnectorConfigSet,
+}
+
+impl Connectors {
+    pub fn get_config(&self) -> &ConnectorConfigSet {
+        match self.environment {
+            ConnectorEnvironment::Sandbox => &self.sandbox,
+            ConnectorEnvironment::Production => &self.production,
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]

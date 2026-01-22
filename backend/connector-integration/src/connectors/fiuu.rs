@@ -330,7 +330,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.fiuu.base_url
+            &req.resource_common_data.connectors.get_config().fiuu.base_url
         }
 
         pub fn connector_secondary_base_url_payments<'a, F, Req, Res>(
@@ -340,6 +340,7 @@ macros::create_all_prerequisites!(
             let base_url = req
                 .resource_common_data
                 .connectors
+                .get_config()
                 .fiuu
                 .secondary_base_url
                 .as_deref()
@@ -355,6 +356,7 @@ macros::create_all_prerequisites!(
             let base_url = req
                 .resource_common_data
                 .connectors
+                .get_config()
                 .fiuu
                 .secondary_base_url
                 .as_deref()
@@ -381,7 +383,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.fiuu.base_url.as_ref()
+        connectors.get_config().fiuu.base_url.as_ref()
     }
 
     fn build_error_response(

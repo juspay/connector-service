@@ -1,8 +1,24 @@
 use grpc_server::{self, app, configs, logger};
 
+#[allow(clippy::expect_used)]
 #[allow(clippy::unwrap_in_result)]
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Build tokio runtime with increased thread stack size
+    // Default tokio stack is ~8MB; we increase to 32MB for safety
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(4) // Match default worker count
+        .thread_stack_size(32 * 1024 * 1024) // 32MB stack per thread
+        .thread_name("grpc-worker")
+        .enable_all()
+        .build()
+        .expect("Failed to create tokio runtime");
+
+    // Block the async main on this runtime
+    rt.block_on(async_main())
+}
+
+#[allow(clippy::unwrap_in_result)]
+async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(debug_assertions)]
     verify_other_config_files();
     #[allow(clippy::expect_used)]

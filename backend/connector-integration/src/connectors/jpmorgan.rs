@@ -323,7 +323,7 @@ macros::create_all_prerequisites!(
         where
             ResourceData: JpmorganResourceData,
         {
-            &req.resource_common_data.connectors().jpmorgan.base_url
+            &req.resource_common_data.connectors().get_config().jpmorgan.base_url
         }
     }
 );
@@ -340,7 +340,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.jpmorgan.base_url.as_ref()
+        connectors.get_config().jpmorgan.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -554,7 +554,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}/am/oauth2/alpha/access_token",
-                req.resource_common_data.connectors.jpmorgan.secondary_base_url.as_ref()
+                req.resource_common_data.connectors.get_config().jpmorgan.secondary_base_url.as_ref()
                     .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?
             ))
         }

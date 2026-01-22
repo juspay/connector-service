@@ -218,7 +218,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.rapyd.base_url.as_ref()
+        connectors.get_config().rapyd.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -389,14 +389,14 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.rapyd.base_url
+            &req.resource_common_data.connectors.get_config().rapyd.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.rapyd.base_url
+            &req.resource_common_data.connectors.get_config().rapyd.base_url
         }
 
         pub fn generate_signature(

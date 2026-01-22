@@ -316,7 +316,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.authipay.base_url
+            &req.resource_common_data.connectors.get_config().authipay.base_url
         }
 
         /// Helper to get base URL for refund flows
@@ -324,7 +324,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.authipay.base_url
+            &req.resource_common_data.connectors.get_config().authipay.base_url
         }
 
         /// Build common headers for all flows
@@ -1016,7 +1016,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.authipay.base_url
+        &connectors.get_config().authipay.base_url
     }
 
     fn get_auth_header(

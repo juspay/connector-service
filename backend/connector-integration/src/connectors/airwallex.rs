@@ -302,7 +302,7 @@ macros::macro_connector_implementation!(
             let order_id = req.resource_common_data.reference_id
                 .as_ref()
                 .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "reference_id" })?;
-            Ok(format!("{}/pa/payment_intents/{}/confirm", &req.resource_common_data.connectors.airwallex.base_url, order_id))
+            Ok(format!("{}/pa/payment_intents/{}/confirm", &req.resource_common_data.connectors.get_config().airwallex.base_url, order_id))
         }
     }
 );
@@ -332,7 +332,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let payment_id = req.request.get_connector_transaction_id()?;
-            Ok(format!("{}/pa/payment_intents/{}", &req.resource_common_data.connectors.airwallex.base_url, payment_id))
+            Ok(format!("{}/pa/payment_intents/{}", &req.resource_common_data.connectors.get_config().airwallex.base_url, payment_id))
         }
     }
 );
@@ -366,7 +366,7 @@ macros::macro_connector_implementation!(
                 ResponseId::ConnectorTransactionId(id) => id,
                 _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
             };
-            Ok(format!("{}/pa/payment_intents/{}/capture", &req.resource_common_data.connectors.airwallex.base_url, payment_id))
+            Ok(format!("{}/pa/payment_intents/{}/capture", &req.resource_common_data.connectors.get_config().airwallex.base_url, payment_id))
         }
     }
 );
@@ -396,7 +396,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/pa/refunds/create", &req.resource_common_data.connectors.airwallex.base_url))
+            Ok(format!("{}/pa/refunds/create", &req.resource_common_data.connectors.get_config().airwallex.base_url))
         }
     }
 );
@@ -426,7 +426,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let refund_id = req.request.connector_refund_id.clone();
-            Ok(format!("{}/pa/refunds/{}", &req.resource_common_data.connectors.airwallex.base_url, refund_id))
+            Ok(format!("{}/pa/refunds/{}", &req.resource_common_data.connectors.get_config().airwallex.base_url, refund_id))
         }
     }
 );
@@ -469,7 +469,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/authentication/login", &req.resource_common_data.connectors.airwallex.base_url))
+            Ok(format!("{}/authentication/login", &req.resource_common_data.connectors.get_config().airwallex.base_url))
         }
     }
 );
@@ -499,7 +499,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/pa/payment_intents/create", &req.resource_common_data.connectors.airwallex.base_url))
+            Ok(format!("{}/pa/payment_intents/create", &req.resource_common_data.connectors.get_config().airwallex.base_url))
         }
     }
 );
@@ -533,7 +533,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let payment_id = req.request.connector_transaction_id.clone();
-            Ok(format!("{}/pa/payment_intents/{}/cancel", &req.resource_common_data.connectors.airwallex.base_url, payment_id))
+            Ok(format!("{}/pa/payment_intents/{}/cancel", &req.resource_common_data.connectors.get_config().airwallex.base_url, payment_id))
         }
     }
 );
@@ -954,7 +954,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.airwallex.base_url.as_ref()
+        connectors.get_config().airwallex.base_url.as_ref()
     }
 
     fn get_auth_header(

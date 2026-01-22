@@ -285,6 +285,7 @@ macros::create_all_prerequisites!(
             // Use secondary_base_url from config for tokenization endpoint
             req.resource_common_data
                 .connectors
+                .get_config()
                 .hipay
                 .secondary_base_url
                 .as_ref()
@@ -299,6 +300,7 @@ macros::create_all_prerequisites!(
             // Use third_base_url from config for sync operations (PSync)
             req.resource_common_data
                 .connectors
+                .get_config()
                 .hipay
                 .third_base_url
                 .as_ref()
@@ -313,6 +315,7 @@ macros::create_all_prerequisites!(
             // Use third_base_url from config for refund sync operations
             req.resource_common_data
                 .connectors
+                .get_config()
                 .hipay
                 .third_base_url
                 .as_ref()
@@ -346,14 +349,14 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.hipay.base_url
+            &req.resource_common_data.connectors.get_config().hipay.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.hipay.base_url
+            &req.resource_common_data.connectors.get_config().hipay.base_url
         }
     }
 );
@@ -370,7 +373,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.hipay.base_url.as_ref()
+        connectors.get_config().hipay.base_url.as_ref()
     }
 
     fn get_auth_header(

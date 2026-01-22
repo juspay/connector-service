@@ -916,7 +916,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.gigadat.base_url
+        &connectors.get_config().gigadat.base_url
     }
 
     fn get_auth_header(

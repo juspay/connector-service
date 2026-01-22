@@ -305,7 +305,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.volt.base_url.to_string()
+            req.resource_common_data.connectors.get_config().volt.base_url.to_string()
         }
     }
 );
@@ -326,7 +326,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.volt.base_url
+        &connectors.get_config().volt.base_url
     }
 
     fn build_error_response(
@@ -483,7 +483,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = req.resource_common_data.connectors.volt
+            let base_url = req.resource_common_data.connectors.get_config().volt
             .secondary_base_url
             .as_ref()
             .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;

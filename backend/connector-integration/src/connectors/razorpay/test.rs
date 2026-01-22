@@ -14,6 +14,7 @@ mod tests {
         payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},
         router_request_types::BrowserInformation,
         router_response_types::Response,
+        types::{ConnectorConfigSet, ConnectorEnvironment},
     };
     use interfaces::{
         connector_integration_v2::ConnectorIntegrationV2,
@@ -41,7 +42,7 @@ mod tests {
             router_data_v2::RouterDataV2,
             router_request_types::BrowserInformation,
             router_response_types::Response,
-            types::{ConnectorParams, Connectors},
+            types::{ConnectorConfigSet, ConnectorEnvironment, ConnectorParams, Connectors},
         };
         use interfaces::{
             connector_integration_v2::ConnectorIntegrationV2,
@@ -99,12 +100,18 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        razorpay: ConnectorParams {
-                            base_url: "https://api.razorpay.com/".to_string(),
-                            dispute_base_url: None,
+                        environment: ConnectorEnvironment::Sandbox,
+                        sandbox: ConnectorConfigSet {
+                            razorpay: ConnectorParams {
+                                base_url: "https://api.razorpay.com/".to_string(),
+                                dispute_base_url: None,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
+                        production: ConnectorConfigSet {
+                            ..Default::default()
+                        },
                     },
                     vault_headers: None,
                     connector_response_headers: None,
@@ -286,12 +293,18 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        razorpay: ConnectorParams {
-                            base_url: "https://api.razorpay.com/".to_string(),
-                            dispute_base_url: None,
+                        environment: ConnectorEnvironment::Sandbox,
+                        sandbox: ConnectorConfigSet {
+                            razorpay: ConnectorParams {
+                                base_url: "https://api.razorpay.com/".to_string(),
+                                dispute_base_url: None,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
+                        production: ConnectorConfigSet {
+                            ..Default::default()
+                        },
                     },
                     vault_headers: None,
                     connector_response_headers: None,
@@ -426,12 +439,18 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        razorpay: ConnectorParams {
-                            base_url: "https://api.razorpay.com/".to_string(),
-                            dispute_base_url: None,
+                        environment: ConnectorEnvironment::Sandbox,
+                        sandbox: ConnectorConfigSet {
+                            razorpay: ConnectorParams {
+                                base_url: "https://api.razorpay.com/".to_string(),
+                                dispute_base_url: None,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
+                        production: ConnectorConfigSet {
+                            ..Default::default()
+                        },
                     },
                     vault_headers: None,
                     connector_response_headers: None,
@@ -588,12 +607,18 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        razorpay: ConnectorParams {
-                            base_url: "https://api.razorpay.com/".to_string(),
-                            dispute_base_url: None,
+                        environment: ConnectorEnvironment::Sandbox,
+                        sandbox: ConnectorConfigSet {
+                            razorpay: ConnectorParams {
+                                base_url: "https://api.razorpay.com/".to_string(),
+                                dispute_base_url: None,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
+                        production: ConnectorConfigSet {
+                            ..Default::default()
+                        },
                     },
                     vault_headers: None,
                     connector_response_headers: None,
@@ -921,12 +946,18 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    razorpay: ConnectorParams {
-                        base_url: "https://api.razorpay.com/".to_string(),
-                        dispute_base_url: None,
+                    environment: ConnectorEnvironment::Sandbox,
+                    sandbox: ConnectorConfigSet {
+                        razorpay: ConnectorParams {
+                            base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
+                    production: ConnectorConfigSet {
+                        ..Default::default()
+                    },
                 },
                 vault_headers: None,
                 connector_response_headers: None,
@@ -1117,12 +1148,18 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    razorpay: ConnectorParams {
-                        base_url: "https://api.razorpay.com/".to_string(),
-                        dispute_base_url: None,
+                    environment: ConnectorEnvironment::Sandbox,
+                    sandbox: ConnectorConfigSet {
+                        razorpay: ConnectorParams {
+                            base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
+                    production: ConnectorConfigSet {
+                        ..Default::default()
+                    },
                 },
                 vault_headers: None,
                 connector_response_headers: None,
@@ -1252,7 +1289,7 @@ mod tests {
             payment_address::{Address, PhoneDetails},
             payment_method_data::DefaultPCIHolder,
             router_data::ConnectorAuthType,
-            types::{ConnectorParams, Connectors},
+            types::{ConnectorConfigSet, ConnectorEnvironment, ConnectorParams, Connectors},
         };
         use interfaces::connector_types::BoxedConnector;
         use serde_json::{to_value, Value};
@@ -1316,12 +1353,18 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        razorpay: ConnectorParams {
-                            base_url: "https://api.razorpay.com/".to_string(),
-                            dispute_base_url: None,
+                        environment: ConnectorEnvironment::Sandbox,
+                        sandbox: ConnectorConfigSet {
+                            razorpay: ConnectorParams {
+                                base_url: "https://api.razorpay.com/".to_string(),
+                                dispute_base_url: None,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
+                        production: ConnectorConfigSet {
+                            ..Default::default()
+                        },
                     },
                     vault_headers: None,
                     connector_response_headers: None,
@@ -1431,12 +1474,18 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        razorpay: ConnectorParams {
-                            base_url: "https://api.razorpay.com/".to_string(),
-                            dispute_base_url: None,
+                        environment: ConnectorEnvironment::Sandbox,
+                        sandbox: ConnectorConfigSet {
+                            razorpay: ConnectorParams {
+                                base_url: "https://api.razorpay.com/".to_string(),
+                                dispute_base_url: None,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
+                        production: ConnectorConfigSet {
+                            ..Default::default()
+                        },
                     },
                     vault_headers: None,
                     connector_response_headers: None,
@@ -1549,12 +1598,18 @@ mod tests {
                     external_latency: None,
                     raw_connector_response: None,
                     connectors: Connectors {
-                        razorpay: ConnectorParams {
-                            base_url: "https://api.razorpay.com/".to_string(),
-                            dispute_base_url: None,
+                        environment: ConnectorEnvironment::Sandbox,
+                        sandbox: ConnectorConfigSet {
+                            razorpay: ConnectorParams {
+                                base_url: "https://api.razorpay.com/".to_string(),
+                                dispute_base_url: None,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
+                        production: ConnectorConfigSet {
+                            ..Default::default()
+                        },
                     },
                     vault_headers: None,
                     connector_response_headers: None,
@@ -1709,12 +1764,18 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    razorpay: ConnectorParams {
-                        base_url: "https://api.razorpay.com/".to_string(),
-                        dispute_base_url: None,
+                    environment: ConnectorEnvironment::Sandbox,
+                    sandbox: ConnectorConfigSet {
+                        razorpay: ConnectorParams {
+                            base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
+                    production: ConnectorConfigSet {
+                        ..Default::default()
+                    },
                 },
                 vault_headers: None,
                 connector_response_headers: None,
@@ -1837,12 +1898,18 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    razorpay: ConnectorParams {
-                        base_url: "https://api.razorpay.com/".to_string(),
-                        dispute_base_url: None,
+                    environment: ConnectorEnvironment::Sandbox,
+                    sandbox: ConnectorConfigSet {
+                        razorpay: ConnectorParams {
+                            base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
+                    production: ConnectorConfigSet {
+                        ..Default::default()
+                    },
                 },
                 vault_headers: None,
                 connector_response_headers: None,
@@ -1953,12 +2020,18 @@ mod tests {
                 external_latency: None,
                 raw_connector_response: None,
                 connectors: Connectors {
-                    razorpay: ConnectorParams {
-                        base_url: "https://api.razorpay.com/".to_string(),
-                        dispute_base_url: None,
+                    environment: ConnectorEnvironment::Sandbox,
+                    sandbox: ConnectorConfigSet {
+                        razorpay: ConnectorParams {
+                            base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
+                    production: ConnectorConfigSet {
+                        ..Default::default()
+                    },
                 },
                 vault_headers: None,
                 connector_response_headers: None,

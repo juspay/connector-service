@@ -285,14 +285,14 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.datatrans.base_url
+            &req.resource_common_data.connectors.get_config().datatrans.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.datatrans.base_url
+            &req.resource_common_data.connectors.get_config().datatrans.base_url
         }
     }
 );

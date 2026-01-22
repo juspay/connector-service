@@ -495,7 +495,7 @@ macros::create_all_prerequisites!(
             let auth = transformers::WellsfargoAuthType::try_from(&req.connector_auth_type)?;
             let merchant_account = auth.merchant_account.clone().expose();
 
-            let base_url = &req.resource_common_data.get_connectors().wellsfargo.base_url;
+            let base_url = &req.resource_common_data.get_connectors().get_config().wellsfargo.base_url;
             let wellsfargo_host = Url::parse(base_url)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)
                 .attach_printable("Failed to parse Wells Fargo base URL")?;
@@ -558,7 +558,7 @@ macros::create_all_prerequisites!(
         where
             FlowData: FlowDataBase,
         {
-            &req.resource_common_data.get_connectors().wellsfargo.base_url
+            &req.resource_common_data.get_connectors().get_config().wellsfargo.base_url
         }
     }
 );
@@ -575,7 +575,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.wellsfargo.base_url.as_ref()
+        connectors.get_config().wellsfargo.base_url.as_ref()
     }
 
     fn get_currency_unit(&self) -> CurrencyUnit {
