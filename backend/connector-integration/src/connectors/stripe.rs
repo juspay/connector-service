@@ -406,9 +406,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .map(|status| match status {
                     WebhookEventStatus::Won => EventType::DisputeWon,
                     WebhookEventStatus::Lost => EventType::DisputeLost,
-                    WebhookEventStatus::NeedsResponse | WebhookEventStatus::WarningNeedsResponse => {
-                        EventType::DisputeOpened
-                    }
+                    WebhookEventStatus::NeedsResponse
+                    | WebhookEventStatus::WarningNeedsResponse => EventType::DisputeOpened,
                     WebhookEventStatus::UnderReview | WebhookEventStatus::WarningUnderReview => {
                         EventType::DisputeChallenged
                     }
@@ -579,8 +578,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_webhook_resource_object(
         &self,
         request: RequestDetails,
-    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<ConnectorError>>
-    {
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<ConnectorError>,
+    > {
         let details: WebhookEvent = request
             .body
             .parse_struct("WebhookEvent")
