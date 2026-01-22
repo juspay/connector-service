@@ -413,18 +413,23 @@ where
                         }))
                     } else {
                         let test_mode = test_context.is_some();
-                        call_connector_api(proxy, request, "execute_connector_processing_step", test_mode)
-                            .await
-                            .change_context(ConnectorError::RequestEncodingFailed)
-                            .inspect_err(|err| {
-                                info_log(
-                                    "NETWORK_ERROR",
-                                    &json!(format!(
-                                        "Failed getting response from connector. Error: {:?}",
-                                        err
-                                    )),
-                                );
-                            })
+                        call_connector_api(
+                            proxy,
+                            request,
+                            "execute_connector_processing_step",
+                            test_mode,
+                        )
+                        .await
+                        .change_context(ConnectorError::RequestEncodingFailed)
+                        .inspect_err(|err| {
+                            info_log(
+                                "NETWORK_ERROR",
+                                &json!(format!(
+                                    "Failed getting response from connector. Error: {:?}",
+                                    err
+                                )),
+                            );
+                        })
                     };
                     let external_service_elapsed = external_service_start_latency.elapsed();
                     metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
@@ -829,10 +834,11 @@ fn get_or_create_proxy_client(
                 None => {
                     tracing::info!("Creating new proxy client for config: {:?}", cache_key);
 
-                    let new_client = get_client_builder(proxy_config, should_bypass_proxy, test_mode)?
-                        .build()
-                        .change_context(ApiClientError::ClientConstructionFailed)
-                        .attach_printable("Failed to construct proxy client")?;
+                    let new_client =
+                        get_client_builder(proxy_config, should_bypass_proxy, test_mode)?
+                            .build()
+                            .change_context(ApiClientError::ClientConstructionFailed)
+                            .attach_printable("Failed to construct proxy client")?;
 
                     write_lock.insert(cache_key.clone(), new_client.clone());
                     tracing::debug!("Cached new proxy client for config: {:?}", cache_key);
@@ -859,8 +865,13 @@ fn get_base_client(
 
         let cache = PROXY_CLIENT_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
 
-        let client =
-            get_or_create_proxy_client(cache, cache_key, proxy_config, should_bypass_proxy, test_mode)?;
+        let client = get_or_create_proxy_client(
+            cache,
+            cache_key,
+            proxy_config,
+            should_bypass_proxy,
+            test_mode,
+        )?;
 
         Ok(client)
     } else {
