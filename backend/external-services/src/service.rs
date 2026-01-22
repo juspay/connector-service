@@ -412,7 +412,8 @@ where
                             status_code: injector_response.status_code, // Use actual status code from connector
                         }))
                     } else {
-                        call_connector_api(proxy, request, "execute_connector_processing_step")
+                        let test_mode = test_context.is_some();
+                        call_connector_api(proxy, request, "execute_connector_processing_step", test_mode)
                             .await
                             .change_context(ConnectorError::RequestEncodingFailed)
                             .inspect_err(|err| {
@@ -618,6 +619,7 @@ pub async fn call_connector_api(
     proxy: &Proxy,
     request: Request,
     _flow_name: &str,
+    test_mode: bool,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
@@ -629,6 +631,7 @@ pub async fn call_connector_api(
         should_bypass_proxy,
         request.certificate,
         request.certificate_key,
+        test_mode,
     )?;
 
     let headers = request.headers.construct_header_map()?;
@@ -754,8 +757,9 @@ pub fn create_client(
     should_bypass_proxy: bool,
     _client_certificate: Option<Secret<String>>,
     _client_certificate_key: Option<Secret<String>>,
+    test_mode: bool,
 ) -> CustomResult<Client, ApiClientError> {
-    get_base_client(proxy_config, should_bypass_proxy)
+    get_base_client(proxy_config, should_bypass_proxy, test_mode)
     // match (client_certificate, client_certificate_key) {
     //     (Some(encoded_certificate), Some(encoded_certificate_key)) => {
     //         let client_builder = get_client_builder(proxy_config, should_bypass_proxy)?;
@@ -797,6 +801,7 @@ fn get_or_create_proxy_client(
     cache_key: Proxy,
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
+    test_mode: bool,
 ) -> CustomResult<Client, ApiClientError> {
     let read_result = cache
         .read()
@@ -824,7 +829,7 @@ fn get_or_create_proxy_client(
                 None => {
                     tracing::info!("Creating new proxy client for config: {:?}", cache_key);
 
-                    let new_client = get_client_builder(proxy_config, should_bypass_proxy)?
+                    let new_client = get_client_builder(proxy_config, should_bypass_proxy, test_mode)?
                         .build()
                         .change_context(ApiClientError::ClientConstructionFailed)
                         .attach_printable("Failed to construct proxy client")?;
@@ -843,6 +848,7 @@ fn get_or_create_proxy_client(
 fn get_base_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
+    test_mode: bool,
 ) -> CustomResult<Client, ApiClientError> {
     // Check if proxy configuration is provided using cache_key method
     if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy) {
@@ -854,7 +860,7 @@ fn get_base_client(
         let cache = PROXY_CLIENT_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
 
         let client =
-            get_or_create_proxy_client(cache, cache_key, proxy_config, should_bypass_proxy)?;
+            get_or_create_proxy_client(cache, cache_key, proxy_config, should_bypass_proxy, test_mode)?;
 
         Ok(client)
     } else {
@@ -864,7 +870,7 @@ fn get_base_client(
         let client = DEFAULT_CLIENT
             .get_or_try_init(|| {
                 tracing::info!("Initializing DEFAULT_CLIENT (no proxy configuration)");
-                get_client_builder(proxy_config, should_bypass_proxy)?
+                get_client_builder(proxy_config, should_bypass_proxy, test_mode)?
                     .build()
                     .change_context(ApiClientError::ClientConstructionFailed)
                     .attach_printable("Failed to construct default client")
@@ -889,6 +895,7 @@ fn load_custom_ca_certificate_from_content(
 fn get_client_builder(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
+    test_mode: bool,
 ) -> CustomResult<reqwest::ClientBuilder, ApiClientError> {
     let mut client_builder = Client::builder()
         .redirect(reqwest::redirect::Policy::none())
@@ -897,6 +904,12 @@ fn get_client_builder(
                 .idle_pool_connection_timeout
                 .unwrap_or_default(),
         ));
+
+    // Disable automatic gzip decompression in test mode
+    // Mock server returns decompressed responses, so we need to bypass reqwest's gzip handling
+    if test_mode {
+        client_builder = client_builder.no_gzip();
+    }
 
     if should_bypass_proxy {
         return Ok(client_builder);
