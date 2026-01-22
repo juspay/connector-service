@@ -1,12 +1,12 @@
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
 use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, MandateRevoke, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, MandateRevoke, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
         MandateReference, MandateReferenceId, MandateRevokeRequestData, MandateRevokeResponseData,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId, SetupMandateRequestData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     mandates::MandateDataType,
@@ -1391,6 +1391,214 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 }
             },
             ..item.router_data
+        })
+    }
+}
+
+// RepeatPayment types - wrapper around NoonPaymentsRequest
+#[derive(Debug, Serialize)]
+pub struct NoonRepeatPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+    pub NoonPaymentsRequest<T>,
+);
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct NoonRepeatPaymentResponse(pub NoonPaymentsResponse);
+
+// TryFrom for NoonRepeatPaymentRequest - creates a payment using the saved mandate
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        NoonRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NoonRepeatPaymentRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: NoonRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let amount = item.connector.amount_converter.convert(
+            router_data.request.minor_amount,
+            router_data.request.currency,
+        );
+
+        // Extract mandate ID for repeat payment
+        let connector_mandate_id = match &router_data.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(mandate_ids) => mandate_ids
+                .get_connector_mandate_id()
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "connector_mandate_id",
+                })?,
+            _ => {
+                return Err(ConnectorError::NotImplemented(
+                    "Only connector mandate ID is supported for Noon repeat payments".to_string(),
+                )
+                .into())
+            }
+        };
+
+        // For repeat payments, use the subscription payment method with the mandate ID
+        let payment_data = NoonPaymentData::Subscription(NoonSubscription {
+            subscription_identifier: Secret::new(connector_mandate_id.to_string()),
+        });
+
+        // Get IP address
+        let ip_address = router_data
+            .request
+            .get_ip_address_as_optional();
+
+        let channel = NoonChannels::Web;
+
+        let billing = router_data
+            .resource_common_data
+            .get_optional_billing()
+            .and_then(|billing_address| billing_address.address.as_ref())
+            .map(|address| NoonBilling {
+                address: NoonBillingAddress {
+                    street: address.line1.clone(),
+                    street2: address.line2.clone(),
+                    city: address.city.clone(),
+                    state_province: address.state.clone(),
+                    country: address.country,
+                    postal_code: address.zip.clone(),
+                },
+            });
+
+        // Clean description
+        let name: String = router_data
+            .resource_common_data
+            .get_description()?
+            .trim()
+            .replace("  ", " ")
+            .chars()
+            .take(50)
+            .collect();
+
+        let order = NoonOrder {
+            amount: amount.change_context(ConnectorError::ParsingFailed)?,
+            currency: Some(router_data.request.currency),
+            channel,
+            category: None, // Category not required for repeat payments
+            reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            name,
+            nvp: router_data
+                .request
+                .metadata
+                .as_ref()
+                .map(|m| NoonOrderNvp::new(m.peek())),
+            ip_address,
+        };
+
+        // Determine payment action based on capture method
+        let payment_action = if router_data.request.is_auto_capture()? {
+            NoonPaymentActions::Sale
+        } else {
+            NoonPaymentActions::Authorize
+        };
+
+        Ok(Self(NoonPaymentsRequest {
+            api_operation: NoonApiOperations::Initiate,
+            order,
+            billing,
+            configuration: NoonConfiguration {
+                payment_action,
+                return_url: router_data.request.router_return_url.clone(),
+                tokenize_c_c: None, // Already tokenized via mandate
+            },
+            payment_data,
+            subscription: None, // Not needed for repeat payment using existing mandate
+        }))
+    }
+}
+
+// TryFrom for NoonRepeatPaymentResponse - delegates to existing NoonPaymentsResponse
+// Since NoonPaymentsResponse has a generic TryFrom for any F, we need to create a wrapper type
+// that allows us to use the existing implementation for RepeatPayment flow
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<NoonRepeatPaymentResponse, Self>>
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<NoonRepeatPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // Unwrap the response and process it directly
+        let ResponseRouterData {
+            response: repeat_response,
+            router_data,
+            http_code,
+        } = item;
+
+        let order = repeat_response.0.result.order;
+        let current_attempt_status = router_data.resource_common_data.status;
+        let status = get_payment_status((order.status, current_attempt_status));
+        let redirection_data = repeat_response.0.result.checkout_data.map(|redirection_data| {
+            Box::new(RedirectForm::Form {
+                endpoint: redirection_data.post_url.to_string(),
+                method: Method::Post,
+                form_fields: std::collections::HashMap::new(),
+            })
+        });
+        let mandate_reference = repeat_response.0.result.subscription.map(|subscription_data| {
+            Box::new(MandateReference {
+                connector_mandate_id: Some(subscription_data.identifier.expose()),
+                payment_method_id: None,
+                connector_mandate_request_reference_id: None,
+            })
+        });
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            response: match order.error_message {
+                Some(error_message) => Err(ErrorResponse {
+                    code: order.error_code.to_string(),
+                    message: error_message.clone(),
+                    reason: Some(error_message),
+                    status_code: http_code,
+                    attempt_status: Some(status),
+                    connector_transaction_id: Some(order.id.to_string()),
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+                _ => {
+                    let connector_response_reference_id =
+                        order.reference.or(Some(order.id.to_string()));
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(order.id.to_string()),
+                        redirection_data,
+                        mandate_reference,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id,
+                        incremental_authorization_allowed: None,
+                        status_code: http_code,
+                    })
+                }
+            },
+            ..router_data
         })
     }
 }
