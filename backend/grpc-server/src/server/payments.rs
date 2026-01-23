@@ -1,16 +1,16 @@
-use std::{collections::HashMap, fmt::Debug, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::Arc};
 
-use common_enums;
 use common_utils::{
     errors::CustomResult, events::FlowName, lineage, metadata::MaskedMetadata, SecretSerdeValue,
 };
 use connector_integration::types::ConnectorData;
+use domain_types::connector_types::ConnectorEnum;
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        Void, VoidPC,
+        VerifyWebhookSource, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -22,13 +22,15 @@ use domain_types::{
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
         RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_request_types::VerifyWebhookSourceRequestData,
     router_response_types,
+    router_response_types::{VerifyWebhookSourceResponseData, VerifyWebhookStatus},
     types::{
         generate_payment_capture_response, generate_payment_incremental_authorization_response,
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
@@ -2555,6 +2557,7 @@ impl PaymentService for Payments {
             config.clone(),
             FlowName::IncomingWebhook,
             |request_data| {
+                let service_name_clone = service_name.clone();
                 async move {
                     let payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
@@ -2587,16 +2590,121 @@ impl PaymentService for Payments {
                         .connector
                         .base_url(&config.connectors);
 
-                    let source_verified = match connector_data
+
+                    // Check if connector requires external webhook source verification call (config-based, like HS)
+                    let connector_enum = ConnectorEnum::from_str(connector_data.connector.id())
+                        .map_err(|_| {
+                            tonic::Status::invalid_argument(format!(
+                                "Invalid connector name: {}",
+                                connector_data.connector.id()
+                            ))
+                        })?;
+                    let requires_external_verification = config
+                        .webhook_source_verification_call
+                        .requires_external_verification(&connector_enum);
+
+                    // For connectors requiring external verification (e.g., PayPal), use ConnectorIntegrationV2
+                    // with execute_connector_processing_step. This ensures proxy, certificates, and logging
+                    // are handled properly. PayPal verify-webhook-signature uses Basic Auth (client_id:client_secret),
+                    // not Bearer token. Credentials are extracted from connector_auth_type - no access token needed.
+                    let source_verified = if requires_external_verification {
+                        // Construct VerifyWebhookSource router data
+                        // PayPal uses Basic Auth from connector_auth_type (matches HS implementation)
+                        let verify_webhook_flow_data = VerifyWebhookSourceFlowData {
+                            connectors: config.connectors.clone(),
+                            connector_request_reference_id: format!("webhook_verify_{}", &metadata_payload.request_id,),
+                            raw_connector_response: None,
+                            raw_connector_request: None,
+                            connector_response_headers: None,
+                        };
+
+                    let merchant_secret = webhook_secrets.clone().ok_or_else(|| {
+                        tonic::Status::invalid_argument(
+                            "missing webhook_secrets in PaymentServiceTransformRequest",
+                        )
+                    })?;
+
+                    let verify_webhook_request = VerifyWebhookSourceRequestData {
+                            webhook_headers: request_details.headers.clone(),
+                            webhook_body: request_details.body.clone(),
+                        merchant_secret,
+                        };
+
+                        let verify_webhook_router_data = RouterDataV2::<
+                            VerifyWebhookSource,
+                            VerifyWebhookSourceFlowData,
+                            VerifyWebhookSourceRequestData,
+                            VerifyWebhookSourceResponseData,
+                        > {
+                            flow: std::marker::PhantomData,
+                            resource_common_data: verify_webhook_flow_data,
+                            connector_auth_type: connector_auth_details.clone(),
+                            request: verify_webhook_request,
+                            response: Err(ErrorResponse::default()),
+                        };
+
+                        // Step 3: Execute connector processing step
+                        let connector_integration: BoxedConnectorIntegrationV2<
+                            '_,
+                            VerifyWebhookSource,
+                            VerifyWebhookSourceFlowData,
+                            VerifyWebhookSourceRequestData,
+                            VerifyWebhookSourceResponseData,
+                        > = connector_data.connector.get_connector_integration_v2();
+
+                        let event_params = EventProcessingParams {
+                            connector_name: connector_data.connector.id(),
+                            service_name: &service_name_clone,
+                            flow_name: FlowName::IncomingWebhook,
+                            event_config: &config.events,
+                            request_id: &metadata_payload.request_id,
+                            lineage_ids: &metadata_payload.lineage_ids,
+                            reference_id: &metadata_payload.reference_id,
+                            shadow_mode: metadata_payload.shadow_mode,
+                        };
+
+                        let verify_result = external_services::service::execute_connector_processing_step(
+                            &config.proxy,
+                            connector_integration,
+                            verify_webhook_router_data,
+                            None,
+                            event_params,
+                            None,
+                            common_enums::CallConnectorAction::Trigger,
+                            None,
+                            None,
+                        )
+                        .await
+                        .switch()
+                        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+                            tracing::warn!(
+                                target: "webhook",
+                                "Webhook verification failed for connector {}: {:?}",
+                                connector_data.connector.id(),
+                                e
+                            );
+                            tonic::Status::internal(format!("Webhook verification failed: {e}"))
+                        })?;
+
+                        // Extract verification result
+                        match verify_result.response {
+                            Ok(response_data) => {
+                                matches!(response_data.verify_webhook_status, VerifyWebhookStatus::SourceVerified)
+                            }
+                            Err(_) => false,
+                        }
+                    } else {
+                        // For other connectors, use the existing verify_webhook_source method
+                        match connector_data
                     .connector
                     .verify_webhook_source(
                         request_details.clone(),
                         webhook_secrets.clone(),
                         Some(connector_auth_details.clone()),
-                        Some(base_url),
-                    )
-                    .await
-                    {
+                                Some(base_url),
+                            )
+                            .await
+                        {
                     Ok(result) => result,
                     Err(err) => {
                         tracing::warn!(
@@ -2605,6 +2713,7 @@ impl PaymentService for Payments {
                             err
                         );
                         false
+                            }
                     }
                 };
 

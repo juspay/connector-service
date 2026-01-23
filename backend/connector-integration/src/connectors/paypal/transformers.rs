@@ -5,12 +5,12 @@ use cards;
 use common_enums;
 use common_utils::{types::StringMajorUnit, CustomResult, Method};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PostAuthenticate, RepeatPayment},
+    connector_flow::{Authorize, Capture, PostAuthenticate, RepeatPayment, VerifyWebhookSource},
     connector_types::{
         AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        ResponseId, SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -20,7 +20,8 @@ use domain_types::{
     },
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::{RedirectForm, VerifyWebhookSourceResponseData, VerifyWebhookStatus},
     utils,
 };
 use error_stack::ResultExt;
@@ -3020,4 +3021,104 @@ pub struct PaypalAccessTokenResponse {
     pub access_token: String,
     pub token_type: String,
     pub expires_in: u64,
+}
+
+// Transformers for VerifyWebhookSource flow
+impl TryFrom<&VerifyWebhookSourceRequestData> for PaypalSourceVerificationRequest {
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(req: &VerifyWebhookSourceRequestData) -> Result<Self, Self::Error> {
+        let req_body = serde_json::from_slice(&req.webhook_body)
+            .change_context(ConnectorError::WebhookBodyDecodingFailed)?;
+        Ok(Self {
+            transmission_id: req
+                .webhook_headers
+                .get(webhook_headers::PAYPAL_TRANSMISSION_ID)
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: webhook_headers::PAYPAL_TRANSMISSION_ID,
+                })?
+                .clone(),
+            transmission_time: req
+                .webhook_headers
+                .get(webhook_headers::PAYPAL_TRANSMISSION_TIME)
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: webhook_headers::PAYPAL_TRANSMISSION_TIME,
+                })?
+                .clone(),
+            cert_url: req
+                .webhook_headers
+                .get(webhook_headers::PAYPAL_CERT_URL)
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: webhook_headers::PAYPAL_CERT_URL,
+                })?
+                .clone(),
+            transmission_sig: req
+                .webhook_headers
+                .get(webhook_headers::PAYPAL_TRANSMISSION_SIG)
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: webhook_headers::PAYPAL_TRANSMISSION_SIG,
+                })?
+                .clone(),
+            auth_algo: req
+                .webhook_headers
+                .get(webhook_headers::PAYPAL_AUTH_ALGO)
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: webhook_headers::PAYPAL_AUTH_ALGO,
+                })?
+                .clone(),
+            webhook_id: String::from_utf8(req.merchant_secret.secret.to_vec())
+                .change_context(ConnectorError::WebhookVerificationSecretNotFound)
+                .attach_printable("Could not convert secret to UTF-8")?,
+            webhook_event: req_body,
+        })
+    }
+}
+
+impl From<PaypalSourceVerificationStatus> for VerifyWebhookStatus {
+    fn from(item: PaypalSourceVerificationStatus) -> Self {
+        match item {
+            PaypalSourceVerificationStatus::Success => Self::SourceVerified,
+            PaypalSourceVerificationStatus::Failure => Self::SourceNotVerified,
+        }
+    }
+}
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            PaypalSourceVerificationResponse,
+            RouterDataV2<
+                VerifyWebhookSource,
+                VerifyWebhookSourceFlowData,
+                VerifyWebhookSourceRequestData,
+                VerifyWebhookSourceResponseData,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        VerifyWebhookSource,
+        VerifyWebhookSourceFlowData,
+        VerifyWebhookSourceRequestData,
+        VerifyWebhookSourceResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            PaypalSourceVerificationResponse,
+            RouterDataV2<
+                VerifyWebhookSource,
+                VerifyWebhookSourceFlowData,
+                VerifyWebhookSourceRequestData,
+                VerifyWebhookSourceResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(VerifyWebhookSourceResponseData {
+                verify_webhook_status: VerifyWebhookStatus::from(item.response.verification_status),
+            }),
+            ..item.router_data
+        })
+    }
 }

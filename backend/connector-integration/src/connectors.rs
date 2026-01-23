@@ -211,3 +211,87 @@ pub use self::wellsfargo::Wellsfargo;
 
 pub mod hyperpg;
 pub use self::hyperpg::Hyperpg;
+
+// Default implementations for VerifyWebhookSourceV2
+// Connectors with real implementations (like PayPal) will override these
+use crate::default_implementations::default_impl_verify_webhook_source_v2;
+use domain_types::{
+    connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,
+    payment_method_data::PaymentMethodDataTypes,
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::VerifyWebhookSourceResponseData,
+};
+use interfaces::connector_integration_v2::ConnectorIntegrationV2;
+use interfaces::connector_types::VerifyWebhookSourceV2;
+use interfaces::verification::SourceVerification;
+
+default_impl_verify_webhook_source_v2!(
+    Adyen,
+    Aci,
+    Airwallex,
+    Authipay,
+    Authorizedotnet,
+    Bambora,
+    Bamboraapac,
+    Bankofamerica,
+    Barclaycard,
+    Billwerk,
+    Bluesnap,
+    Braintree,
+    Calida,
+    Cashfree,
+    Cashtocode,
+    Celero,
+    Checkout,
+    Cryptopay,
+    Cybersource,
+    Datatrans,
+    Dlocal,
+    Elavon,
+    Fiserv,
+    Fiservemea,
+    Fiuu,
+    Forte,
+    Getnet,
+    Gigadat,
+    Globalpay,
+    Helcim,
+    Hipay,
+    Iatapay,
+    Jpmorgan,
+    Loonio,
+    Mifinity,
+    Multisafepay,
+    Nexinets,
+    Nexixpay,
+    Nmi,
+    Noon,
+    Novalnet,
+    Nuvei,
+    Paybox,
+    Payload,
+    Payme,
+    Paysafe,
+    Paytm,
+    Payu,
+    Phonepe,
+    Placetopay,
+    Powertranz,
+    Rapyd,
+    Razorpay,
+    RazorpayV2,
+    Revolut,
+    Shift4,
+    Silverflow,
+    Stax,
+    Stripe,
+    Trustpay,
+    Trustpayments,
+    Tsys,
+    Volt,
+    Wellsfargo,
+    Worldpay,
+    Worldpayvantiv,
+    Worldpayxml,
+    Xendit // Note: PayPal is NOT listed here because it has its own implementation in paypal.rs
+);
