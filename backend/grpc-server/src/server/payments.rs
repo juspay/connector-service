@@ -287,7 +287,7 @@ impl Payments {
         &self,
         config: &Arc<Config>,
         payload: PaymentServiceAuthorizeRequest,
-        connector: domain_types::connector_types::ConnectorEnum,
+        connector: ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
         metadata: &MaskedMetadata,
         metadata_payload: &utils::MetadataPayload,
@@ -686,7 +686,7 @@ impl Payments {
         &self,
         config: &Arc<Config>,
         payload: PaymentServiceAuthorizeOnlyRequest,
-        connector: domain_types::connector_types::ConnectorEnum,
+        connector: ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
         metadata: &MaskedMetadata,
         metadata_payload: &utils::MetadataPayload,
@@ -2541,6 +2541,7 @@ impl PaymentService for Payments {
         )
         skip(self, request)
     )]
+    
     async fn transform(
         &self,
         request: tonic::Request<PaymentServiceTransformRequest>,
@@ -2663,7 +2664,7 @@ impl PaymentService for Payments {
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
-                        let verify_result = external_services::service::execute_connector_processing_step(
+                        let verify_result = Box::pin(external_services::service::execute_connector_processing_step(
                             &config.proxy,
                             connector_integration,
                             verify_webhook_router_data,
@@ -2673,7 +2674,7 @@ impl PaymentService for Payments {
                             common_enums::CallConnectorAction::Trigger,
                             None,
                             None,
-                        )
+                        ))
                         .await
                         .switch()
                         .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {

@@ -3027,8 +3027,12 @@ pub struct PaypalAccessTokenResponse {
 impl TryFrom<&VerifyWebhookSourceRequestData> for PaypalSourceVerificationRequest {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(req: &VerifyWebhookSourceRequestData) -> Result<Self, Self::Error> {
-        let req_body = serde_json::from_slice(&req.webhook_body)
-            .change_context(ConnectorError::WebhookBodyDecodingFailed)?;
+        // Parse the webhook body into serde_json::Value
+        // With preserve_order feature enabled, this preserves field order (uses IndexMap, not BTreeMap)
+        let webhook_event = serde_json::from_slice(&req.webhook_body)
+            .change_context(ConnectorError::WebhookBodyDecodingFailed)
+            .attach_printable("Webhook body is not valid JSON")?;
+
         Ok(Self {
             transmission_id: req
                 .webhook_headers
@@ -3068,7 +3072,7 @@ impl TryFrom<&VerifyWebhookSourceRequestData> for PaypalSourceVerificationReques
             webhook_id: String::from_utf8(req.merchant_secret.secret.to_vec())
                 .change_context(ConnectorError::WebhookVerificationSecretNotFound)
                 .attach_printable("Could not convert secret to UTF-8")?,
-            webhook_event: req_body,
+            webhook_event,
         })
     }
 }
@@ -3086,12 +3090,7 @@ impl
     TryFrom<
         ResponseRouterData<
             PaypalSourceVerificationResponse,
-            RouterDataV2<
-                VerifyWebhookSource,
-                VerifyWebhookSourceFlowData,
-                VerifyWebhookSourceRequestData,
-                VerifyWebhookSourceResponseData,
-            >,
+            Self,
         >,
     >
     for RouterDataV2<
@@ -3106,12 +3105,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             PaypalSourceVerificationResponse,
-            RouterDataV2<
-                VerifyWebhookSource,
-                VerifyWebhookSourceFlowData,
-                VerifyWebhookSourceRequestData,
-                VerifyWebhookSourceResponseData,
-            >,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
