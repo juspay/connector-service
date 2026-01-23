@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.23.0
+
+### Features
+
+- **connector:** [MOLLIE] Connector Integration ([#351](https://github.com/juspay/connector-service/pull/351)) ([`996c206`](https://github.com/juspay/connector-service/commit/996c206a6d7ba3c552b20c2a60c2cad7382a33b8))
+
+**Full Changelog:** [`2026.01.22.0...2026.01.23.0`](https://github.com/juspay/connector-service/compare/2026.01.22.0...2026.01.23.0)
+
+- - -
+
 ## 2026.01.22.0
 
 ### Features
