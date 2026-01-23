@@ -6,14 +6,22 @@
 //!
 //! Pattern: When adding a new connector, add it to the macro invocation list below.
 //! If a connector needs a real implementation, add it in the connector's own file.
-//!
-//! Note: The macro uses types from the invocation site (connectors.rs), not from this file.
-//! The imports here are not used - they're just for documentation.
+
+use crate::connectors::*;
+use domain_types::{
+    connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,
+    payment_method_data::PaymentMethodDataTypes,
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::VerifyWebhookSourceResponseData,
+};
+use interfaces::connector_integration_v2::ConnectorIntegrationV2;
+use interfaces::connector_types::VerifyWebhookSourceV2;
+use interfaces::verification::SourceVerification;
 
 /// Macro to generate empty implementations of VerifyWebhookSourceV2 for connectors
 /// that don't need external webhook verification.
 ///
-/// Usage: When a new connector is added, add it to the macro invocation.
+/// Usage: When a new connector is added, add it to the macro invocation below.
 /// If a connector needs real implementation (like PayPal), implement it in the connector's file
 /// and it will override this empty impl.
 macro_rules! default_impl_verify_webhook_source_v2 {
@@ -47,5 +55,75 @@ macro_rules! default_impl_verify_webhook_source_v2 {
     };
 }
 
-// Export the macro so it can be used in connectors.rs
-pub(crate) use default_impl_verify_webhook_source_v2;
+// Generate default implementations for all connectors that don't have custom implementations
+// Connectors with real implementations (like PayPal) will override these
+default_impl_verify_webhook_source_v2!(
+    Adyen,
+    Aci,
+    Airwallex,
+    Authipay,
+    Authorizedotnet,
+    Bambora,
+    Bamboraapac,
+    Bankofamerica,
+    Barclaycard,
+    Billwerk,
+    Bluesnap,
+    Braintree,
+    Calida,
+    Cashfree,
+    Cashtocode,
+    Celero,
+    Checkout,
+    Cryptopay,
+    Cybersource,
+    Datatrans,
+    Dlocal,
+    Elavon,
+    Fiserv,
+    Fiservemea,
+    Fiuu,
+    Forte,
+    Getnet,
+    Gigadat,
+    Globalpay,
+    Helcim,
+    Hipay,
+    Iatapay,
+    Jpmorgan,
+    Loonio,
+    Mifinity,
+    Multisafepay,
+    Nexinets,
+    Nexixpay,
+    Nmi,
+    Noon,
+    Novalnet,
+    Nuvei,
+    Paybox,
+    Payload,
+    Payme,
+    Paysafe,
+    Paytm,
+    Payu,
+    Phonepe,
+    Placetopay,
+    Powertranz,
+    Rapyd,
+    Razorpay,
+    RazorpayV2,
+    Revolut,
+    Shift4,
+    Silverflow,
+    Stax,
+    Stripe,
+    Trustpay,
+    Trustpayments,
+    Tsys,
+    Volt,
+    Wellsfargo,
+    Worldpay,
+    Worldpayvantiv,
+    Worldpayxml,
+    Xendit // Note: PayPal is NOT listed here because it has its own implementation in paypal.rs
+);
