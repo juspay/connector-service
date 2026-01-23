@@ -14,7 +14,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        SdkSessionToken, SetupMandate, SubmitEvidence, VerifyWebhookSource, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -27,13 +27,14 @@ use domain_types::{
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_response_types::Response,
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::{Response, VerifyWebhookSourceResponseData},
     types::Connectors,
 };
 use error_stack::ResultExt;
@@ -183,13 +184,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             field_name: "base_url",
         })?;
 
-        let webhook_secrets = connector_webhook_secret.ok_or(ConnectorError::MissingRequiredField {
-            field_name: "connector_webhook_secret",
-        })?;
+        let webhook_secrets =
+            connector_webhook_secret.ok_or(ConnectorError::MissingRequiredField {
+                field_name: "connector_webhook_secret",
+            })?;
 
-        let connector_auth = connector_account_details.ok_or(ConnectorError::MissingRequiredField {
-            field_name: "connector_account_details",
-        })?;
+        let connector_auth =
+            connector_account_details.ok_or(ConnectorError::MissingRequiredField {
+                field_name: "connector_account_details",
+            })?;
 
         // Extract webhook_id from secrets
         let webhook_id = String::from_utf8(webhook_secrets.secret.to_vec())
@@ -297,7 +300,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let verify_url = format!("{}v1/notifications/verify-webhook-signature", base_url);
         let verify_response = client
             .post(&verify_url)
-            .header("Authorization", format!("Bearer {}", token_data.access_token))
+            .header(
+                "Authorization",
+                format!("Bearer {}", token_data.access_token),
+            )
             .header("Content-Type", "application/json")
             .json(&verification_request)
             .send()
@@ -1744,6 +1750,132 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         MandateRevokeRequestData,
         MandateRevokeResponseData,
     > for Paypal<T>
+{
+}
+
+// VerifyWebhookSource implementation using ConnectorIntegrationV2
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        VerifyWebhookSource,
+        VerifyWebhookSourceFlowData,
+        VerifyWebhookSourceRequestData,
+        VerifyWebhookSourceResponseData,
+    > for Paypal<T>
+{
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            VerifyWebhookSource,
+            VerifyWebhookSourceFlowData,
+            VerifyWebhookSourceRequestData,
+            VerifyWebhookSourceResponseData,
+        >,
+    ) -> CustomResult<String, ConnectorError> {
+        let base_url = self.base_url(&req.resource_common_data.connectors);
+        Ok(format!(
+            "{}v1/notifications/verify-webhook-signature",
+            base_url
+        ))
+    }
+
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            VerifyWebhookSource,
+            VerifyWebhookSourceFlowData,
+            VerifyWebhookSourceRequestData,
+            VerifyWebhookSourceResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        // PayPal verify-webhook-signature uses Basic Auth (client_id:client_secret), not Bearer token
+        let auth = transformers::PaypalAuthType::try_from(&req.connector_auth_type)
+            .change_context(ConnectorError::FailedToObtainAuthType)?;
+        let credentials = auth.get_credentials()?;
+        let auth_val = credentials.generate_authorization_value();
+
+        Ok(vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            ),
+            (headers::AUTHORIZATION.to_string(), auth_val.into_masked()),
+        ])
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            VerifyWebhookSource,
+            VerifyWebhookSourceFlowData,
+            VerifyWebhookSourceRequestData,
+            VerifyWebhookSourceResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, ConnectorError> {
+        let verification_request = paypal::PaypalSourceVerificationRequest::try_from(&req.request)?;
+        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
+            verification_request,
+        ))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            VerifyWebhookSource,
+            VerifyWebhookSourceFlowData,
+            VerifyWebhookSourceRequestData,
+            VerifyWebhookSourceResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            VerifyWebhookSource,
+            VerifyWebhookSourceFlowData,
+            VerifyWebhookSourceRequestData,
+            VerifyWebhookSourceResponseData,
+        >,
+        ConnectorError,
+    > {
+        let verification_response: paypal::PaypalSourceVerificationResponse = res
+            .response
+            .parse_struct("PaypalSourceVerificationResponse")
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        if let Some(event) = event_builder {
+            event.set_connector_response(&verification_response)
+        }
+
+        RouterDataV2::try_from(ResponseRouterData {
+            response: verification_response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+        .change_context(ConnectorError::ResponseHandlingFailed)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        VerifyWebhookSource,
+        VerifyWebhookSourceFlowData,
+        VerifyWebhookSourceRequestData,
+        VerifyWebhookSourceResponseData,
+    > for Paypal<T>
+{
+}
+
+// Explicit VerifyWebhookSourceV2 marker trait impl
+// PayPal has a real ConnectorIntegrationV2<VerifyWebhookSource, ...> implementation above,
+// so this marker trait is satisfied
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyWebhookSourceV2 for Paypal<T>
 {
 }
 

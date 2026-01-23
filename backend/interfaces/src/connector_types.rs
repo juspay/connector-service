@@ -17,8 +17,10 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::VerifyWebhookSourceResponseData,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
@@ -54,6 +56,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + SdkSessionTokenV2
     + PaymentIncrementalAuthorization
     + MandateRevokeV2
+    + VerifyWebhookSourceV2
 {
 }
 
@@ -296,6 +299,16 @@ pub trait PaymentIncrementalAuthorization:
     PaymentFlowData,
     PaymentsIncrementalAuthorizationData,
     PaymentsResponseData,
+>
+{
+}
+
+pub trait VerifyWebhookSourceV2:
+    ConnectorIntegrationV2<
+    connector_flow::VerifyWebhookSource,
+    VerifyWebhookSourceFlowData,
+    VerifyWebhookSourceRequestData,
+    VerifyWebhookSourceResponseData,
 >
 {
 }

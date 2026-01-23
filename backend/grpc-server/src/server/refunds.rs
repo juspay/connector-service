@@ -155,9 +155,7 @@ impl RefundService for Refunds {
                 let connector_data = ConnectorData::get_connector_by_name(&connector);
 
                 // Get base_url for the connector (needed for connectors like PayPal that make API calls for verification)
-                let base_url = connector_data
-                    .connector
-                    .base_url(&config.connectors);
+                let base_url = connector_data.connector.base_url(&config.connectors);
 
                 let source_verified = match connector_data
                     .connector

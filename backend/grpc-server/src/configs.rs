@@ -5,7 +5,10 @@ use common_utils::{
     events::{EventConfig, EventConfigPatch},
     metadata::{HeaderMaskingConfig, HeaderMaskingConfigPatch},
 };
-use domain_types::types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch};
+use domain_types::{
+    connector_types::ConnectorEnum,
+    types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch},
+};
 
 use crate::{
     error::ConfigurationError,
@@ -30,6 +33,8 @@ pub struct Config {
     pub test: TestConfig,
     #[serde(default)]
     pub api_tags: ApiTagConfig,
+    #[serde(default)]
+    pub webhook_source_verification_call: WebhookSourceVerificationCall,
 }
 
 #[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, config_patch_derive::Patch)]
@@ -182,6 +187,30 @@ pub enum ServiceType {
     #[default]
     Grpc,
     Http,
+}
+
+/// Configuration for connectors that require external API calls for webhook source verification
+/// (e.g., PayPal's verify-webhook-signature endpoint)
+#[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, config_patch_derive::Patch)]
+pub struct WebhookSourceVerificationCall {
+    /// Comma-separated list of connector names that require external verification calls
+    /// Example: "paypal" or "paypal,adyen"
+    #[serde(default)]
+    pub connectors_with_webhook_source_verification_call: String,
+}
+
+impl WebhookSourceVerificationCall {
+    /// Check if a connector requires external webhook source verification call
+    pub fn requires_external_verification(&self, connector: &ConnectorEnum) -> bool {
+        if self.connectors_with_webhook_source_verification_call.is_empty() {
+            return false;
+        }
+        let connector_name = connector.to_string().to_lowercase();
+        self.connectors_with_webhook_source_verification_call
+            .split(',')
+            .map(|s| s.trim().to_lowercase())
+            .any(|s| s == connector_name)
+    }
 }
 
 impl Config {
