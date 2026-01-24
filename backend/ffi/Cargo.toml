@@ -11,12 +11,6 @@ name = "connector_ffi"
 crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
-# Core transformation logic (to be added when implementing)
-# connector-integration = { path = "../connector-integration" }
-# domain_types = { path = "../domain_types" }
-# common_utils = { path = "../common_utils" }
-# common_enums = { path = "../common_enums" }
-
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -26,19 +20,10 @@ thiserror = "1"
 
 [features]
 default = []
-# Enable all connectors (default)
-all-connectors = []
-# Individual connector features for smaller builds
-stripe = []
-adyen = []
-phonepe = []
-checkout = []
-braintree = []
 
-[package.metadata.capi.header]
-name = "connector_ffi"
-subdirectory = "connector-service"
+# Allow unsafe code for FFI
+[lints.rust]
+unsafe_code = "allow"
 
-[package.metadata.capi.pkg_config]
-name = "connector-ffi"
-description = "Connector Service FFI Library"
+[lints.clippy]
+not_unsafe_ptr_arg_deref = "allow"

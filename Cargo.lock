@@ -1007,6 +1007,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "connector-ffi"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "connector-integration"
 version = "0.1.0"
 dependencies = [

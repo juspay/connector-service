@@ -4,7 +4,7 @@ members = [
   "backend/grpc-api-types",
   "backend/connector-integration",
   "backend/external-services",
-  "backend/grpc-server", 
+  "backend/grpc-server",
   "backend/config_patch_derive",
   "sdk/rust-grpc-client",
   "backend/common_enums",
@@ -12,7 +12,8 @@ members = [
   "backend/interfaces",
   "backend/domain_types",
   "backend/tracing-kafka",
-  "backend/cards"
+  "backend/cards",
+  "backend/ffi"
 ]
 exclude = [
   "examples/example-rs",
