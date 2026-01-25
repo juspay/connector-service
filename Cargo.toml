@@ -13,7 +13,8 @@ members = [
   "backend/domain_types",
   "backend/tracing-kafka",
   "backend/cards",
-  "backend/ffi"
+  "backend/ffi",
+  "backend/ffi-uniffi"
 ]
 exclude = [
   "examples/example-rs",

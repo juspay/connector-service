@@ -1,0 +1,25 @@
+[package]
+name = "connector-ffi-uniffi"
+version = "0.1.0"
+edition = "2021"
+description = "UniFFI-based FFI bindings for connector transformation logic"
+
+[lib]
+name = "connector_ffi_uniffi"
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/uniffi-bindgen.rs"
+
+[dependencies]
+uniffi = { version = "0.28", features = ["cli"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }
+
+[lints.rust]
+unsafe_code = "allow"

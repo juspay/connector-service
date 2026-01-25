@@ -1,0 +1,20 @@
+# UniFFI Configuration for Connector FFI
+# See: https://mozilla.github.io/uniffi-rs/latest/
+
+[bindings.python]
+package_name = "connector_ffi"
+cdylib_name = "connector_ffi_uniffi"
+
+[bindings.kotlin]
+package_name = "io.juspay.connector"
+cdylib_name = "connector_ffi_uniffi"
+generate_immutable_records = true
+
+[bindings.swift]
+module_name = "ConnectorFFI"
+cdylib_name = "connector_ffi_uniffi"
+generate_module_map = true
+omit_argument_labels = false
+
+[bindings.ruby]
+cdylib_name = "connector_ffi_uniffi"

@@ -1,0 +1,204 @@
+// UniFFI Interface Definition Language for Connector FFI
+// This file describes the public interface exposed to foreign languages
+
+namespace connector_ffi_uniffi {
+    // List all supported connector names
+    sequence<string> list_supported_connectors();
+
+    // Get information about a specific connector
+    ConnectorInfo? get_connector_info(string name);
+
+    // Transform a payment request into an HTTP request
+    [Throws=ConnectorError]
+    HttpRequest transform_request(TransformRequestInput input);
+
+    // Transform an HTTP response into a payment result
+    [Throws=ConnectorError]
+    PaymentResult transform_response(TransformResponseInput input);
+
+    // Create a card payment method
+    PaymentMethod create_card_payment_method(
+        string number,
+        u32 exp_month,
+        u32 exp_year,
+        string cvc,
+        string? holder_name
+    );
+
+    // Create a wallet payment method
+    PaymentMethod create_wallet_payment_method(
+        string wallet_type,
+        string? token,
+        string? email
+    );
+};
+
+// Error types
+[Error]
+enum ConnectorError {
+    "UnknownConnector",
+    "UnsupportedFlow",
+    "MissingAuthField",
+    "MissingPaymentField",
+    "TransformError",
+    "ParseError",
+    "InvalidInput",
+};
+
+// HTTP method enum
+enum HttpMethod {
+    "Get",
+    "Post",
+    "Put",
+    "Delete",
+    "Patch",
+};
+
+// Payment status enum
+enum PaymentStatus {
+    "Succeeded",
+    "Authorized",
+    "Pending",
+    "Failed",
+    "Cancelled",
+    "RequiresAction",
+    "Processing",
+    "Unknown",
+};
+
+// Payment flow enum
+enum PaymentFlow {
+    "Authorize",
+    "Capture",
+    "Void",
+    "Refund",
+    "Sync",
+    "SetupMandate",
+};
+
+// Body format enum
+enum BodyFormat {
+    "Json",
+    "FormUrlEncoded",
+    "Xml",
+    "Raw",
+};
+
+// Authentication type enum
+enum AuthType {
+    "HeaderKey",
+    "BasicAuth",
+    "BodyKey",
+    "SignatureKey",
+    "MultiAuthKey",
+    "CertificateAuth",
+    "NoKey",
+};
+
+// Card data record
+dictionary CardData {
+    string number;
+    u32 exp_month;
+    u32 exp_year;
+    string cvc;
+    string? holder_name;
+};
+
+// Wallet data record
+dictionary WalletData {
+    string wallet_type;
+    string? token;
+    string? email;
+};
+
+// Bank transfer data record
+dictionary BankTransferData {
+    string? bank_name;
+    string? account_number;
+    string? routing_number;
+    string? iban;
+    string? bic;
+};
+
+// Payment method record
+dictionary PaymentMethod {
+    string method_type;
+    CardData? card;
+    WalletData? wallet;
+    BankTransferData? bank_transfer;
+};
+
+// Payment data record
+dictionary PaymentData {
+    i64 amount;
+    string currency;
+    PaymentMethod? payment_method;
+    string? reference_id;
+    string? transaction_id;
+    string? return_url;
+    string? metadata;
+};
+
+// HTTP request record
+dictionary HttpRequest {
+    string url;
+    HttpMethod method;
+    record<string, string> headers;
+    string? body;
+    BodyFormat body_format;
+};
+
+// Payment result record
+dictionary PaymentResult {
+    boolean success;
+    PaymentStatus status;
+    string? transaction_id;
+    string? connector_transaction_id;
+    i64? amount;
+    string? currency;
+    string? error_code;
+    string? error_message;
+    string? raw_response;
+};
+
+// Connector info record
+dictionary ConnectorInfo {
+    string name;
+    string display_name;
+    string base_url;
+    AuthType auth_type;
+    sequence<string> auth_fields;
+    sequence<PaymentFlow> supported_flows;
+    sequence<string> supported_currencies;
+    BodyFormat body_format;
+    boolean supports_webhooks;
+    boolean supports_3ds;
+};
+
+// Transform request input
+dictionary TransformRequestInput {
+    string connector;
+    string flow;
+    record<string, string> auth;
+    PaymentData payment;
+};
+
+// Transform response input
+dictionary TransformResponseInput {
+    string connector;
+    string flow;
+    u16 status_code;
+    record<string, string> headers;
+    string body;
+};
+
+// Connector registry object
+interface ConnectorRegistry {
+    constructor();
+
+    sequence<string> list_connectors();
+    ConnectorInfo? get_connector_info(string name);
+
+    [Throws=ConnectorError]
+    sequence<PaymentFlow> get_supported_flows(string name);
+};
