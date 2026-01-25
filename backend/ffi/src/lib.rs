@@ -1155,6 +1155,130 @@ pub unsafe extern "C" fn connector_list_flows() -> *const c_char {
     }
 }
 
+/// Get connector information including auth requirements
+///
+/// # Safety
+/// The returned string must be freed with `ffi_string_free`.
+#[no_mangle]
+pub unsafe extern "C" fn connector_get_info(connector_name: *const c_char) -> *const c_char {
+    if connector_name.is_null() {
+        return to_c_string(&serde_json::json!({
+            "success": false,
+            "error": {"code": "NULL_INPUT", "message": "Connector name is null"}
+        }));
+    }
+
+    let name = match CStr::from_ptr(connector_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            return to_c_string(&serde_json::json!({
+                "success": false,
+                "error": {"code": "INVALID_UTF8", "message": "Invalid UTF-8"}
+            }));
+        }
+    };
+
+    let info = match name.to_lowercase().as_str() {
+        "stripe" => serde_json::json!({
+            "success": true,
+            "data": {
+                "name": "stripe",
+                "display_name": "Stripe",
+                "base_url": "https://api.stripe.com/v1",
+                "auth_type": "header_key",
+                "auth_fields": ["api_key"],
+                "supported_flows": ["authorize", "capture", "void", "refund", "sync"],
+                "supported_currencies": ["USD", "EUR", "GBP", "JPY", "CAD", "AUD"],
+                "body_format": "form"
+            }
+        }),
+        "adyen" => serde_json::json!({
+            "success": true,
+            "data": {
+                "name": "adyen",
+                "display_name": "Adyen",
+                "base_url": "https://checkout-test.adyen.com/v71",
+                "auth_type": "header_key",
+                "auth_fields": ["api_key", "merchant_id"],
+                "supported_flows": ["authorize", "capture", "void", "refund", "sync"],
+                "supported_currencies": ["USD", "EUR", "GBP", "JPY", "SEK", "NOK", "DKK"],
+                "body_format": "json"
+            }
+        }),
+        "forte" => serde_json::json!({
+            "success": true,
+            "data": {
+                "name": "forte",
+                "display_name": "Forte",
+                "base_url": "https://sandbox.forte.net/api/v3",
+                "auth_type": "basic_auth",
+                "auth_fields": ["api_key", "api_secret", "organization_id", "location_id"],
+                "supported_flows": ["authorize", "capture", "void", "refund", "sync"],
+                "supported_currencies": ["USD"],
+                "body_format": "json"
+            }
+        }),
+        "checkout" => serde_json::json!({
+            "success": true,
+            "data": {
+                "name": "checkout",
+                "display_name": "Checkout.com",
+                "base_url": "https://api.sandbox.checkout.com",
+                "auth_type": "header_key",
+                "auth_fields": ["api_key"],
+                "supported_flows": ["authorize", "capture", "void", "refund", "sync"],
+                "supported_currencies": ["USD", "EUR", "GBP"],
+                "body_format": "json"
+            }
+        }),
+        "braintree" => serde_json::json!({
+            "success": true,
+            "data": {
+                "name": "braintree",
+                "display_name": "Braintree",
+                "base_url": "https://payments.sandbox.braintree-api.com/graphql",
+                "auth_type": "basic_auth",
+                "auth_fields": ["api_key", "api_secret", "merchant_id"],
+                "supported_flows": ["authorize", "capture", "void", "refund", "sync"],
+                "supported_currencies": ["USD", "EUR", "GBP", "CAD", "AUD"],
+                "body_format": "json"
+            }
+        }),
+        "razorpay" => serde_json::json!({
+            "success": true,
+            "data": {
+                "name": "razorpay",
+                "display_name": "Razorpay",
+                "base_url": "https://api.razorpay.com/v1",
+                "auth_type": "basic_auth",
+                "auth_fields": ["api_key", "api_secret"],
+                "supported_flows": ["authorize", "capture", "void", "refund", "sync"],
+                "supported_currencies": ["INR", "USD"],
+                "body_format": "json"
+            }
+        }),
+        "phonepe" => serde_json::json!({
+            "success": true,
+            "data": {
+                "name": "phonepe",
+                "display_name": "PhonePe",
+                "base_url": "https://api.phonepe.com/apis/hermes",
+                "auth_type": "signature",
+                "auth_fields": ["api_key", "api_secret", "merchant_id"],
+                "supported_flows": ["authorize", "sync"],
+                "supported_currencies": ["INR"],
+                "body_format": "json"
+            }
+        }),
+        _ => serde_json::json!({
+            "success": false,
+            "error": {"code": "UNKNOWN_CONNECTOR", "message": format!("Unknown connector: {}", name)}
+        }),
+    };
+
+    to_c_string(&info)
+}
+
 /// Free a string returned by the FFI layer
 ///
 /// # Safety

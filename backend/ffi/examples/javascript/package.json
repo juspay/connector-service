@@ -1,0 +1,27 @@
+{
+  "name": "@connector-service/ffi",
+  "version": "0.1.0",
+  "description": "JavaScript/Node.js bindings for connector-service FFI",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "node test.js",
+    "example": "node example.js"
+  },
+  "keywords": [
+    "payments",
+    "connector",
+    "ffi",
+    "stripe",
+    "adyen"
+  ],
+  "author": "Juspay",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "ffi-napi": "^4.0.3",
+    "ref-napi": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
