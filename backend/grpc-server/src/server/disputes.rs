@@ -456,13 +456,11 @@ impl DisputeService for Disputes {
                         .transpose()?;
                     // Get connector data
                     let connector_data = ConnectorData::get_connector_by_name(&connector);
-                    
                     // Get base_url for the connector (needed for connectors like PayPal that make API calls for verification)
                     let base_url = connector_data
                         .connector
                         .base_url(&config.connectors);
-                    
-                    let source_verified = match connector_data
+                    let source_verified = connector_data
                         .connector
                         .verify_webhook_source(
                             request_details.clone(),
@@ -471,17 +469,8 @@ impl DisputeService for Disputes {
                             Some(base_url),
                         )
                         .await
-                    {
-                        Ok(result) => result,
-                        Err(err) => {
-                            tracing::warn!(
-                                target: "webhook",
-                                "{:?}",
-                                err
-                            );
-                            false
-                        }
-                    };
+                        .switch()
+                        .map_err(|e| e.into_grpc_status())?;
 
                     let content = get_disputes_webhook_content(
                         connector_data,
