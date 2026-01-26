@@ -1076,6 +1076,13 @@ where
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
+        if !item.router_data.resource_common_data.is_three_ds() {
+            Err(errors::ConnectorError::NotSupported {
+                message: "Cards No3DS".to_string(),
+                connector: "Redsys",
+            })?
+        }
+
         let card_data = requests::RedsysCardData::try_from(&Some(
             item.router_data.request.payment_method_data.clone(),
         ))?;
