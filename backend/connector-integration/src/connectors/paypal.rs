@@ -172,7 +172,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Paypal<T>
 {
-    // NOTE: This method is not used for PayPal.
     async fn verify_webhook_source(
         &self,
         _request: domain_types::connector_types::RequestDetails,
@@ -182,8 +181,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<bool, error_stack::Report<ConnectorError>> {
         // This is a fallback for connectors that don't require external verification
         // For PayPal, this should never be called due to requires_external_verification check
-        Err(error_stack::report!(ConnectorError::WebhookSourceVerificationFailed))
-            .attach_printable("PayPal requires external API call for webhook verification, not internal verification")
+        Err(error_stack::report!(
+            ConnectorError::WebhookSourceVerificationFailed
+        ))
+        .attach_printable(
+            "PayPal requires external API call for webhook verification, not internal verification",
+        )
     }
 
     fn get_event_type(
@@ -1730,9 +1733,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Explicit VerifyWebhookSourceV2 marker trait impl
-// PayPal has a real ConnectorIntegrationV2<VerifyWebhookSource, ...> implementation above,
-// so this marker trait is satisfied
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyWebhookSourceV2 for Paypal<T>
 {

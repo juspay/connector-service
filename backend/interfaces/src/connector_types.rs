@@ -19,10 +19,10 @@ use domain_types::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
-    router_request_types::VerifyWebhookSourceRequestData,
-    router_response_types::VerifyWebhookSourceResponseData,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::VerifyWebhookSourceResponseData,
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;

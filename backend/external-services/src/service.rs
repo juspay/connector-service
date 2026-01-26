@@ -642,14 +642,6 @@ pub async fn call_connector_api(
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
     let should_bypass_proxy = proxy.bypass_proxy_urls.contains(&url.to_string());
-    tracing::debug!(
-        "Proxy configuration - URL: {}, Bypass: {}, MITM enabled: {}, HTTPS proxy: {:?}, HTTP proxy: {:?}",
-        url,
-        should_bypass_proxy,
-        proxy.mitm_proxy_enabled,
-        proxy.https_url,
-        proxy.http_url
-    );
 
     let client = create_client(
         proxy,
@@ -948,55 +940,40 @@ fn get_client_builder(
 
     // Attach MITM certificate if enabled
     if proxy_config.mitm_proxy_enabled {
-        tracing::debug!(
-            "MITM proxy enabled, loading certificate. Certificate present: {}",
-            proxy_config.mitm_ca_cert.is_some()
-        );
         if let Some(cert_content) = &proxy_config.mitm_ca_cert {
             if !cert_content.trim().is_empty() {
                 client_builder =
                     load_custom_ca_certificate_from_content(client_builder, cert_content.trim())?;
-                tracing::debug!("MITM certificate loaded successfully");
-            } else {
-                tracing::warn!("MITM proxy enabled but certificate content is empty");
             }
-        } else {
-            tracing::warn!("MITM proxy enabled but no certificate configured");
         }
     }
 
     // Proxy all HTTPS traffic through the configured HTTPS proxy
     if let Some(url) = proxy_config.https_url.as_ref() {
-        tracing::debug!("Configuring HTTPS proxy: {}", url);
         client_builder = client_builder.proxy(
             reqwest::Proxy::https(url)
                 .change_context(ApiClientError::InvalidProxyConfiguration)
                 .inspect_err(|err| {
-                    tracing::error!("HTTPS proxy configuration error: {:?}", err);
                     info_log(
                         "PROXY_ERROR",
                         &json!(format!("HTTPS proxy configuration error. Error: {:?}", err)),
                     );
                 })?,
         );
-        tracing::debug!("HTTPS proxy configured successfully");
     }
 
     // Proxy all HTTP traffic through the configured HTTP proxy
     if let Some(url) = proxy_config.http_url.as_ref() {
-        tracing::debug!("Configuring HTTP proxy: {}", url);
         client_builder = client_builder.proxy(
             reqwest::Proxy::http(url)
                 .change_context(ApiClientError::InvalidProxyConfiguration)
                 .inspect_err(|err| {
-                    tracing::error!("HTTP proxy configuration error: {:?}", err);
                     info_log(
                         "PROXY_ERROR",
                         &json!(format!("HTTP proxy configuration error. Error: {:?}", err)),
                     );
                 })?,
         );
-        tracing::debug!("HTTP proxy configured successfully");
     }
 
     Ok(client_builder)

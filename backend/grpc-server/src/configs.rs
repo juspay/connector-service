@@ -1,4 +1,6 @@
+use std::collections::HashSet;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use common_utils::{
     consts,
@@ -14,7 +16,7 @@ use crate::{
     error::ConfigurationError,
     logger::config::{Log, LogPatch},
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::Error, Deserialize, Deserializer, Serialize};
 #[derive(Debug, Deserialize, Serialize, Clone, config_patch_derive::Patch)]
 pub struct Config {
     pub common: Common,
@@ -189,27 +191,70 @@ pub enum ServiceType {
     Http,
 }
 
+/// Helper function to deserialize a comma-separated string into a HashSet
+fn deserialize_hashset_inner<T>(value: impl AsRef<str>) -> Result<HashSet<T>, String>
+where
+    T: Eq + FromStr + std::hash::Hash,
+    <T as FromStr>::Err: std::fmt::Display,
+{
+    let (values, errors) = value
+        .as_ref()
+        .trim()
+        .split(',')
+        .map(|s| {
+            T::from_str(s.trim()).map_err(|error| {
+                format!(
+                    "Unable to deserialize `{}` as `{}`: {error}",
+                    s.trim(),
+                    std::any::type_name::<T>()
+                )
+            })
+        })
+        .fold(
+            (HashSet::new(), Vec::new()),
+            |(mut values, mut errors), result| match result {
+                Ok(t) => {
+                    values.insert(t);
+                    (values, errors)
+                }
+                Err(error) => {
+                    errors.push(error);
+                    (values, errors)
+                }
+            },
+        );
+    if !errors.is_empty() {
+        Err(format!("Some errors occurred:\n{}", errors.join("\n")))
+    } else {
+        Ok(values)
+    }
+}
+
+/// Deserializer for HashSet from comma-separated string
+fn deserialize_hashset<'a, D, T>(deserializer: D) -> Result<HashSet<T>, D::Error>
+where
+    D: Deserializer<'a>,
+    T: Eq + FromStr + std::hash::Hash,
+    <T as FromStr>::Err: std::fmt::Display,
+{
+    deserialize_hashset_inner(<String>::deserialize(deserializer)?).map_err(D::Error::custom)
+}
+
 /// Configuration for connectors that require external API calls for webhook source verification
 /// (e.g., PayPal's verify-webhook-signature endpoint)
 #[derive(Clone, Deserialize, Debug, Default, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct WebhookSourceVerificationCall {
     /// Comma-separated list of connector names that require external verification calls
     /// Example: "paypal" or "paypal,adyen"
-    #[serde(default)]
-    pub connectors_with_webhook_source_verification_call: String,
+    #[serde(deserialize_with = "deserialize_hashset")]
+    pub connectors_with_webhook_source_verification_call: HashSet<ConnectorEnum>,
 }
 
 impl WebhookSourceVerificationCall {
     /// Check if a connector requires external webhook source verification call
     pub fn requires_external_verification(&self, connector: &ConnectorEnum) -> bool {
-        if self.connectors_with_webhook_source_verification_call.is_empty() {
-            return false;
-        }
-        let connector_name = connector.to_string().to_lowercase();
         self.connectors_with_webhook_source_verification_call
-            .split(',')
-            .map(|s| s.trim().to_lowercase())
-            .any(|s| s == connector_name)
+            .contains(connector)
     }
 }
 

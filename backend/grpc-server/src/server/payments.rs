@@ -2541,7 +2541,7 @@ impl PaymentService for Payments {
         )
         skip(self, request)
     )]
-    
+
     async fn transform(
         &self,
         request: tonic::Request<PaymentServiceTransformRequest>,
@@ -2604,13 +2604,8 @@ impl PaymentService for Payments {
                         .webhook_source_verification_call
                         .requires_external_verification(&connector_enum);
 
-                    // For connectors requiring external verification (e.g., PayPal), use ConnectorIntegrationV2
-                    // with execute_connector_processing_step. This ensures proxy, certificates, and logging
-                    // are handled properly. PayPal verify-webhook-signature uses Basic Auth (client_id:client_secret),
-                    // not Bearer token. Credentials are extracted from connector_auth_type - no access token needed.
+                    // For connectors requiring external verification (e.g., PayPal)
                     let source_verified = if requires_external_verification {
-                        // Construct VerifyWebhookSource router data
-                        // PayPal uses Basic Auth from connector_auth_type (matches HS implementation)
                         let verify_webhook_flow_data = VerifyWebhookSourceFlowData {
                             connectors: config.connectors.clone(),
                             connector_request_reference_id: format!("webhook_verify_{}", &metadata_payload.request_id,),
@@ -2621,7 +2616,7 @@ impl PaymentService for Payments {
 
                     let merchant_secret = webhook_secrets.clone().ok_or_else(|| {
                         tonic::Status::invalid_argument(
-                            "missing webhook_secrets in PaymentServiceTransformRequest",
+                            "webhook_secrets is required for external webhook source verification",
                         )
                     })?;
 

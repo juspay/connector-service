@@ -3086,13 +3086,7 @@ impl From<PaypalSourceVerificationStatus> for VerifyWebhookStatus {
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            PaypalSourceVerificationResponse,
-            Self,
-        >,
-    >
+impl TryFrom<ResponseRouterData<PaypalSourceVerificationResponse, Self>>
     for RouterDataV2<
         VerifyWebhookSource,
         VerifyWebhookSourceFlowData,
@@ -3103,10 +3097,7 @@ impl
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            PaypalSourceVerificationResponse,
-            Self,
-        >,
+        item: ResponseRouterData<PaypalSourceVerificationResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(VerifyWebhookSourceResponseData {
