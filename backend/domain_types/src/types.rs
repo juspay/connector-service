@@ -4709,6 +4709,7 @@ impl
             connector_meta_data,
             test_mode: value.test_mode,
             payment_method,
+            reference_id: None,
         })
     }
 }
@@ -4771,7 +4772,7 @@ impl
             connector_meta_data,
             test_mode: value.test_mode,
             payment_method,
-            reference_id: value.merchant_order_reference_id,
+            reference_id: value.merchant_reference_id.clone(),
         })
     }
 }
@@ -5706,6 +5707,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .merchant_account_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
                 .transpose()?,
+            merchant_reference_id: value.merchant_reference_id.clone(),
         })
     }
 }

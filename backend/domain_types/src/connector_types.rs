@@ -2128,6 +2128,7 @@ pub struct RefundsData {
     /// Charges associated with the payment
     pub split_refunds: Option<SplitRefundsRequest>,
     pub merchant_account_metadata: Option<SecretSerdeValue>,
+    pub merchant_reference_id: Option<String>,
 }
 
 impl RefundsData {
