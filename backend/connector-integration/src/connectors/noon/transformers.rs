@@ -1,7 +1,9 @@
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
 use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, MandateRevoke, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, MandateRevoke, Refund, RepeatPayment, SetupMandate, Void,
+    },
     connector_types::{
         MandateReference, MandateReferenceId, MandateRevokeRequestData, MandateRevokeResponseData,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
@@ -425,7 +427,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            name,
+            name: name.clone(),
             nvp: item
                 .request
                 .metadata
@@ -438,6 +440,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         } else {
             NoonPaymentActions::Authorize
         };
+
+        // Handle subscription/mandate data for mandate creation
+        let subscription = item
+            .request
+            .setup_mandate_details
+            .as_ref()
+            .and_then(|mandate_data| {
+                mandate_data.mandate_type.as_ref().and_then(|mandate_type| {
+                    let mandate_amount_data = match mandate_type {
+                        MandateDataType::SingleUse(amount_data) => Some(amount_data),
+                        MandateDataType::MultiUse(amount_data_opt) => amount_data_opt.as_ref(),
+                    };
+                    mandate_amount_data.and_then(|amount_data| {
+                        data.connector
+                            .amount_converter
+                            .convert(amount_data.amount, amount_data.currency)
+                            .ok()
+                            .map(|max_amount| NoonSubscriptionData {
+                                subscription_type: NoonSubscriptionType::Unscheduled,
+                                name: name.clone(),
+                                max_amount,
+                            })
+                    })
+                })
+            });
+
+        let tokenize_c_c = subscription.is_some().then_some(true);
+
         Ok(Self {
             api_operation: NoonApiOperations::Initiate,
             order,
@@ -445,10 +475,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             configuration: NoonConfiguration {
                 payment_action,
                 return_url: item.request.router_return_url.clone(),
-                tokenize_c_c: None,
+                tokenize_c_c,
             },
             payment_data,
-            subscription: None,
+            subscription,
         })
     }
 }
@@ -1397,9 +1427,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 
 // RepeatPayment types - wrapper around NoonPaymentsRequest
 #[derive(Debug, Serialize)]
-pub struct NoonRepeatPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
-    pub NoonPaymentsRequest<T>,
-);
+pub struct NoonRepeatPaymentRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(pub NoonPaymentsRequest<T>);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -1438,14 +1468,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             router_data.request.currency,
         );
 
-        // Extract mandate ID for repeat payment
-        let connector_mandate_id = match &router_data.request.mandate_reference {
-            MandateReferenceId::ConnectorMandateId(mandate_ids) => mandate_ids
-                .get_connector_mandate_id()
-                .ok_or(ConnectorError::MissingRequiredField {
-                    field_name: "connector_mandate_id",
-                })?,
-            _ => {
+        // For repeat payments, use the subscription payment method with the mandate ID
+        let payment_data = match &router_data.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(mandate_ids) => {
+                let connector_mandate_id = mandate_ids.get_connector_mandate_id().ok_or(
+                    ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                    },
+                )?;
+                NoonPaymentData::Subscription(NoonSubscription {
+                    subscription_identifier: Secret::new(connector_mandate_id.to_string()),
+                })
+            }
+            MandateReferenceId::NetworkMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => {
                 return Err(ConnectorError::NotImplemented(
                     "Only connector mandate ID is supported for Noon repeat payments".to_string(),
                 )
@@ -1453,15 +1489,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        // For repeat payments, use the subscription payment method with the mandate ID
-        let payment_data = NoonPaymentData::Subscription(NoonSubscription {
-            subscription_identifier: Secret::new(connector_mandate_id.to_string()),
-        });
-
         // Get IP address
-        let ip_address = router_data
-            .request
-            .get_ip_address_as_optional();
+        let ip_address = router_data.request.get_ip_address_as_optional();
 
         let channel = NoonChannels::Web;
 
@@ -1494,7 +1523,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             amount: amount.change_context(ConnectorError::ParsingFailed)?,
             currency: Some(router_data.request.currency),
             channel,
-            category: None, // Category not required for repeat payments
+            category: Some("PAY".to_string()), // Category is required for repeat payments
             reference: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -1552,20 +1581,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let order = repeat_response.0.result.order;
         let current_attempt_status = router_data.resource_common_data.status;
         let status = get_payment_status((order.status, current_attempt_status));
-        let redirection_data = repeat_response.0.result.checkout_data.map(|redirection_data| {
-            Box::new(RedirectForm::Form {
-                endpoint: redirection_data.post_url.to_string(),
-                method: Method::Post,
-                form_fields: std::collections::HashMap::new(),
-            })
-        });
-        let mandate_reference = repeat_response.0.result.subscription.map(|subscription_data| {
-            Box::new(MandateReference {
-                connector_mandate_id: Some(subscription_data.identifier.expose()),
-                payment_method_id: None,
-                connector_mandate_request_reference_id: None,
-            })
-        });
+        let redirection_data = repeat_response
+            .0
+            .result
+            .checkout_data
+            .map(|redirection_data| {
+                Box::new(RedirectForm::Form {
+                    endpoint: redirection_data.post_url.to_string(),
+                    method: Method::Post,
+                    form_fields: std::collections::HashMap::new(),
+                })
+            });
+        let mandate_reference = repeat_response
+            .0
+            .result
+            .subscription
+            .map(|subscription_data| {
+                Box::new(MandateReference {
+                    connector_mandate_id: Some(subscription_data.identifier.expose()),
+                    payment_method_id: None,
+                    connector_mandate_request_reference_id: None,
+                })
+            });
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
