@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::MinorUnit};
+use common_utils::{FloatMajorUnit, consts::NO_ERROR_MESSAGE, errors::CustomResult, events, ext_traits::ByteSliceExt, types::MinorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -16,7 +16,8 @@ use domain_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
         ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, MandateRevokeRequestData,
-        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
         PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData,
@@ -42,7 +43,6 @@ use serde::Serialize;
 use transformers::{
     self as hyperpg, HyperpgAuthorizeRequest, HyperpgAuthorizeResponse, HyperpgRefundRequest,
     HyperpgRefundResponse, HyperpgSyncResponse, HyperpgRefundSyncResponse, HyperpgVoidRequest, HyperpgVoidResponse,
-    HyperpgCreateOrderRequest, HyperpgCreateOrderResponse,
 };
 
 use super::macros;
@@ -88,11 +88,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Hyperpg<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Hyperpg<T>
 {
 }
 
@@ -182,9 +177,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn should_do_access_token(&self, _payment_method: common_enums::PaymentMethod) -> bool {
         false
     }
-    fn should_do_order_create(&self) -> bool {
-        true
-    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Hyperpg<T>
+{
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -223,16 +220,10 @@ macros::create_all_prerequisites!(
             request_body: HyperpgVoidRequest,
             response_body: HyperpgVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: CreateOrder,
-            request_body: HyperpgCreateOrderRequest,
-            response_body: HyperpgCreateOrderResponse,
-            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         )
     ],
     amount_converters: [
-        amount_converter: MinorUnit
+        amount_converter: FloatMajorUnit
     ],
     member_functions: {
         pub fn build_headers(
@@ -246,7 +237,7 @@ macros::create_all_prerequisites!(
             vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
-                    "application/x-www-form-urlencoded".to_string().into(),
+                    "application/json".to_string().into(),
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
@@ -254,7 +245,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::X_MERCHANT_ID.to_string(),
-                    auth.password.peek().to_string().into(),
+                    auth.merchant_id.peek().to_string().into(),
                 ),
             ]
         }
@@ -308,11 +299,39 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
+        // Build reason by concatenating field_name and reason from error_info.fields
+        let reason = response
+            .error_info
+            .as_ref()
+            .and_then(|info| info.fields.as_ref())
+            .and_then(|fields| {
+                if !fields.is_empty() {
+                    let field = &fields[0];
+                    match (&field.field_name, &field.reason) {
+                        (Some(name), Some(reason_text)) => Some(format!("{} - {}", name, reason_text)),
+                        _ => None,
+                    }
+                } else {
+                    None
+                }
+            });
+
+        let code = response
+            .error_code
+            .clone()
+            .or_else(|| {
+                response
+                    .error_info
+                    .as_ref()
+                    .and_then(|info| info.code.clone())
+            })
+            .unwrap_or_else(|| "UNKNOWN_ERROR".to_string());
+
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.code.unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
-            message: response.message.clone(),
-            reason: Some(response.message),
+            code,
+            message: response.error_message.clone().unwrap_or(NO_ERROR_MESSAGE.to_string()),
+            reason,
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
@@ -325,7 +344,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Hyperpg,
-    curl_request: FormUrlEncoded(HyperpgAuthorizeRequest),
+    curl_request: Json(HyperpgAuthorizeRequest),
     curl_response: HyperpgAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -378,9 +397,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let order_id = req.request.connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            let order_id = req.resource_common_data.get_reference_id()?;
+            println!("Fetching PSync URL for order_id: {}", order_id);
             Ok(format!("{}/orders/{}", self.connector_base_url_payments(req), order_id))
         }
     }
@@ -389,7 +407,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Hyperpg,
-    curl_request: FormUrlEncoded(HyperpgRefundRequest),
+    curl_request: Json(HyperpgRefundRequest),
     curl_response: HyperpgRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
@@ -412,7 +430,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let order_id = req.request.connector_transaction_id.clone();
+            let order_id = req.resource_common_data.connector_request_reference_id.clone();
+            println!("Refund URL for order_id: {}", order_id);
             Ok(format!("{}/orders/{}/refunds", self.connector_base_url_refunds(req), order_id))
         }
     }
@@ -443,7 +462,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let order_id = req.request.connector_transaction_id.clone();
+            let order_id = req.resource_common_data.connector_request_reference_id.clone();
             Ok(format!("{}/orders/{}", self.connector_base_url_refunds(req), order_id))
         }
     }
@@ -452,7 +471,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Hyperpg,
-    curl_request: FormUrlEncoded(HyperpgVoidRequest),
+    curl_request: Json(HyperpgVoidRequest),
     curl_response: HyperpgVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
@@ -477,37 +496,6 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let order_id = req.request.connector_transaction_id.clone();
             Ok(format!("{}/orders/{}/refunds", self.connector_base_url_payments(req), order_id))
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Hyperpg,
-    curl_request: FormUrlEncoded(HyperpgCreateOrderRequest),
-    curl_response: HyperpgCreateOrderResponse,
-    flow_name: CreateOrder,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentCreateOrderData,
-    flow_response: PaymentCreateOrderResponse,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_auth_type)
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-            Ok(self.build_headers(&auth))
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/orders", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -671,6 +659,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Hyperpg<T>
+{
+}
+
 // Verification traits
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -768,16 +766,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         MandateRevokeRequestData,
         MandateRevokeResponseData,
-    > for Hyperpg<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
     > for Hyperpg<T>
 {
 }
@@ -898,6 +886,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
+    > for Hyperpg<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
     > for Hyperpg<T>
 {
 }

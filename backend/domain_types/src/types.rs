@@ -4771,6 +4771,7 @@ impl
             connector_meta_data,
             test_mode: value.test_mode,
             payment_method,
+            reference_id: value.merchant_order_reference_id,
         })
     }
 }

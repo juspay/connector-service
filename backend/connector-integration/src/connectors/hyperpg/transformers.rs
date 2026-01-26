@@ -1,12 +1,11 @@
 use crate::{connectors::hyperpg::HyperpgRouterData, types::ResponseRouterData};
-use common_enums::{AttemptStatus, Currency, RefundStatus};
+use common_enums::{AttemptStatus, RefundStatus};
 use domain_types::router_response_types::RedirectForm;
-use common_utils::{id_type::CustomerId, types::MinorUnit};
+use common_utils::{AmountConvertor, FloatMajorUnit, types::MinorUnit, FloatMajorUnitForConnector};
 use domain_types::{
-    connector_flow::{Authorize, CreateOrder, PSync, RSync, Refund, Void, CreateConnectorCustomer},
+    connector_flow::{Authorize, PSync, RSync, Refund, Void, CreateConnectorCustomer},
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse,
-        PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId,
@@ -15,16 +14,18 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    utils,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use error_stack::ResultExt;
 
 #[derive(Debug, Clone)]
 pub struct HyperpgAuthType {
     pub username: Secret<String>,
     pub password: Secret<String>,
+    pub merchant_id: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for HyperpgAuthType {
@@ -32,9 +33,10 @@ impl TryFrom<&ConnectorAuthType> for HyperpgAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => Ok(Self {
                 username: api_key.to_owned(),
                 password: key1.to_owned(),
+                merchant_id: api_secret.to_owned(),
             }),
             _other => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
@@ -46,10 +48,26 @@ impl TryFrom<&ConnectorAuthType> for HyperpgAuthType {
 // ===== ERROR RESPONSE =====
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HyperpgErrorResponse {
-    #[serde(rename = "error_code")]
+    pub error_message: Option<String>,
+    pub status: Option<String>,
+    pub error_code: Option<String>,
+    pub error_info: Option<HyperpgErrorInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HyperpgErrorInfo {
+    pub user_message: Option<String>,
+    pub fields: Option<Vec<HyperpgErrorField>>,
+    pub request_id: Option<String>,
+    pub developer_message: Option<String>,
     pub code: Option<String>,
-    pub message: String,
-    pub description: Option<String>,
+    pub category: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HyperpgErrorField {
+    pub field_name: Option<String>,
+    pub reason: Option<String>,
 }
 
 // ===== STATUS ENUMS =====
@@ -107,25 +125,26 @@ impl From<&HyperpgRefundStatus> for RefundStatus {
 
 #[derive(Debug, Serialize)]
 pub struct HyperpgAuthorizeRequest {
-    pub order_id: String,
-    pub amount: f64,
-    pub currency: String,
-    pub customer_id: String,
-    pub customer_email: Option<String>,
-    pub customer_phone: Option<String>,
-    pub description: Option<String>,
-    pub return_url: Option<String>,
+    pub merchant_id: String,
     pub payment_method_type: String,
     pub payment_method: Option<String>,
     pub card_number: Option<Secret<String>>,
-    pub name_on_card: Option<String>,
+    pub card_security_code: Option<Secret<String>>,
     pub card_exp_month: Option<String>,
     pub card_exp_year: Option<String>,
-    pub card_security_code: Option<Secret<String>>,
-    pub save_to_locker: bool,
-    pub tokenize: bool,
-    pub redirect_after_payment: bool,
+    pub name_on_card: Option<String>,
     pub format: String,
+    pub redirect_after_payment: bool,
+    pub save_to_locker: bool,
+    pub order: HyperpgOrderData,
+}
+
+#[derive(Debug, Serialize)]
+pub struct HyperpgOrderData {
+    pub order_id: String,
+    pub amount: FloatMajorUnit,
+    pub currency: String,
+    pub return_url: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
@@ -189,32 +208,35 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 }
             };
 
-        let amount_minor = router_data.request.amount.get_amount_as_i64();
-        let amount_major = amount_minor as f64 / 100.0;
+        // Convert amount using the connector's amount_converter
+        let amount = utils::convert_amount(
+            wrapper.connector.amount_converter,
+            router_data.request.amount,
+            router_data.request.currency,
+        )?;
+
+        let auth_type = HyperpgAuthType::try_from(&router_data.connector_auth_type)?;
+
+        println!("$$$$$ merchant: {}", auth_type.merchant_id.peek().to_string());
 
         Ok(Self {
-            order_id: router_data.resource_common_data.connector_request_reference_id.clone(),
-            amount: amount_major,
-            currency: router_data.request.currency.to_string(),
-            customer_id: router_data.request.customer_id
-                .as_ref()
-                .map(|id| format!("{:?}", id))
-                .unwrap_or_else(String::new),
-            customer_email: router_data.request.email.as_ref().map(|e| e.peek().clone()),
-            customer_phone: None,
-            description: None,
-            return_url: router_data.request.router_return_url.clone(),
+            merchant_id: "hyperswitchsbx".to_string(),
             payment_method_type,
             payment_method,
             card_number,
-            name_on_card,
+            card_security_code,
             card_exp_month,
             card_exp_year,
-            card_security_code,
-            save_to_locker: false,
-            tokenize: false,
-            redirect_after_payment: false,
+            name_on_card,
             format: "json".to_string(),
+            redirect_after_payment: true,
+            save_to_locker: true,
+            order: HyperpgOrderData {
+                order_id: router_data.resource_common_data.connector_request_reference_id.clone(),
+                amount,
+                currency: router_data.request.currency.to_string(),
+                return_url: router_data.request.router_return_url.clone(),
+            },
         })
     }
 }
@@ -222,7 +244,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 #[derive(Debug, Serialize)]
 pub struct HyperpgVoidRequest {
     pub unique_request_id: String,
-    pub amount: f64,
+    pub amount: FloatMajorUnit,
 }
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
@@ -243,14 +265,18 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = wrapper.router_data;
 
-        // For void, use the amount from the connector_transaction_id or a default of full amount
-        // Since PaymentVoidData doesn't have amount_to_cancel, we'll use the connector_transaction_id
-        // and let the connector handle the full amount void
-        let amount_major = 0.0; // Will be handled by connector based on order_id
+        // For void, use 0.0 as amount - the connector handles the full amount void based on order_id
+        // Currency is optional in PaymentVoidData, use USD as default if not provided
+        let currency = router_data.request.currency.unwrap_or(common_enums::Currency::USD);
+        let amount = utils::convert_amount(
+            wrapper.connector.amount_converter,
+            MinorUnit::new(0),
+            currency,
+        )?;
 
         Ok(Self {
             unique_request_id: router_data.resource_common_data.connector_request_reference_id.clone(),
-            amount: amount_major,
+            amount,
         })
     }
 }
@@ -258,7 +284,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 #[derive(Debug, Serialize)]
 pub struct HyperpgRefundRequest {
     pub unique_request_id: String,
-    pub amount: f64,
+    pub amount: FloatMajorUnit,
 }
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
@@ -276,63 +302,21 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = wrapper.router_data;
 
-        let amount_minor = router_data.request.minor_refund_amount;
-        let amount_major = amount_minor.get_amount_as_i64() as f64 / 100.0;
+        // let amount = utils::convert_amount(
+        //     wrapper.connector.amount_converter,
+        //     router_data.request.minor_refund_amount,
+        //     router_data.request.currency,
+        // )?;
+        let converter = FloatMajorUnitForConnector;
+        let amount = converter
+            .convert(router_data.request.minor_refund_amount, router_data.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        println!("Refund amount after conversion: {}", router_data.request.refund_amount);
 
         Ok(Self {
-            unique_request_id: router_data.resource_common_data.connector_request_reference_id.clone(),
-            amount: amount_major,
-        })
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct HyperpgCreateOrderRequest {
-    pub order_id: String,
-    pub amount: f64,
-    pub currency: String,
-    pub customer_id: String,
-    pub customer_email: Option<String>,
-    pub customer_phone: Option<String>,
-    pub description: Option<String>,
-    pub return_url: Option<String>,
-    pub product_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub options_get_client_auth_token: Option<bool>,
-}
-
-impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        HyperpgRouterData<
-            RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-            T,
-        >,
-    > for HyperpgCreateOrderRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        wrapper: HyperpgRouterData<
-            RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let router_data = wrapper.router_data;
-
-        let amount_minor = router_data.request.amount.get_amount_as_i64();
-        let amount_major = amount_minor as f64 / 100.0;
-
-        Ok(Self {
-            order_id: router_data.resource_common_data.connector_request_reference_id.clone(),
-            amount: amount_major,
-            currency: router_data.request.currency.to_string(),
-            customer_id: "".to_string(), // CreateOrder doesn't have customer_id in request
-            customer_email: None,
-            customer_phone: None,
-            description: None,
-            return_url: router_data.request.webhook_url.clone(),
-            product_id: None,
-            options_get_client_auth_token: Some(true),
+            unique_request_id: router_data.request.connector_transaction_id.clone(),
+            amount,
         })
     }
 }
@@ -341,42 +325,20 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HyperpgAuthorizeResponse {
-    pub id: String,
     pub order_id: String,
     pub status: String,
-    pub amount: i64,
-    pub currency: String,
-    pub txn_id: Option<String>,
-    pub payment_method_type: Option<String>,
-    pub payment_method: Option<String>,
-    pub payment_links: Option<HyperpgPaymentLinks>,
+    pub txn_id: String,
+    pub payment: Option<PaymentResponse>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct HyperpgCreateOrderResponse {
-    pub id: String,
-    pub order_id: String,
-    pub status: String,
-    pub amount: i64,
-    pub currency: String,
-    pub customer_id: String,
-    pub customer_email: Option<String>,
-    pub customer_phone: Option<String>,
-    pub payment_links: Option<HyperpgPaymentLinks>,
-    pub hyperpg: Option<HyperpgClientAuth>,
+pub struct PaymentResponse {
+    pub authentication: Option<Authentication>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct HyperpgClientAuth {
-    pub client_auth_token: Option<String>,
-    pub client_auth_token_expiry: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct HyperpgPaymentLinks {
-    pub web: Option<String>,
-    pub mobile: Option<String>,
-    pub iframe: Option<String>,
+pub struct Authentication {
+    pub url: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -384,13 +346,13 @@ pub struct HyperpgSyncResponse {
     pub id: String,
     pub order_id: String,
     pub status: String,
-    pub amount: i64,
+    pub amount: FloatMajorUnit,
     pub currency: String,
     pub txn_id: Option<String>,
     pub payment_method_type: Option<String>,
     pub payment_method: Option<String>,
     pub refunded: bool,
-    pub amount_refunded: i64,
+    pub amount_refunded: FloatMajorUnit,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -398,13 +360,14 @@ pub struct HyperpgRefundSyncResponse {
     pub id: String,
     pub order_id: String,
     pub status: String,
-    pub amount: i64,
+    pub amount: FloatMajorUnit,
     pub currency: String,
     pub txn_id: Option<String>,
     pub payment_method_type: Option<String>,
     pub payment_method: Option<String>,
     pub refunded: bool,
-    pub amount_refunded: i64,
+    pub amount_refunded: FloatMajorUnit,
+    pub refunds: Option<Vec<HyperpgRefundItem>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -412,11 +375,12 @@ pub struct HyperpgRefundResponse {
     pub id: String,
     pub order_id: String,
     pub status: String,
-    pub amount: i64,
+    pub amount: FloatMajorUnit,
     pub currency: String,
     pub refunded: bool,
-    pub amount_refunded: i64,
+    pub amount_refunded: FloatMajorUnit,
     pub refunds: Option<Vec<HyperpgRefundItem>>,
+    pub txn_id: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -424,19 +388,28 @@ pub struct HyperpgVoidResponse {
     pub id: String,
     pub order_id: String,
     pub status: String,
-    pub amount: i64,
+    pub amount: FloatMajorUnit,
     pub currency: String,
     pub refunded: bool,
-    pub amount_refunded: i64,
+    pub amount_refunded: FloatMajorUnit,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HyperpgRefundItem {
     pub id: Option<String>,
+    pub amount: FloatMajorUnit,
     pub unique_request_id: String,
-    pub status: String,
-    pub amount: i64,
+    #[serde(rename = "ref")]
+    pub reference: Option<String>,
     pub created: Option<String>,
+    pub last_updated: Option<String>,
+    pub status: String,
+    pub error_message: Option<String>,
+    pub sent_to_gateway: Option<bool>,
+    pub initiated_by: Option<String>,
+    pub refund_type: Option<String>,
+    pub pg_processed_at: Option<String>,
+    pub error_code: Option<String>,
 }
 
 // ===== RESPONSE TRANSFORMERS =====
@@ -466,18 +439,18 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                connector_response_reference_id: Some(response.id.clone()),
-                redirection_data: response.payment_links.as_ref().and_then(|links| {
-                    links.web.as_ref().map(|url| {
+                resource_id: ResponseId::ConnectorTransactionId(response.txn_id.clone()),
+                connector_response_reference_id: Some(response.order_id.clone()),
+                redirection_data: response.payment.as_ref().and_then(|links| {
+                    links.authentication.as_ref().map(|authentication| {
                         Box::new(RedirectForm::Uri {
-                            uri: url.clone(),
+                            uri: authentication.url.clone(),
                         })
                     })
                 }),
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: response.txn_id.clone(),
+                network_txn_id: None,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
@@ -514,8 +487,8 @@ impl TryFrom<
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                connector_response_reference_id: Some(response.id.clone()),
+                resource_id: ResponseId::NoResponseId,
+                connector_response_reference_id: None,
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -601,12 +574,7 @@ impl TryFrom<
             })
             .unwrap_or(RefundStatus::Pending);
 
-        let connector_refund_id = response
-            .refunds
-            .as_ref()
-            .and_then(|refunds| refunds.first())
-            .and_then(|refund| refund.id.clone())
-            .unwrap_or_else(|| response.id.clone());
+        let connector_refund_id = response.txn_id.clone();
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -640,15 +608,27 @@ impl TryFrom<
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
-        let refund_status = if response.refunded {
-            RefundStatus::Success
-        } else {
-            RefundStatus::Pending
-        };
+        // Use status from refunds array to determine refund status
+        let refund_status = response
+            .refunds
+            .as_ref()
+            .and_then(|refunds| refunds.first())
+            .and_then(|refund| {
+                HyperpgRefundStatus::deserialize(&refund.status)
+                    .map(|s| RefundStatus::from(&s))
+            })
+            .unwrap_or(RefundStatus::Pending);
+
+        let connector_refund_id = response
+            .refunds
+            .as_ref()
+            .and_then(|refunds| refunds.first())
+            .and_then(|refund| refund.id.clone())
+            .unwrap_or_else(|| response.id.clone());
 
         Ok(Self {
             response: Ok(RefundsResponseData {
-                connector_refund_id: response.id.clone(),
+                connector_refund_id,
                 refund_status,
                 status_code: item.http_code,
             }),
@@ -657,43 +637,6 @@ impl TryFrom<
                 ..item.router_data.resource_common_data.clone()
             },
             ..item.router_data
-        })
-    }
-}
-
-// CreateOrder Response Transformer
-impl TryFrom<
-    ResponseRouterData<
-        HyperpgCreateOrderResponse,
-        RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-    >,
-> for RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<
-            HyperpgCreateOrderResponse,
-            RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let response = &item.response;
-        let router_data = item.router_data;
-
-        let status = HyperpgPaymentStatus::deserialize(&response.status)
-            .map(|s| AttemptStatus::from(&s))
-            .unwrap_or(AttemptStatus::Pending);
-
-        Ok(Self {
-            response: Ok(PaymentCreateOrderResponse {
-                order_id: response.id.clone(),
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                reference_id: Some(response.id.clone()),
-                ..router_data.resource_common_data
-            },
-            ..router_data
         })
     }
 }
