@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.26.0
+
+### Features
+
+- Disable gzip decompression in test mode ([#444](https://github.com/juspay/connector-service/pull/444)) ([`e2718db`](https://github.com/juspay/connector-service/commit/e2718dbc55d3c61f5acba713f3ad9dfcf5b91121))
+
+**Full Changelog:** [`2026.01.23.0...2026.01.26.0`](https://github.com/juspay/connector-service/compare/2026.01.23.0...2026.01.26.0)
+
+- - -
+
 ## 2026.01.23.0
 
 ### Features
