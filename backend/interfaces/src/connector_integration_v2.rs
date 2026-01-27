@@ -9,10 +9,7 @@ use domain_types::{router_data::ErrorResponse, router_data_v2::RouterDataV2};
 use hyperswitch_masking::Maskable;
 use serde_json::json;
 
-use crate::{
-    api::{self},
-    verification::SourceVerification,
-};
+use crate::api;
 
 /// alias for Box of a type that implements trait ConnectorIntegrationV2
 pub type BoxedConnectorIntegrationV2<'a, Flow, ResourceCommonData, Req, Resp> =
@@ -42,10 +39,7 @@ where
 
 /// The new connector integration trait with an additional ResourceCommonData generic parameter
 pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
-    ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp>
-    + Sync
-    + api::ConnectorCommon
-    + SourceVerification<Flow, ResourceCommonData, Req, Resp>
+    ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp> + Sync + api::ConnectorCommon
 {
     /// returns a vec of tuple of header key and value
     fn get_headers(

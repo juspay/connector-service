@@ -84,10 +84,10 @@ use crate::{
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -9678,6 +9678,41 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+        })
+    }
+}
+
+impl ForeignTryFrom<(bool, RedirectDetailsResponse)>
+    for grpc_api_types::payments::PaymentServiceVerifyRedirectResponseResponse
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (source_verified, redirect_details_response): (bool, RedirectDetailsResponse),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            source_verified,
+            transaction_id: redirect_details_response
+                .resource_id
+                .map(|resource_id| {
+                    grpc_api_types::payments::Identifier::foreign_try_from(resource_id)
+                })
+                .transpose()?,
+            response_ref_id: redirect_details_response
+                .connector_response_reference_id
+                .map(|id| grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                }),
+            status: redirect_details_response
+                .status
+                .map(grpc_api_types::payments::PaymentStatus::foreign_from)
+                .map(|status| status as i32),
+            error_code: redirect_details_response.error_code,
+            error_reason: redirect_details_response.error_reason,
+            error_message: redirect_details_response.error_message,
+            raw_connector_response: redirect_details_response
+                .raw_connector_response
+                .map(|response| response.into()),
         })
     }
 }

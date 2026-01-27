@@ -1112,6 +1112,15 @@ message WebhookSecrets {
   optional string additional_secret = 2;
 }
 
+// Secrets used for source verification.
+message RedirectResponseSecrets {
+  // Primary secret for source verification.
+  string secret = 1;
+
+  // Additional secret, if required by the connector.
+  optional string additional_secret = 2;
+}
+
 message IncompleteTransformationResponse {
   // The resource object bytes that should be sent in PSync call
   bytes resource_object = 1;
@@ -2831,6 +2840,39 @@ message PaymentServiceTransformResponse {
 
   // Transformation Status
   WebhookTransformationStatus transformation_status = 5; // Status of the webhook transformation
+}
+
+// Request message for VerifyRedirectResponse
+message PaymentServiceVerifyRedirectResponseRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+
+  // Request Details
+  RequestDetails request_details = 2; // Details of the incoming HTTP request
+
+  // Security
+  optional RedirectResponseSecrets redirect_response_secrets = 3; // Secrets for verifying authenticity
+}
+
+// Response message for VerifyRedirectResponse
+message PaymentServiceVerifyRedirectResponseResponse {
+  // Verification
+  bool source_verified = 1; // Indicates if the source was successfully verified
+
+  // Identification
+  Identifier transaction_id = 2; // Identifier for the resource
+
+  // Reference
+  optional Identifier response_ref_id = 3; // Response reference ID for tracking
+
+  // Status Information
+  optional PaymentStatus status = 4; // Current status of the payment attempt
+  optional string error_code = 5; // Error code if synchronization encountered an issue
+  optional string error_message = 6; // Error message if synchronization encountered an issue
+  optional string error_reason = 7; // Detailed reason for the error
+
+  // Raw Response
+  optional SecretString raw_connector_response = 8; // Raw response from the connector
 }
 
 // -------------------------
