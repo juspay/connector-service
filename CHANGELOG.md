@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.27.0
+
+### Refactors
+
+- **connector:** Add url safe base64 decoding support ([#447](https://github.com/juspay/connector-service/pull/447)) ([`3936c46`](https://github.com/juspay/connector-service/commit/3936c4636c95f3dcc08d75c0ad09657500f9cb5e))
+
+**Full Changelog:** [`2026.01.26.0...2026.01.27.0`](https://github.com/juspay/connector-service/compare/2026.01.26.0...2026.01.27.0)
+
+- - -
+
 ## 2026.01.26.0
 
 ### Features
