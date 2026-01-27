@@ -1991,7 +1991,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     incremental_authorization_id: None,
                     psync_flow: PaypalPaymentIntent::Authenticate,
                     next_action: None,
-                    order_id: Some(threeds_response.id.clone()),
+                    order_id: None,
                 });
 
                 Ok(Self {
@@ -2003,12 +2003,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         resource_id: ResponseId::ConnectorTransactionId(
                             threeds_response.id.clone(),
                         ),
-                        redirection_data: link
-                            .map(|url| Box::new(RedirectForm::from((url, Method::Get)))),
+                        redirection_data: link.and_then(|url| {
+                            paypal_threeds_link((
+                                Some(url),
+                                item.router_data.request.complete_authorize_url.clone(),
+                            ))
+                            .ok()
+                            .map(Box::new)
+                        }),
                         mandate_reference: None,
                         connector_metadata: Some(connector_meta),
                         network_txn_id: None,
-                        connector_response_reference_id: Some(threeds_response.id),
+                        connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                     }),
@@ -2027,18 +2033,39 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: ResponseRouterData<PaypalRedirectResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = get_order_status(item.response.clone().status, item.response.intent.clone());
+        let intent = item.response.intent.clone();
+        let status = get_order_status(item.response.clone().status, intent.clone());
         let link = get_redirect_url(item.response.links.clone())?;
 
         let connector_meta = serde_json::json!(PaypalMeta {
             authorize_id: None,
             capture_id: None,
             incremental_authorization_id: None,
-            psync_flow: item.response.intent,
+            psync_flow: intent.clone(),
             next_action: None,
             order_id: None,
         });
         let purchase_units = item.response.purchase_units.first();
+
+        // Check if this is a 3DS flow - when status is PAYER_ACTION_REQUIRED and intent is Authenticate
+        let redirection_data =
+            if matches!(item.response.status, PaypalOrderStatus::PayerActionRequired)
+                && intent == PaypalPaymentIntent::Authenticate
+            {
+                // Use paypal_threeds_link for 3DS flows
+                link.and_then(|url| {
+                    paypal_threeds_link((
+                        Some(url),
+                        item.router_data.request.complete_authorize_url.clone(),
+                    ))
+                    .ok()
+                    .map(Box::new)
+                })
+            } else {
+                // Regular redirect flow
+                link.map(|url| Box::new(RedirectForm::from((url, Method::Get))))
+            };
+
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
@@ -2046,10 +2073,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
-                redirection_data: Some(Box::new(RedirectForm::from((
-                    link.ok_or(ConnectorError::ResponseDeserializationFailed)?,
-                    Method::Get,
-                )))),
+                redirection_data,
                 mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
@@ -2062,6 +2086,31 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ..item.router_data
         })
     }
+}
+
+fn paypal_threeds_link(
+    (redirect_url, complete_auth_url): (Option<Url>, Option<String>),
+) -> CustomResult<RedirectForm, ConnectorError> {
+    let mut redirect_url = redirect_url.ok_or(ConnectorError::ResponseDeserializationFailed)?;
+    let complete_auth_url = complete_auth_url.ok_or(ConnectorError::MissingRequiredField {
+        field_name: "complete_authorize_url",
+    })?;
+    let mut form_fields = std::collections::HashMap::from_iter(
+        redirect_url
+            .query_pairs()
+            .map(|(key, value)| (key.to_string(), value.to_string())),
+    );
+
+    // paypal requires return url to be passed as a field along with payer_action_url
+    form_fields.insert(String::from("redirect_uri"), complete_auth_url);
+
+    redirect_url.set_query(None);
+
+    Ok(RedirectForm::Form {
+        endpoint: redirect_url.to_string(),
+        method: Method::Get,
+        form_fields,
+    })
 }
 
 impl<F, T> TryFrom<ResponseRouterData<PaypalPaymentsSyncResponse, Self>>
