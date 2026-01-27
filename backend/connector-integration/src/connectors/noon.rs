@@ -51,8 +51,8 @@ use transformers::{
     NoonPaymentsActionRequest as NoonPaymentsRefundActionRequest, NoonPaymentsCancelRequest,
     NoonPaymentsRequest, NoonPaymentsResponse, NoonPaymentsResponse as NoonPaymentsSyncResponse,
     NoonPaymentsResponse as NoonPaymentsCaptureResponse,
-    NoonPaymentsResponse as NoonPaymentsVoidResponse, NoonRevokeMandateRequest,
-    NoonRevokeMandateResponse, NoonRepeatPaymentRequest, NoonRepeatPaymentResponse, RefundResponse,
+    NoonPaymentsResponse as NoonPaymentsVoidResponse, NoonRepeatPaymentRequest,
+    NoonRepeatPaymentResponse, NoonRevokeMandateRequest, NoonRevokeMandateResponse, RefundResponse,
     RefundSyncResponse, SetupMandateRequest, SetupMandateResponse,
 };
 
