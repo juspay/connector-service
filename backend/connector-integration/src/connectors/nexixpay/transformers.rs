@@ -1296,6 +1296,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPreAuthentica
                 redirection_data: authentication_data,
                 connector_response_reference_id: Some(operation.order_id.clone()),
                 status_code: item.http_code,
+                authentication_data: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,

@@ -1,7 +1,7 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use crate::utils::extract_connector_request_reference_id;
+use crate::{connector_types, utils::extract_connector_request_reference_id};
 use common_enums::{
     CaptureMethod, CardNetwork, CountryAlpha2, FutureUsage, PaymentMethod, PaymentMethodType,
 };
@@ -177,7 +177,9 @@ pub struct Connectors {
     pub shift4: ConnectorParams,
     pub paybox: ConnectorParams,
     pub barclaycard: ConnectorParams,
+    pub redsys: ConnectorParams,
     pub nexixpay: ConnectorParams,
+    pub mollie: ConnectorParams,
     pub airwallex: ConnectorParams,
     pub worldpayxml: ConnectorParams,
     pub tsys: ConnectorParams,
@@ -285,6 +287,22 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for CaptureMethod {
             grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
             grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
             _ => Ok(Self::Automatic),
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::ThreeDsCompletionIndicator>
+    for connector_types::ThreeDsCompletionIndicator
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::ThreeDsCompletionIndicator,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::ThreeDsCompletionIndicator::Success => Ok(Self::Success),
+            grpc_api_types::payments::ThreeDsCompletionIndicator::Failure => Ok(Self::Failure),
+            _ => Ok(Self::NotAvailable),
         }
     }
 }
@@ -2059,6 +2077,10 @@ impl<
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
+            // Below fields are set in AuthorizeOnly Flow
+            continue_redirection_url: None,
+            redirect_response: None,
+            threeds_method_comp_ind: None,
             tokenization,
         })
     }
@@ -2167,6 +2189,19 @@ impl<
             )?),
         };
 
+        let redirect_response = value
+            .redirection_response
+            .clone()
+            .map(|redirection_response| ContinueRedirectionResponse {
+                params: redirection_response.params.map(Secret::new),
+                payload: Some(Secret::new(serde_json::Value::Object(
+                    redirection_response
+                        .payload
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))),
+            });
         let tokenization = match value.tokenization_strategy {
             None => None,
             Some(_) => Some(common_enums::Tokenization::foreign_try_from(
@@ -2266,6 +2301,28 @@ impl<
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
+            continue_redirection_url: value
+                .continue_redirection_url
+                .map(|url_str| {
+                    url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
+                        ApiError {
+                            sub_code: "INVALID_URL".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid continue redirection URL".to_owned(),
+                            error_object: None,
+                        },
+                    ))
+                })
+                .transpose()?,
+            redirect_response,
+            threeds_method_comp_ind: value.threeds_completion_indicator.and_then(|value| {
+                grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value)
+                    .ok()
+                    .and_then(|indicator| {
+                        connector_types::ThreeDsCompletionIndicator::foreign_try_from(indicator)
+                            .ok()
+                    })
+            }),
             tokenization,
         })
     }
@@ -3659,9 +3716,21 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                                 },
                                 router_response_types::RedirectForm::Mifinity { initialization_token } => {
                                     Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri: initialization_token,
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Mifinity(
+                                            grpc_api_types::payments::MifinityData {
+                                                initialization_token,
+                                            }
+                                        ))
+                                    })
+                                },
+                                router_response_types::RedirectForm::Braintree { client_token, card_token, bin,  acs_url } => {
+                                    Ok(grpc_api_types::payments::RedirectForm {
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Braintree(
+                                            grpc_api_types::payments::BraintreeData {
+                                               client_token,
+                                               card_token,
+                                               bin,
+                                               acs_url,
                                             }
                                         ))
                                     })
@@ -6924,6 +6993,16 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         })
         .transpose()?;
 
+    // Set amount_captured based on status - only if Charged/PartialCharged
+    let captured_amount = match status {
+        common_enums::AttemptStatus::Charged
+        | common_enums::AttemptStatus::PartialCharged
+        | common_enums::AttemptStatus::PartialChargedAndChargeable => router_data_v2.request.amount,
+        _ => None,
+    };
+
+    let minor_captured_amount = captured_amount;
+
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -7003,6 +7082,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     raw_connector_request,
                     connector_response,
                     connector_metadata: convert_connector_metadata_to_secret_string(connector_metadata),
+                    captured_amount,
+                    minor_captured_amount,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -7049,6 +7130,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 raw_connector_request,
                 connector_response: None,
                 connector_metadata: None,
+                captured_amount: None,
+                minor_captured_amount: None,
             }
         }
     };
@@ -7867,7 +7950,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -9122,6 +9205,14 @@ impl<
                 .transpose()?,
             enrolled_for_3ds,
             redirect_response,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
         })
     }
 }
@@ -9228,6 +9319,18 @@ impl<
                 .transpose()?,
             enrolled_for_3ds: false,
             redirect_response,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
+            authentication_data: value
+                .authentication_data
+                .map(router_request_types::AuthenticationData::try_from)
+                .transpose()?,
         })
     }
 }

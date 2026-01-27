@@ -4,6 +4,74 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.27.0
+
+### Refactors
+
+- **connector:** Add url safe base64 decoding support ([#447](https://github.com/juspay/connector-service/pull/447)) ([`3936c46`](https://github.com/juspay/connector-service/commit/3936c4636c95f3dcc08d75c0ad09657500f9cb5e))
+
+**Full Changelog:** [`2026.01.26.0...2026.01.27.0`](https://github.com/juspay/connector-service/compare/2026.01.26.0...2026.01.27.0)
+
+- - -
+
+## 2026.01.26.0
+
+### Features
+
+- Disable gzip decompression in test mode ([#444](https://github.com/juspay/connector-service/pull/444)) ([`e2718db`](https://github.com/juspay/connector-service/commit/e2718dbc55d3c61f5acba713f3ad9dfcf5b91121))
+
+**Full Changelog:** [`2026.01.23.0...2026.01.26.0`](https://github.com/juspay/connector-service/compare/2026.01.23.0...2026.01.26.0)
+
+- - -
+
+## 2026.01.23.0
+
+### Features
+
+- **connector:** [MOLLIE] Connector Integration ([#351](https://github.com/juspay/connector-service/pull/351)) ([`996c206`](https://github.com/juspay/connector-service/commit/996c206a6d7ba3c552b20c2a60c2cad7382a33b8))
+
+**Full Changelog:** [`2026.01.22.0...2026.01.23.0`](https://github.com/juspay/connector-service/compare/2026.01.22.0...2026.01.23.0)
+
+- - -
+
+## 2026.01.22.0
+
+### Features
+
+- **connector:**
+  - Braintree Card 3DS PaymentMethod ([#433](https://github.com/juspay/connector-service/pull/433)) ([`c5d2a1a`](https://github.com/juspay/connector-service/commit/c5d2a1a0c336b80899514bd1a8681eda0d9d83ef))
+  - [redsys] integrate 3ds card, refund, void, capture ([#309](https://github.com/juspay/connector-service/pull/309)) ([`322985c`](https://github.com/juspay/connector-service/commit/322985c518b61470042c1eaa2537748d559741fb))
+
+### Bug Fixes
+
+- Diff fix for adyen and paypal repeat payments ([#434](https://github.com/juspay/connector-service/pull/434)) ([`38448d9`](https://github.com/juspay/connector-service/commit/38448d94435e44ed91a37d2eca36e0b777752ac9))
+
+### Miscellaneous Tasks
+
+- Proto code owners ([#438](https://github.com/juspay/connector-service/pull/438)) ([`25b68fe`](https://github.com/juspay/connector-service/commit/25b68fe65a6d681cfb6b2cd0b0831d2d585106f0))
+
+**Full Changelog:** [`2026.01.21.0...2026.01.22.0`](https://github.com/juspay/connector-service/compare/2026.01.21.0...2026.01.22.0)
+
+- - -
+
+## 2026.01.21.0
+
+### Features
+
+- **connector:**
+  - [Adyen] Implement Bank debits ([#421](https://github.com/juspay/connector-service/pull/421)) ([`0d3bc38`](https://github.com/juspay/connector-service/commit/0d3bc38022474571a45e8c259b940be421b2b1be))
+  - [NovalNet] Implement Bank Debits ([#432](https://github.com/juspay/connector-service/pull/432)) ([`8aa92fa`](https://github.com/juspay/connector-service/commit/8aa92faa01a4cc14ac27ece85b4c78f21c4b9b2e))
+  - [ADYEN] card redirect Integration ([#419](https://github.com/juspay/connector-service/pull/419)) ([`6b41d6a`](https://github.com/juspay/connector-service/commit/6b41d6a3a7fc93f92cb08d14c3a3d40319ce69dd))
+- Add bank transfer support in adyen ([#420](https://github.com/juspay/connector-service/pull/420)) ([`d3cc4fe`](https://github.com/juspay/connector-service/commit/d3cc4fe1330311118d230a866f59d0a3638c404d))
+
+### Bug Fixes
+
+- Add secondary base url for Fiuu ([#435](https://github.com/juspay/connector-service/pull/435)) ([`0895852`](https://github.com/juspay/connector-service/commit/0895852c024b85036dda553c23b29f2dfd0164c3))
+
+**Full Changelog:** [`2026.01.19.0...2026.01.21.0`](https://github.com/juspay/connector-service/compare/2026.01.19.0...2026.01.21.0)
+
+- - -
+
 ## 2026.01.19.0
 
 ### Features
