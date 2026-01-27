@@ -2721,7 +2721,7 @@ impl PaymentService for Payments {
                         .map(domain_types::connector_types::ConnectorRedirectResponseSecrets::foreign_try_from)
                         .transpose()
                         .map_err(|e| e.into_grpc_status())?
-                        .map(|secrets| ConnectorSourceVerificationSecrets::RedirectResponseSecret(secrets));
+                        .map(ConnectorSourceVerificationSecrets::RedirectResponseSecret);
 
                     // Get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
