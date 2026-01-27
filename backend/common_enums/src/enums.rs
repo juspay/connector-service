@@ -1150,6 +1150,7 @@ pub enum AttemptStatus {
     PartialCharged,
     PartialChargedAndChargeable,
     Unresolved,
+    Unspecified,
     #[default]
     Pending,
     Failure,
@@ -1186,11 +1187,12 @@ impl TryFrom<u32> for AttemptStatus {
             19 => Self::PartialCharged,
             20 => Self::PartialChargedAndChargeable,
             21 => Self::Unresolved,
-            22 => Self::Pending,
-            23 => Self::Failure,
-            24 => Self::PaymentMethodAwaited,
-            25 => Self::ConfirmationAwaited,
-            26 => Self::DeviceDataCollectionPending,
+            22 => Self::Unspecified,
+            23 => Self::Pending,
+            24 => Self::Failure,
+            25 => Self::PaymentMethodAwaited,
+            26 => Self::ConfirmationAwaited,
+            27 => Self::DeviceDataCollectionPending,
             _ => Self::Unknown,
         })
     }
