@@ -446,11 +446,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         MandateDataType::SingleUse(amount_data) => Some(amount_data),
                         MandateDataType::MultiUse(amount_data_opt) => amount_data_opt.as_ref(),
                     };
-                    mandate_amount_data.and_then(|amount_data| {
+                    mandate_amount_data.map(|amount_data| {
                         data.connector
                             .amount_converter
                             .convert(amount_data.amount, amount_data.currency)
-                            .ok()
                             .map(|max_amount| NoonSubscriptionData {
                                 subscription_type: NoonSubscriptionType::Unscheduled,
                                 name: name.clone(),
@@ -458,7 +457,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             })
                     })
                 })
-            });
+            })
+            .transpose()
+            .change_context(ConnectorError::ParsingFailed)?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
 
@@ -1286,25 +1287,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .take(50)
             .collect();
 
-        let subscription = mandate_amount.as_ref().and_then(|mandate_data| {
-            mandate_data.mandate_type.as_ref().and_then(|mandate_type| {
-                let mandate_amount_data = match mandate_type {
-                    MandateDataType::SingleUse(amount_data) => Some(amount_data),
-                    MandateDataType::MultiUse(amount_data_opt) => amount_data_opt.as_ref(),
-                };
-                mandate_amount_data.and_then(|amount_data| {
-                    data.connector
-                        .amount_converter
-                        .convert(amount_data.amount, amount_data.currency)
-                        .ok()
-                        .map(|max_amount| NoonSubscriptionData {
-                            subscription_type: NoonSubscriptionType::Unscheduled,
-                            name: name.clone(),
-                            max_amount,
-                        })
+        let subscription = mandate_amount
+            .as_ref()
+            .and_then(|mandate_data| {
+                mandate_data.mandate_type.as_ref().and_then(|mandate_type| {
+                    let mandate_amount_data = match mandate_type {
+                        MandateDataType::SingleUse(amount_data) => Some(amount_data),
+                        MandateDataType::MultiUse(amount_data_opt) => amount_data_opt.as_ref(),
+                    };
+                    mandate_amount_data.map(|amount_data| {
+                        data.connector
+                            .amount_converter
+                            .convert(amount_data.amount, amount_data.currency)
+                            .map(|max_amount| NoonSubscriptionData {
+                                subscription_type: NoonSubscriptionType::Unscheduled,
+                                name: name.clone(),
+                                max_amount,
+                            })
+                    })
                 })
             })
-        });
+            .transpose()
+            .change_context(ConnectorError::ParsingFailed)?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
 
