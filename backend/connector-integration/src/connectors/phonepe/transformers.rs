@@ -14,6 +14,7 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
@@ -234,11 +235,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(_) => PhonepePaymentInstrument {
-                    instrument_type: constants::UPI_INTENT.to_string(),
-                    target_app: None, // Could be extracted from payment method details if needed
-                    vpa: None,
-                },
+                UpiData::UpiIntent(intent_data) => {
+                    let target_app = get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
+                    PhonepePaymentInstrument {
+                        instrument_type: constants::UPI_INTENT.to_string(),
+                        target_app,
+                        vpa: None,
+                    }
+                }
                 UpiData::UpiQr(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
@@ -386,11 +390,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(_) => PhonepePaymentInstrument {
-                    instrument_type: constants::UPI_INTENT.to_string(),
-                    target_app: None, // Could be extracted from payment method details if needed
-                    vpa: None,
-                },
+                UpiData::UpiIntent(intent_data) => {
+                    let target_app = get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
+                    PhonepePaymentInstrument {
+                        instrument_type: constants::UPI_INTENT.to_string(),
+                        target_app,
+                        vpa: None,
+                    }
+                }
                 UpiData::UpiQr(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
@@ -936,6 +943,62 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
     .ok()
 }
 
+// ===== TARGET APP MAPPING FOR PHONEPE UPI INTENT =====
+
+/// Gets the target app for PhonePe UPI Intent based on OS and payment source
+/// This implements the same logic as makePhonepeUpiIntentV2Payload in euler-x
+///
+/// Logic:
+/// - On Android: Use the app_name from payment_source directly
+/// - On iOS: Map the payment_source to PhonePe's expected target app names
+fn get_target_app_for_phonepe(
+    intent_data: &domain_types::payment_method_data::UpiIntentData,
+    browser_info: &Option<BrowserInformation>,
+) -> Option<String> {
+    match get_device_os(browser_info).as_str() {
+        "ANDROID" => intent_data.app_name.clone(),
+        _ => map_ios_payment_source_to_target_app(intent_data.app_name.as_deref()),
+    }
+}
+
+/// Detects the device OS from browser_info
+/// Matches the logic from makePhonepeUpiIntentV2Payload in euler-x
+fn get_device_os(browser_info: &Option<BrowserInformation>) -> String {
+    browser_info
+        .as_ref()
+        .and_then(|info| info.os_type.as_ref())
+        .map(|os| {
+            match os.to_uppercase().as_str() {
+                "IOS" | "IPHONE" | "IPAD" | "MACOS" | "DARWIN" => "IOS".to_string(),
+                "ANDROID" => "ANDROID".to_string(),
+                _ => "ANDROID".to_string(), // Default to ANDROID for unknown OS
+            }
+        })
+        .unwrap_or_else(|| "ANDROID".to_string())
+}
+
+/// Maps iOS payment source to PhonePe's expected target app names
+/// Matches the logic from makeiOSintentAppPackagename in euler-x
+///
+/// Mapping:
+/// - "tez" -> "GPAY"
+/// - "phonepe" -> "PHONEPE"
+/// - "paytm" -> "PAYTM"
+/// - Others -> None (will use service configuration mapping if available)
+pub fn map_ios_payment_source_to_target_app(payment_source: Option<&str>) -> Option<String> {
+    payment_source.and_then(|source| {
+        let source_lower = source.to_lowercase();
+        match source_lower.as_str() {
+            s if s.contains("tez") => Some("GPAY".to_string()),
+            s if s.contains("phonepe") => Some("PHONEPE".to_string()),
+            s if s.contains("paytm") => Some("PAYTM".to_string()),
+            // For other apps, could add service configuration mapping here
+            // For now, return None and let PhonePe handle it
+            _ => None,
+        }
+    })
+}
+
 /// Extract Android version from user agent string
 /// Example: "Mozilla/5.0 (Linux; Android 10; SM-G973F) ..." -> "10"
 pub fn split_ua(user_agent: &str) -> String {
@@ -959,15 +1022,3 @@ pub fn get_source_channel(user_agent: Option<&String>) -> String {
     "WEB".to_string()
 }
 
-pub fn get_ios_app_id(vpa_id: &str) -> Option<String> {
-    let vpa_lower = vpa_id.to_lowercase();
-    if vpa_lower.contains("tez") {
-        Some("GPAY".to_string())
-    } else if vpa_lower.contains("phonepe") {
-        Some("PHONEPE".to_string())
-    } else if vpa_lower.contains("paytm") {
-        Some("PAYTM".to_string())
-    } else {
-        None
-    }
-}

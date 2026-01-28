@@ -306,7 +306,7 @@ macros::macro_connector_implementation!(
                         if let Some(vpa_id) = &collect_data.vpa_id {
                             let app_id = match is_android {
                                 true => vpa_id.peek().to_string(),
-                                false => phonepe::get_ios_app_id(vpa_id.peek())
+                                false => phonepe::map_ios_payment_source_to_target_app(Some(vpa_id.peek()))
                                     .unwrap_or_else(|| vpa_id.peek().to_string()),
                             };
                             headers.push((headers::X_MERCHANT_APP_ID.to_string(), app_id.into()));
