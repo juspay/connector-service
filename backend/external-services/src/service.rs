@@ -158,6 +158,7 @@ where
         + ConnectorRequestReference
         + AdditionalHeaders,
 {
+    println!("Starting execute_connector_processing_step for connector: ");
     let start = tokio::time::Instant::now();
     let result = match call_connector_action {
         common_enums::CallConnectorAction::HandleResponse(res) => {
