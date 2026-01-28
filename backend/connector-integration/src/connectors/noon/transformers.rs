@@ -270,21 +270,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
-        let amount = data.connector.amount_converter.convert(
-            data.router_data.request.minor_amount,
-            data.router_data.request.currency,
-        );
+        let amount = data.connector
+            .amount_converter
+            .convert(
+                data.router_data.request.minor_amount,
+                data.router_data.request.currency,
+            )
+            .change_context(ConnectorError::ParsingFailed)?;
 
-        let (payment_data, currency, category) = match item.request.connector_mandate_id() {
-            Some(mandate_id) => (
-                NoonPaymentData::Subscription(NoonSubscription {
-                    subscription_identifier: Secret::new(mandate_id),
-                }),
-                None,
-                None,
-            ),
-            _ => (
-                match item.request.payment_method_data.clone() {
+        let payment_data = match item.request.payment_method_data.clone() {
                     PaymentMethodData::Card(req_card) => Ok(NoonPaymentData::Card(NoonCard {
                         name_on_card: item.resource_common_data.get_optional_billing_full_name(),
                         number_plain: req_card.card_number.clone(),
@@ -378,15 +372,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         ))
                     }
-                }?,
-                Some(item.request.currency),
-                Some(item.request.order_category.clone().ok_or(
-                    ConnectorError::MissingRequiredField {
-                        field_name: "order_category",
-                    },
-                )?),
-            ),
-        };
+                }?;
+
+        let currency = Some(item.request.currency);
+        let category = Some(item.request.order_category.clone().ok_or(
+            ConnectorError::MissingRequiredField {
+                field_name: "order_category",
+            },
+        )?);
 
         let ip_address = item.request.get_ip_address_as_optional();
 
@@ -418,15 +411,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .take(50)
             .collect();
 
-        // When using a subscription (connector_mandate_id), currency and category should be None
-        // because the subscription already has these values configured
-        let (currency, category) = match item.request.connector_mandate_id() {
-            Some(_) => (None, None),
-            None => (currency, category),
-        };
-
         let order = NoonOrder {
-            amount: amount.change_context(ConnectorError::ParsingFailed)?,
+            amount,
             currency,
             channel,
             category,
@@ -1586,16 +1572,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Unwrap the response and process it directly
         let ResponseRouterData {
-            response: repeat_response,
+            response: NoonRepeatPaymentResponse(payments_response),
             router_data,
             http_code,
         } = item;
 
-        let order = repeat_response.0.result.order;
+        let order = payments_response.result.order;
         let current_attempt_status = router_data.resource_common_data.status;
         let status = get_payment_status((order.status, current_attempt_status));
-        let redirection_data = repeat_response
-            .0
+        let redirection_data = payments_response
             .result
             .checkout_data
             .map(|redirection_data| {
@@ -1605,8 +1590,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     form_fields: std::collections::HashMap::new(),
                 })
             });
-        let mandate_reference = repeat_response
-            .0
+        let mandate_reference = payments_response
             .result
             .subscription
             .map(|subscription_data| {
