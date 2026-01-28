@@ -270,7 +270,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
-        let amount = data.connector
+        let amount = data
+            .connector
             .amount_converter
             .convert(
                 data.router_data.request.minor_amount,
@@ -279,100 +280,100 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(ConnectorError::ParsingFailed)?;
 
         let payment_data = match item.request.payment_method_data.clone() {
-                    PaymentMethodData::Card(req_card) => Ok(NoonPaymentData::Card(NoonCard {
-                        name_on_card: item.resource_common_data.get_optional_billing_full_name(),
-                        number_plain: req_card.card_number.clone(),
-                        expiry_month: req_card.card_exp_month.clone(),
-                        expiry_year: req_card.get_expiry_year_4_digit(),
-                        cvv: req_card.card_cvc,
-                    })),
-                    PaymentMethodData::Wallet(wallet_data) => match wallet_data.clone() {
-                        WalletData::GooglePay(google_pay_data) => {
-                            Ok(NoonPaymentData::GooglePay(NoonGooglePay {
-                                api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
-                                api_version: GOOGLEPAY_API_VERSION,
-                                payment_method_data: google_pay_data,
-                            }))
-                        }
-                        WalletData::ApplePay(apple_pay_data) => {
-                            let payment_token_data = NoonApplePayTokenData {
-                                token: NoonApplePayData {
-                                    payment_data: wallet_data
-                                        .get_wallet_token_as_json("Apple Pay".to_string())?,
-                                    payment_method: NoonApplePayPaymentMethod {
-                                        display_name: apple_pay_data.payment_method.display_name,
-                                        network: apple_pay_data.payment_method.network,
-                                        pm_type: apple_pay_data.payment_method.pm_type,
-                                    },
-                                    transaction_identifier: Secret::new(
-                                        apple_pay_data.transaction_identifier,
-                                    ),
-                                },
-                            };
-                            let payment_token = payment_token_data
-                                .encode_to_string_of_json()
-                                .change_context(ConnectorError::RequestEncodingFailed)?;
+            PaymentMethodData::Card(req_card) => Ok(NoonPaymentData::Card(NoonCard {
+                name_on_card: item.resource_common_data.get_optional_billing_full_name(),
+                number_plain: req_card.card_number.clone(),
+                expiry_month: req_card.card_exp_month.clone(),
+                expiry_year: req_card.get_expiry_year_4_digit(),
+                cvv: req_card.card_cvc,
+            })),
+            PaymentMethodData::Wallet(wallet_data) => match wallet_data.clone() {
+                WalletData::GooglePay(google_pay_data) => {
+                    Ok(NoonPaymentData::GooglePay(NoonGooglePay {
+                        api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
+                        api_version: GOOGLEPAY_API_VERSION,
+                        payment_method_data: google_pay_data,
+                    }))
+                }
+                WalletData::ApplePay(apple_pay_data) => {
+                    let payment_token_data = NoonApplePayTokenData {
+                        token: NoonApplePayData {
+                            payment_data: wallet_data
+                                .get_wallet_token_as_json("Apple Pay".to_string())?,
+                            payment_method: NoonApplePayPaymentMethod {
+                                display_name: apple_pay_data.payment_method.display_name,
+                                network: apple_pay_data.payment_method.network,
+                                pm_type: apple_pay_data.payment_method.pm_type,
+                            },
+                            transaction_identifier: Secret::new(
+                                apple_pay_data.transaction_identifier,
+                            ),
+                        },
+                    };
+                    let payment_token = payment_token_data
+                        .encode_to_string_of_json()
+                        .change_context(ConnectorError::RequestEncodingFailed)?;
 
-                            Ok(NoonPaymentData::ApplePay(NoonApplePay {
-                                payment_info: Secret::new(payment_token),
-                            }))
-                        }
-                        WalletData::PaypalRedirect(_) => Ok(NoonPaymentData::PayPal(NoonPayPal {
-                            return_url: item.request.get_router_return_url()?,
-                        })),
-                        WalletData::AliPayQr(_)
-                        | WalletData::AliPayRedirect(_)
-                        | WalletData::AliPayHkRedirect(_)
-                        | WalletData::AmazonPayRedirect(_)
-                        | WalletData::MomoRedirect(_)
-                        | WalletData::KakaoPayRedirect(_)
-                        | WalletData::GoPayRedirect(_)
-                        | WalletData::GcashRedirect(_)
-                        | WalletData::ApplePayRedirect(_)
-                        | WalletData::ApplePayThirdPartySdk(_)
-                        | WalletData::DanaRedirect {}
-                        | WalletData::GooglePayRedirect(_)
-                        | WalletData::GooglePayThirdPartySdk(_)
-                        | WalletData::MbWayRedirect(_)
-                        | WalletData::MobilePayRedirect(_)
-                        | WalletData::PaypalSdk(_)
-                        | WalletData::Paze(_)
-                        | WalletData::SamsungPay(_)
-                        | WalletData::TwintRedirect {}
-                        | WalletData::VippsRedirect {}
-                        | WalletData::TouchNGoRedirect(_)
-                        | WalletData::WeChatPayRedirect(_)
-                        | WalletData::WeChatPayQr(_)
-                        | WalletData::CashappQr(_)
-                        | WalletData::SwishQr(_)
-                        | WalletData::Mifinity(_)
-                        | WalletData::BluecodeRedirect { .. }
-                        | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
-                            utils::get_unimplemented_payment_method_error_message("Noon"),
-                        )),
-                    },
-                    PaymentMethodData::CardRedirect(_)
-                    | PaymentMethodData::PayLater(_)
-                    | PaymentMethodData::BankRedirect(_)
-                    | PaymentMethodData::BankDebit(_)
-                    | PaymentMethodData::BankTransfer(_)
-                    | PaymentMethodData::Crypto(_)
-                    | PaymentMethodData::MandatePayment
-                    | PaymentMethodData::Reward
-                    | PaymentMethodData::RealTimePayment(_)
-                    | PaymentMethodData::MobilePayment(_)
-                    | PaymentMethodData::Upi(_)
-                    | PaymentMethodData::Voucher(_)
-                    | PaymentMethodData::GiftCard(_)
-                    | PaymentMethodData::OpenBanking(_)
-                    | PaymentMethodData::CardToken(_)
-                    | PaymentMethodData::NetworkToken(_)
-                    | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                        Err(ConnectorError::NotImplemented(
-                            utils::get_unimplemented_payment_method_error_message("Noon"),
-                        ))
-                    }
-                }?;
+                    Ok(NoonPaymentData::ApplePay(NoonApplePay {
+                        payment_info: Secret::new(payment_token),
+                    }))
+                }
+                WalletData::PaypalRedirect(_) => Ok(NoonPaymentData::PayPal(NoonPayPal {
+                    return_url: item.request.get_router_return_url()?,
+                })),
+                WalletData::AliPayQr(_)
+                | WalletData::AliPayRedirect(_)
+                | WalletData::AliPayHkRedirect(_)
+                | WalletData::AmazonPayRedirect(_)
+                | WalletData::MomoRedirect(_)
+                | WalletData::KakaoPayRedirect(_)
+                | WalletData::GoPayRedirect(_)
+                | WalletData::GcashRedirect(_)
+                | WalletData::ApplePayRedirect(_)
+                | WalletData::ApplePayThirdPartySdk(_)
+                | WalletData::DanaRedirect {}
+                | WalletData::GooglePayRedirect(_)
+                | WalletData::GooglePayThirdPartySdk(_)
+                | WalletData::MbWayRedirect(_)
+                | WalletData::MobilePayRedirect(_)
+                | WalletData::PaypalSdk(_)
+                | WalletData::Paze(_)
+                | WalletData::SamsungPay(_)
+                | WalletData::TwintRedirect {}
+                | WalletData::VippsRedirect {}
+                | WalletData::TouchNGoRedirect(_)
+                | WalletData::WeChatPayRedirect(_)
+                | WalletData::WeChatPayQr(_)
+                | WalletData::CashappQr(_)
+                | WalletData::SwishQr(_)
+                | WalletData::Mifinity(_)
+                | WalletData::BluecodeRedirect { .. }
+                | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Noon"),
+                )),
+            },
+            PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::MobilePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Noon"),
+                ))
+            }
+        }?;
 
         let currency = Some(item.request.currency);
         let category = Some(item.request.order_category.clone().ok_or(
