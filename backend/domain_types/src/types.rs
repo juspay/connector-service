@@ -3830,7 +3830,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 minor_captured_amount: None,
                 minor_capturable_amount: None,
                 minor_authorized_amount: None,
-                connector_response: None,
+                connector_response,
             }
         }
     };
@@ -4661,7 +4661,7 @@ pub fn generate_payment_sync_response(
                     .get_connector_response_headers_as_map(),
                 state,
                 raw_connector_request,
-                connector_response: None,
+                connector_response,
             })
         }
     }
@@ -7128,7 +7128,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     .get_connector_response_headers_as_map(),
                 state,
                 raw_connector_request,
-                connector_response: None,
+                connector_response,
                 connector_metadata: None,
                 captured_amount: None,
                 minor_captured_amount: None,
