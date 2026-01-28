@@ -1,15 +1,12 @@
 use crate::{connectors::hyperpg::HyperpgRouterData, types::ResponseRouterData};
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::{
-    request::Method, AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector,
-};
+use common_utils::{request::Method, AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::router_response_types::RedirectForm;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
