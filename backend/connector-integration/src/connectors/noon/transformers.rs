@@ -1457,10 +1457,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount = item.connector.amount_converter.convert(
-            router_data.request.minor_amount,
-            router_data.request.currency,
-        ).change_context(ConnectorError::ParsingFailed)?;
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                router_data.request.minor_amount,
+                router_data.request.currency,
+            )
+            .change_context(ConnectorError::ParsingFailed)?;
 
         // For repeat payments, use the subscription payment method with the mandate ID
         let payment_data = match &router_data.request.mandate_reference {
