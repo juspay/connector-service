@@ -5,21 +5,22 @@ use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, Float
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -56,6 +57,27 @@ pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose =
     base64::engine::general_purpose::URL_SAFE;
 
 // Trait implementations with generic type parameters
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Rapyd<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Rapyd<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SdkSessionTokenV2 for Rapyd<T>
 {
@@ -87,6 +109,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Rapyd<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentIncrementalAuthorization for Rapyd<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -124,7 +150,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Rapyd<T>
+    connector_types::RepeatPaymentV2<T> for Rapyd<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -159,6 +185,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentPostAuthenticateV2<T> for Rapyd<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Rapyd<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
@@ -594,14 +625,7 @@ macros::macro_connector_implementation!(
 );
 
 // Stub implementations for unsupported flows
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -611,51 +635,25 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Rapyd<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Rapyd<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Rapyd<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
@@ -665,27 +663,17 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Rapyd<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Rapyd<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
@@ -695,14 +683,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateConnectorCustomer,
         PaymentFlowData,
@@ -747,6 +728,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
+    > for Rapyd<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Rapyd<T>
 {
 }
@@ -865,7 +856,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Rapyd<T>
 {
@@ -927,6 +918,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
+    > for Rapyd<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Rapyd<T>
 {
 }

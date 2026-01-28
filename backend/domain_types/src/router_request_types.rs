@@ -1,11 +1,7 @@
 use std::str::FromStr;
 
 use common_enums::{self, CaptureMethod, Currency};
-use common_utils::{
-    pii::{self, IpAddress},
-    types::SemanticVersion,
-    Email, MinorUnit,
-};
+use common_utils::{pii::IpAddress, types::SemanticVersion, Email, MinorUnit};
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::Serialize;
@@ -19,7 +15,7 @@ use crate::{
     utils,
 };
 
-pub type Error = error_stack::Report<crate::errors::ConnectorError>;
+pub type Error = error_stack::Report<errors::ConnectorError>;
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct BrowserInformation {
@@ -95,7 +91,7 @@ impl BrowserInformation {
 
 #[derive(Debug, Default, Clone)]
 pub enum SyncRequestType {
-    MultipleCaptureSync(Vec<String>),
+    MultipleCaptureSync,
     #[default]
     SinglePaymentSync,
 }
@@ -117,6 +113,24 @@ pub struct PaymentsCancelData {
     pub capture_method: Option<CaptureMethod>,
 }
 
+/// Represents additional network-level parameters for 3DS processing.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct NetworkParams {
+    /// Parameters specific to Cartes Bancaires network, if applicable.
+    pub cartes_bancaires: Option<CartesBancairesParams>,
+}
+
+/// Represents network-specific parameters for the Cartes Bancaires 3DS process.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CartesBancairesParams {
+    /// The algorithm used to generate the CAVV value.
+    pub cavv_algorithm: common_enums::CavvAlgorithm,
+    /// Exemption indicator specific to Cartes Bancaires network (e.g., "low_value", "trusted_merchant")
+    pub cb_exemption: String,
+    /// Cartes Bancaires risk score assigned during 3DS authentication.
+    pub cb_score: i32,
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AuthenticationData {
     pub trans_status: Option<common_enums::TransactionStatus>,
@@ -129,6 +143,8 @@ pub struct AuthenticationData {
     pub ds_trans_id: Option<String>,
     pub acs_transaction_id: Option<String>,
     pub transaction_id: Option<String>,
+    pub network_params: Option<NetworkParams>,
+    pub exemption_indicator: Option<common_enums::ExemptionIndicator>,
 }
 
 impl TryFrom<payments::AuthenticationData> for AuthenticationData {
@@ -144,6 +160,8 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             acs_transaction_id,
             transaction_id,
             ucaf_collection_indicator,
+            exemption_indicator,
+            network_params,
         } = value;
         let threeds_server_transaction_id =
             utils::extract_optional_connector_request_reference_id(&threeds_server_transaction_id);
@@ -162,7 +180,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             }))
         }).transpose()?;
         let trans_status = trans_status.map(|trans_status|{
-            grpc_api_types::payments::TransactionStatus::try_from(trans_status).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
+            payments::TransactionStatus::try_from(trans_status).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
                 sub_code: "INVALID_TRANSACTION_STATUS".to_owned(),
                 error_identifier: 400,
                 error_message: "Invalid transaction status format. Expected one of the valid 3DS transaction status values".to_string(),
@@ -183,6 +201,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
                     "description": "Transaction status represents the result of 3D Secure authentication/verification process"
                 })),
             }))}).transpose()?.map(common_enums::TransactionStatus::foreign_from);
+
         Ok(Self {
             ucaf_collection_indicator,
             trans_status,
@@ -193,11 +212,55 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             ds_trans_id: ds_transaction_id,
             acs_transaction_id,
             transaction_id,
+            network_params: network_params.map(NetworkParams::try_from).transpose()?,
+            exemption_indicator: exemption_indicator
+                .map(payments::ExemptionIndicator::try_from)
+                .transpose()
+                .ok()
+                .flatten()
+                .map(common_enums::ExemptionIndicator::foreign_from),
         })
     }
 }
 
-impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
+impl TryFrom<payments::NetworkParams> for NetworkParams {
+    type Error = error_stack::Report<errors::ApplicationErrorResponse>;
+    fn try_from(value: payments::NetworkParams) -> Result<Self, Self::Error> {
+        Ok(Self {
+            cartes_bancaires: value
+                .cartes_bancaires
+                .map(CartesBancairesParams::try_from)
+                .transpose()?,
+        })
+    }
+}
+
+impl TryFrom<payments::CartesBancairesParams> for CartesBancairesParams {
+    type Error = error_stack::Report<errors::ApplicationErrorResponse>;
+    fn try_from(value: payments::CartesBancairesParams) -> Result<Self, Self::Error> {
+        let cavv_algorithm = payments::CavvAlgorithm::try_from(value.cavv_algorithm)
+            .ok()
+            .map(common_enums::CavvAlgorithm::foreign_from)
+            .ok_or_else(|| {
+                errors::ApplicationErrorResponse::BadRequest(errors::ApiError {
+                    sub_code: "INVALID_CAVV_ALGORITHM".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Invalid CAVV algorithm value".to_string(),
+                    error_object: Some(serde_json::json!({
+                        "field": "cavv_algorithm",
+                        "provided_value": value.cavv_algorithm,
+                    })),
+                })
+            })?;
+        Ok(Self {
+            cavv_algorithm,
+            cb_exemption: value.cb_exemption,
+            cb_score: value.cb_score,
+        })
+    }
+}
+
+impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
     fn foreign_from(value: AuthenticationData) -> Self {
         use hyperswitch_masking::ExposeInterface;
         Self {
@@ -217,6 +280,33 @@ impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
                 .map(i32::from),
             acs_transaction_id: value.acs_transaction_id,
             transaction_id: value.transaction_id,
+            exemption_indicator: value
+                .exemption_indicator
+                .map(payments::ExemptionIndicator::foreign_from)
+                .map(i32::from),
+            network_params: value
+                .network_params
+                .map(payments::NetworkParams::foreign_from),
+        }
+    }
+}
+
+impl ForeignFrom<NetworkParams> for payments::NetworkParams {
+    fn foreign_from(value: NetworkParams) -> Self {
+        Self {
+            cartes_bancaires: value
+                .cartes_bancaires
+                .map(payments::CartesBancairesParams::foreign_from),
+        }
+    }
+}
+
+impl ForeignFrom<CartesBancairesParams> for payments::CartesBancairesParams {
+    fn foreign_from(value: CartesBancairesParams) -> Self {
+        Self {
+            cavv_algorithm: payments::CavvAlgorithm::foreign_from(value.cavv_algorithm).into(),
+            cb_exemption: value.cb_exemption,
+            cb_score: value.cb_score,
         }
     }
 }
@@ -224,7 +314,7 @@ impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
 #[derive(Debug, Clone)]
 pub struct ConnectorCustomerData<T: PaymentMethodDataTypes> {
     pub description: Option<String>,
-    pub email: Option<pii::Email>,
+    pub email: Option<Email>,
     pub phone: Option<Secret<String>>,
     pub name: Option<Secret<String>>,
     pub preprocessing_id: Option<String>,
@@ -368,3 +458,11 @@ pub struct PostAuthenticateIntegrityObject {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SdkSessionTokenIntegrityObject {}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct IncrementalAuthorizationIntegrityObject {}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct MandateRevokeIntegrityObject {
+    pub mandate_id: Secret<String>,
+}

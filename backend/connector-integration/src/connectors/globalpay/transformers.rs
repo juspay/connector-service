@@ -3,6 +3,7 @@ use crate::{
     types::ResponseRouterData,
 };
 use common_enums::{AttemptStatus, RefundStatus};
+use common_utils::request::Method;
 use common_utils::types::StringMinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
@@ -12,14 +13,18 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use rand::distributions::DistString;
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 // ===== TYPE ALIASES FOR MACRO =====
 // These type aliases are needed because the create_all_prerequisites! macro
@@ -107,7 +112,7 @@ impl From<GlobalpayPaymentStatus> for AttemptStatus {
             GlobalpayPaymentStatus::Failed => Self::Failure,
             GlobalpayPaymentStatus::Rejected => Self::Failure,
             GlobalpayPaymentStatus::Pending => Self::Pending,
-            GlobalpayPaymentStatus::Initiated => Self::Pending,
+            GlobalpayPaymentStatus::Initiated => Self::AuthenticationPending,
             GlobalpayPaymentStatus::ForReview => Self::Pending,
             GlobalpayPaymentStatus::Funded => Self::Charged,
             GlobalpayPaymentStatus::Reversed => Self::Voided,
@@ -225,21 +230,13 @@ pub struct GlobalpayAccessTokenResponse {
     pub seconds_to_expire: i64,
 }
 
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayAccessTokenResponse,
-            RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
+impl<F, T> TryFrom<ResponseRouterData<GlobalpayAccessTokenResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayAccessTokenResponse,
-            RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayAccessTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
@@ -300,6 +297,27 @@ pub struct StoredCredential {
     pub initiator: Option<InitiatorType>,
 }
 
+// ===== APM / BANK REDIRECT STRUCTURES =====
+
+/// APM (Alternative Payment Method) provider for bank redirect payments
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ApmProvider {
+    Giropay,
+    Ideal,
+    Paypal,
+    Sofort,
+    Eps,
+    Testpay,
+}
+
+/// APM payment method data for bank redirect flows
+#[derive(Debug, Serialize)]
+pub struct GlobalpayApm {
+    /// A string used to identify the payment method provider being used to execute this transaction.
+    pub provider: Option<ApmProvider>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct GlobalpayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub account_name: String,
@@ -326,6 +344,8 @@ pub struct GlobalpayPaymentMethod<T: PaymentMethodDataTypes> {
     pub entry_mode: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card: Option<GlobalpayCard<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub apm: Option<GlobalpayApm>,
 }
 
 #[derive(Debug, Serialize)]
@@ -338,14 +358,7 @@ pub struct GlobalpayCard<T: PaymentMethodDataTypes> {
     pub cvv_indicator: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GlobalpayRouterData<
             RouterDataV2<
@@ -395,6 +408,29 @@ impl<
                         expiry_year: expiry_year_2digit,
                         cvv: card_data.card_cvc.clone(),
                         cvv_indicator,
+                    }),
+                    apm: None,
+                }
+            }
+            PaymentMethodData::BankRedirect(bank_redirect) => {
+                let apm_provider = match bank_redirect {
+                    BankRedirectData::Eps { .. } => Some(ApmProvider::Eps),
+                    BankRedirectData::Ideal { .. } => Some(ApmProvider::Ideal),
+                    _ => {
+                        return Err(error_stack::report!(
+                            errors::ConnectorError::NotImplemented(
+                                "Bank redirect payment method not supported".to_string()
+                            )
+                        ))
+                    }
+                };
+
+                GlobalpayPaymentMethod {
+                    name: item.request.customer_name.clone().map(Secret::new),
+                    entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
+                    card: None,
+                    apm: Some(GlobalpayApm {
+                        provider: apm_provider,
                     }),
                 }
             }
@@ -464,14 +500,7 @@ pub struct GlobalpayCaptureRequest {
     pub reference: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GlobalpayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -549,37 +578,37 @@ pub struct GlobalpayCardResponse {
     pub masked_number_last4: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = AttemptStatus::from(item.response.status.clone());
+        // Extract redirect URL from APM response for bank redirect flows
+        let redirect_url = item
+            .response
+            .payment_method
+            .as_ref()
+            .and_then(|payment_method| {
+                payment_method
+                    .apm
+                    .as_ref()
+                    .and_then(|apm| apm.redirect_url.as_ref())
+            })
+            .filter(|redirect_str| !redirect_str.is_empty())
+            .map(|url| {
+                Url::parse(url).change_context(errors::ConnectorError::FailedToObtainIntegrationUrl)
+            })
+            .transpose()?;
 
-        // TODO: Add redirect URL support for APM flows (PayPal, bank redirects)
-        // Extract from: item.response.payment_method.apm.redirect_url
-        // Need to convert to RedirectForm type
+        let redirection_data = redirect_url
+            .as_ref()
+            .map(|url| Box::new(RedirectForm::from((url.clone(), Method::Get))));
+
+        // Determine status based on connector status and presence of redirect
+        let status = AttemptStatus::from(item.response.status.clone());
 
         // Extract network transaction ID from card response
         let network_txn_id = item
@@ -627,7 +656,7 @@ impl<T: PaymentMethodDataTypes>
             }),
             _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
-                redirection_data: None,
+                redirection_data,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id,
@@ -649,27 +678,15 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // PSync flow - reuses the same GlobalpayPaymentsResponse structure
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
-
-        // TODO: Add redirect URL support for APM flows
-        // Extract from: item.response.payment_method.apm.redirect_url
-        // Need to convert to RedirectForm type
 
         // Extract network transaction ID from card response
         let network_txn_id = item
@@ -739,21 +756,13 @@ impl
 }
 
 // Capture flow - reuses the same GlobalpayPaymentsResponse structure
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
 
@@ -833,14 +842,7 @@ pub struct GlobalpayRefundRequest {
     pub amount: StringMinorUnit,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GlobalpayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -879,21 +881,13 @@ pub struct GlobalpayRefundResponse {
     pub currency: Option<common_enums::Currency>,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(item.response.status.clone());
 
@@ -909,21 +903,13 @@ impl
 }
 
 // RSync Response - Reuses the same GlobalpayRefundResponse structure
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayRefundResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(item.response.status.clone());
 
@@ -946,14 +932,7 @@ pub struct GlobalpayVoidRequest {
     pub amount: Option<StringMinorUnit>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GlobalpayRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -994,21 +973,13 @@ impl<
 
 // Void Response - Reuses GlobalpayPaymentsResponse structure
 // The response is similar to transaction response with REVERSED status
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map GlobalPay void statuses to UCS AttemptStatus
         // Void flow uses VoidFailed instead of generic Failure for failed void attempts

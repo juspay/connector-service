@@ -7,21 +7,22 @@ use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        SubmitEvidence, Void, VoidPC,
+        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,
+        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
@@ -56,6 +57,27 @@ pub(crate) mod headers {
 
 // ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
 // Main service trait - aggregates all other traits
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Authipay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Authipay<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Authipay<T>
 {
@@ -110,7 +132,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Authipay<T>
+    connector_types::RepeatPaymentV2<T> for Authipay<T>
 {
 }
 
@@ -130,7 +152,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Authipay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentTokenV2<T> for Authipay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentIncrementalAuthorization for Authipay<T>
 {
 }
 
@@ -326,7 +358,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -336,7 +368,7 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // Build the request to get the body for HMAC signature
-            let connector_req = authipay::AuthipayPaymentsRequest::try_from(req)?;
+            let connector_req = AuthipayPaymentsRequest::try_from(req)?;
             let request_body_str = serde_json::to_string(&connector_req)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
@@ -367,7 +399,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Get,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -393,7 +425,7 @@ macros::macro_connector_implementation!(
 
             let base_url = self.connector_base_url_payments(req);
             // Append transaction ID to base URL for GET request
-            Ok(format!("{}/{}", base_url, transaction_id))
+            Ok(format!("{base_url}/{transaction_id}"))
         }
     }
 );
@@ -410,7 +442,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -420,7 +452,7 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // Build the request to get the body for HMAC signature
-            let connector_req = authipay::AuthipayVoidRequest::try_from(req)?;
+            let connector_req = AuthipayVoidRequest::try_from(req)?;
             let request_body_str = serde_json::to_string(&connector_req)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
@@ -439,7 +471,7 @@ macros::macro_connector_implementation!(
             let transaction_id = &req.request.connector_transaction_id;
             let base_url = self.connector_base_url_payments(req);
             // Secondary transaction pattern: {base_url}/{transaction_id}
-            Ok(format!("{}/{}", base_url, transaction_id))
+            Ok(format!("{base_url}/{transaction_id}"))
         }
     }
 );
@@ -467,7 +499,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -477,7 +509,7 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // Build the request to get the body for HMAC signature
-            let connector_req = authipay::AuthipayCaptureRequest::try_from(req)?;
+            let connector_req = AuthipayCaptureRequest::try_from(req)?;
             let request_body_str = serde_json::to_string(&connector_req)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
@@ -501,7 +533,7 @@ macros::macro_connector_implementation!(
 
             let base_url = self.connector_base_url_payments(req);
             // Secondary transaction pattern: {base_url}/{transaction_id}
-            Ok(format!("{}/{}", base_url, transaction_id))
+            Ok(format!("{base_url}/{transaction_id}"))
         }
     }
 );
@@ -518,7 +550,7 @@ macros::macro_connector_implementation!(
     flow_response: RefundsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -528,7 +560,7 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // Build the request to get the body for HMAC signature
-            let connector_req = authipay::AuthipayRefundRequest::try_from(req)?;
+            let connector_req = AuthipayRefundRequest::try_from(req)?;
             let request_body_str = serde_json::to_string(&connector_req)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
@@ -548,7 +580,7 @@ macros::macro_connector_implementation!(
             let transaction_id = req.request.connector_transaction_id.clone();
             let base_url = self.connector_base_url_refunds(req);
             // Secondary transaction pattern: {base_url}/{transaction_id}
-            Ok(format!("{}/{}", base_url, transaction_id))
+            Ok(format!("{base_url}/{transaction_id}"))
         }
     }
 );
@@ -564,7 +596,7 @@ macros::macro_connector_implementation!(
     flow_response: RefundsResponseData,
     http_method: Get,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -586,7 +618,7 @@ macros::macro_connector_implementation!(
             let refund_id = req.request.connector_refund_id.clone();
             let base_url = self.connector_base_url_refunds(req);
             // GET request to retrieve refund transaction state
-            Ok(format!("{}/{}", base_url, refund_id))
+            Ok(format!("{base_url}/{refund_id}"))
         }
     }
 );
@@ -604,8 +636,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Authipay<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Authipay<T>
 {
 }
 
@@ -726,6 +762,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Authipay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Authipay<T>
 {
 }
@@ -855,7 +901,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Authipay<T>
 {
@@ -939,6 +985,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Authipay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Authipay<T>
 {
 }

@@ -4,6 +4,11 @@
 pub const API_PAY_ENDPOINT: &str = "pg/v1/pay";
 pub const API_STATUS_ENDPOINT: &str = "pg/v1/status";
 
+// ===== IRCTC MERCHANT-BASED ENDPOINTS =====
+pub const API_IRCTC_PAY_ENDPOINT: &str = "pg/v1/irctc-pay";
+pub const API_IRCTC_STATUS_ENDPOINT: &str = "pg/v1/irctc-status";
+pub const IRCTC_IDENTIFIER: &str = "Disable_IRCTC";
+
 // ===== UPI INSTRUMENT TYPES =====
 pub const UPI_INTENT: &str = "UPI_INTENT";
 pub const UPI_COLLECT: &str = "UPI_COLLECT";

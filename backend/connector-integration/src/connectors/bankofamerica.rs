@@ -15,21 +15,22 @@ const UNAUTHORIZED_STATUS_CODE: u16 = 401;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -51,7 +52,7 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 
-use crate::{connectors::bankofamerica, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 use transformers::{
     BankOfAmericaAuthType, BankOfAmericaPaymentsResponseForSetupMandate,
     BankOfAmericaPaymentsResponseForVoid, BankOfAmericaRefundRequestForRefund,
@@ -66,6 +67,26 @@ pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const ACCEPT: &str = "Accept";
     pub(crate) const CONNECTOR_UNAUTHORIZED_ERROR: &str = "Authentication Error from the connector";
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Bankofamerica<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Bankofamerica<T>
+{
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -106,11 +127,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Bankofamerica<T>
+    connector_types::RepeatPaymentV2<T> for Bankofamerica<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::AcceptDispute for Bankofamerica<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentIncrementalAuthorization for Bankofamerica<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -184,14 +209,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Bankofamerica<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -201,64 +224,35 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Bankofamerica<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Bankofamerica<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Bankofamerica<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Bankofamerica<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Bankofamerica<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
@@ -268,14 +262,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateAccessToken,
         PaymentFlowData,
@@ -285,14 +272,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -302,14 +282,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateConnectorCustomer,
         PaymentFlowData,
@@ -319,14 +292,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,
         PaymentFlowData,
@@ -336,14 +302,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         Authenticate,
         PaymentFlowData,
@@ -353,14 +312,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PostAuthenticate,
         PaymentFlowData,
@@ -370,19 +322,22 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         SdkSessionToken,
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
+    > for Bankofamerica<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Bankofamerica<T>
 {
 }
@@ -511,7 +466,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Bankofamerica<T>
 {
@@ -597,6 +552,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Bankofamerica<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Bankofamerica<T>
 {
@@ -622,7 +587,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         _event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: Result<
-            bankofamerica::BankofamericaErrorResponse,
+            BankofamericaErrorResponse,
             Report<common_utils::errors::ParsingError>,
         > = res.response.parse_struct("Bankofamerica ErrorResponse");
 
@@ -632,7 +597,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             NO_ERROR_MESSAGE.to_string()
         };
         match response {
-            Ok(transformers::BankofamericaErrorResponse::StandardError(response)) => {
+            Ok(BankofamericaErrorResponse::StandardError(response)) => {
                 let (code, message, reason) = match response.error_information {
                     Some(ref error_info) => {
                         let detailed_error_info = error_info.details.as_ref().map(|details| {
@@ -689,19 +654,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_error_message: None,
                 })
             }
-            Ok(transformers::BankofamericaErrorResponse::AuthenticationError(response)) => {
-                Ok(ErrorResponse {
-                    status_code: res.status_code,
-                    code: NO_ERROR_CODE.to_string(),
-                    message: response.response.rmsg.clone(),
-                    reason: Some(response.response.rmsg),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                })
-            }
+            Ok(BankofamericaErrorResponse::AuthenticationError(response)) => Ok(ErrorResponse {
+                status_code: res.status_code,
+                code: NO_ERROR_CODE.to_string(),
+                message: response.response.rmsg.clone(),
+                reason: Some(response.response.rmsg),
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            }),
             Err(error_msg) => {
                 tracing::error!(deserialization_error =? error_msg);
                 domain_types::utils::handle_json_response_deserialization_failure(
@@ -772,7 +735,7 @@ macros::create_all_prerequisites!(
         {
         let date = OffsetDateTime::now_utc();
         let bankofamerica_req = self.get_request_body(req)?;
-        let auth = bankofamerica::BankOfAmericaAuthType::try_from(&req.connector_auth_type)?;
+        let auth = BankOfAmericaAuthType::try_from(&req.connector_auth_type)?;
         let merchant_account = auth.merchant_account.clone();
         let base_url = self.base_url(req.resource_common_data.connectors());
         let bankofamerica_host =
@@ -849,14 +812,14 @@ macros::create_all_prerequisites!(
 
     pub fn generate_signature(
         &self,
-        auth: bankofamerica::BankOfAmericaAuthType,
+        auth: BankOfAmericaAuthType,
         host: String,
         resource: &str,
         payload: &String,
         date: OffsetDateTime,
         http_method: Method,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let bankofamerica::BankOfAmericaAuthType {
+        let BankOfAmericaAuthType {
             api_key,
             merchant_account,
             api_secret,

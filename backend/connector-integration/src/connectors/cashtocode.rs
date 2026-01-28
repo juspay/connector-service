@@ -8,21 +8,22 @@ use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -51,168 +52,99 @@ pub(crate) mod headers {
 }
 
 // Trait implementations with generic type parameters
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::SdkSessionTokenV2 for Cashtocode<T>
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::ConnectorServiceTrait<T> for Cashtocode<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthorizeV2<T> for Cashtocode<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentSyncV2 for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentSessionToken for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Cashtocode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for Cashtocode<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthorizeV2<T> for Cashtocode<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Cashtocode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSessionToken for Cashtocode<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::CreateConnectorCustomer for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentVoidV2 for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundSyncV2 for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundV2 for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentCapture for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::SetupMandateV2<T> for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::AcceptDispute for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::SubmitEvidenceV2 for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::DisputeDefend for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::IncomingWebhook for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Cashtocode<T>
 {
     fn verify_webhook_source(
         &self,
         request: RequestDetails,
         connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
+    ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let webhook_secret = match connector_webhook_secrets.clone() {
             Some(secrets) => secrets,
             None => return Ok(false),
@@ -239,10 +171,8 @@ impl<
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::EventType,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>
+    {
         Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
     }
 
@@ -253,7 +183,7 @@ impl<
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
+        error_stack::Report<errors::ConnectorError>,
     > {
         let webhook: transformers::CashtocodePaymentsSyncResponse = request
             .body
@@ -283,99 +213,54 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentOrderCreate for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::ValidationTrait for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RepeatPaymentV2 for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2<T> for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentTokenV2<T> for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Cashtocode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Cashtocode<T>
 {
 }
 
 // Authentication trait implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPreAuthenticateV2<T> for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPreAuthenticateV2<T> for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthenticateV2<T> for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthenticateV2<T> for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPostAuthenticateV2<T> for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentVoidPostCaptureV2 for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentIncrementalAuthorization for Cashtocode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         VoidPC,
         PaymentFlowData,
@@ -385,14 +270,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         SdkSessionToken,
         PaymentFlowData,
@@ -457,7 +335,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -487,14 +365,8 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorCommon for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Cashtocode<T>
 {
     fn id(&self) -> &'static str {
         "cashtocode"
@@ -547,75 +419,38 @@ impl<
 }
 
 // Stub implementations for unsupported flows
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
     for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
     for Cashtocode<T>
 {
 }
 
 // Authentication flow implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,
         PaymentFlowData,
@@ -625,14 +460,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         Authenticate,
         PaymentFlowData,
@@ -642,19 +470,22 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
+    > for Cashtocode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Cashtocode<T>
 {
 }
@@ -665,14 +496,7 @@ impl<
 
 // Duplicate macro_connector_implementation! for Authorize flow removed - already defined above
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -682,51 +506,25 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
@@ -736,27 +534,17 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Cashtocode<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Cashtocode<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
@@ -766,14 +554,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateAccessToken,
         PaymentFlowData,
@@ -783,14 +564,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateConnectorCustomer,
         PaymentFlowData,
@@ -799,14 +573,7 @@ impl<
     > for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -893,7 +660,7 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     RepeatPayment,
     PaymentFlowData,
-    RepeatPaymentData,
+    RepeatPaymentData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
@@ -945,15 +712,15 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
+impl_source_verification_stub!(
+    MandateRevoke,
+    PaymentFlowData,
+    MandateRevokeRequestData,
+    MandateRevokeResponseData
+);
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
         SdkSessionToken,
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
@@ -962,15 +729,8 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
@@ -979,15 +739,8 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
         CreateAccessToken,
         PaymentFlowData,
         AccessTokenRequestData,
@@ -996,15 +749,8 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
@@ -1013,15 +759,8 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
         CreateConnectorCustomer,
         PaymentFlowData,
         ConnectorCustomerData,

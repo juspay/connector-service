@@ -56,8 +56,8 @@ pub use self::braintree::Braintree;
 pub mod volt;
 pub use self::volt::Volt;
 
-pub mod bluecode;
-pub use self::bluecode::Bluecode;
+pub mod calida;
+pub use self::calida::Calida;
 
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;
@@ -149,6 +149,9 @@ pub use self::nuvei::Nuvei;
 pub mod iatapay;
 pub use self::iatapay::Iatapay;
 
+pub mod jpmorgan;
+pub use self::jpmorgan::Jpmorgan;
+
 pub mod nmi;
 pub use self::nmi::Nmi;
 
@@ -158,14 +161,41 @@ pub use self::forte::Forte;
 pub mod shift4;
 pub use self::shift4::Shift4;
 
+pub mod paybox;
+pub use self::paybox::Paybox;
+
 pub mod nexixpay;
 pub use self::nexixpay::Nexixpay;
 
 pub mod airwallex;
 pub use self::airwallex::Airwallex;
 
+pub mod worldpayxml;
+pub use self::worldpayxml::Worldpayxml;
+
+pub mod tsys;
+pub use self::tsys::Tsys;
+
 pub mod bankofamerica;
 pub use self::bankofamerica::Bankofamerica;
 
 pub mod powertranz;
 pub use self::powertranz::Powertranz;
+
+pub mod getnet;
+pub use self::getnet::Getnet;
+
+pub mod bambora;
+pub use self::bambora::Bambora;
+
+pub mod payme;
+pub use self::payme::Payme;
+
+pub mod revolut;
+pub use self::revolut::Revolut;
+
+pub mod gigadat;
+pub use self::gigadat::Gigadat;
+
+pub mod loonio;
+pub use self::loonio::Loonio;

@@ -34,14 +34,7 @@ pub struct StaxVoidRequest {}
 #[derive(Debug, Serialize, Default)]
 pub struct StaxRSyncRequest {}
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StaxRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -61,14 +54,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StaxRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -88,14 +74,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StaxRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     > for StaxRSyncRequest
@@ -254,14 +233,7 @@ pub struct StaxMeta {
     pub tax: MinorUnit,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StaxRouterData<
             RouterDataV2<
@@ -421,32 +393,12 @@ pub struct ChildTransaction {
     pub created_at: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let status = get_payment_status(response)?;
 
@@ -485,22 +437,12 @@ impl<T: PaymentMethodDataTypes>
 
 // ===== PSYNC RESPONSE TRANSFORMATION =====
 // PSync uses the same StaxPaymentResponse structure as Authorize
-impl
-    TryFrom<
-        ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let status = get_payment_status(response)?;
 
@@ -549,14 +491,7 @@ pub struct StaxCaptureRequest {
     pub total: FloatMajorUnit,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StaxRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -586,22 +521,12 @@ impl<
 
 // ===== CAPTURE RESPONSE TRANSFORMATION =====
 // Capture uses the same StaxPaymentResponse structure as Authorize
-impl
-    TryFrom<
-        ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // CRITICAL: Follow reviewer feedback - check transaction type and status
@@ -669,14 +594,7 @@ pub struct StaxRefundRequest {
     pub total: FloatMajorUnit,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StaxRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for StaxRefundRequest
@@ -706,22 +624,12 @@ impl<
 // We reuse StaxPaymentResponse since the structure is identical
 // The key is to extract and validate the refund child transaction
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // Convert refund amount to FloatMajorUnit for filtering (like HS does)
@@ -755,22 +663,12 @@ impl
 // CRITICAL: RSync queries the refund transaction directly using /transaction/{refund_id}
 // Stax returns the refund transaction at the TOP LEVEL (not as a child transaction)
 // This is different from Refund Execute which returns parent with child_transactions array
-impl
-    TryFrom<
-        ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // Use top-level fields since Stax returns the refund transaction directly
@@ -860,22 +758,12 @@ fn extract_refund_id(
     Ok(refund_child.id.clone())
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            StaxPaymentResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         let status = if response.is_voided {
@@ -914,14 +802,7 @@ pub struct StaxCustomerRequest {
     pub firstname: Option<Secret<String>>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StaxRouterData<
             RouterDataV2<
@@ -971,18 +852,7 @@ pub struct StaxCustomerResponse {
     pub id: Secret<String>, // Stax customer ID
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            StaxCustomerResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateConnectorCustomer,
-                PaymentFlowData,
-                domain_types::connector_types::ConnectorCustomerData,
-                domain_types::connector_types::ConnectorCustomerResponse,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<StaxCustomerResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::CreateConnectorCustomer,
         PaymentFlowData,
@@ -992,17 +862,7 @@ impl
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            StaxCustomerResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateConnectorCustomer,
-                PaymentFlowData,
-                domain_types::connector_types::ConnectorCustomerData,
-                domain_types::connector_types::ConnectorCustomerResponse,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<StaxCustomerResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(domain_types::connector_types::ConnectorCustomerResponse {
                 connector_customer_id: item.response.id.expose(),
@@ -1037,14 +897,7 @@ pub enum StaxTokenRequest<T: PaymentMethodDataTypes> {
     // Note: Bank tokenization not yet implemented
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StaxRouterData<
             RouterDataV2<
@@ -1151,18 +1004,7 @@ pub struct StaxTokenResponse {
     pub id: Secret<String>, // payment_method_id to use in Authorize
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            StaxTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StaxTokenResponse, Self>>
     for RouterDataV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -1172,17 +1014,7 @@ impl<T: PaymentMethodDataTypes>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            StaxTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<StaxTokenResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse {
                 token: item.response.id.expose(),

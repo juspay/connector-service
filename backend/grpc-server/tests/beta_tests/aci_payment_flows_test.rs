@@ -201,8 +201,8 @@ fn create_payment_authorize_request(
 
     // Set the transaction details
     request.auth_type = i32::from(AuthenticationType::NoThreeDs);
-    request.request_incremental_authorization = true;
-    request.enrolled_for_3ds = true;
+    request.request_incremental_authorization = Some(true);
+    request.enrolled_for_3ds = Some(true);
 
     // Set capture method with proper conversion
     if let common_enums::CaptureMethod::Manual = capture_method {
@@ -340,9 +340,10 @@ card_details),
         }),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         setup_future_usage: Some(i32::from(FutureUsage::OffSession)),
-        enrolled_for_3ds: false,
+        enrolled_for_3ds: Some(false),
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("mandate_{}", get_timestamp()))),
+        sync_type: None,
         }),
         metadata: HashMap::new(),
         ..Default::default()

@@ -9,21 +9,22 @@ use common_utils::{errors::CustomResult, events, ext_traits::XmlExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -53,6 +54,27 @@ pub(crate) mod headers {
 }
 
 // Type alias for non-generic trait implementations
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::connector_types::SdkSessionTokenV2 for Bamboraapac<T>
 {
@@ -94,7 +116,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::connector_types::RepeatPaymentV2 for Bamboraapac<T>
+    interfaces::connector_types::RepeatPaymentV2<T> for Bamboraapac<T>
 {
 }
 
@@ -130,6 +152,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::connector_types::IncomingWebhook for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentIncrementalAuthorization for Bamboraapac<T>
 {
 }
 
@@ -170,6 +197,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::connector_types::ValidationTrait for Bamboraapac<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::MandateRevokeV2 for Bamboraapac<T>
 {
 }
 
@@ -225,7 +256,7 @@ macros::create_all_prerequisites!(
             request_body: BamboraapacRepeatPaymentRequest,
             response_body: BamboraapacRepeatPaymentResponse,
             response_format: xml,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -502,7 +533,7 @@ macros::macro_connector_implementation!(
     curl_response: BamboraapacRepeatPaymentResponse,
     flow_name: RepeatPayment,
     resource_common_data: PaymentFlowData,
-    flow_request: RepeatPaymentData,
+    flow_request: RepeatPaymentData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
     preprocess_response: true,
@@ -511,7 +542,7 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_url(
             &self,
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
         }
@@ -565,6 +596,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Bamboraapac<T>
 {
 }
 
@@ -634,7 +675,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Bamboraapac<T>
 {
@@ -852,6 +893,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Bamboraapac<T>
 {
 }

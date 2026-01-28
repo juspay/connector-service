@@ -8,21 +8,22 @@ use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
@@ -58,6 +59,27 @@ pub(crate) mod headers {
 }
 
 // ===== CONNECTOR COMMON IMPLEMENTATION - Must be defined before macros =====
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Shift4<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Shift4<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Shift4<T>
 {
@@ -270,7 +292,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/charges", base_url))
+            Ok(format!("{base_url}/charges"))
         }
     }
 );
@@ -307,7 +329,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/charges/{}", base_url, connector_transaction_id))
+            Ok(format!("{base_url}/charges/{connector_transaction_id}"))
         }
     }
 );
@@ -344,7 +366,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/charges/{}/capture", base_url, connector_transaction_id))
+            Ok(format!("{base_url}/charges/{connector_transaction_id}/capture"))
         }
     }
 );
@@ -368,7 +390,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}/refunds", base_url))
+            Ok(format!("{base_url}/refunds"))
         }
     }
 );
@@ -401,7 +423,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_refund_id = req.request.connector_refund_id.clone();
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}/refunds/{}", base_url, connector_refund_id))
+            Ok(format!("{base_url}/refunds/{connector_refund_id}"))
         }
     }
 );
@@ -517,7 +539,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentIncrementalAuthorization for Shift4<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SdkSessionTokenV2 for Shift4<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Shift4<T>
 {
 }
 
@@ -679,18 +711,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Shift4<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Shift4<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Shift4<T>
+    connector_types::RepeatPaymentV2<T> for Shift4<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
     for Shift4<T>
 {
 }
@@ -787,6 +823,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
+    > for Shift4<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Shift4<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Shift4<T>
 {
 }

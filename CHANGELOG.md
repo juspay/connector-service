@@ -4,6 +4,293 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.13.0
+
+### Features
+
+- **connector:** [GETNETGLOBAL] Connector Integration ([#381](https://github.com/juspay/connector-service/pull/381)) ([`a648f45`](https://github.com/juspay/connector-service/commit/a648f45d93309a083c90f59f73d4f2f5a95effb1))
+
+**Full Changelog:** [`2026.01.12.1...2026.01.13.0`](https://github.com/juspay/connector-service/compare/2026.01.12.1...2026.01.13.0)
+
+- - -
+
+## 2026.01.12.1
+
+### Bug Fixes
+
+- **connector:** Fix Razorpay metadata to accept all values ([#418](https://github.com/juspay/connector-service/pull/418)) ([`4006a76`](https://github.com/juspay/connector-service/commit/4006a76b00ada9e9038a57a49a97f09e3ac9c4ce))
+
+**Full Changelog:** [`2026.01.12.0...2026.01.12.1`](https://github.com/juspay/connector-service/compare/2026.01.12.0...2026.01.12.1)
+
+- - -
+
+## 2026.01.12.0
+
+### Features
+
+- **connector:** [Fiuu] Added RepeatPayment flow ([#414](https://github.com/juspay/connector-service/pull/414)) ([`b2f72d1`](https://github.com/juspay/connector-service/commit/b2f72d1e25d011dbb959a7d728e0ea57ed5a30ab))
+- **core:** MandateRevoke flow ([#214](https://github.com/juspay/connector-service/pull/214)) ([`b251e1a`](https://github.com/juspay/connector-service/commit/b251e1a490b472a896c26d85d416afd471ba5a9d))
+- **framework:** Added IncrementalAuthorization Flow support ([#410](https://github.com/juspay/connector-service/pull/410)) ([`be2fd45`](https://github.com/juspay/connector-service/commit/be2fd45b013ea6e04c2a58cfbbda028d6a71e19e))
+- Added Network-level error details in proto ([#417](https://github.com/juspay/connector-service/pull/417)) ([`772548a`](https://github.com/juspay/connector-service/commit/772548a7d4139906ec1abc4b45a4549f91d8c777))
+
+### Bug Fixes
+
+- Resolved RouterData diffs in Prod for Authorizedotnet ([#413](https://github.com/juspay/connector-service/pull/413)) ([`8d2fcb8`](https://github.com/juspay/connector-service/commit/8d2fcb8baea8b0ab59636d4d02c51a1d9fe061ff))
+
+**Full Changelog:** [`2026.01.09.0...2026.01.12.0`](https://github.com/juspay/connector-service/compare/2026.01.09.0...2026.01.12.0)
+
+- - -
+
+## 2026.01.09.0
+
+### Features
+
+- Add granular Claude rules for connector integration ([#365](https://github.com/juspay/connector-service/pull/365)) ([`144e5f2`](https://github.com/juspay/connector-service/commit/144e5f257bcf39ba7c5e0ca95cceb48b871ee37d))
+
+### Bug Fixes
+
+- Added Capture Method in Cybersource Repeat Payment Response ([#415](https://github.com/juspay/connector-service/pull/415)) ([`e67b4cc`](https://github.com/juspay/connector-service/commit/e67b4cc37a1fd7604865f4229f469e37e7960a49))
+- CavvAlgorithm in proto missing field ([#416](https://github.com/juspay/connector-service/pull/416)) ([`4c40835`](https://github.com/juspay/connector-service/commit/4c408357ae80d7c0fd868ed9cc920fccb23dfc88))
+
+**Full Changelog:** [`2026.01.08.0...2026.01.09.0`](https://github.com/juspay/connector-service/compare/2026.01.08.0...2026.01.09.0)
+
+- - -
+
+## 2026.01.08.0
+
+### Features
+
+- **connector:**
+  - Braintree RepeatPayment Flow ([#399](https://github.com/juspay/connector-service/pull/399)) ([`27992ee`](https://github.com/juspay/connector-service/commit/27992eed49578cb2bbe413d63664ee88ffc3f113))
+  - [GIGADAT] Connector Integration ([#408](https://github.com/juspay/connector-service/pull/408)) ([`2d2fba5`](https://github.com/juspay/connector-service/commit/2d2fba54408355ad1cbff6b46a3e591106c73652))
+- Repeatpayment, nti flow for adyen ([#405](https://github.com/juspay/connector-service/pull/405)) ([`9df9321`](https://github.com/juspay/connector-service/commit/9df9321e23cb2d1735312ae32ed8a9f9ffd42b51))
+
+### Bug Fixes
+
+- Remove the parallel execution of test in Run test ([#412](https://github.com/juspay/connector-service/pull/412)) ([`50b72a1`](https://github.com/juspay/connector-service/commit/50b72a1db4cc6f21b6c05f459e8ed1a54577204a))
+- Remove unused field ([#411](https://github.com/juspay/connector-service/pull/411)) ([`ffd9846`](https://github.com/juspay/connector-service/commit/ffd984675d93281d5f7613d1c952186a36fa92f8))
+
+**Full Changelog:** [`2026.01.05.0...2026.01.08.0`](https://github.com/juspay/connector-service/compare/2026.01.05.0...2026.01.08.0)
+
+- - -
+
+## 2026.01.05.0
+
+### Features
+
+- **connector:**
+  - Trustpay Bank Transfer & Bank Redirect Payment Method ([#406](https://github.com/juspay/connector-service/pull/406)) ([`e8a2708`](https://github.com/juspay/connector-service/commit/e8a270876fd29a6cf6e5a65f07de5f906bb4a1a1))
+  - [PAYBOX] Connector Integration ([#387](https://github.com/juspay/connector-service/pull/387)) ([`70b74d8`](https://github.com/juspay/connector-service/commit/70b74d8412aa594771e8722f48b76ff38b9a8ba9))
+  - [LOONIO] Connector Integration ([#401](https://github.com/juspay/connector-service/pull/401)) ([`62ee8c0`](https://github.com/juspay/connector-service/commit/62ee8c0092c5a3656e601ea3b675b52adfb56fb3))
+- Adyen bankredirect payment method ([#400](https://github.com/juspay/connector-service/pull/400)) ([`bff3e26`](https://github.com/juspay/connector-service/commit/bff3e26bca3fb35d64f601cf3a8825a2f819b1b1))
+
+### Refactors
+
+- Refactor config override functionality ([#385](https://github.com/juspay/connector-service/pull/385)) ([`047fb05`](https://github.com/juspay/connector-service/commit/047fb05929cb1584100bf597a1eb511850192eca))
+
+**Full Changelog:** [`2026.01.01.0...2026.01.05.0`](https://github.com/juspay/connector-service/compare/2026.01.01.0...2026.01.05.0)
+
+- - -
+
+## 2026.01.01.0
+
+### Bug Fixes
+
+- Adyen url on non test mode for authorize,void,etc ([#402](https://github.com/juspay/connector-service/pull/402)) ([`e1a2e3c`](https://github.com/juspay/connector-service/commit/e1a2e3c4e2655a73859c38c9f42dee4097a8c493))
+
+**Full Changelog:** [`2025.12.31.0...2026.01.01.0`](https://github.com/juspay/connector-service/compare/2025.12.31.0...2026.01.01.0)
+
+- - -
+
+## 2025.12.31.0
+
+### Features
+
+- **connector:** [PAYPAL] Bank-Redirect ([#397](https://github.com/juspay/connector-service/pull/397)) ([`83c945f`](https://github.com/juspay/connector-service/commit/83c945fe302493e8d268895bcb3313254721b19c))
+- **core:** Add connector_order_reference_id for Psync ([#395](https://github.com/juspay/connector-service/pull/395)) ([`3dcfd30`](https://github.com/juspay/connector-service/commit/3dcfd30ef1405c81ba711c370397cabba277e854))
+
+**Full Changelog:** [`2025.12.30.0...2025.12.31.0`](https://github.com/juspay/connector-service/compare/2025.12.30.0...2025.12.31.0)
+
+- - -
+
+## 2025.12.30.0
+
+### Features
+
+- **connector:**
+  - [AIRWALLEX] Bank-Redirect ([#388](https://github.com/juspay/connector-service/pull/388)) ([`7e26d93`](https://github.com/juspay/connector-service/commit/7e26d9325acff64c11a9194c91b420f6295ab83e))
+  - [GLOBALPAY] Bank-Redirect ([#393](https://github.com/juspay/connector-service/pull/393)) ([`be59b37`](https://github.com/juspay/connector-service/commit/be59b3715966ee8282c19510c720c5c34bac5210))
+  - Refactor Calida ([#394](https://github.com/juspay/connector-service/pull/394)) ([`625d71f`](https://github.com/juspay/connector-service/commit/625d71f81a7d269e14047461f16a278f53601468))
+
+**Full Changelog:** [`2025.12.25.0...2025.12.30.0`](https://github.com/juspay/connector-service/compare/2025.12.25.0...2025.12.30.0)
+
+- - -
+
+## 2025.12.25.0
+
+### Features
+
+- **core:** Add support for NetworkTokenWithNTI and NetworkMandateId in RepeatPayment ([#389](https://github.com/juspay/connector-service/pull/389)) ([`a910df2`](https://github.com/juspay/connector-service/commit/a910df283e18aa625070dc9aea6cd31d83f7167e))
+
+### Bug Fixes
+
+- Diff check fixes for Dlocal ([#390](https://github.com/juspay/connector-service/pull/390)) ([`241cd4e`](https://github.com/juspay/connector-service/commit/241cd4e49d8b8094176eb10db91ddaa0d2f7f098))
+
+### Refactors
+
+- Made mandatory fields in authorize flow optional ([#386](https://github.com/juspay/connector-service/pull/386)) ([`ab2c078`](https://github.com/juspay/connector-service/commit/ab2c078e434d7b28bc63969dbd6ac9c3c37d498d))
+
+**Full Changelog:** [`2025.12.24.0...2025.12.25.0`](https://github.com/juspay/connector-service/compare/2025.12.24.0...2025.12.25.0)
+
+- - -
+
+## 2025.12.24.0
+
+### Features
+
+- **connector:**
+  - Revolut Connector Integration ([#328](https://github.com/juspay/connector-service/pull/328)) ([`212c6c4`](https://github.com/juspay/connector-service/commit/212c6c4697dfe37e5cd8ad52f35d55d770c732b1))
+  - Revolut pay fix ([#391](https://github.com/juspay/connector-service/pull/391)) ([`768cac9`](https://github.com/juspay/connector-service/commit/768cac9a8284a91db2e808789b6386483b25633a))
+- Added upi_source for cc/cl ([#368](https://github.com/juspay/connector-service/pull/368)) ([`6313849`](https://github.com/juspay/connector-service/commit/6313849618e5397e38960334fbf102f044c698ec))
+
+**Full Changelog:** [`2025.12.23.0...2025.12.24.0`](https://github.com/juspay/connector-service/compare/2025.12.23.0...2025.12.24.0)
+
+- - -
+
+## 2025.12.23.0
+
+### Features
+
+- **connector:**
+  - [SHIFT4] Bank-Redirect ([#383](https://github.com/juspay/connector-service/pull/383)) ([`042b281`](https://github.com/juspay/connector-service/commit/042b2815c6b219f418ba2e2fdd9478abb1aec2f3))
+  - Jpmorgan ([#358](https://github.com/juspay/connector-service/pull/358)) ([`95358c3`](https://github.com/juspay/connector-service/commit/95358c33971ba82cd1558bc3d511a245a619a7c2))
+
+**Full Changelog:** [`2025.12.19.0...2025.12.23.0`](https://github.com/juspay/connector-service/compare/2025.12.19.0...2025.12.23.0)
+
+- - -
+
+## 2025.12.19.0
+
+### Features
+
+- **connector:** [Stripe] Add Banktransfer, BNPL, BankRedirect PMs for stripe ([#371](https://github.com/juspay/connector-service/pull/371)) ([`24682d9`](https://github.com/juspay/connector-service/commit/24682d9e28b386f0ca9d45a30c230f7369397a95))
+
+### Bug Fixes
+
+- [WORLPAYVANTIV] Diff Checks ([#375](https://github.com/juspay/connector-service/pull/375)) ([`116c3b6`](https://github.com/juspay/connector-service/commit/116c3b6d4eccaee4364c0d44ebb8ffe169970f01))
+
+**Full Changelog:** [`2025.12.18.0...2025.12.19.0`](https://github.com/juspay/connector-service/compare/2025.12.18.0...2025.12.19.0)
+
+- - -
+
+## 2025.12.18.0
+
+### Features
+
+- **connector:** [WORLDPAYXML] Connector Integration ([#361](https://github.com/juspay/connector-service/pull/361)) ([`8bb06fc`](https://github.com/juspay/connector-service/commit/8bb06fca660c530968a01d01442463354b9abf80))
+
+### Bug Fixes
+
+- **connector:** Paypal Capture & Void flow ([#376](https://github.com/juspay/connector-service/pull/376)) ([`b978b0e`](https://github.com/juspay/connector-service/commit/b978b0eac62ca98f291f70d4168e0ba1d62711cb))
+
+**Full Changelog:** [`2025.12.17.0...2025.12.18.0`](https://github.com/juspay/connector-service/compare/2025.12.17.0...2025.12.18.0)
+
+- - -
+
+## 2025.12.17.0
+
+### Features
+
+- **connector:**
+  - [TSYS] Connector Integration ([#347](https://github.com/juspay/connector-service/pull/347)) ([`549d00a`](https://github.com/juspay/connector-service/commit/549d00a820e8a564e666ccd905b0e7942575a0ab))
+  - Refactored Volt connector and Refund & RSync flow implementation ([#362](https://github.com/juspay/connector-service/pull/362)) ([`e75ad17`](https://github.com/juspay/connector-service/commit/e75ad17ef5e6d181e378c47a0413f1450bcbfb6b))
+
+### Bug Fixes
+
+- **connector:** Fiserv RSync flow Diff fix ([#377](https://github.com/juspay/connector-service/pull/377)) ([`ddcf3c0`](https://github.com/juspay/connector-service/commit/ddcf3c092c813e1c982983fd6fb43c3319afec51))
+- Correct mapping of metadata ([#367](https://github.com/juspay/connector-service/pull/367)) ([`0f0dd5f`](https://github.com/juspay/connector-service/commit/0f0dd5f23b19161f7ecef29f09d0022a3d86e3c6))
+- Capture, Void, Refund Request ([#374](https://github.com/juspay/connector-service/pull/374)) ([`1b4c268`](https://github.com/juspay/connector-service/commit/1b4c2686c62cec0ee42e601b13663cc5b8b29134))
+- Removed the authorization_indicator_type field from Authdotnet Req ([#372](https://github.com/juspay/connector-service/pull/372)) ([`a9bd19e`](https://github.com/juspay/connector-service/commit/a9bd19ebc7a475ab967710b2ecfd3acaf1b9e69c))
+
+**Full Changelog:** [`2025.12.16.0...2025.12.17.0`](https://github.com/juspay/connector-service/compare/2025.12.16.0...2025.12.17.0)
+
+- - -
+
+## 2025.12.16.0
+
+### Features
+
+- **connector:**
+  - [Checkout] Added Setupmandate & Repeatpayment flows for Checkout ([#366](https://github.com/juspay/connector-service/pull/366)) ([`54ea726`](https://github.com/juspay/connector-service/commit/54ea7265d715054101b56da85e4f76b200909679))
+  - [PAYME] Connector Integration ([#364](https://github.com/juspay/connector-service/pull/364)) ([`8665908`](https://github.com/juspay/connector-service/commit/8665908b4be468052bc875f391ac4bdf99129fcd))
+
+**Full Changelog:** [`2025.12.15.0...2025.12.16.0`](https://github.com/juspay/connector-service/compare/2025.12.15.0...2025.12.16.0)
+
+- - -
+
+## 2025.12.15.0
+
+### Features
+
+- Enable clippy for connector integration crate ([#359](https://github.com/juspay/connector-service/pull/359)) ([`a03dfc2`](https://github.com/juspay/connector-service/commit/a03dfc285aaaf33aa13182829cdcdc548e6f1a03))
+
+### Bug Fixes
+
+- **connector:** [bluesnap] pass `connector_request_ref_id` instead of `payment_id` ([#369](https://github.com/juspay/connector-service/pull/369)) ([`c814f81`](https://github.com/juspay/connector-service/commit/c814f81c517a8741be2a3099e7fdbf72831cb349))
+- Diff check fixes for Xendit Authorize flow ([#357](https://github.com/juspay/connector-service/pull/357)) ([`82d3a1d`](https://github.com/juspay/connector-service/commit/82d3a1d9df95dddbb42de8cad18fb035a3fc8d5d))
+- Adyen brand name lower case to match hyperswitch diff ([#356](https://github.com/juspay/connector-service/pull/356)) ([`286afff`](https://github.com/juspay/connector-service/commit/286afffd4de76427ba0216fdb496521aa319eb51))
+
+**Full Changelog:** [`2025.12.12.0...2025.12.15.0`](https://github.com/juspay/connector-service/compare/2025.12.12.0...2025.12.15.0)
+
+- - -
+
+## 2025.12.12.0
+
+### Features
+
+- **connector:** [BAMBORA] Connector Integration ([#352](https://github.com/juspay/connector-service/pull/352)) ([`ca406f9`](https://github.com/juspay/connector-service/commit/ca406f94ba865a2552c5f429d31c688a4576636c))
+
+**Full Changelog:** [`2025.12.11.1...2025.12.12.0`](https://github.com/juspay/connector-service/compare/2025.12.11.1...2025.12.12.0)
+
+- - -
+
+## 2025.12.11.1
+
+### Bug Fixes
+
+- **connector:** [paysafe] make payment method token calls work for authorizeonly flow ([#346](https://github.com/juspay/connector-service/pull/346)) ([`e2cb5b7`](https://github.com/juspay/connector-service/commit/e2cb5b7004642e6d2e784ac391981ea2f9851ec4))
+- Status handling to use router_data.status during error case 2xx ([#363](https://github.com/juspay/connector-service/pull/363)) ([`350a6e4`](https://github.com/juspay/connector-service/commit/350a6e46d1ae5a9ebf631b11f10302025f8bbe3a))
+
+**Full Changelog:** [`2025.12.11.0...2025.12.11.1`](https://github.com/juspay/connector-service/compare/2025.12.11.0...2025.12.11.1)
+
+- - -
+
+## 2025.12.11.0
+
+### Features
+
+- Setupmandate and repeat payment flow for paypal ([#355](https://github.com/juspay/connector-service/pull/355)) ([`3930b82`](https://github.com/juspay/connector-service/commit/3930b827af6483d6a46daafe89051a231e8c9d24))
+
+**Full Changelog:** [`2025.12.10.1...2025.12.11.0`](https://github.com/juspay/connector-service/compare/2025.12.10.1...2025.12.11.0)
+
+- - -
+
+## 2025.12.10.1
+
+### Features
+
+- **connector:** Nexinets void flow & PSync, Capture, Refund, RSyns diff check fix ([#354](https://github.com/juspay/connector-service/pull/354)) ([`9315320`](https://github.com/juspay/connector-service/commit/9315320027a14d098cab75ca243fcd0ee61833af))
+- Paypal Threeds flow Added ([#350](https://github.com/juspay/connector-service/pull/350)) ([`30b5a8c`](https://github.com/juspay/connector-service/commit/30b5a8c7106778891cbb1a50a9d617da09c697a0))
+
+### Bug Fixes
+
+- Checkout Diff check fixes ([#340](https://github.com/juspay/connector-service/pull/340)) ([`22e1c1f`](https://github.com/juspay/connector-service/commit/22e1c1f7a0e4c71bb028d47f5e04bbac93236dc2))
+- Removed extra ; in payments.proto file ([#360](https://github.com/juspay/connector-service/pull/360)) ([`350e9e0`](https://github.com/juspay/connector-service/commit/350e9e05044fcf2c5fb5991b5fedf66bf633cd25))
+
+**Full Changelog:** [`2025.12.10.0...2025.12.10.1`](https://github.com/juspay/connector-service/compare/2025.12.10.0...2025.12.10.1)
+
+- - -
+
 ## 2025.12.10.0
 
 ### Features

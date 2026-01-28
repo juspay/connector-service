@@ -10,21 +10,22 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        SubmitEvidence, Void, VoidPC,
+        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,
+        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
@@ -125,7 +126,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -149,7 +150,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -176,7 +177,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -199,7 +200,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -224,6 +225,27 @@ macros::create_all_prerequisites!(
 
 // ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
 // Main service trait - aggregates all other traits
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Globalpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Globalpay<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Globalpay<T>
 {
@@ -242,6 +264,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SdkSessionTokenV2 for Globalpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Globalpay<T>
 {
 }
 
@@ -278,7 +305,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Globalpay<T>
+    connector_types::RepeatPaymentV2<T> for Globalpay<T>
 {
 }
 
@@ -289,6 +316,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Globalpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentIncrementalAuthorization for Globalpay<T>
 {
 }
 
@@ -563,8 +595,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Globalpay<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Globalpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Globalpay<T>
 {
 }
 
@@ -676,7 +722,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.globalpay.base_url;
-        Ok(format!("{}/accesstoken", base_url))
+        Ok(format!("{base_url}/accesstoken"))
     }
 
     fn get_request_body(
@@ -928,7 +974,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
-        RepeatPaymentData,
+        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Globalpay<T>
 {
@@ -970,6 +1016,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
+    > for Globalpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Globalpay<T>
 {
 }
