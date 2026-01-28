@@ -1607,7 +1607,6 @@ pub struct RefundFlowData {
     pub connector_meta_data: Option<SecretSerdeValue>,
     pub test_mode: Option<bool>,
     pub payment_method: Option<PaymentMethod>,
-    pub reference_id: Option<String>,
 }
 
 impl RawConnectorRequestResponse for RefundFlowData {
