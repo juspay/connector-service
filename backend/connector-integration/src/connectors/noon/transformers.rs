@@ -1460,7 +1460,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item.connector.amount_converter.convert(
             router_data.request.minor_amount,
             router_data.request.currency,
-        );
+        ).change_context(ConnectorError::ParsingFailed)?;
 
         // For repeat payments, use the subscription payment method with the mandate ID
         let payment_data = match &router_data.request.mandate_reference {
@@ -1513,17 +1513,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .take(50)
             .collect();
 
-        // When using a mandate (subscription), Noon doesn't accept currency and category in order
-        let (currency, category) = match router_data.request.mandate_reference {
-            MandateReferenceId::ConnectorMandateId(_) => (None, None),
-            _ => (Some(router_data.request.currency), Some("PAY".to_string())),
-        };
-
+        // Noon doesn't accept currency and category in order for repeat payments using mandate
         let order = NoonOrder {
-            amount: amount.change_context(ConnectorError::ParsingFailed)?,
-            currency,
+            amount,
+            currency: None,
             channel,
-            category,
+            category: None,
             reference: router_data
                 .resource_common_data
                 .connector_request_reference_id
