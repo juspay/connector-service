@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.28.0
+
+### Refactors
+
+- Use proper error mapping instead of hardcoded connector_errors for Authorize ([#451](https://github.com/juspay/connector-service/pull/451)) ([`d4b22fb`](https://github.com/juspay/connector-service/commit/d4b22fb551053090231a67a474574202e7f9d5c8))
+
+**Full Changelog:** [`2026.01.27.0...2026.01.28.0`](https://github.com/juspay/connector-service/compare/2026.01.27.0...2026.01.28.0)
+
+- - -
+
 ## 2026.01.27.0
 
 ### Refactors
