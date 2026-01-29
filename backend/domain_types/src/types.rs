@@ -6885,10 +6885,14 @@ impl ForeignTryFrom<grpc_api_types::payments::SetupMandateDetails> for MandateDa
                 )) => Some(mandates::MandateDataType::SingleUse(
                     mandates::MandateAmountData {
                         amount: common_utils::types::MinorUnit::new(amount_data.amount),
-                        currency: grpc_api_types::payments::Currency::try_from(amount_data.currency)
-                            .ok()
-                            .and_then(|grpc_currency| common_enums::Currency::foreign_try_from(grpc_currency).ok())
-                            .unwrap_or(common_enums::Currency::USD),
+                        currency: grpc_api_types::payments::Currency::try_from(
+                            amount_data.currency,
+                        )
+                        .ok()
+                        .and_then(|grpc_currency| {
+                            common_enums::Currency::foreign_try_from(grpc_currency).ok()
+                        })
+                        .unwrap_or(common_enums::Currency::USD),
                         start_date: amount_data.start_date.and_then(|ts| {
                             time::OffsetDateTime::from_unix_timestamp(ts)
                                 .ok()
@@ -6911,10 +6915,14 @@ impl ForeignTryFrom<grpc_api_types::payments::SetupMandateDetails> for MandateDa
                 )) => Some(mandates::MandateDataType::MultiUse(Some(
                     mandates::MandateAmountData {
                         amount: common_utils::types::MinorUnit::new(amount_data.amount),
-                        currency: grpc_api_types::payments::Currency::try_from(amount_data.currency)
-                            .ok()
-                            .and_then(|grpc_currency| common_enums::Currency::foreign_try_from(grpc_currency).ok())
-                            .unwrap_or(common_enums::Currency::USD),
+                        currency: grpc_api_types::payments::Currency::try_from(
+                            amount_data.currency,
+                        )
+                        .ok()
+                        .and_then(|grpc_currency| {
+                            common_enums::Currency::foreign_try_from(grpc_currency).ok()
+                        })
+                        .unwrap_or(common_enums::Currency::USD),
                         start_date: amount_data.start_date.and_then(|ts| {
                             time::OffsetDateTime::from_unix_timestamp(ts)
                                 .ok()
