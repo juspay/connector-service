@@ -15,6 +15,8 @@ pub struct WorldpayPaymentsResponse {
     pub links: Option<SelfLink>,
     #[serde(rename = "_actions", skip_serializing_if = "Option::is_none")]
     pub actions: Option<ActionLinks>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_data_collection: Option<DDCToken>,
     #[serde(flatten)]
     pub other_fields: Option<WorldpayPaymentResponseFields>,
 }
@@ -126,14 +128,6 @@ pub enum IssuerResponse {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DDCResponse {
-    pub device_data_collection: DDCToken,
-    #[serde(rename = "_actions")]
-    pub actions: DDCActionLink,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DDCToken {
     pub jwt: Secret<String>,
     pub url: Url,
@@ -144,6 +138,14 @@ pub struct DDCToken {
 pub struct DDCActionLink {
     #[serde(rename = "supply3dsDeviceData")]
     pub supply_ddc_data: ActionLink,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DDCResponse {
+    pub device_data_collection: DDCToken,
+    #[serde(rename = "_actions")]
+    pub actions: DDCActionLink,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -199,12 +201,12 @@ pub struct SelfLinkInner {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActionLinks {
-    supply_3ds_device_data: Option<ActionLink>,
-    settle_payment: Option<ActionLink>,
-    partially_settle_payment: Option<ActionLink>,
-    refund_payment: Option<ActionLink>,
-    partially_refund_payment: Option<ActionLink>,
-    cancel_payment: Option<ActionLink>,
+    pub supply_3ds_device_data: Option<ActionLink>,
+    pub settle_payment: Option<ActionLink>,
+    pub partially_settle_payment: Option<ActionLink>,
+    pub refund_payment: Option<ActionLink>,
+    pub partially_refund_payment: Option<ActionLink>,
+    pub cancel_payment: Option<ActionLink>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -281,22 +283,28 @@ where
         .as_ref()
         .and_then(|link| link.self_link.href.rsplit_once('/').map(|(_, h)| h))
         .or_else(|| {
-            // Fallback to variant-specific logic for DDC and 3DS challenges
-            response
-                .other_fields
-                .as_ref()
-                .and_then(|other_fields| match other_fields {
-                    WorldpayPaymentResponseFields::DDCResponse(res) => {
-                        res.actions.supply_ddc_data.href.split('/').nth_back(1)
-                    }
-                    WorldpayPaymentResponseFields::ThreeDsChallenged(res) => res
-                        .actions
-                        .complete_three_ds_challenge
-                        .href
-                        .split('/')
-                        .nth_back(1),
-                    _ => None,
-                })
+            // Check for DDC at top level
+            if response.device_data_collection.is_some() {
+                response
+                    .actions
+                    .as_ref()
+                    .and_then(|actions| actions.supply_3ds_device_data.as_ref())
+                    .and_then(|action| action.href.split('/').nth_back(1))
+            } else {
+                // Fallback to variant-specific logic for 3DS challenges
+                response
+                    .other_fields
+                    .as_ref()
+                    .and_then(|other_fields| match other_fields {
+                        WorldpayPaymentResponseFields::ThreeDsChallenged(res) => res
+                            .actions
+                            .complete_three_ds_challenge
+                            .href
+                            .split('/')
+                            .nth_back(1),
+                        _ => None,
+                    })
+            }
         })
         .map(|href| {
             urlencoding::decode(href)

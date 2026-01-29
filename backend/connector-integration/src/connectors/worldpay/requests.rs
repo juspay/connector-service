@@ -372,6 +372,7 @@ pub(super) const THREE_DS_MODE: &str = "always";
 pub(super) const THREE_DS_TYPE: &str = "integrated";
 pub(super) const THREE_DS_CHALLENGE_PREFERENCE: &str = "challengeMandated";
 
+// Authenticate/post-authenticate request structure - only contains collection_reference
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayAuthenticateRequest {
@@ -380,7 +381,9 @@ pub struct WorldpayAuthenticateRequest {
 }
 
 // Type aliases to avoid duplicate template structs in macro generation
-pub type WorldpayPreAuthenticateRequest = WorldpayAuthenticateRequest;
+// PreAuthenticate creates a new payment with 3DS setup - uses full authorize request
+pub type WorldpayPreAuthenticateRequest<T> = WorldpayAuthorizeRequest<T>;
+// PostAuthenticate submits DDC data - uses authenticate request with collection_reference
 pub type WorldpayPostAuthenticateRequest = WorldpayAuthenticateRequest;
 
 // RepeatPayment uses the same request structure as Authorize (MIT vs CIT)

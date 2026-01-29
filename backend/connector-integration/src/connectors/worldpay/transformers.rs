@@ -51,6 +51,59 @@ const METADATA_DDC_REFERENCE: &str = "device_data_collection";
 const STAGE_DDC: &str = "ddc";
 const STAGE_CHALLENGE: &str = "challenge";
 
+/// Helper function to extract 3DS authentication data from WorldPay response
+fn extract_authentication_data_from_worldpay(
+    response: &WorldpayPaymentsResponse,
+) -> Option<domain_types::router_request_types::AuthenticationData> {
+    match &response.other_fields {
+        Some(WorldpayPaymentResponseFields::ThreeDsChallenged(res)) => {
+            // Extract from ThreeDsChallengedResponse
+            let version = res.authentication.version.parse::<common_utils::types::SemanticVersion>().ok();
+            Some(domain_types::router_request_types::AuthenticationData {
+                trans_status: Some(common_enums::TransactionStatus::ChallengeRequired),
+                eci: res.authentication.eci.clone(),
+                cavv: None, // WorldPay may not return CAVV in challenge response
+                ucaf_collection_indicator: None,
+                threeds_server_transaction_id: Some(res.challenge.reference.clone()),
+                message_version: version,
+                ds_trans_id: None,
+                acs_transaction_id: None,
+                transaction_id: Some(res.challenge.reference.clone()),
+                exemption_indicator: None,
+                network_params: None,
+            })
+        }
+        Some(WorldpayPaymentResponseFields::RefusedResponse(res)) => {
+            // Extract from RefusedResponse with 3DS data
+            if let Some(three_ds) = &res.three_ds {
+                let version = three_ds.version.as_ref()
+                    .and_then(|v| v.parse::<common_utils::types::SemanticVersion>().ok());
+                let trans_status = match three_ds.outcome.as_str() {
+                    "authenticated" | "frictionless" => Some(common_enums::TransactionStatus::Success),
+                    "challenged" => Some(common_enums::TransactionStatus::ChallengeRequired),
+                    _ => Some(common_enums::TransactionStatus::Failure),
+                };
+                Some(domain_types::router_request_types::AuthenticationData {
+                    trans_status,
+                    eci: three_ds.eci.clone(),
+                    cavv: None,
+                    ucaf_collection_indicator: None,
+                    threeds_server_transaction_id: None,
+                    message_version: version,
+                    ds_trans_id: None,
+                    acs_transaction_id: None,
+                    transaction_id: None,
+                    exemption_indicator: None,
+                    network_params: None,
+                })
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
 /// Metadata object extracted from merchant_account_metadata
 /// Contains Worldpay-specific merchant configuration
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -427,6 +480,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
         let three_ds = create_three_ds_request(&item.router_data, is_mandate_payment)?;
 
+        // Extract 3DS authentication data if present (for re-authorize after 3DS)
+        let customer_authentication = item.router_data.request.authentication_data.as_ref().map(|auth_data| {
+            CustomerAuthentication::ThreeDS(ThreeDS {
+                authentication_value: auth_data.cavv.clone().map(|c| c.peek().to_string().into()),
+                version: auth_data.message_version.as_ref()
+                    .map(|_| ThreeDSVersion::Two)
+                    .unwrap_or_default(),
+                transaction_id: auth_data.transaction_id.clone()
+                    .or_else(|| auth_data.threeds_server_transaction_id.clone()),
+                eci: auth_data.eci.clone().unwrap_or_default(),
+                auth_type: CustomerAuthType::Variant3Ds,
+            })
+        });
+
         let (token_creation, customer_agreement) = get_token_and_agreement(
             &item.router_data.request.payment_method_data,
             item.router_data.request.setup_future_usage,
@@ -456,7 +523,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     currency: item.router_data.request.currency,
                 },
                 debt_repayment: None,
-                three_ds,
+                three_ds: if customer_authentication.is_some() { None } else { three_ds },
                 token_creation,
                 customer_agreement,
             },
@@ -470,7 +537,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            customer: None,
+            customer: customer_authentication.map(|auth| Customer {
+                risk_profile: None,
+                authentication: Some(auth),
+            }),
         })
     }
 }
@@ -746,36 +816,83 @@ impl<F, T>
         ),
     ) -> Result<Self, Self::Error> {
         let (router_data, optional_correlation_id, amount) = item;
-        let (description, redirection_data, mandate_reference, network_txn_id, error) = router_data
-            .response
-            .other_fields
-            .as_ref()
-            .map(|other_fields| match other_fields {
-                WorldpayPaymentResponseFields::AuthorizedResponse(res) => (
-                    res.description.clone(),
+
+        // First check for DDC at top level (WorldPay returns deviceDataCollection at top level)
+        let (description, redirection_data, mandate_reference, network_txn_id, error) = if let (
+            Some(ddc_token),
+            Some(actions),
+        ) = (
+            &router_data.response.device_data_collection,
+            &router_data.response.actions,
+        ) {
+            if let Some(action_link) = &actions.supply_3ds_device_data {
+                let link_data = action_link
+                    .href
+                    .split('/')
+                    .nth_back(1)
+                    .map(|s| s.to_string());
+                (
                     None,
-                    res.token.as_ref().map(|mandate_token| MandateReference {
-                        connector_mandate_id: Some(mandate_token.href.clone().expose()),
-                        payment_method_id: Some(mandate_token.token_id.clone()),
-                        connector_mandate_request_reference_id: None,
+                    Some(RedirectForm::WorldpayDDCForm {
+                        endpoint: ddc_token.url.clone(),
+                        method: common_utils::request::Method::Post,
+                        collection_id: link_data,
+                        form_fields: HashMap::from([
+                            (
+                                FORM_FIELD_BIN.to_string(),
+                                ddc_token.bin.clone().expose(),
+                            ),
+                            (
+                                FORM_FIELD_JWT.to_string(),
+                                ddc_token.jwt.clone().expose(),
+                            ),
+                        ]),
                     }),
-                    res.scheme_reference.clone(),
                     None,
-                ),
-                WorldpayPaymentResponseFields::DDCResponse(res) => {
-                    let link_data = res
-                        .actions
-                        .supply_ddc_data
-                        .href
-                        .split('/')
-                        .nth_back(1)
-                        .map(|s| s.to_string());
-                    (
+                    None,
+                    None,
+                )
+            } else {
+                (None, None, None, None, None)
+            }
+        } else {
+            // Fall back to checking other_fields
+            router_data
+                .response
+                .other_fields
+                .as_ref()
+                .map(|other_fields| match other_fields {
+                    WorldpayPaymentResponseFields::AuthorizedResponse(res) => (
+                        res.description.clone(),
+                        None,
+                        res.token.as_ref().map(|mandate_token| MandateReference {
+                            connector_mandate_id: Some(mandate_token.href.clone().expose()),
+                            payment_method_id: Some(mandate_token.token_id.clone()),
+                            connector_mandate_request_reference_id: None,
+                        }),
+                        res.scheme_reference.clone(),
+                        None,
+                    ),
+                    WorldpayPaymentResponseFields::ThreeDsChallenged(res) => (
+                        None,
+                        Some(RedirectForm::Form {
+                            endpoint: res.challenge.url.to_string(),
+                            method: common_utils::request::Method::Post,
+                            form_fields: HashMap::from([(
+                                FORM_FIELD_JWT.to_string(),
+                                res.challenge.jwt.clone().expose(),
+                            )]),
+                        }),
+                        None,
+                        None,
+                        None,
+                    ),
+                    WorldpayPaymentResponseFields::DDCResponse(res) => (
                         None,
                         Some(RedirectForm::WorldpayDDCForm {
                             endpoint: res.device_data_collection.url.clone(),
                             method: common_utils::request::Method::Post,
-                            collection_id: link_data,
+                            collection_id: Some("SessionId".to_string()),
                             form_fields: HashMap::from([
                                 (
                                     FORM_FIELD_BIN.to_string(),
@@ -790,38 +907,24 @@ impl<F, T>
                         None,
                         None,
                         None,
-                    )
-                }
-                WorldpayPaymentResponseFields::ThreeDsChallenged(res) => (
-                    None,
-                    Some(RedirectForm::Form {
-                        endpoint: res.challenge.url.to_string(),
-                        method: common_utils::request::Method::Post,
-                        form_fields: HashMap::from([(
-                            FORM_FIELD_JWT.to_string(),
-                            res.challenge.jwt.clone().expose(),
-                        )]),
-                    }),
-                    None,
-                    None,
-                    None,
-                ),
-                WorldpayPaymentResponseFields::RefusedResponse(res) => (
-                    None,
-                    None,
-                    None,
-                    None,
-                    Some((
-                        res.refusal_code.clone(),
-                        res.refusal_description.clone(),
-                        res.advice
-                            .as_ref()
-                            .and_then(|advice_code| advice_code.code.clone()),
-                    )),
-                ),
-                WorldpayPaymentResponseFields::FraudHighRisk(_) => (None, None, None, None, None),
-            })
-            .unwrap_or((None, None, None, None, None));
+                    ),
+                    WorldpayPaymentResponseFields::RefusedResponse(res) => (
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some((
+                            res.refusal_code.clone(),
+                            res.refusal_description.clone(),
+                            res.advice
+                                .as_ref()
+                                .and_then(|advice_code| advice_code.code.clone()),
+                        )),
+                    ),
+                    WorldpayPaymentResponseFields::FraudHighRisk(_) => (None, None, None, None, None),
+                })
+                .unwrap_or((None, None, None, None, None))
+        };
         let worldpay_status = router_data.response.outcome.clone();
         let optional_error_message = match worldpay_status {
             PaymentOutcome::ThreeDsAuthenticationFailed => {
@@ -841,44 +944,55 @@ impl<F, T>
         };
 
         // Extract linkData for 3DS flows and store in metadata with stage indicator
-        let connector_metadata = match &router_data.response.other_fields {
-            Some(WorldpayPaymentResponseFields::DDCResponse(res)) => res
-                .actions
-                .supply_ddc_data
-                .href
-                .split('/')
-                .nth_back(1)
-                .map(|link_data| {
-                    let mut metadata = serde_json::Map::new();
-                    metadata.insert(
-                        METADATA_LINK_DATA.to_string(),
-                        serde_json::Value::String(link_data.to_string()),
-                    );
-                    metadata.insert(
-                        METADATA_3DS_STAGE.to_string(),
-                        serde_json::Value::String(STAGE_DDC.to_string()),
-                    );
-                    serde_json::Value::Object(metadata)
-                }),
-            Some(WorldpayPaymentResponseFields::ThreeDsChallenged(res)) => res
-                .actions
-                .complete_three_ds_challenge
-                .href
-                .split('/')
-                .nth_back(1)
-                .map(|link_data| {
-                    let mut metadata = serde_json::Map::new();
-                    metadata.insert(
-                        METADATA_LINK_DATA.to_string(),
-                        serde_json::Value::String(link_data.to_string()),
-                    );
-                    metadata.insert(
-                        METADATA_3DS_STAGE.to_string(),
-                        serde_json::Value::String(STAGE_CHALLENGE.to_string()),
-                    );
-                    serde_json::Value::Object(metadata)
-                }),
-            _ => None,
+        let connector_metadata = if let (
+            Some(_),
+            Some(actions),
+        ) = (
+            &router_data.response.device_data_collection,
+            &router_data.response.actions,
+        ) {
+            if let Some(action_link) = &actions.supply_3ds_device_data {
+                action_link
+                    .href
+                    .split('/')
+                    .nth_back(1)
+                    .map(|link_data| {
+                        let mut metadata = serde_json::Map::new();
+                        metadata.insert(
+                            METADATA_LINK_DATA.to_string(),
+                            serde_json::Value::String(link_data.to_string()),
+                        );
+                        metadata.insert(
+                            METADATA_3DS_STAGE.to_string(),
+                            serde_json::Value::String(STAGE_DDC.to_string()),
+                        );
+                        serde_json::Value::Object(metadata)
+                    })
+            } else {
+                None
+            }
+        } else {
+            match &router_data.response.other_fields {
+                Some(WorldpayPaymentResponseFields::ThreeDsChallenged(res)) => res
+                    .actions
+                    .complete_three_ds_challenge
+                    .href
+                    .split('/')
+                    .nth_back(1)
+                    .map(|link_data| {
+                        let mut metadata = serde_json::Map::new();
+                        metadata.insert(
+                            METADATA_LINK_DATA.to_string(),
+                            serde_json::Value::String(link_data.to_string()),
+                        );
+                        metadata.insert(
+                            METADATA_3DS_STAGE.to_string(),
+                            serde_json::Value::String(STAGE_CHALLENGE.to_string()),
+                        );
+                        serde_json::Value::Object(metadata)
+                    }),
+                _ => None,
+            }
         };
 
         let response = match (optional_error_message, error) {
@@ -1226,9 +1340,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for WorldpayPreAuthenticateRequest
+    > for WorldpayPreAuthenticateRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
+
     fn try_from(
         item: WorldpayRouterData<
             RouterDataV2<
@@ -1240,22 +1355,133 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let params = item
+        let worldpay_connector_metadata_object: WorldpayConnectorMetadataObject =
+            WorldpayConnectorMetadataObject::try_from(
+                item.router_data.resource_common_data.connector_meta_data.as_ref(),
+            )?;
+
+        let merchant_name = worldpay_connector_metadata_object.merchant_name.ok_or(
+            ConnectorError::InvalidConnectorConfig {
+                config: "connector_meta_data.merchant_name",
+            },
+        )?;
+
+        // Get entity_id from auth type
+        let entity_id = WorldpayAuthType::try_from(&item.router_data.connector_auth_type)?.entity_id;
+
+        // Get card/billing information
+        let payment_method_data = item
             .router_data
             .request
-            .redirect_response
-            .as_ref()
-            .and_then(|redirect_response| redirect_response.params.as_ref())
-            .ok_or(ConnectorError::ResponseDeserializationFailed)?;
+            .payment_method_data
+            .clone()
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "payment_method_data",
+            })?;
 
-        let parsed_request = serde_urlencoded::from_str::<Self>(params.peek())
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        // Build 3DS request
+        let browser_info = item.router_data.request.browser_info.as_ref().ok_or(
+            ConnectorError::MissingRequiredField {
+                field_name: "browser_info",
+            },
+        )?;
 
-        Ok(parsed_request)
+        let return_url = item.router_data.request.router_return_url.as_ref().ok_or(
+            ConnectorError::MissingRequiredField {
+                field_name: "return_url",
+            },
+        )?;
+
+        let accept_header = browser_info
+            .accept_header
+            .clone()
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "accept_header",
+            })?;
+
+        let user_agent_header = browser_info
+            .user_agent
+            .clone()
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "user_agent",
+            })?;
+
+        let three_ds = Some(ThreeDSRequest {
+            three_ds_type: THREE_DS_TYPE.to_string(),
+            mode: THREE_DS_MODE.to_string(),
+            device_data: ThreeDSRequestDeviceData {
+                accept_header,
+                user_agent_header,
+                browser_language: browser_info.language.clone(),
+                browser_screen_width: browser_info.screen_width,
+                browser_screen_height: browser_info.screen_height,
+                browser_color_depth: browser_info.color_depth.map(|d| d.to_string()),
+                time_zone: None, // Not available in BrowserInformation
+                browser_java_enabled: browser_info.java_enabled,
+                browser_javascript_enabled: browser_info.java_script_enabled,
+                channel: Some(ThreeDSRequestChannel::Browser),
+            },
+            challenge: ThreeDSRequestChallenge {
+                return_url: return_url.to_string(),
+                preference: Some(THREE_DS_CHALLENGE_PREFERENCE.to_string()),
+            },
+        });
+
+        // Calculate settlement info directly (cannot reuse get_settlement_info due to type mismatch)
+        let settlement = match item.router_data.request.capture_method {
+            Some(enums::CaptureMethod::Automatic)
+            | Some(enums::CaptureMethod::SequentialAutomatic)
+            | None => Some(AutoSettlement { auto: true }),
+            Some(enums::CaptureMethod::Manual) | Some(enums::CaptureMethod::ManualMultiple) => {
+                Some(AutoSettlement { auto: false })
+            }
+            _ => None,
+        };
+
+        let currency = item.router_data.request.currency.ok_or(
+            ConnectorError::MissingRequiredField {
+                field_name: "currency",
+            },
+        )?;
+
+        Ok(Self {
+            transaction_reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            merchant: Merchant {
+                entity: entity_id,
+                ..Default::default()
+            },
+            instruction: Instruction {
+                settlement,
+                method: PaymentMethod::try_from((
+                    item.router_data.resource_common_data.payment_method,
+                    item.router_data.request.payment_method_type,
+                ))?,
+                payment_instrument: fetch_payment_instrument(
+                    payment_method_data,
+                    item.router_data.resource_common_data.get_optional_billing(),
+                )?,
+                narrative: InstructionNarrative {
+                    line1: merchant_name.expose(),
+                },
+                value: PaymentValue {
+                    amount: item.router_data.request.amount,
+                    currency,
+                },
+                debt_repayment: None,
+                three_ds,
+                token_creation: None,
+                customer_agreement: None,
+            },
+            customer: None,
+        })
     }
 }
 
-// PostAuthenticate request transformer (for 3dsChallenges)
+// PostAuthenticate request transformer (for 3dsDeviceData and 3dsChallenges)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WorldpayRouterData<
@@ -1292,6 +1518,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let parsed_request = serde_urlencoded::from_str::<Self>(params.peek())
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
 
+        // Validate request based on payment status (matching Hyperswitch behavior)
+        match item.router_data.resource_common_data.status {
+            common_enums::AttemptStatus::DeviceDataCollectionPending => {
+                // collection_reference is required for DDC
+                if parsed_request.collection_reference.is_none() {
+                    return Err(ConnectorError::RequestEncodingFailedWithReason(
+                        "collection_reference is required for DeviceDataCollectionPending status".to_string()
+                    ).into());
+                }
+            }
+            common_enums::AttemptStatus::AuthenticationPending => {
+                // collection_reference should NOT be present for 3DS challenges
+                if parsed_request.collection_reference.is_some() {
+                    return Err(ConnectorError::RequestEncodingFailedWithReason(
+                        "collection_reference not allowed in AuthenticationPending state".to_string()
+                    ).into());
+                }
+            }
+            _ => {
+                return Err(ConnectorError::RequestEncodingFailedWithReason(format!(
+                    "Invalid payment status for post authenticate: {:?}",
+                    item.router_data.resource_common_data.status
+                )).into());
+            }
+        }
+
         Ok(parsed_request)
     }
 }
@@ -1322,7 +1574,7 @@ where
             redirection_data: redirection_data.map(Box::new),
             connector_response_reference_id,
             status_code: item.http_code,
-            authentication_data: None,
+            authentication_data: extract_authentication_data_from_worldpay(&item.response),
         });
 
         Ok(Self {
@@ -1357,7 +1609,7 @@ where
         let _connector_metadata = extract_three_ds_metadata(&item.response);
 
         let response = Ok(PaymentsResponseData::PostAuthenticateResponse {
-            authentication_data: None,
+            authentication_data: extract_authentication_data_from_worldpay(&item.response),
             connector_response_reference_id,
             status_code: item.http_code,
         });
@@ -1376,6 +1628,37 @@ where
 fn extract_redirection_data(
     response: &WorldpayPaymentsResponse,
 ) -> Result<(Option<RedirectForm>, Option<String>), error_stack::Report<ConnectorError>> {
+    // First check for DDC at top level (WorldPay returns deviceDataCollection at top level)
+    if let (Some(ddc_token), Some(actions)) = (
+        &response.device_data_collection,
+        &response.actions,
+    ) {
+        // Find the supply3dsDeviceData action link
+        let supply_3ds_device_data_href = actions.supply_3ds_device_data.as_ref().map(|a| &a.href);
+        if let Some(_href) = supply_3ds_device_data_href {
+            let redirect_form = RedirectForm::WorldpayDDCForm {
+                endpoint: ddc_token.url.clone(),
+                method: common_utils::request::Method::Post,
+                collection_id: Some("SessionId".to_string()), // Match Hyperswitch behavior
+                form_fields: HashMap::from([
+                    (
+                        FORM_FIELD_BIN.to_string(),
+                        ddc_token.bin.clone().expose(),
+                    ),
+                    (
+                        FORM_FIELD_JWT.to_string(),
+                        ddc_token.jwt.clone().expose(),
+                    ),
+                ]),
+            };
+            return Ok((
+                Some(redirect_form),
+                Some(METADATA_DDC_REFERENCE.to_string()),
+            ));
+        }
+    }
+
+    // Then check other_fields for 3DS challenge
     match &response.other_fields {
         Some(WorldpayPaymentResponseFields::ThreeDsChallenged(challenged)) => {
             let redirect_form = RedirectForm::Form {
@@ -1391,40 +1674,33 @@ fn extract_redirection_data(
                 Some(challenged.challenge.reference.clone()),
             ))
         }
-        Some(WorldpayPaymentResponseFields::DDCResponse(ddc)) => {
-            let link_data = ddc
-                .actions
-                .supply_ddc_data
-                .href
-                .split('/')
-                .nth_back(1)
-                .map(|s| s.to_string());
-            let redirect_form = RedirectForm::WorldpayDDCForm {
-                endpoint: ddc.device_data_collection.url.clone(),
-                method: common_utils::request::Method::Post,
-                collection_id: link_data,
-                form_fields: HashMap::from([
-                    (
-                        FORM_FIELD_BIN.to_string(),
-                        ddc.device_data_collection.bin.clone().expose(),
-                    ),
-                    (
-                        FORM_FIELD_JWT.to_string(),
-                        ddc.device_data_collection.jwt.clone().expose(),
-                    ),
-                ]),
-            };
-            Ok((
-                Some(redirect_form),
-                Some(METADATA_DDC_REFERENCE.to_string()),
-            ))
-        }
         _ => Ok((None, None)),
     }
 }
 
 // Helper function to extract 3DS authentication metadata
 fn extract_three_ds_metadata(response: &WorldpayPaymentsResponse) -> Option<serde_json::Value> {
+    // First check for DDC at top level (WorldPay returns deviceDataCollection at top level)
+    if let (Some(_), Some(actions)) = (&response.device_data_collection, &response.actions) {
+        if let Some(action_link) = &actions.supply_3ds_device_data {
+            let mut metadata = serde_json::Map::new();
+            if let Some(link_data) = action_link.href.split('/').nth_back(1) {
+                metadata.insert(
+                    "link_data".to_string(),
+                    serde_json::Value::String(link_data.to_string()),
+                );
+                metadata.insert(
+                    "3ds_stage".to_string(),
+                    serde_json::Value::String("ddc".to_string()),
+                );
+            }
+            if !metadata.is_empty() {
+                return Some(serde_json::Value::Object(metadata));
+            }
+        }
+    }
+
+    // Then check other_fields
     match &response.other_fields {
         Some(WorldpayPaymentResponseFields::RefusedResponse(refused)) => {
             // Check for 3DS data in refused response
@@ -1484,25 +1760,6 @@ fn extract_three_ds_metadata(response: &WorldpayPaymentsResponse) -> Option<serd
                 );
             }
             Some(serde_json::Value::Object(metadata))
-        }
-        Some(WorldpayPaymentResponseFields::DDCResponse(ddc)) => {
-            // Extract linkData and stage for Authenticate response with DDC
-            let mut metadata = serde_json::Map::new();
-            if let Some(link_data) = ddc.actions.supply_ddc_data.href.split('/').nth_back(1) {
-                metadata.insert(
-                    "link_data".to_string(),
-                    serde_json::Value::String(link_data.to_string()),
-                );
-                metadata.insert(
-                    "3ds_stage".to_string(),
-                    serde_json::Value::String("ddc".to_string()),
-                );
-            }
-            if !metadata.is_empty() {
-                Some(serde_json::Value::Object(metadata))
-            } else {
-                None
-            }
         }
         _ => None,
     }

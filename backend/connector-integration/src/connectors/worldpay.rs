@@ -221,7 +221,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PreAuthenticate,
-            request_body: WorldpayPreAuthenticateRequest,
+            request_body: WorldpayPreAuthenticateRequest<T>,
             response_body: WorldpayPreAuthenticateResponse,
             router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ),
@@ -580,12 +580,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let link_data = Self::extract_link_data_from_metadata(req)?;
-
+            // PreAuthenticate creates a new payment with 3DS setup
+            // URL: POST /api/payments
             Ok(format!(
-                "{}api/payments/{}/3dsDeviceData",
+                "{}api/payments",
                 self.connector_base_url_payments(req),
-                urlencoding::encode(&link_data),
             ))
         }
     }
@@ -615,11 +614,21 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let link_data = Self::extract_link_data_from_metadata(req)?;
+            let stage = match req.resource_common_data.status {
+                common_enums::AttemptStatus::DeviceDataCollectionPending => "3dsDeviceData",
+                common_enums::AttemptStatus::AuthenticationPending => "3dsChallenges",
+                _ => {
+                    return Err(errors::ConnectorError::RequestEncodingFailedWithReason(
+                        format!("Invalid payment status for post authenticate: {:?}", req.resource_common_data.status)
+                    ).into());
+                }
+            };
 
             Ok(format!(
-                "{}api/payments/{}/3dsChallenges",
+                "{}api/payments/{}/{}",
                 self.connector_base_url_payments(req),
                 urlencoding::encode(&link_data),
+                stage,
             ))
         }
     }

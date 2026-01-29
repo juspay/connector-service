@@ -4372,6 +4372,32 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                                 ),
                             })
                         }
+                        router_response_types::RedirectForm::WorldpayDDCForm {
+                            endpoint,
+                            method,
+                            form_fields,
+                            collection_id,
+                        } => {
+                            let mut enhanced_fields = form_fields;
+                            if let Some(collection_id) = collection_id {
+                                enhanced_fields.insert("collection_id".to_string(), collection_id);
+                            }
+
+                            Ok(grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Form(
+                                        grpc_api_types::payments::FormData {
+                                            endpoint: endpoint.to_string(),
+                                            method: grpc_api_types::payments::HttpMethod::foreign_from(
+                                                method,
+                                            )
+                                            .into(),
+                                            form_fields: enhanced_fields,
+                                        },
+                                    ),
+                                ),
+                            })
+                        }
                         _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "INVALID_RESPONSE".to_owned(),
                             error_identifier: 400,
