@@ -177,9 +177,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Hyperpg<T>
 {
-    fn should_do_access_token(&self, _payment_method: common_enums::PaymentMethod) -> bool {
-        false
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -426,9 +423,7 @@ macros::macro_connector_implementation!(
 
 
     let order_id = hyperpg_meta.order_id.ok_or(
-        errors::ConnectorError::RequestEncodingFailedWithReason(
-            "Missing Order id".to_string(),
-        ),
+        errors::ConnectorError::MissingRequiredField { field_name: "order_id"},
     )?;
 
 
