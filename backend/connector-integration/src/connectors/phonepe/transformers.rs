@@ -822,15 +822,23 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                 if let (Some(merchant_transaction_id), Some(transaction_id)) =
                     (&data.merchant_transaction_id, &data.transaction_id)
                 {
-                    // Detect UPI mode from sync response
-                    let upi_mode = extract_upi_mode_from_sync_data(data);
-
-                    // Extract BIN from masked account number
-                    let bin = data.payment_instrument.as_ref().and_then(|payment_inst| {
-                        extract_bin_from_masked_account_number(
-                            payment_inst.masked_account_number.as_deref(),
-                        )
-                    });
+                    // Only extract UPI mode and BIN for UPI payment methods
+                    let (upi_mode, bin) = match &item.router_data.request.payment_method_type {
+                        Some(
+                            common_enums::PaymentMethodType::UpiCollect
+                            | common_enums::PaymentMethodType::UpiIntent
+                            | common_enums::PaymentMethodType::UpiQr,
+                        ) => {
+                            let upi_mode = extract_upi_mode_from_sync_data(data);
+                            let bin = data.payment_instrument.as_ref().and_then(|payment_inst| {
+                                extract_bin_from_masked_account_number(
+                                    payment_inst.masked_account_number.as_deref(),
+                                )
+                            });
+                            (upi_mode, bin)
+                        }
+                        _ => (None, None),
+                    };
 
                     // Map PhonePe response codes to payment statuses based on documentation
                     let status = match response.code.as_str() {
@@ -979,13 +987,13 @@ fn get_sync_metadata(bin: Option<String>) -> Option<serde_json::Value> {
 }
 
 fn determine_upi_mode(
-    instrument_response: &PhonepeInstrumentResponse,
+    payment_instrument: &PhonepePaymentInstrumentSync,
     response_code: Option<&String>,
 ) -> Option<UpiSource> {
     match (
-        instrument_response.upi_credit_line,
-        instrument_response.account_type.as_deref(),
-        instrument_response.card_network.as_deref(),
+        payment_instrument.upi_credit_line,
+        payment_instrument.account_type.as_deref(),
+        payment_instrument.card_network.as_deref(),
         response_code.map(|s| s.as_str()),
     ) {
         (Some(true), _, _, _) => Some(UpiSource::UpiCl),
@@ -1003,24 +1011,23 @@ fn determine_upi_mode(
 
 /// Extracts UPI mode from sync response payment instrument
 fn extract_upi_mode_from_sync_data(sync_data: &PhonepeSyncResponseData) -> Option<UpiSource> {
+    // Try to determine from payment_instrument
     sync_data
         .payment_instrument
         .as_ref()
         .and_then(|payment_instrument| {
-        
-            if payment_instrument.instrument_type.as_deref() != Some(constants::UPI) {
-                return None;
-            }
-
-            let instrument_response = PhonepeInstrumentResponse {
-                instrument_type: constants::UPI.to_string(),
-                intent_url: None,
-                qr_data: None,
-                account_type: payment_instrument.account_type.clone(),
-                card_network: payment_instrument.card_network.clone(),
-                upi_credit_line: payment_instrument.upi_credit_line,
-            };
-            determine_upi_mode(&instrument_response, sync_data.response_code.as_ref())
+            determine_upi_mode(payment_instrument, sync_data.response_code.as_ref())
+        })
+        // Fallback: determine from response_code alone
+        .or_else(|| {
+            sync_data
+                .response_code
+                .as_deref()
+                .and_then(|code| match code {
+                    constants::RESPONSE_CODE_CREDIT_ACCOUNT_NOT_ALLOWED => Some(UpiSource::UpiCc),
+                    constants::RESPONSE_CODE_PAY0071 => Some(UpiSource::UpiCl),
+                    _ => None,
+                })
         })
 }
 
