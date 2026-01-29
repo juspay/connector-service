@@ -3685,7 +3685,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                         resource_id,
                     )?),
                     redirection_data: redirection_data
-                        .map(|form| convert_redirect_form(*form))
+                        .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
                         .transpose()?,
                     connector_metadata: convert_connector_metadata_to_secret_string(
                         connector_metadata,
@@ -4503,7 +4503,7 @@ pub fn generate_payment_sync_response(
                 Ok(PaymentServiceGetResponse {
                     transaction_id: Some(grpc_resource_id),
                     redirection_data: redirection_data
-                        .map(|form| convert_redirect_form(*form))
+                        .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
                         .transpose()?,
                     status: grpc_status as i32,
                     mandate_reference: mandate_reference_grpc,
@@ -4877,70 +4877,81 @@ impl ForeignFrom<Method> for grpc_api_types::payments::HttpMethod {
     }
 }
 
-/// Helper function to convert router_response_types::RedirectForm to grpc_api_types::payments::RedirectForm
-fn convert_redirect_form(
-    form: router_response_types::RedirectForm,
-) -> Result<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse> {
-    match form {
-        router_response_types::RedirectForm::Form {
-            endpoint,
-            method,
-            form_fields,
-        } => Ok(grpc_api_types::payments::RedirectForm {
-            form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
-                grpc_api_types::payments::FormData {
-                    endpoint,
-                    method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
-                    form_fields,
-                },
-            )),
-        }),
-        router_response_types::RedirectForm::Html { html_data } => {
-            Ok(grpc_api_types::payments::RedirectForm {
+impl ForeignTryFrom<router_response_types::RedirectForm>
+    for grpc_api_types::payments::RedirectForm
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        form: router_response_types::RedirectForm,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match form {
+            router_response_types::RedirectForm::Form {
+                endpoint,
+                method,
+                form_fields,
+            } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
+                    grpc_api_types::payments::FormData {
+                        endpoint,
+                        method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
+                        form_fields,
+                    },
+                )),
+            }),
+            router_response_types::RedirectForm::Html { html_data } => Ok(Self {
                 form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
                     grpc_api_types::payments::HtmlData { html_data },
                 )),
-            })
-        }
-        router_response_types::RedirectForm::Uri { uri } => {
-            Ok(grpc_api_types::payments::RedirectForm {
+            }),
+            router_response_types::RedirectForm::Uri { uri } => Ok(Self {
                 form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
                     grpc_api_types::payments::UriData { uri },
                 )),
-            })
-        }
-        router_response_types::RedirectForm::Mifinity {
-            initialization_token,
-        } => Ok(grpc_api_types::payments::RedirectForm {
-            form_type: Some(grpc_api_types::payments::redirect_form::FormType::Mifinity(
-                grpc_api_types::payments::MifinityData {
-                    initialization_token,
-                },
-            )),
-        }),
-        router_response_types::RedirectForm::Braintree {
-            client_token,
-            card_token,
-            bin,
-            acs_url,
-        } => Ok(grpc_api_types::payments::RedirectForm {
-            form_type: Some(
-                grpc_api_types::payments::redirect_form::FormType::Braintree(
-                    grpc_api_types::payments::BraintreeData {
-                        client_token,
-                        card_token,
-                        bin,
-                        acs_url,
+            }),
+            router_response_types::RedirectForm::Mifinity {
+                initialization_token,
+            } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Mifinity(
+                    grpc_api_types::payments::MifinityData {
+                        initialization_token,
                     },
+                )),
+            }),
+            router_response_types::RedirectForm::Braintree {
+                client_token,
+                card_token,
+                bin,
+                acs_url,
+            } => Ok(Self {
+                form_type: Some(
+                    grpc_api_types::payments::redirect_form::FormType::Braintree(
+                        grpc_api_types::payments::BraintreeData {
+                            client_token,
+                            card_token,
+                            bin,
+                            acs_url,
+                        },
+                    ),
                 ),
-            ),
-        }),
-        _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "INVALID_RESPONSE".to_owned(),
-            error_identifier: 400,
-            error_message: "Invalid response from connector".to_owned(),
-            error_object: None,
-        })),
+            }),
+            // Variants not supported in gRPC proto
+            router_response_types::RedirectForm::BlueSnap { .. }
+            | router_response_types::RedirectForm::CybersourceAuthSetup { .. }
+            | router_response_types::RedirectForm::CybersourceConsumerAuth { .. }
+            | router_response_types::RedirectForm::DeutschebankThreeDSChallengeFlow { .. }
+            | router_response_types::RedirectForm::Payme
+            | router_response_types::RedirectForm::Nmi { .. }
+            | router_response_types::RedirectForm::WorldpayDDCForm { .. } => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_REDIRECT_FORM_TYPE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "RedirectForm type not supported in gRPC API".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
+        }
     }
 }
 
