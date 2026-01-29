@@ -4075,6 +4075,7 @@ impl ForeignFrom<common_enums::AttemptStatus> for grpc_api_types::payments::Paym
                 Self::PartialChargedAndChargeable
             }
             common_enums::AttemptStatus::IntegrityFailure => Self::Failure,
+            common_enums::AttemptStatus::Unspecified => Self::AttemptStatusUnspecified,
             common_enums::AttemptStatus::Unknown => Self::AttemptStatusUnspecified,
         }
     }
