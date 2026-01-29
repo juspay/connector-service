@@ -336,6 +336,7 @@ pub enum EventStage {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ServiceCall {
     Internal,
     External,
