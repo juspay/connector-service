@@ -48,9 +48,6 @@ pub const X_CONNECTOR_SERVICE: &str = "connector-service";
 
 pub const X_FLOW_NAME: &str = "x-flow";
 
-/// Event origin: Router (Hyperswitch)
-pub const EVENT_ORIGIN_ROUTER: &str = "router";
-
 /// Event origin: Unified Connector Service
 pub const EVENT_ORIGIN_UCS: &str = "unified_connector_service";
 
