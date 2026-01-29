@@ -6878,13 +6878,80 @@ impl ForeignTryFrom<grpc_api_types::payments::SetupMandateDetails> for MandateDa
     fn foreign_try_from(
         value: grpc_api_types::payments::SetupMandateDetails,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Map the mandate_type from grpc type to domain type
+        let mandate_type = value
+            .mandate_type
+            .and_then(|grpc_mandate_type| match grpc_mandate_type.mandate_type {
+                Some(grpc_api_types::payments::mandate_type::MandateType::SingleUse(
+                    amount_data,
+                )) => Some(mandates::MandateDataType::SingleUse(
+                    mandates::MandateAmountData {
+                        amount: common_utils::types::MinorUnit::new(amount_data.amount),
+                        currency: grpc_api_types::payments::Currency::try_from(
+                            amount_data.currency,
+                        )
+                        .ok()
+                        .and_then(|grpc_currency| {
+                            common_enums::Currency::foreign_try_from(grpc_currency).ok()
+                        })
+                        .unwrap_or(common_enums::Currency::USD),
+                        start_date: amount_data.start_date.and_then(|ts| {
+                            time::OffsetDateTime::from_unix_timestamp(ts)
+                                .ok()
+                                .map(|offset_dt| {
+                                    time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
+                                })
+                        }),
+                        end_date: amount_data.end_date.and_then(|ts| {
+                            time::OffsetDateTime::from_unix_timestamp(ts)
+                                .ok()
+                                .map(|offset_dt| {
+                                    time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
+                                })
+                        }),
+                        metadata: None,
+                    },
+                )),
+                Some(grpc_api_types::payments::mandate_type::MandateType::MultiUse(
+                    amount_data,
+                )) => Some(mandates::MandateDataType::MultiUse(Some(
+                    mandates::MandateAmountData {
+                        amount: common_utils::types::MinorUnit::new(amount_data.amount),
+                        currency: grpc_api_types::payments::Currency::try_from(
+                            amount_data.currency,
+                        )
+                        .ok()
+                        .and_then(|grpc_currency| {
+                            common_enums::Currency::foreign_try_from(grpc_currency).ok()
+                        })
+                        .unwrap_or(common_enums::Currency::USD),
+                        start_date: amount_data.start_date.and_then(|ts| {
+                            time::OffsetDateTime::from_unix_timestamp(ts)
+                                .ok()
+                                .map(|offset_dt| {
+                                    time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
+                                })
+                        }),
+                        end_date: amount_data.end_date.and_then(|ts| {
+                            time::OffsetDateTime::from_unix_timestamp(ts)
+                                .ok()
+                                .map(|offset_dt| {
+                                    time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
+                                })
+                        }),
+                        metadata: None,
+                    },
+                ))),
+                None => None,
+            });
+
         Ok(Self {
             update_mandate_id: value.update_mandate_id,
             customer_acceptance: value
                 .customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
-            mandate_type: None,
+            mandate_type,
         })
     }
 }
