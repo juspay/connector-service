@@ -110,11 +110,13 @@ impl ToHttpMethod for Method {
 pub struct EventProcessingParams<'a> {
     pub connector_name: &'a str,
     pub service_name: &'a str,
+    pub service_type: &'a str,
     pub flow_name: FlowName,
     pub event_config: &'a EventConfig,
     pub request_id: &'a str,
     pub lineage_ids: &'a lineage::LineageIds<'a>,
     pub reference_id: &'a Option<String>,
+    pub resource_id: &'a Option<String>,
     pub shadow_mode: bool,
 }
 
@@ -471,6 +473,9 @@ where
                         lineage_ids: event_params.lineage_ids.to_owned(),
                     };
                     event.add_reference_id(event_params.reference_id.as_deref());
+                    event.add_resource_id(event_params.resource_id.as_deref());
+                    event.add_service_type(event_params.service_type);
+                    event.add_service_name(event_params.service_name);
 
                     let result = match response {
                         Ok(body) => {

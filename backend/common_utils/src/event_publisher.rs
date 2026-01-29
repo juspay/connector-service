@@ -172,12 +172,23 @@ impl EventPublisher {
             .additional_fields
             .get("reference_id")
             .and_then(|ref_id_value| ref_id_value.inner().as_str());
+        let resource_id_option = event
+            .additional_fields
+            .get("resource_id")
+            .and_then(|resource_id_value| resource_id_value.inner().as_str());
 
         // Add reference_id from Event.additional_fields
         if let Some(ref_id_str) = ref_id_option {
             headers = headers.insert(Header {
                 key: "reference_id",
                 value: Some(ref_id_str.as_bytes()),
+            });
+        }
+        // Add resource_id from Event.additional_fields
+        if let Some(resource_id_str) = resource_id_option {
+            headers = headers.insert(Header {
+                key: "resource_id",
+                value: Some(resource_id_str.as_bytes()),
             });
         }
 
