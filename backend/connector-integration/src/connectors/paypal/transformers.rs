@@ -2210,6 +2210,7 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
             | common_enums::AttemptStatus::VoidFailed
             | common_enums::AttemptStatus::AutoRefunded
             | common_enums::AttemptStatus::Unresolved
+            | common_enums::AttemptStatus::Unspecified
             | common_enums::AttemptStatus::PaymentMethodAwaited
             | common_enums::AttemptStatus::ConfirmationAwaited
             | common_enums::AttemptStatus::DeviceDataCollectionPending
