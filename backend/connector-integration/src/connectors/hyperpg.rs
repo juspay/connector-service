@@ -307,11 +307,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .and_then(|error| error.first());
 
         // Build reason without moving strings out of the struct
-        let reason = fields.map(|f| {
+        let reason = fields.map(|fields| {
             format!(
                 "{}: {}",
-                f.field_name.as_deref().unwrap_or_default(),
-                f.reason.as_deref().unwrap_or_default()
+                fields.field_name.as_deref().unwrap_or_default(),
+                fields.reason.as_deref().unwrap_or_default()
             )
         });
 
