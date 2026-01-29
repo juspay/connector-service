@@ -223,6 +223,8 @@ pub struct Event {
     pub request_data: Option<MaskedSerdeValue>,
     pub response_data: Option<MaskedSerdeValue>,
     pub headers: HashMap<String, String>,
+    pub service_call: ServiceCall,
+    pub origin: String,
     #[serde(flatten)]
     pub additional_fields: HashMap<String, MaskedSerdeValue>,
     #[serde(flatten)]
@@ -331,6 +333,12 @@ impl FlowName {
 pub enum EventStage {
     ConnectorCall,
     GrpcRequest,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ServiceCall {
+    Internal,
+    External,
 }
 
 impl EventStage {

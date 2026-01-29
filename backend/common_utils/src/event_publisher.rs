@@ -132,9 +132,8 @@ impl EventPublisher {
                     .attach_printable(format!("Failed event: {event_json}"))
             })?;
 
-        let event_json = serde_json::to_string(&event).unwrap_or_default();
         tracing::info!(
-            full_event = %event_json,
+            full_event = ?event,
             "Event successfully published to Kafka"
         );
 

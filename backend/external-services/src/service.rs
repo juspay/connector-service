@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr, sync::RwLock, time::Duration};
 
 use common_enums::ApiClientError;
 use common_utils::{
-    consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
+    consts::{EVENT_ORIGIN_UCS, X_API_TAG, X_API_URL, X_SESSION_ID},
     ext_traits::AsyncExt,
     lineage,
     request::{Method, Request, RequestContent},
@@ -71,7 +71,7 @@ impl AdditionalHeaders for domain_types::connector_types::DisputeFlowData {
 }
 use common_utils::{
     emit_event_with_config,
-    events::{Event, EventConfig, EventStage, FlowName, MaskedSerdeValue},
+    events::{Event, EventConfig, EventStage, FlowName, MaskedSerdeValue, ServiceCall},
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
@@ -467,6 +467,8 @@ where
                         request_data: masked_request_data,
                         response_data: None, // Will be set by connector via set_response_body
                         headers: event_headers,
+                        service_call: ServiceCall::External,
+                        origin: EVENT_ORIGIN_UCS.to_string(),
                         additional_fields: HashMap::new(),
                         lineage_ids: event_params.lineage_ids.to_owned(),
                     };
