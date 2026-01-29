@@ -581,6 +581,7 @@ where
     grpc_response
 }
 
+#[allow(clippy::too_many_arguments)]
 fn create_and_emit_grpc_event<R>(
     masked_request_data: Option<MaskedSerdeValue>,
     grpc_response: &Result<tonic::Response<R>, tonic::Status>,
