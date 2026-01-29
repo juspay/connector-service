@@ -927,6 +927,31 @@ message OnlineMandate {
   // User agent string of the browser used for mandate acceptance.
   string user_agent = 2;
 }
+// Amount data for mandate
+message MandateAmountData {
+  // Maximum amount to be debited for the mandate transaction (in minor units)
+  int64 amount = 1;
+
+  // Currency for the transaction
+  string currency = 2;
+
+  // Unix timestamp (seconds since epoch) for start date of the mandate
+  optional int64 start_date = 3;
+
+  // Unix timestamp (seconds since epoch) for end date of the mandate
+  optional int64 end_date = 4;
+}
+
+// Mandate type with amount details
+message MandateType {
+  oneof mandate_type {
+    // Single use mandate with amount details
+    MandateAmountData single_use = 1;
+
+    // Multi use mandate with amount details (for recurring payments)
+    MandateAmountData multi_use = 2;
+  }
+}
 
 // Setup mandate details for payment authorization
 message SetupMandateDetails {
@@ -935,6 +960,9 @@ message SetupMandateDetails {
 
   // Details of customer acceptance
   optional CustomerAcceptance customer_acceptance = 2;
+
+  // Type of mandate (single_use or multi_use) with amount details
+  optional MandateType mandate_type = 3;
 }
 
 // Information about the customer's browser.
