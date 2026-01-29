@@ -932,8 +932,8 @@ message MandateAmountData {
   // Maximum amount to be debited for the mandate transaction (in minor units)
   int64 amount = 1;
 
-  // Currency for the transaction
-  string currency = 2;
+  // Currency for the transaction (ISO 4217)
+  Currency currency = 2;
 
   // Unix timestamp (seconds since epoch) for start date of the mandate
   optional int64 start_date = 3;
