@@ -76,7 +76,7 @@ pub struct HyperpgErrorField {
 
 // ===== STATUS ENUMS =====
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "UPPERCASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum HyperpgPaymentStatus {
     New,
     Pending,
@@ -84,9 +84,9 @@ pub enum HyperpgPaymentStatus {
     Charged,
     Failed,
     Cancelled,
-    Refunded,
-    #[serde(other)]
-    Unknown,
+    AuthenticationFailed,
+    AuthorizationFailed,
+    Authorizing,
 }
 
 impl From<&HyperpgPaymentStatus> for AttemptStatus {
@@ -94,12 +94,13 @@ impl From<&HyperpgPaymentStatus> for AttemptStatus {
         match status {
             HyperpgPaymentStatus::Charged => Self::Charged,
             HyperpgPaymentStatus::New
+            | HyperpgPaymentStatus::Authorizing
             | HyperpgPaymentStatus::Pending
             | HyperpgPaymentStatus::PendingVbv => Self::Pending,
             HyperpgPaymentStatus::Failed => Self::Failure,
             HyperpgPaymentStatus::Cancelled => Self::Voided,
-            HyperpgPaymentStatus::Refunded => Self::Charged,
-            HyperpgPaymentStatus::Unknown => Self::Pending,
+            HyperpgPaymentStatus::AuthorizationFailed => Self::AuthorizationFailed,
+            HyperpgPaymentStatus::AuthenticationFailed => Self::AuthenticationFailed,
         }
     }
 }
@@ -135,7 +136,6 @@ pub struct HyperpgAuthorizeRequest {
     pub name_on_card: Option<String>,
     pub format: String,
     pub redirect_after_payment: bool,
-    pub save_to_locker: bool,
     pub order: HyperpgOrderData,
 }
 
@@ -252,7 +252,6 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             name_on_card,
             format: JSON.to_string(),
             redirect_after_payment: true,
-            save_to_locker: true,
             order: HyperpgOrderData {
                 order_id: router_data
                     .resource_common_data
@@ -333,28 +332,15 @@ pub struct Authentication {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HyperpgSyncResponse {
-    pub id: String,
     pub order_id: String,
     pub status: HyperpgPaymentStatus,
-    pub amount: FloatMajorUnit,
-    pub currency: String,
     pub txn_id: Option<String>,
-    pub payment_method_type: Option<String>,
-    pub payment_method: Option<String>,
-    pub refunded: bool,
-    pub amount_refunded: FloatMajorUnit,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HyperpgRefundSyncResponse {
-    pub id: String,
     pub order_id: String,
-    pub status: String,
-    pub amount: FloatMajorUnit,
-    pub currency: String,
     pub txn_id: Option<String>,
-    pub payment_method_type: Option<String>,
-    pub payment_method: Option<String>,
     pub refunded: bool,
     pub amount_refunded: FloatMajorUnit,
     pub refunds: Option<Vec<HyperpgRefundItem>>,
@@ -362,11 +348,7 @@ pub struct HyperpgRefundSyncResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HyperpgRefundResponse {
-    pub id: String,
     pub order_id: String,
-    pub status: String,
-    pub amount: FloatMajorUnit,
-    pub currency: String,
     pub refunded: bool,
     pub amount_refunded: FloatMajorUnit,
     pub refunds: Option<Vec<HyperpgRefundItem>>,
@@ -374,32 +356,8 @@ pub struct HyperpgRefundResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct HyperpgVoidResponse {
-    pub id: String,
-    pub order_id: String,
-    pub status: HyperpgPaymentStatus,
-    pub amount: FloatMajorUnit,
-    pub currency: String,
-    pub refunded: bool,
-    pub amount_refunded: FloatMajorUnit,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct HyperpgRefundItem {
-    pub id: Option<String>,
-    pub amount: FloatMajorUnit,
-    pub unique_request_id: String,
-    #[serde(rename = "ref")]
-    pub reference: Option<String>,
-    pub created: Option<String>,
-    pub last_updated: Option<String>,
     pub status: HyperpgRefundStatus,
-    pub error_message: Option<String>,
-    pub sent_to_gateway: Option<bool>,
-    pub initiated_by: Option<String>,
-    pub refund_type: Option<String>,
-    pub pg_processed_at: Option<String>,
-    pub error_code: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -475,7 +433,7 @@ impl TryFrom<ResponseRouterData<HyperpgSyncResponse, Self>>
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: response.txn_id.clone(),
+                network_txn_id: None,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
