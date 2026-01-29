@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.29.0
+
+### Miscellaneous Tasks
+
+- Populate connector response field in error response ([#454](https://github.com/juspay/connector-service/pull/454)) ([`1abde2f`](https://github.com/juspay/connector-service/commit/1abde2fb6dd203fc7b0cf5b2b184ce1c0d964e37))
+
+**Full Changelog:** [`2026.01.28.0...2026.01.29.0`](https://github.com/juspay/connector-service/compare/2026.01.28.0...2026.01.29.0)
+
+- - -
+
 ## 2026.01.28.0
 
 ### Refactors
