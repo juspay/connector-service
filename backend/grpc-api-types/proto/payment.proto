@@ -1819,6 +1819,9 @@ message PaymentServiceGetResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 29; // Raw request to the connector for debugging
+
+  // Redirection and Transaction Details
+  optional RedirectForm redirection_data = 35; // Data for redirecting the customer's browser
 }
 
 // Request message for voiding a payment.
