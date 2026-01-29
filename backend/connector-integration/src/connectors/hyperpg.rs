@@ -1,9 +1,7 @@
 pub mod transformers;
 
-use std::fmt::Debug;
-
 use base64::Engine;
-use common_enums::CurrencyUnit;
+use common_enums::{self as enums, CurrencyUnit};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -20,23 +18,26 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        ConnectorCustomerResponse, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::Connectors,
+    types::{
+        CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus, PaymentConnectorCategory,
+        PaymentMethodDetails, PaymentMethodSpecificFeatures, SupportedPaymentMethods,
+    },
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
@@ -44,6 +45,8 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
+use std::fmt::Debug;
+use std::sync::LazyLock;
 use transformers::{
     self as hyperpg, HyperpgAuthorizeRequest, HyperpgAuthorizeResponse, HyperpgRefundRequest,
     HyperpgRefundResponse, HyperpgRefundSyncResponse, HyperpgSyncResponse,
@@ -462,6 +465,69 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+static HYPERPG_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = {
+    LazyLock::new(|| {
+        let supported_capture_methods = vec![enums::CaptureMethod::Automatic];
+
+        let supported_card_network = vec![
+            common_enums::CardNetwork::Mastercard,
+            common_enums::CardNetwork::Visa,
+            common_enums::CardNetwork::Interac,
+            common_enums::CardNetwork::AmericanExpress,
+            common_enums::CardNetwork::JCB,
+            common_enums::CardNetwork::DinersClub,
+            common_enums::CardNetwork::Discover,
+            common_enums::CardNetwork::CartesBancaires,
+            common_enums::CardNetwork::UnionPay,
+            common_enums::CardNetwork::Maestro,
+        ];
+
+        let mut hyperpg_supported_payment_methods = SupportedPaymentMethods::new();
+        hyperpg_supported_payment_methods.add(
+            enums::PaymentMethod::Card,
+            enums::PaymentMethodType::Card,
+            PaymentMethodDetails {
+                mandates: FeatureStatus::Supported,
+                refunds: FeatureStatus::Supported,
+                supported_capture_methods: supported_capture_methods.clone(),
+                specific_features: Some(PaymentMethodSpecificFeatures::Card({
+                    CardSpecificFeatures {
+                        three_ds: FeatureStatus::Supported,
+                        no_three_ds: FeatureStatus::Supported,
+                        supported_card_networks: supported_card_network.clone(),
+                    }
+                })),
+            },
+        );
+
+        hyperpg_supported_payment_methods
+    })
+};
+
+static HYPERPG_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
+        display_name: "Hyperpg",
+        description: "Hyperpg is your trusted payment gateway solution. Seamlessly manage transactions, enhance security, and empower your business to thrive in the digital age.",
+        connector_type: PaymentConnectorCategory::PaymentGateway,
+    };
+
+static HYPERPG_SUPPORTED_WEBHOOK_FLOWS: Vec<enums::EventClass> = Vec::new();
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Hyperpg<T>
+{
+    fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
+        Some(&HYPERPG_CONNECTOR_INFO)
+    }
+
+    fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
+        Some(&HYPERPG_SUPPORTED_PAYMENT_METHODS)
+    }
+
+    fn get_supported_webhook_flows(&self) -> Option<&'static [enums::EventClass]> {
+        Some(&HYPERPG_SUPPORTED_WEBHOOK_FLOWS)
+    }
+}
 
 // Empty implementations for other traits
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
