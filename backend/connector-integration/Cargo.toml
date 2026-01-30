@@ -43,6 +43,7 @@ thiserror = "1.0.69"
 sha2 = "0.10"
 rand = "0.8"
 jsonwebtoken = "9.2"
+html-escape = "0.2"
 
 [lints]
 workspace = true

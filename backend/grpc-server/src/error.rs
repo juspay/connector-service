@@ -144,6 +144,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                 })
             }
             Self::NoConnectorMetaData
+            | Self::MaxFieldLengthViolated { .. }
             | Self::MissingConnectorMandateID
             | Self::MissingConnectorTransactionID
             | Self::MissingConnectorRefundID
