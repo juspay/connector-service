@@ -1779,6 +1779,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
+fn validate_and_get_setup_future_usage(
+    setup_future_usage: Option<common_enums::FutureUsage>,
+    payment_method_type: Option<common_enums::PaymentMethodType>,
+) -> Result<Option<common_enums::FutureUsage>, error_stack::Report<ConnectorError>> {
+    match payment_method_type {
+        Some(common_enums::PaymentMethodType::Affirm)
+        | Some(common_enums::PaymentMethodType::Klarna) => Ok(None),
+        Some(_) | None => Ok(setup_future_usage),
+    }
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
@@ -1871,7 +1882,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_method_types,
             setup_future_usage,
         ) = if payment_method_token.is_some() {
-            (None, None, StripeBillingAddress::default(), None, None)
+            let setup_future_usage = validate_and_get_setup_future_usage(
+                item.request.setup_future_usage,
+                item.request.payment_method_type,
+            )?;
+            (
+                None,
+                None,
+                StripeBillingAddress::default(),
+                None,
+                setup_future_usage,
+            )
         } else {
             let (payment_method_data, payment_method_type, billing_address) =
                 create_stripe_payment_method(
@@ -1909,12 +1930,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 payment_method_type.as_ref(),
             )?;
 
+            let setup_future_usage = validate_and_get_setup_future_usage(
+                item.request.setup_future_usage,
+                item.request.payment_method_type,
+            )?;
+
             (
                 Some(payment_method_data),
                 None,
                 billing_address,
                 payment_method_type,
-                item.request.setup_future_usage,
+                setup_future_usage,
             )
         };
 
