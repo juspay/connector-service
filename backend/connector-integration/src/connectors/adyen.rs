@@ -925,8 +925,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             })?;
 
         let (error_code, error_message, error_reason) =
-            if transformers::get_adyen_payment_webhook_event(notif.event_code.clone(), notif.success.clone())?
-                == AttemptStatus::Failure
+            if transformers::get_adyen_payment_webhook_event(
+                notif.event_code.clone(),
+                notif.success.clone(),
+            )? == AttemptStatus::Failure
             {
                 (
                     notif.reason.clone(),
@@ -970,14 +972,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
 
-        let (error_code, error_message) =
-            if transformers::get_adyen_refund_webhook_event(notif.event_code.clone(), notif.success.clone())?
-                == common_enums::RefundStatus::Failure
-            {
-                (notif.reason.clone(), notif.reason.clone())
-            } else {
-                (None, None)
-            };
+        let (error_code, error_message) = if transformers::get_adyen_refund_webhook_event(
+            notif.event_code.clone(),
+            notif.success.clone(),
+        )? == common_enums::RefundStatus::Failure
+        {
+            (notif.reason.clone(), notif.reason.clone())
+        } else {
+            (None, None)
+        };
 
         Ok(RefundWebhookDetailsResponse {
             connector_refund_id: Some(notif.psp_reference.clone()),
