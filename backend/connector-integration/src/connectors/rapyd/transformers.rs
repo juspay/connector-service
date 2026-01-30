@@ -1,4 +1,4 @@
-use common_utils::{ext_traits::OptionExt, request::Method, FloatMajorUnit};
+use common_utils::{ext_traits::OptionExt, request::Method, FloatMajorUnit, StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture},
     connector_types::{
@@ -138,7 +138,7 @@ impl TryFrom<&ConnectorAuthType> for RapydAuthType {
 pub struct RapydPaymentsRequest<
     T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
-    pub amount: FloatMajorUnit,
+    pub amount: StringMajorUnit,
     pub currency: common_enums::Currency,
     pub payment_method: PaymentMethod<T>,
     pub payment_method_options: Option<PaymentMethodOptions>,
@@ -417,7 +417,7 @@ pub struct ResponseData {
 // Capture Request
 #[derive(Debug, Serialize, Clone)]
 pub struct CaptureRequest {
-    amount: Option<FloatMajorUnit>,
+    amount: Option<StringMajorUnit>,
     receipt_email: Option<Secret<String>>,
     statement_descriptor: Option<String>,
 }
@@ -457,7 +457,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 #[derive(Default, Debug, Serialize)]
 pub struct RapydRefundRequest {
     pub payment: String,
-    pub amount: Option<FloatMajorUnit>,
+    pub amount: Option<StringMajorUnit>,
     pub currency: Option<common_enums::Currency>,
 }
 
