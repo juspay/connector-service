@@ -382,21 +382,39 @@ pub struct MerchantDefinedInformation {
 /// - Input is already valid JSON (serde_json::Value), so parsing rarely fails
 /// - Better to continue payment without metadata than to fail the entire payment
 pub fn convert_metadata_to_merchant_defined_info(
-    metadata: Value,
-) -> Vec<MerchantDefinedInformation> {
-    serde_json::from_str::<std::collections::BTreeMap<String, Value>>(&metadata.to_string())
-        .unwrap_or_default()
-        .into_iter()
-        .enumerate()
-        .filter_map(|(index, (key, value))| {
-            u8::try_from(index + 1)
-                .ok()
-                .map(|key_num| MerchantDefinedInformation {
-                    key: key_num,
-                    value: format!("{key}={value}"),
-                })
-        })
-        .collect()
+    metadata: Option<Value>,
+    merchant_order_reference_id: Option<String>,
+) -> Option<Vec<MerchantDefinedInformation>> {
+    let mut vector = Vec::new();
+    let mut iter = 1;
+
+    // Add metadata if present
+    if let Some(metadata) = metadata {
+        let hashmap: std::collections::BTreeMap<String, Value> =
+            serde_json::from_str(&metadata.to_string())
+                .unwrap_or(std::collections::BTreeMap::new());
+        for (key, value) in hashmap {
+            vector.push(MerchantDefinedInformation {
+                key: iter,
+                value: format!("{key}={value}"),
+            });
+            iter += 1;
+        }
+    }
+
+    // Add merchant_order_reference_id if present
+    if let Some(merchant_ref_id) = merchant_order_reference_id {
+        vector.push(MerchantDefinedInformation {
+            key: iter,
+            value: format!("merchant_order_reference_id={}", merchant_ref_id),
+        });
+    }
+
+    if vector.is_empty() {
+        None
+    } else {
+        Some(vector)
+    }
 }
 
 /// Convert state/province to 2-letter code based on country
