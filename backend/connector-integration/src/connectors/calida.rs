@@ -87,14 +87,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Calida<T>
 {
-    fn verify_webhook_source(
+    async fn verify_webhook_source(
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
+        _base_url: Option<&str>,
     ) -> CustomResult<bool, ConnectorError> {
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets.secret,
