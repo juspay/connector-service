@@ -1195,11 +1195,6 @@ message CardConnectorResponse {
   optional string domestic_network = 4; // Domestic (co-branded) card network
 }
 
-// Additional payment method data for UPI payments
-message UpiConnectorResponse {
-  optional string upi_mode = 1; // UPI mode detected from connector (e.g., "UPICC", "UPICL", "UPI_ACCOUNT")
-}
-
 // Additional payment method connector response
 message AdditionalPaymentMethodConnectorResponse {
   oneof payment_method_data {

@@ -542,6 +542,8 @@ enum UpiSource {
   UPI_CL = 1;    // UPI Credit Line
   UPI_ACCOUNT = 2; // UPI Bank Account (Savings)
   UPI_CC_CL = 3; // UPI Credit Card + Credit Line
+  UPI_PPI = 4;   // UPI Prepaid Payment Instrument
+  UPI_VOUCHER = 5; // UPI Voucher
 }
 
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
@@ -562,6 +564,17 @@ message UpiIntent {
 message UpiQr {
   // UPI source type
   optional UpiSource upi_source = 1;
+}
+
+// Additional payment method data for UPI payments
+// Note: This struct uses `upi_mode` (not `upi_source`) to represent the final
+// payment instrument selected by the customer at the connector end.
+//
+// - `upi_source` in UpiCollect/UpiIntent/UpiQr: The intended UPI source type
+//   requested by the merchant (e.g., customer wants to pay via UPI_CC).
+
+message UpiConnectorResponse {
+  optional UpiSource upi_mode = 1; // Final UPI source detected from connector response
 }
 
 // PIX - Brazilian instant payment ecosystem

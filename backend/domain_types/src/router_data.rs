@@ -416,8 +416,8 @@ pub enum AdditionalPaymentMethodConnectorResponse {
         domestic_network: Option<String>,
     },
     Upi {
-        /// UPI mode detected from the connector response (e.g., "UPICC", "UPICL", "UPI_ACCOUNT")
-        upi_mode: Option<String>,
+        /// UPI source detected from the connector response
+        upi_mode: Option<crate::payment_method_data::UpiSource>,
     },
 }
 

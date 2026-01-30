@@ -1036,15 +1036,9 @@ fn get_connector_response_with_upi_mode(
     upi_mode: Option<UpiSource>,
 ) -> Option<domain_types::router_data::ConnectorResponseData> {
     upi_mode.map(|mode| {
-        let upi_mode_string = match mode {
-            UpiSource::UpiCc => "UPI_CC".to_string(),
-            UpiSource::UpiCl => "UPI_CL".to_string(),
-            UpiSource::UpiAccount => "UPI_ACCOUNT".to_string(),
-            UpiSource::UpiCcCl => "UPI_CC_CL".to_string(),
-        };
         domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
             domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
-                upi_mode: Some(upi_mode_string),
+                upi_mode: Some(mode),
             },
         )
     })
