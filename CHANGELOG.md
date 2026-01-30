@@ -4,6 +4,22 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.01.30.0
+
+### Features
+
+- Noon repeateverything flow implementation ([#450](https://github.com/juspay/connector-service/pull/450)) ([`23ae5ac`](https://github.com/juspay/connector-service/commit/23ae5acea8cfb1f1d35517dc95b7da8d101df5b9))
+
+### Bug Fixes
+
+- [CYBERSOURCE] PSYNC DIFF FIX ([#452](https://github.com/juspay/connector-service/pull/452)) ([`b6e66c2`](https://github.com/juspay/connector-service/commit/b6e66c24964b8af52f4f383ca7d619bf574030a7))
+- Trustpay refund fix ([#459](https://github.com/juspay/connector-service/pull/459)) ([`7ef7bd0`](https://github.com/juspay/connector-service/commit/7ef7bd0a68273c6c363c99d535324821a3404f93))
+- Paypal missing redirect_uri logic in form_fields for 3DS flow ([#453](https://github.com/juspay/connector-service/pull/453)) ([`bd68518`](https://github.com/juspay/connector-service/commit/bd6851817556e7e0d53c602635dc52b20fc08ec4))
+
+**Full Changelog:** [`2026.01.29.0...2026.01.30.0`](https://github.com/juspay/connector-service/compare/2026.01.29.0...2026.01.30.0)
+
+- - -
+
 ## 2026.01.29.0
 
 ### Miscellaneous Tasks
