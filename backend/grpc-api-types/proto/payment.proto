@@ -2860,19 +2860,23 @@ message PaymentServiceVerifyRedirectResponseResponse {
   bool source_verified = 1; // Indicates if the source was successfully verified
 
   // Identification
-  Identifier transaction_id = 2; // Identifier for the resource
+  optional Identifier transaction_id = 2; // Identifier for the resource
+
+  // Response Amount Information
+  optional Currency response_currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  optional int64 response_minor_amount = 4; // The minor amount for the payment (e.g., cents)
 
   // Reference
-  optional Identifier response_ref_id = 3; // Response reference ID for tracking
+  optional Identifier response_ref_id = 5; // Response reference ID for tracking
 
   // Status Information
-  optional PaymentStatus status = 4; // Current status of the payment attempt
-  optional string error_code = 5; // Error code if synchronization encountered an issue
-  optional string error_message = 6; // Error message if synchronization encountered an issue
-  optional string error_reason = 7; // Detailed reason for the error
+  optional PaymentStatus status = 6; // Current status of the payment attempt
+  optional string error_code = 7; // Error code if synchronization encountered an issue
+  optional string error_message = 8; // Error message if synchronization encountered an issue
+  optional string error_reason = 9; // Detailed reason for the error
 
   // Raw Response
-  optional SecretString raw_connector_response = 8; // Raw response from the connector
+  optional SecretString raw_connector_response = 10; // Raw response from the connector
 }
 
 // -------------------------

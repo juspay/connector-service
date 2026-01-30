@@ -9703,6 +9703,14 @@ impl ForeignTryFrom<(bool, RedirectDetailsResponse)>
                 .map(|id| grpc_api_types::payments::Identifier {
                     id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                 }),
+            response_minor_amount: redirect_details_response
+                .response_minor_amount
+                .map(|amount| amount.get_amount_as_i64()),
+            response_currency: redirect_details_response
+                .response_currency
+                .map(|currency| grpc_api_types::payments::Currency::foreign_try_from(currency))
+                .transpose()?
+                .map(|currency| currency.into()),
             status: redirect_details_response
                 .status
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)

@@ -136,6 +136,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _request: &RequestDetails,
         _secrets: Option<ConnectorSourceVerificationSecrets>,
     ) -> CustomResult<bool, errors::ConnectorError> {
+        // Revolut does not support source verification for redirect responses
         Ok(false)
     }
 
@@ -150,6 +151,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_code: None,
             error_message: None,
             error_reason: None,
+            response_currency: None,
+            response_minor_amount: None,
             raw_connector_response: None,
         })
     }
