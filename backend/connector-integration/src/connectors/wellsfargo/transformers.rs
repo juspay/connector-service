@@ -1747,11 +1747,20 @@ fn build_connector_metadata(
                 avs_response.insert("code".to_string(), serde_json::Value::String(code.clone()));
             }
             if let Some(code_raw) = &avs.code_raw {
-                avs_response.insert("codeRaw".to_string(), serde_json::Value::String(code_raw.clone()));
+                avs_response.insert(
+                    "codeRaw".to_string(),
+                    serde_json::Value::String(code_raw.clone()),
+                );
             }
 
-            payment_checks.insert("avs_response".to_string(), serde_json::Value::Object(avs_response));
-            card_data.insert("payment_checks".to_string(), serde_json::Value::Object(payment_checks));
+            payment_checks.insert(
+                "avs_response".to_string(),
+                serde_json::Value::Object(avs_response),
+            );
+            card_data.insert(
+                "payment_checks".to_string(),
+                serde_json::Value::Object(payment_checks),
+            );
         }
 
         Some(serde_json::json!({
