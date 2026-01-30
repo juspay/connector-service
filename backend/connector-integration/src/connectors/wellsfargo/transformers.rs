@@ -132,6 +132,7 @@ pub struct WellsfargoCaptureRequest {
 #[serde(rename_all = "camelCase")]
 pub struct OrderInformationAmount {
     amount_details: Amount,
+    #[serde(skip_serializing_if = "Option::is_none")]
     bill_to: Option<BillTo>,
 }
 
@@ -1132,7 +1133,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata: build_connector_metadata(
+                    &response.processor_information,
+                    response
+                        .processor_information
+                        .as_ref()
+                        .and_then(|info| info.response_code.clone()),
+                ),
                 network_txn_id: response
                     .processor_information
                     .as_ref()
@@ -1197,7 +1204,13 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata: build_connector_metadata(
+                    &response.processor_information,
+                    response
+                        .processor_information
+                        .as_ref()
+                        .and_then(|info| info.response_code.clone()),
+                ),
                 network_txn_id: response
                     .processor_information
                     .as_ref()
@@ -1250,7 +1263,13 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata: build_connector_metadata(
+                    &response.processor_information,
+                    response
+                        .processor_information
+                        .as_ref()
+                        .and_then(|info| info.response_code.clone()),
+                ),
                 network_txn_id: response
                     .processor_information
                     .as_ref()
@@ -1303,7 +1322,13 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata: build_connector_metadata(
+                    &response.processor_information,
+                    response
+                        .processor_information
+                        .as_ref()
+                        .and_then(|info| info.response_code.clone()),
+                ),
                 network_txn_id: response
                     .processor_information
                     .as_ref()
@@ -1377,7 +1402,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
                 mandate_reference: mandate_reference.map(Box::new),
-                connector_metadata: None,
+                connector_metadata: build_connector_metadata(
+                    &response.processor_information,
+                    response
+                        .processor_information
+                        .as_ref()
+                        .and_then(|info| info.response_code.clone()),
+                ),
                 network_txn_id: response
                     .processor_information
                     .as_ref()
@@ -1689,5 +1720,44 @@ pub fn get_error_reason(
         (None, Some(details), None) => Some(details),
         (None, None, Some(avs_message)) => Some(avs_message),
         (None, None, None) => None,
+    }
+}
+
+/// Builds connector_metadata from Wells Fargo response
+/// Includes AVS data from processor_information
+fn build_connector_metadata(
+    processor_info: &Option<ClientProcessorInformation>,
+    auth_code: Option<String>,
+) -> Option<serde_json::Value> {
+    let avs_data = processor_info.as_ref().and_then(|info| info.avs.as_ref());
+
+    // Only build metadata if we have meaningful data
+    if avs_data.is_some() || auth_code.is_some() {
+        let mut card_data = serde_json::Map::new();
+
+        if let Some(code) = auth_code {
+            card_data.insert("auth_code".to_string(), serde_json::Value::String(code));
+        }
+
+        if let Some(avs) = avs_data {
+            let mut payment_checks = serde_json::Map::new();
+            let mut avs_response = serde_json::Map::new();
+
+            if let Some(code) = &avs.code {
+                avs_response.insert("code".to_string(), serde_json::Value::String(code.clone()));
+            }
+            if let Some(code_raw) = &avs.code_raw {
+                avs_response.insert("codeRaw".to_string(), serde_json::Value::String(code_raw.clone()));
+            }
+
+            payment_checks.insert("avs_response".to_string(), serde_json::Value::Object(avs_response));
+            card_data.insert("payment_checks".to_string(), serde_json::Value::Object(payment_checks));
+        }
+
+        Some(serde_json::json!({
+            "Card": card_data
+        }))
+    } else {
+        None
     }
 }
