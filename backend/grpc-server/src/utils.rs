@@ -3,10 +3,11 @@ use base64::{engine::general_purpose, Engine as _};
 use common_utils::{
     config_patch::Patch,
     consts::{
-        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_SHADOW_MODE,
+        self, EVENT_ORIGIN_UCS, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2,
+        X_SHADOW_MODE,
     },
     errors::CustomResult,
-    events::{Event, EventStage, FlowName, MaskedSerdeValue},
+    events::{Event, EventStage, FlowName, MaskedSerdeValue, ServiceCall},
     lineage::LineageIds,
 };
 use domain_types::{
@@ -587,6 +588,8 @@ fn create_and_emit_grpc_event<R>(
         request_data: masked_request_data,
         response_data: None,
         headers: masked_headers,
+        service_call: ServiceCall::Internal,
+        origin: EVENT_ORIGIN_UCS.to_string(),
         additional_fields: HashMap::new(),
         lineage_ids: metadata_payload
             .map_or_else(|| LineageIds::empty(""), |md| md.lineage_ids.clone()),

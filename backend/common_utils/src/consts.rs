@@ -47,6 +47,10 @@ pub const X_SOURCE_NAME: &str = "x-source";
 pub const X_CONNECTOR_SERVICE: &str = "connector-service";
 
 pub const X_FLOW_NAME: &str = "x-flow";
+
+/// Event origin: Unified Connector Service
+pub const EVENT_ORIGIN_UCS: &str = "unified_connector_service";
+
 /// Header key for shadow mode
 pub const X_SHADOW_MODE: &str = "x-shadow-mode";
 
