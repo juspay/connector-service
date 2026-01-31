@@ -923,22 +923,38 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
+
+        let (error_code, error_message, error_reason) =
+            if transformers::get_adyen_payment_webhook_event(
+                notif.event_code.clone(),
+                notif.success.clone(),
+            )? == AttemptStatus::Failure
+            {
+                (
+                    notif.reason.clone(),
+                    notif.reason.clone(),
+                    notif.reason.clone(),
+                )
+            } else {
+                (None, None, None)
+            };
+
         Ok(WebhookDetailsResponse {
             resource_id: Some(ResponseId::ConnectorTransactionId(
                 notif.psp_reference.clone(),
             )),
             status: transformers::get_adyen_payment_webhook_event(notif.event_code, notif.success)?,
             connector_response_reference_id: Some(notif.psp_reference),
-            error_code: notif.reason.clone(),
+            error_code,
             mandate_reference: None,
-            error_message: notif.reason,
+            error_message,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
             minor_amount_captured: None,
             amount_captured: None,
-            error_reason: None,
+            error_reason,
             network_txn_id: None,
         })
     }
@@ -956,12 +972,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
 
+        let (error_code, error_message) = if transformers::get_adyen_refund_webhook_event(
+            notif.event_code.clone(),
+            notif.success.clone(),
+        )? == common_enums::RefundStatus::Failure
+        {
+            (notif.reason.clone(), notif.reason.clone())
+        } else {
+            (None, None)
+        };
+
         Ok(RefundWebhookDetailsResponse {
             connector_refund_id: Some(notif.psp_reference.clone()),
             status: transformers::get_adyen_refund_webhook_event(notif.event_code, notif.success)?,
             connector_response_reference_id: Some(notif.psp_reference.clone()),
-            error_code: notif.reason.clone(),
-            error_message: notif.reason,
+            error_code,
+            error_message,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
