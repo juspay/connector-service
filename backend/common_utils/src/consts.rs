@@ -41,6 +41,8 @@ pub const X_CONNECTOR_NAME: &str = "x-connector";
 pub const X_MERCHANT_ID: &str = "x-merchant-id";
 /// Header key for reference identification
 pub const X_REFERENCE_ID: &str = "x-reference-id";
+/// Header key for resource identification
+pub const X_RESOURCE_ID: &str = "x-resource-id";
 
 pub const X_SOURCE_NAME: &str = "x-source";
 
