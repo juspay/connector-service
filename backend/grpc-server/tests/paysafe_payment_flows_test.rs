@@ -270,6 +270,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         encoded_data: None,
         sync_type: None,
         connector_order_reference_id: None,
+        test_mode: None,
     }
 }
 

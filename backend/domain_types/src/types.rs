@@ -3182,7 +3182,10 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -3192,7 +3195,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -3259,7 +3262,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -3681,74 +3684,20 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     });
 
                 PaymentServiceAuthorizeResponse {
-                    transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
-                    redirection_data: redirection_data.map(
-                        |form| {
-                            match *form {
-                                router_response_types::RedirectForm::Form { endpoint, method, form_fields } => {
-                                    Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
-                                            grpc_api_types::payments::FormData {
-                                                endpoint,
-                                                method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
-                                                form_fields, //TODO
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Html { html_data } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
-                                            grpc_api_types::payments::HtmlData {
-                                                html_data,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Uri { uri } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Mifinity { initialization_token } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Mifinity(
-                                            grpc_api_types::payments::MifinityData {
-                                                initialization_token,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Braintree { client_token, card_token, bin,  acs_url } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Braintree(
-                                            grpc_api_types::payments::BraintreeData {
-                                               client_token,
-                                               card_token,
-                                               bin,
-                                               acs_url,
-                                            }
-                                        ))
-                                    })
-                                },
-                                _ => Err(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_RESPONSE".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid response from connector".to_owned(),
-                                        error_object: None,
-                                    }))?,
-                            }
-                        }
-                    ).transpose()?,
-                    connector_metadata: convert_connector_metadata_to_secret_string(connector_metadata),
+                    transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
+                        resource_id,
+                    )?),
+                    redirection_data: redirection_data
+                        .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
+                        .transpose()?,
+                    connector_metadata: convert_connector_metadata_to_secret_string(
+                        connector_metadata,
+                    ),
                     network_txn_id,
-                    response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    response_ref_id: connector_response_reference_id.map(|id| {
+                        grpc_api_types::payments::Identifier {
+                            id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                        }
                     }),
                     mandate_reference: mandate_reference_grpc,
                     incremental_authorization_allowed,
@@ -4533,7 +4482,7 @@ pub fn generate_payment_sync_response(
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
                 resource_id,
-                redirection_data: _,
+                redirection_data,
                 connector_metadata: _,
                 network_txn_id,
                 connector_response_reference_id,
@@ -4557,6 +4506,9 @@ pub fn generate_payment_sync_response(
 
                 Ok(PaymentServiceGetResponse {
                     transaction_id: Some(grpc_resource_id),
+                    redirection_data: redirection_data
+                        .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
+                        .transpose()?,
                     status: grpc_status as i32,
                     mandate_reference: mandate_reference_grpc,
                     error_code: None,
@@ -4663,6 +4615,7 @@ pub fn generate_payment_sync_response(
                 state,
                 raw_connector_request,
                 connector_response,
+                redirection_data: None,
             })
         }
     }
@@ -4924,6 +4877,84 @@ impl ForeignFrom<Method> for grpc_api_types::payments::HttpMethod {
             Method::Delete => Self::Delete,
             Method::Patch => Self::Post, // Patch is not defined in gRPC, using Post
                                          // as a fallback
+        }
+    }
+}
+
+impl ForeignTryFrom<router_response_types::RedirectForm>
+    for grpc_api_types::payments::RedirectForm
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        form: router_response_types::RedirectForm,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match form {
+            router_response_types::RedirectForm::Form {
+                endpoint,
+                method,
+                form_fields,
+            } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
+                    grpc_api_types::payments::FormData {
+                        endpoint,
+                        method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
+                        form_fields,
+                    },
+                )),
+            }),
+            router_response_types::RedirectForm::Html { html_data } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
+                    grpc_api_types::payments::HtmlData { html_data },
+                )),
+            }),
+            router_response_types::RedirectForm::Uri { uri } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
+                    grpc_api_types::payments::UriData { uri },
+                )),
+            }),
+            router_response_types::RedirectForm::Mifinity {
+                initialization_token,
+            } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Mifinity(
+                    grpc_api_types::payments::MifinityData {
+                        initialization_token,
+                    },
+                )),
+            }),
+            router_response_types::RedirectForm::Braintree {
+                client_token,
+                card_token,
+                bin,
+                acs_url,
+            } => Ok(Self {
+                form_type: Some(
+                    grpc_api_types::payments::redirect_form::FormType::Braintree(
+                        grpc_api_types::payments::BraintreeData {
+                            client_token,
+                            card_token,
+                            bin,
+                            acs_url,
+                        },
+                    ),
+                ),
+            }),
+            // Variants not supported in gRPC proto
+            router_response_types::RedirectForm::BlueSnap { .. }
+            | router_response_types::RedirectForm::CybersourceAuthSetup { .. }
+            | router_response_types::RedirectForm::CybersourceConsumerAuth { .. }
+            | router_response_types::RedirectForm::DeutschebankThreeDSChallengeFlow { .. }
+            | router_response_types::RedirectForm::Payme
+            | router_response_types::RedirectForm::Nmi { .. }
+            | router_response_types::RedirectForm::WorldpayDDCForm { .. } => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_REDIRECT_FORM_TYPE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "RedirectForm type not supported in gRPC API".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
         }
     }
 }
@@ -5333,6 +5364,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             state: None,
             raw_connector_request: None,
             connector_response: None,
+            redirection_data: None,
         })
     }
 }
@@ -6216,7 +6248,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,

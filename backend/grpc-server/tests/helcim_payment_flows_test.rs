@@ -280,6 +280,7 @@ fn create_payment_sync_request(
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
+        test_mode: None,
     }
 }
 
