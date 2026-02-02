@@ -16,6 +16,7 @@ pub type RedsysRefundRequest = super::transformers::RedsysTransaction;
 pub struct RedsysPaymentRequest {
     pub ds_merchant_amount: StringMinorUnit,
     pub ds_merchant_currency: String,
+    pub ds_merchant_cvv2: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ds_merchant_emv3ds: Option<RedsysEmvThreeDsRequestData>,
     pub ds_merchant_expirydate: Secret<String>,
@@ -24,14 +25,13 @@ pub struct RedsysPaymentRequest {
     pub ds_merchant_pan: cards::CardNumber,
     pub ds_merchant_terminal: Secret<String>,
     pub ds_merchant_transactiontype: RedsysTransactionType,
-    pub ds_merchant_cvv2: Secret<String>,
 }
 
 #[derive(Debug)]
 pub struct RedsysCardData<T: PaymentMethodDataTypes> {
     pub card_number: RawCardNumber<T>,
-    pub expiry_date: Secret<String>,
     pub cvv2: Secret<String>,
+    pub expiry_date: Secret<String>,
 }
 
 /// Transaction types supported by Redsys
@@ -58,13 +58,14 @@ pub enum RedsysTransactionType {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedsysEmvThreeDsRequestData {
-    pub three_d_s_info: RedsysThreeDsInfo,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub protocol_version: Option<String>,
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub billing_data: Option<RedsysBillingData>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_accept_header: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub browser_user_agent: Option<Secret<String>>,
+    pub browser_color_depth: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_i_p: Option<Secret<String, pii::IpAddress>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_java_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -72,27 +73,26 @@ pub struct RedsysEmvThreeDsRequestData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_language: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub browser_color_depth: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_screen_height: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_screen_width: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_t_z: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub browser_i_p: Option<Secret<String, pii::IpAddress>>,
+    pub browser_user_agent: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub three_d_s_server_trans_i_d: Option<String>,
+    pub cres: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notification_u_r_l: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub three_d_s_comp_ind: Option<RedsysThreeDSCompInd>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cres: Option<String>,
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
-    pub billing_data: Option<RedsysBillingData>,
+    pub protocol_version: Option<String>,
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     pub shipping_data: Option<RedsysShippingData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub three_d_s_comp_ind: Option<RedsysThreeDSCompInd>,
+    pub three_d_s_info: RedsysThreeDsInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub three_d_s_server_trans_i_d: Option<String>,
 }
 
 /// Billing address data for 3DS
@@ -155,35 +155,35 @@ pub enum RedsysThreeDsInfo {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RedsysThreeDSCompInd {
-    /// Y = Completed successfully
-    Y,
     /// N = Completed with errors
     N,
     /// U = 3DSMethod not executed
     U,
+    /// Y = Completed successfully
+    Y,
 }
 
 /// Operation request for capture, void, and refund operations
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct RedsysOperationRequest {
-    pub ds_merchant_order: String,
-    pub ds_merchant_merchantcode: Secret<String>,
-    pub ds_merchant_terminal: Secret<String>,
+    pub ds_merchant_amount: StringMinorUnit,
     // Redsys uses numeric ISO 4217 currency codes (e.g., "978" for EUR)
     // not 3-letter codes, so we use String here
     pub ds_merchant_currency: String,
+    pub ds_merchant_merchantcode: Secret<String>,
+    pub ds_merchant_order: String,
+    pub ds_merchant_terminal: Secret<String>,
     pub ds_merchant_transactiontype: RedsysTransactionType,
-    pub ds_merchant_amount: StringMinorUnit,
 }
 
 /// SOAP XML messages container for sync operations
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Messages {
-    pub version: RedsysVersionData,
     pub signature: String,
     pub signature_version: String,
+    pub version: RedsysVersionData,
 }
 
 /// Version wrapper for SOAP sync request
@@ -218,10 +218,10 @@ pub enum MessageContent {
 pub struct RedsysTransactionRequest {
     #[serde(rename = "Ds_MerchantCode")]
     pub ds_merchant_code: Secret<String>,
-    #[serde(rename = "Ds_Terminal")]
-    pub ds_terminal: Secret<String>,
     #[serde(rename = "Ds_Order")]
     pub ds_order: String,
+    #[serde(rename = "Ds_Terminal")]
+    pub ds_terminal: Secret<String>,
     #[serde(rename = "Ds_TransactionType")]
     pub ds_transaction_type: String,
 }
@@ -231,10 +231,10 @@ pub struct RedsysTransactionRequest {
 pub struct RedsysMonitorRequest {
     #[serde(rename = "Ds_MerchantCode")]
     pub ds_merchant_code: Secret<String>,
-    #[serde(rename = "Ds_Terminal")]
-    pub ds_terminal: Secret<String>,
     #[serde(rename = "Ds_Order")]
     pub ds_order: String,
+    #[serde(rename = "Ds_Terminal")]
+    pub ds_terminal: Secret<String>,
 }
 
 /// Request for invoking 3DS method redirect
@@ -242,17 +242,17 @@ pub struct RedsysMonitorRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedsysThreedsInvokeRequest {
-    pub three_d_s_server_trans_i_d: String,
     pub three_d_s_method_notification_u_r_l: String,
+    pub three_d_s_server_trans_i_d: String,
 }
 
 // serialize to camel case and try to convert it to hashmap<string, string>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedsysThreeDsInvokeData {
-    pub three_ds_method_url: String,
-    pub three_ds_method_data: String,
     pub message_version: common_utils::types::SemanticVersion,
-    pub three_d_s_server_trans_i_d: String,
+    pub three_ds_method_data: String,
+    pub three_ds_method_url: String,
     pub three_ds_method_data_submission: String,
+    pub three_d_s_server_trans_i_d: String,
 }
