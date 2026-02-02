@@ -1875,6 +1875,9 @@ message PaymentServiceVoidRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 11; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Additional Context
+  optional string merchant_order_reference_id = 13; // Merchant's internal reference ID
 }
 
 // Response message for a payment void operation.
@@ -2017,6 +2020,9 @@ message PaymentServiceCaptureRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Additional Context
+  optional string merchant_order_reference_id = 14; // Merchant's internal reference ID
 }
 
 // Response message for a payment capture operation.

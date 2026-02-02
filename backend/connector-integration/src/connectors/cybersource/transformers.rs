@@ -40,7 +40,7 @@ use domain_types::{
     utils::{to_currency_base_unit, CardIssuer},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 pub const REFUND_VOIDED: &str = "Refund request has been voided.";
@@ -1321,13 +1321,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             raw_card_type.map(|network| network.to_string()),
         ))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .expose_option()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         let consumer_authentication_information = item
             .router_data
@@ -1408,13 +1409,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let processing_information = ProcessingInformation::try_from((item, None, card_type))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .expose_option()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         Ok(Self {
             processing_information,
@@ -1519,13 +1521,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let processing_information = ProcessingInformation::try_from((item, None, None))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .expose_option()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         Ok(Self {
             processing_information,
@@ -1616,13 +1619,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     expiration_month,
                 },
             }));
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .expose_option()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
         let ucaf_collection_indicator = match apple_pay_wallet_data
             .payment_method
             .network
@@ -1724,13 +1728,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let processing_information =
             ProcessingInformation::try_from((item, Some(PaymentSolution::GooglePay), None))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .expose_option()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         Ok(Self {
             processing_information,
@@ -1816,13 +1821,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Some(google_pay_data.info.card_network.clone()),
         ))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .expose_option()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         let ucaf_collection_indicator =
             match google_pay_data.info.card_network.to_lowercase().as_str() {
@@ -1937,13 +1943,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Some(google_pay_data.info.card_network.clone()),
         ))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .expose_option()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         let ucaf_collection_indicator =
             match google_pay_data.info.card_network.to_lowercase().as_str() {
@@ -2030,13 +2037,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Some(samsung_pay_data.payment_credential.card_brand.to_string()),
         ))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .expose_option()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         Ok(Self {
             processing_information,
@@ -2190,11 +2198,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 },
                             ));
                             let merchant_defined_information =
-                                item.router_data.request.metadata.clone().map(|metadata| {
-                                    utils::convert_metadata_to_merchant_defined_info(
-                                        metadata.expose(),
-                                    )
-                                });
+                                convert_metadata_to_merchant_defined_info(
+                                    item.router_data
+                                        .request
+                                        .metadata
+                                        .clone()
+                                        .map(|metadata| metadata.expose()),
+                                    item.router_data.request.merchant_order_reference_id.clone(),
+                                );
                             let ucaf_collection_indicator = match apple_pay_data
                                 .payment_method
                                 .network
@@ -2481,10 +2492,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let merchant_defined_information =
-            item.router_data.request.metadata.clone().map(|metadata| {
-                utils::convert_metadata_to_merchant_defined_info(metadata.expose())
-            });
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         let is_final = matches!(
             item.router_data.request.capture_method,
@@ -2565,15 +2580,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let merchant_defined_information =
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
             value
                 .router_data
                 .request
                 .metadata
                 .clone()
-                .map(|connector_metadata| {
-                    utils::convert_metadata_to_merchant_defined_info(connector_metadata.expose())
-                });
+                .map(|metadata| metadata.expose()),
+            value
+                .router_data
+                .request
+                .merchant_order_reference_id
+                .clone(),
+        );
 
         let currency =
             value
@@ -4504,13 +4523,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 card: mandate_card_information,
             }));
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .as_ref()
-            .map(|metadata| metadata.clone().expose())
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         Ok(Self {
             processing_information,
@@ -4583,13 +4603,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let processing_information = ProcessingInformation::try_from((item, None, card_type))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .as_ref()
-            .map(|metadata| metadata.clone().expose())
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         let consumer_authentication_information = item
             .router_data
@@ -4670,13 +4691,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let processing_information = ProcessingInformation::try_from((item, None, card_type))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .as_ref()
-            .map(|metadata| metadata.clone().expose())
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         let consumer_authentication_information = item
             .router_data
@@ -5065,4 +5087,40 @@ fn get_commerce_indicator_for_external_authentication(
         _ => "vbv_failure",
     }
     .to_string()
+}
+
+fn convert_metadata_to_merchant_defined_info(
+    metadata: Option<serde_json::Value>,
+    merchant_order_reference_id: Option<String>,
+) -> Option<Vec<utils::MerchantDefinedInformation>> {
+    let mut vector = Vec::new();
+    let mut iter = 1;
+
+    // Add metadata if present
+    if let Some(metadata) = metadata {
+        let hashmap: std::collections::BTreeMap<String, serde_json::Value> =
+            serde_json::from_str(&metadata.to_string())
+                .unwrap_or(std::collections::BTreeMap::new());
+        for (key, value) in hashmap {
+            vector.push(utils::MerchantDefinedInformation {
+                key: iter,
+                value: format!("{key}={value}"),
+            });
+            iter += 1;
+        }
+    }
+
+    // Add merchant_order_reference_id if present
+    if let Some(merchant_ref_id) = merchant_order_reference_id {
+        vector.push(utils::MerchantDefinedInformation {
+            key: iter,
+            value: format!("merchant_order_reference_id={}", merchant_ref_id),
+        });
+    }
+
+    if vector.is_empty() {
+        None
+    } else {
+        Some(vector)
+    }
 }
