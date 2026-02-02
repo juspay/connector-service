@@ -1322,6 +1322,7 @@ where
             redirection_data: redirection_data.map(Box::new),
             connector_response_reference_id,
             status_code: item.http_code,
+            authentication_data: None,
         });
 
         Ok(Self {

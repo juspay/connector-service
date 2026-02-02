@@ -61,6 +61,26 @@ pub enum ApplicationErrorResponse {
     DomainError(ApiError),
 }
 
+impl ApplicationErrorResponse {
+    /// Returns a reference to the inner ApiError
+    pub fn get_api_error(&self) -> &ApiError {
+        match self {
+            Self::Unauthorized(err) => err,
+            Self::ForbiddenCommonResource(err) => err,
+            Self::ForbiddenPrivateResource(err) => err,
+            Self::Conflict(err) => err,
+            Self::Gone(err) => err,
+            Self::Unprocessable(err) => err,
+            Self::InternalServerError(err) => err,
+            Self::NotImplemented(err) => err,
+            Self::NotFound(err) => err,
+            Self::MethodNotAllowed(err) => err,
+            Self::BadRequest(err) => err,
+            Self::DomainError(err) => err,
+        }
+    }
+}
+
 #[derive(Debug, serde::Serialize, Clone)]
 pub struct ApiError {
     pub sub_code: String,
@@ -890,7 +910,7 @@ pub enum ConnectorError {
     InvalidDateFormat,
     #[error("Date Formatting Failed")]
     DateFormattingFailed,
-    #[error("Invalid Data format")]
+    #[error("Invalid Data format: {field_name}")]
     InvalidDataFormat { field_name: &'static str },
     #[error("Payment Method data / Payment Method Type / Payment Experience Mismatch ")]
     MismatchedPaymentData,
@@ -926,6 +946,13 @@ pub enum ConnectorError {
     },
     #[error("Field {fields} doesn't match with the ones used during mandate creation")]
     MandatePaymentDataMismatch { fields: String },
+    #[error("Field '{field_name}' is too long for connector '{connector}'")]
+    MaxFieldLengthViolated {
+        connector: String,
+        field_name: String,
+        max_length: usize,
+        received_length: usize,
+    },
 }
 
 impl ConnectorError {

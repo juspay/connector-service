@@ -1150,6 +1150,7 @@ pub enum AttemptStatus {
     PartialCharged,
     PartialChargedAndChargeable,
     Unresolved,
+    Unspecified,
     #[default]
     Pending,
     Failure,
@@ -1191,6 +1192,7 @@ impl TryFrom<u32> for AttemptStatus {
             24 => Self::PaymentMethodAwaited,
             25 => Self::ConfirmationAwaited,
             26 => Self::DeviceDataCollectionPending,
+            27 => Self::Unspecified,
             _ => Self::Unknown,
         })
     }
@@ -2093,6 +2095,15 @@ pub enum MitCategory {
     Recurring,
     /// A retried MIT after a previous transaction failed or was declined.
     Resubmission,
+}
+
+/// Padding schemes used for cryptographic operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CryptoPadding {
+    /// PKCS7 padding - adds bytes equal to the number of padding bytes needed
+    PKCS7,
+    /// Zero padding - pads with null bytes
+    ZeroPadding,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, strum::Display)]

@@ -21,6 +21,8 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+mollie.base_url = "https://api.mollie.com/v2"
+mollie.secondary_base_url = "https://api.cc.mollie.com/v1/"
 gigadat.base_url = "https://interac.express-connect.com/"
 paybox.base_url = "https://ppps.paybox.com/PPPS.php"
 loonio.base_url = "https://loonio.ca/"
@@ -81,6 +83,7 @@ helcim.base_url = "https://api.helcim.com/"
 dlocal.base_url = "https://api.dlocal.com/"
 placetopay.base_url = "https://checkout.placetopay.com/rest/gateway"
 rapyd.base_url = "https://api.rapyd.net"
+redsys.base_url = "https://sis.redsys.es"
 aci.base_url = "https://eu-prod.oppwa.com/"
 trustpay.base_url = "https://tpgw.trustpay.eu/"
 trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"

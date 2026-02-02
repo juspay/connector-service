@@ -167,8 +167,14 @@ pub use self::paybox::Paybox;
 pub mod nexixpay;
 pub use self::nexixpay::Nexixpay;
 
+pub mod mollie;
+pub use self::mollie::Mollie;
+
 pub mod airwallex;
 pub use self::airwallex::Airwallex;
+
+pub mod redsys;
+pub use self::redsys::Redsys;
 
 pub mod worldpayxml;
 pub use self::worldpayxml::Worldpayxml;

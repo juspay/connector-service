@@ -1,6 +1,11 @@
 pub mod qr_code;
 pub mod xml_utils;
+use base64::Engine;
 use common_utils::{
+    consts::{
+        BASE64_ENGINE, BASE64_ENGINE_STD_NO_PAD, BASE64_ENGINE_URL_SAFE,
+        BASE64_ENGINE_URL_SAFE_NO_PAD,
+    },
     errors::{ParsingError, ReportSwitchExt},
     ext_traits::ValueExt,
     types::MinorUnit,
@@ -135,6 +140,28 @@ pub fn is_refund_failure(status: enums::RefundStatus) -> bool {
         | common_enums::RefundStatus::Pending
         | common_enums::RefundStatus::Success => false,
     }
+}
+
+pub(crate) fn safe_base64_decode(base64_data: String) -> Result<Vec<u8>, Error> {
+    let mut error_stack = Vec::new();
+    [
+        &BASE64_ENGINE,
+        &BASE64_ENGINE_STD_NO_PAD,
+        &BASE64_ENGINE_URL_SAFE,
+        &BASE64_ENGINE_URL_SAFE_NO_PAD,
+    ]
+    .iter()
+    .find_map(|engine| {
+        engine
+            .decode(&base64_data)
+            .map_err(|e| error_stack.push(e))
+            .ok()
+    })
+    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)
+    .attach_printable(format!(
+        "Base64 decoding failed for all engines. Errors: {:?}",
+        error_stack
+    ))
 }
 
 pub fn deserialize_zero_minor_amount_as_none<'de, D>(

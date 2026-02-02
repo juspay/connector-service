@@ -172,6 +172,14 @@ enum AuthenticationType {
   NO_THREE_DS = 2;                     // No 3D Secure, or 3DS explicitly bypassed.
 }
 
+// Indicates if 3DS method data was successfully completed or not.
+enum ThreeDsCompletionIndicator {
+  THREE_DS_COMPLETION_INDICATOR_UNSPECIFIED = 0; // Default value
+  THREE_DS_COMPLETION_INDICATOR_SUCCESS = 1; // 3DS method successfully completed ("Y")
+  THREE_DS_COMPLETION_INDICATOR_FAILURE = 2; // 3DS method was not successful ("N")
+  THREE_DS_COMPLETION_INDICATOR_NOT_AVAILABLE = 3; // 3DS method URL was unavailable ("U")
+}
+
 // Indicates the transaction status from authentication/verification process.
 enum TransactionStatus {
   // Authentication/Account Verification Successful
@@ -315,7 +323,6 @@ enum WebhookEventType {
   RECOVERY_PAYMENT_PENDING = 39;           // Recovery payment pending
   RECOVERY_INVOICE_CANCEL = 40;            // Recovery invoice cancelled
 }
-
 
 // Enum for currency codes (ISO 4217).
 enum Currency {
@@ -920,6 +927,31 @@ message OnlineMandate {
   // User agent string of the browser used for mandate acceptance.
   string user_agent = 2;
 }
+// Amount data for mandate
+message MandateAmountData {
+  // Maximum amount to be debited for the mandate transaction (in minor units)
+  int64 amount = 1;
+
+  // Currency for the transaction (ISO 4217)
+  Currency currency = 2;
+
+  // Unix timestamp (seconds since epoch) for start date of the mandate
+  optional int64 start_date = 3;
+
+  // Unix timestamp (seconds since epoch) for end date of the mandate
+  optional int64 end_date = 4;
+}
+
+// Mandate type with amount details
+message MandateType {
+  oneof mandate_type {
+    // Single use mandate with amount details
+    MandateAmountData single_use = 1;
+
+    // Multi use mandate with amount details (for recurring payments)
+    MandateAmountData multi_use = 2;
+  }
+}
 
 // Setup mandate details for payment authorization
 message SetupMandateDetails {
@@ -928,6 +960,9 @@ message SetupMandateDetails {
 
   // Details of customer acceptance
   optional CustomerAcceptance customer_acceptance = 2;
+
+  // Type of mandate (single_use or multi_use) with amount details
+  optional MandateType mandate_type = 3;
 }
 
 // Information about the customer's browser.
@@ -969,7 +1004,6 @@ message Identifier {
     google.protobuf.Empty no_response_id_marker = 3;
   }
 }
-
 
 // Reference to a payment mandate.
 message MandateReference {
@@ -1649,8 +1683,17 @@ message PaymentServiceAuthorizeOnlyRequest {
    // Locale Information
   optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
 
+  // URL for Redirection
+  optional string continue_redirection_url = 46; // URL to complete authorization
+
+  // Indicates if 3DS method data was successfully completed or not
+  optional ThreeDsCompletionIndicator threeds_completion_indicator = 47;
+
+  // Redirection Information after DDC step
+  optional RedirectionResponse redirection_response = 48; // Redirection Response from client browser
+
   // Tokenization configuration  
-  optional Tokenization tokenization_strategy = 46; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
+  optional Tokenization tokenization_strategy = 49; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
 }
 
 // Response message for a payment authorization.
@@ -1741,6 +1784,9 @@ message PaymentServiceGetRequest {
 
   // Connector Reference Id
   optional string connector_order_reference_id = 15; // Connector's reference id for order
+
+  // Environment Configuration
+  optional bool test_mode = 16; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a payment status synchronization.
@@ -1804,6 +1850,9 @@ message PaymentServiceGetResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 29; // Raw request to the connector for debugging
+
+  // Redirection and Transaction Details
+  optional RedirectForm redirection_data = 35; // Data for redirecting the customer's browser
 }
 
 // Request message for voiding a payment.
@@ -1832,6 +1881,9 @@ message PaymentServiceVoidRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 11; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Environment Configuration
+  optional bool test_mode = 13; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a payment void operation.
@@ -1974,6 +2026,9 @@ message PaymentServiceCaptureRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Environment Configuration
+  optional bool test_mode = 14; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a payment capture operation.
@@ -2293,6 +2348,10 @@ message PaymentServiceRegisterResponse {
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
 
+  // Captured Amount Details
+  optional int64 captured_amount = 17; // Amount that has been captured
+  optional int64 minor_captured_amount = 18; // Captured amount in minor currency units
+
   // State Information
   optional ConnectorState state = 12; // State data for access token storage and other connector-specific state
 
@@ -2505,6 +2564,9 @@ message PaymentServicePreAuthenticateRequest {
   // State Information
   optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
 
+  // Capture Settings
+  optional CaptureMethod capture_method = 19; // Method for capturing the payment
+
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
@@ -2546,6 +2608,9 @@ message PaymentServicePreAuthenticateResponse {
 
   // Raw Response
   optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Authentication Results
+  optional AuthenticationData authentication_data = 8; // Authentication data from the connector
 }
 
 // Request message for authentication step
@@ -2587,6 +2652,9 @@ message PaymentServiceAuthenticateRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 16; // Redirection Response from client browser
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 13; // Method for capturing the payment
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
@@ -3198,7 +3266,11 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // URLs for Redirection
   optional string return_url = 13; // URL to redirect after payment method token creation
-  optional SecretString connector_metadata = 14; // Connector-specific metadata for the transaction
+ 
+ optional SecretString connector_metadata = 14; // Connector-specific metadata for the transaction
+
+  // Environment Configuration
+  optional bool test_mode = 15; // A boolean value to indicate if the connector is in Test mode  
 }
 
 // Response message for creating a payment method token.

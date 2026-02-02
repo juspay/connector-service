@@ -70,7 +70,9 @@ use tracing::info;
 
 use crate::{
     configs::Config,
-    error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
+    error::{
+        ErrorSwitch, IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc,
+    },
     implement_connector_operation,
     request::RequestData,
     utils::{self, get_config_from_request, grpc_logging_wrapper},
@@ -608,6 +610,10 @@ impl Payments {
             })?,
             Err(error_report) => {
                 tracing::error!("{:?}", error_report);
+                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
+                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
+                let api_error = app_err.get_api_error();
+
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
@@ -631,9 +637,9 @@ impl Payments {
                         },
                     )?,
                     response: Err(ErrorResponse {
-                        status_code: 400,
-                        code: "CONNECTOR_ERROR".to_string(),
-                        message: format!("{error_report}"),
+                        status_code: api_error.error_identifier,
+                        code: api_error.sub_code.clone(),
+                        message: api_error.error_message.clone(),
                         reason: None,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: None,
@@ -796,6 +802,10 @@ impl Payments {
                 )
             })?,
             Err(error_report) => {
+                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
+                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
+                let api_error = app_err.get_api_error();
+
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
@@ -819,9 +829,9 @@ impl Payments {
                         },
                     )?,
                     response: Err(ErrorResponse {
-                        status_code: 400,
-                        code: "CONNECTOR_ERROR".to_string(),
-                        message: format!("{error_report}"),
+                        status_code: api_error.error_identifier,
+                        code: api_error.sub_code.clone(),
+                        message: api_error.error_message.clone(),
                         reason: None,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: None,
@@ -4284,6 +4294,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 redirection_data,
                 connector_response_reference_id,
                 status_code,
+                authentication_data,
             } => PaymentServicePreAuthenticateResponse {
                 transaction_id: None,
                 redirection_data: redirection_data
@@ -4387,6 +4398,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 network_advice_code: None,
                 network_error_message: None,
                 state: None,
+                authentication_data: authentication_data.map(ForeignFrom::foreign_from),
             },
             _ => {
                 return Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -4424,6 +4436,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 raw_connector_response,
                 connector_metadata: None,
                 state: None,
+                authentication_data: None,
             }
         }
     };
@@ -4507,6 +4520,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::AuthenticateResponse {
+                resource_id,
                 redirection_data,
                 authentication_data,
                 connector_response_reference_id,
@@ -4517,7 +4531,9 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
                 }),
-                transaction_id: None,
+                transaction_id: resource_id
+                    .map(grpc_api_types::payments::Identifier::foreign_try_from)
+                    .transpose()?,
                 redirection_data: redirection_data
                     .map(|form| match *form {
                         router_response_types::RedirectForm::Form {

@@ -1562,18 +1562,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     },
                 )))
             }
-            Some(enums::PaymentMethod::Card) => {
-                Ok(Self::CardsRefund(Box::new(TrustpayRefundRequestCards {
-                    instance_id: item.router_data.request.connector_transaction_id.clone(),
-                    amount,
-                    currency: item.router_data.request.currency.to_string(),
-                    reference: item.router_data.request.refund_id.clone(),
-                })))
-            }
-            _ => Err(ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("trustpay"),
-            )
-            .into()),
+            _ => Ok(Self::CardsRefund(Box::new(TrustpayRefundRequestCards {
+                instance_id: item.router_data.request.connector_transaction_id.clone(),
+                amount,
+                currency: item.router_data.request.currency.to_string(),
+                reference: item.router_data.request.refund_id.clone(),
+            }))),
         }
     }
 }
