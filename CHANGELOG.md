@@ -4,6 +4,19 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.02.0
+
+### Bug Fixes
+
+- **connector:**
+  - Map `Ds_State` to status in Redsys PSync when `Ds_Response` is absent ([#464](https://github.com/juspay/connector-service/pull/464)) ([`b71ee3a`](https://github.com/juspay/connector-service/commit/b71ee3ac9bc911bb54ecdbdfbca86f2d86367b3c))
+  - Rapyd amount type in request ([#466](https://github.com/juspay/connector-service/pull/466)) ([`e6cae8e`](https://github.com/juspay/connector-service/commit/e6cae8e0bdb46bb5dc018fd2774f4ef2346328cb))
+- **payload:** Do not pass `content-type` header in sync calls ([#465](https://github.com/juspay/connector-service/pull/465)) ([`995cbe5`](https://github.com/juspay/connector-service/commit/995cbe5375698368c5923b570749cba8bc55195b))
+
+**Full Changelog:** [`2026.01.30.0...2026.02.02.0`](https://github.com/juspay/connector-service/compare/2026.01.30.0...2026.02.02.0)
+
+- - -
+
 ## 2026.01.30.0
 
 ### Features
