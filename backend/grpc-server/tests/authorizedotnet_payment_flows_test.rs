@@ -444,6 +444,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         state: None,
         merchant_account_metadata: None,
         test_mode: None,
+        merchant_order_reference_id: None,
     }
 }
 
