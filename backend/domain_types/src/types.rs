@@ -9867,7 +9867,7 @@ impl ForeignTryFrom<(bool, RedirectDetailsResponse)>
                 .map(|amount| amount.get_amount_as_i64()),
             response_currency: redirect_details_response
                 .response_currency
-                .map(|currency| grpc_api_types::payments::Currency::foreign_try_from(currency))
+                .map(grpc_api_types::payments::Currency::foreign_try_from)
                 .transpose()?
                 .map(|currency| currency.into()),
             status: redirect_details_response
