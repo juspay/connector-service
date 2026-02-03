@@ -1142,7 +1142,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: Some(false), // Wells Fargo doesn't support incremental authorization
+                incremental_authorization_allowed: Some(false),
                 status_code: item.http_code,
             })
         } else {
@@ -1156,9 +1156,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
         };
 
         // Build connector response with additional payment method data
-        let connector_response =
-            convert_to_additional_payment_method_connector_response(&response.processor_information)
-                .map(ConnectorResponseData::with_additional_payment_method_data);
+        let connector_response = convert_to_additional_payment_method_connector_response(
+            &response.processor_information,
+        )
+        .map(ConnectorResponseData::with_additional_payment_method_data);
 
         Ok(Self {
             response: response_data,
@@ -1213,7 +1214,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: Some(false), // Wells Fargo doesn't support incremental authorization
+                incremental_authorization_allowed: Some(false),
                 status_code: item.http_code,
             })
         } else {
@@ -1227,9 +1228,10 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
         };
 
         // Build connector response with additional payment method data
-        let connector_response =
-            convert_to_additional_payment_method_connector_response(&response.processor_information)
-                .map(ConnectorResponseData::with_additional_payment_method_data);
+        let connector_response = convert_to_additional_payment_method_connector_response(
+            &response.processor_information,
+        )
+        .map(ConnectorResponseData::with_additional_payment_method_data);
 
         Ok(Self {
             response: response_data,
@@ -1272,7 +1274,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: Some(false), // Wells Fargo doesn't support incremental authorization
+                incremental_authorization_allowed: Some(false),
                 status_code: item.http_code,
             })
         } else {
@@ -1286,9 +1288,10 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
         };
 
         // Build connector response with additional payment method data
-        let connector_response =
-            convert_to_additional_payment_method_connector_response(&response.processor_information)
-                .map(ConnectorResponseData::with_additional_payment_method_data);
+        let connector_response = convert_to_additional_payment_method_connector_response(
+            &response.processor_information,
+        )
+        .map(ConnectorResponseData::with_additional_payment_method_data);
 
         Ok(Self {
             response: response_data,
@@ -1331,7 +1334,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: Some(false), // Wells Fargo doesn't support incremental authorization
+                incremental_authorization_allowed: Some(false),
                 status_code: item.http_code,
             })
         } else {
@@ -1345,9 +1348,10 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
         };
 
         // Build connector response with additional payment method data
-        let connector_response =
-            convert_to_additional_payment_method_connector_response(&response.processor_information)
-                .map(ConnectorResponseData::with_additional_payment_method_data);
+        let connector_response = convert_to_additional_payment_method_connector_response(
+            &response.processor_information,
+        )
+        .map(ConnectorResponseData::with_additional_payment_method_data);
 
         Ok(Self {
             response: response_data,
@@ -1411,7 +1415,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: Some(false), // Wells Fargo doesn't support incremental authorization
+                incremental_authorization_allowed: Some(false),
                 status_code: item.http_code,
             })
         } else {
@@ -1425,9 +1429,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
         };
 
         // Build connector response with additional payment method data
-        let connector_response =
-            convert_to_additional_payment_method_connector_response(&response.processor_information)
-                .map(ConnectorResponseData::with_additional_payment_method_data);
+        let connector_response = convert_to_additional_payment_method_connector_response(
+            &response.processor_information,
+        )
+        .map(ConnectorResponseData::with_additional_payment_method_data);
 
         Ok(Self {
             response: response_data,
