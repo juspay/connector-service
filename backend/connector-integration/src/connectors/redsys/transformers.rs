@@ -1627,7 +1627,29 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                         });
                         (attempt_status, payment_response)
                     } else {
-                        // No ds_response - use existing status
+                        // No ds_response - check Ds_State for status mapping
+                        let status = match latest_response.ds_state {
+                            Some(responses::DsState::A) => {
+                                // Authenticating - customer needs to complete 3DS
+                                common_enums::AttemptStatus::AuthenticationPending
+                            }
+                            Some(responses::DsState::P) => common_enums::AttemptStatus::Pending, // Authorizing - payment in progress
+                            Some(responses::DsState::S) => common_enums::AttemptStatus::Pending, // Requested - initial state
+                            Some(responses::DsState::F) => {
+                                // Completed - check capture method for final status
+                                match item.router_data.request.capture_method {
+                                    Some(enums::CaptureMethod::Automatic) | None => {
+                                        common_enums::AttemptStatus::Charged
+                                    }
+                                    Some(enums::CaptureMethod::Manual) => {
+                                        common_enums::AttemptStatus::Authorized
+                                    }
+                                    _ => common_enums::AttemptStatus::Pending,
+                                }
+                            }
+                            _ => item.router_data.resource_common_data.status, // Fallback to existing status if Ds_State is unknown/missing
+                        };
+
                         let payment_response = Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
                                 latest_response.ds_order.clone(),
@@ -1640,10 +1662,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                         });
-                        (
-                            item.router_data.resource_common_data.status,
-                            payment_response,
-                        )
+                        (status, payment_response)
                     }
                 } else {
                     // NEW: No valid responses found
