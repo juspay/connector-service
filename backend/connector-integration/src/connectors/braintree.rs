@@ -286,14 +286,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_webhook_source_verification_signature(
         &self,
         request: &RequestDetails,
-        _connector_webhook_secrets: &ConnectorWebhookSecrets,
+        connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, Report<errors::ConnectorError>> {
-        let resource: transformers::BraintreeWebhookResponse =
-            serde_urlencoded::from_bytes(&request.body)
-                .change_context(errors::ConnectorError::WebhookSignatureNotFound)
-                .attach_printable("Could not find bt_signature in form-encoded body")?;
+        let notif_item = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
-        Ok(resource.bt_signature.into_bytes())
+        let signature_pairs: Vec<(&str, &str)> = notif_item
+            .bt_signature
+            .split('&')
+            .collect::<Vec<&str>>()
+            .into_iter()
+            .map(|pair| pair.split_once('|').unwrap_or(("", "")))
+            .collect::<Vec<(_, _)>>();
+
+        let merchant_secret = connector_webhook_secrets
+            .additional_secret //public key
+            .clone()
+            .ok_or(errors::ConnectorError::WebhookVerificationSecretNotFound)?;
+
+        let signature = get_matching_webhook_signature(signature_pairs, merchant_secret.peek())
+            .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
+        Ok(signature.as_bytes().to_vec())
     }
 
     fn get_webhook_source_verification_message(
@@ -442,6 +455,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             network_txn_id: None,
         })
     }
+}
+
+fn get_matching_webhook_signature(
+    signature_pairs: Vec<(&str, &str)>,
+    secret: &str,
+) -> Option<String> {
+    for (public_key, signature) in signature_pairs {
+        if public_key == secret {
+            return Some(signature.to_string());
+        }
+    }
+    None
 }
 
 fn get_webhook_object_from_body(
