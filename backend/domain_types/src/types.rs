@@ -391,6 +391,21 @@ impl ForeignTryFrom<grpc_api_types::payments::UpiSource> for payment_method_data
             grpc_api_types::payments::UpiSource::UpiCl => Ok(Self::UpiCl),
             grpc_api_types::payments::UpiSource::UpiAccount => Ok(Self::UpiAccount),
             grpc_api_types::payments::UpiSource::UpiCcCl => Ok(Self::UpiCcCl),
+            grpc_api_types::payments::UpiSource::UpiPpi => Ok(Self::UpiPpi),
+            grpc_api_types::payments::UpiSource::UpiVoucher => Ok(Self::UpiVoucher),
+        }
+    }
+}
+
+impl ForeignFrom<payment_method_data::UpiSource> for grpc_api_types::payments::UpiSource {
+    fn foreign_from(value: payment_method_data::UpiSource) -> Self {
+        match value {
+            payment_method_data::UpiSource::UpiCc => Self::UpiCc,
+            payment_method_data::UpiSource::UpiCl => Self::UpiCl,
+            payment_method_data::UpiSource::UpiAccount => Self::UpiAccount,
+            payment_method_data::UpiSource::UpiCcCl => Self::UpiCcCl,
+            payment_method_data::UpiSource::UpiPpi => Self::UpiPpi,
+            payment_method_data::UpiSource::UpiVoucher => Self::UpiVoucher,
         }
     }
 }
@@ -3459,17 +3474,35 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                             card_network,
                             domestic_network,
                         } => grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
-                            card: Some(grpc_api_types::payments::CardConnectorResponse {
-                                authentication_data: authentication_data
-                                    .as_ref()
-                                    .and_then(|data| serde_json::to_vec(data).ok()),
-                                payment_checks: payment_checks
-                                    .as_ref()
-                                    .and_then(|checks| serde_json::to_vec(checks).ok()),
-                                card_network: card_network.clone(),
-                                domestic_network: domestic_network.clone(),
-                            }),
+                            payment_method_data: Some(
+                                grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Card(
+                                    grpc_api_types::payments::CardConnectorResponse {
+                                        authentication_data: authentication_data
+                                            .as_ref()
+                                            .and_then(|data| serde_json::to_vec(data).ok()),
+                                        payment_checks: payment_checks
+                                            .as_ref()
+                                            .and_then(|checks| serde_json::to_vec(checks).ok()),
+                                        card_network: card_network.clone(),
+                                        domestic_network: domestic_network.clone(),
+                                    }
+                                )
+                            ),
                         },
+                        AdditionalPaymentMethodConnectorResponse::Upi { upi_mode } => {
+                            grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
+                                payment_method_data: Some(
+                                    grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Upi(
+                                        grpc_api_types::payments::UpiConnectorResponse {
+                                            upi_mode: upi_mode.clone().map(|source| {
+                                                let proto_source: grpc_api_types::payments::UpiSource = ForeignFrom::foreign_from(source);
+                                                proto_source as i32
+                                            }),
+                                        }
+                                    )
+                                ),
+                            }
+                        }
                     }
                 },
             ),
