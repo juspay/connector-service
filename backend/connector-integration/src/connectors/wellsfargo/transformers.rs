@@ -342,17 +342,6 @@ pub struct CardVerification {
     pub result_code_raw: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ClientRiskInformation {
-    pub rules: Option<Vec<ClientRiskInformationRules>>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ClientRiskInformationRules {
-    pub name: Option<Secret<String>>,
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoErrorInformation {
@@ -365,22 +354,6 @@ pub struct WellsfargoErrorInformation {
 pub struct ErrorInfo {
     pub field: Option<String>,
     pub reason: Option<String>,
-}
-
-// Additional error structures for compatibility with Hyperswitch error handling
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Details {
-    pub field: String,
-    pub reason: String,
-}
-
-#[derive(Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ErrorInformation {
-    pub message: String,
-    pub reason: String,
-    pub details: Option<Vec<Details>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
