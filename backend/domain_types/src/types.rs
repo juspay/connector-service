@@ -9387,6 +9387,7 @@ impl<
                     )
                 })
                 .transpose()?,
+            mandate_reference: None,
         })
     }
 }
