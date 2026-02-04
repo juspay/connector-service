@@ -598,6 +598,7 @@ enum Connector {
   REVOLUT = 104;
   LOONIO = 105;
   GIGADAT = 106;
+  HYPERPG = 107;
 }
 
 // Payment method types.
@@ -1240,7 +1241,10 @@ message CardConnectorResponse {
 
 // Additional payment method connector response
 message AdditionalPaymentMethodConnectorResponse {
-  CardConnectorResponse card = 1; // Card-specific response data
+  oneof payment_method_data {
+    CardConnectorResponse card = 1; // Card-specific response data
+    UpiConnectorResponse upi = 2; // UPI-specific response data
+  }
 }
 
 // Connector response data containing various information from the connector
@@ -1793,6 +1797,9 @@ message PaymentServiceGetRequest {
 
   // Connector Reference Id
   optional string connector_order_reference_id = 15; // Connector's reference id for order
+
+  // Environment Configuration
+  optional bool test_mode = 16; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a payment status synchronization.
@@ -1856,6 +1863,9 @@ message PaymentServiceGetResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 29; // Raw request to the connector for debugging
+
+  // Redirection and Transaction Details
+  optional RedirectForm redirection_data = 35; // Data for redirecting the customer's browser
 }
 
 // Request message for voiding a payment.
@@ -1884,6 +1894,9 @@ message PaymentServiceVoidRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 11; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Environment Configuration
+  optional bool test_mode = 13; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a payment void operation.
@@ -2026,6 +2039,9 @@ message PaymentServiceCaptureRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Environment Configuration
+  optional bool test_mode = 14; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a payment capture operation.

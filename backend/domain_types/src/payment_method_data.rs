@@ -383,14 +383,18 @@ pub enum UpiSource {
     UpiCl,      // UPI Credit Line
     UpiAccount, // UPI Bank Account (Savings)
     UpiCcCl,    // UPI Credit Card + Credit Line
+    UpiPpi,     // UPI Prepaid Payment Instrument
+    UpiVoucher, // UPI Voucher
 }
 
 impl UpiSource {
     /// Converts UpiSource to payment mode string for PhonePe connector
-    /// Maps: UPI_CC/UPI_CL/UPI_CC_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
+    /// Maps: UPI_CC/UPI_CL/UPI_CC_CL/UPI_PPI/UPI_VOUCHER -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
     pub fn to_payment_mode(&self) -> String {
         match self {
-            Self::UpiCc | Self::UpiCl | Self::UpiCcCl => "ALL".to_string(),
+            Self::UpiCc | Self::UpiCl | Self::UpiCcCl | Self::UpiPpi | Self::UpiVoucher => {
+                "ALL".to_string()
+            }
             Self::UpiAccount => "ACCOUNT".to_string(),
         }
     }
