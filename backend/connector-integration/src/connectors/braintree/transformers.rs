@@ -11,7 +11,8 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, PaymentMethodToken, RSync, RepeatPayment, SdkSessionToken, Void,
+        Authenticate, Authorize, Capture, PostAuthenticate, PSync, PaymentMethodToken, RSync,
+        RepeatPayment, SdkSessionToken, Void,
     },
     connector_types::{
         self, AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse,
@@ -717,6 +718,154 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 }),
                 ..item.router_data
             }),
+        }
+    }
+}
+
+// Authenticate flow response transformer
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<BraintreeAuthenticateResponse, Self>>
+    for RouterDataV2<Authenticate, PaymentFlowData, connector_types::PaymentsAuthenticateData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BraintreeAuthenticateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            BraintreeAuthResponse::ClientTokenResponse(client_token_data) => {
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: enums::AttemptStatus::AuthenticationPending,
+                        ..item.router_data.resource_common_data.clone()
+                    },
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::NoResponseId,
+                        redirection_data: Some(Box::new(get_braintree_redirect_form(
+                            *client_token_data,
+                            item.router_data
+                                .resource_common_data
+                                .get_payment_method_token()?,
+                            item.router_data
+                                .request
+                                .payment_method_data
+                                .clone()
+                                .ok_or(ConnectorError::MissingRequiredField {
+                                    field_name: "payment_method_data",
+                                })?,
+                            item.router_data.request.get_continue_redirection_url()?.to_string(),
+                        )?)),
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    }),
+                    ..item.router_data
+                })
+            }
+            BraintreeAuthResponse::ErrorResponse(error_response) => {
+                Ok(Self {
+                    response: build_error_response(&error_response.errors, item.http_code)
+                        .map_err(|err| *err),
+                    ..item.router_data
+                })
+            }
+            _ => Err(ConnectorError::ResponseDeserializationFailed.into()),
+        }
+    }
+}
+
+// PostAuthenticate flow response transformer - reuses the existing BraintreeAuthResponse transformer
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<BraintreePostAuthenticateResponse, Self>>
+    for RouterDataV2<PostAuthenticate, PaymentFlowData, connector_types::PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BraintreePostAuthenticateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            BraintreeAuthResponse::ErrorResponse(error_response) => {
+                Ok(Self {
+                    response: build_error_response(&error_response.errors, item.http_code)
+                        .map_err(|err| *err),
+                    ..item.router_data
+                })
+            }
+            BraintreeAuthResponse::AuthResponse(auth_response) => {
+                let transaction_data = auth_response.data.authorize_credit_card.transaction;
+                let status = enums::AttemptStatus::from(transaction_data.status.clone());
+                let response = if domain_types::utils::is_payment_failure(status) {
+                    Err(create_failure_error_response(
+                        transaction_data.status,
+                        Some(transaction_data.id),
+                        item.http_code,
+                    ))
+                } else {
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
+                        redirection_data: None,
+                        mandate_reference: transaction_data.payment_method.as_ref().map(|pm| {
+                            Box::new(MandateReference {
+                                connector_mandate_id: Some(pm.id.clone().expose()),
+                                payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
+                            })
+                        }),
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    })
+                };
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response,
+                    ..item.router_data
+                })
+            }
+            BraintreeAuthResponse::WalletAuthResponse(wallet_response) => {
+                let transaction_data = &wallet_response.data.authorize_payment_method.transaction;
+                let status = enums::AttemptStatus::from(transaction_data.status.clone());
+
+                let response = if domain_types::utils::is_payment_failure(status) {
+                    Err(create_failure_error_response(
+                        transaction_data.status.clone(),
+                        Some(transaction_data.id.clone()),
+                        item.http_code,
+                    ))
+                } else {
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            transaction_data.id.clone(),
+                        ),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: transaction_data.legacy_id.clone(),
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    })
+                };
+
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response,
+                    ..item.router_data
+                })
+            }
+            _ => Err(ConnectorError::ResponseDeserializationFailed.into()),
         }
     }
 }
@@ -2222,6 +2371,14 @@ pub struct BraintreeRedirectionResponse {
     pub authentication_response: String,
 }
 
+// Authenticate flow types - for initiating 3DS
+pub type BraintreeAuthenticateRequest = BraintreeClientTokenRequest;
+pub type BraintreeAuthenticateResponse = BraintreeAuthResponse;
+
+// PostAuthenticate flow types - for completing payment with 3DS nonce
+pub type BraintreePostAuthenticateRequest = CardPaymentRequest;
+pub type BraintreePostAuthenticateResponse = BraintreeAuthResponse;
+
 fn get_card_isin_from_payment_method_data<T>(
     card_details: &PaymentMethodData<T>,
 ) -> Result<String, error_stack::Report<ConnectorError>>
@@ -2252,6 +2409,179 @@ impl TryFrom<BraintreeMeta> for BraintreeClientTokenRequest {
                     client_token: ClientTokenInput {
                         merchant_account_id: metadata.merchant_account_id,
                     },
+                },
+            },
+        })
+    }
+}
+
+// Authenticate flow: Returns client token for 3DS initiation
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        RouterDataV2<
+            Authenticate,
+            PaymentFlowData,
+            connector_types::PaymentsAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    > for BraintreeAuthenticateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        router_data: RouterDataV2<
+            Authenticate,
+            PaymentFlowData,
+            connector_types::PaymentsAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let metadata: BraintreeMeta = utils::to_connector_meta_from_secret(
+            router_data
+                .resource_common_data
+                .connector_meta_data
+                .clone(),
+        )
+        .change_context(ConnectorError::InvalidConnectorConfig {
+            config: "metadata",
+        })?;
+
+        BraintreeClientTokenRequest::try_from(metadata)
+    }
+}
+
+// PostAuthenticate flow: Completes payment with 3DS nonce from redirect response
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BraintreeRouterData<
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                connector_types::PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BraintreePostAuthenticateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: BraintreeRouterData<
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                connector_types::PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+
+        // Get metadata from connector_meta_data
+        let metadata: BraintreeMeta = utils::to_connector_meta_from_secret(
+            router_data
+                .resource_common_data
+                .connector_meta_data
+                .clone(),
+        )
+        .change_context(ConnectorError::InvalidConnectorConfig {
+            config: "metadata",
+        })?;
+
+        // Validate currency
+        validate_currency(
+            router_data.request.currency.ok_or(ConnectorError::MissingRequiredField {
+                field_name: "currency",
+            })?,
+            Some(metadata.merchant_config_currency),
+        )?;
+
+        // Extract redirect response payload
+        let redirect_response = router_data
+            .request
+            .redirect_response
+            .as_ref()
+            .and_then(|r| r.payload.as_ref())
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "redirect_response.payload",
+            })?;
+
+        let redirection_response: BraintreeRedirectionResponse =
+            serde_json::from_value(redirect_response.clone().expose())
+                .change_context(ConnectorError::MissingConnectorRedirectionPayload {
+                    field_name: "redirection_response",
+                })?;
+
+        // Parse 3DS response from authentication_response
+        let three_ds_data = serde_json::from_str::<BraintreeThreeDsResponse>(
+            &redirection_response.authentication_response,
+        )
+        .change_context(ConnectorError::MissingConnectorRedirectionPayload {
+            field_name: "three_ds_data",
+        })?;
+
+        // Get payment method token
+        let payment_method_token = router_data
+            .resource_common_data
+            .get_payment_method_token()?;
+
+        // Determine query based on capture method (default to auto capture if not specified)
+        let is_auto_capture = true; // PostAuthenticate typically follows the original payment's capture method
+
+        let query = if is_auto_capture {
+            constants::CHARGE_CREDIT_CARD_MUTATION.to_string()
+        } else {
+            constants::AUTHORIZE_CREDIT_CARD_MUTATION.to_string()
+        };
+
+        // Build transaction body using amount from connector's converter
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                router_data.request.amount,
+                router_data.request.currency.ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
+
+        let transaction_body = TransactionBody::Regular(RegularTransactionBody {
+            amount,
+            merchant_account_id: metadata.merchant_account_id,
+            channel: constants::CHANNEL_CODE.to_string(),
+            customer_details: router_data
+                .resource_common_data
+                .get_billing_email()
+                .ok()
+                .map(|email| CustomerBody { email }),
+            order_id: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        });
+
+        // Build the payment request using the NONCE as payment_method_id
+        Ok(Self {
+            query,
+            variables: VariablePaymentInput {
+                input: PaymentInput {
+                    payment_method_id: match payment_method_token {
+                        PaymentMethodTokenFlow::Token(_) => three_ds_data.nonce,
+                        PaymentMethodTokenFlow::ApplePayDecrypt(_) => Err(
+                            unimplemented_payment_method!("Apple Pay", "Braintree"),
+                        )?,
+                        PaymentMethodTokenFlow::PazeDecrypt(_) => {
+                            Err(unimplemented_payment_method!("Paze", "Braintree"))?
+                        }
+                        PaymentMethodTokenFlow::GooglePayDecrypt(_) => {
+                            Err(unimplemented_payment_method!("Google Pay", "Braintree"))?
+                        }
+                    },
+                    transaction: transaction_body,
+                    options: None, // No options needed - nonce already has 3DS data embedded
                 },
             },
         })
