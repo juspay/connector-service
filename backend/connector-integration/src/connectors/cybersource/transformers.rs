@@ -5093,34 +5093,30 @@ fn convert_metadata_to_merchant_defined_info(
     metadata: Option<serde_json::Value>,
     merchant_order_reference_id: Option<String>,
 ) -> Option<Vec<utils::MerchantDefinedInformation>> {
-    let mut vector = Vec::new();
     let mut iter = 1;
 
-    // Add metadata if present
-    if let Some(metadata) = metadata {
-        let hashmap: std::collections::BTreeMap<String, serde_json::Value> =
-            serde_json::from_str(&metadata.to_string())
-                .unwrap_or(std::collections::BTreeMap::new());
-        for (key, value) in hashmap {
-            vector.push(utils::MerchantDefinedInformation {
-                key: iter,
-                value: format!("{key}={value}"),
-            });
-            iter += 1;
-        }
-    }
+    let mut result: Vec<utils::MerchantDefinedInformation> = metadata
+        .and_then(|value| value.as_object().cloned())
+        .map(|map| {
+            map.into_iter()
+                .map(|(key, value)| {
+                    let mdi = utils::MerchantDefinedInformation {
+                        key: iter,
+                        value: format!("{key}={value}"),
+                    };
+                    iter += 1;
+                    mdi
+                })
+                .collect()
+        })
+        .unwrap_or_default();
 
-    // Add merchant_order_reference_id if present
     if let Some(merchant_ref_id) = merchant_order_reference_id {
-        vector.push(utils::MerchantDefinedInformation {
+        result.push(utils::MerchantDefinedInformation {
             key: iter,
-            value: format!("merchant_order_reference_id={}", merchant_ref_id),
+            value: format!("merchant_order_reference_id={merchant_ref_id}"),
         });
     }
 
-    if vector.is_empty() {
-        None
-    } else {
-        Some(vector)
-    }
+    (!result.is_empty()).then_some(result)
 }
