@@ -1961,14 +1961,13 @@ impl<
         let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
 
         // Store merchant_account_metadata for connector use
-        let merchant_account_metadata = value
-            .clone()
-            .merchant_account_metadata
-            .and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let merchant_account_metadata = value.clone().merchant_account_metadata.and_then(|m| {
+            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
         let merchant_account_id = merchant_account_metadata
             .as_ref()
             .and_then(|m: &Secret<serde_json::Value>| m.peek().get("merchant_account_id"))
@@ -2175,14 +2174,13 @@ impl<
         };
         let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
         // Store merchant_account_metadata for connector use
-        let merchant_account_metadata = value
-            .clone()
-            .merchant_account_metadata
-            .and_then(|m| {
-                SecretSerdeValue::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let merchant_account_metadata = value.clone().merchant_account_metadata.and_then(|m| {
+            SecretSerdeValue::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
         let merchant_account_id = merchant_account_metadata
             .as_ref()
             .and_then(|m| m.peek().get("merchant_account_id"))
@@ -2335,13 +2333,11 @@ impl<
                     error_object: None,
                 }))?,
             request_incremental_authorization: value.request_incremental_authorization,
-            metadata: value
-                .metadata
-                .and_then(|m| {
-                    ForeignTryFrom::foreign_try_from((m, "metadata"))
-                        .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                        .ok()
-                }),
+            metadata: value.metadata.and_then(|m| {
+                ForeignTryFrom::foreign_try_from((m, "metadata"))
+                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
+                    .ok()
+            }),
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
             shipping_cost,
@@ -2918,13 +2914,13 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let connector_meta_data = value
-            .merchant_account_metadata
-            .and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
+            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
 
         let order_details = (!value.order_details.is_empty())
             .then(|| {
@@ -3032,13 +3028,13 @@ impl
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let connector_meta_data = value
-            .merchant_account_metadata
-            .and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
+            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
 
         let order_details = (!value.order_details.is_empty())
             .then(|| {
@@ -3172,11 +3168,11 @@ impl
             connector_customer: value.connector_customer_id,
             description: value.description,
             return_url: None,
-            connector_meta_data: value
-                .merchant_account_metadata
-                .and_then(|m| {
+            connector_meta_data: value.merchant_account_metadata.and_then(|m| {
                 ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
+                    .inspect_err(|e| {
+                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                    })
                     .ok()
             }),
             amount_captured: None,
@@ -3301,13 +3297,13 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-        let connector_meta_data = value
-            .merchant_account_metadata
-            .and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
+            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -4053,13 +4049,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             }
         };
 
-        let connector_metadata = value
-            .merchant_account_metadata
-            .and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let connector_metadata = value.merchant_account_metadata.and_then(|m| {
+            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
 
         Ok(Self {
             connector_transaction_id,
@@ -4746,11 +4742,11 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
             split_refunds: None,
-            merchant_account_metadata: value
-                .merchant_account_metadata
-                .and_then(|m| {
+            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
                 ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
+                    .inspect_err(|e| {
+                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                    })
                     .ok()
             }),
         })
@@ -4779,13 +4775,13 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
-        let connector_meta_data = value
-            .merchant_account_metadata
-            .and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
+            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
 
         let payment_method = value
             .payment_method_type
@@ -4844,13 +4840,13 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
-        let connector_meta_data = value
-            .merchant_account_metadata
-            .and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
+            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
 
         let payment_method = value
             .payment_method_type
@@ -5497,25 +5493,23 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                     _ => None,
                 })
                 .unwrap_or_default(),
-            metadata: value
-                .metadata
-                .and_then(|m| {
-                    ForeignTryFrom::foreign_try_from((m, "metadata"))
-                        .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                        .ok()
-                }),
+            metadata: value.metadata.and_then(|m| {
+                ForeignTryFrom::foreign_try_from((m, "metadata"))
+                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
+                    .ok()
+            }),
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
             integrity_object: None,
             amount,
             currency,
-            connector_metadata: value
-                .connector_metadata
-                .and_then(|m| {
-                    ForeignTryFrom::foreign_try_from((m, "connector metadata"))
-                        .inspect_err(|e| tracing::error!("Connector metadata conversion error: {:?}", e))
-                        .ok()
-                }),
+            connector_metadata: value.connector_metadata.and_then(|m| {
+                ForeignTryFrom::foreign_try_from((m, "connector metadata"))
+                    .inspect_err(|e| {
+                        tracing::error!("Connector metadata conversion error: {:?}", e)
+                    })
+                    .ok()
+            }),
         })
     }
 }
@@ -5872,13 +5866,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
             refund_amount: value.refund_amount,
-            connector_metadata: value
-                .connector_metadata
-                .and_then(|m| {
-                    ForeignTryFrom::foreign_try_from((m, "connector metadata"))
-                        .inspect_err(|e| tracing::error!("Connector metadata conversion error: {:?}", e))
-                        .ok()
-                }),
+            connector_metadata: value.connector_metadata.and_then(|m| {
+                ForeignTryFrom::foreign_try_from((m, "connector metadata"))
+                    .inspect_err(|e| {
+                        tracing::error!("Connector metadata conversion error: {:?}", e)
+                    })
+                    .ok()
+            }),
             refund_connector_metadata: value
                 .refund_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "refund metadata")))
@@ -5901,11 +5895,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .transpose()?,
             integrity_object: None,
             split_refunds: None,
-            merchant_account_metadata: value
-                .merchant_account_metadata
-                .and_then(|m| {
+            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
                 ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
+                    .inspect_err(|e| {
+                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                    })
                     .ok()
             }),
         })
@@ -6238,26 +6232,24 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
-            metadata: value
-                .metadata
-                .and_then(|m| {
-                    ForeignTryFrom::foreign_try_from((m, "metadata"))
-                        .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                        .ok()
-                }),
+            metadata: value.metadata.and_then(|m| {
+                ForeignTryFrom::foreign_try_from((m, "metadata"))
+                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
+                    .ok()
+            }),
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             integrity_object: None,
             capture_method,
-            connector_metadata: value
-                .connector_metadata
-                .and_then(|m| {
-                    ForeignTryFrom::foreign_try_from((m, "connector metadata"))
-                        .inspect_err(|e| tracing::error!("Connector metadata conversion error: {:?}", e))
-                        .ok()
-                }),
+            connector_metadata: value.connector_metadata.and_then(|m| {
+                ForeignTryFrom::foreign_try_from((m, "connector metadata"))
+                    .inspect_err(|e| {
+                        tracing::error!("Connector metadata conversion error: {:?}", e)
+                    })
+                    .ok()
+            }),
         })
     }
 }
@@ -6339,13 +6331,13 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-        let connector_meta_data = value
-            .merchant_account_metadata
-            .and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
+            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -6724,13 +6716,11 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-        let metadata = value
-            .metadata
-            .and_then(|m| {
-                SecretSerdeValue::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let metadata = value.metadata.and_then(|m| {
+            SecretSerdeValue::foreign_try_from((m, "metadata"))
+                .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
+                .ok()
+        });
         let description = metadata
             .as_ref()
             .and_then(|m| m.peek().get("description"))
@@ -6889,13 +6879,11 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             return_url: value.return_url.clone(),
             payment_method_type: None,
             request_incremental_authorization: false,
-            metadata: value
-                .metadata
-                .and_then(|m| {
-                    ForeignTryFrom::foreign_try_from((m, "metadata"))
-                        .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                        .ok()
-                }),
+            metadata: value.metadata.and_then(|m| {
+                ForeignTryFrom::foreign_try_from((m, "metadata"))
+                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
+                    .ok()
+            }),
             complete_authorize_url: None,
             capture_method: None,
             integrity_object: None,
@@ -6914,11 +6902,11 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                 }))?,
             billing_descriptor,
             merchant_order_reference_id: value.merchant_order_reference_id,
-            merchant_account_metadata: value
-                .merchant_account_metadata
-                .and_then(|m| {
+            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
                 ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
+                    .inspect_err(|e| {
+                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                    })
                     .ok()
             }),
             payment_channel,
@@ -7518,13 +7506,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
             amount: common_utils::types::MinorUnit::new(value.amount),
             currency,
             integrity_object: None,
-            metadata: value
-                .metadata
-                .and_then(|m| {
-                    ForeignTryFrom::foreign_try_from((m, "metadata"))
-                        .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                        .ok()
-                }),
+            metadata: value.metadata.and_then(|m| {
+                ForeignTryFrom::foreign_try_from((m, "metadata"))
+                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
+                    .ok()
+            }),
             webhook_url: value.webhook_url,
         })
     }
@@ -7558,13 +7544,13 @@ impl
         );
 
         // Create connector metadata from the metadata field if present
-        let connector_meta_data = value
-            .merchant_account_metadata
-            .and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
+            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
+                .inspect_err(|e| {
+                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                })
+                .ok()
+        });
 
         // Extract access token from state if present
         let access_token = value
@@ -8121,11 +8107,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodT
             setup_mandate_details: None,
             integrity_object: None,
             split_payments: None,
-            merchant_account_metadata: value
-                .merchant_account_metadata
-                .and_then(|m| {
+            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
                 ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
+                    .inspect_err(|e| {
+                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                    })
                     .ok()
             }),
         })
@@ -8541,13 +8527,11 @@ impl<
             minor_amount: common_utils::types::MinorUnit::new(minor_amount),
             currency: common_enums::Currency::foreign_try_from(currency)?,
             merchant_order_reference_id,
-            metadata: value
-                .metadata
-                .and_then(|m| {
-                    ForeignTryFrom::foreign_try_from((m, "metadata"))
-                        .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                        .ok()
-                }),
+            metadata: value.metadata.and_then(|m| {
+                ForeignTryFrom::foreign_try_from((m, "metadata"))
+                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
+                    .ok()
+            }),
             webhook_url,
             router_return_url: value.return_url,
             integrity_object: None,
@@ -8558,11 +8542,11 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             payment_method_type,
-            merchant_account_metadata: value
-                .merchant_account_metadata
-                .and_then(|m| {
+            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
                 ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
+                    .inspect_err(|e| {
+                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                    })
                     .ok()
             }),
             off_session: value.off_session,
@@ -9743,11 +9727,11 @@ impl
             connector_customer: None,
             description: None,
             return_url: value.return_url.clone(),
-            connector_meta_data: value
-                .merchant_account_metadata
-                .and_then(|m| {
+            connector_meta_data: value.merchant_account_metadata.and_then(|m| {
                 ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
+                    .inspect_err(|e| {
+                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                    })
                     .ok()
             }),
             amount_captured: None,
@@ -9806,13 +9790,11 @@ impl
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let metadata = value
-            .metadata
-            .and_then(|m| {
-                SecretSerdeValue::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let metadata = value.metadata.and_then(|m| {
+            SecretSerdeValue::foreign_try_from((m, "metadata"))
+                .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
+                .ok()
+        });
         let description = metadata
             .as_ref()
             .and_then(|m| m.peek().get("description"))
@@ -9836,11 +9818,11 @@ impl
             connector_customer: None,
             description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value
-                .merchant_account_metadata
-                .and_then(|m| {
+            connector_meta_data: value.merchant_account_metadata.and_then(|m| {
                 ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
+                    .inspect_err(|e| {
+                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                    })
                     .ok()
             }),
             amount_captured: None,
@@ -9905,13 +9887,11 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
-        let metadata = value
-            .metadata
-            .and_then(|m| {
-                SecretSerdeValue::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            });
+        let metadata = value.metadata.and_then(|m| {
+            SecretSerdeValue::foreign_try_from((m, "metadata"))
+                .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
+                .ok()
+        });
         let description = metadata
             .as_ref()
             .and_then(|m| m.peek().get("description"))
@@ -9935,11 +9915,11 @@ impl
             connector_customer: None,
             description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value
-                .merchant_account_metadata
-                .and_then(|m| {
+            connector_meta_data: value.merchant_account_metadata.and_then(|m| {
                 ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| tracing::error!("Merchant account metadata conversion error: {:?}", e))
+                    .inspect_err(|e| {
+                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
+                    })
                     .ok()
             }),
             amount_captured: None,
