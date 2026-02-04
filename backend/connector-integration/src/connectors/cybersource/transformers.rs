@@ -3941,7 +3941,7 @@ impl<F> TryFrom<ResponseRouterData<CybersourceTransactionResponse, Self>>
             }
             None => Ok(Self {
                 resource_common_data: PaymentFlowData {
-                    status: item.router_data.resource_common_data.status,
+                    status: common_enums::AttemptStatus::Unspecified,
                     ..item.router_data.resource_common_data
                 },
                 response: Ok(PaymentsResponseData::TransactionResponse {

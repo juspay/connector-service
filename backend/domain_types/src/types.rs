@@ -192,6 +192,7 @@ pub struct Connectors {
     pub gigadat: ConnectorParams,
     pub loonio: ConnectorParams,
     pub wellsfargo: ConnectorParams,
+    pub hyperpg: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -390,6 +391,21 @@ impl ForeignTryFrom<grpc_api_types::payments::UpiSource> for payment_method_data
             grpc_api_types::payments::UpiSource::UpiCl => Ok(Self::UpiCl),
             grpc_api_types::payments::UpiSource::UpiAccount => Ok(Self::UpiAccount),
             grpc_api_types::payments::UpiSource::UpiCcCl => Ok(Self::UpiCcCl),
+            grpc_api_types::payments::UpiSource::UpiPpi => Ok(Self::UpiPpi),
+            grpc_api_types::payments::UpiSource::UpiVoucher => Ok(Self::UpiVoucher),
+        }
+    }
+}
+
+impl ForeignFrom<payment_method_data::UpiSource> for grpc_api_types::payments::UpiSource {
+    fn foreign_from(value: payment_method_data::UpiSource) -> Self {
+        match value {
+            payment_method_data::UpiSource::UpiCc => Self::UpiCc,
+            payment_method_data::UpiSource::UpiCl => Self::UpiCl,
+            payment_method_data::UpiSource::UpiAccount => Self::UpiAccount,
+            payment_method_data::UpiSource::UpiCcCl => Self::UpiCcCl,
+            payment_method_data::UpiSource::UpiPpi => Self::UpiPpi,
+            payment_method_data::UpiSource::UpiVoucher => Self::UpiVoucher,
         }
     }
 }
@@ -1219,6 +1235,31 @@ impl<
                     )))
                 }
 
+                grpc_api_types::payments::payment_method::PaymentMethod::Givex(givex_data) => {
+                    Ok(Self::GiftCard(Box::new(
+                        payment_method_data::GiftCardData::Givex(payment_method_data::GiftCardDetails {
+                            number: givex_data.number.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "MISSING_GIVEX_NUMBER".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Missing Givex gift card number".to_owned(),
+                                error_object: None,
+                            }))?,
+                            cvc: givex_data.cvc.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "MISSING_GIVEX_CVC".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Missing Givex gift card CVC".to_owned(),
+                                error_object: None,
+                            }))?,
+                        }),
+                    )))
+                }
+
+                grpc_api_types::payments::payment_method::PaymentMethod::PaySafeCard(_) => {
+                    Ok(Self::GiftCard(Box::new(
+                        payment_method_data::GiftCardData::PaySafeCard {},
+                    )))
+                }
+
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                     error_identifier: 400,
@@ -1474,6 +1515,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::CardDetailsForNetworkTransactionId(_) => Ok(Some(PaymentMethodType::Card)),
                 grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(_) => Ok(Some(PaymentMethodType::Card)),
+                // ============================================================================
+                // GIFT CARDS
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Givex(_) => {
+                    Ok(Some(PaymentMethodType::Givex))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PaySafeCard(_) => {
+                    Ok(Some(PaymentMethodType::PaySafeCard))
+                }
                 // ============================================================================
                 // UNSUPPORTED ONLINE BANKING - Direct error generation
                 // ============================================================================
@@ -3201,7 +3251,10 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -3211,7 +3264,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -3281,7 +3334,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -3477,17 +3530,35 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                             card_network,
                             domestic_network,
                         } => grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
-                            card: Some(grpc_api_types::payments::CardConnectorResponse {
-                                authentication_data: authentication_data
-                                    .as_ref()
-                                    .and_then(|data| serde_json::to_vec(data).ok()),
-                                payment_checks: payment_checks
-                                    .as_ref()
-                                    .and_then(|checks| serde_json::to_vec(checks).ok()),
-                                card_network: card_network.clone(),
-                                domestic_network: domestic_network.clone(),
-                            }),
+                            payment_method_data: Some(
+                                grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Card(
+                                    grpc_api_types::payments::CardConnectorResponse {
+                                        authentication_data: authentication_data
+                                            .as_ref()
+                                            .and_then(|data| serde_json::to_vec(data).ok()),
+                                        payment_checks: payment_checks
+                                            .as_ref()
+                                            .and_then(|checks| serde_json::to_vec(checks).ok()),
+                                        card_network: card_network.clone(),
+                                        domestic_network: domestic_network.clone(),
+                                    }
+                                )
+                            ),
                         },
+                        AdditionalPaymentMethodConnectorResponse::Upi { upi_mode } => {
+                            grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
+                                payment_method_data: Some(
+                                    grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Upi(
+                                        grpc_api_types::payments::UpiConnectorResponse {
+                                            upi_mode: upi_mode.clone().map(|source| {
+                                                let proto_source: grpc_api_types::payments::UpiSource = ForeignFrom::foreign_from(source);
+                                                proto_source as i32
+                                            }),
+                                        }
+                                    )
+                                ),
+                            }
+                        }
                     }
                 },
             ),
@@ -3703,74 +3774,20 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     });
 
                 PaymentServiceAuthorizeResponse {
-                    transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
-                    redirection_data: redirection_data.map(
-                        |form| {
-                            match *form {
-                                router_response_types::RedirectForm::Form { endpoint, method, form_fields } => {
-                                    Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
-                                            grpc_api_types::payments::FormData {
-                                                endpoint,
-                                                method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
-                                                form_fields, //TODO
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Html { html_data } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
-                                            grpc_api_types::payments::HtmlData {
-                                                html_data,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Uri { uri } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Mifinity { initialization_token } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Mifinity(
-                                            grpc_api_types::payments::MifinityData {
-                                                initialization_token,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Braintree { client_token, card_token, bin,  acs_url } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Braintree(
-                                            grpc_api_types::payments::BraintreeData {
-                                               client_token,
-                                               card_token,
-                                               bin,
-                                               acs_url,
-                                            }
-                                        ))
-                                    })
-                                },
-                                _ => Err(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_RESPONSE".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid response from connector".to_owned(),
-                                        error_object: None,
-                                    }))?,
-                            }
-                        }
-                    ).transpose()?,
-                    connector_metadata: convert_connector_metadata_to_secret_string(connector_metadata),
+                    transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
+                        resource_id,
+                    )?),
+                    redirection_data: redirection_data
+                        .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
+                        .transpose()?,
+                    connector_metadata: convert_connector_metadata_to_secret_string(
+                        connector_metadata,
+                    ),
                     network_txn_id,
-                    response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    response_ref_id: connector_response_reference_id.map(|id| {
+                        grpc_api_types::payments::Identifier {
+                            id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                        }
                     }),
                     mandate_reference: mandate_reference_grpc,
                     incremental_authorization_allowed,
@@ -3852,7 +3869,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 minor_captured_amount: None,
                 minor_capturable_amount: None,
                 minor_authorized_amount: None,
-                connector_response: None,
+                connector_response,
             }
         }
     };
@@ -4154,6 +4171,7 @@ impl ForeignFrom<common_enums::AttemptStatus> for grpc_api_types::payments::Paym
                 Self::PartialChargedAndChargeable
             }
             common_enums::AttemptStatus::IntegrityFailure => Self::Failure,
+            common_enums::AttemptStatus::Unspecified => Self::AttemptStatusUnspecified,
             common_enums::AttemptStatus::Unknown => Self::AttemptStatusUnspecified,
         }
     }
@@ -4557,7 +4575,7 @@ pub fn generate_payment_sync_response(
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
                 resource_id,
-                redirection_data: _,
+                redirection_data,
                 connector_metadata: _,
                 network_txn_id,
                 connector_response_reference_id,
@@ -4581,6 +4599,9 @@ pub fn generate_payment_sync_response(
 
                 Ok(PaymentServiceGetResponse {
                     transaction_id: Some(grpc_resource_id),
+                    redirection_data: redirection_data
+                        .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
+                        .transpose()?,
                     status: grpc_status as i32,
                     mandate_reference: mandate_reference_grpc,
                     error_code: None,
@@ -4686,7 +4707,8 @@ pub fn generate_payment_sync_response(
                     .get_connector_response_headers_as_map(),
                 state,
                 raw_connector_request,
-                connector_response: None,
+                connector_response,
+                redirection_data: None,
             })
         }
     }
@@ -4957,6 +4979,84 @@ impl ForeignFrom<Method> for grpc_api_types::payments::HttpMethod {
             Method::Delete => Self::Delete,
             Method::Patch => Self::Post, // Patch is not defined in gRPC, using Post
                                          // as a fallback
+        }
+    }
+}
+
+impl ForeignTryFrom<router_response_types::RedirectForm>
+    for grpc_api_types::payments::RedirectForm
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        form: router_response_types::RedirectForm,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match form {
+            router_response_types::RedirectForm::Form {
+                endpoint,
+                method,
+                form_fields,
+            } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
+                    grpc_api_types::payments::FormData {
+                        endpoint,
+                        method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
+                        form_fields,
+                    },
+                )),
+            }),
+            router_response_types::RedirectForm::Html { html_data } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
+                    grpc_api_types::payments::HtmlData { html_data },
+                )),
+            }),
+            router_response_types::RedirectForm::Uri { uri } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
+                    grpc_api_types::payments::UriData { uri },
+                )),
+            }),
+            router_response_types::RedirectForm::Mifinity {
+                initialization_token,
+            } => Ok(Self {
+                form_type: Some(grpc_api_types::payments::redirect_form::FormType::Mifinity(
+                    grpc_api_types::payments::MifinityData {
+                        initialization_token,
+                    },
+                )),
+            }),
+            router_response_types::RedirectForm::Braintree {
+                client_token,
+                card_token,
+                bin,
+                acs_url,
+            } => Ok(Self {
+                form_type: Some(
+                    grpc_api_types::payments::redirect_form::FormType::Braintree(
+                        grpc_api_types::payments::BraintreeData {
+                            client_token,
+                            card_token,
+                            bin,
+                            acs_url,
+                        },
+                    ),
+                ),
+            }),
+            // Variants not supported in gRPC proto
+            router_response_types::RedirectForm::BlueSnap { .. }
+            | router_response_types::RedirectForm::CybersourceAuthSetup { .. }
+            | router_response_types::RedirectForm::CybersourceConsumerAuth { .. }
+            | router_response_types::RedirectForm::DeutschebankThreeDSChallengeFlow { .. }
+            | router_response_types::RedirectForm::Payme
+            | router_response_types::RedirectForm::Nmi { .. }
+            | router_response_types::RedirectForm::WorldpayDDCForm { .. } => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_REDIRECT_FORM_TYPE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "RedirectForm type not supported in gRPC API".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
         }
     }
 }
@@ -5366,6 +5466,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             state: None,
             raw_connector_request: None,
             connector_response: None,
+            redirection_data: None,
         })
     }
 }
@@ -6270,7 +6371,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -6636,6 +6737,12 @@ impl
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
+        // Extract connector_meta_data from merchant_account_metadata
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -6661,7 +6768,7 @@ impl
             connector_customer: value.connector_customer_id,
             description,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -6941,13 +7048,80 @@ impl ForeignTryFrom<grpc_api_types::payments::SetupMandateDetails> for MandateDa
     fn foreign_try_from(
         value: grpc_api_types::payments::SetupMandateDetails,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Map the mandate_type from grpc type to domain type
+        let mandate_type = value
+            .mandate_type
+            .and_then(|grpc_mandate_type| match grpc_mandate_type.mandate_type {
+                Some(grpc_api_types::payments::mandate_type::MandateType::SingleUse(
+                    amount_data,
+                )) => Some(mandates::MandateDataType::SingleUse(
+                    mandates::MandateAmountData {
+                        amount: common_utils::types::MinorUnit::new(amount_data.amount),
+                        currency: grpc_api_types::payments::Currency::try_from(
+                            amount_data.currency,
+                        )
+                        .ok()
+                        .and_then(|grpc_currency| {
+                            common_enums::Currency::foreign_try_from(grpc_currency).ok()
+                        })
+                        .unwrap_or(common_enums::Currency::USD),
+                        start_date: amount_data.start_date.and_then(|ts| {
+                            time::OffsetDateTime::from_unix_timestamp(ts)
+                                .ok()
+                                .map(|offset_dt| {
+                                    time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
+                                })
+                        }),
+                        end_date: amount_data.end_date.and_then(|ts| {
+                            time::OffsetDateTime::from_unix_timestamp(ts)
+                                .ok()
+                                .map(|offset_dt| {
+                                    time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
+                                })
+                        }),
+                        metadata: None,
+                    },
+                )),
+                Some(grpc_api_types::payments::mandate_type::MandateType::MultiUse(
+                    amount_data,
+                )) => Some(mandates::MandateDataType::MultiUse(Some(
+                    mandates::MandateAmountData {
+                        amount: common_utils::types::MinorUnit::new(amount_data.amount),
+                        currency: grpc_api_types::payments::Currency::try_from(
+                            amount_data.currency,
+                        )
+                        .ok()
+                        .and_then(|grpc_currency| {
+                            common_enums::Currency::foreign_try_from(grpc_currency).ok()
+                        })
+                        .unwrap_or(common_enums::Currency::USD),
+                        start_date: amount_data.start_date.and_then(|ts| {
+                            time::OffsetDateTime::from_unix_timestamp(ts)
+                                .ok()
+                                .map(|offset_dt| {
+                                    time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
+                                })
+                        }),
+                        end_date: amount_data.end_date.and_then(|ts| {
+                            time::OffsetDateTime::from_unix_timestamp(ts)
+                                .ok()
+                                .map(|offset_dt| {
+                                    time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
+                                })
+                        }),
+                        metadata: None,
+                    },
+                ))),
+                None => None,
+            });
+
         Ok(Self {
             update_mandate_id: value.update_mandate_id,
             customer_acceptance: value
                 .customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
-            mandate_type: None,
+            mandate_type,
         })
     }
 }
@@ -7192,7 +7366,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     .get_connector_response_headers_as_map(),
                 state,
                 raw_connector_request,
-                connector_response: None,
+                connector_response,
                 connector_metadata: None,
                 captured_amount: None,
                 minor_captured_amount: None,
