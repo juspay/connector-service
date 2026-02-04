@@ -30,6 +30,30 @@ use strum::Display;
 // Import the wrapper type created by macros
 use super::NexixpayRouterData;
 
+const MAX_ORDER_ID_LENGTH: usize = 18;
+
+fn get_nexi_order_id(payment_id: &str) -> CustomResult<String, errors::ConnectorError> {
+    if payment_id.len() > MAX_ORDER_ID_LENGTH {
+        if payment_id.starts_with("pay_") {
+            Ok(payment_id
+                .chars()
+                .take(MAX_ORDER_ID_LENGTH)
+                .collect::<String>())
+        } else {
+            Err(error_stack::Report::from(
+                errors::ConnectorError::MaxFieldLengthViolated {
+                    field_name: "payment_id".to_string(),
+                    connector: "Nexixpay".to_string(),
+                    max_length: MAX_ORDER_ID_LENGTH,
+                    received_length: payment_id.len(),
+                },
+            ))
+        }
+    } else {
+        Ok(payment_id.to_string())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct NexixpayAuthType {
     pub api_key: Secret<String>,
@@ -352,10 +376,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Build order data with customer_info
         let order = NexixpayOrderData {
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
             amount: StringMinorUnitForConnector
                 .convert(item.request.minor_amount, item.request.currency)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?,
@@ -1207,10 +1228,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         })?;
 
         let order = NexixpayPreAuthOrder {
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
             amount: StringMinorUnitForConnector
                 .convert(item.request.amount, currency)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?,
