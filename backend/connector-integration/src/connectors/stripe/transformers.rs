@@ -1779,15 +1779,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-fn validate_and_get_setup_future_usage(
-    setup_future_usage: Option<common_enums::FutureUsage>,
+fn is_setup_future_usage_supported(
     payment_method_type: Option<common_enums::PaymentMethodType>,
-) -> Result<Option<common_enums::FutureUsage>, error_stack::Report<ConnectorError>> {
-    match payment_method_type {
+) -> bool {
+    !matches!(
+        payment_method_type,
         Some(common_enums::PaymentMethodType::Affirm)
-        | Some(common_enums::PaymentMethodType::Klarna) => Ok(None),
-        Some(_) | None => Ok(setup_future_usage),
-    }
+            | Some(common_enums::PaymentMethodType::Klarna)
+    )
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -1882,10 +1881,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_method_types,
             setup_future_usage,
         ) = if payment_method_token.is_some() {
-            let setup_future_usage = validate_and_get_setup_future_usage(
-                item.request.setup_future_usage,
-                item.request.payment_method_type,
-            )?;
+            let setup_future_usage =
+                if is_setup_future_usage_supported(item.request.payment_method_type) {
+                    item.request.setup_future_usage
+                } else {
+                    None
+                };
+
             (
                 None,
                 None,
@@ -1930,10 +1932,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 payment_method_type.as_ref(),
             )?;
 
-            let setup_future_usage = validate_and_get_setup_future_usage(
-                item.request.setup_future_usage,
-                item.request.payment_method_type,
-            )?;
+            let setup_future_usage =
+                if is_setup_future_usage_supported(item.request.payment_method_type) {
+                    item.request.setup_future_usage
+                } else {
+                    None
+                };
 
             (
                 Some(payment_method_data),
