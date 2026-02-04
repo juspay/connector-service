@@ -426,7 +426,7 @@ pub trait VerifyRedirectResponse: SourceVerification {
         request: &RequestDetails,
         secrets: Option<ConnectorSourceVerificationSecrets>,
     ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
-        let connector_source_verifacation_secrets =
+        let connector_source_verification_secrets =
             secrets.ok_or(domain_types::errors::ConnectorError::MissingRequiredField {
                 field_name: "redirect response secrets",
             })?;
@@ -438,7 +438,7 @@ pub trait VerifyRedirectResponse: SourceVerification {
             .change_context(domain_types::errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
         let secret = self
-            .get_secrets(connector_source_verifacation_secrets)
+            .get_secrets(connector_source_verification_secrets)
             .change_context(domain_types::errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
         algorithm
