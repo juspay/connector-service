@@ -1,15 +1,19 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::{self, errors::CustomResult, types::MinorUnit};
+use common_utils::{
+    self,
+    errors::CustomResult,
+    types::{AmountConvertor, StringMinorUnit, StringMinorUnitForConnector},
+};
 use domain_types::{
     connector_flow::{
         Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, Void,
     },
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -25,6 +29,30 @@ use strum::Display;
 
 // Import the wrapper type created by macros
 use super::NexixpayRouterData;
+
+const MAX_ORDER_ID_LENGTH: usize = 18;
+
+fn get_nexi_order_id(payment_id: &str) -> CustomResult<String, errors::ConnectorError> {
+    if payment_id.len() > MAX_ORDER_ID_LENGTH {
+        if payment_id.starts_with("pay_") {
+            Ok(payment_id
+                .chars()
+                .take(MAX_ORDER_ID_LENGTH)
+                .collect::<String>())
+        } else {
+            Err(error_stack::Report::from(
+                errors::ConnectorError::MaxFieldLengthViolated {
+                    field_name: "payment_id".to_string(),
+                    connector: "Nexixpay".to_string(),
+                    max_length: MAX_ORDER_ID_LENGTH,
+                    received_length: payment_id.len(),
+                },
+            ))
+        }
+    } else {
+        Ok(payment_id.to_string())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct NexixpayAuthType {
@@ -177,7 +205,7 @@ pub struct NexixpayPaymentsRequest {
 #[serde(rename_all = "camelCase")]
 pub struct NexixpayOrderData {
     pub order_id: String,
-    pub amount: MinorUnit,
+    pub amount: StringMinorUnit,
     pub currency: common_enums::Currency,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -263,10 +291,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "authentication_data.transaction_id (operationId from PostAuthenticate)",
             },
         )?;
-
-        // CRITICAL FIX: Extract PaRes from authentication_data.ds_trans_id
-        // We use ds_trans_id field to store PaRes since connector_metadata is not passed by Hyperswitch
-        let pa_res = authentication_data.ds_trans_id.clone();
+        // Extract PaRes from redirect_response.payload (same as PostAuthenticate)
+        let pa_res = item
+            .request
+            .redirect_response
+            .as_ref()
+            .and_then(|redirect| redirect.payload.as_ref())
+            .and_then(|payload| {
+                serde_json::from_value::<NexixpayRedirectPayload>(payload.peek().clone()).ok()
+            })
+            .and_then(|redirect_payload| redirect_payload.pa_res)
+            .map(|secret| secret.expose());
 
         // Extract 3DS authentication data from authentication_data
         // IMPORTANT: NexiXPay /payment endpoint ONLY accepts PaRes and CAVV
@@ -341,11 +376,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Build order data with customer_info
         let order = NexixpayOrderData {
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            amount: item.request.minor_amount,
+            order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
+            amount: StringMinorUnitForConnector
+                .convert(item.request.minor_amount, item.request.currency)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             currency: item.request.currency,
             description: item
                 .request
@@ -596,7 +630,7 @@ impl TryFrom<ResponseRouterData<NexixpaySyncResponse, Self>>
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NexixpayCaptureRequest {
-    pub amount: MinorUnit,
+    pub amount: StringMinorUnit,
     pub currency: common_enums::Currency,
 }
 
@@ -619,7 +653,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let item = &value.router_data;
 
         // Convert amount - handle partial vs full capture
-        let capture_amount = item.request.minor_amount_to_capture;
+        let capture_amount = StringMinorUnitForConnector
+            .convert(item.request.minor_amount_to_capture, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
             amount: capture_amount,
@@ -704,7 +740,7 @@ impl TryFrom<ResponseRouterData<NexixpayCaptureResponse, Self>>
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NexixpayRefundRequest {
-    pub amount: MinorUnit,
+    pub amount: StringMinorUnit,
     pub currency: common_enums::Currency,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -731,7 +767,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // No need to extract from ResponseId
 
         // Convert refund amount
-        let refund_amount = item.request.minor_refund_amount;
+        let refund_amount = StringMinorUnitForConnector
+            .convert(item.request.minor_refund_amount, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
             amount: refund_amount,
@@ -782,7 +820,7 @@ impl TryFrom<ResponseRouterData<NexixpayRefundResponse, Self>>
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NexixpayVoidRequest {
-    pub amount: MinorUnit,
+    pub amount: StringMinorUnit,
     pub currency: common_enums::Currency,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -822,8 +860,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     field_name: "currency for void operation",
                 })?;
 
+        let void_amount_string = StringMinorUnitForConnector
+            .convert(void_amount, currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
         Ok(Self {
-            amount: void_amount,
+            amount: void_amount_string,
             currency,
             description: item.request.cancellation_reason.clone(),
         })
@@ -995,13 +1037,15 @@ pub struct NexixpayPreAuthenticateRequest {
     pub card: NexixpayCardData,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recurrence: Option<NexixpayRecurrence>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_type: Option<NexixpayPaymentRequestActionType>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NexixpayPreAuthOrder {
     pub order_id: String,
-    pub amount: MinorUnit,
+    pub amount: StringMinorUnit,
     pub currency: common_enums::Currency,
     pub customer_info: NexixpayCustomerInfo,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1050,9 +1094,15 @@ pub struct NexixpayShippingAddress {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NexixpayRecurrence {
-    pub action: String,
-    pub contract_id: Option<String>,
-    pub contract_type: Option<String>,
+    pub action: NexixpayRecurringAction,
+    pub contract_id: Option<Secret<String>>,
+    pub contract_type: Option<ContractType>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum NexixpayPaymentRequestActionType {
+    Verify,
 }
 
 // PreAuthenticate Request transformer
@@ -1173,33 +1223,61 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Build order data
-        let order = NexixpayPreAuthOrder {
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            amount: item.request.amount,
-            currency: item.request.currency.ok_or(
-                errors::ConnectorError::MissingRequiredField {
+        let currency =
+            item.request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "currency",
-                },
-            )?,
+                })?;
+
+        let order = NexixpayPreAuthOrder {
+            order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
+            amount: StringMinorUnitForConnector
+                .convert(item.request.amount, currency)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            currency,
             customer_info,
-            description: None, // No description field in PreAuthenticateData
+            description: item.resource_common_data.description.clone(),
         };
 
-        // Build recurrence data - default to NO_RECURRING for PreAuthenticate
+        // Build recurrence data - conditionally check for mandate reference
         // Following Hyperswitch pattern
-        let recurrence = Some(NexixpayRecurrence {
-            action: "NO_RECURRING".to_string(),
-            contract_id: None,
-            contract_type: None,
+        let recurrence = Some(match &item.request.mandate_reference {
+            Some(MandateReferenceId::ConnectorMandateId(mandate_data)) => {
+                if let Some(contract_id) = mandate_data.get_connector_mandate_request_reference_id()
+                {
+                    NexixpayRecurrence {
+                        action: NexixpayRecurringAction::ContractCreation,
+                        contract_id: Some(Secret::new(contract_id)),
+                        contract_type: Some(ContractType::MitUnscheduled),
+                    }
+                } else {
+                    NexixpayRecurrence {
+                        action: NexixpayRecurringAction::NoRecurring,
+                        contract_id: None,
+                        contract_type: None,
+                    }
+                }
+            }
+            _ => NexixpayRecurrence {
+                action: NexixpayRecurringAction::NoRecurring,
+                contract_id: None,
+                contract_type: None,
+            },
         });
+
+        // Add actionType logic for zero-amount payments
+        let action_type = if item.request.amount == common_utils::types::MinorUnit::zero() {
+            Some(NexixpayPaymentRequestActionType::Verify)
+        } else {
+            None
+        };
 
         Ok(Self {
             order,
             card,
             recurrence,
+            action_type,
         })
     }
 }
@@ -1466,23 +1544,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPostAuthentic
             _ => AttemptStatus::AuthenticationPending,
         };
 
-        // CRITICAL FIX: Store PaRes in authentication_data.ds_trans_id for Authorize flow
-        // Extract PaRes from the redirect response
-        let pa_res = item
-            .router_data
-            .request
-            .redirect_response
-            .as_ref()
-            .and_then(|redirect| redirect.payload.as_ref())
-            .and_then(|payload| {
-                // Parse the JSON payload to extract PaRes
-                serde_json::from_value::<NexixpayRedirectPayload>(payload.peek().clone()).ok()
-            })
-            .and_then(|redirect_payload| redirect_payload.pa_res)
-            .map(|secret| secret.expose());
-
-        // CRITICAL FIX: PostAuthenticate doesn't touch metadata at all like working commit
-        // Only returns authentication_data with PaRes and operationId
+        // PostAuthenticate only returns authentication_data with CAVV/ECI/XID and operationId
+        // PaRes is extracted directly from redirect_response in Authorize flow
 
         Ok(Self {
             response: Ok(PaymentsResponseData::PostAuthenticateResponse {
@@ -1500,8 +1563,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPostAuthentic
                             .version
                             .as_ref()
                             .and_then(|v| v.parse::<common_utils::types::SemanticVersion>().ok()),
-                        // CRITICAL FIX: Store PaRes in ds_trans_id (unused field)
-                        ds_trans_id: pa_res.clone(),
+                        // PaRes now read directly from redirect_response in Authorize
+                        ds_trans_id: None,
                         acs_transaction_id: None,
                         // CRITICAL FIX: Store operationId in transaction_id for Authorize flow
                         transaction_id: Some(operation.operation_id.clone()),
