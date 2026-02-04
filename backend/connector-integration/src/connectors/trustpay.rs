@@ -1,6 +1,6 @@
 use base64::Engine;
 use common_utils::{
-    consts, errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit,
+    consts, errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -11,16 +11,17 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        RefundWebhookDetailsResponse, RepeatPaymentData, RequestDetails, ResponseId,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -149,6 +150,135 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Trustpay<T>
 {
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<EventType, Report<errors::ConnectorError>> {
+        let webhook_response: trustpay::TrustpayWebhookResponse =
+            request.body.parse_struct("TrustpayWebhookResponse").map_err(|err| {
+                Report::new(errors::ConnectorError::WebhookBodyDecodingFailed)
+                    .attach_printable(format!("error while decoding webhook body: {err}"))
+            })?;
+
+        Ok(trustpay::get_event_type_from_webhook(
+            &webhook_response.payment_information.credit_debit_indicator,
+            &webhook_response.payment_information.status,
+        ))
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<WebhookDetailsResponse, Report<errors::ConnectorError>> {
+        let request_body_copy = request.body.clone();
+        let webhook_response: trustpay::TrustpayWebhookResponse =
+            request.body.parse_struct("TrustpayWebhookResponse").map_err(|err| {
+                Report::new(errors::ConnectorError::WebhookBodyDecodingFailed)
+                    .attach_printable(format!("error while decoding webhook body: {err}"))
+            })?;
+
+        let (status, error, _payment_response_data) =
+            trustpay::handle_webhook_response_for_incoming_webhook(
+                webhook_response.payment_information.clone(),
+                200,
+            )?;
+
+        let (error_code, error_message, error_reason) = if status == common_enums::AttemptStatus::Failure {
+            (
+                error.as_ref().and_then(|e| Some(e.code.clone())),
+                error.as_ref().and_then(|e| Some(e.message.clone())),
+                error.as_ref().and_then(|e| e.reason.clone()),
+            )
+        } else {
+            (None, None, None)
+        };
+
+        Ok(WebhookDetailsResponse {
+            resource_id: webhook_response
+                .payment_information
+                .references
+                .merchant_reference
+                .map(ResponseId::ConnectorTransactionId),
+            status,
+            connector_response_reference_id: webhook_response
+                .payment_information
+                .references
+                .payment_request_id,
+            mandate_reference: None,
+            error_code,
+            error_message,
+            error_reason,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
+            response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            amount_captured: None,
+            minor_amount_captured: None,
+            network_txn_id: None,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<RefundWebhookDetailsResponse, Report<errors::ConnectorError>> {
+        let request_body_copy = request.body.clone();
+        let webhook_response: trustpay::TrustpayWebhookResponse =
+            request.body.parse_struct("TrustpayWebhookResponse").map_err(|err| {
+                Report::new(errors::ConnectorError::WebhookBodyDecodingFailed)
+                    .attach_printable(format!("error while decoding webhook body: {err}"))
+            })?;
+
+        let (error, refund_response_data) =
+            trustpay::handle_webhooks_refund_response_for_incoming_webhook(
+                webhook_response.payment_information,
+                200,
+            )?;
+
+        let (error_code, error_message) = if refund_response_data.refund_status
+            == common_enums::RefundStatus::Failure
+        {
+            (
+                error.as_ref().and_then(|e| Some(e.code.clone())),
+                error.as_ref().and_then(|e| Some(e.message.clone())),
+            )
+        } else {
+            (None, None)
+        };
+
+        Ok(RefundWebhookDetailsResponse {
+            connector_refund_id: Some(refund_response_data.connector_refund_id.clone()),
+            status: refund_response_data.refund_status,
+            connector_response_reference_id: Some(refund_response_data.connector_refund_id),
+            error_code,
+            error_message,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
+            response_headers: None,
+        })
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        Report<errors::ConnectorError>,
+    > {
+        let webhook_response: trustpay::TrustpayWebhookResponse =
+            request.body.parse_struct("TrustpayWebhookResponse").map_err(|err| {
+                Report::new(errors::ConnectorError::WebhookBodyDecodingFailed)
+                    .attach_printable(format!("error while decoding webhook body: {err}"))
+            })?;
+
+        Ok(Box::new(webhook_response))
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Trustpay<T>

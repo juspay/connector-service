@@ -786,6 +786,29 @@ pub fn handle_webhook_response(
     Ok((status, error, payment_response_data))
 }
 
+// Wrapper function for IncomingWebhook trait
+pub fn handle_webhook_response_for_incoming_webhook(
+    payment_information: WebhookPaymentInformation,
+    status_code: u16,
+) -> CustomResult<
+    (
+        enums::AttemptStatus,
+        Option<ErrorResponse>,
+        PaymentsResponseData,
+    ),
+    ConnectorError,
+> {
+    handle_webhook_response(payment_information, status_code)
+}
+
+// Wrapper function for IncomingWebhook trait
+pub fn handle_webhooks_refund_response_for_incoming_webhook(
+    response: WebhookPaymentInformation,
+    status_code: u16,
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorError> {
+    handle_webhooks_refund_response(response, status_code)
+}
+
 pub fn get_trustpay_response(
     response: TrustpayPaymentsResponse,
     status_code: u16,
@@ -913,6 +936,42 @@ pub struct WebhookPaymentInformation {
     pub status: WebhookStatus,
     pub amount: WebhookAmount,
     pub status_reason_information: Option<StatusReasonInformation>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub struct TrustpayWebhookResponse {
+    pub payment_information: WebhookPaymentInformation,
+    pub signature: String,
+}
+
+pub fn get_event_type_from_webhook(
+    indicator: &CreditDebitIndicator,
+    status: &WebhookStatus,
+) -> domain_types::connector_types::EventType {
+    match (indicator, status) {
+        // Credit (Crdt) = Payment events
+        (CreditDebitIndicator::Crdt, WebhookStatus::Paid) => {
+            domain_types::connector_types::EventType::PaymentIntentSuccess
+        }
+        (CreditDebitIndicator::Crdt, WebhookStatus::Rejected) => {
+            domain_types::connector_types::EventType::PaymentIntentFailure
+        }
+        // Debit (Dbit) = Refund events
+        (CreditDebitIndicator::Dbit, WebhookStatus::Paid)
+        | (CreditDebitIndicator::Dbit, WebhookStatus::Refunded) => {
+            domain_types::connector_types::EventType::RefundSuccess
+        }
+        (CreditDebitIndicator::Dbit, WebhookStatus::Rejected) => {
+            domain_types::connector_types::EventType::RefundFailure
+        }
+        // Chargeback = Dispute event
+        (CreditDebitIndicator::Dbit, WebhookStatus::Chargebacked) => {
+            domain_types::connector_types::EventType::DisputeLost
+        }
+        // Unknown status
+        _ => domain_types::connector_types::EventType::PaymentIntentProcessing,
+    }
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
