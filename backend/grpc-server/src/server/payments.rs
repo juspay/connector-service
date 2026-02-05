@@ -2659,7 +2659,7 @@ impl PaymentService for Payments {
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
-                        let verify_result = Box::pin(external_services::service::execute_connector_processing_step(
+                        let source_verified = match Box::pin(external_services::service::execute_connector_processing_step(
                             &config.proxy,
                             connector_integration,
                             verify_webhook_router_data,
@@ -2671,24 +2671,35 @@ impl PaymentService for Payments {
                             None,
                         ))
                         .await
-                        .switch()
-                        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-                            tracing::warn!(
-                                target: "webhook",
-                                "Webhook verification failed for connector {}: {:?}",
-                                connector_data.connector.id(),
-                                e
-                            );
-                            tonic::Status::internal(format!("Webhook verification failed: {e}"))
-                        })?;
-
-                        // Extract verification result
-                        match verify_result.response {
-                            Ok(response_data) => {
-                                matches!(response_data.verify_webhook_status, VerifyWebhookStatus::SourceVerified)
+                        {
+                            Ok(verify_result) => {
+                                // Extract verification result from successful execution
+                                match verify_result.response {
+                                    Ok(response_data) => {
+                                        matches!(response_data.verify_webhook_status, VerifyWebhookStatus::SourceVerified)
+                                    }
+                                    Err(_) => {
+                                        tracing::warn!(
+                                            target: "webhook",
+                                            "Webhook verification returned error response for connector {}",
+                                            connector_data.connector.id()
+                                        );
+                                        false
+                                    }
+                                }
                             }
-                            Err(_) => false,
-                        }
+                            Err(e) => {
+                                // Handle all errors (timeout, parsing, network, etc.) gracefully
+                                tracing::warn!(
+                                    target: "webhook",
+                                    "Webhook verification failed for connector {}: {:?}. Setting source_verified=false",
+                                    connector_data.connector.id(),
+                                    e
+                                );
+                                false
+                            }
+                        };
+                        source_verified
                     } else {
                         // For other connectors, use the existing verify_webhook_source method
                         match connector_data

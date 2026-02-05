@@ -24,6 +24,7 @@ use interfaces::verification::SourceVerification;
 /// Usage: When a new connector is added, add it to the macro invocation below.
 /// If a connector needs real implementation (like PayPal), implement it in the connector's file
 /// and it will override this empty impl.
+#[macro_export]
 macro_rules! default_impl_verify_webhook_source_v2 {
     ($($connector:ident),*) => {
         $(
@@ -89,10 +90,12 @@ default_impl_verify_webhook_source_v2!(
     Globalpay,
     Helcim,
     Hipay,
+    Hyperpg,
     Iatapay,
     Jpmorgan,
     Loonio,
     Mifinity,
+    Mollie,
     Multisafepay,
     Nexinets,
     Nexixpay,
@@ -112,6 +115,7 @@ default_impl_verify_webhook_source_v2!(
     Rapyd,
     Razorpay,
     RazorpayV2,
+    Redsys,
     Revolut,
     Shift4,
     Silverflow,

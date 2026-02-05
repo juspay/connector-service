@@ -230,14 +230,20 @@ where
     }
 }
 
-/// Deserializer for HashSet from comma-separated string
-fn deserialize_hashset<'a, D, T>(deserializer: D) -> Result<HashSet<T>, D::Error>
+/// Deserializer for Option<HashSet> from comma-separated string
+/// Handles Option<String> input and returns Option<HashSet> for config_patch_derive::Patch
+fn deserialize_hashset<'a, D, T>(deserializer: D) -> Result<Option<HashSet<T>>, D::Error>
 where
     D: Deserializer<'a>,
     T: Eq + FromStr + std::hash::Hash,
     <T as FromStr>::Err: std::fmt::Display,
 {
-    deserialize_hashset_inner(<String>::deserialize(deserializer)?).map_err(D::Error::custom)
+    match Option::<String>::deserialize(deserializer)? {
+        Some(s) if !s.trim().is_empty() => deserialize_hashset_inner(s)
+            .map(Some)
+            .map_err(D::Error::custom),
+        _ => Ok(None), // Empty string or None -> None
+    }
 }
 
 /// Configuration for connectors that require external API calls for webhook source verification
@@ -247,14 +253,17 @@ pub struct WebhookSourceVerificationCall {
     /// Comma-separated list of connector names that require external verification calls
     /// Example: "paypal" or "paypal,adyen"
     #[serde(deserialize_with = "deserialize_hashset")]
-    pub connectors_with_webhook_source_verification_call: HashSet<ConnectorEnum>,
+    #[patch(ignore)]
+    pub connectors_with_webhook_source_verification_call: Option<HashSet<ConnectorEnum>>,
 }
 
 impl WebhookSourceVerificationCall {
     /// Check if a connector requires external webhook source verification call
     pub fn requires_external_verification(&self, connector: &ConnectorEnum) -> bool {
         self.connectors_with_webhook_source_verification_call
-            .contains(connector)
+            .as_ref()
+            .map(|set| set.contains(connector))
+            .unwrap_or(false)
     }
 }
 
