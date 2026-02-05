@@ -84,6 +84,10 @@ service PaymentService {
 
   // Authorized amount for a payment can be incremented if it is in status AUTHORIZED.
   rpc IncrementalAuthorization(PaymentServiceIncrementalAuthorizationRequest) returns (PaymentServiceIncrementalAuthorizationResponse);
+
+  // Handles redirect responses from connectors.
+  // This will perform source verification for redirect responses based on the connector configuration.
+  rpc VerifyRedirectResponse(PaymentServiceVerifyRedirectResponseRequest) returns (PaymentServiceVerifyRedirectResponseResponse);
 }
 
 // Service for refund-specific operations.
