@@ -325,6 +325,11 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
             grpc_api_types::payments::CardNetwork::Unionpay => Ok(Self::UnionPay),
             grpc_api_types::payments::CardNetwork::Rupay => Ok(Self::RuPay),
             grpc_api_types::payments::CardNetwork::Maestro => Ok(Self::Maestro),
+            grpc_api_types::payments::CardNetwork::InteracCard => Ok(Self::Interac),
+            grpc_api_types::payments::CardNetwork::Star => Ok(Self::Star),
+            grpc_api_types::payments::CardNetwork::Pulse => Ok(Self::Pulse),
+            grpc_api_types::payments::CardNetwork::Accel => Ok(Self::Accel),
+            grpc_api_types::payments::CardNetwork::Nyce => Ok(Self::Nyce),
             grpc_api_types::payments::CardNetwork::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CARD_NETWORK".to_owned(),

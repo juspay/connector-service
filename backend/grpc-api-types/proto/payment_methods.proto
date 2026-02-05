@@ -22,6 +22,11 @@ enum CardNetwork {
   MAESTRO = 8;
   CARTES_BANCAIRES = 9;
   RUPAY = 10;
+  INTERAC_CARD = 11;
+  STAR = 12;
+  PULSE = 13;
+  ACCEL = 14;
+  NYCE = 15;
 }
 
 // Paysafecard - Prepaid payment method
