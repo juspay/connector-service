@@ -11,7 +11,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, UpiSource},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -1656,11 +1656,13 @@ pub fn get_upi_transaction_mode_metadata(upi_details: &Option<SyncUPIDetails>) -
 }
 
 /// Extracts UPI mode from Razorpay sync response
-/// Returns: "UPI_CC" for credit_card payer_account_type, None otherwise
-pub fn extract_upi_mode_from_sync_response(upi_details: &Option<SyncUPIDetails>) -> Option<String> {
+/// Returns: UpiSource::UpiCc for credit_card payer_account_type, None otherwise
+pub fn extract_upi_mode_from_sync_response(
+    upi_details: &Option<SyncUPIDetails>,
+) -> Option<UpiSource> {
     upi_details.as_ref().and_then(|upi| {
         if upi.payer_account_type == "credit_card" {
-            Some("UPI_CC".to_string())
+            Some(UpiSource::UpiCc)
         } else {
             None
         }
@@ -1669,7 +1671,7 @@ pub fn extract_upi_mode_from_sync_response(upi_details: &Option<SyncUPIDetails>)
 
 /// Creates ConnectorResponseData with UPI mode for additional_payment_method_connector_response
 pub fn get_connector_response_with_upi_mode(
-    upi_mode: Option<String>,
+    upi_mode: Option<UpiSource>,
 ) -> Option<domain_types::router_data::ConnectorResponseData> {
     upi_mode.map(|mode| {
         domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
