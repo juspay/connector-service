@@ -802,8 +802,18 @@ impl<F, Req>
                     get_psync_razorpay_payment_status(is_manual_capture, psync_response.status);
 
                 // Extract UPI mode and set in connector_response
-                let upi_mode = extract_upi_mode_from_sync_response(&psync_response.upi);
-                let connector_response = get_connector_response_with_upi_mode(upi_mode);
+                let connector_response = psync_response
+                    .upi
+                    .as_ref()
+                    .filter(|upi| upi.payer_account_type == "credit_card")
+                    .map(|_| {
+                        domain_types::router_data::ConnectorResponseData::
+                            with_additional_payment_method_data(
+                                domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
+                                    upi_mode: Some(domain_types::payment_method_data::UpiSource::UpiCc),
+                                },
+                            )
+                    });
 
                 let psync_response_data = PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(psync_response.id),
@@ -1635,33 +1645,6 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
         e
     })
     .ok()
-}
-
-/// Extracts UPI mode from Razorpay sync response
-/// Returns: UpiSource::UpiCc for credit_card payer_account_type, None otherwise
-pub fn extract_upi_mode_from_sync_response(
-    upi_details: &Option<SyncUPIDetails>,
-) -> Option<domain_types::payment_method_data::UpiSource> {
-    upi_details.as_ref().and_then(|upi| {
-        if upi.payer_account_type == "credit_card" {
-            Some(domain_types::payment_method_data::UpiSource::UpiCc)
-        } else {
-            None
-        }
-    })
-}
-
-/// Creates ConnectorResponseData with UPI mode for additional_payment_method_connector_response
-pub fn get_connector_response_with_upi_mode(
-    upi_mode: Option<domain_types::payment_method_data::UpiSource>,
-) -> Option<domain_types::router_data::ConnectorResponseData> {
-    upi_mode.map(|mode| {
-        domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
-            domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
-                upi_mode: Some(mode),
-            },
-        )
-    })
 }
 
 pub fn json_value_to_string(value: &serde_json::Value) -> String {
