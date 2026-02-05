@@ -290,7 +290,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .get_optional_billing_last_name(),
             },
-            metadata: item.router_data.request.metadata.clone().map(Into::into),
+            metadata: item.router_data.request.metadata.clone(),
             settle: item.router_data.request.is_auto_capture()?,
         })
     }

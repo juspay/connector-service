@@ -13,7 +13,7 @@ use time::Date;
 use utoipa::ToSchema;
 
 use crate::{
-    errors::ConnectorError,
+    errors::{self, ConnectorError},
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
 };
 
@@ -98,6 +98,23 @@ impl<T: PaymentMethodDataTypes> Card<T> {
                 .ok_or(ConnectorError::RequestEncodingFailed)?
                 .to_string(),
         ))
+    }
+
+    pub fn get_card_expiry_month_2_digit(&self) -> Result<Secret<String>, errors::ConnectorError> {
+        let exp_month = self
+            .card_exp_month
+            .peek()
+            .to_string()
+            .parse::<u8>()
+            .map_err(|_| errors::ConnectorError::InvalidDataFormat {
+                field_name: "payment_method_data.card.card_exp_month",
+            })?;
+        let month = cards::validate::CardExpirationMonth::try_from(exp_month).map_err(|_| {
+            errors::ConnectorError::InvalidDataFormat {
+                field_name: "payment_method_data.card.card_exp_month",
+            }
+        })?;
+        Ok(Secret::new(month.two_digits()))
     }
 
     pub fn get_card_expiry_month_year_2_digit_with_delimiter(
@@ -366,14 +383,18 @@ pub enum UpiSource {
     UpiCl,      // UPI Credit Line
     UpiAccount, // UPI Bank Account (Savings)
     UpiCcCl,    // UPI Credit Card + Credit Line
+    UpiPpi,     // UPI Prepaid Payment Instrument
+    UpiVoucher, // UPI Voucher
 }
 
 impl UpiSource {
     /// Converts UpiSource to payment mode string for PhonePe connector
-    /// Maps: UPI_CC/UPI_CL/UPI_CC_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
+    /// Maps: UPI_CC/UPI_CL/UPI_CC_CL/UPI_PPI/UPI_VOUCHER -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
     pub fn to_payment_mode(&self) -> String {
         match self {
-            Self::UpiCc | Self::UpiCl | Self::UpiCcCl => "ALL".to_string(),
+            Self::UpiCc | Self::UpiCl | Self::UpiCcCl | Self::UpiPpi | Self::UpiVoucher => {
+                "ALL".to_string()
+            }
             Self::UpiAccount => "ACCOUNT".to_string(),
         }
     }
@@ -445,6 +466,8 @@ pub enum BankTransferData {
         source_bank_account_id: Option<MaskedBankAccount>,
         /// Destination bank account UUID.
         destination_bank_account_id: Option<MaskedBankAccount>,
+        /// Session expiry date for Pix QR code (max 5 days from now for Adyen)
+        expiry_date: Option<time::PrimitiveDateTime>,
     },
     Pse {},
     LocalBankTransfer {

@@ -16,7 +16,7 @@ use domain_types::{
 
 // Note: Refund and RefundsData are used for the Refund flow implementation
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json;
 
@@ -240,7 +240,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .as_ref()
-                .map(NmiMerchantDefinedField::new),
+                .map(|m| NmiMerchantDefinedField::new(m.peek())),
         })
     }
 }

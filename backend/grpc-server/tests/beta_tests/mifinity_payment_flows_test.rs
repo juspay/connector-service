@@ -6,7 +6,7 @@ use grpc_server::{app, configs};
 use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
 mod utils;
-
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use grpc_api_types::{
@@ -98,10 +98,14 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         language_preference: Some("en-US".to_string()),
     };
 
-    // Create connector metadata JSON string
-    let connector_meta_data = format!(
-        "{{\"brand_id\":\"{TEST_BRAND_ID}\",\"destination_account_number\":\"{TEST_DESTINATION_ACCOUNT_NUMBER}\"}}"
+    let mut merchant_account_metadata_map = HashMap::new();
+    merchant_account_metadata_map.insert("brand_id".to_string(), TEST_BRAND_ID.to_string());
+    merchant_account_metadata_map.insert(
+        "destination_account_number".to_string(),
+        TEST_DESTINATION_ACCOUNT_NUMBER.to_string(),
     );
+    let merchant_account_metadata_json =
+        serde_json::to_string(&merchant_account_metadata_map).unwrap_or_default();
 
     PaymentServiceAuthorizeRequest {
         amount: TEST_AMOUNT,
@@ -139,11 +143,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
-        metadata: {
-            let mut metadata = std::collections::HashMap::new();
-            metadata.insert("connector_meta_data".to_string(), connector_meta_data);
-            metadata
-        },
+        metadata: None,
+        merchant_account_metadata: Some(merchant_account_metadata_json.into()),
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
@@ -164,12 +165,13 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Eur),
         state: None,
-        metadata: std::collections::HashMap::new(),
-        merchant_account_metadata: std::collections::HashMap::new(),
+        metadata: None,
+        merchant_account_metadata: None,
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: Some(transaction_id.to_string()),
+        test_mode: None,
     }
 }
 

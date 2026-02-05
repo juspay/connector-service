@@ -30,7 +30,7 @@ use domain_types::{
     utils::{is_payment_failure, CardIssuer},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
@@ -668,6 +668,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
@@ -1816,6 +1817,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(convert_metadata_to_merchant_defined_info);
         let payment_information = PaymentInformation::try_from(&ccard)?;
         let processing_information = ProcessingInformation::try_from((item, None, None))?;

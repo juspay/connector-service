@@ -4,7 +4,7 @@ use common_enums::{self, AttemptStatus, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
-    ext_traits::{ByteSliceExt, OptionExt, ValueExt},
+    ext_traits::{ByteSliceExt, Encode, OptionExt, ValueExt},
     request::Method,
     types::{MinorUnit, SemanticVersion},
     SecretSerdeValue,
@@ -23,8 +23,9 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankRedirectData, Card, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, WalletData,
+        BankDebitData, BankRedirectData, BankTransferData, Card, CardRedirectData,
+        DefaultPCIHolder, GiftCardData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -35,7 +36,7 @@ use domain_types::{
     utils as domain_utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 use url::Url;
@@ -43,7 +44,11 @@ use url::Url;
 use super::AdyenRouterData;
 use crate::{
     types::ResponseRouterData,
-    utils::{self, is_manual_capture, to_connector_meta_from_secret},
+    utils::{
+        self, is_manual_capture,
+        qr_code::{QrCodeInformation, QrImage},
+        to_connector_meta_from_secret,
+    },
 };
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -97,6 +102,22 @@ impl TryFrom<&domain_utils::CardIssuer> for CardBrand {
             domain_utils::CardIssuer::UnionPay => Ok(Self::Cup),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GiftCardBrand {
+    Givex,
+    Auriga,
+    Babygiftcard,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenGiftCardData {
+    brand: GiftCardBrand,
+    number: Secret<String>,
+    cvc: Secret<String>,
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -165,8 +186,39 @@ pub enum AdyenPaymentMethod<
     OnlineBankingThailand(Box<OnlineBankingThailandData>),
     #[serde(rename = "paybybank")]
     OpenBankingUK(Box<OpenBankingUKData>),
+    #[serde(rename = "giftcard")]
+    AdyenGiftCard(Box<AdyenGiftCardData>),
+    #[serde(rename = "paysafecard")]
+    PaySafeCard,
     #[serde(rename = "trustly")]
     Trustly,
+    // Bank transfer payment methods (Indonesian banks via Doku)
+    #[serde(rename = "doku_permata_lite_atm")]
+    PermataBankTransfer(Box<DokuBankData>),
+    #[serde(rename = "doku_bca_va")]
+    BcaBankTransfer(Box<DokuBankData>),
+    #[serde(rename = "doku_bni_va")]
+    BniVa(Box<DokuBankData>),
+    #[serde(rename = "doku_bri_va")]
+    BriVa(Box<DokuBankData>),
+    #[serde(rename = "doku_cimb_va")]
+    CimbVa(Box<DokuBankData>),
+    #[serde(rename = "doku_danamon_va")]
+    DanamonVa(Box<DokuBankData>),
+    #[serde(rename = "doku_mandiri_va")]
+    MandiriVa(Box<DokuBankData>),
+    // Brazilian instant payment
+    Pix,
+    #[serde(rename = "ach")]
+    AchDirectDebit(Box<AchDirectDebitData>),
+    #[serde(rename = "sepadirectdebit")]
+    SepaDirectDebit(Box<SepaDirectDebitData>),
+    #[serde(rename = "directdebit_GB")]
+    BacsDirectDebit(Box<BacsDirectDebitData>),
+    Knet,
+    Benefit,
+    #[serde(rename = "momo_atm")]
+    MomoAtm,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -357,6 +409,15 @@ pub enum OpenBankingUKIssuer {
     TescoBank,
     #[serde(rename = "uk-ulster-oauth2")]
     UlsterBank,
+}
+
+/// Data structure for Indonesian bank transfers (Doku integration)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DokuBankData {
+    first_name: Secret<String>,
+    last_name: Option<Secret<String>>,
+    shopper_email: common_utils::pii::Email,
 }
 
 pub struct AdyenTestBankNames(String);
@@ -557,6 +618,31 @@ impl TryFrom<&common_enums::BankNames> for OpenBankingUKIssuer {
             ))?,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AchDirectDebitData {
+    bank_account_number: Secret<String>,
+    bank_location_id: Secret<String>,
+    owner_name: Secret<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SepaDirectDebitData {
+    #[serde(rename = "sepa.ownerName")]
+    owner_name: Secret<String>,
+    #[serde(rename = "sepa.ibanNumber")]
+    iban_number: Secret<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BacsDirectDebitData {
+    bank_account_number: Secret<String>,
+    bank_location_id: Secret<String>,
+    holder_name: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -930,6 +1016,8 @@ pub enum PaymentType {
     SevenEleven,
     #[serde(rename = "econtext_stores")]
     Lawson,
+    #[serde(rename = "pix")]
+    Pix,
 }
 
 impl TryFrom<&common_enums::PaymentMethodType> for PaymentType {
@@ -962,7 +1050,11 @@ impl TryFrom<&common_enums::PaymentMethodType> for PaymentType {
             common_enums::PaymentMethodType::Sepa => Ok(Self::SepaDirectDebit),
             common_enums::PaymentMethodType::Bacs => Ok(Self::BacsDirectDebit),
             common_enums::PaymentMethodType::Ach => Ok(Self::AchDirectDebit),
+
             common_enums::PaymentMethodType::Paypal => Ok(Self::Paypal),
+            common_enums::PaymentMethodType::Pix => Ok(Self::Pix),
+            common_enums::PaymentMethodType::Givex => Ok(Self::Giftcard),
+            common_enums::PaymentMethodType::PaySafeCard => Ok(Self::PaySafeCard),
             _ => Err(errors::ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Adyen"),
             ))?,
@@ -1068,6 +1160,24 @@ pub struct SetupMandateRequest<
 pub struct AdyenVoidRequest {
     merchant_account: Secret<String>,
     reference: String,
+}
+
+/// Local struct for Adyen split payment data (extracted from metadata)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AdyenSplitPaymentRequest {
+    pub store: Option<String>,
+    pub split_items: Vec<AdyenSplitItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AdyenSplitItem {
+    pub amount: Option<MinorUnit>,
+    pub reference: String,
+    pub split_type: AdyenSplitType,
+    pub account: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1264,6 +1374,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<&GiftCardData> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+    fn try_from(gift_card_data: &GiftCardData) -> Result<Self, Self::Error> {
+        match gift_card_data {
+            GiftCardData::PaySafeCard {} => Ok(Self::PaySafeCard),
+            GiftCardData::Givex(givex_data) => {
+                let gift_card_pm = AdyenGiftCardData {
+                    brand: GiftCardBrand::Givex,
+                    number: givex_data.number.clone(),
+                    cvc: givex_data.cvc.clone(),
+                };
+                Ok(Self::AdyenGiftCard(Box::new(gift_card_pm)))
+            }
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &BankRedirectData,
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -1386,6 +1515,169 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+// TryFrom implementation for extracting DokuBankData from router data
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    > for DokuBankData
+{
+    type Error = Error;
+    fn try_from(
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let first_name = item.resource_common_data.get_billing_first_name()?;
+        let last_name = item.resource_common_data.get_optional_billing_last_name();
+        let shopper_email = item.resource_common_data.get_billing_email()?;
+        Ok(Self {
+            first_name,
+            last_name,
+            shopper_email,
+        })
+    }
+}
+
+// TryFrom implementation for converting BankTransferData to AdyenPaymentMethod
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &BankTransferData,
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    )> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+    fn try_from(
+        (bank_transfer_data, item): (
+            &BankTransferData,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match bank_transfer_data {
+            BankTransferData::PermataBankTransfer {} => Ok(Self::PermataBankTransfer(Box::new(
+                DokuBankData::try_from(item)?,
+            ))),
+            BankTransferData::BcaBankTransfer {} => Ok(Self::BcaBankTransfer(Box::new(
+                DokuBankData::try_from(item)?,
+            ))),
+            BankTransferData::BniVaBankTransfer {} => {
+                Ok(Self::BniVa(Box::new(DokuBankData::try_from(item)?)))
+            }
+            BankTransferData::BriVaBankTransfer {} => {
+                Ok(Self::BriVa(Box::new(DokuBankData::try_from(item)?)))
+            }
+            BankTransferData::CimbVaBankTransfer {} => {
+                Ok(Self::CimbVa(Box::new(DokuBankData::try_from(item)?)))
+            }
+            BankTransferData::DanamonVaBankTransfer {} => {
+                Ok(Self::DanamonVa(Box::new(DokuBankData::try_from(item)?)))
+            }
+            BankTransferData::MandiriVaBankTransfer {} => {
+                Ok(Self::MandiriVa(Box::new(DokuBankData::try_from(item)?)))
+            }
+            BankTransferData::Pix { .. } => Ok(Self::Pix),
+            BankTransferData::AchBankTransfer {}
+            | BankTransferData::SepaBankTransfer {}
+            | BankTransferData::BacsBankTransfer {}
+            | BankTransferData::MultibancoBankTransfer {}
+            | BankTransferData::Pse {}
+            | BankTransferData::LocalBankTransfer { .. }
+            | BankTransferData::InstantBankTransfer {}
+            | BankTransferData::InstantBankTransferFinland {}
+            | BankTransferData::InstantBankTransferPoland {} => {
+                Err(errors::ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Adyen"),
+                )
+                .into())
+            }
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<&CardRedirectData> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+
+    fn try_from(card_redirect_data: &CardRedirectData) -> Result<Self, Self::Error> {
+        match card_redirect_data {
+            CardRedirectData::Knet {} => Ok(Self::Knet),
+            CardRedirectData::Benefit {} => Ok(Self::Benefit),
+            CardRedirectData::MomoAtm {} => Ok(Self::MomoAtm),
+            CardRedirectData::CardRedirect {} => Err(errors::ConnectorError::NotImplemented(
+                "payment_method".into(),
+            ))?,
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &BankDebitData,
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    )> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+    fn try_from(
+        (bank_debit_data, item): (
+            &BankDebitData,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match bank_debit_data {
+            BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                ..
+            } => Ok(Self::AchDirectDebit(Box::new(AchDirectDebitData {
+                bank_account_number: account_number.clone(),
+                bank_location_id: routing_number.clone(),
+                owner_name: item.resource_common_data.get_billing_full_name()?,
+            }))),
+            BankDebitData::SepaBankDebit { iban, .. } => {
+                Ok(Self::SepaDirectDebit(Box::new(SepaDirectDebitData {
+                    owner_name: item.resource_common_data.get_billing_full_name()?,
+                    iban_number: iban.clone(),
+                })))
+            }
+            BankDebitData::BacsBankDebit {
+                account_number,
+                sort_code,
+                ..
+            } => {
+                let testing_data = item
+                    .request
+                    .get_connector_testing_data()
+                    .map(AdyenTestingData::try_from)
+                    .transpose()?;
+                let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
+                Ok(Self::BacsDirectDebit(Box::new(BacsDirectDebitData {
+                    bank_account_number: account_number.clone(),
+                    bank_location_id: sort_code.clone(),
+                    holder_name: test_holder_name
+                        .unwrap_or(item.resource_common_data.get_billing_full_name()?),
+                })))
+            }
+            BankDebitData::BecsBankDebit { .. } => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Adyen"),
+            )
+            .into()),
+        }
+    }
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         AdyenRouterData<
@@ -1442,7 +1734,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let additional_data = get_additional_data(&item.router_data);
 
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
         let store = adyen_metadata.store.clone(); // no split payment support yet
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
@@ -1552,7 +1845,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .clone()
-                .map(|value| Secret::new(filter_adyen_metadata(value))),
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
             platform_chargeback_logic,
             session_validity: None,
         })
@@ -1600,7 +1893,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let return_url = item.router_data.request.get_router_return_url()?;
         let additional_data = get_additional_data(&item.router_data);
 
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
         let country_code =
@@ -1670,7 +1964,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .clone()
-                .map(|value| Secret::new(filter_adyen_metadata(value))),
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
             platform_chargeback_logic,
             session_validity: None,
         })
@@ -1726,15 +2020,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_payment_billing(),
         )
         .and_then(Result::ok);
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
 
-        let (store, splits) = match item.router_data.request.split_payments.as_ref() {
-            Some(_split_payment) => {
-                // todo: Handle split payments if needed
-                (adyen_metadata.store.clone(), None)
-            }
-            _ => (adyen_metadata.store.clone(), None),
-        };
+        // Split payments not currently handled for bank transfers
+        let store = adyen_metadata.store.clone();
+        let splits = None;
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
@@ -1764,9 +2055,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             additional_data,
             mpi_data: None,
             telephone_number,
-            shopper_name: get_shopper_name(
-                item.router_data.resource_common_data.get_optional_billing(),
-            ),
+            shopper_name: None,
             shopper_email: item
                 .router_data
                 .resource_common_data
@@ -1796,7 +2085,517 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .metadata
                 .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+            platform_chargeback_logic,
+            session_validity: None,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &BankDebitData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &BankDebitData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, bank_debit_data) = value;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let (recurring_processing_model, store_payment_method, shopper_reference) =
+            get_recurring_processing_model(&item.router_data)?;
+        let return_url = item.router_data.request.get_router_return_url()?;
+
+        let billing_address =
+            get_address_info(item.router_data.resource_common_data.get_optional_billing())
+                .and_then(Result::ok);
+
+        let additional_data = get_additional_data(&item.router_data);
+
+        let adyen_metadata = get_adyen_metadata(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|secret| secret.expose()),
+        );
+        let store = adyen_metadata.store.clone();
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+        let country_code =
+            get_country_code(item.router_data.resource_common_data.get_optional_billing());
+
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from((bank_debit_data, &item.router_data))?,
+        ));
+
+        // For ACH bank debit, override state_or_province with state code (e.g., "CA" instead of "California")
+        let billing_address = match bank_debit_data {
+            BankDebitData::AchBankDebit { .. } => billing_address.map(|mut addr| {
+                addr.state_or_province = item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing()
+                    .and_then(|b| b.address.as_ref())
+                    .and_then(|address| address.to_state_code_as_optional().ok().flatten())
+                    .or(addr.state_or_province);
+                addr
+            }),
+            BankDebitData::SepaBankDebit { .. }
+            | BankDebitData::BacsBankDebit { .. }
+            | BankDebitData::BecsBankDebit { .. } => billing_address,
+        };
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info: get_browser_info(&item.router_data)?,
+            additional_data,
+            mpi_data: None,
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
+            shopper_name: None,
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number: None,
+            billing_address,
+            delivery_address: get_address_info(
+                item.router_data
+                    .resource_common_data
+                    .get_optional_shipping(),
+            )
+            .and_then(Result::ok),
+            country_code,
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: item
+                .router_data
+                .request
+                .billing_descriptor
+                .clone()
+                .and_then(|descriptor| descriptor.statement_descriptor),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store,
+            splits: None,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+            platform_chargeback_logic,
+            session_validity: None,
+        })
+    }
+}
+
+// TryFrom implementation for converting BankTransferData to AdyenPaymentRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &BankTransferData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &BankTransferData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, bank_transfer_data) = value;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let return_url = item.router_data.request.get_router_return_url()?;
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from((bank_transfer_data, &item.router_data))?,
+        ));
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+
+        // Split payments not currently handled for bank transfers
+        let store = adyen_metadata.store.clone();
+        let splits = None;
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+
+        let delivery_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .get_optional_shipping(),
+        )
+        .and_then(Result::ok);
+        let telephone_number = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_phone_number();
+
+        // Extract Pix-specific fields (session_validity and social_security_number)
+        // This aligns with Hyperswitch implementation for Adyen Pix payments
+        let (session_validity, social_security_number) = match bank_transfer_data {
+            BankTransferData::Pix {
+                cpf,
+                cnpj,
+                expiry_date,
+                ..
+            } => {
+                // Validate expiry_date doesn't exceed 5 days from now (Adyen requirement)
+                expiry_date
+                    .map(|expiry| -> CustomResult<(), errors::ConnectorError> {
+                        let now = OffsetDateTime::now_utc();
+                        let max_expiry = now + Duration::days(5);
+                        let max_expiry_primitive =
+                            PrimitiveDateTime::new(max_expiry.date(), max_expiry.time());
+
+                        if expiry > max_expiry_primitive {
+                            Err(errors::ConnectorError::InvalidDataFormat {
+                                field_name: "expiry_date cannot be more than 5 days from now",
+                            }
+                            .into())
+                        } else {
+                            Ok(())
+                        }
+                    })
+                    .transpose()?;
+
+                // Use CPF or CNPJ as social security number (Brazilian tax ID)
+                (*expiry_date, cpf.clone().or_else(|| cnpj.clone()))
+            }
+            _ => (None, None),
+        };
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model: None,
+            browser_info: None,
+            additional_data: None,
+            mpi_data: None,
+            telephone_number,
+            shopper_name: None,
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number,
+            billing_address,
+            delivery_address,
+            country_code: None,
+            line_items: None,
+            shopper_reference: None,
+            store_payment_method: None,
+            channel: None,
+            shopper_statement: item
+                .router_data
+                .request
+                .billing_descriptor
+                .clone()
+                .and_then(|descriptor| descriptor.statement_descriptor),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store,
+            splits,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+            platform_chargeback_logic,
+            session_validity,
+        })
+    }
+}
+
+// TryFrom implementation for converting CardRedirectData to AdyenPaymentRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &CardRedirectData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &CardRedirectData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, card_redirect_data) = value;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let return_url = item.router_data.request.get_router_return_url()?;
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from(card_redirect_data)?,
+        ));
+        let billing_address =
+            get_address_info(item.router_data.resource_common_data.get_optional_billing())
+                .and_then(Result::ok);
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+
+        let (store, splits) = get_adyen_split_request(
+            &item.router_data.request.metadata,
+            &adyen_metadata.store,
+            item.router_data.request.currency,
+        );
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+
+        let delivery_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .get_optional_shipping(),
+        )
+        .and_then(Result::ok);
+        let telephone_number = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_phone_number();
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model: None,
+            browser_info: None,
+            additional_data: None,
+            mpi_data: None,
+            telephone_number,
+            shopper_name: get_shopper_name(
+                item.router_data.resource_common_data.get_optional_billing(),
+            ),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number: None,
+            billing_address,
+            delivery_address,
+            country_code: None,
+            line_items: None,
+            shopper_reference: None,
+            store_payment_method: None,
+            channel: None,
+            shopper_statement: get_shopper_statement(&item.router_data),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store,
+            splits,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .expose_option()
                 .map(|value| Secret::new(filter_adyen_metadata(value))),
+            platform_chargeback_logic,
+            session_validity: None,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &GiftCardData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &GiftCardData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, gift_card_data) = value;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from(gift_card_data)?,
+        ));
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let return_url = item.router_data.request.get_router_return_url()?;
+
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+        let delivery_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .get_optional_shipping(),
+        )
+        .and_then(Result::ok);
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model: None,
+            browser_info: None,
+            additional_data: None,
+            mpi_data: None,
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
+            shopper_name: None,
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number: None,
+            billing_address,
+            delivery_address,
+            country_code: None,
+            line_items: None,
+            shopper_reference: None,
+            store_payment_method: None,
+            channel: None,
+            shopper_statement: get_shopper_statement(&item.router_data),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store: None,
+            splits: None,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
             platform_chargeback_logic,
             session_validity: None,
         })
@@ -1864,16 +2663,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ))?,
             None => match item.router_data.request.payment_method_data.clone() {
                 PaymentMethodData::Card(ref card) => Self::try_from((item, card)),
+                PaymentMethodData::CardRedirect(ref card_redirect_data) => {
+                    Self::try_from((item, card_redirect_data))
+                }
                 PaymentMethodData::Wallet(ref wallet_data) => Self::try_from((item, wallet_data)),
                 PaymentMethodData::BankRedirect(ref bank_redirect) => {
                     Self::try_from((item, bank_redirect))
                 }
+                PaymentMethodData::BankTransfer(ref bank_transfer) => {
+                    Self::try_from((item, bank_transfer.as_ref()))
+                }
+                PaymentMethodData::BankDebit(ref bank_debit) => Self::try_from((item, bank_debit)),
+                PaymentMethodData::GiftCard(ref gift_card) => {
+                    Self::try_from((item, gift_card.as_ref()))
+                }
                 PaymentMethodData::PayLater(_)
-                | PaymentMethodData::BankDebit(_)
-                | PaymentMethodData::BankTransfer(_)
-                | PaymentMethodData::CardRedirect(_)
                 | PaymentMethodData::Voucher(_)
-                | PaymentMethodData::GiftCard(_)
                 | PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
@@ -1975,10 +2780,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[serde(untagged)]
 pub enum AdyenPaymentResponse {
     Response(Box<AdyenResponse>),
+    QrCodeResponse(Box<QrCodeResponseResponse>),
     RedirectionResponse(Box<RedirectionResponse>),
     PresentToShopper(Box<PresentToShopperResponse>),
     RedirectionErrorResponse(Box<RedirectionErrorResponse>),
-    QrCodeResponse(Box<QrCodeResponseResponse>),
     WebhookResponse(Box<AdyenWebhookResponse>),
 }
 
@@ -2241,7 +3046,7 @@ impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for AttemptStatus {
 fn get_adyen_payment_status(
     is_manual_capture: bool,
     adyen_status: AdyenStatus,
-    _pmt: Option<common_enums::PaymentMethodType>,
+    pmt: Option<common_enums::PaymentMethodType>,
 ) -> AttemptStatus {
     match adyen_status {
         AdyenStatus::AuthenticationFinished => AttemptStatus::AuthenticationSuccessful,
@@ -2256,7 +3061,12 @@ fn get_adyen_payment_status(
         | AdyenStatus::RedirectShopper
         | AdyenStatus::PresentToShopper => AttemptStatus::AuthenticationPending,
         AdyenStatus::Error | AdyenStatus::Refused => AttemptStatus::Failure,
-        AdyenStatus::Pending => AttemptStatus::Pending,
+        // Pix returns Pending status but requires customer action (QR code)
+        // so we map it to AuthenticationPending like Hyperswitch does
+        AdyenStatus::Pending => match pmt {
+            Some(common_enums::PaymentMethodType::Pix) => AttemptStatus::AuthenticationPending,
+            _ => AttemptStatus::Pending,
+        },
     }
 }
 
@@ -2788,13 +3598,16 @@ pub fn get_qr_code_response(
         None
     };
 
+    // Generate QR metadata matching Hyperswitch implementation
+    let connector_metadata = get_qr_metadata(&response)?;
+
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: match response.psp_reference.as_ref() {
             Some(psp) => ResponseId::ConnectorTransactionId(psp.to_string()),
             None => ResponseId::NoResponseId,
         },
         redirection_data: None,
-        connector_metadata: None,
+        connector_metadata,
         network_txn_id: None,
         connector_response_reference_id: response
             .merchant_reference
@@ -2812,6 +3625,51 @@ pub fn get_qr_code_response(
         txn_amount: response.amount.map(|amount| amount.value),
         connector_response: None,
     })
+}
+
+/// Get QR code metadata for Pix and other QR-based payment methods
+/// Matches Hyperswitch's get_qr_metadata implementation
+fn get_qr_metadata(
+    response: &QrCodeResponseResponse,
+) -> CustomResult<Option<serde_json::Value>, errors::ConnectorError> {
+    // Generate QR code image from qr_code_data
+    let image_data = QrImage::new_from_data(response.action.qr_code_data.clone())
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
+
+    let image_data_url = Url::parse(image_data.data.as_str()).ok();
+    let qr_code_url = response.action.qr_code_url.clone();
+
+    // Extract pix expiration date and convert to timestamp in milliseconds
+    let display_to_timestamp = response
+        .additional_data
+        .as_ref()
+        .and_then(|additional_data| additional_data.pix_expiration_date)
+        .map(|time| {
+            // Convert PrimitiveDateTime to Unix timestamp in milliseconds
+            time.assume_utc().unix_timestamp() * 1000
+        });
+
+    let qr_code_info = match (image_data_url, qr_code_url) {
+        (Some(image_data_url), Some(qr_code_url)) => Some(QrCodeInformation::QrCodeUrl {
+            image_data_url,
+            qr_code_url,
+            display_to_timestamp,
+        }),
+        (None, Some(qr_code_url)) => Some(QrCodeInformation::QrCodeImageUrl {
+            qr_code_url,
+            display_to_timestamp,
+        }),
+        (Some(image_data_url), None) => Some(QrCodeInformation::QrDataUrl {
+            image_data_url,
+            display_to_timestamp,
+        }),
+        (None, None) => None,
+    };
+
+    qr_code_info
+        .map(|info| info.encode_to_value())
+        .transpose()
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
 }
 
 pub fn get_webhook_response(
@@ -3140,7 +3998,8 @@ pub fn get_wait_screen_metadata(
         | PaymentType::MandiriVa
         | PaymentType::PaySafeCard
         | PaymentType::SevenEleven
-        | PaymentType::Lawson => Ok(None),
+        | PaymentType::Lawson
+        | PaymentType::Pix => Ok(None),
     }
 }
 
@@ -3389,19 +4248,24 @@ fn get_recurring_processing_model_for_repeat_payment<
 >(
     item: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
 ) -> Result<RecurringDetails, Error> {
-    // For repeat payments (MIT flows), it's always off-session
-    let shopper_reference = item
-        .resource_common_data
-        .get_connector_customer_id()
-        .ok()
-        .ok_or(errors::ConnectorError::MissingRequiredField {
-            field_name: "connector_customer_id",
-        })?;
-    Ok((
-        Some(AdyenRecurringModel::UnscheduledCardOnFile),
-        None, // store_payment_method is None for repeat payments
-        Some(shopper_reference),
-    ))
+    let shopper_reference = item.resource_common_data.get_connector_customer_id().ok();
+
+    match item.request.off_session {
+        // Off-session payment
+        Some(true) => {
+            let shopper_reference =
+                shopper_reference.ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_customer_id",
+                })?;
+            Ok((
+                Some(AdyenRecurringModel::UnscheduledCardOnFile),
+                None,
+                Some(shopper_reference),
+            ))
+        }
+        // On-session payment
+        _ => Ok((None, None, shopper_reference)),
+    }
 }
 
 fn get_recurring_processing_model<
@@ -3473,7 +4337,12 @@ fn get_additional_data<
         }
         _ => (None, None),
     };
-    let riskdata = item.request.metadata.clone().and_then(get_risk_data);
+    let riskdata = item
+        .request
+        .metadata
+        .clone()
+        .expose_option()
+        .and_then(get_risk_data);
 
     let execute_three_d = if matches!(
         item.resource_common_data.auth_type,
@@ -3899,7 +4768,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let additional_data = get_additional_data_for_setup_mandate(&item.router_data);
 
-        let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
 
@@ -4207,7 +5077,12 @@ fn get_additional_data_for_setup_mandate<
         }
         _ => (None, None),
     };
-    let riskdata = item.request.metadata.clone().and_then(get_risk_data);
+    let riskdata = item
+        .request
+        .metadata
+        .clone()
+        .expose_option()
+        .and_then(get_risk_data);
 
     let execute_three_d = if matches!(
         item.resource_common_data.auth_type,
@@ -4441,15 +5316,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             additional_data,
             shopper_reference: shopper_reference.clone(),
             store_payment_method,
-            shopper_name: get_shopper_name(
-                item.router_data.resource_common_data.get_optional_billing(),
-            ),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            shopper_name: None,
             shopper_locale: item.router_data.request.locale.clone(),
-            shopper_email: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_email(),
+            shopper_email: None,
             shopper_statement: get_shopper_statement_for_repeat_payment(&item.router_data),
             social_security_number: None,
             telephone_number,
@@ -5168,4 +6038,35 @@ impl AdditionalData {
             Some(first_part.to_string())
         })
     }
+}
+
+fn get_adyen_split_request(
+    metadata: &Option<SecretSerdeValue>,
+    adyen_store: &Option<String>,
+    currency: common_enums::Currency,
+) -> (Option<String>, Option<Vec<AdyenSplitData>>) {
+    metadata
+        .as_ref()
+        .and_then(|secret| {
+            serde_json::from_value::<AdyenSplitPaymentRequest>(secret.clone().expose()).ok()
+        })
+        .map(|split_request| {
+            let splits: Vec<AdyenSplitData> = split_request
+                .split_items
+                .into_iter()
+                .map(|split_item| {
+                    let amount = split_item.amount.map(|value| Amount { currency, value });
+                    AdyenSplitData {
+                        amount,
+                        reference: split_item.reference,
+                        split_type: split_item.split_type,
+                        account: split_item.account,
+                        description: split_item.description,
+                    }
+                })
+                .collect();
+            let store = split_request.store.clone().or(adyen_store.clone());
+            (store, Some(splits))
+        })
+        .unwrap_or_else(|| (adyen_store.clone(), None))
 }

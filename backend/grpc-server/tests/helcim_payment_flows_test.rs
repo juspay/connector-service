@@ -104,9 +104,14 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
             Some(IdType::EncodedData(id)) => id.clone(),
             Some(IdType::NoResponseIdMarker(_)) => {
                 // For manual capture, extract the transaction ID from connector metadata
-                if let Some(preauth_id) = response.connector_metadata.get("preauth_transaction_id")
-                {
-                    return preauth_id.clone();
+                if let Some(connector_meta) = &response.connector_metadata {
+                    if let Ok(meta_map) = serde_json::from_str::<HashMap<String, String>>(
+                        connector_meta.as_ref().expose(),
+                    ) {
+                        if let Some(preauth_id) = meta_map.get("preauth_transaction_id") {
+                            return preauth_id.clone();
+                        }
+                    }
                 }
                 panic!(
                     "NoResponseIdMarker found but no preauth_transaction_id in connector metadata"
@@ -218,11 +223,13 @@ fn create_payment_authorize_request_with_amount(
         bank_code: None,
         nick_name: None,
     };
-    let mut metadata = HashMap::new();
-    metadata.insert(
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert(
         "description".to_string(),
         "Its my first payment request".to_string(),
     );
+    let metadata_json = serde_json::to_string(&metadata_map).unwrap();
+
     PaymentServiceAuthorizeRequest {
         amount,
         minor_amount: amount,
@@ -242,7 +249,7 @@ fn create_payment_authorize_request_with_amount(
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         order_category: Some("PAY".to_string()),
-        metadata,
+        metadata: Some(Secret::new(metadata_json)),
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
@@ -267,12 +274,13 @@ fn create_payment_sync_request(
         amount,
         currency: i32::from(Currency::Usd),
         state: None,
-        metadata: HashMap::new(),
-        merchant_account_metadata: HashMap::new(),
+        metadata: None,
+        merchant_account_metadata: None,
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
+        test_mode: None,
     }
 }
 

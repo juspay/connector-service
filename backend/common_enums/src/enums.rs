@@ -1028,6 +1028,7 @@ pub enum PaymentMethodType {
     Twint,
     UpiCollect,
     UpiIntent,
+    UpiQr,
     Vipps,
     VietQr,
     Venmo,
@@ -1150,6 +1151,7 @@ pub enum AttemptStatus {
     PartialCharged,
     PartialChargedAndChargeable,
     Unresolved,
+    Unspecified,
     #[default]
     Pending,
     Failure,
@@ -1191,6 +1193,7 @@ impl TryFrom<u32> for AttemptStatus {
             24 => Self::PaymentMethodAwaited,
             25 => Self::ConfirmationAwaited,
             26 => Self::DeviceDataCollectionPending,
+            27 => Self::Unspecified,
             _ => Self::Unknown,
         })
     }
@@ -2095,6 +2098,15 @@ pub enum MitCategory {
     Resubmission,
 }
 
+/// Padding schemes used for cryptographic operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CryptoPadding {
+    /// PKCS7 padding - adds bytes equal to the number of padding bytes needed
+    PKCS7,
+    /// Zero padding - pads with null bytes
+    ZeroPadding,
+}
+
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, strum::Display)]
 #[serde(rename_all = "snake_case")]
 pub enum MandateStatus {
@@ -2103,4 +2115,27 @@ pub enum MandateStatus {
     Inactive,
     Pending,
     Revoked,
+}
+
+/// The type of tokenization to use for the payment method
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    Deserialize,
+    Serialize,
+    strum::Display,
+    strum::EnumString,
+    ToSchema,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum Tokenization {
+    /// Skip PSP-level tokenization
+    SkipPsp,
+    /// Tokenize at PSP Level
+    TokenizeAtPsp,
 }

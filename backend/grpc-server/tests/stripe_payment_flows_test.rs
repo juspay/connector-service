@@ -173,12 +173,13 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
-        metadata: std::collections::HashMap::new(),
-        merchant_account_metadata: std::collections::HashMap::new(),
+        metadata: None,
+        merchant_account_metadata: None,
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
+        test_mode: None,
     }
 }
 

@@ -24,6 +24,11 @@ enum CardNetwork {
   RUPAY = 10;
 }
 
+// Paysafecard - Prepaid payment method
+message PaySafeCard {
+  // Fields will be added as needed for Paysafecard integration
+}
+
 // ============================================================================
 // COMPOSITE MESSAGES
 // ============================================================================
@@ -98,6 +103,14 @@ message PaymentMethod {
     MultibancoBankTransfer multibanco_bank_transfer = 94;      // Multibanco - Portuguese payment method
     InstantBankTransferFinland instant_bank_transfer_finland = 95;         // Finland's instant bank transfer
     InstantBankTransferPoland instant_bank_transfer_poland = 96;           // Poland's instant bank transfer
+    PixPayment pix = 97;                                       // PIX - Brazilian instant payment
+    PermataBankTransfer permata_bank_transfer = 130;           // Permata Bank transfer in Indonesia
+    BCABankTransfer bca_bank_transfer = 131;                   // BCA Bank transfer in Indonesia
+    BNIVaBankTransfer bni_va_bank_transfer = 132;              // BNI VA Bank transfer in Indonesia
+    BRIVaBankTransfer bri_va_bank_transfer = 133;              // BRI VA Bank transfer in Indonesia
+    CIMBVaBankTransfer cimb_va_bank_transfer = 134;            // CIMB VA Bank transfer in Indonesia
+    DanamonVaBankTransfer danamon_va_bank_transfer = 135;      // Danamon VA Bank transfer in Indonesia
+    MandiriVaBankTransfer mandiri_va_bank_transfer = 136;      // Mandiri VA Bank transfer in Indonesia
 
     // DIRECT DEBIT (100-109)
     Ach ach = 100;                                              // Ach - Automated Clearing House
@@ -113,6 +126,10 @@ message PaymentMethod {
     // NETWORK TRANSACTION METHODS (120-129) - For recurring payments with network transaction IDs
     CardDetailsForNetworkTransactionId card_details_for_network_transaction_id = 120; // Card details with network transaction ID
     NetworkTokenData network_token = 121; // Network token data
+    
+    // GIFT CARDS (130-139)
+    Givex givex = 137;                                         // Givex gift card
+    PaySafeCard pay_safe_card = 138;                           // Paysafecard - Prepaid payment method
   }
 }
 
@@ -534,6 +551,8 @@ enum UpiSource {
   UPI_CL = 1;    // UPI Credit Line
   UPI_ACCOUNT = 2; // UPI Bank Account (Savings)
   UPI_CC_CL = 3; // UPI Credit Card + Credit Line
+  UPI_PPI = 4;   // UPI Prepaid Payment Instrument
+  UPI_VOUCHER = 5; // UPI Voucher
 }
 
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
@@ -556,6 +575,17 @@ message UpiQr {
   optional UpiSource upi_source = 1;
 }
 
+// Additional payment method data for UPI payments
+// Note: This struct uses `upi_mode` (not `upi_source`) to represent the final
+// payment instrument selected by the customer at the connector end.
+//
+// - `upi_source` in UpiCollect/UpiIntent/UpiQr: The intended UPI source type
+//   requested by the merchant (e.g., customer wants to pay via UPI_CC).
+
+message UpiConnectorResponse {
+  optional UpiSource upi_mode = 1; // Final UPI source detected from connector response
+}
+
 // PIX - Brazilian instant payment ecosystem
 message PixPayment {
   // Unique key for PIX transfer
@@ -572,6 +602,9 @@ message PixPayment {
   
   // Destination bank account ID
   optional string destination_bank_account_id = 5;
+  
+  // Session expiry date for Pix QR code (ISO 8601 format, max 5 days from now for Adyen)
+  optional string expiry_date = 6;
 }
 
 // PromptPay - Thai QR code payment system
@@ -641,7 +674,10 @@ message InstantBankTransferPoland {
   // Fields will be added as needed for instant bank transfers poland
 }
 
-/*
+// ============================================================================
+// INDONESIAN BANK TRANSFERS (Doku Integration)
+// ============================================================================
+
 // BCA Bank Transfer - Bank Central Asia transfer in Indonesia
 message BCABankTransfer {
   // Fields will be added as needed for BCA Bank Transfer integration
@@ -651,7 +687,31 @@ message BCABankTransfer {
 message PermataBankTransfer {
   // Fields will be added as needed for Permata Bank Transfer integration
 }
-*/
+
+// BNI VA Bank Transfer - BNI Virtual Account transfer in Indonesia
+message BNIVaBankTransfer {
+  // Fields will be added as needed for BNI VA Bank Transfer integration
+}
+
+// BRI VA Bank Transfer - BRI Virtual Account transfer in Indonesia
+message BRIVaBankTransfer {
+  // Fields will be added as needed for BRI VA Bank Transfer integration
+}
+
+// CIMB VA Bank Transfer - CIMB Virtual Account transfer in Indonesia
+message CIMBVaBankTransfer {
+  // Fields will be added as needed for CIMB VA Bank Transfer integration
+}
+
+// Danamon VA Bank Transfer - Danamon Virtual Account transfer in Indonesia
+message DanamonVaBankTransfer {
+  // Fields will be added as needed for Danamon VA Bank Transfer integration
+}
+
+// Mandiri VA Bank Transfer - Mandiri Virtual Account transfer in Indonesia
+message MandiriVaBankTransfer {
+  // Fields will be added as needed for Mandiri VA Bank Transfer integration
+}
 
 // ============================================================================
 // ONLINE BANKING PAYMENT METHODS
@@ -950,15 +1010,6 @@ message EVoucher {
   // Fields will be added as needed for E-Voucher integration
 }
 
-// Givex - Gift card and loyalty program provider
-message Givex {
-  // The gift card number
-  SecretString number = 1 [(validate.rules).string = {min_len: 1}];
-  
-  // The card verification code
-  SecretString cvc = 2;
-}
-
 // Indomaret - Indonesian convenience store payment
 message Indomaret {
   // Fields will be added as needed for Indomaret integration
@@ -972,11 +1023,6 @@ message OXXO {
 // PagoEfectivo - Peruvian cash payment method
 message PagoEfectivo {
   // Fields will be added as needed for PagoEfectivo integration
-}
-
-// Paysafecard - Prepaid payment method
-message PaySafeCard {
-  // Fields will be added as needed for Paysafecard integration
 }
 
 // 7-Eleven - Convenience store payment
@@ -1156,6 +1202,19 @@ message EVoucher {
 
 message SecretString {
   string value = 1;
+}
+
+// ============================================================================
+// GIFT CARDS
+// ============================================================================
+
+// Givex - Gift card and loyalty program provider
+message Givex {
+  // The gift card number
+  SecretString number = 1;
+
+  // The card verification code
+  SecretString cvc = 2;
 }
 
 enum BankNames {

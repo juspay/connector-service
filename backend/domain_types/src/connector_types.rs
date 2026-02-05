@@ -12,7 +12,7 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use time::PrimitiveDateTime;
@@ -93,6 +93,7 @@ pub enum ConnectorEnum {
     Billwerk,
     Hipay,
     Trustpayments,
+    Redsys,
     Globalpay,
     Nuvei,
     Iatapay,
@@ -101,6 +102,7 @@ pub enum ConnectorEnum {
     Paybox,
     Barclaycard,
     Nexixpay,
+    Mollie,
     Airwallex,
     Tsys,
     Bankofamerica,
@@ -112,6 +114,8 @@ pub enum ConnectorEnum {
     Revolut,
     Gigadat,
     Loonio,
+    Wellsfargo,
+    Hyperpg,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -174,7 +178,9 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Nmi => Ok(Self::Nmi),
             grpc_api_types::payments::Connector::Shift4 => Ok(Self::Shift4),
             grpc_api_types::payments::Connector::Barclaycard => Ok(Self::Barclaycard),
+            grpc_api_types::payments::Connector::Redsys => Ok(Self::Redsys),
             grpc_api_types::payments::Connector::Nexixpay => Ok(Self::Nexixpay),
+            grpc_api_types::payments::Connector::Mollie => Ok(Self::Mollie),
             grpc_api_types::payments::Connector::Airwallex => Ok(Self::Airwallex),
             grpc_api_types::payments::Connector::Tsys => Ok(Self::Tsys),
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
@@ -186,6 +192,8 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Revolut => Ok(Self::Revolut),
             grpc_api_types::payments::Connector::Gigadat => Ok(Self::Gigadat),
             grpc_api_types::payments::Connector::Loonio => Ok(Self::Loonio),
+            grpc_api_types::payments::Connector::Wellsfargo => Ok(Self::Wellsfargo),
+            grpc_api_types::payments::Connector::Hyperpg => Ok(Self::Hyperpg),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1063,7 +1071,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_method_type: Option<PaymentMethodType>,
     pub customer_id: Option<CustomerId>,
     pub request_incremental_authorization: Option<bool>,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<SecretSerdeValue>,
     pub authentication_data: Option<router_request_types::AuthenticationData>,
     pub split_payments: Option<SplitPaymentsRequest>,
     // New amount for amount frame work
@@ -1085,6 +1093,10 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
     pub locale: Option<String>,
+    pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub threeds_method_comp_ind: Option<ThreeDsCompletionIndicator>,
+    pub continue_redirection_url: Option<Url>,
+    pub tokenization: Option<common_enums::Tokenization>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -1243,13 +1255,16 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn get_metadata_as_object(&self) -> Option<SecretSerdeValue> {
-        self.metadata.clone().and_then(|meta_data| match meta_data {
-            serde_json::Value::Null
-            | serde_json::Value::Bool(_)
-            | serde_json::Value::Number(_)
-            | serde_json::Value::String(_)
-            | serde_json::Value::Array(_) => None,
-            serde_json::Value::Object(_) => Some(meta_data.into()),
+        self.metadata.clone().and_then(|meta_data| {
+            let inner = meta_data.expose();
+            match inner {
+                serde_json::Value::Null
+                | serde_json::Value::Bool(_)
+                | serde_json::Value::Number(_)
+                | serde_json::Value::String(_)
+                | serde_json::Value::Array(_) => None,
+                serde_json::Value::Object(_) => Some(SecretSerdeValue::new(inner)),
+            }
         })
     }
 
@@ -1334,12 +1349,14 @@ pub enum PaymentsResponseData {
         status_code: u16,
     },
     PreAuthenticateResponse {
+        authentication_data: Option<router_request_types::AuthenticationData>,
         /// For Device Data Collection
         redirection_data: Option<Box<RedirectForm>>,
         connector_response_reference_id: Option<String>,
         status_code: u16,
     },
     AuthenticateResponse {
+        resource_id: Option<ResponseId>,
         /// For friction flow
         redirection_data: Option<Box<RedirectForm>>,
         /// For frictionles flow
@@ -1391,7 +1408,7 @@ pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
     pub currency: Currency,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
 }
 
@@ -1433,6 +1450,22 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+}
+
+impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(ConnectorError::CaptureMethodNotSupported.into())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1447,6 +1480,35 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+    pub authentication_data: Option<router_request_types::AuthenticationData>,
+}
+
+impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(ConnectorError::CaptureMethodNotSupported.into())
+            }
+        }
+    }
+
+    pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
+    }
+
+    pub fn get_continue_redirection_url(&self) -> Result<Url, Error> {
+        self.continue_redirection_url
+            .clone()
+            .ok_or_else(missing_field_err("continue_redirection_url"))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1472,6 +1534,20 @@ pub struct PaymentsSdkSessionTokenData {
     pub shipping_cost: Option<MinorUnit>,
     /// The specific payment method type for which the session token is being generated
     pub payment_method_type: Option<PaymentMethodType>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+/// Indicates if 3DS method data was successfully completed or not
+pub enum ThreeDsCompletionIndicator {
+    /// 3DS method successfully completed
+    #[serde(rename = "Y")]
+    Success,
+    /// 3DS method was not successful
+    #[serde(rename = "N")]
+    Failure,
+    /// 3DS method URL was unavailable
+    #[serde(rename = "U")]
+    NotAvailable,
 }
 
 #[derive(Debug, Clone)]
@@ -2107,7 +2183,7 @@ pub struct RefundsData {
     pub reason: Option<String>,
     pub webhook_url: Option<String>,
     pub refund_amount: i64,
-    pub connector_metadata: Option<serde_json::Value>,
+    pub connector_metadata: Option<SecretSerdeValue>,
     pub refund_connector_metadata: Option<SecretSerdeValue>,
     pub minor_payment_amount: MinorUnit,
     pub minor_refund_amount: MinorUnit,
@@ -2134,7 +2210,7 @@ impl RefundsData {
             .clone()
             .ok_or_else(missing_field_err("webhook_url"))
     }
-    pub fn get_connector_metadata(&self) -> Result<serde_json::Value, Error> {
+    pub fn get_connector_metadata(&self) -> Result<SecretSerdeValue, Error> {
         self.connector_metadata
             .clone()
             .ok_or_else(missing_field_err("connector_metadata"))
@@ -2231,7 +2307,7 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub return_url: Option<String>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub request_incremental_authorization: bool,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<SecretSerdeValue>,
     pub complete_authorize_url: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub merchant_order_reference_id: Option<String>,
@@ -2319,7 +2395,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub locale: Option<String>,
     pub connector_testing_data: Option<SecretSerdeValue>,
     pub merchant_account_id: Option<Secret<String>>,
-    pub merchant_configered_currency: Option<Currency>,
+    pub merchant_configured_currency: Option<Currency>,
 }
 
 impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
@@ -2379,6 +2455,9 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => None,
         }
+    }
+    pub fn get_optional_email(&self) -> Option<Email> {
+        self.email.clone()
     }
 }
 

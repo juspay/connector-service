@@ -13,7 +13,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -443,7 +443,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .change_context(ConnectorError::RequestEncodingFailed)?;
             let action = PlacetopayNextAction::Reverse;
             let authorization = match item.router_data.request.connector_metadata.clone() {
-                Some(metadata) => metadata.as_str().map(|auth| auth.to_string()),
+                Some(metadata) => metadata.expose().as_str().map(|auth| auth.to_string()),
                 None => None,
             };
             Ok(Self {

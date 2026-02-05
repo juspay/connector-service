@@ -144,6 +144,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                 })
             }
             Self::NoConnectorMetaData
+            | Self::MaxFieldLengthViolated { .. }
             | Self::MissingConnectorMandateID
             | Self::MissingConnectorTransactionID
             | Self::MissingConnectorRefundID
@@ -316,7 +317,7 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             network_error_message: None,
             status_code: error.status_code.unwrap_or(500),
             response_headers: std::collections::HashMap::new(),
-            connector_metadata: std::collections::HashMap::new(),
+            connector_metadata: None,
             raw_connector_response: None,
             raw_connector_request: None,
             state: None,

@@ -540,7 +540,7 @@ macros::macro_connector_implementation!(
             let operation_id = if let Some(metadata) = req.request.connector_metadata.clone() {
                 // Try to get capture operation ID from metadata
                 nexixpay::get_payment_id(
-                    Some(metadata),
+                    Some(metadata.expose()),
                     Some(nexixpay::NexixpayPaymentIntent::Capture)
                 ).unwrap_or_else(|_| {
                     // Fallback to connector_transaction_id if dynamic selection fails

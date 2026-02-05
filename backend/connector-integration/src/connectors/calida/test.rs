@@ -160,6 +160,10 @@ mod tests {
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,
+                    continue_redirection_url: None,
+                    redirect_response: None,
+                    threeds_method_comp_ind: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -304,6 +308,10 @@ mod tests {
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,
+                    continue_redirection_url: None,
+                    redirect_response: None,
+                    threeds_method_comp_ind: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

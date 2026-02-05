@@ -923,22 +923,38 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
+
+        let (error_code, error_message, error_reason) =
+            if transformers::get_adyen_payment_webhook_event(
+                notif.event_code.clone(),
+                notif.success.clone(),
+            )? == AttemptStatus::Failure
+            {
+                (
+                    notif.reason.clone(),
+                    notif.reason.clone(),
+                    notif.reason.clone(),
+                )
+            } else {
+                (None, None, None)
+            };
+
         Ok(WebhookDetailsResponse {
             resource_id: Some(ResponseId::ConnectorTransactionId(
                 notif.psp_reference.clone(),
             )),
             status: transformers::get_adyen_payment_webhook_event(notif.event_code, notif.success)?,
             connector_response_reference_id: Some(notif.psp_reference),
-            error_code: notif.reason.clone(),
+            error_code,
             mandate_reference: None,
-            error_message: notif.reason,
+            error_message,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
             minor_amount_captured: None,
             amount_captured: None,
-            error_reason: None,
+            error_reason,
             network_txn_id: None,
         })
     }
@@ -956,12 +972,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
 
+        let (error_code, error_message) = if transformers::get_adyen_refund_webhook_event(
+            notif.event_code.clone(),
+            notif.success.clone(),
+        )? == common_enums::RefundStatus::Failure
+        {
+            (notif.reason.clone(), notif.reason.clone())
+        } else {
+            (None, None)
+        };
+
         Ok(RefundWebhookDetailsResponse {
             connector_refund_id: Some(notif.psp_reference.clone()),
             status: transformers::get_adyen_refund_webhook_event(notif.event_code, notif.success)?,
             connector_response_reference_id: Some(notif.psp_reference.clone()),
-            error_code: notif.reason.clone(),
-            error_message: notif.reason,
+            error_code,
+            error_message,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
@@ -1217,6 +1243,42 @@ static ADYEN_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = Lazy
         },
     );
 
+    // Bank Debit - ACH
+    adyen_supported_payment_methods.add(
+        PaymentMethod::BankDebit,
+        PaymentMethodType::Ach,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::Supported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: adyen_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
+    // Bank Debit - SEPA
+    adyen_supported_payment_methods.add(
+        PaymentMethod::BankDebit,
+        PaymentMethodType::Sepa,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::Supported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: adyen_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
+    // Bank Debit - BACS
+    adyen_supported_payment_methods.add(
+        PaymentMethod::BankDebit,
+        PaymentMethodType::Bacs,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::Supported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: adyen_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
     adyen_supported_payment_methods
 });
 
@@ -1248,7 +1310,12 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
         pm_type: Option<PaymentMethodType>,
         pm_data: PaymentMethodData<DefaultPCIHolder>,
     ) -> CustomResult<(), errors::ConnectorError> {
-        let mandate_supported_pmd = std::collections::HashSet::from([PaymentMethodDataType::Card]);
+        let mandate_supported_pmd = std::collections::HashSet::from([
+            PaymentMethodDataType::Card,
+            PaymentMethodDataType::AchBankDebit,
+            PaymentMethodDataType::SepaBankDebit,
+            PaymentMethodDataType::BecsBankDebit,
+        ]);
         is_mandate_supported(pm_data, pm_type, mandate_supported_pmd, self.id())
     }
 

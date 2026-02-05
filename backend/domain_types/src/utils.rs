@@ -239,6 +239,7 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::PartialCharged
         | common_enums::AttemptStatus::PartialChargedAndChargeable
         | common_enums::AttemptStatus::Unresolved
+        | common_enums::AttemptStatus::Unspecified
         | common_enums::AttemptStatus::Pending
         | common_enums::AttemptStatus::PaymentMethodAwaited
         | common_enums::AttemptStatus::ConfirmationAwaited
@@ -516,5 +517,100 @@ pub fn convert_canada_state_to_code(state: &str) -> String {
         "yukon" => "YT".to_string(),
         // If no match found, return original
         _ => state.to_string(),
+    }
+}
+
+/// Convert Spanish autonomous community/province names to their 2-letter ISO 3166-2:ES codes
+///
+/// # Arguments
+/// * `state` - The state/province name or code to convert
+///
+/// # Returns
+/// * `Ok(String)` - The 2-letter state code
+/// * `Err(ConnectorError)` - If the state cannot be mapped
+pub fn convert_spain_state_to_code(state: &str) -> Result<String, crate::errors::ConnectorError> {
+    // If already 2 characters, assume it's already an abbreviation
+    if state.len() == 2 {
+        return Ok(state.to_uppercase());
+    }
+
+    match state.to_lowercase().trim() {
+        "acoruna" | "lacoruna" | "esc" => Ok("C".to_string()),
+        "alacant" | "esa" | "alicante" => Ok("A".to_string()),
+        "albacete" | "esab" => Ok("AB".to_string()),
+        "almeria" | "esal" => Ok("AL".to_string()),
+        "andalucia" | "esan" => Ok("AN".to_string()),
+        "araba" | "esvi" => Ok("VI".to_string()),
+        "aragon" | "esar" => Ok("AR".to_string()),
+        "asturias" | "eso" => Ok("O".to_string()),
+        "asturiasprincipadode" | "principadodeasturias" | "esas" => Ok("AS".to_string()),
+        "badajoz" | "esba" => Ok("BA".to_string()),
+        "barcelona" | "esb" => Ok("B".to_string()),
+        "bizkaia" | "esbi" => Ok("BI".to_string()),
+        "burgos" | "esbu" => Ok("BU".to_string()),
+        "canarias" | "escn" => Ok("CN".to_string()),
+        "cantabria" | "ess" => Ok("S".to_string()),
+        "castello" | "escs" => Ok("CS".to_string()),
+        "castellon" => Ok("C".to_string()),
+        "castillayleon" | "escl" => Ok("CL".to_string()),
+        "castillalamancha" | "escm" => Ok("CM".to_string()),
+        "cataluna" | "catalunya" | "esct" => Ok("CT".to_string()),
+        "ceuta" | "esce" => Ok("CE".to_string()),
+        "ciudadreal" | "escr" | "ciudad" => Ok("CR".to_string()),
+        "cuenca" | "escu" => Ok("CU".to_string()),
+        "caceres" | "escc" => Ok("CC".to_string()),
+        "cadiz" | "esca" => Ok("CA".to_string()),
+        "cordoba" | "esco" => Ok("CO".to_string()),
+        "euskalherria" | "espv" => Ok("PV".to_string()),
+        "extremadura" | "esex" => Ok("EX".to_string()),
+        "galicia" | "esga" => Ok("GA".to_string()),
+        "gipuzkoa" | "esss" => Ok("SS".to_string()),
+        "girona" | "esgi" | "gerona" => Ok("GI".to_string()),
+        "granada" | "esgr" => Ok("GR".to_string()),
+        "guadalajara" | "esgu" => Ok("GU".to_string()),
+        "huelva" | "esh" => Ok("H".to_string()),
+        "huesca" | "eshu" => Ok("HU".to_string()),
+        "illesbalears" | "islasbaleares" | "espm" => Ok("PM".to_string()),
+        "esib" => Ok("IB".to_string()),
+        "jaen" | "esj" => Ok("J".to_string()),
+        "larioja" | "eslo" => Ok("LO".to_string()),
+        "esri" => Ok("RI".to_string()),
+        "laspalmas" | "palmas" | "esgc" => Ok("GC".to_string()),
+        "leon" => Ok("LE".to_string()),
+        "lleida" | "lerida" | "esl" => Ok("L".to_string()),
+        "lugo" | "eslu" => Ok("LU".to_string()),
+        "madrid" | "esm" => Ok("M".to_string()),
+        "comunidaddemadrid" | "madridcomunidadde" | "esmd" => Ok("MD".to_string()),
+        "melilla" | "esml" => Ok("ML".to_string()),
+        "murcia" | "esmu" => Ok("MU".to_string()),
+        "murciaregionde" | "regiondemurcia" | "esmc" => Ok("MC".to_string()),
+        "malaga" | "esma" => Ok("MA".to_string()),
+        "nafarroa" | "esnc" => Ok("NC".to_string()),
+        "nafarroakoforukomunitatea" | "esna" => Ok("NA".to_string()),
+        "navarra" => Ok("NA".to_string()),
+        "navarracomunidadforalde" | "comunidadforaldenavarra" => Ok("NC".to_string()),
+        "ourense" | "orense" | "esor" => Ok("OR".to_string()),
+        "palencia" | "esp" => Ok("P".to_string()),
+        "paisvasco" => Ok("PV".to_string()),
+        "pontevedra" | "espo" => Ok("PO".to_string()),
+        "salamanca" | "essa" => Ok("SA".to_string()),
+        "santacruzdetenerife" | "estf" => Ok("TF".to_string()),
+        "segovia" | "essg" => Ok("SG".to_string()),
+        "sevilla" | "esse" => Ok("SE".to_string()),
+        "soria" | "esso" => Ok("SO".to_string()),
+        "tarragona" | "est" => Ok("T".to_string()),
+        "teruel" | "este" => Ok("TE".to_string()),
+        "toledo" | "esto" => Ok("TO".to_string()),
+        "valencia" | "esv" => Ok("V".to_string()),
+        "valencianacomunidad" | "esvc" => Ok("VC".to_string()),
+        "valencianacomunitat" => Ok("V".to_string()),
+        "valladolid" | "esva" => Ok("VA".to_string()),
+        "zamora" | "esza" => Ok("ZA".to_string()),
+        "zaragoza" | "esz" => Ok("Z".to_string()),
+        "alava" => Ok("VI".to_string()),
+        "avila" | "esav" => Ok("AV".to_string()),
+        _ => Err(errors::ConnectorError::InvalidDataFormat {
+            field_name: "address.state",
+        })?,
     }
 }

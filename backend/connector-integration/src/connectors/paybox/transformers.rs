@@ -18,7 +18,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeOptionInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
@@ -843,6 +843,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let numtrans = router_data
             .request
             .connector_metadata
+            .expose_option()
             .as_ref()
             .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.clone()).ok())
             .map(|meta| meta.connector_request_id)

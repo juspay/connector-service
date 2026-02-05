@@ -14,7 +14,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 const LANGUAGE: &str = "en";
@@ -1097,7 +1097,7 @@ impl
                 .request
                 .metadata
                 .as_ref()
-                .and_then(|meta| meta.get("product_name"))
+                .and_then(|meta| meta.peek().get("product_name"))
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string()), // Extract from metadata
             transaction_id: item

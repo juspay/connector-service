@@ -25,7 +25,7 @@ type HsInterfacesConnectorError = ConnectorError;
 use std::str::FromStr;
 
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -614,7 +614,10 @@ fn create_regular_transaction_request<
     };
 
     // Extract user fields from metadata
-    let user_fields = metadata_to_user_fields(item.router_data.request.metadata.clone(), false)?;
+    let user_fields = metadata_to_user_fields(
+        item.router_data.request.metadata.clone().expose_option(),
+        false,
+    )?;
 
     // Process billing address
     let billing_address = item
@@ -1328,8 +1331,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .connector_metadata
-            .as_ref()
-            .map(|v| Secret::new(v.clone()))
+            .clone()
             .ok_or_else(|| {
                 error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
                     field_name: "connector_metadata"
@@ -2671,7 +2673,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetCreateConnectorCustomerResponse {
     pub customer_profile_id: Option<String>,
-    pub customer_payment_profile_id_list: Vec<String>,
+    pub customer_payment_profile_id_list: Option<Vec<String>>,
     pub validation_direct_response_list: Option<Vec<Secret<String>>>,
     pub messages: ResponseMessages,
 }

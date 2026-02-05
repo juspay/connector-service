@@ -167,12 +167,13 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         amount,
         currency: i32::from(Currency::Usd),
         state: None,
-        metadata: HashMap::new(),
-        merchant_account_metadata: HashMap::new(),
+        metadata: None,
+        merchant_account_metadata: None,
         connector_metadata: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
+        test_mode: None,
     }
 }
 
@@ -254,12 +255,14 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         )),
     };
 
-    let mut metadata = HashMap::new();
-    metadata.insert("order_type".to_string(), "recurring".to_string());
-    metadata.insert(
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert("order_type".to_string(), "recurring".to_string());
+    metadata_map.insert(
         "customer_note".to_string(),
         "Recurring payment using saved payment method".to_string(),
     );
+
+    let metadata_json = serde_json::to_string(&metadata_map).unwrap();
 
     PaymentServiceRepeatEverythingRequest {
         request_ref_id: Some(Identifier {
@@ -270,14 +273,14 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         currency: i32::from(Currency::Usd),
         minor_amount: unique_amount,
         merchant_order_reference_id: Some(generate_unique_id("repeat_order")),
-        metadata,
+        metadata: Some(Secret::new(metadata_json)),
         webhook_url: None,
         capture_method: None,
         email: Some(Secret::new(TEST_EMAIL.to_string())),
         browser_info: None,
         test_mode: None,
         payment_method_type: None,
-        merchant_account_metadata: HashMap::new(),
+        merchant_account_metadata: None,
         state: None,
         ..Default::default()
     }
@@ -346,7 +349,7 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id(prefix))),
         }),
-        metadata: HashMap::new(),
+        metadata: None,
         ..Default::default()
     }
 }
@@ -507,12 +510,13 @@ async fn test_authorize_capture_refund_rsync() {
             amount,
             currency: i32::from(Currency::Usd),
             state: None,
-            metadata: HashMap::new(),
-            merchant_account_metadata: HashMap::new(),
+            metadata: None,
+            merchant_account_metadata: None,
             connector_metadata: None,
             setup_future_usage: None,
             sync_type: None,
             connector_order_reference_id: None,
+            test_mode: None,
         };
         let mut rsync_grpc_request = Request::new(rsync_request);
         add_payload_metadata(&mut rsync_grpc_request);

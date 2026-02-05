@@ -37,7 +37,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Mask, Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
@@ -741,7 +741,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_metadata.clone())?;
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_metadata.clone().expose_option())?;
             let capture_id = paypal_meta.capture_id.ok_or(
                 ConnectorError::RequestEncodingFailedWithReason(
                     "Missing Capture id".to_string(),

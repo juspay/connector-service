@@ -12,7 +12,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
 use serde::Serialize;
 
 use super::{requests, responses, BarclaycardAmountConvertor, BarclaycardRouterData};
@@ -487,6 +487,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .metadata
             .clone()
+            .expose_option()
             .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {

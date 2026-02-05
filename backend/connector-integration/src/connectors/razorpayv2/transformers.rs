@@ -19,7 +19,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -329,7 +329,7 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })?
                 .clone(),
             payment_capture: Some(true),
-            notes: item.router_data.metadata.clone(),
+            notes: item.router_data.metadata.clone().expose_option(),
         })
     }
 }
@@ -425,7 +425,7 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ),
             method: "upi".to_string(),
             description: Some("Payment via RazorpayV2".to_string()),
-            notes: item.router_data.request.metadata.clone(),
+            notes: item.router_data.request.metadata.clone().expose_option(),
             callback_url: item.router_data.request.get_router_return_url()?,
             upi: upi_details,
             customer_id: None,

@@ -22,7 +22,7 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils,
 };
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_with::skip_serializing_none;
@@ -325,6 +325,7 @@ fn build_metadata<
         .request
         .metadata
         .clone()
+        .expose_option()
         .unwrap_or_else(|| json!({}));
 
     Some(Secret::new(metadata_json))
