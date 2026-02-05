@@ -198,14 +198,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== WEBHOOK TRAIT IMPLEMENTATIONS =====
+#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Bluesnap<T>
 {
-    fn verify_webhook_source(
+    async fn verify_webhook_source(
         &self,
         request: domain_types::connector_types::RequestDetails,
         connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
+        _base_url: Option<&str>,
     ) -> CustomResult<bool, errors::ConnectorError> {
         let connector_webhook_secret = connector_webhook_secret
             .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)

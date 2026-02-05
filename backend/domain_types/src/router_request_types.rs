@@ -466,3 +466,15 @@ pub struct IncrementalAuthorizationIntegrityObject {}
 pub struct MandateRevokeIntegrityObject {
     pub mandate_id: Secret<String>,
 }
+
+#[derive(Debug, Clone)]
+pub struct VerifyWebhookSourceRequestData {
+    pub webhook_headers: std::collections::HashMap<String, String>,
+    pub webhook_body: Vec<u8>,
+    pub merchant_secret: crate::connector_types::ConnectorWebhookSecrets,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VerifyWebhookSourceIntegrityObject {
+    pub webhook_id: String,
+}

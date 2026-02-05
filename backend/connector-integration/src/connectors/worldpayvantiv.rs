@@ -211,14 +211,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
+#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     IncomingWebhook for Worldpayvantiv<T>
 {
-    fn verify_webhook_source(
+    async fn verify_webhook_source(
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
+        _base_url: Option<&str>,
     ) -> Result<bool, error_stack::Report<ConnectorError>> {
         Ok(false) // WorldpayVantiv doesn't support webhooks
     }
