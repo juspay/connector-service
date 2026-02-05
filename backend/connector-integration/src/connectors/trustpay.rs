@@ -241,10 +241,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
         let (status, error, _payment_response_data) =
-            trustpay::handle_webhook_response(
-                webhook_response.payment_information.clone(),
-                200,
-            )?;
+            trustpay::handle_webhook_response(webhook_response.payment_information.clone(), 200)?;
 
         let (error_code, error_message, error_reason) =
             if status == common_enums::AttemptStatus::Failure {
@@ -294,10 +291,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
         let (error, refund_response_data) =
-            trustpay::handle_webhooks_refund_response(
-                webhook_response.payment_information,
-                200,
-            )?;
+            trustpay::handle_webhooks_refund_response(webhook_response.payment_information, 200)?;
 
         let (error_code, error_message) =
             if refund_response_data.refund_status == common_enums::RefundStatus::Failure {
