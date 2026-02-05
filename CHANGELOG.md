@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.05.0
+
+### Features
+
+- Adyen gift card ([#431](https://github.com/juspay/connector-service/pull/431)) ([`e0164dc`](https://github.com/juspay/connector-service/commit/e0164dc4a7552fcfbda9ada07d0234317149ee2e))
+
+**Full Changelog:** [`2026.02.04.0...2026.02.05.0`](https://github.com/juspay/connector-service/compare/2026.02.04.0...2026.02.05.0)
+
+- - -
+
 ## 2026.02.04.0
 
 ### Features
