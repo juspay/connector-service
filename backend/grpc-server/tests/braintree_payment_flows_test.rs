@@ -325,8 +325,8 @@ async fn test_payment_authorization_auto_capture() {
 #[tokio::test]
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Add delay of 4 seconds
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        // Add delay of 15 seconds
+        tokio::time::sleep(std::time::Duration::from_secs(15)).await;
 
         // Create the payment authorization request with manual capture
         let auth_request = create_payment_authorize_request(CaptureMethod::Manual);
@@ -379,8 +379,8 @@ async fn test_payment_authorization_manual_capture() {
 #[tokio::test]
 async fn test_payment_sync_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Add delay of 8 seconds
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        // Add delay of 15 seconds
+        tokio::time::sleep(std::time::Duration::from_secs(15)).await;
 
         // Create the payment authorization request
         let request = create_payment_authorize_request(CaptureMethod::Automatic);
@@ -425,8 +425,8 @@ async fn test_payment_sync_auto_capture() {
 #[tokio::test]
 async fn test_payment_void() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Add delay of 12 seconds
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        // Add delay of 15 seconds
+        tokio::time::sleep(std::time::Duration::from_secs(15)).await;
 
         // First create a payment with manual capture to void
         let auth_request = create_payment_authorize_request(CaptureMethod::Manual);
