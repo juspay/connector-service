@@ -11,7 +11,9 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, UpiSource},
+    payment_method_data::{
+        Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, UpiSource,
+    },
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -1638,7 +1640,9 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
     .ok()
 }
 
-pub fn get_upi_transaction_mode_metadata(upi_details: &Option<SyncUPIDetails>) -> Option<serde_json::Value> {
+pub fn get_upi_transaction_mode_metadata(
+    upi_details: &Option<SyncUPIDetails>,
+) -> Option<serde_json::Value> {
     upi_details.as_ref().and_then(|upi| {
         if upi.payer_account_type == "credit_card" {
             serde_json::to_value(serde_json::json!({
