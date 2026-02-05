@@ -1712,7 +1712,7 @@ pub fn handle_webhooks_refund_response(
                 reason: reason_info.reason.reject_reason,
                 status_code,
                 attempt_status: None,
-                connector_transaction_id: response.references.payment_request_id.clone(),
+                connector_transaction_id: response.references.payment_id.clone(),
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
@@ -1723,7 +1723,7 @@ pub fn handle_webhooks_refund_response(
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response
             .references
-            .payment_request_id
+            .payment_id
             .ok_or(ConnectorError::MissingConnectorRefundID)?,
         refund_status,
         status_code,
