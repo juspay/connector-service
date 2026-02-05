@@ -5476,6 +5476,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                 .connector_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
+            merchant_order_reference_id: value.merchant_order_reference_id,
         })
     }
 }
@@ -6206,6 +6207,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .connector_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
+            merchant_order_reference_id: value.merchant_order_reference_id,
         })
     }
 }

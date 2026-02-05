@@ -973,6 +973,7 @@ pub struct PaymentVoidData {
     pub currency: Option<Currency>,
     pub connector_metadata: Option<SecretSerdeValue>,
     pub metadata: Option<SecretSerdeValue>,
+    pub merchant_order_reference_id: Option<String>,
 }
 
 impl PaymentVoidData {
@@ -2286,6 +2287,7 @@ pub struct PaymentsCaptureData {
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub metadata: Option<SecretSerdeValue>,
+    pub merchant_order_reference_id: Option<String>,
 }
 
 impl PaymentsCaptureData {

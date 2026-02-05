@@ -1897,6 +1897,9 @@ message PaymentServiceVoidRequest {
 
   // Environment Configuration
   optional bool test_mode = 13; // A boolean value to indicate if the connector is in Test mode
+
+  // Additional Context
+  optional string merchant_order_reference_id = 14; // Merchant's internal reference ID
 }
 
 // Response message for a payment void operation.
@@ -2042,6 +2045,9 @@ message PaymentServiceCaptureRequest {
 
   // Environment Configuration
   optional bool test_mode = 14; // A boolean value to indicate if the connector is in Test mode
+
+  // Additional Context
+  optional string merchant_order_reference_id = 15; // Merchant's internal reference ID
 }
 
 // Response message for a payment capture operation.
