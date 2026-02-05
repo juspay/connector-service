@@ -4032,8 +4032,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         };
 
         let connector_metadata = value
-            .merchant_account_metadata
-            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .connector_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
             .transpose()?;
 
         Ok(Self {
