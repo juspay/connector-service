@@ -802,7 +802,6 @@ impl<F, Req>
             RazorpayResponse::PsyncResponse(psync_response) => {
                 let status =
                     get_psync_razorpay_payment_status(is_manual_capture, psync_response.status);
-                let connector_metadata = get_upi_transaction_mode_metadata(&psync_response.upi);
 
                 // Extract UPI mode and set in connector_response
                 let upi_mode = extract_upi_mode_from_sync_response(&psync_response.upi);
@@ -811,7 +810,7 @@ impl<F, Req>
                 let psync_response_data = PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(psync_response.id),
                     redirection_data: None,
-                    connector_metadata,
+                    connector_metadata: None,
                     network_txn_id: None,
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
@@ -1638,25 +1637,6 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
         e
     })
     .ok()
-}
-
-pub fn get_upi_transaction_mode_metadata(
-    upi_details: &Option<SyncUPIDetails>,
-) -> Option<serde_json::Value> {
-    upi_details.as_ref().and_then(|upi| {
-        if upi.payer_account_type == "credit_card" {
-            serde_json::to_value(serde_json::json!({
-                "upi_transaction_mode": "CREDIT_CARD"
-            }))
-            .map_err(|e| {
-                tracing::error!("Failed to serialize UPI transaction mode metadata: {}", e);
-                e
-            })
-            .ok()
-        } else {
-            None
-        }
-    })
 }
 
 /// Extracts UPI mode from Razorpay sync response
