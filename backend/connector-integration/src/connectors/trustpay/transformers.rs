@@ -1890,39 +1890,3 @@ fn get_refund_status_from_result_info(
         _ => (enums::RefundStatus::Pending, None),
     }
 }
-
-// Utility function for collecting and sorting values from JSON for webhook signature verification
-pub fn collect_and_sort_values_by_removing_signature(
-    value: &serde_json::Value,
-    signature: &str,
-) -> Vec<String> {
-    let mut values = collect_values_by_removing_signature(value, signature);
-    values.sort();
-    values
-}
-
-fn collect_values_by_removing_signature(value: &serde_json::Value, signature: &str) -> Vec<String> {
-    match value {
-        serde_json::Value::Null => vec!["null".to_owned()],
-        serde_json::Value::Bool(b) => vec![b.to_string()],
-        serde_json::Value::Number(n) => match n.as_f64() {
-            Some(f) => vec![format!("{f:.2}")],
-            None => vec![n.to_string()],
-        },
-        serde_json::Value::String(s) => {
-            if signature == s {
-                vec![]
-            } else {
-                vec![s.clone()]
-            }
-        }
-        serde_json::Value::Array(arr) => arr
-            .iter()
-            .flat_map(|v| collect_values_by_removing_signature(v, signature))
-            .collect(),
-        serde_json::Value::Object(obj) => obj
-            .values()
-            .flat_map(|v| collect_values_by_removing_signature(v, signature))
-            .collect(),
-    }
-}

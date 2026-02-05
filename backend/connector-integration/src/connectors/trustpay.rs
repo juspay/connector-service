@@ -178,7 +178,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .body
             .parse_struct("Webhook Value")
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
-        let values = trustpay::collect_and_sort_values_by_removing_signature(
+        let values = utils::collect_and_sort_values_by_removing_signature(
             &response,
             &trustpay_response.signature,
         );
