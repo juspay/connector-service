@@ -1,7 +1,11 @@
 use base64::Engine;
 use common_utils::{
-    consts, crypto::VerifySignature, errors::CustomResult, events, ext_traits::ByteSliceExt,
-    types::StringMajorUnit,
+    consts,
+    crypto::VerifySignature,
+    errors::CustomResult,
+    events,
+    ext_traits::ByteSliceExt,
+    types::{FloatMajorUnitForConnector, StringMajorUnit, StringMinorUnitForConnector},
 };
 use domain_types::{
     connector_flow::{
@@ -313,6 +317,56 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
         })
+    }
+
+    fn process_dispute_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::DisputeWebhookDetailsResponse,
+        Report<errors::ConnectorError>,
+    > {
+        let webhook_response: trustpay::TrustpayWebhookResponse = request
+            .body
+            .parse_struct("TrustpayWebhookResponse")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let payment_info = webhook_response.payment_information;
+        let reason_info = payment_info.status_reason_information.unwrap_or_default();
+
+        let connector_dispute_id = payment_info
+            .references
+            .payment_id
+            .ok_or(errors::ConnectorError::WebhookReferenceIdNotFound)?;
+
+        let minor_units = domain_types::utils::convert_back_amount_to_minor_units(
+            &FloatMajorUnitForConnector,
+            payment_info.amount.amount,
+            payment_info.amount.currency,
+        )?;
+        let amount = domain_types::utils::convert_amount(
+            &StringMinorUnitForConnector,
+            minor_units,
+            payment_info.amount.currency,
+        )?;
+
+        Ok(
+            domain_types::connector_types::DisputeWebhookDetailsResponse {
+                amount,
+                currency: payment_info.amount.currency,
+                dispute_id: connector_dispute_id.clone(),
+                status: common_enums::enums::DisputeStatus::DisputeLost,
+                stage: common_enums::enums::DisputeStage::Dispute,
+                connector_response_reference_id: Some(connector_dispute_id),
+                dispute_message: reason_info.reason.reject_reason,
+                raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
+                status_code: 200,
+                response_headers: None,
+                connector_reason_code: reason_info.reason.code,
+            },
+        )
     }
 
     fn get_webhook_resource_object(
