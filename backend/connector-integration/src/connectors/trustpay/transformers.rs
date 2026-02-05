@@ -946,7 +946,7 @@ pub fn get_event_type_from_webhook(
         (CreditDebitIndicator::Dbit, WebhookStatus::Chargebacked) => {
             domain_types::connector_types::EventType::DisputeLost
         }
-        _ => domain_types::connector_types::EventType::EventNotSupported,
+        _ => domain_types::connector_types::EventType::IncomingWebhookEventUnspecified,
     }
 }
 

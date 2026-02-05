@@ -1859,9 +1859,6 @@ pub enum EventType {
     RecoveryInvoiceCancel,
     IncomingWebhookEventUnspecified,
 
-    // Unsupported events
-    EventNotSupported,
-
     // Legacy broad categories (for backward compatibility)
     Payment,
     Refund,
@@ -2065,9 +2062,6 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::IncomingWebhookEventUnspecified => {
                 Ok(Self::IncomingWebhookEventUnspecified)
             }
-            grpc_api_types::payments::WebhookEventType::EventNotSupported => {
-                Ok(Self::EventNotSupported)
-            }
         }
     }
 }
@@ -2122,7 +2116,6 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::RecoveryPaymentPending => Ok(Self::RecoveryPaymentPending),
             EventType::RecoveryInvoiceCancel => Ok(Self::RecoveryInvoiceCancel),
             EventType::IncomingWebhookEventUnspecified => Ok(Self::IncomingWebhookEventUnspecified),
-            EventType::EventNotSupported => Ok(Self::EventNotSupported),
 
             // Legacy broad categories (for backward compatibility)
             EventType::Payment => Ok(Self::PaymentIntentSuccess), // Map broad Payment to PaymentIntentSuccess
