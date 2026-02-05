@@ -1884,22 +1884,21 @@ pub fn get_webhook_object_from_body(
 ) -> error_stack::Result<NuveiWebhook, errors::ConnectorError> {
     // Try parsing as URL-encoded first (common for Nuvei payment DMNs)
     let url_encoded_result = serde_urlencoded::from_bytes::<NuveiWebhook>(body)
-        .change_context(errors::ConnectorError::ResponseDeserializationFailed);
+        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+        .attach_printable("Failed to parse Nuvei webhook body as URL-encoded data");
 
     match url_encoded_result {
         Ok(webhook) => Ok(webhook),
-        Err(_) => {
+        Err(err) => {
             // Fall back to JSON parsing (for chargeback notifications)
             body.parse_struct::<NuveiWebhook>("NuveiWebhook")
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                .attach_printable(
+                    "Failed to parse Nuvei webhook body as JSON after URL-encoded parsing failed",
+                )
+                .attach(err)
         }
     }
-}
-
-/// Concatenates a vector of strings without any separator
-/// This is useful for creating verification messages for webhooks
-pub fn concat_strings(strings: &[String]) -> String {
-    strings.join("")
 }
 
 /// Maps Nuvei DMN notification to UCS EventType
@@ -2032,14 +2031,6 @@ pub fn get_dispute_stage(
         });
 
     dispute_stage.ok_or(errors::ConnectorError::WebhookEventTypeNotFound.into())
-}
-
-/// Helper function to check if client_request_id has payout prefix
-#[allow(dead_code)]
-fn has_payout_prefix(id_option: &Option<String>) -> bool {
-    id_option
-        .as_deref()
-        .is_some_and(|s| s.starts_with("payout_"))
 }
 
 /// Implementation to convert DisputeUnifiedStatusCode to DisputeStage

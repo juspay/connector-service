@@ -159,7 +159,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         use transformers::{get_webhook_object_from_body, NuveiWebhook};
 
         let webhook = get_webhook_object_from_body(&request.body)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Failed to parse webhook body for signature verification")?;
 
         let nuvei_notification_signature = match webhook {
             NuveiWebhook::PaymentDmn(notification) => notification
@@ -181,10 +182,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &domain_types::connector_types::RequestDetails,
         connector_webhook_secrets: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, Report<errors::ConnectorError>> {
-        use transformers::{concat_strings, get_webhook_object_from_body, NuveiWebhook};
+        use crate::utils::concat_strings;
+        use transformers::{get_webhook_object_from_body, NuveiWebhook};
 
         let webhook = get_webhook_object_from_body(&request.body)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Failed to parse webhook body for message construction")?;
 
         let secret_str = std::str::from_utf8(&connector_webhook_secrets.secret)
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
@@ -294,7 +297,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let webhook = get_webhook_object_from_body(&request.body)
-            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
+            .attach_printable("Failed to parse webhook body to determine event type")?;
 
         match webhook {
             NuveiWebhook::PaymentDmn(notification) => {
@@ -322,7 +326,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         use transformers::{get_webhook_object_from_body, NuveiWebhook};
 
         let webhook = get_webhook_object_from_body(&request.body)
-            .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)?;
+            .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)
+            .attach_printable("Failed to parse webhook body for payment webhook processing")?;
 
         match webhook {
             NuveiWebhook::PaymentDmn(notification) => {
@@ -355,7 +360,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         use transformers::{get_webhook_object_from_body, NuveiTransactionType, NuveiWebhook};
 
         let webhook = get_webhook_object_from_body(&request.body)
-            .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)?;
+            .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)
+            .attach_printable("Failed to parse webhook body for refund webhook processing")?;
 
         match webhook {
             NuveiWebhook::PaymentDmn(notification) => {
@@ -402,7 +408,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let webhook = get_webhook_object_from_body(&request.body)
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
+            .attach_printable("Failed to parse webhook body for dispute webhook processing")?;
 
         match webhook {
             NuveiWebhook::Chargeback(notification) => {
