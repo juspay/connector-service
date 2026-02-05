@@ -434,3 +434,49 @@ pub fn get_state_code_for_country(
         }
     }
 }
+
+/// Utility function for collecting and sorting values from JSON for webhook signature verification.
+///
+/// Recursively collects all values from a JSON structure, excluding a specific signature field,
+/// sorts them alphabetically, and returns them joined with "/" separator.
+///
+/// # Arguments
+/// * `value` - The JSON value to process
+/// * `signature` - The signature value to exclude from collection
+///
+/// # Returns
+/// Sorted vector of all values (excluding the signature)
+pub fn collect_and_sort_values_by_removing_signature(
+    value: &Value,
+    signature: &str,
+) -> Vec<String> {
+    let mut values = collect_values_by_removing_signature(value, signature);
+    values.sort();
+    values
+}
+
+fn collect_values_by_removing_signature(value: &Value, signature: &str) -> Vec<String> {
+    match value {
+        Value::Null => vec!["null".to_owned()],
+        Value::Bool(b) => vec![b.to_string()],
+        Value::Number(n) => match n.as_f64() {
+            Some(f) => vec![format!("{f:.2}")],
+            None => vec![n.to_string()],
+        },
+        Value::String(s) => {
+            if signature == s {
+                vec![]
+            } else {
+                vec![s.clone()]
+            }
+        }
+        Value::Array(arr) => arr
+            .iter()
+            .flat_map(|v| collect_values_by_removing_signature(v, signature))
+            .collect(),
+        Value::Object(obj) => obj
+            .values()
+            .flat_map(|v| collect_values_by_removing_signature(v, signature))
+            .collect(),
+    }
+}
