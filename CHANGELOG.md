@@ -4,6 +4,55 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.05.0
+
+### Features
+
+- Adyen gift card ([#431](https://github.com/juspay/connector-service/pull/431)) ([`e0164dc`](https://github.com/juspay/connector-service/commit/e0164dc4a7552fcfbda9ada07d0234317149ee2e))
+
+**Full Changelog:** [`2026.02.04.0...2026.02.05.0`](https://github.com/juspay/connector-service/compare/2026.02.04.0...2026.02.05.0)
+
+- - -
+
+## 2026.02.04.0
+
+### Features
+
+- **connector:**
+  - [Hyperpg] Integrate Card flows ([#429](https://github.com/juspay/connector-service/pull/429)) ([`337d2d0`](https://github.com/juspay/connector-service/commit/337d2d0dd234f26b591c8c504ee2fce08420e7b6))
+  - Phonepe upi cc/cl response handling ([#437](https://github.com/juspay/connector-service/pull/437)) ([`8827276`](https://github.com/juspay/connector-service/commit/882727682e833236bca26330b070daa5a104efab))
+
+### Bug Fixes
+
+- **connector:** [NOVALNET] Populating connector transaction id during 2xx failures ([#470](https://github.com/juspay/connector-service/pull/470)) ([`f155fc8`](https://github.com/juspay/connector-service/commit/f155fc815abf89ca6321b0647d3e6abc1a444989))
+- Added missing proto to domain conversion of merchant_account_metadata for setupmandate ([#467](https://github.com/juspay/connector-service/pull/467)) ([`7d09a51`](https://github.com/juspay/connector-service/commit/7d09a51b911f52d217487e9d2f1589b06aeef764))
+
+### Refactors
+
+- **connector:** [redsys] skip serializing fields that are `none` and sort fields in alphabetical order ([#468](https://github.com/juspay/connector-service/pull/468)) ([`2facec5`](https://github.com/juspay/connector-service/commit/2facec50889530a4ab11ab0e83f8056e63dabed9))
+
+### Miscellaneous Tasks
+
+- [Auth.net] Response field made optional ([#469](https://github.com/juspay/connector-service/pull/469)) ([`88bc959`](https://github.com/juspay/connector-service/commit/88bc9597d7a209a2f708f3075c11a0cc5dc9e97c))
+
+**Full Changelog:** [`2026.02.03.0...2026.02.04.0`](https://github.com/juspay/connector-service/compare/2026.02.03.0...2026.02.04.0)
+
+- - -
+
+## 2026.02.03.0
+
+### Features
+
+- **framework:** Added redirection_data field in PSync response and test_mode field in PSync request ([#456](https://github.com/juspay/connector-service/pull/456)) ([`0e0a463`](https://github.com/juspay/connector-service/commit/0e0a4630b19d53ecb592f87dec071f3fdbe9836f))
+
+### Bug Fixes
+
+- Adyen webhook fix ([#462](https://github.com/juspay/connector-service/pull/462)) ([`d1a28bf`](https://github.com/juspay/connector-service/commit/d1a28bfe75ac219f7a3e5558c3b60fb67a64a5b0))
+
+**Full Changelog:** [`2026.02.02.0...2026.02.03.0`](https://github.com/juspay/connector-service/compare/2026.02.02.0...2026.02.03.0)
+
+- - -
+
 ## 2026.02.02.0
 
 ### Bug Fixes

@@ -2673,7 +2673,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetCreateConnectorCustomerResponse {
     pub customer_profile_id: Option<String>,
-    pub customer_payment_profile_id_list: Vec<String>,
+    pub customer_payment_profile_id_list: Option<Vec<String>>,
     pub validation_direct_response_list: Option<Vec<Secret<String>>>,
     pub messages: ResponseMessages,
 }

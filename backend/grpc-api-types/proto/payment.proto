@@ -598,6 +598,7 @@ enum Connector {
   REVOLUT = 104;
   LOONIO = 105;
   GIGADAT = 106;
+  HYPERPG = 107;
 }
 
 // Payment method types.
@@ -1231,7 +1232,10 @@ message CardConnectorResponse {
 
 // Additional payment method connector response
 message AdditionalPaymentMethodConnectorResponse {
-  CardConnectorResponse card = 1; // Card-specific response data
+  oneof payment_method_data {
+    CardConnectorResponse card = 1; // Card-specific response data
+    UpiConnectorResponse upi = 2; // UPI-specific response data
+  }
 }
 
 // Connector response data containing various information from the connector

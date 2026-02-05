@@ -192,6 +192,7 @@ pub struct Connectors {
     pub gigadat: ConnectorParams,
     pub loonio: ConnectorParams,
     pub wellsfargo: ConnectorParams,
+    pub hyperpg: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -390,6 +391,21 @@ impl ForeignTryFrom<grpc_api_types::payments::UpiSource> for payment_method_data
             grpc_api_types::payments::UpiSource::UpiCl => Ok(Self::UpiCl),
             grpc_api_types::payments::UpiSource::UpiAccount => Ok(Self::UpiAccount),
             grpc_api_types::payments::UpiSource::UpiCcCl => Ok(Self::UpiCcCl),
+            grpc_api_types::payments::UpiSource::UpiPpi => Ok(Self::UpiPpi),
+            grpc_api_types::payments::UpiSource::UpiVoucher => Ok(Self::UpiVoucher),
+        }
+    }
+}
+
+impl ForeignFrom<payment_method_data::UpiSource> for grpc_api_types::payments::UpiSource {
+    fn foreign_from(value: payment_method_data::UpiSource) -> Self {
+        match value {
+            payment_method_data::UpiSource::UpiCc => Self::UpiCc,
+            payment_method_data::UpiSource::UpiCl => Self::UpiCl,
+            payment_method_data::UpiSource::UpiAccount => Self::UpiAccount,
+            payment_method_data::UpiSource::UpiCcCl => Self::UpiCcCl,
+            payment_method_data::UpiSource::UpiPpi => Self::UpiPpi,
+            payment_method_data::UpiSource::UpiVoucher => Self::UpiVoucher,
         }
     }
 }
@@ -1219,6 +1235,31 @@ impl<
                     )))
                 }
 
+                grpc_api_types::payments::payment_method::PaymentMethod::Givex(givex_data) => {
+                    Ok(Self::GiftCard(Box::new(
+                        payment_method_data::GiftCardData::Givex(payment_method_data::GiftCardDetails {
+                            number: givex_data.number.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "MISSING_GIVEX_NUMBER".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Missing Givex gift card number".to_owned(),
+                                error_object: None,
+                            }))?,
+                            cvc: givex_data.cvc.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "MISSING_GIVEX_CVC".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Missing Givex gift card CVC".to_owned(),
+                                error_object: None,
+                            }))?,
+                        }),
+                    )))
+                }
+
+                grpc_api_types::payments::payment_method::PaymentMethod::PaySafeCard(_) => {
+                    Ok(Self::GiftCard(Box::new(
+                        payment_method_data::GiftCardData::PaySafeCard {},
+                    )))
+                }
+
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                     error_identifier: 400,
@@ -1474,6 +1515,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::CardDetailsForNetworkTransactionId(_) => Ok(Some(PaymentMethodType::Card)),
                 grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(_) => Ok(Some(PaymentMethodType::Card)),
+                // ============================================================================
+                // GIFT CARDS
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Givex(_) => {
+                    Ok(Some(PaymentMethodType::Givex))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PaySafeCard(_) => {
+                    Ok(Some(PaymentMethodType::PaySafeCard))
+                }
                 // ============================================================================
                 // UNSUPPORTED ONLINE BANKING - Direct error generation
                 // ============================================================================
@@ -3458,17 +3508,35 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                             card_network,
                             domestic_network,
                         } => grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
-                            card: Some(grpc_api_types::payments::CardConnectorResponse {
-                                authentication_data: authentication_data
-                                    .as_ref()
-                                    .and_then(|data| serde_json::to_vec(data).ok()),
-                                payment_checks: payment_checks
-                                    .as_ref()
-                                    .and_then(|checks| serde_json::to_vec(checks).ok()),
-                                card_network: card_network.clone(),
-                                domestic_network: domestic_network.clone(),
-                            }),
+                            payment_method_data: Some(
+                                grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Card(
+                                    grpc_api_types::payments::CardConnectorResponse {
+                                        authentication_data: authentication_data
+                                            .as_ref()
+                                            .and_then(|data| serde_json::to_vec(data).ok()),
+                                        payment_checks: payment_checks
+                                            .as_ref()
+                                            .and_then(|checks| serde_json::to_vec(checks).ok()),
+                                        card_network: card_network.clone(),
+                                        domestic_network: domestic_network.clone(),
+                                    }
+                                )
+                            ),
                         },
+                        AdditionalPaymentMethodConnectorResponse::Upi { upi_mode } => {
+                            grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
+                                payment_method_data: Some(
+                                    grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Upi(
+                                        grpc_api_types::payments::UpiConnectorResponse {
+                                            upi_mode: upi_mode.clone().map(|source| {
+                                                let proto_source: grpc_api_types::payments::UpiSource = ForeignFrom::foreign_from(source);
+                                                proto_source as i32
+                                            }),
+                                        }
+                                    )
+                                ),
+                            }
+                        }
                     }
                 },
             ),
@@ -6613,6 +6681,12 @@ impl
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
+        // Extract connector_meta_data from merchant_account_metadata
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -6638,7 +6712,7 @@ impl
             connector_customer: value.connector_customer_id,
             description,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
