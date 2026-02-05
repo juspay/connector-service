@@ -325,7 +325,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("TrustpayWebhookResponse")
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
-        Ok(Box::new(webhook_response))
+        Ok(Box::new(webhook_response.payment_information))
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
