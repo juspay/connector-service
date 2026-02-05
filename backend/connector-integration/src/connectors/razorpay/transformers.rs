@@ -11,9 +11,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{
-        Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, UpiSource,
-    },
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -1643,10 +1641,10 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
 /// Returns: UpiSource::UpiCc for credit_card payer_account_type, None otherwise
 pub fn extract_upi_mode_from_sync_response(
     upi_details: &Option<SyncUPIDetails>,
-) -> Option<UpiSource> {
+) -> Option<domain_types::payment_method_data::UpiSource> {
     upi_details.as_ref().and_then(|upi| {
         if upi.payer_account_type == "credit_card" {
-            Some(UpiSource::UpiCc)
+            Some(domain_types::payment_method_data::UpiSource::UpiCc)
         } else {
             None
         }
@@ -1655,7 +1653,7 @@ pub fn extract_upi_mode_from_sync_response(
 
 /// Creates ConnectorResponseData with UPI mode for additional_payment_method_connector_response
 pub fn get_connector_response_with_upi_mode(
-    upi_mode: Option<UpiSource>,
+    upi_mode: Option<domain_types::payment_method_data::UpiSource>,
 ) -> Option<domain_types::router_data::ConnectorResponseData> {
     upi_mode.map(|mode| {
         domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
