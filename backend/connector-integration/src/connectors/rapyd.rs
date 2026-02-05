@@ -1,7 +1,7 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, FloatMajorUnit};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, StringMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -349,7 +349,7 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [
-        amount_converter: FloatMajorUnit
+        amount_converter: StringMajorUnit
     ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(

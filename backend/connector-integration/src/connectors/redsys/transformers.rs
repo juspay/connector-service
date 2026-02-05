@@ -225,8 +225,8 @@ where
                 let expiry_date = Secret::new(format!("{year}{month}"));
                 Ok(Self {
                     card_number: card.card_number.clone(),
-                    expiry_date,
                     cvv2: card.card_cvc.clone(),
+                    expiry_date,
                 })
             }
             Some(PaymentMethodData::Wallet(..))
@@ -520,8 +520,8 @@ fn build_threeds_invoke_response(
     )?;
 
     let threeds_invoke_request = requests::RedsysThreedsInvokeRequest {
-        three_d_s_server_trans_i_d: three_d_s_server_trans_i_d.to_string(),
         three_d_s_method_notification_u_r_l: notification_url,
+        three_d_s_server_trans_i_d: three_d_s_server_trans_i_d.to_string(),
     };
 
     let three_ds_data_string = threeds_invoke_request
@@ -531,11 +531,11 @@ fn build_threeds_invoke_response(
     let three_ds_method_data = BASE64_ENGINE.encode(&three_ds_data_string);
 
     let three_ds_invoke_data = requests::RedsysThreeDsInvokeData {
-        three_ds_method_url: three_ds_method_url.to_string(),
-        three_ds_method_data: three_ds_method_data.clone(),
         message_version: protocol_version,
-        three_d_s_server_trans_i_d: three_d_s_server_trans_i_d.to_string(),
+        three_ds_method_data: three_ds_method_data.clone(),
         three_ds_method_data_submission: true.to_string(),
+        three_ds_method_url: three_ds_method_url.to_string(),
+        three_d_s_server_trans_i_d: three_d_s_server_trans_i_d.to_string(),
     };
 
     // Serialize to JSON, then deserialize to HashMap<String, String>
@@ -769,8 +769,7 @@ where
         }?;
 
         let payment_request = requests::RedsysPaymentRequest {
-            ds_merchant_emv3ds,
-            ds_merchant_transactiontype,
+            ds_merchant_amount: amount,
             ds_merchant_currency: router_data
                 .request
                 .currency
@@ -779,15 +778,16 @@ where
                 })?
                 .iso_4217()
                 .to_owned(),
+            ds_merchant_cvv2: card_data.cvv2,
+            ds_merchant_emv3ds,
+            ds_merchant_expirydate: card_data.expiry_date,
+            ds_merchant_merchantcode: auth.merchant_id.clone(),
+            ds_merchant_order,
             ds_merchant_pan: cards::CardNumber::try_from(card_data.card_number.peek().to_string())
                 .change_context(errors::ConnectorError::RequestEncodingFailed)
                 .attach_printable("Invalid card number")?,
-            ds_merchant_merchantcode: auth.merchant_id.clone(),
             ds_merchant_terminal: auth.terminal_id.clone(),
-            ds_merchant_order,
-            ds_merchant_amount: amount,
-            ds_merchant_expirydate: card_data.expiry_date,
-            ds_merchant_cvv2: card_data.cvv2,
+            ds_merchant_transactiontype,
         };
 
         let transaction = Self::try_from((&payment_request, &auth))?;
@@ -944,22 +944,6 @@ where
         .set_shipping_data(router_data.resource_common_data.get_optional_shipping())?;
 
         let payment_request = requests::RedsysPaymentRequest {
-            ds_merchant_emv3ds: Some(emv3ds_data),
-            ds_merchant_transactiontype,
-            ds_merchant_currency: router_data
-                .request
-                .currency
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "currency",
-                })?
-                .iso_4217()
-                .to_owned(),
-            ds_merchant_pan: cards::CardNumber::try_from(card_data.card_number.peek().to_string())
-                .change_context(errors::ConnectorError::RequestEncodingFailed)
-                .attach_printable("Invalid card number")?,
-            ds_merchant_merchantcode: auth.merchant_id.clone(),
-            ds_merchant_terminal: auth.terminal_id.clone(),
-            ds_merchant_order,
             ds_merchant_amount: RedsysAmountConvertor::convert(
                 router_data.request.amount,
                 router_data.request.currency.ok_or(
@@ -968,8 +952,24 @@ where
                     },
                 )?,
             )?,
-            ds_merchant_expirydate: card_data.expiry_date,
+            ds_merchant_currency: router_data
+                .request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?
+                .iso_4217()
+                .to_owned(),
             ds_merchant_cvv2: card_data.cvv2,
+            ds_merchant_emv3ds: Some(emv3ds_data),
+            ds_merchant_expirydate: card_data.expiry_date,
+            ds_merchant_merchantcode: auth.merchant_id.clone(),
+            ds_merchant_order,
+            ds_merchant_pan: cards::CardNumber::try_from(card_data.card_number.peek().to_string())
+                .change_context(errors::ConnectorError::RequestEncodingFailed)
+                .attach_printable("Invalid card number")?,
+            ds_merchant_terminal: auth.terminal_id.clone(),
+            ds_merchant_transactiontype,
         };
 
         let transaction = Self::try_from((&payment_request, &auth))?;
@@ -1199,21 +1199,21 @@ where
         }?;
 
         let payment_request = requests::RedsysPaymentRequest {
-            ds_merchant_emv3ds: Some(emv3ds_data),
-            ds_merchant_transactiontype,
-            ds_merchant_currency: router_data.request.currency.iso_4217().to_owned(),
-            ds_merchant_pan: cards::CardNumber::try_from(card_data.card_number.peek().to_string())
-                .change_context(errors::ConnectorError::RequestEncodingFailed)
-                .attach_printable("Invalid card number")?,
-            ds_merchant_merchantcode: auth.merchant_id.clone(),
-            ds_merchant_terminal: auth.terminal_id.clone(),
-            ds_merchant_order,
             ds_merchant_amount: RedsysAmountConvertor::convert(
                 router_data.request.amount,
                 router_data.request.currency,
             )?,
-            ds_merchant_expirydate: card_data.expiry_date,
+            ds_merchant_currency: router_data.request.currency.iso_4217().to_owned(),
             ds_merchant_cvv2: card_data.cvv2,
+            ds_merchant_emv3ds: Some(emv3ds_data),
+            ds_merchant_expirydate: card_data.expiry_date,
+            ds_merchant_merchantcode: auth.merchant_id.clone(),
+            ds_merchant_order,
+            ds_merchant_pan: cards::CardNumber::try_from(card_data.card_number.peek().to_string())
+                .change_context(errors::ConnectorError::RequestEncodingFailed)
+                .attach_printable("Invalid card number")?,
+            ds_merchant_terminal: auth.terminal_id.clone(),
+            ds_merchant_transactiontype,
         };
 
         let transaction = Self::try_from((&payment_request, &auth))?;
@@ -1313,15 +1313,15 @@ where
             common_utils::types::MinorUnit::new(router_data.request.amount_to_capture);
 
         let capture_request = requests::RedsysOperationRequest {
-            ds_merchant_order: connector_transaction_id,
-            ds_merchant_merchantcode: auth.merchant_id.clone(),
-            ds_merchant_terminal: auth.terminal_id.clone(),
-            ds_merchant_currency: router_data.request.currency.iso_4217().to_owned(),
-            ds_merchant_transactiontype: requests::RedsysTransactionType::Confirmation,
             ds_merchant_amount: RedsysAmountConvertor::convert(
                 amount_to_capture,
                 router_data.request.currency,
             )?,
+            ds_merchant_currency: router_data.request.currency.iso_4217().to_owned(),
+            ds_merchant_merchantcode: auth.merchant_id.clone(),
+            ds_merchant_order: connector_transaction_id,
+            ds_merchant_terminal: auth.terminal_id.clone(),
+            ds_merchant_transactiontype: requests::RedsysTransactionType::Confirmation,
         };
 
         let transaction = Self::try_from((&capture_request, &auth))?;
@@ -1430,12 +1430,12 @@ where
                 })?;
 
         let void_request = requests::RedsysOperationRequest {
-            ds_merchant_order: connector_transaction_id,
-            ds_merchant_merchantcode: auth.merchant_id.clone(),
-            ds_merchant_terminal: auth.terminal_id.clone(),
-            ds_merchant_currency: currency.iso_4217().to_owned(),
-            ds_merchant_transactiontype: requests::RedsysTransactionType::Cancellation,
             ds_merchant_amount: RedsysAmountConvertor::convert(amount, currency)?,
+            ds_merchant_currency: currency.iso_4217().to_owned(),
+            ds_merchant_merchantcode: auth.merchant_id.clone(),
+            ds_merchant_order: connector_transaction_id,
+            ds_merchant_terminal: auth.terminal_id.clone(),
+            ds_merchant_transactiontype: requests::RedsysTransactionType::Cancellation,
         };
 
         let transaction = Self::try_from((&void_request, &auth))?;
@@ -1542,21 +1542,21 @@ pub fn construct_sync_request(
         requests::Message {
             content: requests::MessageContent::Transaction(requests::RedsysTransactionRequest {
                 ds_merchant_code: auth.merchant_id,
+                ds_order: order_id.clone(),
                 ds_terminal: auth.terminal_id,
                 ds_transaction_type: transaction_type.ok_or(
                     errors::ConnectorError::MissingRequiredField {
                         field_name: "transaction_type",
                     },
                 )?,
-                ds_order: order_id.clone(),
             }),
         }
     } else {
         requests::Message {
             content: requests::MessageContent::Monitor(requests::RedsysMonitorRequest {
                 ds_merchant_code: auth.merchant_id,
-                ds_terminal: auth.terminal_id,
                 ds_order: order_id.clone(),
+                ds_terminal: auth.terminal_id,
             }),
         }
     };
@@ -1572,9 +1572,9 @@ pub fn construct_sync_request(
     let signature = get_signature(&order_id, &version_data, auth.sha256_pwd.peek())?;
 
     let messages = requests::Messages {
-        version,
         signature,
         signature_version: SIGNATURE_VERSION.to_owned(),
+        version,
     };
 
     let cdata = quick_xml::se::to_string(&messages)
@@ -1627,7 +1627,29 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                         });
                         (attempt_status, payment_response)
                     } else {
-                        // No ds_response - use existing status
+                        // No ds_response - check Ds_State for status mapping
+                        let status = match latest_response.ds_state {
+                            Some(responses::DsState::A) => {
+                                // Authenticating - customer needs to complete 3DS
+                                common_enums::AttemptStatus::AuthenticationPending
+                            }
+                            Some(responses::DsState::P) => common_enums::AttemptStatus::Pending, // Authorizing - payment in progress
+                            Some(responses::DsState::S) => common_enums::AttemptStatus::Pending, // Requested - initial state
+                            Some(responses::DsState::F) => {
+                                // Completed - check capture method for final status
+                                match item.router_data.request.capture_method {
+                                    Some(enums::CaptureMethod::Automatic) | None => {
+                                        common_enums::AttemptStatus::Charged
+                                    }
+                                    Some(enums::CaptureMethod::Manual) => {
+                                        common_enums::AttemptStatus::Authorized
+                                    }
+                                    _ => common_enums::AttemptStatus::Pending,
+                                }
+                            }
+                            _ => item.router_data.resource_common_data.status, // Fallback to existing status if Ds_State is unknown/missing
+                        };
+
                         let payment_response = Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
                                 latest_response.ds_order.clone(),
@@ -1640,10 +1662,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                         });
-                        (
-                            item.router_data.resource_common_data.status,
-                            payment_response,
-                        )
+                        (status, payment_response)
                     }
                 } else {
                     // NEW: No valid responses found
@@ -1716,15 +1735,15 @@ where
         let refund_amount = common_utils::types::MinorUnit::new(router_data.request.refund_amount);
 
         let refund_request = requests::RedsysOperationRequest {
-            ds_merchant_order: router_data.request.connector_transaction_id.clone(),
-            ds_merchant_merchantcode: auth.merchant_id.clone(),
-            ds_merchant_terminal: auth.terminal_id.clone(),
-            ds_merchant_currency: router_data.request.currency.iso_4217().to_owned(),
-            ds_merchant_transactiontype: requests::RedsysTransactionType::Refund,
             ds_merchant_amount: RedsysAmountConvertor::convert(
                 refund_amount,
                 router_data.request.currency,
             )?,
+            ds_merchant_currency: router_data.request.currency.iso_4217().to_owned(),
+            ds_merchant_merchantcode: auth.merchant_id.clone(),
+            ds_merchant_order: router_data.request.connector_transaction_id.clone(),
+            ds_merchant_terminal: auth.terminal_id.clone(),
+            ds_merchant_transactiontype: requests::RedsysTransactionType::Refund,
         };
 
         let transaction = Self::try_from((&refund_request, &auth))?;

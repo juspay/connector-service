@@ -61,6 +61,26 @@ pub enum ApplicationErrorResponse {
     DomainError(ApiError),
 }
 
+impl ApplicationErrorResponse {
+    /// Returns a reference to the inner ApiError
+    pub fn get_api_error(&self) -> &ApiError {
+        match self {
+            Self::Unauthorized(err) => err,
+            Self::ForbiddenCommonResource(err) => err,
+            Self::ForbiddenPrivateResource(err) => err,
+            Self::Conflict(err) => err,
+            Self::Gone(err) => err,
+            Self::Unprocessable(err) => err,
+            Self::InternalServerError(err) => err,
+            Self::NotImplemented(err) => err,
+            Self::NotFound(err) => err,
+            Self::MethodNotAllowed(err) => err,
+            Self::BadRequest(err) => err,
+            Self::DomainError(err) => err,
+        }
+    }
+}
+
 #[derive(Debug, serde::Serialize, Clone)]
 pub struct ApiError {
     pub sub_code: String,
