@@ -70,7 +70,9 @@ use tracing::info;
 
 use crate::{
     configs::Config,
-    error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
+    error::{
+        ErrorSwitch, IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc,
+    },
     implement_connector_operation,
     request::RequestData,
     utils::{self, get_config_from_request, grpc_logging_wrapper},
@@ -623,6 +625,10 @@ impl Payments {
             })?,
             Err(error_report) => {
                 tracing::error!("{:?}", error_report);
+                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
+                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
+                let api_error = app_err.get_api_error();
+
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
@@ -646,9 +652,9 @@ impl Payments {
                         },
                     )?,
                     response: Err(ErrorResponse {
-                        status_code: 400,
-                        code: "CONNECTOR_ERROR".to_string(),
-                        message: format!("{error_report}"),
+                        status_code: api_error.error_identifier,
+                        code: api_error.sub_code.clone(),
+                        message: api_error.error_message.clone(),
                         reason: None,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: None,
@@ -813,6 +819,10 @@ impl Payments {
                 )
             })?,
             Err(error_report) => {
+                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
+                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
+                let api_error = app_err.get_api_error();
+
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
@@ -836,9 +846,9 @@ impl Payments {
                         },
                     )?,
                     response: Err(ErrorResponse {
-                        status_code: 400,
-                        code: "CONNECTOR_ERROR".to_string(),
-                        message: format!("{error_report}"),
+                        status_code: api_error.error_identifier,
+                        code: api_error.sub_code.clone(),
+                        message: api_error.error_message.clone(),
                         reason: None,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: None,

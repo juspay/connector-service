@@ -1979,43 +1979,59 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             PaypalAuthResponse::PaypalThreeDsResponse(threeds_response) => {
-                let status = get_order_status(
-                    threeds_response.status.clone(),
-                    PaypalPaymentIntent::Authenticate,
-                );
-                let link = get_redirect_url(threeds_response.links.clone())?;
-
-                let connector_meta = serde_json::json!(PaypalMeta {
-                    authorize_id: None,
-                    capture_id: None,
-                    incremental_authorization_id: None,
-                    psync_flow: PaypalPaymentIntent::Authenticate,
-                    next_action: None,
-                    order_id: Some(threeds_response.id.clone()),
-                });
-
-                Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    response: Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            threeds_response.id.clone(),
-                        ),
-                        redirection_data: link
-                            .map(|url| Box::new(RedirectForm::from((url, Method::Get)))),
-                        mandate_reference: None,
-                        connector_metadata: Some(connector_meta),
-                        network_txn_id: None,
-                        connector_response_reference_id: Some(threeds_response.id),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    }),
-                    ..item.router_data
+                Self::try_from(ResponseRouterData {
+                    response: threeds_response,
+                    router_data: item.router_data,
+                    http_code: item.http_code,
                 })
             }
         }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PaypalThreeDsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PaypalThreeDsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let connector_meta = serde_json::json!(PaypalMeta {
+            authorize_id: None,
+            capture_id: None,
+            incremental_authorization_id: None,
+            psync_flow: PaypalPaymentIntent::Authenticate, // when there is no capture or auth id present
+            next_action: None,
+            order_id: None,
+        });
+
+        let status = get_order_status(
+            item.response.clone().status,
+            PaypalPaymentIntent::Authenticate,
+        );
+        let link = get_redirect_url(item.response.links.clone())?;
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id),
+                redirection_data: Some(Box::new(paypal_threeds_link((
+                    link,
+                    item.router_data.request.complete_authorize_url.clone(),
+                ))?)),
+                mandate_reference: None,
+                connector_metadata: Some(connector_meta),
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
     }
 }
 
@@ -2046,10 +2062,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
-                redirection_data: Some(Box::new(RedirectForm::from((
-                    link.ok_or(ConnectorError::ResponseDeserializationFailed)?,
-                    Method::Get,
-                )))),
+                redirection_data: link.map(|url| Box::new(RedirectForm::from((url, Method::Get)))),
                 mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
@@ -2062,6 +2075,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ..item.router_data
         })
     }
+}
+
+fn paypal_threeds_link(
+    (redirect_url, complete_auth_url): (Option<Url>, Option<String>),
+) -> CustomResult<RedirectForm, ConnectorError> {
+    let mut redirect_url = redirect_url.ok_or(ConnectorError::ResponseDeserializationFailed)?;
+    let complete_auth_url = complete_auth_url.ok_or(ConnectorError::MissingRequiredField {
+        field_name: "complete_authorize_url",
+    })?;
+    let mut form_fields = std::collections::HashMap::from_iter(
+        redirect_url
+            .query_pairs()
+            .map(|(key, value)| (key.to_string(), value.to_string())),
+    );
+
+    // paypal requires return url to be passed as a field along with payer_action_url
+    form_fields.insert(String::from("redirect_uri"), complete_auth_url);
+
+    // Do not include query params in the endpoint
+    redirect_url.set_query(None);
+
+    Ok(RedirectForm::Form {
+        endpoint: redirect_url.to_string(),
+        method: Method::Get,
+        form_fields,
+    })
 }
 
 impl<F, T> TryFrom<ResponseRouterData<PaypalPaymentsSyncResponse, Self>>
@@ -2210,6 +2249,7 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
             | common_enums::AttemptStatus::VoidFailed
             | common_enums::AttemptStatus::AutoRefunded
             | common_enums::AttemptStatus::Unresolved
+            | common_enums::AttemptStatus::Unspecified
             | common_enums::AttemptStatus::PaymentMethodAwaited
             | common_enums::AttemptStatus::ConfirmationAwaited
             | common_enums::AttemptStatus::DeviceDataCollectionPending
