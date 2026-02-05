@@ -1,13 +1,15 @@
 use common_utils::{crypto, CustomResult};
 use domain_types::{
-    connector_types::ConnectorWebhookSecrets, router_data::ConnectorAuthType,
-    router_data_v2::RouterDataV2,
+    connector_types::{ConnectorRedirectResponseSecrets, ConnectorWebhookSecrets},
+    router_data::ConnectorAuthType,
 };
 use error_stack::ResultExt;
 
+#[derive(Clone)]
 pub enum ConnectorSourceVerificationSecrets {
     AuthHeaders(ConnectorAuthType),
     WebhookSecret(ConnectorWebhookSecrets),
+    RedirectResponseSecret(ConnectorRedirectResponseSecrets),
     AuthWithWebHookSecret {
         auth_headers: ConnectorAuthType,
         webhook_secret: ConnectorWebhookSecrets,
@@ -15,7 +17,7 @@ pub enum ConnectorSourceVerificationSecrets {
 }
 
 /// Core trait for source verification
-pub trait SourceVerification<Flow, ResourceCommonData, Req, Resp> {
+pub trait SourceVerification {
     fn get_secrets(
         &self,
         _secrets: ConnectorSourceVerificationSecrets,
@@ -35,7 +37,6 @@ pub trait SourceVerification<Flow, ResourceCommonData, Req, Resp> {
     fn get_signature(
         &self,
         _payload: &[u8],
-        _router_data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
         Ok(Vec::new())
@@ -45,7 +46,6 @@ pub trait SourceVerification<Flow, ResourceCommonData, Req, Resp> {
     fn get_message(
         &self,
         payload: &[u8],
-        _router_data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
         Ok(payload.to_owned())
@@ -54,14 +54,13 @@ pub trait SourceVerification<Flow, ResourceCommonData, Req, Resp> {
     /// Perform the verification
     fn verify(
         &self,
-        router_data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
         secrets: ConnectorSourceVerificationSecrets,
         payload: &[u8],
     ) -> CustomResult<bool, domain_types::errors::ConnectorError> {
         let algorithm = self.get_algorithm()?;
         let extracted_secrets = self.get_secrets(secrets)?;
-        let signature = self.get_signature(payload, router_data, &extracted_secrets)?;
-        let message = self.get_message(payload, router_data, &extracted_secrets)?;
+        let signature = self.get_signature(payload, &extracted_secrets)?;
+        let message = self.get_message(payload, &extracted_secrets)?;
 
         // Verify the signature against the message
         algorithm

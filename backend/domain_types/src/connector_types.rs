@@ -1727,6 +1727,19 @@ impl RefundFlowData {
 }
 
 #[derive(Debug, Clone)]
+pub struct RedirectDetailsResponse {
+    pub resource_id: Option<ResponseId>,
+    pub status: Option<AttemptStatus>,
+    pub response_minor_amount: Option<MinorUnit>,
+    pub response_currency: Option<Currency>,
+    pub connector_response_reference_id: Option<String>,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+    pub error_reason: Option<String>,
+    pub raw_connector_response: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct WebhookDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: AttemptStatus,
@@ -1797,6 +1810,12 @@ pub struct RequestDetails {
 
 #[derive(Debug, Clone)]
 pub struct ConnectorWebhookSecrets {
+    pub secret: Vec<u8>,
+    pub additional_secret: Option<Secret<String>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectorRedirectResponseSecrets {
     pub secret: Vec<u8>,
     pub additional_secret: Option<Secret<String>>,
 }
@@ -2165,6 +2184,21 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebho
 
     fn foreign_try_from(
         value: grpc_api_types::payments::WebhookSecrets,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            secret: value.secret.into(),
+            additional_secret: value.additional_secret.map(Secret::new),
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::RedirectResponseSecrets>
+    for ConnectorRedirectResponseSecrets
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::RedirectResponseSecrets,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             secret: value.secret.into(),

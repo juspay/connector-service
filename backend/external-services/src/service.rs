@@ -481,13 +481,6 @@ where
                                         "status_code",
                                         tracing::field::display(status_code),
                                     );
-                                    let is_source_verified = connector.verify(&updated_router_data, interfaces::verification::ConnectorSourceVerificationSecrets::AuthHeaders(updated_router_data.connector_auth_type.clone()), &body.response)?;
-
-                                    if !is_source_verified {
-                                        return Err(error_stack::report!(
-                                            ConnectorError::SourceVerificationFailed
-                                        ));
-                                    }
 
                                     if all_keys_required.unwrap_or(true) {
                                         let raw_response_string =
