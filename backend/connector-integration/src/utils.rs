@@ -434,3 +434,9 @@ pub fn get_state_code_for_country(
         }
     }
 }
+
+/// Concatenates a vector of strings without any separator
+/// This is useful for creating verification messages for webhooks
+pub fn concat_strings(strings: &[String]) -> String {
+    strings.join("")
+}

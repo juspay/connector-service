@@ -1,5 +1,6 @@
 use common_utils::{
-    consts, errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit,
+    consts, crypto::VerifySignature, errors::CustomResult, events, ext_traits::BytesExt,
+    types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -28,7 +29,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::Report;
+use error_stack::{Report, ResultExt};
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -141,6 +142,349 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Nuvei<T>
 {
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, Report<errors::ConnectorError>> {
+        use transformers::{get_webhook_object_from_body, NuveiWebhook};
+
+        let webhook = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Failed to parse webhook body for signature verification")?;
+
+        let nuvei_notification_signature = match webhook {
+            NuveiWebhook::PaymentDmn(notification) => notification
+                .advance_response_checksum
+                .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?,
+            NuveiWebhook::Chargeback(_) => request
+                .headers
+                .get("Checksum")
+                .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?
+                .clone(),
+        };
+
+        hex::decode(nuvei_notification_signature)
+            .change_context(errors::ConnectorError::WebhookSignatureNotFound)
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        connector_webhook_secrets: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, Report<errors::ConnectorError>> {
+        use crate::utils::concat_strings;
+        use transformers::{get_webhook_object_from_body, NuveiWebhook};
+
+        let webhook = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Failed to parse webhook body for message construction")?;
+
+        let secret_str = std::str::from_utf8(&connector_webhook_secrets.secret)
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        match webhook {
+            NuveiWebhook::PaymentDmn(notification) => {
+                let status = notification
+                    .status
+                    .as_ref()
+                    .map(|s| format!("{s:?}").to_uppercase())
+                    .unwrap_or_default();
+
+                let to_sign = concat_strings(&[
+                    secret_str.to_string(),
+                    notification.total_amount,
+                    notification.currency,
+                    notification.response_time_stamp,
+                    notification.ppp_transaction_id,
+                    status,
+                    notification.product_id.unwrap_or("NA".to_string()),
+                ]);
+                Ok(to_sign.into_bytes())
+            }
+            NuveiWebhook::Chargeback(notification) => {
+                let response = serde_json::to_string(&notification)
+                    .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+                let to_sign = format!("{secret_str}{response}");
+                Ok(to_sign.into_bytes())
+            }
+        }
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorAuthType>,
+    ) -> Result<bool, Report<errors::ConnectorError>> {
+        use common_utils::crypto;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets,
+            None => {
+                tracing::warn!(
+                    target: "nuvei_webhook",
+                    "Missing webhook secret for Nuvei webhook verification - verification failed but continuing processing"
+                );
+                return Ok(false);
+            }
+        };
+
+        let signature = match self
+            .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
+        {
+            Ok(sig) => sig,
+            Err(error) => {
+                tracing::warn!(
+                    target: "nuvei_webhook",
+                    "Failed to get webhook source verification signature for Nuvei: {} - verification failed but continuing processing",
+                    error
+                );
+                return Ok(false);
+            }
+        };
+
+        let message = match self
+            .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
+        {
+            Ok(msg) => msg,
+            Err(error) => {
+                tracing::warn!(
+                    target: "nuvei_webhook",
+                    "Failed to get webhook source verification message for Nuvei: {} - verification failed but continuing processing",
+                    error
+                );
+                return Ok(false);
+            }
+        };
+
+        match crypto::Sha256.verify_signature(
+            &connector_webhook_secrets.secret,
+            &signature,
+            &message,
+        ) {
+            Ok(is_verified) => Ok(is_verified),
+            Err(error) => {
+                tracing::warn!(
+                    target: "nuvei_webhook",
+                    "Failed to verify webhook signature for Nuvei: {} - verification failed but continuing processing",
+                    error
+                );
+                Ok(false)
+            }
+        }
+    }
+
+    fn get_event_type(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorAuthType>,
+    ) -> Result<domain_types::connector_types::EventType, Report<errors::ConnectorError>> {
+        use transformers::{
+            get_webhook_object_from_body, map_dispute_notification_to_event,
+            map_notification_to_event, NuveiWebhook,
+        };
+
+        let webhook = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
+            .attach_printable("Failed to parse webhook body to determine event type")?;
+
+        match webhook {
+            NuveiWebhook::PaymentDmn(notification) => {
+                if let Some((status, transaction_type)) =
+                    notification.status.zip(notification.transaction_type)
+                {
+                    map_notification_to_event(status, transaction_type)
+                } else {
+                    Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
+                }
+            }
+            NuveiWebhook::Chargeback(notification) => {
+                map_dispute_notification_to_event(&notification.chargeback)
+            }
+        }
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorAuthType>,
+    ) -> Result<domain_types::connector_types::WebhookDetailsResponse, Report<errors::ConnectorError>>
+    {
+        use transformers::{get_webhook_object_from_body, NuveiWebhook};
+
+        let webhook = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)
+            .attach_printable("Failed to parse webhook body for payment webhook processing")?;
+
+        match webhook {
+            NuveiWebhook::PaymentDmn(notification) => {
+                let response =
+                    domain_types::connector_types::WebhookDetailsResponse::try_from(notification)
+                        .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+                Ok(domain_types::connector_types::WebhookDetailsResponse {
+                    raw_connector_response: Some(
+                        String::from_utf8_lossy(&request.body).to_string(),
+                    ),
+                    ..response
+                })
+            }
+            NuveiWebhook::Chargeback(_) => {
+                Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
+            }
+        }
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::RefundWebhookDetailsResponse,
+        Report<errors::ConnectorError>,
+    > {
+        use transformers::{get_webhook_object_from_body, NuveiTransactionType, NuveiWebhook};
+
+        let webhook = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)
+            .attach_printable("Failed to parse webhook body for refund webhook processing")?;
+
+        match webhook {
+            NuveiWebhook::PaymentDmn(notification) => {
+                // Only process if it's a refund transaction
+                if notification.transaction_type == Some(NuveiTransactionType::Credit) {
+                    let response =
+                        domain_types::connector_types::RefundWebhookDetailsResponse::try_from(
+                            notification,
+                        )
+                        .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+                    Ok(
+                        domain_types::connector_types::RefundWebhookDetailsResponse {
+                            raw_connector_response: Some(
+                                String::from_utf8_lossy(&request.body).to_string(),
+                            ),
+                            ..response
+                        },
+                    )
+                } else {
+                    Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
+                }
+            }
+            NuveiWebhook::Chargeback(_) => {
+                Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
+            }
+        }
+    }
+
+    fn process_dispute_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::DisputeWebhookDetailsResponse,
+        Report<errors::ConnectorError>,
+    > {
+        use common_enums::{Currency, DisputeStatus};
+        use domain_types::connector_types::DisputeWebhookDetailsResponse;
+        use transformers::{
+            get_dispute_stage, get_webhook_object_from_body, map_dispute_notification_to_event,
+            NuveiWebhook,
+        };
+
+        let webhook = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
+            .attach_printable("Failed to parse webhook body for dispute webhook processing")?;
+
+        match webhook {
+            NuveiWebhook::Chargeback(notification) => {
+                let currency = notification
+                    .chargeback
+                    .reported_currency
+                    .to_uppercase()
+                    .parse::<Currency>()
+                    .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                // Convert FloatMajorUnit to MinorUnit using FloatMajorUnitForConnector
+                use common_utils::types::StringMinorUnitForConnector;
+                use common_utils::types::{AmountConvertor, FloatMajorUnitForConnector};
+                let converter = FloatMajorUnitForConnector;
+                let amount_minorunit = converter
+                    .convert_back(notification.chargeback.reported_amount, currency)
+                    .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
+                // Then convert to StringMinorUnit using StringMinorUnitForConnector
+                let minor_unit_converter = StringMinorUnitForConnector;
+                let amount = minor_unit_converter
+                    .convert(amount_minorunit, currency)
+                    .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
+                let connector_dispute_id = notification
+                    .chargeback
+                    .dispute_id
+                    .clone()
+                    .ok_or(errors::ConnectorError::WebhookReferenceIdNotFound)?;
+
+                let dispute_stage = get_dispute_stage(&notification.chargeback)?;
+
+                Ok(DisputeWebhookDetailsResponse {
+                    amount,
+                    currency,
+                    dispute_id: connector_dispute_id,
+                    status: {
+                        // Map dispute status code to EventType first, then to DisputeStatus
+                        let event_type =
+                            map_dispute_notification_to_event(&notification.chargeback)?;
+                        match event_type {
+                            domain_types::connector_types::EventType::DisputeOpened => {
+                                DisputeStatus::DisputeOpened
+                            }
+                            domain_types::connector_types::EventType::DisputeAccepted => {
+                                DisputeStatus::DisputeAccepted
+                            }
+                            domain_types::connector_types::EventType::DisputeCancelled => {
+                                DisputeStatus::DisputeCancelled
+                            }
+                            domain_types::connector_types::EventType::DisputeChallenged => {
+                                DisputeStatus::DisputeChallenged
+                            }
+                            domain_types::connector_types::EventType::DisputeWon => {
+                                DisputeStatus::DisputeWon
+                            }
+                            domain_types::connector_types::EventType::DisputeLost => {
+                                DisputeStatus::DisputeLost
+                            }
+                            domain_types::connector_types::EventType::DisputeExpired => {
+                                DisputeStatus::DisputeExpired
+                            }
+                            _ => DisputeStatus::DisputeOpened, // Default fallback
+                        }
+                    },
+                    stage: dispute_stage,
+                    connector_response_reference_id: None,
+                    dispute_message: notification.chargeback.chargeback_reason.clone(),
+                    raw_connector_response: Some(
+                        String::from_utf8_lossy(&request.body).to_string(),
+                    ),
+                    status_code: 200,
+                    response_headers: None,
+                    connector_reason_code: notification
+                        .chargeback
+                        .chargeback_reason_category
+                        .clone(),
+                })
+            }
+            NuveiWebhook::PaymentDmn(_) => {
+                Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
+            }
+        }
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyRedirectResponse for Nuvei<T>
