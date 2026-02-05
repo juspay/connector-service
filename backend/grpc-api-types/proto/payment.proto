@@ -322,6 +322,9 @@ enum WebhookEventType {
   RECOVERY_PAYMENT_SUCCESS = 38;           // Recovery payment success
   RECOVERY_PAYMENT_PENDING = 39;           // Recovery payment pending
   RECOVERY_INVOICE_CANCEL = 40;            // Recovery invoice cancelled
+  
+  // Unsupported events
+  EVENT_NOT_SUPPORTED = 41;                // Webhook event is not supported
 }
 
 // Enum for currency codes (ISO 4217).
