@@ -24,6 +24,11 @@ enum CardNetwork {
   RUPAY = 10;
 }
 
+// Paysafecard - Prepaid payment method
+message PaySafeCard {
+  // Fields will be added as needed for Paysafecard integration
+}
+
 // ============================================================================
 // COMPOSITE MESSAGES
 // ============================================================================
@@ -121,6 +126,10 @@ message PaymentMethod {
     // NETWORK TRANSACTION METHODS (120-129) - For recurring payments with network transaction IDs
     CardDetailsForNetworkTransactionId card_details_for_network_transaction_id = 120; // Card details with network transaction ID
     NetworkTokenData network_token = 121; // Network token data
+    
+    // GIFT CARDS (130-139)
+    Givex givex = 137;                                         // Givex gift card
+    PaySafeCard pay_safe_card = 138;                           // Paysafecard - Prepaid payment method
   }
 }
 
@@ -1001,15 +1010,6 @@ message EVoucher {
   // Fields will be added as needed for E-Voucher integration
 }
 
-// Givex - Gift card and loyalty program provider
-message Givex {
-  // The gift card number
-  SecretString number = 1 [(validate.rules).string = {min_len: 1}];
-  
-  // The card verification code
-  SecretString cvc = 2;
-}
-
 // Indomaret - Indonesian convenience store payment
 message Indomaret {
   // Fields will be added as needed for Indomaret integration
@@ -1023,11 +1023,6 @@ message OXXO {
 // PagoEfectivo - Peruvian cash payment method
 message PagoEfectivo {
   // Fields will be added as needed for PagoEfectivo integration
-}
-
-// Paysafecard - Prepaid payment method
-message PaySafeCard {
-  // Fields will be added as needed for Paysafecard integration
 }
 
 // 7-Eleven - Convenience store payment
@@ -1207,6 +1202,19 @@ message EVoucher {
 
 message SecretString {
   string value = 1;
+}
+
+// ============================================================================
+// GIFT CARDS
+// ============================================================================
+
+// Givex - Gift card and loyalty program provider
+message Givex {
+  // The gift card number
+  SecretString number = 1;
+
+  // The card verification code
+  SecretString cvc = 2;
 }
 
 enum BankNames {
