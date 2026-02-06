@@ -102,7 +102,7 @@ pub struct FiservemeaPaymentsRequest<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method: Option<FiservemeaPaymentMethod>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub order: Option<FiservemeaOrder>,
+    pub order: Option<FisiservemeaOrder>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -321,7 +321,7 @@ pub struct FiservemeaRefundResponse {
     pub transaction_state: Option<FiservemeaTransactionState>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub approval_code: Option<String>,
-    #[serde(skip_serializing_if = "Option::is")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub approved_amount: Option<FiservemeaAmount>,
 }
 
@@ -403,26 +403,15 @@ pub struct FiservemeaPaymentMethodDetails {
     pub payment_method_brand: Option<String>,
 }
 
-use crate::connectors::fiservemea::FiservemeaRouterData;
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiservemeaRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            T,
-        >,
-    >
-    for FiservemeaPaymentsRequest
+impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for FiservemeaPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: FiservemeaRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            T,
-        >,
+        value: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let payment_method = item.router_data.request.payment_method_data.clone();
+        let payment_method = value.request.payment_method_data.clone();
 
         let payment_method_obj = match payment_method {
             PaymentMethodData::Card(card) => Some(FiservemeaPaymentMethod {
@@ -452,7 +441,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 payment_token: None,
                 wallet: Some(FiservemeaWallet {
                     apple_pay: None,
-                    google_pay: Some(FiservemeaGooglePay {
+                    google_pay: Some(FisevemeaGooglePay {
                         payment_data: google_pay.payment_data.clone(),
                     }),
                 }),
@@ -470,7 +459,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }))?,
         };
 
-        let order = item.router_data
+        let order = value
             .request
             .order_details
             .as_ref()
@@ -490,8 +479,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(FiservemeaPaymentsRequest {
             request_type: "PaymentCardSaleTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: item.router_data.request.amount.to_string(),
-                currency: item.router_data.request.currency.to_string(),
+                total: value.request.amount.to_string(),
+                currency: value.request.currency.to_string(),
             },
             payment_method: payment_method_obj,
             order,
@@ -499,22 +488,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiservemeaRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    >
+impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
     for FiservemeaVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: FiservemeaRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        _value: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaVoidRequest {
             request_type: "VoidTransaction".to_string(),
@@ -523,55 +503,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiservemeaRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    >
+impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
     for FiservemeaCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: FiservemeaRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        value: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaCaptureRequest {
             request_type: "PostAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: item.router_data.request.amount.to_string(),
-                currency: item.router_data.request.currency.to_string(),
+                total: value.request.amount.to_string(),
+                currency: value.request.currency.to_string(),
             },
         })
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiservemeaRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    >
+impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
     for FiservemeaRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: FiservemeaRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        value: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaRefundRequest {
             request_type: "ReturnTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: item.router_data.request.amount.to_string(),
-                currency: item.router_data.request.currency.to_string(),
+                total: value.request.amount.to_string(),
+                currency: value.request.currency.to_string(),
             },
             comments: None,
         })
@@ -592,12 +554,12 @@ pub fn map_fiservemea_status_to_attempt_status(
         (Some(FiservemeaTransactionResult::Approved), Some(FiservemeaTransactionState::Settled)) => {
             AttemptStatus::Charged
         }
-        (Some(FiservemeaTransactionResult::Declined), _)
+        (Some(FisemeaTransactionResult::Declined), _)
         | (_, Some(FiservemeaTransactionState::Declined)) => AttemptStatus::Failure,
         (Some(FiservemeaTransactionResult::Failed), _) => AttemptStatus::Failure,
         (Some(FiservemeaTransactionResult::Waiting), _)
         | (_, Some(FiservemeaTransactionState::Waiting)) => AttemptStatus::Pending,
-        (Some(FiservemeaTransactionResult::Partial), _) => AttemptStatus::Pending,
+        (Some(FisemeaTransactionResult::Partial), _) => AttemptStatus::Pending,
         (Some(FiservemeaTransactionResult::Fraud), _) => AttemptStatus::Failure,
         (_, Some(FiservemeaTransactionState::Voided)) => AttemptStatus::Voided,
         (_, Some(FiservemeaTransactionState::Pending)) => AttemptStatus::Pending,
@@ -617,7 +579,7 @@ pub fn map_fiservemea_status_to_refund_status(
         (Some(FiservemeaTransactionResult::Waiting), _)
         | (_, Some(FiservemeaTransactionState::Waiting)) => RefundStatus::Pending,
         (Some(FiservemeaTransactionResult::Partial), _) => RefundStatus::Pending,
-        (Some(FiservemeaTransactionResult::Fraud), _) => RefundStatus::Failure,
+        (Some(FisemeaTransactionResult::Fraud), _) => RefundStatus::Failure,
         (_, Some(FiservemeaTransactionState::Pending)) => RefundStatus::Pending,
         _ => RefundStatus::Pending,
     }
