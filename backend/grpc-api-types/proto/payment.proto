@@ -2588,6 +2588,7 @@ message PaymentServicePreAuthenticateRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  optional string description = 20; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
 }
 
 // Response message for pre-authentication step

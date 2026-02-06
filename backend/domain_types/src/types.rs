@@ -9394,6 +9394,7 @@ impl<
                     )
                 })
                 .transpose()?,
+            mandate_reference: None,
         })
     }
 }
@@ -9669,7 +9670,7 @@ impl
             ),
             customer_id: None,
             connector_customer: None,
-            description: None,
+            description: value.description,
             return_url: value.return_url.clone(),
             connector_meta_data: value
                 .merchant_account_metadata
