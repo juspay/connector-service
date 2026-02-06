@@ -570,3 +570,235 @@ pub fn map_fiservemea_status_to_attempt_status(
         _ => AttemptStatus::Pending,
     }
 }
+
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservemeaAuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_fiservemea_status_to_attempt_status(
+            &item.response.transaction_result,
+            &item.response.transaction_state,
+        );
+
+        let network_txn_id = item
+            .response
+            .processor
+            .as_ref()
+            .and_then(|p| p.reference_number.clone());
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
+                connector_response_reference_id: Some(item.response.client_request_id.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<FiservemeaSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservemeaSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_fiservemea_status_to_attempt_status(
+            &item.response.transaction_result,
+            &item.response.transaction_state,
+        );
+
+        let network_txn_id = item
+            .response
+            .processor
+            .as_ref()
+            .and_then(|p| p.reference_number.clone());
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
+                connector_response_reference_id: Some(item.response.client_request_id.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<FiservemeaVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservemeaVoidResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_fiservemea_status_to_attempt_status(
+            &item.response.transaction_result,
+            &item.response.transaction_state,
+        );
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: item.response.api_trace_id.clone(),
+                connector_response_reference_id: Some(item.response.client_request_id.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<FiservemeaCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservemeaCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_fiservemea_status_to_attempt_status(
+            &item.response.transaction_result,
+            &item.response.transaction_state,
+        );
+
+        let network_txn_id = item
+            .response
+            .processor
+            .as_ref()
+            .and_then(|p| p.reference_number.clone());
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
+                connector_response_reference_id: Some(item.response.client_request_id.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<FiservemeaRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservemeaRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_fiservemea_status_to_attempt_status(
+            &item.response.transaction_result,
+            &item.response.transaction_state,
+        );
+
+        let network_txn_id = item
+            .response
+            .processor
+            .as_ref()
+            .and_then(|p| p.reference_number.clone());
+
+        Ok(Self {
+            response: Ok(RefundsResponseData {
+                connector_refund_id: item.response.ipg_transaction_id.clone(),
+                refund_status: status,
+                connector_response_reference_id: Some(item.response.client_request_id.clone()),
+                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
+                connector_metadata: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: RefundFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<FiservemeaRefundSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservemeaRefundSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_fiservemea_status_to_attempt_status(
+            &item.response.transaction_result,
+            &item.response.transaction_state,
+        );
+
+        let network_txn_id = item
+            .response
+            .processor
+            .as_ref()
+            .and_then(|p| p.reference_number.clone());
+
+        Ok(Self {
+            response: Ok(RefundsResponseData {
+                connector_refund_id: item.response.ipg_transaction_id.clone(),
+                refund_status: status,
+                connector_response_reference_id: Some(item.response.client_request_id.clone()),
+                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
+                connector_metadata: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: RefundFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
