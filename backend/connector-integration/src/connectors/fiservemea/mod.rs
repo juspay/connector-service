@@ -504,7 +504,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let id = req.request.connector_transaction_id.clone();
-            Ok(format!("{}/{}", self.connector_base_url(req), id))
+            Ok(format!("{}/{}", self.connector_base_url_refunds(req), id))
         }
     }
 );
