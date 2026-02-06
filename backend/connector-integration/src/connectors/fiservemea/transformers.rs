@@ -403,15 +403,20 @@ pub struct FiservemeaPaymentMethodDetails {
     pub payment_method_brand: Option<String>,
 }
 
-impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+#[derive(Debug, Clone)]
+pub struct FiservemeaRouterData<RD> {
+    pub router_data: RD,
+}
+
+impl<T: PaymentMethodDataTypes> TryFrom<&FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
     for FiservemeaPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        value: &FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let payment_method = value.request.payment_method_data.clone();
+        let payment_method = value.router_data.request.payment_method_data.clone();
 
         let payment_method_obj = match payment_method {
             PaymentMethodData::Card(card) => Some(FiservemeaPaymentMethod {
@@ -459,7 +464,7 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>,
             }))?,
         };
 
-        let order = value
+        let order = value.router_data
             .request
             .order_details
             .as_ref()
@@ -479,8 +484,8 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>,
         Ok(FiservemeaPaymentsRequest {
             request_type: "PaymentCardSaleTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: value.request.amount.to_string(),
-                currency: value.request.currency.to_string(),
+                total: value.router_data.request.amount.to_string(),
+                currency: value.router_data.request.currency.to_string(),
             },
             payment_method: payment_method_obj,
             order,
@@ -488,13 +493,13 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>,
     }
 }
 
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
+impl TryFrom<&FiservemeaRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>>
     for FiservemeaVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _value: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        _value: &FiservemeaRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaVoidRequest {
             request_type: "VoidTransaction".to_string(),
@@ -503,37 +508,37 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
     }
 }
 
-impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
+impl TryFrom<&FiservemeaRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
     for FiservemeaCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        value: &FiservemeaRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaCaptureRequest {
             request_type: "PostAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: value.request.amount.to_string(),
-                currency: value.request.currency.to_string(),
+                total: value.router_data.request.amount.to_string(),
+                currency: value.router_data.request.currency.to_string(),
             },
         })
     }
 }
 
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
+impl TryFrom<&FiservemeaRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
     for FiservemeaRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        value: &FiservemeaRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaRefundRequest {
             request_type: "ReturnTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: value.request.amount.to_string(),
-                currency: value.request.currency.to_string(),
+                total: value.router_data.request.amount.to_string(),
+                currency: value.router_data.request.currency.to_string(),
             },
             comments: None,
         })
