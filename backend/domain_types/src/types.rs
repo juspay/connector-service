@@ -2850,7 +2850,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -2913,7 +2913,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let connector_meta_data = value
+        let merchant_account_metadata = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -2958,7 +2958,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_customer: value.connector_customer_id,
             description: value.description,
             return_url: value.return_url.clone(),
-            connector_meta_data,
+            merchant_account_metadata,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -3024,7 +3024,7 @@ impl
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let connector_meta_data = value
+        let merchant_account_metadata = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -3073,7 +3073,7 @@ impl
             connector_customer: value.connector_customer_id,
             description: value.description,
             return_url: value.return_url.clone(),
-            connector_meta_data,
+            merchant_account_metadata,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -3161,7 +3161,7 @@ impl
             connector_customer: value.connector_customer_id,
             description: value.description,
             return_url: None,
-            connector_meta_data: value
+            merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
                 .transpose()?,
@@ -3237,7 +3237,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: value
+            merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
                 .transpose()?,
@@ -3287,7 +3287,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-        let connector_meta_data = value
+        let merchant_account_metadata = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -3307,7 +3307,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            merchant_account_metadata,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -4089,7 +4089,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -4756,7 +4756,7 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
-        let connector_meta_data = value
+        let merchant_account_metadata = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -4789,7 +4789,7 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
-            connector_meta_data,
+            merchant_account_metadata,
             test_mode: value.test_mode,
             payment_method,
         })
@@ -4818,7 +4818,7 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
-        let connector_meta_data = value
+        let merchant_account_metadata = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -4851,7 +4851,7 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
-            connector_meta_data,
+            merchant_account_metadata,
             test_mode: value.test_mode,
             payment_method,
         })
@@ -5556,7 +5556,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,
@@ -5672,7 +5672,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,
@@ -6247,7 +6247,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -6294,7 +6294,7 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-        let connector_meta_data = value
+        let merchant_account_metadata = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -6313,7 +6313,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            merchant_account_metadata,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -6372,7 +6372,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: value
+            merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|metadata| serde_json::from_str(&metadata.expose()))
                 .transpose()
@@ -6686,8 +6686,8 @@ impl
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        // Extract connector_meta_data from merchant_account_metadata
-        let connector_meta_data = value
+        // Extract merchant_account_metadata
+        let merchant_account_metadata = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -6717,7 +6717,7 @@ impl
             connector_customer: value.connector_customer_id,
             description,
             return_url: None,
-            connector_meta_data,
+            merchant_account_metadata,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -7497,8 +7497,8 @@ impl
             Some(false), // should_unify_address
         );
 
-        // Create connector metadata from the metadata field if present
-        let connector_meta_data = value
+        // Create merchant account metadata if present
+        let merchant_account_metadata = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -7525,7 +7525,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            merchant_account_metadata,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -7979,7 +7979,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -8121,7 +8121,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: value.return_url,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -8267,7 +8267,7 @@ impl
             connector_customer: None,
             description: None, // description field not available in this proto
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -8567,7 +8567,7 @@ impl
             connector_customer: None,
             description: Some("Repeat payment transaction".to_string()),
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -9671,7 +9671,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: value.return_url.clone(),
-            connector_meta_data: value
+            merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
                 .transpose()?,
@@ -9758,7 +9758,7 @@ impl
             connector_customer: None,
             description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value
+            merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
                 .transpose()?,
@@ -9851,7 +9851,7 @@ impl
             connector_customer: None,
             description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value
+            merchant_account_metadata: value
                 .merchant_account_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
                 .transpose()?,
@@ -9928,7 +9928,7 @@ impl
             connector_customer: None,
             description: Some("Mandate revoke operation".to_string()),
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,

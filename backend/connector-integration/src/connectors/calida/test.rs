@@ -73,7 +73,7 @@ mod tests {
                         None,
                     ),
                     auth_type: common_enums::AuthenticationType::NoThreeDs,
-                    connector_meta_data: Some(pii::SecretSerdeValue::new(
+                    merchant_account_metadata: Some(pii::SecretSerdeValue::new(
                         serde_json::json!({ "shop_name": "test_shop" }),
                     )),
                     amount_captured: None,
@@ -231,7 +231,7 @@ mod tests {
                         None, None, None, None,
                     ),
                     auth_type: common_enums::AuthenticationType::NoThreeDs,
-                    connector_meta_data: None,
+                    merchant_account_metadata: None,
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_authorized: None,

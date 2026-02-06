@@ -824,14 +824,14 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                     item.router_data.request.continue_redirection_url.as_ref(),
                     item.router_data
                         .resource_common_data
-                        .connector_meta_data
+                        .merchant_account_metadata
                         .clone(),
                 )?;
 
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::AuthenticationPending,
-                        connector_meta_data,
+                        merchant_account_metadata: connector_meta_data,
                         reference_id: response_ref_id.clone(),
                         ..item.router_data.resource_common_data
                     },
@@ -1009,10 +1009,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status,
-                        connector_meta_data: item
+                        merchant_account_metadata: item
                             .router_data
                             .resource_common_data
-                            .connector_meta_data,
+                            .merchant_account_metadata,
                         reference_id: Some(ds_order),
 
                         ..item.router_data.resource_common_data
@@ -1248,10 +1248,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status,
-                        connector_meta_data: item
+                        merchant_account_metadata: item
                             .router_data
                             .resource_common_data
-                            .connector_meta_data,
+                            .merchant_account_metadata,
                         reference_id: Some(ds_order),
 
                         ..item.router_data.resource_common_data

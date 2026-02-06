@@ -410,7 +410,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or_else(|| {
                 router_data
                     .resource_common_data
-                    .connector_meta_data
+                    .merchant_account_metadata
                     .as_ref()
                     .and_then(|metadata_value| {
                         metadata_value

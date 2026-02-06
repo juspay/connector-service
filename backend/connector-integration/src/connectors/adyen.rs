@@ -414,7 +414,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
@@ -447,7 +447,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/details"))
         }
@@ -484,7 +484,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/{id}/captures"))
         }
@@ -538,7 +538,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/{id}/cancels"))
         }
@@ -844,7 +844,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_refunds(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!(
                 "{endpoint}{ADYEN_API_VERSION}/payments/{connector_payment_id}/refunds",
@@ -879,7 +879,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
@@ -974,7 +974,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }

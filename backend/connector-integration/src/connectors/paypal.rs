@@ -365,7 +365,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .ok_or(ConnectorError::FailedToObtainAuthType)?;
         let connector_metadata = req
             .resource_common_data
-            .connector_meta_data
+            .merchant_account_metadata
             .as_ref()
             .map(|secret| secret.clone().expose());
         self.build_headers(
@@ -540,7 +540,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.merchant_account_metadata
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             let reference_id = req.resource_common_data.get_reference_id()?;
@@ -625,7 +625,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.merchant_account_metadata
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -674,7 +674,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.merchant_account_metadata
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -726,7 +726,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.merchant_account_metadata
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -775,7 +775,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.merchant_account_metadata
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -819,7 +819,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.merchant_account_metadata
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -862,7 +862,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.merchant_account_metadata
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -996,7 +996,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .ok_or(ConnectorError::FailedToObtainAuthType)?;
         let connector_metadata = req
             .resource_common_data
-            .connector_meta_data
+            .merchant_account_metadata
             .as_ref()
             .map(|secret| secret.clone().expose());
         self.build_headers(
