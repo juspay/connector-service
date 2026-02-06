@@ -408,13 +408,13 @@ pub struct FiservemeaRouterData<RD> {
     pub router_data: RD,
 }
 
-impl TryFrom<&FiservemeaRouterData<RouterDataV2<Authorize, _, _, _>>>
+impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for FiservemeaPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &FiservemeaRouterData<RouterDataV2<Authorize, _, _, _>>,
+        value: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let router_data = &value.router_data;
         let payment_method = router_data.request.payment_method_data.clone();
