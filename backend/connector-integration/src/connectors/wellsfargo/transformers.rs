@@ -11,7 +11,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ErrorResponse,
+    router_data::{AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils::CardIssuer,
 };
@@ -132,6 +132,7 @@ pub struct WellsfargoCaptureRequest {
 #[serde(rename_all = "camelCase")]
 pub struct OrderInformationAmount {
     amount_details: Amount,
+    #[serde(skip_serializing_if = "Option::is_none")]
     bill_to: Option<BillTo>,
 }
 
@@ -323,6 +324,7 @@ pub enum WellsfargoPaymentStatus {
 pub struct ClientProcessorInformation {
     pub network_transaction_id: Option<String>,
     pub avs: Option<Avs>,
+    pub card_verification: Option<CardVerification>,
     pub response_code: Option<String>,
 }
 
@@ -331,6 +333,13 @@ pub struct ClientProcessorInformation {
 pub struct Avs {
     pub code: Option<String>,
     pub code_raw: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardVerification {
+    pub result_code: Option<String>,
+    pub result_code_raw: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1141,7 +1150,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
             })
         } else {
@@ -1154,10 +1163,18 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
             ))
         };
 
+        // Build connector response with additional payment method data
+        let connector_response = response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             response: response_data,
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1206,7 +1223,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
             })
         } else {
@@ -1219,10 +1236,18 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
             ))
         };
 
+        // Build connector response with additional payment method data
+        let connector_response = response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             response: response_data,
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1259,7 +1284,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
             })
         } else {
@@ -1272,10 +1297,18 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
             ))
         };
 
+        // Build connector response with additional payment method data
+        let connector_response = response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             response: response_data,
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1312,7 +1345,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
             })
         } else {
@@ -1325,10 +1358,18 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
             ))
         };
 
+        // Build connector response with additional payment method data
+        let connector_response = response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             response: response_data,
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1386,7 +1427,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
             })
         } else {
@@ -1399,10 +1440,18 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
             ))
         };
 
+        // Build connector response with additional payment method data
+        let connector_response = response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             response: response_data,
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1567,7 +1616,21 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
     }
 }
 
-// HELPER FUNCTIONS
+impl From<&ClientProcessorInformation> for AdditionalPaymentMethodConnectorResponse {
+    fn from(processor_information: &ClientProcessorInformation) -> Self {
+        let payment_checks = Some(serde_json::json!({
+            "avs_response": processor_information.avs,
+            "card_verification": processor_information.card_verification,
+        }));
+
+        Self::Card {
+            authentication_data: None,
+            payment_checks,
+            card_network: None,
+            domestic_network: None,
+        }
+    }
+}
 
 fn is_payment_successful(
     status: &Option<WellsfargoPaymentStatus>,
