@@ -800,21 +800,6 @@ impl<F, Req>
             RazorpayResponse::PsyncResponse(psync_response) => {
                 let status =
                     get_psync_razorpay_payment_status(is_manual_capture, psync_response.status);
-
-                // Extract UPI mode and set in connector_response
-                let connector_response = psync_response
-                    .upi
-                    .as_ref()
-                    .filter(|upi| upi.payer_account_type == "credit_card")
-                    .map(|_| {
-                        domain_types::router_data::ConnectorResponseData::
-                            with_additional_payment_method_data(
-                                domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
-                                    upi_mode: Some(domain_types::payment_method_data::UpiSource::UpiCc),
-                                },
-                            )
-                    });
-
                 let psync_response_data = PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(psync_response.id),
                     redirection_data: None,
@@ -831,7 +816,6 @@ impl<F, Req>
                     response: error.map_or_else(|| Ok(psync_response_data), Err),
                     resource_common_data: PaymentFlowData {
                         status,
-                        connector_response,
                         ..data.resource_common_data
                     },
                     ..data

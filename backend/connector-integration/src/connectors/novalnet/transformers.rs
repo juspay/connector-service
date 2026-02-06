@@ -274,7 +274,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             billing: Some(billing),
             // no_nc is used to indicate if minimal customer data is passed or not
             no_nc: MINIMAL_CUSTOMER_DATA_PASSED,
-            // DOB should be populated in case of SepaGuaranteedBankDebit payments
+            // DOB should be populated in case of SepaGuarenteedBankDebit payments
             birth_date: None,
         };
 
@@ -1932,7 +1932,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             billing: Some(billing),
             // no_nc is used to indicate if minimal customer data is passed or not
             no_nc: MINIMAL_CUSTOMER_DATA_PASSED,
-            // DOB should be populated in case of SepaGuaranteedBankDebit payments
+            // DOB should be populated in case of SepaGuarenteedBankDebit payments
             birth_date: None,
         };
 
@@ -2203,7 +2203,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             billing: Some(billing),
             // no_nc is used to indicate if minimal customer data is passed or not
             no_nc: MINIMAL_CUSTOMER_DATA_PASSED,
-            // DOB should be populated in case of SepaGuaranteedBankDebit payments
+            // DOB should be populated in case of SepaGuarenteedBankDebit payments
             birth_date: None,
         };
 
