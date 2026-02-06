@@ -222,7 +222,7 @@ impl Payments {
         &self,
         config: &Arc<Config>,
         connector_data: &ConnectorData<T>,
-        cached_access_token: Option<(String, Option<i64>)>,
+        cached_access_token: Option<(Option<Secret<String>>, Option<i64>)>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_type: &ConnectorAuthType,
         connector_name: &str,
@@ -230,7 +230,7 @@ impl Payments {
         event_params: EventParams<'_>,
     ) -> Result<AccessTokenResponseData, tonic::Status> {
         let access_token_data = match cached_access_token {
-            Some((token, expires_in)) => {
+            Some((Some(token), expires_in)) => {
                 // If provided cached token - use it, don't generate new one
                 tracing::info!("Using cached access token from Hyperswitch");
                 AccessTokenResponseData {
@@ -239,7 +239,7 @@ impl Payments {
                     expires_in,
                 }
             }
-            None => {
+            Some((None, _)) | None => {
                 // No cached token - generate fresh one
                 tracing::info!("No cached access token found, generating new token");
 
@@ -332,8 +332,7 @@ impl Payments {
         let cached_access_token = payload
             .state
             .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(|access| (access.token.clone(), access.expires_in_seconds));
+            .and_then(|state| state.access_token.as_ref());
 
         // Check if connector supports access tokens
         let should_do_access_token = connector_data
@@ -343,14 +342,20 @@ impl Payments {
         // Conditional token generation - ONLY if not provided in request
         let payment_flow_data = if should_do_access_token {
             let access_token_data = match cached_access_token {
-                Some((token, expires_in)) => {
+                Some(access_token) => {
                     // If provided cached token - use it, don't generate new one
                     tracing::info!("Using cached access token from Hyperswitch");
-                    Some(AccessTokenResponseData {
-                        access_token: token,
-                        token_type: None,
-                        expires_in,
-                    })
+                    let access_token = AccessTokenResponseData::foreign_try_from(access_token)
+                        .map_err(|err| {
+                            tracing::error!("Failed to process Access Token from state: {:?}", err);
+                            PaymentAuthorizationError::new(
+                                grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
+                                Some("Failed to process access token data".to_string()),
+                                Some("ACCESS_TOKEN_ERROR".to_string()),
+                                None,
+                            )
+                        })?;
+                    Some(access_token)
                 }
                 None => {
                     // No cached token - generate fresh one
@@ -2456,7 +2461,7 @@ impl PaymentService for Payments {
 
                         // Create access token info for the request
                         let access_token_info = grpc_api_types::payments::AccessToken {
-                            token: access_token_data.access_token,
+                            token: Some(access_token_data.access_token),
                             expires_in_seconds: access_token_data.expires_in,
                             token_type: access_token_data.token_type,
                         };
@@ -3018,7 +3023,7 @@ impl PaymentService for Payments {
 
                         // Create access token info for the request
                         let access_token_info = grpc_api_types::payments::AccessToken {
-                            token: access_token_data.access_token.clone(),
+                            token: Some(access_token_data.access_token.clone()),
                             expires_in_seconds: access_token_data.expires_in,
                             token_type: access_token_data.token_type.clone(),
                         };
@@ -4234,7 +4239,7 @@ impl PaymentService for Payments {
 
                     // Create response using the access token data
                     let create_access_token_response = PaymentServiceCreateAccessTokenResponse {
-                        access_token: access_token_data.access_token,
+                        access_token: Some(access_token_data.access_token),
                         token_type: access_token_data.token_type,
                         expires_in_seconds: access_token_data.expires_in,
                         status: i32::from(grpc_api_types::payments::OperationStatus::Success),
