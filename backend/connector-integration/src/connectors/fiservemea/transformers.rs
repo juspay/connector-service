@@ -403,11 +403,7 @@ pub struct FiservemeaPaymentMethodDetails {
     pub payment_method_brand: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct FiservemeaRouterData<RD, T> {
-    pub router_data: RD,
-    pub _phantom: std::marker::PhantomData<T>,
-}
+use crate::connectors::fiservemea::FiservemeaRouterData;
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
