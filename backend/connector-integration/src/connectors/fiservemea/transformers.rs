@@ -325,7 +325,7 @@ pub struct FiservemeaRefundResponse {
     pub approved_amount: Option<FiservemeaAmount>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaRefundSyncResponse {
     pub client_request_id: String,
