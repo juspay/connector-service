@@ -4,6 +4,37 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.06.0
+
+### Features
+
+- **connector:**
+  - Razorpay - added pay mode handling in upi sync response ([#457](https://github.com/juspay/connector-service/pull/457)) ([`e63458a`](https://github.com/juspay/connector-service/commit/e63458abc229ff123e5462d8406f2a3a472f954a))
+  - Implement incoming webhooks for trustpay ([#473](https://github.com/juspay/connector-service/pull/473)) ([`e192698`](https://github.com/juspay/connector-service/commit/e192698682e13120569f75ba27848531acfc3366))
+- **framework:** Added VerifyRedirectResponse flow ([#449](https://github.com/juspay/connector-service/pull/449)) ([`c816ebd`](https://github.com/juspay/connector-service/commit/c816ebd0cc39fe3e84c7ee74a81e62c669a7f4e5))
+
+### Bug Fixes
+
+- **connector:** Request diff fix for Stripe & Cybersource ([#463](https://github.com/juspay/connector-service/pull/463)) ([`9421bac`](https://github.com/juspay/connector-service/commit/9421bace2f98cbad494a188b9ed971f714ba808c))
+
+### Miscellaneous Tasks
+
+- Updated the creds file ([#479](https://github.com/juspay/connector-service/pull/479)) ([`59a4ea2`](https://github.com/juspay/connector-service/commit/59a4ea23fc8af9536735a83147c03f7456d05ec7))
+
+**Full Changelog:** [`2026.02.05.0...2026.02.06.0`](https://github.com/juspay/connector-service/compare/2026.02.05.0...2026.02.06.0)
+
+- - -
+
+## 2026.02.05.0
+
+### Features
+
+- Adyen gift card ([#431](https://github.com/juspay/connector-service/pull/431)) ([`e0164dc`](https://github.com/juspay/connector-service/commit/e0164dc4a7552fcfbda9ada07d0234317149ee2e))
+
+**Full Changelog:** [`2026.02.04.0...2026.02.05.0`](https://github.com/juspay/connector-service/compare/2026.02.04.0...2026.02.05.0)
+
+- - -
+
 ## 2026.02.04.0
 
 ### Features

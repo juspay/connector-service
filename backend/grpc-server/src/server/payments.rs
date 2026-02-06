@@ -58,6 +58,7 @@ use grpc_api_types::payments::{
     PaymentServiceRevokeMandateRequest, PaymentServiceRevokeMandateResponse,
     PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse,
+    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
     WebhookTransformationStatus,
@@ -65,7 +66,10 @@ use grpc_api_types::payments::{
 use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::Secret;
 use injector::{TokenData, VaultConnectors};
-use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use interfaces::{
+    connector_integration_v2::BoxedConnectorIntegrationV2,
+    verification::ConnectorSourceVerificationSecrets,
+};
 use tracing::info;
 
 use crate::{
@@ -2671,6 +2675,126 @@ impl PaymentService for Payments {
             },
         )
         .await
+    }
+
+    #[tracing::instrument(
+        name = "verify_redirect_response",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::VerifyRedirectResponse.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::VerifyRedirectResponse.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn verify_redirect_response(
+        &self,
+        request: tonic::Request<PaymentServiceVerifyRedirectResponseRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVerifyRedirectResponseResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::VerifyRedirectResponse,
+            |request_data| {
+                async move {
+                    let payload = request_data.payload;
+                    let metadata_payload = request_data.extracted_metadata;
+                    let connector = metadata_payload.connector;
+
+                    let request_details = payload
+                        .request_details
+                        .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+                        .transpose()
+                        .map_err(|e| e.into_grpc_status())?
+                        .ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?;
+
+                    let secrets = payload
+                        .redirect_response_secrets
+                        .map(domain_types::connector_types::ConnectorRedirectResponseSecrets::foreign_try_from)
+                        .transpose()
+                        .map_err(|e| e.into_grpc_status())?
+                        .map(ConnectorSourceVerificationSecrets::RedirectResponseSecret);
+
+                    // Get connector data
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    let decoded_body = match connector_data
+                        .connector
+                        .decode_redirect_response_body(
+                            &request_details,
+                            secrets.clone(),
+                        ) {
+                            Ok(result) => result,
+                            Err(err) => {
+                                tracing::warn!(
+                                    target: "decode_redirect_response_body",
+                                    "{:?}",
+                                    err
+                                );
+                                request_details.body
+                            }
+                        };
+
+                    // Create request_details with decoded body for connector processing
+                    let updated_request_details = domain_types::connector_types::RequestDetails {
+                        method: request_details.method.clone(),
+                        uri: request_details.uri.clone(),
+                        headers: request_details.headers,
+                        query_params: request_details.query_params.clone(),
+                        body: decoded_body,
+                    };
+
+                    let source_verified = match connector_data
+                        .connector
+                        .verify_redirect_response_source(
+                            &updated_request_details,
+                            secrets,
+                        ) {
+                            Ok(result) => result,
+                            Err(err) => {
+                                tracing::warn!(
+                                    target: "verify_redirect_response",
+                                    "{:?}",
+                                    err
+                                );
+                                false
+                            }
+                        };
+
+                    let redirect_details_response = connector_data
+                        .connector
+                        .process_redirect_response(
+                            &updated_request_details,
+                        )
+                        .switch()
+                        .into_grpc_status()?;
+
+                    let response = PaymentServiceVerifyRedirectResponseResponse::foreign_try_from((source_verified, redirect_details_response))
+                        .map_err(|e| e.into_grpc_status())?;
+
+                    Ok(tonic::Response::new(response))
+                }
+            }
+        ).await
     }
 
     #[tracing::instrument(

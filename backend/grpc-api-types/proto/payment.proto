@@ -1147,6 +1147,15 @@ message WebhookSecrets {
   optional string additional_secret = 2;
 }
 
+// Secrets used for source verification.
+message RedirectResponseSecrets {
+  // Primary secret for source verification.
+  string secret = 1;
+
+  // Additional secret, if required by the connector.
+  optional string additional_secret = 2;
+}
+
 message IncompleteTransformationResponse {
   // The resource object bytes that should be sent in PSync call
   bytes resource_object = 1;
@@ -1888,6 +1897,9 @@ message PaymentServiceVoidRequest {
 
   // Environment Configuration
   optional bool test_mode = 13; // A boolean value to indicate if the connector is in Test mode
+
+  // Additional Context
+  optional string merchant_order_reference_id = 14; // Merchant's internal reference ID
 }
 
 // Response message for a payment void operation.
@@ -2033,6 +2045,9 @@ message PaymentServiceCaptureRequest {
 
   // Environment Configuration
   optional bool test_mode = 14; // A boolean value to indicate if the connector is in Test mode
+
+  // Additional Context
+  optional string merchant_order_reference_id = 15; // Merchant's internal reference ID
 }
 
 // Response message for a payment capture operation.
@@ -2903,6 +2918,43 @@ message PaymentServiceTransformResponse {
 
   // Transformation Status
   WebhookTransformationStatus transformation_status = 5; // Status of the webhook transformation
+}
+
+// Request message for VerifyRedirectResponse
+message PaymentServiceVerifyRedirectResponseRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+
+  // Request Details
+  RequestDetails request_details = 2; // Details of the incoming HTTP request
+
+  // Security
+  optional RedirectResponseSecrets redirect_response_secrets = 3; // Secrets for verifying authenticity
+}
+
+// Response message for VerifyRedirectResponse
+message PaymentServiceVerifyRedirectResponseResponse {
+  // Verification
+  bool source_verified = 1; // Indicates if the source was successfully verified
+
+  // Identification
+  optional Identifier transaction_id = 2; // Identifier for the resource
+
+  // Response Amount Information
+  optional Currency response_currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  optional int64 response_minor_amount = 4; // The minor amount for the payment (e.g., cents)
+
+  // Reference
+  optional Identifier response_ref_id = 5; // Response reference ID for tracking
+
+  // Status Information
+  optional PaymentStatus status = 6; // Current status of the payment attempt
+  optional string error_code = 7; // Error code if synchronization encountered an issue
+  optional string error_message = 8; // Error message if synchronization encountered an issue
+  optional string error_reason = 9; // Detailed reason for the error
+
+  // Raw Response
+  optional SecretString raw_connector_response = 10; // Raw response from the connector
 }
 
 // -------------------------
