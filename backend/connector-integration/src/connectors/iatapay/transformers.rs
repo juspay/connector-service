@@ -743,7 +743,7 @@ impl TryFrom<ResponseRouterData<IatapayAuthUpdateResponse, Self>>
         let mut router_data = item.router_data;
 
         router_data.response = Ok(domain_types::connector_types::AccessTokenResponseData {
-            access_token: response.access_token.expose(),
+            access_token: response.access_token,
             token_type: Some("Bearer".to_string()),
             expires_in: Some(response.expires_in),
         });

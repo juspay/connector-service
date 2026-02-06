@@ -369,7 +369,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .as_ref()
             .map(|secret| secret.clone().expose());
         self.build_headers(
-            &access_token.access_token,
+            &access_token.access_token.expose(),
             &req.resource_common_data.connector_request_reference_id,
             &req.connector_auth_type,
             connector_metadata.as_ref(),
@@ -545,7 +545,7 @@ macros::macro_connector_implementation!(
                 .map(|secret| secret.clone().expose());
             let reference_id = req.resource_common_data.get_reference_id()?;
             self.build_headers(
-                &access_token.access_token,
+                &access_token.access_token.expose(),
                 &reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
@@ -629,7 +629,7 @@ macros::macro_connector_implementation!(
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
-                &access_token.access_token,
+                &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
@@ -678,7 +678,7 @@ macros::macro_connector_implementation!(
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
-                &access_token.access_token,
+                &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
@@ -730,7 +730,7 @@ macros::macro_connector_implementation!(
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
-                &access_token.access_token,
+                &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
@@ -779,7 +779,7 @@ macros::macro_connector_implementation!(
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
-                &access_token.access_token,
+                &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
@@ -823,7 +823,7 @@ macros::macro_connector_implementation!(
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
-                &access_token.access_token,
+                &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
@@ -866,7 +866,7 @@ macros::macro_connector_implementation!(
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
-                &access_token.access_token,
+                &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
@@ -1000,7 +1000,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .as_ref()
             .map(|secret| secret.clone().expose());
         self.build_headers(
-            &access_token.access_token,
+            &access_token.access_token.expose(),
             &req.resource_common_data.connector_request_reference_id,
             &req.connector_auth_type,
             connector_metadata.as_ref(),
