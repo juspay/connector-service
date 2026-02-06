@@ -854,3 +854,174 @@ impl TryFrom<ResponseRouterData<FiservemeaRefundSyncResponse, Self>>
         })
     }
 }
+
+use crate::connectors::fiservemea::FiservemeaRouterData;
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservemeaPaymentsRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let payment_method = item.router_data.request.payment_method_data.clone();
+
+        let payment_method_obj = match payment_method {
+            PaymentMethodData::Card(card) => Some(FiservemeaPaymentMethod {
+                payment_card: Some(FiservemeaPaymentCard {
+                    number: card.card_number.clone().into_masked(),
+                    security_code: card.card_cvc.map(|c| c.into_masked()),
+                    expiry_date: FiservemeaExpiryDate {
+                        month: card.card_exp_month.clone(),
+                        year: card.card_exp_year.clone(),
+                    },
+                }),
+                payment_token: None,
+                wallet: None,
+            }),
+            PaymentMethodData::ApplePayCard(apple_pay) => Some(FiservemeaPaymentMethod {
+                payment_card: None,
+                payment_token: None,
+                wallet: Some(FiservemeaWallet {
+                    apple_pay: Some(FiservemeaApplePay {
+                        payment_data: apple_pay.payment_data.clone(),
+                    }),
+                    google_pay: None,
+                }),
+            }),
+            PaymentMethodData::GooglePayCard(google_pay) => Some(FiservemeaPaymentMethod {
+                payment_card: None,
+                payment_token: None,
+                wallet: Some(FiservemeaWallet {
+                    apple_pay: None,
+                    google_pay: Some(FiservemeaGooglePay {
+                        payment_data: google_pay.payment_data.clone(),
+                    }),
+                }),
+            }),
+            PaymentMethodData::PaymentToken(token) => Some(FiservemeaPaymentMethod {
+                payment_card: None,
+                payment_token: Some(FiservemeaPaymentToken {
+                    value: token.token_value.clone(),
+                }),
+                wallet: None,
+            }),
+            _ => Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                message: "Payment method not supported".to_string(),
+                connector: "fiservemea".to_string(),
+            }))?,
+        };
+
+        let order = item.router_data
+            .request
+            .order_details
+            .as_ref()
+            .map(|order| FiservemeaOrder {
+                order_id: Some(order.order_id.clone()),
+                billing: order.billing_address.as_ref().map(|addr| FiservemeaBilling {
+                    name: addr.first_name.clone(),
+                    address: Some(FiservemeaAddress {
+                        street: addr.address.line1.clone(),
+                        city: addr.city.clone(),
+                        postal_code: addr.zip.clone(),
+                        country: addr.country.clone(),
+                    }),
+                }),
+            });
+
+        Ok(FiservemeaPaymentsRequest {
+            request_type: "PaymentCardSaleTransaction".to_string(),
+            transaction_amount: FiservemeaTransactionAmount {
+                total: item.router_data.request.amount.to_string(),
+                currency: item.router_data.request.currency.to_string(),
+            },
+            payment_method: payment_method_obj,
+            order,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservemeaVoidRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        _item: FiservemeaRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(FiservemeaVoidRequest {
+            request_type: "VoidTransaction".to_string(),
+            comments: None,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservemeaCaptureRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: FiservemeaRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(FiservemeaCaptureRequest {
+            request_type: "PostAuthTransaction".to_string(),
+            transaction_amount: FiservemeaTransactionAmount {
+                total: item.router_data.request.amount.to_string(),
+                currency: item.router_data.request.currency.to_string(),
+            },
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for FiservemeaRefundRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: FiservemeaRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(FiservemeaRefundRequest {
+            request_type: "ReturnTransaction".to_string(),
+            transaction_amount: FiservemeaTransactionAmount {
+                total: item.router_data.request.amount.to_string(),
+                currency: item.router_data.request.currency.to_string(),
+            },
+            comments: None,
+        })
+    }
+}
