@@ -571,6 +571,24 @@ pub fn map_fiservemea_status_to_attempt_status(
     }
 }
 
+pub fn map_fiservemea_status_to_refund_status(
+    result: &Option<FiservemeaTransactionResult>,
+    state: &Option<FiservemeaTransactionState>,
+) -> common_enums::RefundStatus {
+    match (result, state) {
+        (Some(FiservemeaTransactionResult::Approved), _) => common_enums::RefundStatus::Success,
+        (Some(FiservemeaTransactionResult::Declined), _)
+        | (_, Some(FiservemeaTransactionState::Declined)) => common_enums::RefundStatus::Failure,
+        (Some(FiservemeaTransactionResult::Failed), _) => common_enums::RefundStatus::Failure,
+        (Some(FiservemeaTransactionResult::Waiting), _)
+        | (_, Some(FiservemeaTransactionState::Waiting)) => common_enums::RefundStatus::Pending,
+        (Some(FiservemeaTransactionResult::Partial), _) => common_enums::RefundStatus::Pending,
+        (Some(FiservemeaTransactionResult::Fraud), _) => common_enums::RefundStatus::Failure,
+        (_, Some(FiservemeaTransactionState::Pending)) => common_enums::RefundStatus::Pending,
+        _ => common_enums::RefundStatus::Pending,
+    }
+}
+
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
