@@ -1,1722 +1,794 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-================================================================================
-REQUIREMENT ANALYSIS: Fiservemea UCS Connector Integration
-Generated: 2026-02-06
-Workflow: GRACE-UCS Deterministic Workflow Rules
-Version: 1.0
-================================================================================
--->
 <RequirementAnalysis xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <Metadata>
+  <!-- ========================================================================
+       PROJECT INFORMATION
+       ======================================================================== -->
+  <ProjectInfo>
     <ProjectName>Fiservemea UCS Connector Integration</ProjectName>
-    <DocumentVersion>1.0</DocumentVersion>
-    <GeneratedDate>2026-02-06</GeneratedDate>
-    <WorkflowEngine>GRACE-UCS Deterministic Workflow</WorkflowEngine>
-    <TargetLanguage>Rust</TargetLanguage>
-    <BuildSystem>Cargo</BuildSystem>
-    <ConnectorName>fiservemea</ConnectorName>
-  </Metadata>
+    <ProjectType>New Connector Integration</ProjectType>
+    <WorkflowFramework>GRACE-UCS Deterministic Workflow Rules</WorkflowFramework>
+    <TargetConnector>Fiservemea</TargetConnector>
+    <WorkflowRulesPath>grace/rulesbook/codegen/.gracerules</WorkflowRulesPath>
+    <TechSpecPath>grace/rulesbook/codegen/references/fiservemea/technical_specification.md</TechSpecPath>
+    <CreationDate>2026-02-06</CreationDate>
+    <Status>Pending</Status>
+  </ProjectInfo>
 
-  <!-- ============================================================================
-       SECURITY REQUIREMENTS
-       ============================================================================ -->
-  <SecurityRequirements>
-    <SectionHeader>Mandatory Security Guarantees with Testable Acceptance Criteria</SectionHeader>
-    
-    <Requirement id="SEC-001" priority="CRITICAL" category="AUTHENTICATION">
-      <Title>API Authentication Security</Title>
-      <Description>All API requests to Fiservemea must be authenticated using secure credentials</Description>
-      <AcceptanceCriteria>
-        <Criterion id="SEC-001-AC-01" testable="true">
-          <Description>Connector must support API key-based authentication</Description>
-          <TestMethod>Verify authentication headers are correctly constructed and sent with every request</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-001-AC-02" testable="true">
-          <Description>Credentials must never be logged or exposed in error messages</Description>
-          <TestMethod>Review logs and error responses to ensure credential redaction</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-001-AC-03" testable="true">
-          <Description>Authentication failures must return standardized error responses</Description>
-          <TestMethod>Trigger invalid auth scenarios and verify error handling</TestMethod>
-        </Criterion>
-      </AcceptanceCriteria>
-    </Requirement>
-
-    <Requirement id="SEC-002" priority="CRITICAL" category="DATA_PROTECTION">
-      <Title>Sensitive Data Protection</Title>
-      <Description>Protect sensitive payment data throughout the request lifecycle</Description>
-      <AcceptanceCriteria>
-        <Criterion id="SEC-002-AC-01" testable="true">
-          <Description>PAN (Primary Account Number) must never be stored in logs</Description>
-          <TestMethod>Execute payment flows and verify log sanitization</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-002-AC-02" testable="true">
-          <Description>CVV/CVC must never be transmitted in request bodies except to payment processor</Description>
-          <TestMethod>Inspect request payloads to verify CVV handling</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-002-AC-03" testable="true">
-          <Description>PII (Personally Identifiable Information) must be masked in debug outputs</Description>
-          <TestMethod>Enable debug logging and verify data masking</TestMethod>
-        </Criterion>
-      </AcceptanceCriteria>
-    </Requirement>
-
-    <Requirement id="SEC-003" priority="HIGH" category="TLS_SECURITY">
-      <Title>TLS/SSL Certificate Validation</Title>
-      <Description>All outbound connections must use TLS with proper certificate validation</Description>
-      <AcceptanceCriteria>
-        <Criterion id="SEC-003-AC-01" testable="true">
-          <Description>HTTPS must be enforced for all API endpoints</Description>
-          <TestMethod>Verify base URL scheme and reject non-HTTPS URLs</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-003-AC-02" testable="true">
-          <Description>Certificate validation must not be disabled</Description>
-          <TestMethod>Review HTTP client configuration for dangerous_insecure_skip_verify flags</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-003-AC-03" testable="true">
-          <Description>TLS version must be 1.2 or higher</Description>
-          <TestMethod>Configure minimum TLS version and verify connection negotiation</TestMethod>
-        </Criterion>
-      </AcceptanceCriteria>
-    </Requirement>
-
-    <Requirement id="SEC-004" priority="HIGH" category="INPUT_VALIDATION">
-      <Title>Input Validation and Sanitization</Title>
-      <Description>All inputs must be validated before processing</Description>
-      <AcceptanceCriteria>
-        <Criterion id="SEC-004-AC-01" testable="true">
-          <Description>Request payloads must be validated against schema</Description>
-          <TestMethod>Send malformed payloads and verify rejection</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-004-AC-02" testable="true">
-          <Description>Numeric values must have range validation</Description>
-          <TestMethod>Test boundary conditions for amounts and quantities</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-004-AC-03" testable="true">
-          <Description>String inputs must have length limits</Description>
-          <TestMethod>Send oversized strings and verify truncation/rejection</TestMethod>
-        </Criterion>
-      </AcceptanceCriteria>
-    </Requirement>
-
-    <Requirement id="SEC-005" priority="MEDIUM" category="ERROR_HANDLING">
-      <Title>Secure Error Handling</Title>
-      <Description>Error messages must not leak sensitive information</Description>
-      <AcceptanceCriteria>
-        <Criterion id="SEC-005-AC-01" testable="true">
-          <Description>Internal errors must not expose stack traces to clients</Description>
-          <TestMethod>Trigger internal errors and inspect response format</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-005-AC-02" testable="true">
-          <Description>Third-party API errors must be sanitized before propagation</Description>
-          <TestMethod>Mock upstream errors and verify response transformation</TestMethod>
-        </Criterion>
-      </AcceptanceCriteria>
-    </Requirement>
-
-    <Requirement id="SEC-006" priority="HIGH" category="IDEMPOTENCY">
-      <Title>Idempotency Protection</Title>
-      <Description>Retry mechanisms must not cause duplicate transactions</Description>
-      <AcceptanceCriteria>
-        <Criterion id="SEC-006-AC-01" testable="true">
-          <Description>Connector must support idempotency keys for payment operations</Description>
-          <TestMethod>Send duplicate requests with same idempotency key</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-006-AC-02" testable="true">
-          <Description>Idempotency key must be included in request headers</Description>
-          <TestMethod>Verify header construction includes idempotency key</TestMethod>
-        </Criterion>
-      </AcceptanceCriteria>
-    </Requirement>
-
-    <Requirement id="SEC-007" priority="CRITICAL" category="PCI_DSS">
-      <Title>PCI DSS Compliance</Title>
-      <Description>Implementation must align with PCI DSS requirements for payment processing</Description>
-      <AcceptanceCriteria>
-        <Criterion id="SEC-007-AC-01" testable="true">
-          <Description>No cardholder data storage in application memory beyond transaction scope</Description>
-          <TestMethod>Memory analysis during transaction processing</TestMethod>
-        </Criterion>
-        <Criterion id="SEC-007-AC-02" testable="true">
-          <Description>Encryption at rest for any stored reference tokens</Description>
-          <TestMethod>Verify encryption of stored payment methods</TestMethod>
-        </Criterion>
-      </AcceptanceCriteria>
-    </Requirement>
-  </SecurityRequirements>
-
-  <!-- ============================================================================
-       TECHNICAL SCOPE
-       ============================================================================ -->
-  <TechnicalScope>
-    <SectionHeader>Core Operations and Flows with Success/Failure Conditions</SectionHeader>
-
-    <Phase id="PHASE-1" name="Tech Spec Validation" mandatory="true">
+  <!-- ========================================================================
+       WORKFLOW PHASES
+       ======================================================================== -->
+  <WorkflowPhases>
+    <Phase id="phase_1" name="Tech Spec Validation" sequence="1" mandatory="true">
       <Description>Validate technical specification completeness and UCS compatibility</Description>
-      <Operations>
-        <Operation id="OP-1-1" name="ReadTechSpec" mandatory="true">
-          <Description>Read tech spec from grace/rulesbook/codegen/references/fiservemea/technical_specification.md</Description>
-          <SuccessCondition>File exists and contains valid markdown with connector specifications</SuccessCondition>
-          <FailureCondition>File not found, empty, or malformed - workflow must halt</FailureCondition>
-        </Operation>
-        <Operation id="OP-1-2" name="ValidateCompleteness" mandatory="true">
-          <Description>Validate tech spec contains all required sections</Description>
-          <SuccessCondition>All required sections present: API endpoints, authentication, request/response formats, error codes</SuccessCondition>
-          <FailureCondition>Missing sections - workflow must halt with specific error</FailureCondition>
-        </Operation>
-        <Operation id="OP-1-3" name="ExtractRequirements" mandatory="true">
-          <Description>Extract connector requirements and supported features</Description>
-          <SuccessCondition>Structured requirements extracted including payment methods, flows, and features</SuccessCondition>
-          <FailureCondition>Unable to parse requirements - workflow must halt</FailureCondition>
-        </Operation>
-      </Operations>
-      <TimelineLog>phase_1_tech_spec_validation</TimelineLog>
+      <Steps>
+        <Step id="p1_s1" sequence="1" mandatory="true">
+          <Action>Read tech spec from grace/rulesbook/codegen/references/fiservemea/technical_specification.md</Action>
+          <ExpectedOutput>Complete technical specification document loaded</ExpectedOutput>
+          <ValidationCriteria>File exists and is readable</ValidationCriteria>
+        </Step>
+        <Step id="p1_s2" sequence="2" mandatory="true">
+          <Action>Validate tech spec completeness and UCS compatibility</Action>
+          <ExpectedOutput>Validation report with pass/fail status</ExpectedOutput>
+          <ValidationCriteria>
+            <Criterion>Connector name specified</Criterion>
+            <Criterion>Base URL defined</Criterion>
+            <Criterion>API endpoints documented</Criterion>
+            <Criterion>Authentication mechanism described</Criterion>
+            <Criterion>Supported payment methods listed</Criterion>
+            <Criterion>Request/response schemas provided</Criterion>
+            <Criterion>Error codes documented</Criterion>
+          </ValidationCriteria>
+        </Step>
+        <Step id="p1_s3" sequence="3" mandatory="true">
+          <Action>Extract all connector requirements and supported features</Action>
+          <ExpectedOutput>Structured requirements document</ExpectedOutput>
+          <ValidationCriteria>All requirements extracted and categorized</ValidationCriteria>
+        </Step>
+        <Step id="p1_s4" sequence="4" mandatory="true">
+          <Action>Log phase completion</Action>
+          <Command>timeline.log_phase_end("phase_1_tech_spec_validation", status="success")</Command>
+          <ExpectedOutput>Phase 1 marked as completed in timeline</ExpectedOutput>
+        </Step>
+      </Steps>
+      <Dependencies>None</Dependencies>
+      <Blocking>true</Blocking>
     </Phase>
 
-    <Phase id="PHASE-2" name="Foundation Setup" mandatory="true">
+    <Phase id="phase_2" name="Foundation Setup" sequence="2" mandatory="true">
       <Description>Establish basic connector structure using UCS conventions</Description>
-      <Operations>
-        <Operation id="OP-2-1" name="EnvironmentValidation" mandatory="true">
-          <Description>Validate UCS repository structure and scripts</Description>
-          <SuccessCondition>add_connector.sh exists, backend/ directory structure valid</SuccessCondition>
-          <FailureCondition>Invalid environment - workflow must halt</FailureCondition>
-        </Operation>
-        <Operation id="OP-2-2" name="ExecuteAddConnectorScript" mandatory="true">
-          <Description>Execute add_connector.sh with fiservemea and base_url</Description>
+      <Prerequisites>Phase 1 completed successfully</Prerequisites>
+      <Steps>
+        <Step id="p2_s1" sequence="1" mandatory="true">
+          <SubAgent>Foundation Setup Agent</SubAgent>
+          <Action>Environment Validation</Action>
+          <Commands>
+            <Command>Check UCS repository structure exists</Command>
+            <Command>Validate add_connector.sh script exists</Command>
+            <Command>Verify backend/ directory structure exists</Command>
+          </Commands>
+          <ExpectedOutput>Environment validation report</ExpectedOutput>
+        </Step>
+        <Step id="p2_s2" sequence="2" mandatory="true">
+          <SubAgent>Foundation Setup Agent</SubAgent>
+          <Action>Tech Spec Analysis</Action>
+          <Actions>
+            <Action>Read tech spec from grace/rulesbook/codegen/references/fiservemea/technical_specification.md</Action>
+            <Action>Extract connector_name and base_url</Action>
+            <Action>Validate tech spec completeness</Action>
+          </Actions>
+          <ExpectedOutput>Connector configuration parameters extracted</ExpectedOutput>
+        </Step>
+        <Step id="p2_s3" sequence="3" mandatory="true">
+          <SubAgent>Foundation Setup Agent</SubAgent>
+          <Action>Execute add_connector.sh Script</Action>
           <Command>./add_connector.sh fiservemea {base_url} --force -y</Command>
-          <SuccessCondition>Script exits with code 0, all files created</SuccessCondition>
-          <FailureCondition>Script fails - analyze error, fix, retry before proceeding</FailureCondition>
-        </Operation>
-        <Operation id="OP-2-3" name="CargoBuildValidation" mandatory="true">
-          <Description>Execute cargo build to validate foundation</Description>
+          <ExpectedOutput>Connector scaffold created successfully</ExpectedOutput>
+          <ErrorHandling>Analyze error, fix prerequisites, retry on failure</ErrorHandling>
+        </Step>
+        <Step id="p2_s4" sequence="4" mandatory="true">
+          <SubAgent>Foundation Setup Agent</SubAgent>
+          <Action>Cargo Build Validation</Action>
           <Command>cargo build</Command>
-          <SuccessCondition>Build completes without errors or warnings</SuccessCondition>
-          <FailureCondition>Build fails - fix compilation errors before proceeding</FailureCondition>
-        </Operation>
-        <Operation id="OP-2-4" name="UCSConventionValidation" mandatory="true">
-          <Description>Verify UCS coding conventions are followed</Description>
-          <SuccessCondition>RouterDataV2, ConnectorIntegrationV2, domain_types all correctly used</SuccessCondition>
-          <FailureCondition>Convention violations - fix before proceeding</FailureCondition>
-        </Operation>
-      </Operations>
-      <TimelineLog>phase_2_foundation_setup</TimelineLog>
+          <ExpectedOutput>Successful compilation with no errors</ExpectedOutput>
+          <ErrorHandling>Analyze compilation errors, fix using UCS patterns, retry</ErrorHandling>
+        </Step>
+        <Step id="p2_s5" sequence="5" mandatory="true">
+          <SubAgent>Foundation Setup Agent</SubAgent>
+          <Action>UCS Convention Validation</Action>
+          <Validations>
+            <Validation>RouterDataV2 usage (not RouterData)</Validation>
+            <Validation>ConnectorIntegrationV2 usage (not ConnectorIntegration)</Validation>
+            <Validation>domain_types imports (not hyperswitch_domain_models)</Validation>
+            <Validation>Generic struct pattern: Fiservemea&lt;T&gt;</Validation>
+          </Validations>
+          <ExpectedOutput>All UCS conventions validated</ExpectedOutput>
+        </Step>
+        <Step id="p2_s6" sequence="6" mandatory="true">
+          <SubAgent>Foundation Setup Agent</SubAgent>
+          <Action>Completion Confirmation</Action>
+          <Outputs>
+            <Output>Report: "Foundation Setup COMPLETED"</Output>
+            <Output>List of files created/modified</Output>
+            <Output>Cargo build successful confirmation</Output>
+            <Output>Ready for flow implementation phase</Output>
+          </Outputs>
+        </Step>
+        <Step id="p2_s7" sequence="7" mandatory="true">
+          <Action>Log phase completion</Action>
+          <Command>timeline.log_phase_end("phase_2_foundation_setup", status="success")</Command>
+          <ExpectedOutput>Phase 2 marked as completed in timeline</ExpectedOutput>
+        </Step>
+      </Steps>
+      <Dependencies>Phase 1</Dependencies>
+      <Blocking>true</Blocking>
     </Phase>
 
-    <Phase id="PHASE-2.5" name="Macro Pattern Reference Study" mandatory="true">
-      <Description>Study macro patterns before implementation</Description>
-      <Operations>
-        <Operation id="OP-2.5-1" name="ReadMacroPatternsReference" mandatory="true">
-          <Description>Read guides/patterns/macro_patterns_reference.md</Description>
-          <SuccessCondition>File read successfully, concepts understood</SuccessCondition>
-          <FailureCondition>File not found - workflow must halt</FailureCondition>
-        </Operation>
-        <Operation id="OP-2.5-2" name="ReadFlowMacroGuide" mandatory="true">
-          <Description>Read guides/patterns/flow_macro_guide.md</Description>
-          <SuccessCondition>File read successfully, flow patterns understood</SuccessCondition>
-          <FailureCondition>File not found - workflow must halt</FailureCondition>
-        </Operation>
-        <Operation id="OP-2.5-3" name="ReadMacroTemplates" mandatory="true">
-          <Description>Read template-generation/macro_templates.md</Description>
-          <SuccessCondition>File read successfully, templates understood</SuccessCondition>
-          <FailureCondition>File not found - workflow must halt</FailureCondition>
-        </Operation>
-        <Operation id="OP-2.5-4" name="UnderstandKeyConcepts" mandatory="true">
-          <Description>Understand macro usage patterns and conventions</Description>
-          <SuccessCondition>All key concepts documented and understood</SuccessCondition>
-          <FailureCondition>Concepts unclear - review guides again</FailureCondition>
-        </Operation>
-      </Operations>
-      <TimelineLog>phase_2_5_macro_pattern_study</TimelineLog>
+    <Phase id="phase_2_5" name="Macro Pattern Reference Study" sequence="2.5" mandatory="true">
+      <Description>Study macro pattern guides before implementation</Description>
+      <Prerequisites>Phase 2 completed successfully</Prerequisites>
+      <Steps>
+        <Step id="p2_5_s1" sequence="1" mandatory="true">
+          <Action>Read macro pattern guides</Action>
+          <Documents>
+            <Document>guides/patterns/macro_patterns_reference.md</Document>
+            <Document>guides/patterns/flow_macro_guide.md</Document>
+            <Document>template-generation/macro_templates.md</Document>
+          </Documents>
+          <ExpectedOutput>All macro pattern documents studied</ExpectedOutput>
+        </Step>
+        <Step id="p2_5_s2" sequence="2" mandatory="true">
+          <Action>Understand key concepts for implementation</Action>
+          <Concepts>
+            <Concept>How to use create_all_prerequisites! macro</Concept>
+            <Concept>How to use macro_connector_implementation! macro</Concept>
+            <Concept>Flow-specific macro configurations</Concept>
+            <Concept>Request/Response type naming conventions</Concept>
+            <Concept>When to use generic &lt;T&gt; types</Concept>
+            <Concept>Resource common data selection (PaymentFlowData, RefundFlowData, DisputeFlowData)</Concept>
+          </Concepts>
+          <ExpectedOutput>Macro pattern understanding confirmed</ExpectedOutput>
+        </Step>
+        <Step id="p2_5_s3" sequence="3" mandatory="true">
+          <Action>Log phase completion</Action>
+          <Command>timeline.log_phase_end("phase_2_5_macro_pattern_study", status="success")</Command>
+          <ExpectedOutput>Phase 2.5 marked as completed in timeline</ExpectedOutput>
+        </Step>
+      </Steps>
+      <Dependencies>Phase 2</Dependencies>
+      <Blocking>true</Blocking>
     </Phase>
 
-    <Phase id="PHASE-3" name="Flow Implementation" mandatory="true">
+    <Phase id="phase_3" name="Flow Implementation" sequence="3" mandatory="true">
       <Description>Implement connector flows in exact sequence</Description>
-      
-      <Flow id="FLOW-AUTHORIZE" name="Authorize" sequence="1" mandatory="true">
-        <Description>Payment authorization implementation</Description>
-        <PatternFile>guides/patterns/pattern_authorize.md</PatternFile>
-        <Trait>ConnectorIntegrationV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Trait>
-        
-        <Operations>
-          <Operation id="OP-AUTH-1" name="ReadTechSpec" mandatory="true">
-            <Description>Extract authorize flow requirements from tech spec</Description>
-            <SuccessCondition>Authorize endpoint, request format, response format documented</SuccessCondition>
-            <FailureCondition>Missing authorize spec - cannot proceed</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-2" name="ReadFlowPattern" mandatory="true">
-            <Description>Study authorize flow implementation pattern</Description>
-            <SuccessCondition>Pattern understood, implementation approach defined</SuccessCondition>
-            <FailureCondition>Pattern unclear - review again</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-3" name="ReadUtilsAndEnums" mandatory="true">
-            <Description>Read available utilities and enums for reuse</Description>
-            <Files>
-              <File>backend/grpc-server/src/utils.rs</File>
-              <File>backend/domain_types/src/utils.rs</File>
-              <File>backend/connector-integration/src/utils.rs</File>
-              <File>backend/common_enums/src/enums.rs</File>
-            </Files>
-            <SuccessCondition>Available utilities catalogued for use</SuccessCondition>
-            <FailureCondition>Cannot read utility files - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-4" name="GenerateImplementationPlan" mandatory="true">
-            <Description>Create detailed implementation plan for authorize flow</Description>
-            <Deliverables>
-              <Deliverable>List of required methods</Deliverable>
-              <Deliverable>Request/response structures</Deliverable>
-              <Deliverable>Payment method handling approach</Deliverable>
-              <Deliverable>Error handling strategy</Deliverable>
-            </Deliverables>
-            <SuccessCondition>Complete plan documented and approved</SuccessCondition>
-            <FailureCondition>Plan incomplete - revise before implementation</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-5" name="AddToPrerequisitesMacro" mandatory="true">
-            <Description>Add authorize flow to create_all_prerequisites! macro</Description>
-            <File>backend/connector-integration/src/connectors/fiservemea.rs</File>
-            <SuccessCondition>Flow entry added to api array with correct types</SuccessCondition>
-            <FailureCondition>Macro syntax error - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-6" name="ImplementWithMacro" mandatory="true">
-            <Description>Implement authorize flow using macro_connector_implementation!</Description>
-            <File>backend/connector-integration/src/connectors/fiservemea.rs</File>
-            <SuccessCondition>Macro invocation compiles successfully</SuccessCondition>
-            <FailureCondition>Compilation error - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-7" name="CreateRequestResponseTypes" mandatory="true">
-            <Description>Create request and response types in transformers.rs</Description>
-            <File>backend/connector-integration/src/connectors/fiservemea/transformers.rs</File>
-            <SuccessCondition>All types defined, derive macros correct</SuccessCondition>
-            <FailureCondition>Type errors - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-8" name="ImplementRequestTransformer" mandatory="true">
-            <Description>Implement TryFrom for request transformation</Description>
-            <SuccessCondition>Transformation logic handles all required fields</SuccessCondition>
-            <FailureCondition>Transformation errors - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-9" name="ImplementResponseTransformer" mandatory="true">
-            <Description>Implement TryFrom for response transformation</Description>
-            <SuccessCondition>Status derived from response, not hardcoded</SuccessCondition>
-            <FailureCondition>Hardcoded status detected - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-10" name="AddStatusMapping" mandatory="true">
-            <Description>Create status enum and mapping function</Description>
-            <SuccessCondition>All connector statuses mapped to AttemptStatus</SuccessCondition>
-            <FailureCondition>Unmapped statuses - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-AUTH-11" name="CargoBuild" mandatory="true">
-            <Description>Execute cargo build for authorize flow</Description>
-            <Command>cargo build</Command>
-            <SuccessCondition>Build completes without errors</SuccessCondition>
-            <FailureCondition>Build fails - fix errors before marking complete</FailureCondition>
-          </Operation>
-        </Operations>
-        <TimelineLog>phase_3_authorize_flow</TimelineLog>
-      </Flow>
+      <Prerequisites>Phase 2.5 completed successfully</Prerequisites>
+      <ExecutionMode>Sequential - each flow must complete before next begins</ExecutionMode>
+      <Flows>
+        <Flow id="flow_authorize" name="Authorize" sequence="1" mandatory="true">
+          <SubAgent>Authorize Flow Implementation Agent</SubAgent>
+          <PatternFile>guides/patterns/pattern_authorize.md</PatternFile>
+          <Trait>ConnectorIntegrationV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Trait>
+          <Steps>
+            <Step id="auth_s1" sequence="1" mandatory="true">
+              <Action>Read Tech Spec</Action>
+              <Source>grace/rulesbook/codegen/references/fiservemea/technical_specification.md</Source>
+              <Extractions>
+                <Extraction>Flow-specific requirements</Extraction>
+                <Extraction>Supported payment methods for Authorize flow</Extraction>
+                <Extraction>API endpoints for authorization</Extraction>
+                <Extraction>Flow-specific behaviors</Extraction>
+              </Extractions>
+            </Step>
+            <Step id="auth_s2" sequence="2" mandatory="true">
+              <Action>Read Flow Pattern</Action>
+              <Source>guides/patterns/pattern_authorize.md</Source>
+              <Understanding>
+                <Item>Implementation patterns and examples</Item>
+                <Item>UCS-specific requirements for Authorize flow</Item>
+                <Item>Code templates and best practices</Item>
+              </Understanding>
+            </Step>
+            <Step id="auth_s3" sequence="3" mandatory="true">
+              <Action>Read Available Utils &amp; Enums</Action>
+              <Files>
+                <File>backend/grpc-server/src/utils.rs</File>
+                <File>backend/domain_types/src/utils.rs</File>
+                <File>backend/connector-integration/src/utils.rs</File>
+                <File>backend/common_enums/src/enums.rs</File>
+              </Files>
+              <Objective>Reuse existing utilities and enums as much as possible</Objective>
+            </Step>
+            <Step id="auth_s4" sequence="4" mandatory="true">
+              <Action>Generate Implementation Plan</Action>
+              <PlanComponents>
+                <Component>Detailed plan for Authorize flow</Component>
+                <Component>List of all required methods to implement</Component>
+                <Component>Request/response structures needed</Component>
+                <Component>Payment method handling approach</Component>
+                <Component>Error handling strategy</Component>
+              </PlanComponents>
+            </Step>
+            <Step id="auth_s4_5" sequence="4.5" mandatory="true">
+              <Action>Read Macro Pattern Reference</Action>
+              <Documents>
+                <Document>guides/patterns/macro_patterns_reference.md</Document>
+                <Document>guides/patterns/flow_macro_guide.md</Document>
+                <Document>template-generation/macro_templates.md</Document>
+              </Documents>
+              <Understanding>
+                <Item>How to use create_all_prerequisites! macro</Item>
+                <Item>How to use macro_connector_implementation! macro</Item>
+                <Item>Flow-specific macro configurations</Item>
+                <Item>Request/Response type naming conventions</Item>
+                <Item>When to use generic &lt;T&gt; types</Item>
+                <Item>Resource common data selection (PaymentFlowData)</Item>
+              </Understanding>
+            </Step>
+            <Step id="auth_s5" sequence="5" mandatory="true">
+              <Action>Execute Implementation Plan - MACRO-BASED APPROACH</Action>
+              <SubSteps>
+                <SubStep id="auth_s5_a" name="Add Flow to create_all_prerequisites! macro">
+                  <File>backend/connector-integration/src/connectors/fiservemea.rs</File>
+                  <Actions>
+                    <Action>Locate existing create_all_prerequisites! macro invocation</Action>
+                    <Action>Add Authorize flow definition to api: [] array</Action>
+                  </Actions>
+                  <Configuration>
+                    <Parameter name="flow">Authorize</Parameter>
+                    <Parameter name="request_body">FiservemeaAuthorizeRequest</Parameter>
+                    <Parameter name="response_body">FiservemeaAuthorizeResponse</Parameter>
+                    <Parameter name="router_data">RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Parameter>
+                  </Configuration>
+                </SubStep>
+                <SubStep id="auth_s5_b" name="Implement Flow with macro_connector_implementation!">
+                  <Location>AFTER create_all_prerequisites! block in backend/connector-integration/src/connectors/fiservemea.rs</Location>
+                  <MacroInvocation>
+                    <MacroName>macro_connector_implementation!</MacroName>
+                    <Parameters>
+                      <Parameter name="connector_default_implementations">[get_content_type, get_error_response_v2]</Parameter>
+                      <Parameter name="connector">Fiservemea</Parameter>
+                      <Parameter name="curl_request">Json(FiservemeaAuthorizeRequest)</Parameter>
+                      <Parameter name="curl_response">FiservemeaAuthorizeResponse</Parameter>
+                      <Parameter name="flow_name">Authorize</Parameter>
+                      <Parameter name="resource_common_data">PaymentFlowData</Parameter>
+                      <Parameter name="flow_request">PaymentsAuthorizeData</Parameter>
+                      <Parameter name="flow_response">PaymentsResponseData</Parameter>
+                      <Parameter name="http_method">Post</Parameter>
+                      <Parameter name="generic_type">T</Parameter>
+                      <Parameter name="trait_bounds">PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize</Parameter>
+                    </Parameters>
+                    <OtherFunctions>
+                      <Function>
+                        <Signature>fn get_headers(&amp;self, req: &amp;RouterDataV2&lt;...&gt;) -&gt; CustomResult&lt;...&gt;</Signature>
+                        <Body>self.build_headers(req)</Body>
+                      </Function>
+                      <Function>
+                        <Signature>fn get_url(&amp;self, req: &amp;RouterDataV2&lt;...&gt;) -&gt; CustomResult&lt;String, ...&gt;</Signature>
+                        <Body>Ok(format!("{}/{endpoint}", self.connector_base_url_payments(req)))</Body>
+                      </Function>
+                    </OtherFunctions>
+                  </MacroInvocation>
+                </SubStep>
+                <SubStep id="auth_s5_c" name="Create Request/Response Types in transformers.rs">
+                  <File>backend/connector-integration/src/connectors/fiservemea/transformers.rs</File>
+                  <Structs>
+                    <Struct name="FiservemeaAuthorizeRequest">
+                      <Derives>[Debug, Serialize]</Derives>
+                      <Generics>&lt;T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize&gt;</Generics>
+                      <Fields>
+                        <Field name="amount" type="AmountType" source="amount_converter"/>
+                        <Field name="currency" type="String"/>
+                        <Field name="payment_method" type="FiservemeaPaymentMethod&lt;T&gt;" condition="if flow needs payment method"/>
+                      </Fields>
+                      <Constraints>
+                        <Constraint>Add ONLY fields from API docs</Constraint>
+                        <Constraint>DO NOT add fields "just in case"</Constraint>
+                        <Constraint>Remove any field that will always be None</Constraint>
+                        <Constraint>Don't use Option unless truly optional per API spec</Constraint>
+                      </Constraints>
+                    </Struct>
+                    <Struct name="FiservemeaAuthorizeResponse">
+                      <Derives>[Debug, Deserialize]</Derives>
+                      <Fields>
+                        <Field name="id" type="String"/>
+                        <Field name="status" type="FiservemeaStatus"/>
+                      </Fields>
+                      <Constraints>
+                        <Constraint>Add ONLY fields from API docs that will be used</Constraint>
+                        <Constraint>Create enums for status fields instead of String</Constraint>
+                      </Constraints>
+                    </Struct>
+                  </Structs>
+                  <Transformers>
+                    <Transformer name="RequestTransformer">
+                      <Source>FiservemeaRouterData&lt;RouterDataV2&lt;Authorize, ...&gt;, T&gt;</Source>
+                      <Target>FiservemeaAuthorizeRequest&lt;T&gt;</Target>
+                      <ImplementationRules>
+                        <Rule>Extract and transform data from router_data</Rule>
+                        <Rule>Use specific NotSupported errors with exact feature names</Rule>
+                        <Rule>WRONG: Err(ConnectorError::NotSupported { message: "Not supported" })</Rule>
+                        <Rule>CORRECT: Err(ConnectorError::NotSupported { message: "Apple Pay is not supported" })</Rule>
+                        <Rule>Only populate fields that exist in the struct</Rule>
+                        <Rule>DO NOT set any field to None - remove the field instead</Rule>
+                      </ImplementationRules>
+                    </Transformer>
+                    <Transformer name="ResponseTransformer">
+                      <Source>ResponseRouterData&lt;FiservemeaAuthorizeResponse, RouterDataV2&lt;...&gt;&gt;</Source>
+                      <Target>RouterDataV2&lt;Authorize, ...&gt;</Target>
+                      <ImplementationRules>
+                        <Rule>Map response to RouterDataV2</Rule>
+                        <Rule>CRITICAL: NEVER hardcode status - ALWAYS derive from response</Rule>
+                        <Rule>WRONG: status: AttemptStatus::Charged</Rule>
+                        <Rule>CORRECT: status: map_fiservemea_status_to_attempt_status(&amp;item.response.status)</Rule>
+                      </ImplementationRules>
+                    </Transformer>
+                  </Transformers>
+                </SubStep>
+                <SubStep id="auth_s5_d" name="Add Status Mapping">
+                  <FunctionName>map_fiservemea_status_to_attempt_status</FunctionName>
+                  <Input>status: &amp;FiservemeaStatus</Input>
+                  <Output>common_enums::AttemptStatus</Output>
+                  <MappingRules>
+                    <Rule>ALWAYS create a dedicated status enum (FiservemeaStatus)</Rule>
+                    <Rule>ALWAYS use the status mapping function in response transformers</Rule>
+                    <Rule>NEVER hardcode status values like AttemptStatus::Charged directly</Rule>
+                    <Rule>Map status based on actual response field, not assumptions</Rule>
+                    <Rule>Map ALL possible connector status values from API docs</Rule>
+                    <Rule>NEVER leave status variants unmapped</Rule>
+                  </MappingRules>
+                  <ExampleMappings>
+                    <Mapping from="FiservemeaStatus::Success" to="common_enums::AttemptStatus::Charged"/>
+                    <Mapping from="FiservemeaStatus::Pending" to="common_enums::AttemptStatus::Pending"/>
+                    <Mapping from="FiservemeaStatus::Failed" to="common_enums::AttemptStatus::Failure"/>
+                  </ExampleMappings>
+                </SubStep>
+              </SubSteps>
+              <CriticalRules>
+                <Rule>NEVER manually implement ConnectorIntegrationV2 - ALWAYS use macros</Rule>
+                <Rule>ALWAYS add flow to create_all_prerequisites! before using macro_connector_implementation!</Rule>
+                <Rule>Flow name MUST match exactly in both macros</Rule>
+                <Rule>Request/Response types MUST match between macro and transformers</Rule>
+                <Rule>ALWAYS use domain_types imports (not hyperswitch_*)</Rule>
+                <Rule>ALWAYS use RouterDataV2 (not RouterData)</Rule>
+                <Rule>Generic &lt;T&gt; needed for Authorize flow using payment method data</Rule>
+                <Rule>POST endpoints: always include curl_request parameter</Rule>
+              </CriticalRules>
+              <CodeQualityRules>
+                <Rule>Remove all fields hardcoded to None - if always None, delete the field</Rule>
+                <Rule>Don't use Option unless truly optional per API spec</Rule>
+                <Rule>NEVER hardcode status - always derive from connector response</Rule>
+                <Rule>Use specific NotSupported errors with exact feature names</Rule>
+                <Rule>Only validate what's required by connector API</Rule>
+                <Rule>Add comments explaining validation logic</Rule>
+                <Rule>Only include fields actually used by connector API</Rule>
+              </CodeQualityRules>
+            </Step>
+            <Step id="auth_s6" sequence="6" mandatory="true">
+              <Action>Cargo Build and Debug</Action>
+              <Command>cargo build</Command>
+              <ErrorHandling>
+                <Action>Analyze compilation errors</Action>
+                <Action>Fix immediately</Action>
+                <Action>Ensure all UCS conventions followed</Action>
+                <Action>Verify no syntax or type errors</Action>
+                <Action>MUST achieve successful build</Action>
+              </ErrorHandling>
+            </Step>
+            <Step id="auth_s7" sequence="7" mandatory="true">
+              <Action>Flow Completion Confirmation</Action>
+              <Outputs>
+                <Output>Report: "Authorize Flow Implementation COMPLETED"</Output>
+                <Output>Cargo build successful confirmation</Output>
+                <Output>Documentation of what was implemented</Output>
+                <Output>Ready for next flow implementation</Output>
+              </Outputs>
+            </Step>
+          </Steps>
+        </Flow>
 
-      <Flow id="FLOW-PSYNC" name="PaymentSync" sequence="2" mandatory="true">
-        <Description>Payment synchronization implementation</Description>
-        <PatternFile>guides/patterns/pattern_psync.md</PatternFile>
-        <Trait>ConnectorIntegrationV2&lt;PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData&gt;</Trait>
-        <Operations>
-          <Operation id="OP-PSYNC-1" name="ReadTechSpec" mandatory="true">
-            <Description>Extract payment sync requirements from tech spec</Description>
-            <SuccessCondition>Sync endpoint and format documented</SuccessCondition>
-            <FailureCondition>Missing sync spec - cannot proceed</FailureCondition>
-          </Operation>
-          <Operation id="OP-PSYNC-2" name="ImplementFlow" mandatory="true">
-            <Description>Implement payment sync following macro pattern</Description>
-            <SuccessCondition>Flow implemented and compiles</SuccessCondition>
-            <FailureCondition>Implementation errors - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-PSYNC-3" name="CargoBuild" mandatory="true">
-            <Description>Execute cargo build for payment sync flow</Description>
-            <SuccessCondition>Build completes without errors</SuccessCondition>
-            <FailureCondition>Build fails - fix errors before proceeding</FailureCondition>
-          </Operation>
-        </Operations>
-        <TimelineLog>phase_3_psync_flow</TimelineLog>
-      </Flow>
-
-      <Flow id="FLOW-CAPTURE" name="Capture" sequence="3" mandatory="true">
-        <Description>Payment capture implementation</Description>
-        <PatternFile>guides/patterns/pattern_capture.md</PatternFile>
-        <Trait>ConnectorIntegrationV2&lt;Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData&gt;</Trait>
-        <Operations>
-          <Operation id="OP-CAP-1" name="ReadTechSpec" mandatory="true">
-            <Description>Extract capture requirements from tech spec</Description>
-            <SuccessCondition>Capture endpoint and format documented</SuccessCondition>
-            <FailureCondition>Missing capture spec - cannot proceed</FailureCondition>
-          </Operation>
-          <Operation id="OP-CAP-2" name="ImplementFlow" mandatory="true">
-            <Description>Implement capture following macro pattern</Description>
-            <SuccessCondition>Flow implemented and compiles</SuccessCondition>
-            <FailureCondition>Implementation errors - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-CAP-3" name="CargoBuild" mandatory="true">
-            <Description>Execute cargo build for capture flow</Description>
-            <SuccessCondition>Build completes without errors</SuccessCondition>
-            <FailureCondition>Build fails - fix errors before proceeding</FailureCondition>
-          </Operation>
-        </Operations>
-        <TimelineLog>phase_3_capture_flow</TimelineLog>
-      </Flow>
-
-      <Flow id="FLOW-VOID" name="Void" sequence="4" mandatory="true">
-        <Description>Payment void implementation</Description>
-        <PatternFile>guides/patterns/pattern_void.md</PatternFile>
-        <Trait>ConnectorIntegrationV2&lt;Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData&gt;</Trait>
-        <Operations>
-          <Operation id="OP-VOID-1" name="ReadTechSpec" mandatory="true">
-            <Description>Extract void requirements from tech spec</Description>
-            <SuccessCondition>Void endpoint and format documented</SuccessCondition>
-            <FailureCondition>Missing void spec - cannot proceed</FailureCondition>
-          </Operation>
-          <Operation id="OP-VOID-2" name="ImplementFlow" mandatory="true">
-            <Description>Implement void following macro pattern</Description>
-            <SuccessCondition>Flow implemented and compiles</SuccessCondition>
-            <FailureCondition>Implementation errors - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-VOID-3" name="CargoBuild" mandatory="true">
-            <Description>Execute cargo build for void flow</Description>
-            <SuccessCondition>Build completes without errors</SuccessCondition>
-            <FailureCondition>Build fails - fix errors before proceeding</FailureCondition>
-          </Operation>
-        </Operations>
-        <TimelineLog>phase_3_void_flow</TimelineLog>
-      </Flow>
-
-      <Flow id="FLOW-REFUND" name="Refund" sequence="5" mandatory="true">
-        <Description>Payment refund implementation</Description>
-        <PatternFile>guides/patterns/pattern_refund.md</PatternFile>
-        <Trait>ConnectorIntegrationV2&lt;Refund, RefundFlowData, RefundsData, RefundsResponseData&gt;</Trait>
-        <Operations>
-          <Operation id="OP-REF-1" name="ReadTechSpec" mandatory="true">
-            <Description>Extract refund requirements from tech spec</Description>
-            <SuccessCondition>Refund endpoint and format documented</SuccessCondition>
-            <FailureCondition>Missing refund spec - cannot proceed</FailureCondition>
-          </Operation>
-          <Operation id="OP-REF-2" name="ImplementFlow" mandatory="true">
-            <Description>Implement refund following macro pattern</Description>
-            <SuccessCondition>Flow implemented and compiles</SuccessCondition>
-            <FailureCondition>Implementation errors - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-REF-3" name="CargoBuild" mandatory="true">
-            <Description>Execute cargo build for refund flow</Description>
-            <SuccessCondition>Build completes without errors</SuccessCondition>
-            <FailureCondition>Build fails - fix errors before proceeding</FailureCondition>
-          </Operation>
-        </Operations>
-        <TimelineLog>phase_3_refund_flow</TimelineLog>
-      </Flow>
-
-      <Flow id="FLOW-RSYNC" name="RefundSync" sequence="6" mandatory="true">
-        <Description>Refund synchronization implementation</Description>
-        <PatternFile>guides/patterns/pattern_rsync.md</PatternFile>
-        <Trait>ConnectorIntegrationV2&lt;RSync, RefundFlowData, RefundSyncData, RefundsResponseData&gt;</Trait>
-        <Operations>
-          <Operation id="OP-RSYNC-1" name="ReadTechSpec" mandatory="true">
-            <Description>Extract refund sync requirements from tech spec</Description>
-            <SuccessCondition>Refund sync endpoint and format documented</SuccessCondition>
-            <FailureCondition>Missing refund sync spec - cannot proceed</FailureCondition>
-          </Operation>
-          <Operation id="OP-RSYNC-2" name="ImplementFlow" mandatory="true">
-            <Description>Implement refund sync following macro pattern</Description>
-            <SuccessCondition>Flow implemented and compiles</SuccessCondition>
-            <FailureCondition>Implementation errors - fix before proceeding</FailureCondition>
-          </Operation>
-          <Operation id="OP-RSYNC-3" name="CargoBuild" mandatory="true">
-            <Description>Execute cargo build for refund sync flow</Description>
-            <SuccessCondition>Build completes without errors</SuccessCondition>
-            <FailureCondition>Build fails - fix errors before proceeding</FailureCondition>
-          </Operation>
-        </Operations>
-        <TimelineLog>phase_3_rsync_flow</TimelineLog>
-      </Flow>
+        <!-- Additional flows can be added here following the same pattern -->
+        <!-- Examples: PSync, Capture, Void, Refund, RSync, etc. -->
+      </Flows>
     </Phase>
 
-    <Phase id="PHASE-4" name="Final Validation and Quality Review" mandatory="true">
+    <Phase id="phase_4" name="Final Validation and Quality Review" sequence="4" mandatory="true">
       <Description>Comprehensive validation and quality assurance</Description>
-      <Operations>
-        <Operation id="OP-4-1" name="FinalCargoBuild" mandatory="true">
-          <Description>Execute final cargo build for entire project</Description>
+      <Prerequisites>All flows in Phase 3 completed successfully</Prerequisites>
+      <Steps>
+        <Step id="p4_s1" sequence="1" mandatory="true">
+          <Action>Execute final cargo build</Action>
           <Command>cargo build</Command>
-          <SuccessCondition>Build completes without errors or warnings</SuccessCondition>
-          <FailureCondition>Build fails - fix all errors before proceeding</FailureCondition>
-        </Operation>
-        <Operation id="OP-4-2" name="ValidateAllFlows" mandatory="true">
-          <Description>Validate all flows compile successfully</Description>
-          <SuccessCondition>All flow implementations compile without errors</SuccessCondition>
-          <FailureCondition>Any flow fails compilation - fix before proceeding</FailureCondition>
-        </Operation>
-        <Operation id="OP-4-3" name="QualityGuardianReview" mandatory="true">
-          <Description>Delegate to Quality Guardian for comprehensive review</Description>
-          <SuccessCondition>Quality review passes with approval</SuccessCondition>
-          <FailureCondition>Quality review fails - address all findings before proceeding</FailureCondition>
-        </Operation>
-        <Operation id="OP-4-4" name="GenerateCompletionReport" mandatory="true">
-          <Description>Generate comprehensive completion report</Description>
-          <SuccessCondition>Report generated documenting all implemented features</SuccessCondition>
-          <FailureCondition>Report generation fails - fix before proceeding</FailureCondition>
-        </Operation>
-        <Operation id="OP-4-5" name="MarkAnalysisResolved" mandatory="true">
-          <Description>Mark requirement analysis as resolved</Description>
-          <Command>mv generated-requirement-analysis.xml generated-requirement-analysis.xml.resolved</Command>
-          <SuccessCondition>File renamed successfully indicating completion</SuccessCondition>
-          <FailureCondition>File rename fails - manual intervention required</FailureCondition>
-        </Operation>
-      </Operations>
-      <TimelineLog>phase_4_quality_review</TimelineLog>
-      <FinalTimelineCall>timeline.finalize()</FinalTimelineCall>
+          <ExpectedOutput>Successful compilation with zero errors</ExpectedOutput>
+        </Step>
+        <Step id="p4_s2" sequence="2" mandatory="true">
+          <Action>Validate all flows compile successfully</Action>
+          <ValidationCriteria>
+            <Criterion>No compilation warnings</Criterion>
+            <Criterion>All flows implemented</Criterion>
+            <Criterion>All tests pass</Criterion>
+          </ValidationCriteria>
+        </Step>
+        <Step id="p4_s3" sequence="3" mandatory="true">
+          <SubAgent>Quality Guardian Subagent</SubAgent>
+          <Action>Comprehensive code quality review</Action>
+          <ReviewAreas>
+            <Area>Code style and formatting</Area>
+            <Area>UCS convention compliance</Area>
+            <Area>Error handling completeness</Area>
+            <Area>Status mapping correctness</Area>
+            <Area>Documentation completeness</Area>
+            <Area>Test coverage</Area>
+          </ReviewAreas>
+          <ExpectedOutput>Quality review report with approval/rejection</ExpectedOutput>
+        </Step>
+        <Step id="p4_s4" sequence="4" mandatory="true">
+          <Action>Wait for quality review completion and approval</Action>
+          <Blocking>true</Blocking>
+        </Step>
+        <Step id="p4_s5" sequence="5" mandatory="true">
+          <Action>Generate completion report</Action>
+          <ReportContents>
+            <Content>Summary of implemented flows</Content>
+            <Content>Files created/modified</Content>
+            <Content>Known limitations</Content>
+            <Content>Future enhancement opportunities</Content>
+          </ReportContents>
+        </Step>
+        <Step id="p4_s6" sequence="6" mandatory="true">
+          <Action>Log phase completion</Action>
+          <Command>timeline.log_phase_end("phase_4_quality_review", status="success")</Command>
+          <ExpectedOutput>Phase 4 marked as completed in timeline</ExpectedOutput>
+        </Step>
+        <Step id="p4_s7" sequence="7" mandatory="true">
+          <Action>Timeline Finalization</Action>
+          <Command>timeline.finalize()</Command>
+          <Description>ALWAYS execute this as the final step</Description>
+          <ExpectedOutput>Workflow timeline finalized and closed</ExpectedOutput>
+        </Step>
+      </Steps>
+      <Dependencies>Phase 3 (all flows)</Dependencies>
+      <Blocking>true</Blocking>
     </Phase>
-  </TechnicalScope>
 
-  <!-- ============================================================================
-       ARCHITECTURE GUIDANCE
-       ============================================================================ -->
-  <ArchitectureGuidance>
-    <SectionHeader>Modular Design Recommendations with Testability Considerations</SectionHeader>
-
-    <DesignPrinciple id="ARCH-001" name="SingleBinaryConstraint">
-      <Title>Single Binary Constraint</Title>
-      <Description>Project must compile to a single binary to avoid cargo run confusion</Description>
-      <Rationale>Multiple binaries cause runtime ambiguity and deployment complexity</Rationale>
-      <Implementation>
-        <Guideline>Ensure only one [[bin]] target in Cargo.toml</Guideline>
-        <Guideline>Use library crates for shared functionality</Guideline>
-        <Guideline>Avoid creating additional binary targets</Guideline>
-      </Implementation>
-      <Verification>
-        <Test>Run `cargo build --bins` and verify only one binary is produced</Test>
-        <Test>Verify `cargo run` executes without ambiguity</Test>
-      </Verification>
-    </DesignPrinciple>
-
-    <DesignPrinciple id="ARCH-002" name="MacroBasedImplementation">
-      <Title>Macro-Based Implementation Pattern</Title>
-      <Description>All connector flows must use UCS macros, not manual trait implementations</Description>
-      <Rationale>Macros ensure consistency, reduce boilerplate, and enforce UCS conventions</Rationale>
-      <Implementation>
-        <Guideline>Use create_all_prerequisites! for flow registration</Guideline>
-        <Guideline>Use macro_connector_implementation! for flow implementation</Guideline>
-        <Guideline>Never manually implement ConnectorIntegrationV2 trait</Guideline>
-      </Implementation>
-      <Verification>
-        <Test>Code review to verify macro usage</Test>
-        <Test>Compile-time verification of macro expansion</Test>
-      </Verification>
-    </DesignPrinciple>
-
-    <DesignPrinciple id="ARCH-003" name="GenericTypePattern">
-      <Title>Generic Type Pattern for Payment Methods</Title>
-      <Description>Use generic &lt;T&gt; types for flows handling payment method data</Description>
-      <Rationale>Supports multiple payment methods with type-safe implementations</Rationale>
-      <Implementation>
-        <Guideline>Authorize flow uses PaymentsAuthorizeData&lt;T&gt;</Guideline>
-        <Guideline>T bound: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize</Guideline>
-        <Guideline>Other flows without payment methods don't need generics</Guideline>
-      </Implementation>
-      <Verification>
-        <Test>Type checking with various payment method types</Test>
-        <Test>Compile-time verification of trait bounds</Test>
-      </Verification>
-    </DesignPrinciple>
-
-    <DesignPrinciple id="ARCH-004" name="ModuleStructure">
-      <Title>Connector Module Structure</Title>
-      <Description>Follow UCS module structure for connectors</Description>
-      <Rationale>Consistent structure enables maintainability and tooling support</Rationale>
-      <Implementation>
-        <Guideline>Main connector file: backend/connector-integration/src/connectors/fiservemea.rs</Guideline>
-        <Guideline>Transformers: backend/connector-integration/src/connectors/fiservemea/transformers.rs</Guideline>
-        <Guideline>Types module: backend/connector-integration/src/connectors/fiservemea/types.rs</Guideline>
-      </Implementation>
-      <Verification>
-        <Test>Verify all required files exist</Test>
-        <Test>Verify module declarations are correct</Test>
-      </Verification>
-    </DesignPrinciple>
-
-    <DesignPrinciple id="ARCH-005" name="ErrorHandling">
-      <Title>Structured Error Handling</Title>
-      <Description>Use error_stack for consistent error reporting</Description>
-      <Rationale>Provides context-rich error messages and proper error propagation</Rationale>
-      <Implementation>
-        <Guideline>Use error_stack::Report&lt;ConnectorError&gt; for fallible operations</Guideline>
-        <Guideline>Use specific NotSupported errors with descriptive messages</Guideline>
-        <Guideline>Avoid generic error messages</Guideline>
-      </Implementation>
-      <Verification>
-        <Test>Trigger error conditions and verify error messages</Test>
-        <Test>Verify error context is preserved through call stack</Test>
-      </Verification>
-    </DesignPrinciple>
-
-    <DesignPrinciple id="ARCH-006" name="StatusMapping">
-      <Title>Dedicated Status Mapping</Title>
-      <Description>Create connector-specific status enums and mapping functions</Description>
-      <Rationale>Type-safe status handling prevents hardcoded status values</Rationale>
-      <Implementation>
-        <Guideline>Create FiservemeaStatus enum with all possible values</Guideline>
-        <Guideline>Implement map_fiservemea_status_to_attempt_status function</Guideline>
-        <Guideline>Always derive status from response, never hardcode</Guideline>
-      </Implementation>
-      <Verification>
-        <Test>Verify all API status values have mappings</Test>
-        <Test>Test status mapping with all enum variants</Test>
-      </Verification>
-    </DesignPrinciple>
-
-    <DesignPrinciple id="ARCH-007" name="NoMockImplementations">
-      <Title>Production-Ready Code Only</Title>
-      <Description>No TODOs, mocks, or placeholder implementations</Description>
-      <Rationale>Production systems require complete, tested implementations</Rationale>
-      <Implementation>
-        <Guideline>All functions must have complete implementations</Guideline>
-        <Guideline>No TODO comments in production code</Guideline>
-        <Guideline>No unimplemented!() or todo!() macros</Guideline>
-      </Implementation>
-      <Verification>
-        <Test>Grep for TODO, FIXME, todo!, unimplemented! patterns</Test>
-        <Test>Code review for completeness</Test>
-      </Verification>
-    </DesignPrinciple>
-
-    <DesignPrinciple id="ARCH-008" name="Testability">
-      <Title>Test-Driven Design</Title>
-      <Description>Design for testability from the ground up</Description>
-      <Rationale>Enables comprehensive testing and reduces bugs</Rationale>
-      <Implementation>
-        <Guideline>Separate pure logic from side effects</Guideline>
-        <Guideline>Use dependency injection for external services</Guideline>
-        <Guideline>Make transformers unit-testable</Guideline>
-      </Implementation>
-      <Verification>
-        <Test>Unit tests for all transformers</Test>
-        <Test>Integration tests for flow execution</Test>
-      </Verification>
-    </DesignPrinciple>
-  </ArchitectureGuidance>
-
-  <!-- ============================================================================
-       API DESIGN
-       ============================================================================ -->
-  <APIDesign>
-    <SectionHeader>Endpoints, Request/Response Schemas, Validation Rules, Error Handling</SectionHeader>
-
-    <ConnectorAPI>
-      <BaseURLVariable>connector_base_url</BaseURLVariable>
-      <Authentication>
-        <Type>API Key</Type>
-        <HeaderName>Authorization</HeaderName>
-        <HeaderFormat>Bearer {api_key}</HeaderFormat>
-      </Authentication>
-
-      <Endpoint id="API-AUTHORIZE" flow="Authorize">
-        <HTTPMethod>POST</HTTPMethod>
-        <Path>/payments/authorize</Path>
-        <Description>Initiate a payment authorization</Description>
-        <RequestHeaders>
-          <Header name="Content-Type" required="true">application/json</Header>
-          <Header name="Authorization" required="true">Bearer {api_key}</Header>
-          <Header name="Idempotency-Key" required="false">{uuid}</Header>
-        </RequestHeaders>
-        <RequestBody>
-          <Schema>FiservemeaAuthorizeRequest&lt;T&gt;</Schema>
-          <ContentType>application/json</ContentType>
-          <Fields>
-            <Field name="amount" type="i64" required="true">
-              <Description>Amount in minor currency units</Description>
-              <Validation>
-                <Rule type="min">0</Rule>
-                <Rule type="max">999999999</Rule>
-              </Validation>
-            </Field>
-            <Field name="currency" type="String" required="true">
-              <Description>ISO 4217 currency code</Description>
-              <Validation>
-                <Rule type="length">3</Rule>
-                <Rule type="pattern">^[A-Z]{3}$</Rule>
-              </Validation>
-            </Field>
-            <Field name="payment_method" type="FiservemeaPaymentMethod&lt;T&gt;" required="true">
-              <Description>Payment method details</Description>
-            </Field>
-            <Field name="merchant_reference" type="String" required="true">
-              <Description>Merchant transaction reference</Description>
-              <Validation>
-                <Rule type="maxLength">255</Rule>
-              </Validation>
-            </Field>
-            <Field name="customer" type="Option&lt;FiservemeaCustomer&gt;" required="false">
-              <Description>Customer information</Description>
-            </Field>
-            <Field name="billing_address" type="Option&lt;FiservemeaAddress&gt;" required="false">
-              <Description>Billing address</Description>
-            </Field>
-            <Field name="shipping_address" type="Option&lt;FiservemeaAddress&gt;" required="false">
-              <Description>Shipping address</Description>
-            </Field>
-            <Field name="metadata" type="Option&lt;HashMap&lt;String, String&gt;&gt;" required="false">
-              <Description>Additional metadata</Description>
-            </Field>
-          </Fields>
-        </RequestBody>
-        <ResponseBody>
-          <Schema>FiservemeaAuthorizeResponse</Schema>
-          <Fields>
-            <Field name="id" type="String" required="true">
-              <Description>Transaction ID</Description>
-            </Field>
-            <Field name="status" type="FiservemeaStatus" required="true">
-              <Description>Transaction status</Description>
-            </Field>
-            <Field name="amount" type="i64" required="true">
-              <Description>Authorized amount</Description>
-            </Field>
-            <Field name="currency" type="String" required="true">
-              <Description>Transaction currency</Description>
-            </Field>
-            <Field name="created_at" type="String" required="true">
-              <Description>ISO 8601 timestamp</Description>
-            </Field>
-            <Field name="response_code" type="String" required="true">
-              <Description>Processor response code</Description>
-            </Field>
-            <Field name="response_message" type="String" required="true">
-              <Description>Processor response message</Description>
-            </Field>
-            <Field name="risk_data" type="Option&lt;FiservemeaRiskData&gt;" required="false">
-              <Description>Risk assessment data</Description>
-            </Field>
-          </Fields>
-        </ResponseBody>
-        <SuccessResponses>
-          <Response code="200">Authorization successful</Response>
-          <Response code="201">Authorization created</Response>
-        </SuccessResponses>
-        <ErrorResponses>
-          <Response code="400">Bad request - invalid parameters</Response>
-          <Response code="401">Unauthorized - invalid credentials</Response>
-          <Response code="402">Payment required - insufficient funds</Response>
-          <Response code="404">Not found - invalid resource</Response>
-          <Response code="422">Unprocessable entity - validation failed</Response>
-          <Response code="429">Too many requests - rate limit exceeded</Response>
-          <Response code="500">Internal server error</Response>
-          <Response code="502">Bad gateway - upstream error</Response>
-          <Response code="503">Service unavailable</Response>
-        </ErrorResponses>
-      </Endpoint>
-
-      <Endpoint id="API-PSYNC" flow="PaymentSync">
-        <HTTPMethod>GET</HTTPMethod>
-        <Path>/payments/{transaction_id}</Path>
-        <Description>Retrieve payment status</Description>
-        <RequestHeaders>
-          <Header name="Authorization" required="true">Bearer {api_key}</Header>
-        </RequestHeaders>
-        <PathParameters>
-          <Parameter name="transaction_id" type="String" required="true">
-            <Description>Transaction ID to retrieve</Description>
-          </Parameter>
-        </PathParameters>
-        <ResponseBody>
-          <Schema>FiservemeaPSyncResponse</Schema>
-          <Fields>
-            <Field name="id" type="String" required="true"/>
-            <Field name="status" type="FiservemeaStatus" required="true"/>
-            <Field name="amount" type="i64" required="true"/>
-            <Field name="currency" type="String" required="true"/>
-            <Field name="captured_amount" type="Option&lt;i64&gt;" required="false"/>
-            <Field name="refunded_amount" type="Option&lt;i64&gt;" required="false"/>
-            <Field name="created_at" type="String" required="true"/>
-            <Field name="updated_at" type="String" required="true"/>
-          </Fields>
-        </ResponseBody>
-      </Endpoint>
-
-      <Endpoint id="API-CAPTURE" flow="Capture">
-        <HTTPMethod>POST</HTTPMethod>
-        <Path>/payments/{transaction_id}/capture</Path>
-        <Description>Capture a previously authorized payment</Description>
-        <RequestHeaders>
-          <Header name="Content-Type" required="true">application/json</Header>
-          <Header name="Authorization" required="true">Bearer {api_key}</Header>
-        </RequestHeaders>
-        <RequestBody>
-          <Schema>FiservemeaCaptureRequest</Schema>
-          <Fields>
-            <Field name="amount" type="Option&lt;i64&gt;" required="false">
-              <Description>Amount to capture (defaults to full authorization)</Description>
-            </Field>
-            <Field name="capture_reference" type="String" required="true">
-              <Description>Capture reference identifier</Description>
-            </Field>
-          </Fields>
-        </RequestBody>
-        <ResponseBody>
-          <Schema>FiservemeaCaptureResponse</Schema>
-          <Fields>
-            <Field name="id" type="String" required="true"/>
-            <Field name="status" type="FiservemeaStatus" required="true"/>
-            <Field name="amount" type="i64" required="true"/>
-            <Field name="currency" type="String" required="true"/>
-            <Field name="captured_at" type="String" required="true"/>
-          </Fields>
-        </ResponseBody>
-      </Endpoint>
-
-      <Endpoint id="API-VOID" flow="Void">
-        <HTTPMethod>POST</HTTPMethod>
-        <Path>/payments/{transaction_id}/void</Path>
-        <Description>Void a previously authorized payment</Description>
-        <RequestHeaders>
-          <Header name="Content-Type" required="true">application/json</Header>
-          <Header name="Authorization" required="true">Bearer {api_key}</Header>
-        </RequestHeaders>
-        <RequestBody>
-          <Schema>FiservemeaVoidRequest</Schema>
-          <Fields>
-            <Field name="void_reference" type="String" required="true">
-              <Description>Void reference identifier</Description>
-            </Field>
-            <Field name="reason" type="Option&lt;String&gt;" required="false">
-              <Description>Reason for void</Description>
-            </Field>
-          </Fields>
-        </RequestBody>
-        <ResponseBody>
-          <Schema>FiservemeaVoidResponse</Schema>
-          <Fields>
-            <Field name="id" type="String" required="true"/>
-            <Field name="status" type="FiservemeaStatus" required="true"/>
-            <Field name="voided_at" type="String" required="true"/>
-          </Fields>
-        </ResponseBody>
-      </Endpoint>
-
-      <Endpoint id="API-REFUND" flow="Refund">
-        <HTTPMethod>POST</HTTPMethod>
-        <Path>/payments/{transaction_id}/refunds</Path>
-        <Description>Process a refund</Description>
-        <RequestHeaders>
-          <Header name="Content-Type" required="true">application/json</Header>
-          <Header name="Authorization" required="true">Bearer {api_key}</Header>
-        </RequestHeaders>
-        <RequestBody>
-          <Schema>FiservemeaRefundRequest</Schema>
-          <Fields>
-            <Field name="amount" type="i64" required="true">
-              <Description>Refund amount in minor units</Description>
-            </Field>
-            <Field name="currency" type="String" required="true">
-              <Description>Refund currency</Description>
-            </Field>
-            <Field name="refund_reference" type="String" required="true">
-              <Description>Refund reference identifier</Description>
-            </Field>
-            <Field name="reason" type="Option&lt;String&gt;" required="false">
-              <Description>Reason for refund</Description>
-            </Field>
-          </Fields>
-        </RequestBody>
-        <ResponseBody>
-          <Schema>FiservemeaRefundResponse</Schema>
-          <Fields>
-            <Field name="id" type="String" required="true"/>
-            <Field name="status" type="FiservemeaStatus" required="true"/>
-            <Field name="amount" type="i64" required="true"/>
-            <Field name="currency" type="String" required="true"/>
-            <Field name="refunded_at" type="String" required="true"/>
-          </Fields>
-        </ResponseBody>
-      </Endpoint>
-
-      <Endpoint id="API-RSYNC" flow="RefundSync">
-        <HTTPMethod>GET</HTTPMethod>
-        <Path>/payments/{transaction_id}/refunds/{refund_id}</Path>
-        <Description>Retrieve refund status</Description>
-        <RequestHeaders>
-          <Header name="Authorization" required="true">Bearer {api_key}</Header>
-        </RequestHeaders>
-        <PathParameters>
-          <Parameter name="transaction_id" type="String" required="true"/>
-          <Parameter name="refund_id" type="String" required="true"/>
-        </PathParameters>
-        <ResponseBody>
-          <Schema>FiservemeaRSyncResponse</Schema>
-          <Fields>
-            <Field name="id" type="String" required="true"/>
-            <Field name="status" type="FiservemeaStatus" required="true"/>
-            <Field name="amount" type="i64" required="true"/>
-            <Field name="currency" type="String" required="true"/>
-            <Field name="created_at" type="String" required="true"/>
-            <Field name="updated_at" type="String" required="true"/>
-          </Fields>
-        </ResponseBody>
-      </Endpoint>
-    </ConnectorAPI>
-
-    <ErrorHandling>
-      <ErrorCodes>
-        <ErrorCode id="ERR-001" name="INVALID_REQUEST">
-          <HTTPCode>400</HTTPCode>
-          <Description>Request validation failed</Description>
-          <RecoveryAction>Correct request parameters and retry</RecoveryAction>
-        </ErrorCode>
-        <ErrorCode id="ERR-002" name="AUTHENTICATION_FAILED">
-          <HTTPCode>401</HTTPCode>
-          <Description>Invalid API credentials</Description>
-          <RecoveryAction>Verify API key configuration</RecoveryAction>
-        </ErrorCode>
-        <ErrorCode id="ERR-003" name="INSUFFICIENT_FUNDS">
-          <HTTPCode>402</HTTPCode>
-          <Description>Payment method has insufficient funds</Description>
-          <RecoveryAction>Notify customer to use alternative payment method</RecoveryAction>
-        </ErrorCode>
-        <ErrorCode id="ERR-004" name="TRANSACTION_NOT_FOUND">
-          <HTTPCode>404</HTTPCode>
-          <Description>Transaction not found</Description>
-          <RecoveryAction>Verify transaction ID</RecoveryAction>
-        </ErrorCode>
-        <ErrorCode id="ERR-005" name="VALIDATION_ERROR">
-          <HTTPCode>422</HTTPCode>
-          <Description>Request validation failed</Description>
-          <RecoveryAction>Correct validation errors and retry</RecoveryAction>
-        </ErrorCode>
-        <ErrorCode id="ERR-006" name="RATE_LIMIT_EXCEEDED">
-          <HTTPCode>429</HTTPCode>
-          <Description>Rate limit exceeded</Description>
-          <RecoveryAction>Implement exponential backoff and retry</RecoveryAction>
-        </ErrorCode>
-        <ErrorCode id="ERR-007" name="INTERNAL_ERROR">
-          <HTTPCode>500</HTTPCode>
-          <Description>Internal server error</Description>
-          <RecoveryAction>Contact support, retry with backoff</RecoveryAction>
-        </ErrorCode>
-        <ErrorCode id="ERR-008" name="SERVICE_UNAVAILABLE">
-          <HTTPCode>503</HTTPCode>
-          <Description>Service temporarily unavailable</Description>
-          <RecoveryAction>Retry with exponential backoff</RecoveryAction>
-        </ErrorCode>
-      </ErrorCodes>
-    </ErrorHandling>
-  </APIDesign>
-
-  <!-- ============================================================================
-       STORAGE REQUIREMENTS
-       ============================================================================ -->
-  <StorageRequirements>
-    <SectionHeader>Data Models, Identity Mapping, Validation, Forbidden Data Storage</SectionHeader>
-
-    <DataModels>
-      <Model id="DM-001" name="FiservemeaConnectorAccount">
-        <Description>Connector account configuration</Description>
-        <Table>connector_accounts</Table>
-        <Fields>
-          <Field name="id" type="UUID" primaryKey="true" nullable="false">
-            <Description>Unique account identifier</Description>
-          </Field>
-          <Field name="merchant_id" type="String" nullable="false">
-            <Description>Fiservemea merchant ID</Description>
-            <Validation>
-              <Rule type="maxLength">100</Rule>
-            </Validation>
-          </Field>
-          <Field name="api_key" type="String" encrypted="true" nullable="false">
-            <Description>Encrypted API key</Description>
-            <Validation>
-              <Rule type="minLength">32</Rule>
-            </Validation>
-          </Field>
-          <Field name="base_url" type="String" nullable="false">
-            <Description>API base URL</Description>
-            <Validation>
-              <Rule type="pattern">^https://</Rule>
-            </Validation>
-          </Field>
-          <Field name="sandbox" type="Boolean" nullable="false" defaultValue="false">
-            <Description>Sandbox mode flag</Description>
-          </Field>
-          <Field name="webhook_secret" type="String" encrypted="true" nullable="true">
-            <Description>Webhook signature secret</Description>
-          </Field>
-          <Field name="created_at" type="Timestamp" nullable="false">
-            <Description>Account creation timestamp</Description>
-          </Field>
-          <Field name="updated_at" type="Timestamp" nullable="false">
-            <Description>Last update timestamp</Description>
-          </Field>
-        </Fields>
-        <Indexes>
-          <Index name="idx_merchant_id" fields="merchant_id" unique="true"/>
-        </Indexes>
-      </Model>
-
-      <Model id="DM-002" name="FiservemeaPaymentAttempt">
-        <Description>Payment attempt tracking</Description>
-        <Table>payment_attempts</Table>
-        <Fields>
-          <Field name="id" type="UUID" primaryKey="true" nullable="false"/>
-          <Field name="payment_id" type="UUID" foreignKey="payments.id" nullable="false"/>
-          <Field name="connector_transaction_id" type="String" nullable="true">
-            <Description>Fiservemea transaction ID</Description>
-            <Validation>
-              <Rule type="maxLength">255</Rule>
-            </Validation>
-          </Field>
-          <Field name="status" type="Enum" nullable="false">
-            <EnumValues>pending, processing, charged, failed, voided</EnumValues>
-          </Field>
-          <Field name="amount" type="Decimal" nullable="false">
-            <Description>Transaction amount</Description>
-          </Field>
-          <Field name="currency" type="String" nullable="false">
-            <Description>Transaction currency (ISO 4217)</Description>
-            <Validation>
-              <Rule type="length">3</Rule>
-            </Validation>
-          </Field>
-          <Field name="error_code" type="String" nullable="true">
-            <Description>Connector error code</Description>
-          </Field>
-          <Field name="error_message" type="String" nullable="true">
-            <Description>Error message (sanitized)</Description>
-          </Field>
-          <Field name="connector_response" type="JSONB" nullable="true">
-            <Description>Full connector response (for debugging)</Description>
-          </Field>
-          <Field name="created_at" type="Timestamp" nullable="false"/>
-          <Field name="updated_at" type="Timestamp" nullable="false"/>
-        </Fields>
-        <Indexes>
-          <Index name="idx_payment_id" fields="payment_id"/>
-          <Index name="idx_connector_transaction_id" fields="connector_transaction_id"/>
-          <Index name="idx_status" fields="status"/>
-          <Index name="idx_created_at" fields="created_at"/>
-        </Indexes>
-      </Model>
-
-      <Model id="DM-003" name="FiservemeaRefundAttempt">
-        <Description>Refund attempt tracking</Description>
-        <Table>refund_attempts</Table>
-        <Fields>
-          <Field name="id" type="UUID" primaryKey="true" nullable="false"/>
-          <Field name="refund_id" type="UUID" foreignKey="refunds.id" nullable="false"/>
-          <Field name="connector_refund_id" type="String" nullable="true">
-            <Description>Fiservemea refund ID</Description>
-          </Field>
-          <Field name="status" type="Enum" nullable="false">
-            <EnumValues>pending, processing, success, failed</EnumValues>
-          </Field>
-          <Field name="amount" type="Decimal" nullable="false"/>
-          <Field name="currency" type="String" nullable="false"/>
-          <Field name="error_code" type="String" nullable="true"/>
-          <Field name="error_message" type="String" nullable="true"/>
-          <Field name="created_at" type="Timestamp" nullable="false"/>
-          <Field name="updated_at" type="Timestamp" nullable="false"/>
-        </Fields>
-        <Indexes>
-          <Index name="idx_refund_id" fields="refund_id"/>
-          <Index name="idx_connector_refund_id" fields="connector_refund_id"/>
-        </Indexes>
-      </Model>
-    </DataModels>
-
-    <IdentityMapping>
-      <Mapping id="IM-001" source="internal" target="fiservemea">
-        <Description>Internal payment ID to Fiservemea transaction ID mapping</Description>
-        <SourceField>payment_attempts.id</SourceField>
-        <TargetField>connector_transaction_id</TargetField>
-        <Direction>bidirectional</Direction>
-      </Mapping>
-      <Mapping id="IM-002" source="internal" target="fiservemea">
-        <Description>Internal refund ID to Fiservemea refund ID mapping</Description>
-        <SourceField>refund_attempts.id</SourceField>
-        <TargetField>connector_refund_id</TargetField>
-        <Direction>bidirectional</Direction>
-      </Mapping>
-    </IdentityMapping>
-
-    <ValidationRules>
-      <Rule id="VR-001" name="CurrencyCodeValidation">
-        <Description>Validate ISO 4217 currency codes</Description>
-        <AppliesTo>currency fields</AppliesTo>
-        <Validation>Must be valid ISO 4217 3-letter code</Validation>
-      </Rule>
-      <Rule id="VR-002" name="AmountRangeValidation">
-        <Description>Validate amount ranges</Description>
-        <AppliesTo>amount fields</AppliesTo>
-        <Validation>Must be positive and within connector limits</Validation>
-      </Rule>
-      <Rule id="VR-003" name="MerchantIdValidation">
-        <Description>Validate merchant ID format</Description>
-        <AppliesTo>merchant_id</AppliesTo>
-        <Validation>Must match Fiservemea merchant ID format</Validation>
-      </Rule>
-    </ValidationRules>
-
-    <ForbiddenDataStorage>
-      <Prohibition id="FD-001" severity="CRITICAL">
-        <DataType>Cardholder PAN (Primary Account Number)</DataType>
-        <Description>Full card numbers must never be stored</Description>
-        <Exception>Tokenized card references from Fiservemea are permitted</Exception>
-        <Verification>Database scan for 13-19 digit sequences matching card patterns</Verification>
-      </Prohibition>
-      <Prohibition id="FD-002" severity="CRITICAL">
-        <DataType>CVV/CVC</DataType>
-        <Description>Card security codes must never be stored</Description>
-        <Exception>None</Exception>
-        <Verification>Code review for any CVV storage attempts</Verification>
-      </Prohibition>
-      <Prohibition id="FD-003" severity="HIGH">
-        <DataType>Raw API Keys</DataType>
-        <Description>API keys must be encrypted at rest</Description>
-        <Exception>In-memory only during request processing</Exception>
-        <Verification>Database scan for unencrypted API key patterns</Verification>
-      </Prohibition>
-      <Prohibition id="FD-004" severity="HIGH">
-        <DataType>PII in Logs</DataType>
-        <Description>Personally identifiable information must not appear in logs</Description>
-        <Exception>Hashed identifiers for correlation</Exception>
-        <Verification>Log analysis for email, phone, address patterns</Verification>
-      </Prohibition>
-    </ForbiddenDataStorage>
-
-    <SchemaConsistency>
-      <Requirement id="SC-001">
-        <Description>Database schema must be consistent with data models defined above</Description>
-        <Verification>Run schema migration and validate all tables exist</Verification>
-      </Requirement>
-      <Requirement id="SC-002">
-        <Description>All foreign key constraints must be properly defined</Description>
-        <Verification>Database integrity check</Verification>
-      </Requirement>
-      <Requirement id="SC-003">
-        <Description>Indexes must be created for all query patterns</Description>
-        <Verification>Query plan analysis</Verification>
-      </Requirement>
-    </SchemaConsistency>
-  </StorageRequirements>
-
-  <!-- ============================================================================
-       COMPLIANCE CHECKLIST
-       ============================================================================ -->
-  <ComplianceChecklist>
-    <SectionHeader>Verifiable Requirements Mapped to Automated Tests</SectionHeader>
-
-    <ComplianceItem id="CMP-001" category="PCI_DSS" priority="CRITICAL">
-      <Requirement>Cardholder data protection</Requirement>
-      <Description>Protect stored cardholder data</Description>
-      <AutomatedTest>
-        <Name>test_no_pan_storage</Name>
-        <Type>integration</Type>
-        <Description>Verify no PAN is stored in database after transaction</Description>
-        <Assertion>Database query returns zero results for card number patterns</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-002" category="PCI_DSS" priority="CRITICAL">
-      <Requirement>CVV/CVC non-storage</Requirement>
-      <Description>Do not store card security codes</Description>
-      <AutomatedTest>
-        <Name>test_no_cvv_storage</Name>
-        <Type>integration</Type>
-        <Description>Verify no CVV is stored anywhere in the system</Description>
-        <Assertion>Memory and database scan finds no CVV patterns</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-003" category="PCI_DSS" priority="HIGH">
-      <Requirement>Strong cryptography</Requirement>
-      <Description>Use strong cryptography for stored sensitive data</Description>
-      <AutomatedTest>
-        <Name>test_api_key_encryption</Name>
-        <Type>unit</Type>
-        <Description>Verify API keys are encrypted in database</Description>
-        <Assertion>Stored value differs from original and decrypts correctly</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-004" category="PCI_DSS" priority="HIGH">
-      <Requirement>Secure authentication</Requirement>
-      <Description>Implement secure access control</Description>
-      <AutomatedTest>
-        <Name>test_authentication_required</Name>
-        <Type>integration</Type>
-        <Description>Verify all endpoints require authentication</Description>
-        <Assertion>Unauthenticated requests return 401</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-005" category="GDPR" priority="HIGH">
-      <Requirement>Data minimization</Requirement>
-      <Description>Collect only necessary data</Description>
-      <AutomatedTest>
-        <Name>test_data_minimization</Name>
-        <Type>unit</Type>
-        <Description>Verify request structures contain only required fields</Description>
-        <Assertion>No unnecessary fields in API requests</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-006" category="GDPR" priority="MEDIUM">
-      <Requirement>Right to erasure</Requirement>
-      <Description>Support data deletion requests</Description>
-      <AutomatedTest>
-        <Name>test_data_deletion</Name>
-        <Type>integration</Type>
-        <Description>Verify customer data can be deleted</Description>
-        <Assertion>Delete operation removes all customer data</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-007" category="SOX" priority="HIGH">
-      <Requirement>Audit logging</Requirement>
-      <Description>Log all financial transactions</Description>
-      <AutomatedTest>
-        <Name>test_audit_logging</Name>
-        <Type>integration</Type>
-        <Description>Verify all transactions are logged</Description>
-        <Assertion>Each transaction creates audit log entry</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-008" category="SOX" priority="HIGH">
-      <Requirement>Immutable records</Requirement>
-        <Description>Transaction records cannot be modified</Description>
-      <AutomatedTest>
-        <Name>test_record_immutability</Name>
-        <Type>integration</Type>
-        <Description>Verify transaction records cannot be altered</Description>
-        <Assertion>Update attempts on completed transactions fail</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-009" category="UCS_CONVENTIONS" priority="CRITICAL">
-      <Requirement>RouterDataV2 usage</Requirement>
-      <Description>Use RouterDataV2 instead of deprecated RouterData</Description>
-      <AutomatedTest>
-        <Name>test_routerdatav2_usage</Name>
-        <Type>compile</Type>
-        <Description>Compile-time check for RouterDataV2 usage</Description>
-        <Assertion>Code compiles without RouterData references</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-010" category="UCS_CONVENTIONS" priority="CRITICAL">
-      <Requirement>ConnectorIntegrationV2 usage</Requirement>
-      <Description>Use ConnectorIntegrationV2 instead of deprecated ConnectorIntegration</Description>
-      <AutomatedTest>
-        <Name>test_connectorintegrationv2_usage</Name>
-        <Type>compile</Type>
-        <Description>Compile-time check for ConnectorIntegrationV2 usage</Description>
-        <Assertion>Code compiles without ConnectorIntegration references</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-011" category="UCS_CONVENTIONS" priority="CRITICAL">
-      <Requirement>domain_types imports</Requirement>
-      <Description>Use domain_types instead of hyperswitch_domain_models</Description>
-      <AutomatedTest>
-        <Name>test_domain_types_imports</Name>
-        <Type>compile</Type>
-        <Description>Compile-time check for correct imports</Description>
-        <Assertion>Code compiles without hyperswitch_domain_models imports</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-012" category="UCS_CONVENTIONS" priority="HIGH">
-      <Requirement>Macro-based implementation</Requirement>
-      <Description>All flows must use macro_connector_implementation!</Description>
-      <AutomatedTest>
-        <Name>test_macro_usage</Name>
-        <Type>code_review</Type>
-        <Description>Verify macro usage for all flows</Description>
-        <Assertion>All flows use macro_connector_implementation!</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-013" category="CODE_QUALITY" priority="CRITICAL">
-      <Requirement>No TODO comments</Requirement>
-      <Description>Production code must not contain TODO comments</Description>
-      <AutomatedTest>
-        <Name>test_no_todos</Name>
-        <Type>static_analysis</Type>
-        <Description>Scan code for TODO, FIXME patterns</Description>
-        <Assertion>Zero TODO/FIXME comments found</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-014" category="CODE_QUALITY" priority="CRITICAL">
-      <Requirement>No mock implementations</Requirement>
-      <Description>All functions must have complete implementations</Description>
-      <AutomatedTest>
-        <name>test_no_mocks</name>
-        <Type>static_analysis</Type>
-        <Description>Scan for unimplemented!, todo! macros</Description>
-        <Assertion>Zero unimplemented!/todo! macros found</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-015" category="CODE_QUALITY" priority="HIGH">
-      <Requirement>Successful compilation</Requirement>
-      <Description>Project must compile without errors</Description>
-      <AutomatedTest>
-        <Name>test_compilation</Name>
-        <Type>build</Type>
-        <Description>Execute cargo build</Description>
-        <Assertion>Build exits with code 0</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-016" category="CODE_QUALITY" priority="HIGH">
-      <Requirement>Single binary output</Requirement>
-      <Description>Project must produce only one binary</Description>
-      <AutomatedTest>
-        <Name>test_single_binary</Name>
-        <Type>build</Type>
-        <Description>Verify only one binary is produced</Description>
-        <Assertion>cargo build --bins produces exactly one binary</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-017" category="FUNCTIONAL" priority="CRITICAL">
-      <Requirement>Status mapping completeness</Requirement>
-      <Description>All connector statuses must be mapped</Description>
-      <AutomatedTest>
-        <Name>test_status_mapping_completeness</Name>
-        <Type>unit</Type>
-        <Description>Verify all status enum variants have mappings</Description>
-        <Assertion>Every FiservemeaStatus variant maps to AttemptStatus</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-018" category="FUNCTIONAL" priority="HIGH">
-      <Requirement>Idempotency support</Requirement>
-      <Description>Connector must support idempotent requests</Description>
-      <AutomatedTest>
-        <Name>test_idempotency</Name>
-        <Type>integration</Type>
-        <Description>Send duplicate requests with same idempotency key</Description>
-        <Assertion>Second request returns same result as first</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-019" category="FUNCTIONAL" priority="HIGH">
-      <Requirement>Error message specificity</Requirement>
-      <Description>NotSupported errors must specify exact feature</Description>
-      <AutomatedTest>
-        <Name>test_specific_error_messages</Name>
-        <Type>unit</Type>
-        <Description>Verify error messages are specific</Description>
-        <Assertion>No generic "Not supported" messages found</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-020" category="WORKFLOW" priority="CRITICAL">
-      <Requirement>Sequential phase execution</Requirement>
-      <Description>Phases must execute in defined sequence</Description>
-      <AutomatedTest>
-        <Name>test_phase_sequence</Name>
-        <Type>workflow</Type>
-        <Description>Verify phases execute in correct order</Description>
-        <Assertion>Timeline logs show sequential phase completion</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-021" category="WORKFLOW" priority="CRITICAL">
-      <Requirement>Phase completion before progression</Requirement>
-      <Description>Each phase must complete before next begins</Description>
-      <AutomatedTest>
-        <Name>test_phase_blocking</Name>
-        <Type>workflow</Type>
-        <Description>Verify failed phase blocks progression</Description>
-        <Assertion>Workflow halts on phase failure</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-022" category="WORKFLOW" priority="HIGH">
-      <Requirement>Timeline logging</Requirement>
- <Description>All phases must log completion to timeline</Description>
-      <AutomatedTest>
-        <Name>test_timeline_logging</Name>
-        <Type>workflow</Type>
-        <Description>Verify timeline.log_phase_end called for each phase</Description>
-        <Assertion>Timeline contains all phase entries</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-023" category="WORKFLOW" priority="CRITICAL">
-      <Requirement>Final timeline finalize</Requirement>
-      <Description>timeline.finalize() must be called at end</Description>
-      <AutomatedTest>
-        <Name>test_timeline_finalize</Name>
-        <Type>workflow</Type>
-        <Description>Verify timeline.finalize() is called</Description>
-        <Assertion>Final workflow step executes timeline.finalize()</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-
-    <ComplianceItem id="CMP-024" category="DOCUMENTATION" priority="HIGH">
-      <Requirement>Requirement analysis resolution</Requirement>
-      <Description>XML must be marked as resolved on completion</Description>
-      <AutomatedTest>
-        <Name>test_xml_resolution</Name>
-        <Type>file_system</Type>
-        <Description>Verify file is renamed to .resolved</Description>
-        <Assertion>generated-requirement-analysis.xml.resolved exists</Assertion>
-      </AutomatedTest>
-      <Status>pending</Status>
-    </ComplianceItem>
-  </ComplianceChecklist>
-
-  <!-- ============================================================================
-       RISK ASSESSMENT
-       ============================================================================ -->
-  <RiskAssessment>
-    <SectionHeader>Key Threats, Mitigations, and Validating Tests</SectionHeader>
-
-    <Risk id="RISK-001" severity="CRITICAL" category="SECURITY">
-      <Title>Credential Exposure</Title>
-      <Description>API keys or merchant credentials could be exposed in logs, error messages, or debug output</Description>
-      <Impact>Unauthorized access to merchant account, financial loss, regulatory penalties</Impact>
-      <Likelihood>Medium</Likelihood>
-      <Mitigation>
-        <Strategy>Implement credential redaction in all logging paths</Strategy>
-        <Strategy>Use custom Debug implementations that mask sensitive fields</Strategy>
-        <Strategy>Sanitize error messages before returning to clients</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_credentials_not_in_logs</Test>
-        <Test>test_error_message_sanitization</Test>
-        <Test>test_debug_output_redaction</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-002" severity="CRITICAL" category="SECURITY">
-      <Title>Man-in-the-Middle Attack</Title>
-      <Description>Interception of payment data in transit due to weak TLS configuration</Description>
-      <Impact>Cardholder data compromise, PCI DSS violation, fraud</Impact>
-      <Likelihood>Low</Likelihood>
-      <Mitigation>
-        <Strategy>Enforce TLS 1.2+ with strong cipher suites</Strategy>
-        <Strategy>Enable certificate validation (no insecure_skip_verify)</Strategy>
-        <Strategy>Use HTTPS-only base URLs</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_tls_version_enforcement</Test>
-        <Test>test_certificate_validation_enabled</Test>
-        <Test>test_https_only_urls</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-003" severity="HIGH" category="FUNCTIONAL">
-      <Title>Incorrect Status Mapping</Title>
-      <Description>Connector status values incorrectly mapped to internal AttemptStatus</Description>
-      <Impact>Incorrect payment state, duplicate charges, failed refunds</Impact>
-      <Likelihood>Medium</Likelihood>
-      <Mitigation>
-        <Strategy>Use dedicated status enum with all possible values</Strategy>
-        <Strategy>Derive status from response, never hardcode</Strategy>
-        <Strategy>Comprehensive testing of all status paths</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_all_status_mappings</Test>
-        <Test>test_status_derived_from_response</Test>
-        <Test>test_unknown_status_handling</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-004" severity="HIGH" category="FUNCTIONAL">
-      <Title>Duplicate Transactions</Title>
-      <Description>Network retries causing duplicate payment authorizations</Description>
-      <Impact>Customer double-charged, disputes, chargebacks</Impact>
-      <Likelihood>Medium</Likelihood>
-      <Mitigation>
-        <Strategy>Implement idempotency key support</Strategy>
-        <Strategy>Include idempotency key in all mutation requests</Strategy>
-        <Strategy>Handle 409 Conflict responses appropriately</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_idempotency_prevents_duplicates</Test>
-        <Test>test_retry_with_same_idempotency_key</Test>
-        <Test>test_conflict_response_handling</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-005" severity="MEDIUM" category="OPERATIONAL">
-      <Title>API Rate Limiting</Title>
-      <Description>Exceeding Fiservemea API rate limits causing service disruption</Description>
-      <Impact>Failed transactions, poor customer experience</Impact>
-      <Likelihood>High</Likelihood>
-      <Mitigation>
-        <Strategy>Implement exponential backoff for retries</Strategy>
-        <Strategy>Respect Retry-After headers</Strategy>
-        <Strategy>Queue management for high-volume periods</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_rate_limit_backoff</Test>
-        <Test>test_retry_after_header_respected</Test>
-        <Test>test_429_error_handling</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-006" severity="MEDIUM" category="INTEGRITY">
-      <Title>Data Corruption in Transformation</Title>
-      <Description>Incorrect data transformation between internal and connector formats</Description>
-      <Impact>Incorrect amounts, failed transactions, accounting discrepancies</Impact>
-      <Likelihood>Low</Likelihood>
-      <Mitigation>
-        <Strategy>Type-safe request/response structures</Strategy>
-        <Strategy>Comprehensive unit tests for transformers</Strategy>
-        <Strategy>Property-based testing for edge cases</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_amount_transformation_accuracy</Test>
-        <Test>test_currency_code_preservation</Test>
-        <Test>test_edge_case_transformations</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-007" severity="HIGH" category="COMPLIANCE">
-      <Title>PCI DSS Violation</Title>
-      <Description>Accidental storage or logging of prohibited cardholder data</Description>
-      <Impact>Regulatory fines, loss of certification, legal liability</Impact>
-      <Likelihood>Low</Likelihood>
-      <Mitigation>
-        <Strategy>Static analysis for card number patterns</Strategy>
-        <Strategy>Pre-commit hooks for sensitive data detection</Strategy>
-        <Strategy>Regular security audits</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_no_pan_in_database</Test>
-        <Test>test_no_pan_in_logs</Test>
-        <Test>test_no_cvv_storage</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-008" severity="MEDIUM" category="MAINTAINABILITY">
-      <Title>Macro Misconfiguration</Title>
-      <Description>Incorrect macro usage leading to subtle bugs</Description>
-      <Impact>Runtime errors, incorrect behavior, difficult debugging</Impact>
-      <Likelihood>Medium</Likelihood>
-      <Mitigation>
-        <Strategy>Thorough understanding of macro patterns</Strategy>
-        <Strategy>Code review of macro invocations</Strategy>
-        <Strategy>Compile-time testing of macro expansions</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_macro_expansion_correctness</Test>
-        <Test>test_trait_bound_satisfaction</Test>
-        <Test>test_type_matching_across_macros</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-009" severity="MEDIUM" category="AVAILABILITY">
-      <Title>Connector Service Outage</Title>
-      <Description>Fiservemea API downtime causing transaction failures</Description>
-      <Impact>Lost revenue, customer dissatisfaction</Impact>
-      <Likelihood>Medium</Likelihood>
-      <Mitigation>
-        <Strategy>Implement circuit breaker pattern</Strategy>
-        <Strategy>Graceful degradation messaging</Strategy>
-        <Strategy>Health monitoring and alerting</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_circuit_breaker_trips</Test>
-        <Test>test_graceful_error_on_outage</Test>
-        <Test>test_health_check_implementation</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-010" severity="LOW" category="PERFORMANCE">
-      <Title>Memory Leak in Long-Running Process</Title>
-      <Description>Accumulation of request/response data in memory</Description>
-      <Impact>Increased resource usage, potential OOM crashes</Impact>
-      <Likelihood>Low</Likelihood>
-      <Mitigation>
-        <Strategy>Proper scoping of request/response objects</Strategy>
-        <Strategy>Avoid unnecessary cloning of large structures</Strategy>
-        <Strategy>Memory profiling in load testing</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_memory_usage_under_load</Test>
-        <Test>test_no_object_leak_in_loop</Test>
-        <Test>test_proper_drop_behavior</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-011" severity="HIGH" category="WORKFLOW">
-      <Title>Incomplete Implementation</Title>
-      <Description>TODO or mock implementations left in production code</Description>
-      <Impact>Runtime panics, undefined behavior, production incidents</Impact>
-      <Likelihood>Medium</Likelihood>
-      <Mitigation>
-        <Strategy>Static analysis for TODO/FIXME markers</Strategy>
-        <Strategy>Pre-commit hooks blocking incomplete code</Strategy>
-        <Strategy>Code review requirement for all changes</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_no_todo_comments</Test>
-        <Test>test_no_unimplemented_macros</Test>
-        <Test>test_complete_function_coverage</Test>
-      </ValidatingTests>
-    </Risk>
-
-    <Risk id="RISK-012" severity="MEDIUM" category="DEPLOYMENT">
-      <Title>Multiple Binary Confusion</Title>
-      <Description>Multiple binaries causing cargo run ambiguity</Description>
-      <Impact>Deployment failures, incorrect binary execution</Impact>
-      <Likelihood>Low</Likelihood>
-      <Mitigation>
-        <Strategy>Single [[bin]] target in Cargo.toml</Strategy>
-        <Strategy>Build verification for single binary output</Strategy>
-        <Strategy>Documentation of binary naming</Strategy>
-      </Mitigation>
-      <ValidatingTests>
-        <Test>test_single_binary_output</Test>
-        <Test>test_cargo_run_executes_correctly</Test>
-        <Test>test_binary_naming_consistency</Test>
-      </ValidatingTests>
-    </Risk>
-  </RiskAssessment>
-
-  <!-- ============================================================================
-       TASK TRACKING
-       ============================================================================ -->
-  <TaskTracking>
-    <SectionHeader>Implementation Tasks and Completion Status</SectionHeader>
-
-    <Task id="TASK-001" phase="PHASE-1" status="pending">
-      <Title>Read and validate technical specification</Title>
-      <Description>Read grace/rulesbook/codegen/references/fiservemea/technical_specification.md and validate completeness</Description>
-      <AcceptanceCriteria>Tech spec exists and contains all required sections</AcceptanceCriteria>
-      <EstimatedDuration>15 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-002" phase="PHASE-2" status="pending">
-      <Title>Execute add_connector.sh script</Title>
-      <Description>Run ./add_connector.sh fiservemea {base_url} --force -y</Description>
-      <AcceptanceCriteria>Script completes successfully, all files created</AcceptanceCriteria>
-      <EstimatedDuration>10 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-003" phase="PHASE-2" status="pending">
-      <Title>Validate cargo build success</Title>
-      <Description>Run cargo build and verify no errors</Description>
-      <AcceptanceCriteria>Build completes without errors</AcceptanceCriteria>
-      <EstimatedDuration>5 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-004" phase="PHASE-2.5" status="pending">
-      <Title>Study macro pattern references</Title>
-      <Description>Read all macro pattern guides and understand implementation approach</Description>
-      <AcceptanceCriteria>All macro guides read and understood</AcceptanceCriteria>
-      <EstimatedDuration>30 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-005" phase="PHASE-3" flow="Authorize" status="pending">
-      <Title>Implement Authorize flow</Title>
-      <Description>Complete authorize flow implementation using macros</Description>
-      <AcceptanceCriteria>Authorize flow compiles and passes tests</AcceptanceCriteria>
-      <EstimatedDuration>60 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-006" phase="PHASE-3" flow="PaymentSync" status="pending">
-      <Title>Implement PaymentSync flow</Title>
-      <Description>Complete payment sync flow implementation using macros</Description>
-      <AcceptanceCriteria>PaymentSync flow compiles and passes tests</AcceptanceCriteria>
-      <EstimatedDuration>45 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-007" phase="PHASE-3" flow="Capture" status="pending">
-      <Title>Implement Capture flow</Title>
-      <Description>Complete capture flow implementation using macros</Description>
-      <AcceptanceCriteria>Capture flow compiles and passes tests</AcceptanceCriteria>
-      <EstimatedDuration>45 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-008" phase="PHASE-3" flow="Void" status="pending">
-      <Title>Implement Void flow</Title>
-      <Description>Complete void flow implementation using macros</Description>
-      <AcceptanceCriteria>Void flow compiles and passes tests</AcceptanceCriteria>
-      <EstimatedDuration>45 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-009" phase="PHASE-3" flow="Refund" status="pending">
-      <Title>Implement Refund flow</Title>
-      <Description>Complete refund flow implementation using macros</Description>
-      <AcceptanceCriteria>Refund flow compiles and passes tests</AcceptanceCriteria>
-      <EstimatedDuration>45 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-010" phase="PHASE-3" flow="RefundSync" status="pending">
-      <Title>Implement RefundSync flow</Title>
-      <Description>Complete refund sync flow implementation using macros</Description>
-      <AcceptanceCriteria>RefundSync flow compiles and passes tests</AcceptanceCriteria>
-      <EstimatedDuration>45 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-011" phase="PHASE-4" status="pending">
-      <Title>Execute final cargo build</Title>
-      <Description>Run final cargo build for entire project</Description>
-      <AcceptanceCriteria>Build completes without errors or warnings</AcceptanceCriteria>
-      <EstimatedDuration>10 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-012" phase="PHASE-4" status="pending">
-      <Title>Quality Guardian review</Title>
-      <Description>Submit to Quality Guardian for comprehensive review</Description>
-      <AcceptanceCriteria>Quality review passes with approval</AcceptanceCriteria>
-      <EstimatedDuration>30 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-013" phase="PHASE-4" status="pending">
-      <Title>Generate completion report</Title>
-      <Description>Document all implemented features and outcomes</Description>
-      <AcceptanceCriteria>Completion report generated</AcceptanceCriteria>
-      <EstimatedDuration>15 minutes</EstimatedDuration>
-    </Task>
-
-    <Task id="TASK-014" phase="PHASE-4" status="pending">
-      <Title>Mark requirement analysis as resolved</Title>
-      <Description>Rename generated-requirement-analysis.xml to generated-requirement-analysis.xml.resolved</Description>
-      <AcceptanceCriteria>File renamed successfully</AcceptanceCriteria>
-      <EstimatedDuration>1 minute</EstimatedDuration>
-    </Task>
-  </TaskTracking>
-
-  <!-- ============================================================================
-       SIGNATURE
-       ============================================================================ -->
-  <Signature>
-    <DocumentStatus>DRAFT</DocumentStatus>
-    <LastUpdated>2026-02-06</LastUpdated>
-    <WorkflowController>GRACE-UCS Main Workflow Controller</WorkflowController>
-    <NextStep>Execute: integrate fiservemea using grace/rulesbook/codegen/.gracerules</NextStep>
-  </Signature>
+    <Phase id="phase_5" name="Requirement Resolution Marking" sequence="5" mandatory="true">
+      <Description>Mark requirement analysis as resolved upon completion</Description>
+      <Prerequisites>Phase 4 completed successfully</Prerequisites>
+      <Steps>
+        <Step id="p5_s1" sequence="1" mandatory="true">
+          <Action>Rename generated-requirement-analysis.xml to generated-requirement-analysis.xml.resolved</Action>
+          <Command>mv generated-requirement-analysis.xml generated-requirement-analysis.xml.resolved</Command>
+          <ExpectedOutput>File renamed with .resolved extension</ExpectedOutput>
+          <Purpose>Indicates all tasks in requirement analysis are completed</Purpose>
+        </Step>
+      </Steps>
+      <Dependencies>Phase 4</Dependencies>
+      <Blocking>false</Blocking>
+    </Phase>
+  </WorkflowPhases>
+
+  <!-- ========================================================================
+       TECHNICAL REQUIREMENTS
+       ======================================================================== -->
+  <TechnicalRequirements>
+    <Architecture>
+      <Pattern>UCS (Universal Connector Standard)</Pattern>
+      <Version>V2</Version>
+      <CoreTraits>
+        <Trait>RouterDataV2</Trait>
+        <Trait>ConnectorIntegrationV2</Trait>
+      </CoreTraits>
+    </Architecture>
+
+    <ModuleStructure>
+      <MainConnectorFile>backend/connector-integration/src/connectors/fiservemea.rs</MainConnectorFile>
+      <TransformersFile>backend/connector-integration/src/connectors/fiservemea/transformers.rs</TransformersFile>
+      <UtilsFile>backend/connector-integration/src/connectors/fiservemea/utils.rs</UtilsFile>
+      <ModFile>backend/connector-integration/src/connectors/fiservemea/mod.rs</ModFile>
+    </ModuleStructure>
+
+    <Imports>
+      <RequiredImport>domain_types (NOT hyperswitch_domain_models)</RequiredImport>
+      <RequiredImport>common_enums</RequiredImport>
+      <RequiredImport>error_stack</RequiredImport>
+      <RequiredImport>serde::{Serialize, Deserialize}</RequiredImport>
+      <RequiredImport>macros (for macro_connector_implementation!)</RequiredImport>
+    </Imports>
+
+    <GenericTypes>
+      <Usage>Authorize flow requires generic &lt;T&gt; for payment method data</Usage>
+      <TraitBounds>PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize</TraitBounds>
+    </GenericTypes>
+
+    <NamingConventions>
+      <RequestType>{ConnectorName}{FlowName}Request</RequestType>
+      <ResponseType>{ConnectorName}{FlowName}Response</ResponseType>
+      <StatusEnum>{ConnectorName}Status</StatusEnum>
+      <StatusMapper>map_{connector_name}_status_to_attempt_status</StatusMapper>
+      <PaymentMethod>{ConnectorName}PaymentMethod&lt;T&gt;</PaymentMethod>
+    </NamingConventions>
+
+    <Macros>
+      <Macro name="create_all_prerequisites!">
+        <Purpose>Define API endpoints, types, and converters</Purpose>
+        <Location>Top of connector file</Location>
+        <Required>true</Required>
+      </Macro>
+      <Macro name="macro_connector_implementation!">
+        <Purpose>Implement ConnectorIntegrationV2 trait</Purpose>
+        <Location>After create_all_prerequisites! block</Location>
+        <Required>true</Required>
+      </Macro>
+    </Macros>
+  </TechnicalRequirements>
+
+  <!-- ========================================================================
+       IMPLEMENTATION PLAN
+       ======================================================================== -->
+  <ImplementationPlan>
+    <PreImplementation>
+      <Task id="pre_1">Verify technical specification exists and is complete</Task>
+      <Task id="pre_2">Set up development environment</Task>
+      <Task id="pre_3">Study UCS macro patterns and guides</Task>
+    </PreImplementation>
+
+    <FoundationTasks>
+      <Task id="found_1">Run add_connector.sh script with fiservemea parameters</Task>
+      <Task id="found_2">Verify generated file structure</Task>
+      <Task id="found_3">Validate UCS conventions in generated code</Task>
+      <Task id="found_4">Achieve successful cargo build</Task>
+    </FoundationTasks>
+
+    <FlowImplementationTasks>
+      <Flow name="Authorize">
+        <Task id="auth_1">Define FiservemeaAuthorizeRequest struct</Task>
+        <Task id="auth_2">Define FiservemeaAuthorizeResponse struct</Task>
+        <Task id="auth_3">Define FiservemeaStatus enum</Task>
+        <Task id="auth_4">Implement request transformer (TryFrom)</Task>
+        <Task id="auth_5">Implement response transformer (TryFrom)</Task>
+        <Task id="auth_6">Implement status mapping function</Task>
+        <Task id="auth_7">Add Authorize to create_all_prerequisites! macro</Task>
+        <Task id="auth_8">Add macro_connector_implementation! for Authorize</Task>
+        <Task id="auth_9">Implement get_headers function</Task>
+        <Task id="auth_10">Implement get_url function</Task>
+        <Task id="auth_11">Cargo build and fix errors</Task>
+      </Flow>
+    </FlowImplementationTasks>
+
+    <PostImplementation>
+      <Task id="post_1">Final cargo build validation</Task>
+      <Task id="post_2">Code quality review</Task>
+      <Task id="post_3">Generate completion report</Task>
+      <Task id="post_4">Mark requirement analysis as resolved</Task>
+    </PostImplementation>
+  </ImplementationPlan>
+
+  <!-- ========================================================================
+       QUALITY ASSURANCE
+       ======================================================================== -->
+  <QualityAssurance>
+    <CodeStandards>
+      <Standard id="qs_1">No TODO comments - production ready code only</Standard>
+      <Standard id="qs_2">No mock implementations</Standard>
+      <Standard id="qs_3">All fields must be used - remove unused fields</Standard>
+      <Standard id="qs_4">No hardcoded None values - remove field instead</Standard>
+      <Standard id="qs_5">Specific error messages with feature names</Standard>
+      <Standard id="qs_6">Status always derived from response, never hardcoded</Standard>
+    </CodeStandards>
+
+    <BuildRequirements>
+      <Requirement id="br_1">Project must compile without errors</Requirement>
+      <Requirement id="br_2">No compilation warnings</Requirement>
+      <Requirement id="br_3">Single binary - no multiple binaries causing cargo run confusion</Requirement>
+      <Requirement id="br_4">All dependencies resolved</Requirement>
+    </BuildRequirements>
+
+    <DatabaseConsistency>
+      <Requirement id="db_1">Schema consistent with connector requirements</Requirement>
+      <Requirement id="db_2">All required tables/columns present</Requirement>
+      <Requirement id="db_3">Migration scripts if needed</Requirement>
+    </DatabaseConsistency>
+
+    <TestingRequirements>
+      <Requirement id="test_1">Unit tests for transformers</Requirement>
+      <Requirement id="test_2">Integration tests for flows</Requirement>
+      <Requirement id="test_3">Edge case coverage</Requirement>
+      <Requirement id="test_4">Error scenario testing</Requirement>
+    </TestingRequirements>
+
+    <DocumentationRequirements>
+      <Requirement id="doc_1">Inline comments for complex logic</Requirement>
+      <Requirement id="doc_2">API endpoint documentation</Requirement>
+      <Requirement id="doc_3">Status mapping documentation</Requirement>
+      <Requirement id="doc_4">Error handling documentation</Requirement>
+    </DocumentationRequirements>
+  </QualityAssurance>
+
+  <!-- ========================================================================
+       COMPLETION CRITERIA
+       ======================================================================== -->
+  <CompletionCriteria>
+    <PhaseCompletion>
+      <Phase name="Phase 1 - Tech Spec Validation">
+        <Criteria>
+          <Criterion>Tech spec read successfully</Criterion>
+          <Criterion>Completeness validated</Criterion>
+          <Criterion>Requirements extracted</Criterion>
+          <Criterion>Timeline logged</Criterion>
+        </Criteria>
+      </Phase>
+      <Phase name="Phase 2 - Foundation Setup">
+        <Criteria>
+          <Criterion>Environment validated</Criterion>
+          <Criterion>add_connector.sh executed successfully</Criterion>
+          <Criterion>Cargo build successful</Criterion>
+          <Criterion>UCS conventions validated</Criterion>
+          <Criterion>Timeline logged</Criterion>
+        </Criteria>
+      </Phase>
+      <Phase name="Phase 2.5 - Macro Pattern Study">
+        <Criteria>
+          <Criterion>All macro guides read</Criterion>
+          <Criterion>Key concepts understood</Criterion>
+          <Criterion>Timeline logged</Criterion>
+        </Criteria>
+      </Phase>
+      <Phase name="Phase 3 - Flow Implementation">
+        <Criteria>
+          <Criterion>Authorize flow implemented</Criterion>
+          <Criterion>Request/Response types defined</Criterion>
+          <Criterion>Transformers implemented</Criterion>
+          <Criterion>Status mapping implemented</Criterion>
+          <Criterion>Macros configured correctly</Criterion>
+          <Criterion>Cargo build successful</Criterion>
+        </Criteria>
+      </Phase>
+      <Phase name="Phase 4 - Final Validation">
+        <Criteria>
+          <Criterion>Final cargo build successful</Criterion>
+          <Criterion>All flows compile</Criterion>
+          <Criterion>Quality review passed</Criterion>
+          <Criterion>Completion report generated</Criterion>
+          <Criterion>Timeline logged</Criterion>
+          <Criterion>Timeline finalized</Criterion>
+        </Criteria>
+      </Phase>
+      <Phase name="Phase 5 - Resolution Marking">
+        <Criteria>
+          <Criterion>XML file renamed to .resolved</Criterion>
+        </Criteria>
+      </Phase>
+    </PhaseCompletion>
+
+    <ProjectCompletion>
+      <Criteria>
+        <Criterion>All phases completed in sequence</Criterion>
+        <Criterion>Zero compilation errors</Criterion>
+        <Criterion>Zero compilation warnings</Criterion>
+        <Criterion>Quality review approved</Criterion>
+        <Criterion>Production-ready code (no TODOs, no mocks)</Criterion>
+        <Criterion>Database schema consistent</Criterion>
+        <Criterion>Single binary project</Criterion>
+        <Criterion>Requirement analysis marked as resolved</Criterion>
+      </Criteria>
+    </ProjectCompletion>
+  </CompletionCriteria>
+
+  <!-- ========================================================================
+       ERROR HANDLING STRATEGIES
+       ======================================================================== -->
+  <ErrorHandling>
+    <PhaseErrors>
+      <Phase name="Phase 1">
+        <Error type="TechSpecNotFound">
+          <Action>Verify file path exists</Action>
+          <Action>Check file permissions</Action>
+          <Action>Request tech spec from user if missing</Action>
+        </Error>
+        <Error type="IncompleteTechSpec">
+          <Action>Identify missing sections</Action>
+          <Action>Request clarification from user</Action>
+          <Action>Do not proceed until complete</Action>
+        </Error>
+      </Phase>
+      <Phase name="Phase 2">
+        <Error type="ScriptExecutionFailed">
+          <Action>Analyze error output</Action>
+          <Action>Fix prerequisites</Action>
+          <Action>Retry script execution</Action>
+        </Error>
+        <Error type="BuildFailed">
+          <Action>Analyze compilation errors</Action>
+          <Action>Fix using UCS patterns</Action>
+          <Action>Retry build until successful</Action>
+        </Error>
+        <Error type="ConventionViolation">
+          <Action>Identify violated convention</Action>
+          <Action>Fix code to match UCS requirements</Action>
+          <Action>Re-validate</Action>
+        </Error>
+      </Phase>
+      <Phase name="Phase 3">
+        <Error type="CompilationError">
+          <Action>Analyze error message</Action>
+          <Action>Fix type/syntax issues</Action>
+          <Action>Rebuild immediately</Action>
+        </Error>
+        <Error type="MacroError">
+          <Action>Verify macro syntax</Action>
+          <Action>Check parameter types</Action>
+          <Action>Consult macro reference guides</Action>
+        </Error>
+        <Error type="TransformerError">
+          <Action>Verify TryFrom implementation</Action>
+          <Action>Check type conversions</Action>
+          <Action>Ensure all fields handled</Action>
+        </Error>
+      </Phase>
+      <Phase name="Phase 4">
+        <Error type="BuildFailure">
+          <Action>Full code audit</Action>
+          <Action>Fix all issues</Action>
+          <Action>Rebuild until successful</Action>
+        </Error>
+        <Error type="QualityReviewFailed">
+          <Action>Review quality report</Action>
+          <Action>Address all findings</Action>
+          <Action>Resubmit for review</Action>
+        </Error>
+      </Phase>
+    </PhaseErrors>
+
+    <GeneralErrorHandling>
+      <Principle>Never proceed to next phase with unresolved errors</Principle>
+      <Principle>Always analyze root cause before applying fixes</Principle>
+      <Principle>Use UCS-specific patterns for error resolution</Principle>
+      <Principle>Document all error resolutions for future reference</Principle>
+    </GeneralErrorHandling>
+  </ErrorHandling>
+
+  <!-- ========================================================================
+       SUCCESS METRICS
+       ======================================================================== -->
+  <SuccessMetrics>
+    <Metric id="sm_1" name="Compilation Success Rate" target="100%">
+      <Description>All builds must succeed without errors</Description>
+    </Metric>
+    <Metric id="sm_2" name="Code Quality Score" target="Pass">
+      <Description>Must pass quality guardian review</Description>
+    </Metric>
+    <Metric id="sm_3" name="UCS Convention Compliance" target="100%">
+      <Description>All UCS conventions must be followed</Description>
+    </Metric>
+    <Metric id="sm_4" name="Phase Completion Rate" target="100%">
+      <Description>All mandatory phases must complete</Description>
+    </Metric>
+    <Metric id="sm_5" name="Production Readiness" target="Yes">
+      <Description>No TODOs, no mocks, clean code</Description>
+    </Metric>
+  </SuccessMetrics>
+
+  <!-- ========================================================================
+       TRIGGER COMMAND
+       ======================================================================== -->
+  <TriggerCommand>
+    <Command>integrate Fiservemea using grace/rulesbook/codegen/.gracerules</Command>
+    <Description>This command initiates the complete deterministic workflow</Description>
+  </TriggerCommand>
+
+  <!-- ========================================================================
+       NOTES AND ASSUMPTIONS
+       ======================================================================== -->
+  <NotesAndAssumptions>
+    <Note id="note_1">This workflow is for NEW CONNECTOR INTEGRATIONS ONLY</Note>
+    <Note id="note_2">Each phase MUST complete successfully before proceeding</Note>
+    <Note id="note_3">ALL steps are mandatory and must be executed in exact sequence</Note>
+    <Note id="note_4">Macro-based approach is REQUIRED - no manual trait implementations</Note>
+    <Note id="note_5">Single binary project - avoid creating multiple binaries</Note>
+    <Note id="note_6">Production-ready code only - no TODOs or mock implementations</Note>
+    <Note id="note_7">Database schema must be consistent with requirements</Note>
+    <Note id="note_8">Final step renames XML to .resolved extension</Note>
+    <Assumption id="assump_1">Technical specification exists at specified path</Assumption>
+    <Assumption id="assump_2">User has necessary permissions to execute scripts</Assumption>
+    <Assumption id="assump_3">Development environment is properly configured</Assumption>
+    <Assumption id="assump_4">Rust toolchain and Cargo are installed</Assumption>
+  </NotesAndAssumptions>
 </RequirementAnalysis>
