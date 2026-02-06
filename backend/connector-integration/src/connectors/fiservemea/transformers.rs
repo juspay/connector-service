@@ -295,7 +295,7 @@ pub struct FiservemeaCaptureResponse {
     pub approved_amount: Option<FiservemeaAmount>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaRefundRequest {
     pub request_type: String,
