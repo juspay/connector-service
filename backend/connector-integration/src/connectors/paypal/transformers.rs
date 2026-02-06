@@ -3,7 +3,11 @@ use crate::{types::ResponseRouterData, utils::to_connector_meta};
 use base64::Engine;
 use cards;
 use common_enums;
-use common_utils::{types::StringMajorUnit, CustomResult, Method};
+use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    types::StringMajorUnit,
+    CustomResult, Method,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PostAuthenticate, RepeatPayment},
     connector_types::{
@@ -1836,10 +1840,10 @@ where
                     ..item.router_data.resource_common_data
                 },
                 response: Err(domain_types::router_data::ErrorResponse {
-                    code: error_code.unwrap_or_else(|| "HE_00".to_string()),
+                    code: error_code.unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                     message: error_message
                         .clone()
-                        .unwrap_or_else(|| "Something went wrong".to_string()),
+                        .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                     reason: error_message,
                     status_code: item.http_code,
                     attempt_status: None,
