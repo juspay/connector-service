@@ -778,7 +778,11 @@ message Ideal {
 
 // Sofort - German online banking payment method
 message Sofort {
-  // Fields will be added as needed for Sofort integration
+    // The country for bank payment
+    optional CountryAlpha2 country = 1;
+    
+    // Preferred language for bank payment
+    optional string preferred_language = 2;
 }
 
 // Trustly - European online banking payment method
