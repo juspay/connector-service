@@ -267,7 +267,7 @@ pub struct FiservemeaVoidResponse {
     pub transaction_state: Option<FiservemeaTransactionState>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaCaptureRequest {
     pub request_type: String,
