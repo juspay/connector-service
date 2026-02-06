@@ -1,0 +1,67 @@
+{
+  "test_sets": [
+    {
+      "name": "Manual Capture Flow",
+      "description": "Authorize → Capture → Payment Sync",
+      "steps": [
+        {
+          "operation": "auth",
+          "depends_on": null,
+          "capture_method": "MANUAL"
+        },
+        {
+          "operation": "capture",
+          "depends_on": "auth",
+          "capture_method": "MANUAL"
+        },
+        {
+          "operation": "sync",
+          "depends_on": "capture",
+          "capture_method": "MANUAL"
+        }
+      ]
+    },
+    {
+      "name": "Void Flow",
+      "description": "Authorize → Void → Payment Sync",
+      "steps": [
+        {
+          "operation": "auth",
+          "depends_on": null,
+          "capture_method": "MANUAL"
+        },
+        {
+          "operation": "void",
+          "depends_on": "auth",
+          "capture_method": "MANUAL"
+        },
+        {
+          "operation": "sync",
+          "depends_on": "void",
+          "capture_method": "MANUAL"
+        }
+      ]
+    },
+    {
+      "name": "Automatic Refund Flow",
+      "description": "Authorize → Refund → Payment Sync",
+      "steps": [
+        {
+          "operation": "auth",
+          "depends_on": null,
+          "capture_method": "AUTOMATIC"
+        },
+        {
+          "operation": "refund",
+          "depends_on": "auth",
+          "capture_method": "AUTOMATIC"
+        },
+        {
+          "operation": "rsync",
+          "depends_on": "refund",
+          "capture_method": "AUTOMATIC"
+        }
+      ]
+    }
+  ]
+}

@@ -156,7 +156,6 @@ pub struct Connectors {
     pub worldpayvantiv: ConnectorParams,
     pub multisafepay: ConnectorParams,
     pub payload: ConnectorParams,
-    pub fiservemea: ConnectorParams,
     pub paysafe: ConnectorParams,
     pub datatrans: ConnectorParams,
     pub bluesnap: ConnectorParams,

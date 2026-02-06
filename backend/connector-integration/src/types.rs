@@ -55,7 +55,6 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Nexixpay => Box::new(connectors::Nexixpay::new()),
             ConnectorEnum::Authipay => Box::new(connectors::Authipay::new()),
             ConnectorEnum::Stax => Box::new(connectors::Stax::new()),
-            ConnectorEnum::Fiservemea => Box::new(connectors::Fiservemea::new()),
             ConnectorEnum::Datatrans => Box::new(connectors::Datatrans::new()),
             ConnectorEnum::Silverflow => Box::new(connectors::Silverflow::new()),
             ConnectorEnum::Celero => Box::new(connectors::Celero::new()),

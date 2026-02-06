@@ -143,7 +143,6 @@ enum Connector {
   EBANX = 26;
   ELAVON = 27;
   FISERV = 28;
-  FISERVEMEA = 29;
   FIUU = 30;
   FORTE = 31;
   GETNET = 32;
