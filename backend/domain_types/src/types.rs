@@ -126,6 +126,7 @@ pub struct Connectors {
     pub razorpay: ConnectorParams,
     pub razorpayv2: ConnectorParams,
     pub fiserv: ConnectorParams,
+    pub fiservemea: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
     pub checkout: ConnectorParams,
