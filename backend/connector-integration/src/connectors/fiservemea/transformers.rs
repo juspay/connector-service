@@ -613,7 +613,7 @@ pub fn map_fiservemea_status_to_refund_status(
         (Some(FiservemeaTransactionResult::Approved), _) => RefundStatus::Success,
         (Some(FiservemeaTransactionResult::Declined), _)
         | (_, Some(FiservemeaTransactionState::Declined)) => RefundStatus::Failure,
-        (Some(FisevemeaTransactionResult::Failed), _) => RefundStatus::Failure,
+        (Some(FiservemeaTransactionResult::Failed), _) => RefundStatus::Failure,
         (Some(FiservemeaTransactionResult::Waiting), _)
         | (_, Some(FiservemeaTransactionState::Waiting)) => RefundStatus::Pending,
         (Some(FiservemeaTransactionResult::Partial), _) => RefundStatus::Pending,
