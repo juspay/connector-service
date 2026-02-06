@@ -528,11 +528,13 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
     }
 }
 
-impl TryFrom<&FiservemeaRouterData<RouterDataV2<Refund, _, _, _>>> for FiservemeaRefundRequest {
+impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
+    for FiservemeaRefundRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &FiservemeaRouterData<RouterDataV2<Refund, _, _, _>>,
+        value: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         let router_data = &value.router_data;
         Ok(FiservemeaRefundRequest {
