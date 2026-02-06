@@ -186,7 +186,7 @@ pub struct FiservemeaAddress {
     pub country: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaAuthorizeResponse {
     pub client_request_id: String,
