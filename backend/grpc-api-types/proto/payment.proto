@@ -1241,10 +1241,7 @@ message CardConnectorResponse {
 
 // Additional payment method connector response
 message AdditionalPaymentMethodConnectorResponse {
-  oneof payment_method_data {
-    CardConnectorResponse card = 1; // Card-specific response data
-    UpiConnectorResponse upi = 2; // UPI-specific response data
-  }
+  CardConnectorResponse card = 1; // Card-specific response data
 }
 
 // Connector response data containing various information from the connector

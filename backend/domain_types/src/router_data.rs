@@ -415,10 +415,6 @@ pub enum AdditionalPaymentMethodConnectorResponse {
         /// Domestic(Co-Branded) Card network returned by the processor
         domestic_network: Option<String>,
     },
-    Upi {
-        /// UPI source detected from the connector response
-        upi_mode: Option<crate::payment_method_data::UpiSource>,
-    },
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

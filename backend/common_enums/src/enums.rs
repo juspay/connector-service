@@ -1028,7 +1028,6 @@ pub enum PaymentMethodType {
     Twint,
     UpiCollect,
     UpiIntent,
-    UpiQr,
     Vipps,
     VietQr,
     Venmo,

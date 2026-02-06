@@ -11,7 +11,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, UpiSource},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -154,30 +154,6 @@ pub struct PhonepeInstrumentResponse {
     intent_url: Option<String>,
     #[serde(rename = "qrData", skip_serializing_if = "Option::is_none")]
     qr_data: Option<String>,
-    // Fields for UPI CC/CL detection
-    #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
-    account_type: Option<String>,
-    #[serde(rename = "cardNetwork", skip_serializing_if = "Option::is_none")]
-    card_network: Option<String>,
-    #[serde(rename = "upiCreditLine", skip_serializing_if = "Option::is_none")]
-    upi_credit_line: Option<bool>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PhonepePaymentInstrumentSync {
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub instrument_type: Option<String>,
-    #[serde(rename = "cardNetwork", skip_serializing_if = "Option::is_none")]
-    pub card_network: Option<String>,
-    #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
-    pub account_type: Option<String>,
-    #[serde(rename = "upiCreditLine", skip_serializing_if = "Option::is_none")]
-    pub upi_credit_line: Option<bool>,
-    #[serde(
-        rename = "maskedAccountNumber",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub masked_account_number: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -198,7 +174,13 @@ pub struct PhonepeSyncResponseData {
     #[serde(rename = "responseCode", skip_serializing_if = "Option::is_none")]
     response_code: Option<String>,
     #[serde(rename = "paymentInstrument", skip_serializing_if = "Option::is_none")]
-    pub payment_instrument: Option<PhonepePaymentInstrumentSync>,
+    payment_instrument: Option<serde_json::Value>,
+    #[serde(rename = "cardNetwork", skip_serializing_if = "Option::is_none")]
+    card_network: Option<String>,
+    #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
+    account_type: Option<String>,
+    #[serde(rename = "upiCreditLine", skip_serializing_if = "Option::is_none")]
+    upi_credit_line: Option<bool>,
 }
 
 // ===== REQUEST BUILDING =====
@@ -590,9 +572,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                         }),
-                        resource_common_data: PaymentFlowData {
-                            ..item.router_data.resource_common_data
-                        },
                         ..item.router_data
                     })
                 }
@@ -740,7 +719,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &wrapper.router_data;
         let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_transaction_id = router_data.resource_common_data.get_reference_id()?;
+        let merchant_transaction_id = &router_data
+            .resource_common_data
+            .connector_request_reference_id;
 
         // Generate checksum for status API - use IRCTC endpoint if merchant is IRCTC
         let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
@@ -783,7 +764,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = item.router_data;
         let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_transaction_id = router_data.resource_common_data.get_reference_id()?;
+        let merchant_transaction_id = &router_data
+            .resource_common_data
+            .connector_request_reference_id;
 
         // Generate checksum for status API - use IRCTC endpoint if merchant is IRCTC
         let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
@@ -822,24 +805,6 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                 if let (Some(merchant_transaction_id), Some(transaction_id)) =
                     (&data.merchant_transaction_id, &data.transaction_id)
                 {
-                    // Only extract UPI mode and BIN for UPI payment methods
-                    let (upi_mode, bin) = match &item.router_data.request.payment_method_type {
-                        Some(
-                            common_enums::PaymentMethodType::UpiCollect
-                            | common_enums::PaymentMethodType::UpiIntent
-                            | common_enums::PaymentMethodType::UpiQr,
-                        ) => {
-                            let upi_mode = extract_upi_mode_from_sync_data(data);
-                            let bin = data.payment_instrument.as_ref().and_then(|payment_inst| {
-                                extract_bin_from_masked_account_number(
-                                    payment_inst.masked_account_number.as_deref(),
-                                )
-                            });
-                            (upi_mode, bin)
-                        }
-                        _ => (None, None),
-                    };
-
                     // Map PhonePe response codes to payment statuses based on documentation
                     let status = match response.code.as_str() {
                         "PAYMENT_SUCCESS" => common_enums::AttemptStatus::Charged,
@@ -859,7 +824,7 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                             resource_id: ResponseId::ConnectorTransactionId(transaction_id.clone()),
                             redirection_data: None,
                             mandate_reference: None,
-                            connector_metadata: get_sync_metadata(bin),
+                            connector_metadata: get_wait_screen_metadata(),
                             network_txn_id: None,
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
@@ -867,7 +832,6 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                         }),
                         resource_common_data: PaymentFlowData {
                             status,
-                            connector_response: get_connector_response_with_upi_mode(upi_mode),
                             ..item.router_data.resource_common_data
                         },
                         ..item.router_data
@@ -970,86 +934,4 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
         e
     })
     .ok()
-}
-
-/// Creates metadata for sync response with BIN from masked account number
-fn get_sync_metadata(bin: Option<String>) -> Option<serde_json::Value> {
-    bin.and_then(|b| {
-        serde_json::to_value(serde_json::json!({
-            "card_bin_number": b
-        }))
-        .map_err(|e| {
-            tracing::error!("Failed to serialize sync metadata: {}", e);
-            e
-        })
-        .ok()
-    })
-}
-
-fn determine_upi_mode(
-    payment_instrument: &PhonepePaymentInstrumentSync,
-    response_code: Option<&String>,
-) -> Option<UpiSource> {
-    match (
-        payment_instrument.upi_credit_line,
-        payment_instrument.account_type.as_deref(),
-        payment_instrument.card_network.as_deref(),
-        response_code.map(|s| s.as_str()),
-    ) {
-        (Some(true), _, _, _) => Some(UpiSource::UpiCl),
-        (_, Some(constants::ACCOUNT_TYPE_CREDIT), Some(constants::CARD_NETWORK_RUPAY), _) => {
-            Some(UpiSource::UpiCc)
-        }
-        (_, Some(constants::ACCOUNT_TYPE_SAVINGS), _, _) => Some(UpiSource::UpiAccount),
-        (_, _, _, Some(constants::RESPONSE_CODE_CREDIT_ACCOUNT_NOT_ALLOWED)) => {
-            Some(UpiSource::UpiCc)
-        }
-        (_, _, _, Some(constants::RESPONSE_CODE_PAY0071)) => Some(UpiSource::UpiCl),
-        _ => None,
-    }
-}
-
-/// Extracts UPI mode from sync response payment instrument
-fn extract_upi_mode_from_sync_data(sync_data: &PhonepeSyncResponseData) -> Option<UpiSource> {
-    // Try to determine from payment_instrument
-    sync_data
-        .payment_instrument
-        .as_ref()
-        .and_then(|payment_instrument| {
-            determine_upi_mode(payment_instrument, sync_data.response_code.as_ref())
-        })
-        // Fallback: determine from response_code alone
-        .or_else(|| {
-            sync_data
-                .response_code
-                .as_deref()
-                .and_then(|code| match code {
-                    constants::RESPONSE_CODE_CREDIT_ACCOUNT_NOT_ALLOWED => Some(UpiSource::UpiCc),
-                    constants::RESPONSE_CODE_PAY0071 => Some(UpiSource::UpiCl),
-                    _ => None,
-                })
-        })
-}
-
-/// Creates ConnectorResponseData with UPI mode
-fn get_connector_response_with_upi_mode(
-    upi_mode: Option<UpiSource>,
-) -> Option<domain_types::router_data::ConnectorResponseData> {
-    upi_mode.map(|mode| {
-        domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
-            domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
-                upi_mode: Some(mode),
-            },
-        )
-    })
-}
-
-/// Extracts the BIN (first 6 numeric characters) from a masked account number.
-fn extract_bin_from_masked_account_number(masked_account_number: Option<&str>) -> Option<String> {
-    masked_account_number.and_then(|account_number| {
-        account_number
-            .get(..6)
-            .filter(|bin| bin.chars().all(|c| c.is_ascii_digit()))
-            .map(str::to_string)
-    })
 }
