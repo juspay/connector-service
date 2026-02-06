@@ -1,5 +1,3 @@
-// use api_models::payments::AdditionalPaymentData;
-
 use crate::{connectors::zift::ZiftRouterData, types::ResponseRouterData};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -30,25 +28,6 @@ pub struct ZiftAuthType {
     user_name: Secret<String>,
     password: Secret<String>,
     account_id: Secret<String>,
-}
-impl TryFrom<&ConnectorAuthType> for ZiftAuthType {
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::SignatureKey {
-            api_key,
-            key1,
-            api_secret,
-        } = auth_type
-        {
-            Ok(Self {
-                user_name: api_key.to_owned(),
-                password: api_secret.to_owned(),
-                account_id: key1.to_owned(),
-            })
-        } else {
-            Err(ConnectorError::FailedToObtainAuthType)?
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,28 +169,6 @@ pub enum AuthenticationStatus {
     Unavailable,
 }
 
-impl TryFrom<&domain_types::router_request_types::AuthenticationData> for AuthenticationStatus {
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        auth_data: &domain_types::router_request_types::AuthenticationData,
-    ) -> Result<Self, Self::Error> {
-        // Map authentication status based on trans_status field
-        let authentication_status = match auth_data.trans_status {
-            Some(common_enums::TransactionStatus::Success) => Self::Success,
-            Some(common_enums::TransactionStatus::NotVerified) => Self::Attempted,
-            Some(common_enums::TransactionStatus::VerificationNotPerformed)
-            | Some(common_enums::TransactionStatus::Rejected)
-            | Some(common_enums::TransactionStatus::InformationOnly)
-            | Some(common_enums::TransactionStatus::Failure)
-            | Some(common_enums::TransactionStatus::ChallengeRequired)
-            | Some(common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication)
-            | None => Self::Unavailable,
-        };
-        Ok(authentication_status)
-    }
-}
-
 #[derive(Debug, Serialize)]
 pub enum TransactionModeType {
     #[serde(rename = "P")]
@@ -232,6 +189,200 @@ pub enum TransactionCategoryType {
 pub enum TransactionCategoryCode {
     #[serde(rename = "EC")]
     Ecommerce,
+}
+
+pub trait ResponseCodeExt {
+    fn is_pending(&self) -> bool;
+    fn is_approved(&self) -> bool;
+    fn is_failed(&self) -> bool;
+}
+
+impl ResponseCodeExt for String {
+    fn is_pending(&self) -> bool {
+        self == "X02"
+    }
+    fn is_approved(&self) -> bool {
+        self.starts_with('A')
+    }
+    fn is_failed(&self) -> bool {
+        !(self.is_approved() || self.is_pending())
+    }
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftErrorResponse {
+    pub response_code: String,
+    pub response_message: String,
+    pub failure_code: String,
+    pub failure_message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftAuthPaymentsResponse {
+    pub response_code: String,
+    pub response_message: String,
+    pub transaction_id: Option<String>,
+    pub transaction_code: Option<String>,
+    pub token: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftCaptureResponse {
+    pub response_code: String,
+    pub response_message: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftRefundRequest {
+    request_type: RequestType,
+    #[serde(flatten)]
+    auth: ZiftAuthType,
+    transaction_id: String,
+    amount: StringMinorUnit,
+    transaction_code: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftRefundResponse {
+    transaction_id: Option<String>,
+    response_code: String,
+    response_message: Option<String>,
+    transaction_code: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TransactionStatus {
+    #[serde(rename = "N")]
+    Pending,
+    #[serde(rename = "P")]
+    Processed,
+    #[serde(rename = "C")]
+    Cancelled,
+    #[serde(rename = "R")]
+    InRebill,
+}
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftSyncRequest {
+    request_type: RequestType,
+    #[serde(flatten)]
+    auth: ZiftAuthType,
+    transaction_id: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftSyncResponse {
+    pub transaction_status: TransactionStatus,
+    pub transaction_type: PaymentRequestType,
+    pub response_message: Option<String>,
+    pub response_code: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftCaptureRequest {
+    request_type: RequestType,
+    #[serde(flatten)]
+    auth: ZiftAuthType,
+    transaction_id: i64,
+    amount: StringMinorUnit,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftVoidRequest {
+    request_type: RequestType,
+    #[serde(flatten)]
+    auth: ZiftAuthType,
+    transaction_id: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftVoidResponse {
+    pub response_code: String,
+    pub response_message: String,
+}
+
+// Enum for payment method specific fields
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum SetupMandatePaymentMethod<T: PaymentMethodDataTypes + Serialize + Debug> {
+    Card(CardVerificationDetails<T>),
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZiftSetupMandateRequest<T: PaymentMethodDataTypes + Serialize + Debug> {
+    request_type: RequestType,
+    #[serde(flatten)]
+    auth: ZiftAuthType,
+    transaction_industry_type: TransactionIndustryType,
+    transaction_category_code: TransactionCategoryCode,
+    holder_name: Secret<String>,
+    holder_type: HolderType,
+    transaction_code: String,
+    #[serde(flatten)]
+    payment_method_details: SetupMandatePaymentMethod<T>,
+    //Billing address fields are intentionally not passed to Zift.As confirmed by the Zift connector team, billing-related parameters must not be sent in payment or mandate requests. Passing billing address details was causing transaction failures in production. To ensure successful processing and alignment with Zift’s API expectations, all billing address fields have been removed.
+}
+
+// Card specific fields for account verification
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardVerificationDetails<T: PaymentMethodDataTypes + Serialize + Debug> {
+    account_type: AccountType,
+    account_number: RawCardNumber<T>,
+    account_accessory: Secret<String>,
+    csc: Secret<String>,
+}
+
+impl TryFrom<&ConnectorAuthType> for ZiftAuthType {
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        if let ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } = auth_type
+        {
+            Ok(Self {
+                user_name: api_key.to_owned(),
+                password: api_secret.to_owned(),
+                account_id: key1.to_owned(),
+            })
+        } else {
+            Err(ConnectorError::FailedToObtainAuthType)?
+        }
+    }
+}
+
+impl TryFrom<&domain_types::router_request_types::AuthenticationData> for AuthenticationStatus {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        auth_data: &domain_types::router_request_types::AuthenticationData,
+    ) -> Result<Self, Self::Error> {
+        // Map authentication status based on trans_status field
+        let authentication_status = match auth_data.trans_status {
+            Some(common_enums::TransactionStatus::Success) => Self::Success,
+            Some(common_enums::TransactionStatus::NotVerified) => Self::Attempted,
+            Some(common_enums::TransactionStatus::VerificationNotPerformed)
+            | Some(common_enums::TransactionStatus::Rejected)
+            | Some(common_enums::TransactionStatus::InformationOnly)
+            | Some(common_enums::TransactionStatus::Failure)
+            | Some(common_enums::TransactionStatus::ChallengeRequired)
+            | Some(common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication)
+            | None => Self::Unavailable,
+        };
+        Ok(authentication_status)
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -360,92 +511,47 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     Ok(Self::Card(card_request))
                 }
             }
-            // PaymentMethodData::MandatePayment => {
-            //     let additional_card_details = match item
-            //         .router_data
-            //         .request
-            //         .additional_payment_method_data
-            //         .clone()
-            //         .ok_or(errors::ConnectorError::MissingRequiredField {
-            //             field_name: "additional_payment_method_data",
-            //         })? {
-            //         AdditionalPaymentData::Card(card) => *card,
-            //         _ => Err(errors::ConnectorError::NotSupported {
-            //             message: "Payment Method Not Supported".to_string(),
-            //             connector: "Zift",
-            //         })?,
-            //     };
-            //     let mandate_request = ZiftMandatePaymentRequest {
-            //         request_type,
-            //         auth,
-            //         account_type: AccountType::PaymentCard,
-            //         token: Secret::new(item.router_data.request.connector_mandate_id().ok_or(
-            //             errors::ConnectorError::MissingRequiredField {
-            //                 field_name: "connector_mandate_id",
-            //             },
-            //         )?),
-            //         account_accessory: additional_card_details.get_expiry_date_as_mmyy()?,
-            //         transaction_industry_type: TransactionIndustryType::Ecommerce,
-            //         transaction_category_code: TransactionCategoryCode::Ecommerce,
-            //         holder_name: additional_card_details.get_card_holder_name()?,
-            //         holder_type: HolderType::Personal,
-            //         amount: item.amount.to_owned(),
-            //         transaction_mode_type: TransactionModeType::CardNotPresent,
-            //         transaction_category_type: TransactionCategoryType::Recurring,
-            //         sequence_number: 2, // Its required for MIT
-            //         transaction_code: item.router_data.connector_request_reference_id.clone(),
-            //     };
-            //     Ok(Self::Mandate(mandate_request))
-            // }
+            PaymentMethodData::MandatePayment => {
+                let card_details = match &item.router_data.request.payment_method_data {
+                    PaymentMethodData::Card(card) => Ok(card),
+                    _ => Err(error_stack::report!(ConnectorError::NotSupported {
+                        message: "Payment Method Not Supported".to_string(),
+                        connector: "Zift",
+                    })),
+                }?;
+
+                let mandate_request = ZiftMandatePaymentRequest {
+                    request_type,
+                    auth,
+                    account_type: AccountType::PaymentCard,
+                    token: Secret::new(item.router_data.request.connector_mandate_id().ok_or(
+                        ConnectorError::MissingRequiredField {
+                            field_name: "connector_mandate_id",
+                        },
+                    )?),
+                    account_accessory: card_details
+                        .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
+                    transaction_industry_type: TransactionIndustryType::Ecommerce,
+                    transaction_category_code: TransactionCategoryCode::Ecommerce,
+                    holder_name: card_details.get_cardholder_name()?,
+                    holder_type: HolderType::Personal,
+                    amount,
+                    transaction_mode_type: TransactionModeType::CardNotPresent,
+                    transaction_category_type: TransactionCategoryType::Recurring,
+                    sequence_number: 2, // Its required for MIT
+                    transaction_code: item
+                        .router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                };
+                Ok(Self::Mandate(mandate_request))
+            }
             _ => Err(error_stack::report!(ConnectorError::NotImplemented(
                 "Payment method".to_string()
             ),)),
         }
     }
-}
-
-pub trait ResponseCodeExt {
-    fn is_pending(&self) -> bool;
-    fn is_approved(&self) -> bool;
-    fn is_failed(&self) -> bool;
-}
-
-impl ResponseCodeExt for String {
-    fn is_pending(&self) -> bool {
-        self == "X02"
-    }
-    fn is_approved(&self) -> bool {
-        self.starts_with('A')
-    }
-    fn is_failed(&self) -> bool {
-        !(self.is_approved() || self.is_pending())
-    }
-}
-
-#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftErrorResponse {
-    pub response_code: String,
-    pub response_message: String,
-    pub failure_code: String,
-    pub failure_message: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftAuthPaymentsResponse {
-    pub response_code: String,
-    pub response_message: String,
-    pub transaction_id: Option<String>,
-    pub transaction_code: Option<String>,
-    pub token: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftCaptureResponse {
-    pub response_code: String,
-    pub response_message: String,
 }
 
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsResponse, Self>>
@@ -519,114 +625,6 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
             })
         }
     }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftRefundRequest {
-    request_type: RequestType,
-    #[serde(flatten)]
-    auth: ZiftAuthType,
-    transaction_id: String,
-    amount: StringMinorUnit,
-    transaction_code: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftRefundResponse {
-    transaction_id: Option<String>,
-    response_code: String,
-    response_message: Option<String>,
-    transaction_code: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum TransactionStatus {
-    #[serde(rename = "N")]
-    Pending,
-    #[serde(rename = "P")]
-    Processed,
-    #[serde(rename = "C")]
-    Cancelled,
-    #[serde(rename = "R")]
-    InRebill,
-}
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftSyncRequest {
-    request_type: RequestType,
-    #[serde(flatten)]
-    auth: ZiftAuthType,
-    transaction_id: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftSyncResponse {
-    pub transaction_status: TransactionStatus,
-    pub transaction_type: PaymentRequestType,
-    pub response_message: Option<String>,
-    pub response_code: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftCaptureRequest {
-    request_type: RequestType,
-    #[serde(flatten)]
-    auth: ZiftAuthType,
-    transaction_id: i64,
-    amount: StringMinorUnit,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftVoidRequest {
-    request_type: RequestType,
-    #[serde(flatten)]
-    auth: ZiftAuthType,
-    transaction_id: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftVoidResponse {
-    pub response_code: String,
-    pub response_message: String,
-}
-
-// Enum for payment method specific fields
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
-pub enum SetupMandatePaymentMethod<T: PaymentMethodDataTypes + Serialize + Debug> {
-    Card(CardVerificationDetails<T>),
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZiftSetupMandateRequest<T: PaymentMethodDataTypes + Serialize + Debug> {
-    request_type: RequestType,
-    #[serde(flatten)]
-    auth: ZiftAuthType,
-    transaction_industry_type: TransactionIndustryType,
-    transaction_category_code: TransactionCategoryCode,
-    holder_name: Secret<String>,
-    holder_type: HolderType,
-    transaction_code: String,
-    #[serde(flatten)]
-    payment_method_details: SetupMandatePaymentMethod<T>,
-    //Billing address fields are intentionally not passed to Zift.As confirmed by the Zift connector team, billing-related parameters must not be sent in payment or mandate requests. Passing billing address details was causing transaction failures in production. To ensure successful processing and alignment with Zift’s API expectations, all billing address fields have been removed.
-}
-
-// Card specific fields for account verification
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CardVerificationDetails<T: PaymentMethodDataTypes + Serialize + Debug> {
-    account_type: AccountType,
-    account_number: RawCardNumber<T>,
-    account_accessory: Secret<String>,
-    csc: Secret<String>,
 }
 
 impl TryFrom<ResponseRouterData<ZiftSyncResponse, Self>>
