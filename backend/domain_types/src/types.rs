@@ -193,6 +193,7 @@ pub struct Connectors {
     pub loonio: ConnectorParams,
     pub wellsfargo: ConnectorParams,
     pub hyperpg: ConnectorParams,
+    pub zift: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
