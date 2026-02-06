@@ -4,6 +4,12 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.06.1-hotfix1
+
+**Full Changelog:** [`2026.02.06.1...2026.02.06.1-hotfix1`](https://github.com/juspay/connector-service/compare/2026.02.06.1...2026.02.06.1-hotfix1)
+
+- - -
+
 ## 2026.02.06.1
 
 ### Features
