@@ -411,8 +411,7 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>,
     fn try_from(
         value: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let router_data = &value.router_data;
-        let payment_method = router_data.request.payment_method_data.clone();
+        let payment_method = value.request.payment_method_data.clone();
 
         let payment_method_obj = match payment_method {
             PaymentMethodData::Card(card) => Some(FiservemeaPaymentMethod {
@@ -460,7 +459,7 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>,
             }))?,
         };
 
-        let order = router_data
+        let order = value
             .request
             .order_details
             .as_ref()
@@ -480,8 +479,8 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>,
         Ok(FiservemeaPaymentsRequest {
             request_type: "PaymentCardSaleTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: router_data.request.amount.to_string(),
-                currency: router_data.request.currency.to_string(),
+                total: value.request.amount.to_string(),
+                currency: value.request.currency.to_string(),
             },
             payment_method: payment_method_obj,
             order,
@@ -512,12 +511,11 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
     fn try_from(
         value: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let router_data = &value.router_data;
         Ok(FiservemeaCaptureRequest {
             request_type: "PostAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: router_data.request.amount.to_string(),
-                currency: router_data.request.currency.to_string(),
+                total: value.request.amount.to_string(),
+                currency: value.request.currency.to_string(),
             },
         })
     }
@@ -531,12 +529,11 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
     fn try_from(
         value: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let router_data = &value.router_data;
         Ok(FiservemeaRefundRequest {
             request_type: "ReturnTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: router_data.request.amount.to_string(),
-                currency: router_data.request.currency.to_string(),
+                total: value.request.amount.to_string(),
+                currency: value.request.currency.to_string(),
             },
             comments: None,
         })
