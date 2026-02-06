@@ -113,7 +113,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let metadata: MifinityConnectorMetadataObject = utils::to_connector_meta_from_secret(
             item.router_data
                 .resource_common_data
-                .connector_meta_data
+                .merchant_account_metadata
                 .clone(),
         )
         .change_context(ConnectorError::InvalidConnectorConfig {

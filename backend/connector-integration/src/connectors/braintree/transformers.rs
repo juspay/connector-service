@@ -390,7 +390,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             utils::to_connector_meta_from_secret(
                 item.router_data
                     .resource_common_data
-                    .connector_meta_data
+                    .merchant_account_metadata
                     .clone(),
             )
             .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
@@ -1804,8 +1804,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let metadata =
-            BraintreeMeta::try_from(&item.router_data.resource_common_data.connector_meta_data)?;
+        let metadata = BraintreeMeta::try_from(
+            &item
+                .router_data
+                .resource_common_data
+                .merchant_account_metadata,
+        )?;
         Ok(Self {
             query: constants::CLIENT_TOKEN_MUTATION.to_owned(),
             variables: VariableClientTokenInput {
@@ -1835,7 +1839,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         let payment_request_data: PaymentRequestMetadata = match item
                             .router_data
                             .resource_common_data
-                            .connector_meta_data
+                            .merchant_account_metadata
                             .clone()
                         {
                             Some(connector_meta) => {
@@ -1906,7 +1910,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         let gpay_data: GpaySessionTokenData = match item
                             .router_data
                             .resource_common_data
-                            .connector_meta_data
+                            .merchant_account_metadata
                             .clone()
                         {
                             Some(connector_meta) => connector_meta
@@ -1956,7 +1960,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         let paypal_sdk_data = item
                             .router_data
                             .resource_common_data
-                            .connector_meta_data
+                            .merchant_account_metadata
                             .clone()
                             .parse_value::<PaypalSdkSessionTokenData>("PaypalSdkSessionTokenData")
                             .change_context(ConnectorError::NoConnectorMetaData)
@@ -2560,7 +2564,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             utils::to_connector_meta_from_secret(
                 item.router_data
                     .resource_common_data
-                    .connector_meta_data
+                    .merchant_account_metadata
                     .clone(),
             )
             .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?

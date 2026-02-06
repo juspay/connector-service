@@ -483,7 +483,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             &item
                 .router_data
                 .resource_common_data
-                .connector_meta_data
+                .merchant_account_metadata
                 .as_ref()
                 .map(|s| s.peek().clone()),
         )?;
@@ -570,7 +570,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             &item
                 .router_data
                 .resource_common_data
-                .connector_meta_data
+                .merchant_account_metadata
                 .as_ref()
                 .map(|s| s.peek().clone()),
         )?;

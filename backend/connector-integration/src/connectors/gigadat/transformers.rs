@@ -211,9 +211,9 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        // Get metadata for site - try connector_meta_data first, then fallback to request metadata
+        // Get metadata for site - try merchant_account_metadata first, then fallback to request metadata
         let metadata = GigadatConnectorMetadataObject::try_from(
-            &item.resource_common_data.connector_meta_data,
+            &item.resource_common_data.merchant_account_metadata,
         )
         .or_else(|_| {
             // Try to get site from request metadata
@@ -227,7 +227,7 @@ impl<T: PaymentMethodDataTypes>
                 })
                 .ok_or_else(|| {
                     Report::from(ConnectorError::InvalidConnectorConfig {
-                        config: "missing 'site' in connector_meta_data or metadata",
+                        config: "missing 'site' in merchant_account_metadata or metadata",
                     })
                 })
         })?;
