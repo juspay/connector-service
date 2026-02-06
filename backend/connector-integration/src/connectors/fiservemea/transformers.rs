@@ -598,7 +598,7 @@ pub fn map_fiservemea_status_to_attempt_status(
         (Some(FiservemeaTransactionResult::Waiting), _)
         | (_, Some(FiservemeaTransactionState::Waiting)) => AttemptStatus::Pending,
         (Some(FiservemeaTransactionResult::Partial), _) => AttemptStatus::Pending,
-        (Some(FisevemeaTransactionResult::Fraud), _) => AttemptStatus::Failure,
+        (Some(FiservemeaTransactionResult::Fraud), _) => AttemptStatus::Failure,
         (_, Some(FiservemeaTransactionState::Voided)) => AttemptStatus::Voided,
         (_, Some(FiservemeaTransactionState::Pending)) => AttemptStatus::Pending,
         _ => AttemptStatus::Pending,
