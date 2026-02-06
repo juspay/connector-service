@@ -494,11 +494,13 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>,
     }
 }
 
-impl TryFrom<&FiservemeaRouterData<RouterDataV2<Void, _, _, _>>> for FiservemeaVoidRequest {
+impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
+    for FiservemeaVoidRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _value: &FiservemeaRouterData<RouterDataV2<Void, _, _, _>>,
+        _value: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaVoidRequest {
             request_type: "VoidTransaction".to_string(),
