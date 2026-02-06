@@ -274,7 +274,7 @@ pub struct FiservemeaCaptureRequest {
     pub transaction_amount: FiservemeaTransactionAmount,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaCaptureResponse {
     pub client_request_id: String,
