@@ -755,7 +755,7 @@ impl TryFrom<ResponseRouterData<FiservemeaRefundResponse, Self>>
     fn try_from(
         item: ResponseRouterData<FiservemeaRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = map_fiservemea_status_to_attempt_status(
+        let refund_status = map_fiservemea_status_to_refund_status(
             &item.response.transaction_result,
             &item.response.transaction_state,
         );
@@ -769,14 +769,14 @@ impl TryFrom<ResponseRouterData<FiservemeaRefundResponse, Self>>
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.ipg_transaction_id.clone(),
-                refund_status: status,
+                refund_status,
                 connector_response_reference_id: Some(item.response.client_request_id.clone()),
                 network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
                 connector_metadata: None,
                 status_code: item.http_code,
             }),
             resource_common_data: RefundFlowData {
-                status,
+                refund_status,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -792,7 +792,7 @@ impl TryFrom<ResponseRouterData<FiservemeaRefundSyncResponse, Self>>
     fn try_from(
         item: ResponseRouterData<FiservemeaRefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = map_fiservemea_status_to_attempt_status(
+        let refund_status = map_fiservemea_status_to_refund_status(
             &item.response.transaction_result,
             &item.response.transaction_state,
         );
@@ -806,14 +806,14 @@ impl TryFrom<ResponseRouterData<FiservemeaRefundSyncResponse, Self>>
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.ipg_transaction_id.clone(),
-                refund_status: status,
+                refund_status,
                 connector_response_reference_id: Some(item.response.client_request_id.clone()),
                 network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
                 connector_metadata: None,
                 status_code: item.http_code,
             }),
             resource_common_data: RefundFlowData {
-                status,
+                refund_status,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
