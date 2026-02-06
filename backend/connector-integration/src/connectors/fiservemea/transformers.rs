@@ -1,29 +1,106 @@
-use std::fmt::Debug;
+use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::types::ResponseRouterData;
+use base64::{engine::general_purpose, Engine};
+use common_enums::AttemptStatus;
 use common_utils::{
-    errors::CustomResult,
-    ext_traits::{ByteSliceExt, ValueExt},
-    types::{AmountMinorUnit, MinorUnit},
+    crypto::{self, SignMessage},
+    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::Authorize,
-    errors::ConnectorError,
-    payment_method_data::{ApplePayCard, BankTransfer, Card, GooglePayCard, PaymentMethodData},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_types::{
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
+    },
+    errors,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    types::MinorUnitForConnector,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use super::headers;
+#[derive(Debug, Clone)]
+pub struct FiservemeaAuthType {
+    pub api_key: Secret<String>,
+    pub api_secret: Secret<String>,
+}
+
+impl FiservemeaAuthType {
+    pub fn generate_hmac_signature(
+        &self,
+        api_key: &str,
+        client_request_id: &str,
+        timestamp: &str,
+        request_body: &str,
+    ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
+        let raw_signature = format!("{api_key}{client_request_id}{timestamp}{request_body}");
+
+        let signature = crypto::HmacSha256
+            .sign_message(
+                self.api_secret.clone().expose().as_bytes(),
+                raw_signature.as_bytes(),
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        Ok(general_purpose::STANDARD.encode(signature))
+    }
+
+    pub fn generate_client_request_id() -> String {
+        Uuid::new_v4().to_string()
+    }
+
+    pub fn generate_timestamp() -> String {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+            .to_string()
+    }
+}
+
+impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorAuthType::BodyKey { api_key, key1, .. } => Ok(Self {
+                api_key: api_key.to_owned(),
+                api_secret: key1.to_owned(),
+            }),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaErrorResponse {
+    pub code: Option<String>,
+    pub message: Option<String>,
+    pub details: Option<Vec<ErrorDetail>>,
+    pub ipg_transaction_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorDetail {
+    pub field: Option<String>,
+    pub message: Option<String>,
+}
 
 #[derive(Debug, Clone, Serialize)]
-pub struct FiservemeaPaymentsRequest<T> {
+pub struct FiservemeaPaymentsRequest {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub payment_method: Option<FiservemeaPaymentMethod<T>>,
+    pub payment_method: Option<FiservemeaPaymentMethod>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub order: Option<FiservemeaOrder>,
 }
@@ -35,23 +112,13 @@ pub struct FiservemeaTransactionAmount {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct FiservemeaPaymentMethod<T> {
+pub struct FiservemeaPaymentMethod {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_card: Option<FiservemeaPaymentCard>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_token: Option<FiservemeaPaymentToken>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wallet: Option<FiservemeaWallet>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sepa: Option<FiservemeaSepa>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub apm: Option<FiservemeaApm>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub payment_method_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub payment_method_brand: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub _phantom: Option<T>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -92,18 +159,6 @@ pub struct FiservemeaGooglePay {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct FiservemeaSepa {
-    pub iban: Maskable<String>,
-    pub bic: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct FiservemeaApm {
-    pub payment_method_type: String,
-    pub payment_data: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
 pub struct FiservemeaOrder {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub order_id: Option<String>,
@@ -132,6 +187,7 @@ pub struct FiservemeaAddress {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaAuthorizeResponse {
     pub client_request_id: String,
     pub api_trace_id: String,
@@ -160,6 +216,7 @@ pub struct FiservemeaAuthorizeResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaSyncResponse {
     pub client_request_id: String,
     pub api_trace_id: String,
@@ -186,6 +243,7 @@ pub struct FiservemeaSyncResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaVoidRequest {
     pub request_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -193,6 +251,7 @@ pub struct FiservemeaVoidRequest {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaVoidResponse {
     pub client_request_id: String,
     pub api_trace_id: String,
@@ -209,12 +268,14 @@ pub struct FiservemeaVoidResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaCaptureRequest {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaCaptureResponse {
     pub client_request_id: String,
     pub api_trace_id: String,
@@ -235,6 +296,7 @@ pub struct FiservemeaCaptureResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaRefundRequest {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
@@ -243,6 +305,7 @@ pub struct FiservemeaRefundRequest {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaRefundResponse {
     pub client_request_id: String,
     pub api_trace_id: String,
@@ -263,6 +326,7 @@ pub struct FiservemeaRefundResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaRefundSyncResponse {
     pub client_request_id: String,
     pub api_trace_id: String,
@@ -278,28 +342,6 @@ pub struct FiservemeaRefundSyncResponse {
     pub transaction_state: Option<FiservemeaTransactionState>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub approved_amount: Option<FiservemeaAmount>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct FiservemeaErrorResponse {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_request_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub api_trace_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub response_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<FiservemeaErrorDetail>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ipg_transaction_id: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct FiservemeaErrorDetail {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub code: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -331,12 +373,14 @@ pub enum FiservemeaTransactionState {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaAmount {
     pub total: f64,
     pub currency: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reference_number: Option<String>,
@@ -351,6 +395,7 @@ pub struct FiservemeaProcessor {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaPaymentMethodDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_type: Option<String>,
@@ -359,18 +404,17 @@ pub struct FiservemeaPaymentMethodDetails {
 }
 
 #[derive(Debug, Clone)]
-pub struct FiservemeaRouterData<RD, T> {
+pub struct FiservemeaRouterData<RD> {
     pub router_data: RD,
-    pub _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: Debug + Clone + Serialize> TryFrom<&FiservemeaRouterData<RouterDataV2<Authorize, _, _, _>, T>>
-    for FiservemeaPaymentsRequest<T>
+impl TryFrom<&FiservemeaRouterData<RouterDataV2<Authorize, _, _, _>>>
+    for FiservemeaPaymentsRequest
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &FiservemeaRouterData<RouterDataV2<Authorize, _, _, _>, T>,
+        value: &FiservemeaRouterData<RouterDataV2<Authorize, _, _, _>>,
     ) -> Result<Self, Self::Error> {
         let router_data = &value.router_data;
         let payment_method = router_data.request.payment_method_data.clone();
@@ -387,11 +431,6 @@ impl<T: Debug + Clone + Serialize> TryFrom<&FiservemeaRouterData<RouterDataV2<Au
                 }),
                 payment_token: None,
                 wallet: None,
-                sepa: None,
-                apm: None,
-                payment_method_type: Some("PAYMENT_CARD".to_string()),
-                payment_method_brand: Some(card.card_network.to_string()),
-                _phantom: None,
             }),
             PaymentMethodData::ApplePayCard(apple_pay) => Some(FiservemeaPaymentMethod {
                 payment_card: None,
@@ -402,11 +441,6 @@ impl<T: Debug + Clone + Serialize> TryFrom<&FiservemeaRouterData<RouterDataV2<Au
                     }),
                     google_pay: None,
                 }),
-                sepa: None,
-                apm: None,
-                payment_method_type: Some("PAYPAL".to_string()),
-                payment_method_brand: Some("APPLE_PAY".to_string()),
-                _phantom: None,
             }),
             PaymentMethodData::GooglePayCard(google_pay) => Some(FiservemeaPaymentMethod {
                 payment_card: None,
@@ -417,24 +451,6 @@ impl<T: Debug + Clone + Serialize> TryFrom<&FiservemeaRouterData<RouterDataV2<Au
                         payment_data: google_pay.payment_data.clone(),
                     }),
                 }),
-                sepa: None,
-                apm: None,
-                payment_method_type: Some("PAYPAL".to_string()),
-                payment_method_brand: Some("GOOGLE_PAY".to_string()),
-                _phantom: None,
-            }),
-            PaymentMethodData::BankTransfer(bank_transfer) => Some(FiservemeaPaymentMethod {
-                payment_card: None,
-                payment_token: None,
-                wallet: None,
-                sepa: Some(FiservemeaSepa {
-                    iban: bank_transfer.iban.clone().into_masked(),
-                    bic: bank_transfer.bic.clone(),
-                }),
-                apm: None,
-                payment_method_type: Some("SEPA".to_string()),
-                payment_method_brand: None,
-                _phantom: None,
             }),
             PaymentMethodData::PaymentToken(token) => Some(FiservemeaPaymentMethod {
                 payment_card: None,
@@ -442,15 +458,11 @@ impl<T: Debug + Clone + Serialize> TryFrom<&FiservemeaRouterData<RouterDataV2<Au
                     value: token.token_value.clone(),
                 }),
                 wallet: None,
-                sepa: None,
-                apm: None,
-                payment_method_type: Some("PAYMENT_TOKEN".to_string()),
-                payment_method_brand: None,
-                _phantom: None,
             }),
-            _ => Err(ConnectorError::NotSupported {
+            _ => Err(error_stack::report!(errors::ConnectorError::NotSupported {
                 message: "Payment method not supported".to_string(),
-            })?,
+                connector: "fiservemea".to_string(),
+            }))?,
         };
 
         let order = router_data
@@ -482,11 +494,11 @@ impl<T: Debug + Clone + Serialize> TryFrom<&FiservemeaRouterData<RouterDataV2<Au
     }
 }
 
-impl<T> TryFrom<&FiservemeaRouterData<RouterDataV2<Void, _, _, _>, T>> for FiservemeaVoidRequest {
-    type Error = ConnectorError;
+impl TryFrom<&FiservemeaRouterData<RouterDataV2<Void, _, _, _>>> for FiservemeaVoidRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _value: &FiservemeaRouterData<RouterDataV2<Void, _, _, _>, T>,
+        _value: &FiservemeaRouterData<RouterDataV2<Void, _, _, _>>,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaVoidRequest {
             request_type: "VoidTransaction".to_string(),
@@ -495,13 +507,13 @@ impl<T> TryFrom<&FiservemeaRouterData<RouterDataV2<Void, _, _, _>, T>> for Fiser
     }
 }
 
-impl<T> TryFrom<&FiservemeaRouterData<RouterDataV2<Capture, _, _, _>, T>>
+impl TryFrom<&FiservemeaRouterData<RouterDataV2<Capture, _, _, _>>>
     for FiservemeaCaptureRequest
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &FiservemeaRouterData<RouterDataV2<Capture, _, _, _>, T>,
+        value: &FiservemeaRouterData<RouterDataV2<Capture, _, _, _>>,
     ) -> Result<Self, Self::Error> {
         let router_data = &value.router_data;
         Ok(FiservemeaCaptureRequest {
@@ -514,11 +526,11 @@ impl<T> TryFrom<&FiservemeaRouterData<RouterDataV2<Capture, _, _, _>, T>>
     }
 }
 
-impl<T> TryFrom<&FiservemeaRouterData<RouterDataV2<Refund, _, _, _>, T>> for FiservemeaRefundRequest {
-    type Error = ConnectorError;
+impl TryFrom<&FiservemeaRouterData<RouterDataV2<Refund, _, _, _>>> for FiservemeaRefundRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &FiservemeaRouterData<RouterDataV2<Refund, _, _, _>, T>,
+        value: &FiservemeaRouterData<RouterDataV2<Refund, _, _, _>>,
     ) -> Result<Self, Self::Error> {
         let router_data = &value.router_data;
         Ok(FiservemeaRefundRequest {
@@ -535,58 +547,26 @@ impl<T> TryFrom<&FiservemeaRouterData<RouterDataV2<Refund, _, _, _>, T>> for Fis
 pub fn map_fiservemea_status_to_attempt_status(
     result: &Option<FiservemeaTransactionResult>,
     state: &Option<FiservemeaTransactionState>,
-) -> common_enums::AttemptStatus {
+) -> AttemptStatus {
     match (result, state) {
         (Some(FiservemeaTransactionResult::Approved), Some(FiservemeaTransactionState::Authorized)) => {
-            common_enums::AttemptStatus::Authorized
+            AttemptStatus::Authorized
         }
         (Some(FiservemeaTransactionResult::Approved), Some(FiservemeaTransactionState::Captured)) => {
-            common_enums::AttemptStatus::Charged
+            AttemptStatus::Charged
         }
         (Some(FiservemeaTransactionResult::Approved), Some(FiservemeaTransactionState::Settled)) => {
-            common_enums::AttemptStatus::Charged
+            AttemptStatus::Charged
         }
-        (Some(FiservemeaTransactionResult::Declined), _) | (_, Some(FiservemeaTransactionState::Declined)) => {
-            common_enums::AttemptStatus::Failure
-        }
-        (Some(FiservemeaTransactionResult::Failed), _) => {
-            common_enums::AttemptStatus::Failure
-        }
-        (Some(FiservemeaTransactionResult::Waiting), _) | (_, Some(FiservemeaTransactionState::Waiting)) => {
-            common_enums::AttemptStatus::Pending
-        }
-        (Some(FiservemeaTransactionResult::Partial), _) => {
-            common_enums::AttemptStatus::Pending
-        }
-        (Some(FiservemeaTransactionResult::Fraud), _) => {
-            common_enums::AttemptStatus::Failure
-        }
-        (_, Some(FiservemeaTransactionState::Voided)) => {
-            common_enums::AttemptStatus::Voided
-        }
-        (_, Some(FiservemeaTransactionState::Pending)) => {
-            common_enums::AttemptStatus::Pending
-        }
-        _ => common_enums::AttemptStatus::Pending,
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct FiservemeaAuthType {
-    pub api_key: Secret<String>,
-}
-
-impl TryFrom<&domain_types::router_data::ConnectorAuthType> for FiservemeaAuthType {
-    type Error = ConnectorError;
-
-    fn try_from(auth_type: &domain_types::router_data::ConnectorAuthType) -> Result<Self, Self::Error> {
-        match auth_type {
-            domain_types::router_data::ConnectorAuthType::Header { api_key } => {
-                Ok(FiservemeaAuthType {
-                    api_key: api_key.clone(),
-                })
-            }
-            _ => Err(ConnectorError::FailedToObtainAuthType),
-        }
+        (Some(FiservemeaTransactionResult::Declined), _)
+        | (_, Some(FiservemeaTransactionState::Declined)) => AttemptStatus::Failure,
+        (Some(FiservemeaTransactionResult::Failed), _) => AttemptStatus::Failure,
+        (Some(FiservemeaTransactionResult::Waiting), _)
+        | (_, Some(FiservemeaTransactionState::Waiting)) => AttemptStatus::Pending,
+        (Some(FiservemeaTransactionResult::Partial), _) => AttemptStatus::Pending,
+        (Some(FiservemeaTransactionResult::Fraud), _) => AttemptStatus::Failure,
+        (_, Some(FiservemeaTransactionState::Voided)) => AttemptStatus::Voided,
+        (_, Some(FiservemeaTransactionState::Pending)) => AttemptStatus::Pending,
+        _ => AttemptStatus::Pending,
     }
 }
