@@ -96,7 +96,7 @@ pub struct ErrorDetail {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct FiservemeaPaymentsRequest {
+pub struct FiservemeaPaymentsRequest<T> {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
     #[serde(skip_serializing_if = "Option::is_none")]
