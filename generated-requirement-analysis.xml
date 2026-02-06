@@ -1,0 +1,1410 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+GRACE-UCS Deterministic Workflow Rules - Requirement Analysis
+Generated: 2026-02-06
+Version: 1.0.0
+-->
+<RequirementAnalysis xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Metadata>
+    <DocumentTitle>GRACE-UCS Deterministic Workflow Rules</DocumentTitle>
+    <DocumentVersion>1.0.0</DocumentVersion>
+    <GenerationDate>2026-02-06</GenerationDate>
+    <SystemName>GRACE-UCS</SystemName>
+    <Component>Deterministic Workflow Controller</Component>
+    <Classification>Internal</Classification>
+  </Metadata>
+
+  <!-- ======================================================================= -->
+  <!-- SECURITY REQUIREMENTS -->
+  <!-- ======================================================================= -->
+  <SecurityRequirements>
+    <Requirement id="SEC-001" priority="CRITICAL">
+      <Title>Path Traversal Prevention</Title>
+      <Description>Prevent directory traversal attacks when reading tech specs and pattern files</Description>
+      <AcceptanceCriteria>
+        <Criterion>Validate all file paths against allowed base directories</Criterion>
+        <Criterion>Reject paths containing ".." sequences</Criterion>
+        <Criterion>Normalize paths before access</Criterion>
+        <Criterion>Log all path access attempts</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-001-01">Verify path with "../" is rejected</TestCase>
+        <TestCase id="TC-SEC-001-02">Verify absolute paths outside allowed directories are rejected</TestCase>
+        <TestCase id="TC-SEC-001-03">Verify path normalization prevents bypass attempts</TestCase>
+      </TestCases>
+    </Requirement>
+
+    <Requirement id="SEC-002" priority="HIGH">
+      <Title>Command Injection Prevention</Title>
+      <Description>Prevent command injection when executing shell scripts and cargo commands</Description>
+      <AcceptanceCriteria>
+        <Criterion>Sanitize all connector names before use in commands</Criterion>
+        <Criterion>Use parameterized execution where possible</Criterion>
+        <Criterion>Validate connector names against regex: ^[a-z0-9_-]+$</Criterion>
+        <Criterion>Never concatenate unvalidated input into shell commands</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-002-01">Verify connector name with semicolon is rejected</TestCase>
+        <TestCase id="TC-SEC-002-02">Verify connector name with pipe character is rejected</TestCase>
+        <TestCase id="TC-SEC-002-03">Verify connector name with backtick is rejected</TestCase>
+        <TestCase id="TC-SEC-002-04">Verify valid connector names pass validation</TestCase>
+      </TestCases>
+    </Requirement>
+
+    <Requirement id="SEC-003" priority="HIGH">
+      <Title>File Access Control</Title>
+      <Description>Ensure proper file permissions and access control for generated code</Description>
+      <AcceptanceCriteria>
+        <Criterion>Generated files inherit appropriate permissions</Criterion>
+        <Criterion>Sensitive configuration files are not world-readable</Criterion>
+        <Criterion>Write operations are restricted to designated directories</Criterion>
+        <Criterion>Audit log tracks all file modifications</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-003-01">Verify generated connector files have correct permissions</TestCase>
+        <TestCase id="TC-SEC-003-02">Verify write operations fail outside allowed directories</TestCase>
+        <TestCase id="TC-SEC-003-03">Verify audit log records all file writes</TestCase>
+      </TestCases>
+    </Requirement>
+
+    <Requirement id="SEC-004" priority="MEDIUM">
+      <Title>Input Validation</Title>
+      <Description>Validate all inputs including tech specs, connector names, and URLs</Description>
+      <AcceptanceCriteria>
+        <Criterion>Validate tech spec completeness before processing</Criterion>
+        <Criterion>Validate URL format for base_url parameter</Criterion>
+        <Criterion>Validate connector name length (1-64 characters)</Criterion>
+        <Criterion>Reject malformed or incomplete specifications</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-004-01">Verify empty tech spec is rejected</TestCase>
+        <TestCase id="TC-SEC-004-02">Verify invalid URL format is rejected</TestCase>
+        <TestCase id="TC-SEC-004-03">Verify connector name exceeding max length is rejected</TestCase>
+        <TestCase id="TC-SEC-004-04">Verify valid inputs pass all validations</TestCase>
+      </TestCases>
+    </Requirement>
+
+    <Requirement id="SEC-005" priority="MEDIUM">
+      <Title>Timeline Integrity</Title>
+      <Description>Ensure timeline logging is tamper-evident and complete</Description>
+      <AcceptanceCriteria>
+        <Criterion>All phase transitions are logged atomically</Criterion>
+        <Criterion>Timeline cannot be modified after finalization</Criterion>
+        <Criterion>Failed phases are logged with error details</Criterion>
+        <Criterion>Timeline includes timestamps for all events</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-005-01">Verify phase transition is logged atomically</TestCase>
+        <TestCase id="TC-SEC-005-02">Verify finalized timeline cannot be modified</TestCase>
+        <TestCase id="TC-SEC-005-03">Verify failed phases include error context</TestCase>
+      </TestCases>
+    </Requirement>
+
+    <Requirement id="SEC-006" priority="HIGH">
+      <Title>Dependency Validation</Title>
+      <Description>Validate all external dependencies and macro expansions</Description>
+      <AcceptanceCriteria>
+        <Criterion>Macro expansions are validated for security</Criterion>
+        <Criterion>No arbitrary code execution through macro parameters</Criterion>
+        <Criterion>External crate versions are pinned</Criterion>
+        <Criterion>Cargo.lock integrity is verified</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-006-01">Verify macro expansion doesn't allow code injection</TestCase>
+        <TestCase id="TC-SEC-006-02">Verify Cargo.lock is checked for integrity</TestCase>
+        <TestCase id="TC-SEC-006-03">Verify dependency versions are properly pinned</TestCase>
+      </TestCases>
+    </Requirement>
+  </SecurityRequirements>
+
+  <!-- ======================================================================= -->
+  <!-- TECHNICAL SCOPE -->
+  <!-- ======================================================================= -->
+  <TechnicalScope>
+    <CoreOperations>
+      <Operation id="OP-001" name="WorkflowTrigger">
+        <Description>Initiate connector integration workflow</Description>
+        <Trigger>Command: integrate {ConnectorName} using grace/rulesbook/codegen/.gracerules</Trigger>
+        <Preconditions>
+          <Condition>Tech spec exists at grace/rulesbook/codegen/references/{connector_name}/technical_specification.md</Condition>
+          <Condition>.gracerules file is accessible</Condition>
+          <Condition>Repository structure is valid</Condition>
+        </Preconditions>
+        <SuccessConditions>
+          <Condition>Workflow controller initialized</Condition>
+          <Condition>Phase 1 started successfully</Condition>
+          <Condition>Timeline logging initialized</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Tech spec file not found</Condition>
+          <Condition>Invalid connector name format</Condition>
+          <Condition>Missing required files</Condition>
+        </FailureConditions>
+      </Operation>
+
+      <Operation id="OP-002" name="TechSpecValidation">
+        <Description>Validate technical specification completeness and UCS compatibility</Description>
+        <Phase>Phase 1</Phase>
+        <Preconditions>
+          <Condition>Workflow triggered successfully</Condition>
+          <Condition>Tech spec file exists</Condition>
+        </Preconditions>
+        <SuccessConditions>
+          <Condition>Tech spec is complete</Condition>
+          <Condition>UCS compatibility verified</Condition>
+          <Condition>Requirements extracted successfully</Condition>
+          <Condition>Features identified</Condition>
+          <Condition>Timeline logged: phase_1_tech_spec_validation=success</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Tech spec missing required sections</Condition>
+          <Condition>Incompatible with UCS patterns</Condition>
+          <Condition>Cannot parse specification</Condition>
+        </FailureConditions>
+      </Operation>
+
+      <Operation id="OP-003" name="FoundationSetup">
+        <Description>Establish basic connector structure using add_connector.sh</Description>
+        <Phase>Phase 2</Phase>
+        <Preconditions>
+          <Condition>Phase 1 completed successfully</Condition>
+          <Condition>Environment validated</Condition>
+        </Preconditions>
+        <SuccessConditions>
+          <Condition>add_connector.sh executed successfully</Condition>
+          <Condition>Cargo build succeeds</Condition>
+          <Condition>UCS conventions validated</Condition>
+          <Condition>RouterDataV2 usage confirmed</Condition>
+          <Condition>ConnectorIntegrationV2 usage confirmed</Condition>
+          <Condition>domain_types imports confirmed</Condition>
+          <Condition>Generic struct pattern confirmed</Condition>
+          <Condition>Timeline logged: phase_2_foundation_setup=success</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>add_connector.sh fails</Condition>
+          <Condition>Cargo build fails</Condition>
+          <Condition>Convention validation fails</Condition>
+          <Condition>RouterDataV2 not used</Condition>
+          <Condition>Wrong import patterns detected</Condition>
+        </FailureConditions>
+      </Operation>
+
+      <Operation id="OP-004" name="MacroPatternStudy">
+        <Description>Study macro pattern guides before implementation</Description>
+        <Phase>Phase 2.5</Phase>
+        <Preconditions>
+          <Condition>Phase 2 completed successfully</Condition>
+        </Preconditions>
+        <SuccessConditions>
+          <Condition>guides/patterns/macro_patterns_reference.md read</Condition>
+          <Condition>guides/patterns/flow_macro_guide.md read</Condition>
+          <Condition>template-generation/macro_templates.md read</Condition>
+          <Condition>create_all_prerequisites! macro understood</Condition>
+          <Condition>macro_connector_implementation! macro understood</Condition>
+          <Condition>Flow-specific configurations understood</Condition>
+          <Condition>Type naming conventions understood</Condition>
+          <Condition>Generic &lt;T&gt; usage understood</Condition>
+          <Condition>Resource data selection understood</Condition>
+          <Condition>Timeline logged: phase_2_5_macro_pattern_study=success</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Pattern files not found</Condition>
+          <Condition>Cannot parse pattern documentation</Condition>
+        </FailureConditions>
+      </Operation>
+
+      <Operation id="OP-005" name="FlowImplementation">
+        <Description>Implement individual payment flows using macro-based approach</Description>
+        <Phase>Phase 3</Phase>
+        <Preconditions>
+          <Condition>Phase 2.5 completed successfully</Condition>
+          <Condition>Flow pattern guide read</Condition>
+          <Condition>Utils and enums studied</Condition>
+          <Condition>Implementation plan generated</Condition>
+        </Preconditions>
+        <SuccessConditions>
+          <Condition>Flow added to create_all_prerequisites! macro</Condition>
+          <Condition>macro_connector_implementation! invoked correctly</Condition>
+          <Condition>Request/Response types defined in transformers.rs</Condition>
+          <Condition>Status mapping function implemented</Condition>
+          <Condition>No hardcoded status values</Condition>
+          <Condition>No None-valued fields</Condition>
+          <Condition>Specific NotSupported errors used</Condition>
+          <Condition>Cargo build succeeds</Condition>
+          <Condition>Previous flow completed before next starts</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Macro invocation fails</Condition>
+          <Condition>Type mismatches detected</Condition>
+          <Condition>Cargo build fails</Condition>
+          <Condition>Hardcoded status found</Condition>
+          <Condition>Unused fields present</Condition>
+        </FailureConditions>
+        <Flows>
+          <Flow name="Authorize" sequence="1">
+            <PatternFile>guides/patterns/pattern_authorize.md</PatternFile>
+            <Trait>ConnectorIntegrationV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Trait>
+            <RequiresGeneric>true</RequiresGeneric>
+          </Flow>
+          <Flow name="PSync" sequence="2">
+            <PatternFile>guides/patterns/pattern_psync.md</PatternFile>
+            <Trait>ConnectorIntegrationV2&lt;PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData&gt;</Trait>
+            <RequiresGeneric>false</RequiresGeneric>
+          </Flow>
+          <Flow name="Capture" sequence="3">
+            <PatternFile>guides/patterns/pattern_capture.md</PatternFile>
+            <Trait>ConnectorIntegrationV2&lt;Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData&gt;</Trait>
+            <RequiresGeneric>false</RequiresGeneric>
+          </Flow>
+          <Flow name="Void" sequence="4">
+            <PatternFile>guides/patterns/pattern_void.md</PatternFile>
+            <Trait>ConnectorIntegrationV2&lt;Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData&gt;</Trait>
+            <RequiresGeneric>false</RequiresGeneric>
+          </Flow>
+          <Flow name="Refund" sequence="5">
+            <PatternFile>guides/patterns/pattern_refund.md</PatternFile>
+            <Trait>ConnectorIntegrationV2&lt;Refund, RefundFlowData, RefundsData, RefundsResponseData&gt;</Trait>
+            <RequiresGeneric>false</RequiresGeneric>
+          </Flow>
+          <Flow name="RSync" sequence="6">
+            <PatternFile>guides/patterns/pattern_rsync.md</PatternFile>
+            <Trait>ConnectorIntegrationV2&lt;RSync, RefundFlowData, RefundSyncData, RefundsResponseData&gt;</Trait>
+            <RequiresGeneric>false</RequiresGeneric>
+          </Flow>
+        </Flows>
+      </Operation>
+
+      <Operation id="OP-006" name="FinalValidation">
+        <Description>Execute final validation and quality review</Description>
+        <Phase>Phase 4</Phase>
+        <Preconditions>
+          <Condition>All flows implemented successfully</Condition>
+          <Condition>All cargo builds succeeded</Condition>
+        </Preconditions>
+        <SuccessConditions>
+          <Condition>Final cargo build succeeds</Condition>
+          <Condition>All flows compile successfully</Condition>
+          <Condition>Quality Guardian review passed</Condition>
+          <Condition>Completion report generated</Condition>
+          <Condition>Timeline logged: phase_4_quality_review=success</Condition>
+          <Condition>Timeline finalized with timeline.finalize()</Condition>
+          <Condition>generated-requirement-analysis.xml marked as .resolved</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Final cargo build fails</Condition>
+          <Condition>Quality review fails</Condition>
+          <Condition>Compilation errors detected</Condition>
+        </FailureConditions>
+      </Operation>
+    </CoreOperations>
+
+    <ExecutionGuarantees>
+      <Guarantee id="EG-001">Phases execute in strict sequential order</Guarantee>
+      <Guarantee id="EG-002">Each phase must complete before next begins</Guarantee>
+      <Guarantee id="EG-003">All steps within a phase are mandatory</Guarantee>
+      <Guarantee id="EG-004">Failed phases prevent workflow progression</Guarantee>
+      <Guarantee id="EG-005">Timeline logging occurs at each phase boundary</Guarantee>
+      <Guarantee id="EG-006">timeline.finalize() is always the final step</Guarantee>
+    </ExecutionGuarantees>
+  </TechnicalScope>
+
+  <!-- ======================================================================= -->
+  <!-- ARCHITECTURE GUIDANCE -->
+  <!-- ======================================================================= -->
+  <ArchitectureGuidance>
+    <Language>Rust</Language>
+    <BuildSystem>Cargo</BuildSystem>
+    <DesignPrinciples>
+      <Principle>Single binary output - no multiple binaries</Prarincipe>
+      <Principle>Macro-based code generation over manual implementation</Prarincipe>
+      <Principle>Type-safe request/response transformations</Prarincipe>
+      <Principle>Zero-cost abstractions</Prarinciple>
+      <Principle>Compile-time validation</Prarinciple>
+      <Principle>Explicit error handling with error_stack</Prarinciple>
+    </DesignPrinciples>
+
+    <ModuleStructure>
+      <Module name="workflow_controller" path="backend/workflow-controller/src/">
+        <Responsibility>Main orchestration and phase management</Responsibility>
+        <Exports>WorkflowController, Phase, Timeline</Exports>
+      </Module>
+      <Module name="foundation_agent" path="backend/foundation-agent/src/">
+        <Responsibility>Foundation setup and environment validation</Responsibility>
+        <Exports>FoundationAgent, ValidationResult</Exports>
+      </Module>
+      <Module name="flow_agent" path="backend/flow-agent/src/">
+        <Responsibility>Individual flow implementation</Responsibility>
+        <Exports>FlowAgent, FlowImplementation</Exports>
+      </Module>
+      <Module name="quality_guardian" path="backend/quality-guardian/src/">
+        <Responsibility>Code quality review and validation</Responsibility>
+        <Exports>QualityGuardian, ReviewResult</Exports>
+      </Module>
+      <Module name="connector_integration" path="backend/connector-integration/src/">
+        <Responsibility>Generated connector implementations</Responsibility>
+        <Exports>Connector traits, macros</Exports>
+      </Module>
+      <Module name="domain_types" path="backend/domain_types/src/">
+        <Responsibility>Shared domain types and utilities</Responsibility>
+        <Exports>RouterDataV2, FlowData types</Exports>
+      </Module>
+      <Module name="common_enums" path="backend/common_enums/src/">
+        <Responsibility>Common enumerations</Responsibility>
+        <Exports>AttemptStatus, PaymentMethod</Exports>
+      </Module>
+    </ModuleStructure>
+
+    <MacroSystem>
+      <Macro name="create_all_prerequisites!">
+        <Purpose>Define all flow prerequisites and type mappings</Purpose>
+        <Location>backend/connector-integration/src/connectors/{connector_name}.rs</Location>
+        <Parameters>
+          <Parameter name="connector">Connector name struct</Parameter>
+          <Parameter name="api">Array of flow definitions</Parameter>
+          <Parameter name="amount_converter">Amount conversion function</Parameter>
+        </Parameters>
+        <Generates>Type aliases, auth implementations, utility functions</Generates>
+      </Macro>
+      <Macro name="macro_connector_implementation!">
+        <Purpose>Generate ConnectorIntegrationV2 implementation</Purpose>
+        <Location>backend/connector-integration/src/connectors/{connector_name}.rs</Location>
+        <Parameters>
+          <Parameter name="connector_default_implementations">Default trait implementations</Parameter>
+          <Parameter name="connector">Connector name</Parameter>
+          <Parameter name="curl_request">Request type (Json, FormData, FormUrlEncoded)</Parameter>
+          <Parameter name="curl_response">Response type</Parameter>
+          <Parameter name="flow_name">Flow enum variant</Parameter>
+          <Parameter name="resource_common_data">FlowData type</Parameter>
+          <Parameter name="flow_request">RequestData type</Parameter>
+          <Parameter name="flow_response">ResponseData type</Parameter>
+          <Parameter name="http_method">HTTP method (Post, Get, Put, Delete)</Parameter>
+          <Parameter name="generic_type">Generic type parameter</Parameter>
+          <Parameter name="other_functions">Additional trait implementations</Parameter>
+        </Parameters>
+        <Generates>ConnectorIntegrationV2 trait implementation</Generates>
+      </Macro>
+    </MacroSystem>
+
+    <TestabilityConsiderations>
+      <Consideration>Each phase should be independently testable</Consideration>
+      <Consideration>Mock file system for testing without side effects</Consideration>
+      <Consideration>Injectable dependencies for subagents</Consideration>
+      <Consideration>Timeline should be inspectable during tests</Consideration>
+      <Consideration>Error scenarios should be reproducible</Consideration>
+      <Consideration>Macro expansions should be verifiable</Consideration>
+    </TestabilityConsiderations>
+
+    <CodeQualityStandards>
+      <Standard>No TODO comments in production code</Standard>
+      <Standard>No mock implementations</Standard>
+      <Standard>No hardcoded None values in structs</Standard>
+      <Standard>No hardcoded status values</Standard>
+      <Standard>Specific error messages for NotSupported cases</Standard>
+      <Standard>All fields in structs must be used</Standard>
+      <Standard>Option only for truly optional fields per API spec</Standard>
+      <Standard>Complete status mapping for all connector statuses</Standard>
+    </CodeQualityStandards>
+  </ArchitectureGuidance>
+
+  <!-- ======================================================================= -->
+  <!-- API DESIGN -->
+  <!-- ======================================================================= -->
+  <APIDesign>
+    <CommandLineInterface>
+      <Command name="integrate">
+        <Syntax>integrate {ConnectorName} using grace/rulesbook/codegen/.gracerules</Syntax>
+        <Parameters>
+          <Parameter name="ConnectorName" type="String" required="true">
+            <Validation>Regex: ^[a-z0-9_-]{1,64}$</Validation>
+            <Description>Name of the connector to integrate</Description>
+          </Parameter>
+          <Parameter name="rules_path" type="Path" required="false" default="grace/rulesbook/codegen/.gracerules">
+            <Validation>Must exist and be readable</Validation>
+            <Description>Path to the gracerules configuration file</Description>
+          </Parameter>
+        </Parameters>
+        <ExitCodes>
+          <Code value="0">Success</Code>
+          <Code value="1">General error</Code>
+          <Code value="2">Validation error</Code>
+          <Code value="3">Build error</Code>
+          <Code value="4">Quality gate failure</Code>
+        </ExitCodes>
+      </Command>
+    </CommandLineInterface>
+
+    <InternalAPIs>
+      <API name="WorkflowController::new">
+        <Signature>fn new(connector_name: String, rules_path: PathBuf) -> Result<Self, WorkflowError></Signature>
+        <Description>Create a new workflow controller instance</Description>
+        <Errors>
+          <Error>InvalidConnectorName - connector name fails validation</Error>
+          <Error>RulesNotFound - .gracerules file not found</Error>
+        </Errors>
+      </API>
+
+      <API name="WorkflowController::execute">
+        <Signature>async fn execute(&amp;mut self) -> Result<CompletionReport, WorkflowError></Signature>
+        <Description>Execute the complete workflow</Description>
+        <Errors>
+          <Error>TechSpecNotFound - technical specification file missing</Error>
+          <Error>TechSpecIncomplete - specification missing required sections</Error>
+          <Error>FoundationSetupFailed - add_connector.sh or cargo build failed</Error>
+          <Error>FlowImplementationFailed - flow implementation or build failed</Error>
+          <Error>QualityGateFailed - quality review did not pass</Error>
+        </Errors>
+      </API>
+
+      <API name="Timeline::log_phase_end">
+        <Signature>fn log_phase_end(&amp;mut self, phase: &amp;str, status: &amp;str)</Signature>
+        <Description>Log the completion of a phase</Description>
+        <Parameters>
+          <Parameter name="phase" type="&amp;str">Phase identifier (e.g., "phase_1_tech_spec_validation")</Parameter>
+          <Parameter name="status" type="&amp;str">Status ("success" or "failed")</Parameter>
+        </Parameters>
+      </API>
+
+      <API name="Timeline::finalize">
+        <Signature>fn finalize(self) -> Result&lt;CompletedTimeline, TimelineError&gt;</Signature>
+        <Description>Finalize the timeline and mark workflow complete</Description>
+        <Errors>
+          <Error>TimelineNotComplete - not all phases logged</Error>
+          <Error>TimelineAlreadyFinalized - called twice</Error>
+        </Errors>
+      </API>
+
+      <API name="FoundationAgent::setup">
+        <Signature>async fn setup(&amp;self, connector_name: &amp;str, base_url: &amp;str) -> Result&lt;SetupResult, FoundationError&gt;</Signature>
+        <Description>Execute foundation setup for a connector</Description>
+        <Steps>
+          <Step>Validate environment</Step>
+          <Step>Analyze tech spec</Step>
+          <Step>Execute add_connector.sh</Step>
+          <Step>Run cargo build</Step>
+          <Step>Validate UCS conventions</Step>
+        </Steps>
+        <Errors>
+          <Error>ScriptExecutionFailed - add_connector.sh returned non-zero</Error>
+          <Error>BuildFailed - cargo build failed</Error>
+          <Error>ConventionViolation - UCS conventions not followed</Error>
+        </Errors>
+      </API>
+
+      <API name="FlowAgent::implement_flow">
+        <Signature>async fn implement_flow(&amp;self, flow: Flow, connector_name: &amp;str) -> Result&lt;FlowResult, FlowError&gt;</Signature>
+        <Description>Implement a single flow using macro-based approach</Description>
+        <Steps>
+          <Step>Read tech spec</Step>
+          <Step>Read flow pattern</Step>
+          <Step>Read utils and enums</Step>
+          <Step>Generate implementation plan</Step>
+          <Step>Read macro pattern reference</Step>
+          <Step>Add flow to create_all_prerequisites!</Step>
+          <Step>Invoke macro_connector_implementation!</Step>
+          <Step>Create request/response types</Step>
+          <Step>Implement status mapping</Step>
+          <Step>Run cargo build</Step>
+        </Steps>
+        <Errors>
+          <Error>PatternNotFound - flow pattern file missing</Error>
+          <Error>MacroExpansionFailed - macro could not expand</Error>
+          <Error>TypeMismatch - type incompatibility detected</Error>
+          <Error>BuildFailed - cargo build failed</Error>
+        </Errors>
+      </API>
+
+      <API name="QualityGuardian::review">
+        <Signature>async fn review(&amp;self, connector_name: &amp;str) -> Result&lt;ReviewReport, QualityError&gt;</Signature>
+        <Description>Perform comprehensive code quality review</Description>
+        <Checks>
+          <Check>No TODO comments</Check>
+          <Check>No mock implementations</Check>
+          <Check>No hardcoded None values</Check>
+          <Check>No hardcoded status values</Check>
+          <Check>Specific error messages</Check>
+          <Check>All struct fields used</Check>
+          <Check>Complete status mapping</Check>
+          <Check>Correct imports (domain_types, not hyperswitch_*)</Check>
+          <Check>RouterDataV2 usage</Check>
+          <Check>ConnectorIntegrationV2 usage</Check>
+        </Checks>
+        <Errors>
+          <Error>TodosFound - TODO comments detected</Error>
+          <Error>MocksFound - mock implementations detected</Error>
+          <Error>HardcodedValuesFound - hardcoded values detected</Error>
+          <Error>IncompleteMapping - status mapping incomplete</Error>
+          <Error>WrongImports - incorrect import patterns</Error>
+        </Errors>
+      </API>
+    </InternalAPIs>
+
+    <DataStructures>
+      <Structure name="WorkflowError">
+        <Variants>
+          <Variant name="InvalidConnectorName">message: String</Variant>
+          <Variant name="RulesNotFound">path: PathBuf</Variant>
+          <Variant name="TechSpecNotFound">connector: String</Variant>
+          <Variant name="TechSpecIncomplete">missing_sections: Vec&lt;String&gt;</Variant>
+          <Variant name="FoundationSetupFailed">error: FoundationError</Variant>
+          <Variant name="FlowImplementationFailed">flow: Flow, error: FlowError</Variant>
+          <Variant name="QualityGateFailed">report: ReviewReport</Variant>
+        </Variants>
+      </Structure>
+
+      <Structure name="Phase">
+        <Variants>
+          <Variant name="TechSpecValidation"/>
+          <Variant name="FoundationSetup"/>
+          <Variant name="MacroPatternStudy"/>
+          <Variant name="FlowImplementation">flow: Flow</Variant>
+          <Variant name="FinalValidation"/>
+        </Variants>
+      </Structure>
+
+      <Structure name="Flow">
+        <Variants>
+          <Variant name="Authorize"/>
+          <Variant name="PSync"/>
+          <Variant name="Capture"/>
+          <Variant name="Void"/>
+          <Variant name="Refund"/>
+          <Variant name="RSync"/>
+        </Variants>
+      </Structure>
+
+      <Structure name="Timeline">
+        <Fields>
+          <Field name="phases" type="HashMap&lt;String, PhaseEntry&gt;">Map of phase ID to entry</Field>
+          <Field name="start_time" type="DateTime&lt;Utc&gt;">Workflow start timestamp</Field>
+          <Field name="end_time" type="Option&lt;DateTime&lt;Utc&gt;&gt;">Workflow end timestamp</Field>
+          <Field name="finalized" type="bool">Whether timeline is finalized</Field>
+        </Fields>
+      </Structure>
+
+      <Structure name="PhaseEntry">
+        <Fields>
+          <Field name="status" type="String">"success" or "failed"</Field>
+          <Field name="timestamp" type="DateTime&lt;Utc&gt;">Phase completion timestamp</Field>
+          <Field name="error" type="Option&lt;String&gt;">Error message if failed</Field>
+        </Fields>
+      </Structure>
+
+      <Structure name="CompletionReport">
+        <Fields>
+          <Field name="connector_name" type="String">Name of integrated connector</Field>
+          <Field name="timeline" type="CompletedTimeline">Finalized timeline</Field>
+          <Field name="files_created" type="Vec&lt;PathBuf&gt;">List of created files</Field>
+          <Field name="files_modified" type="Vec&lt;PathBuf&gt;">List of modified files</Field>
+          <Field name="flows_implemented" type="Vec&lt;Flow&gt;">List of implemented flows</Field>
+          <Field name="quality_score" type="u8">Quality score (0-100)</Field>
+        </Fields>
+      </Structure>
+    </DataStructures>
+
+    <ValidationRules>
+      <Rule id="VR-001">Connector name must match ^[a-z0-9_-]{1,64}$</Rule>
+      <Rule id="VR-002">Base URL must be valid HTTPS URL</Rule>
+      <Rule id="VR-003">Tech spec must contain all required sections</Rule>
+      <Rule id="VR-004">Flow names must match predefined variants</Rule>
+      <Rule id="VR-005">HTTP method must be one of: Post, Get, Put, Delete</Rule>
+      <Rule id="VR-006">Request type must be one of: Json, FormData, FormUrlEncoded</Rule>
+      <Rule id="VR-007">FlowData must be PaymentFlowData, RefundFlowData, or DisputeFlowData</Rule>
+      <Rule id="VR-008">Status mapping must cover all connector status values</Rule>
+    </ValidationRules>
+
+    <ErrorHandling>
+      <Strategy>Use error_stack for structured error reporting</Strategy>
+      <Strategy>All errors must include context</Strategy>
+      <Strategy>NotSupported errors must specify exact feature</Strategy>
+      <Strategy>Recoverable errors should be logged and retried</Strategy>
+      <Strategy>Fatal errors should halt workflow with clear message</Strategy>
+    </ErrorHandling>
+  </APIDesign>
+
+  <!-- ======================================================================= -->
+  <!-- STORAGE REQUIREMENTS -->
+  <!-- ======================================================================= -->
+  <StorageRequirements>
+    <FileSystem>
+      <Directory path="grace/rulesbook/codegen/references/{connector_name}/" purpose="Technical specifications">
+        <Files>
+          <File name="technical_specification.md" required="true" purpose="Connector technical specification"/>
+        </Files>
+      </Directory>
+      <Directory path="guides/patterns/" purpose="Implementation pattern guides">
+        <Files>
+          <File name="pattern_authorize.md" required="true" purpose="Authorize flow pattern"/>
+          <File name="pattern_psync.md" required="true" purpose="Payment sync pattern"/>
+          <File name="pattern_capture.md" required="true" purpose="Capture flow pattern"/>
+          <File name="pattern_void.md" required="true" purpose="Void flow pattern"/>
+          <File name="pattern_refund.md" required="true" purpose="Refund flow pattern"/>
+          <File name="pattern_rsync.md" required="true" purpose="Refund sync pattern"/>
+          <File name="macro_patterns_reference.md" required="true" purpose="Macro usage reference"/>
+          <File name="flow_macro_guide.md" required="true" purpose="Flow macro guide"/>
+        </Files>
+      </Directory>
+      <Directory path="template-generation/" purpose="Template definitions">
+        <Files>
+          <File name="macro_templates.md" required="true" purpose="Macro templates"/>
+        </Files>
+      </Directory>
+      <Directory path="backend/connector-integration/src/connectors/" purpose="Generated connector code">
+        <Files>
+          <File name="{connector_name}.rs" generated="true" purpose="Main connector implementation"/>
+          <File name="{connector_name}/transformers.rs" generated="true" purpose="Request/response transformers"/>
+        </Files>
+      </Directory>
+      <Directory path="backend/" purpose="Backend source code">
+        <Files>
+          <File name="Cargo.toml" required="true" purpose="Cargo manifest"/>
+          <File name="Cargo.lock" required="true" purpose="Dependency lock file"/>
+        </Files>
+      </Directory>
+      <Directory path="./" purpose="Root directory">
+        <Files>
+          <File name="add_connector.sh" required="true" purpose="Connector setup script"/>
+          <File name="generated-requirement-analysis.xml" generated="true" purpose="This requirement analysis"/>
+          <File name="generated-requirement-analysis.xml.resolved" generated="true" purpose="Completion marker"/>
+        </Files>
+      </Directory>
+    </FileSystem>
+
+    <DataModels>
+      <Model name="TechnicalSpecification">
+        <Fields>
+          <Field name="connector_name" type="String">Connector identifier</Field>
+          <Field name="base_url" type="String">Base API URL</Field>
+          <Field name="supported_flows" type="Vec&lt;Flow&gt;">List of supported flows</Field>
+          <Field name="api_endpoints" type="HashMap&lt;Flow, EndpointInfo&gt;">Flow to endpoint mapping</Field>
+          <Field name="request_schemas" type="HashMap&lt;Flow, Schema&gt;">Request body schemas</Field>
+          <Field name="response_schemas" type="HashMap&lt;Flow, Schema&gt;">Response body schemas</Field>
+          <Field name="status_mappings" type="HashMap&lt;String, AttemptStatus&gt;">Connector to UCS status mapping</Field>
+          <Field name="authentication" type="AuthConfig">Authentication configuration</Field>
+          <Field name="supported_payment_methods" type="Vec&lt;PaymentMethod&gt;">Supported payment methods</Field>
+        </Fields>
+      </Model>
+
+      <Model name="EndpointInfo">
+        <Fields>
+          <Field name="path" type="String">API endpoint path</Field>
+          <Field name="method" type="HttpMethod">HTTP method</Field>
+          <Field name="request_type" type="RequestType">Request content type</Field>
+          <Field name="requires_auth" type="bool">Whether authentication is required</Field>
+        </Fields>
+      </Model>
+
+      <Model name="ConnectorStatusEnum">
+        <Fields>
+          <Field name="variants" type="Vec&lt;String&gt;">All possible status values from API</Field>
+          <Field name="mappings" type="HashMap&lt;String, AttemptStatus&gt;">Mapping to UCS status</Field>
+        </Fields>
+      </Model>
+    </DataModels>
+
+    <IdentityMapping>
+      <Mapping>
+        <Source>Connector name from command line</Source>
+        <Target>Directory name: grace/rulesbook/codegen/references/{connector_name}/</Target>
+        <Target>File name: {connector_name}.rs</Target>
+        <Target>Struct name: {ConnectorName}</Target>
+        <Target>Status enum: {ConnectorName}Status</Target>
+      </Mapping>
+      <Mapping>
+        <Source>Flow name</Source>
+        <Target>Request struct: {ConnectorName}{FlowName}Request</Target>
+        <Target>Response struct: {ConnectorName}{FlowName}Response</Target>
+        <Target>Status function: map_{connector_name}_status_to_attempt_status</Target>
+      </Mapping>
+    </IdentityMapping>
+
+    <ForbiddenDataStorage>
+      <ForbiddenItem>Hardcoded API keys or secrets</ForbiddenItem>
+      <ForbiddenItem>User credentials</ForbiddenItem>
+      <ForbiddenItem>Payment card data (PAN, CVV, expiry)</ForbiddenItem>
+      <ForbiddenItem>Personal identifiable information (PII)</ForbiddenItem>
+      <ForbiddenItem>Temporary test data in production code</ForbiddenItem>
+      <ForbiddenItem>TODO or FIXME comments</ForbiddenItem>
+      <ForbiddenItem>Mock implementations</ForbiddenItem>
+      <ForbiddenItem>Hardcoded None values in structs</ForbiddenItem>
+      <ForbiddenItem>Hardcoded status values</ForbiddenItem>
+    </ForbiddenDataStorage>
+
+    <DatabaseSchema>
+      <Note>This system primarily uses file-based storage. No database schema is required for the workflow controller itself.</Note>
+      <Note>Generated connectors may interact with existing UCS databases using established schemas.</Note>
+    </DatabaseSchema>
+  </StorageRequirements>
+
+  <!-- ======================================================================= -->
+  <!-- COMPLIANCE CHECKLIST -->
+  <!-- ======================================================================= -->
+  <ComplianceChecklist>
+    <Category name="Functional Requirements">
+      <Check id="FC-001" priority="CRITICAL" automated="true">
+        <Description>Workflow triggers on correct command</Description>
+        <Test>Execute integrate command with valid connector name</Test>
+        <Expected>Workflow initializes and starts Phase 1</Expected>
+      </Check>
+      <Check id="FC-002" priority="CRITICAL" automated="true">
+        <Description>Tech spec validation completes before Phase 2</Description>
+        <Test>Verify Phase 1 completion before Phase 2 start</Test>
+        <Expected>Phase 2 only starts after Phase 1 success</Expected>
+      </Check>
+      <Check id="FC-003" priority="CRITICAL" automated="true">
+        <Description>Foundation setup executes add_connector.sh</Description>
+        <Test>Verify script execution during Phase 2</Test>
+        <Expected>Script runs with correct parameters</Expected>
+      </Check>
+      <Check id="FC-004" priority="CRITICAL" automated="true">
+        <Description>Cargo build succeeds after foundation setup</Description>
+        <Test>Run cargo build after Phase 2</Test>
+        <Expected>Build completes without errors</Expected>
+      </Check>
+      <Check id="FC-005" priority="CRITICAL" automated="true">
+        <Description>Macro pattern study completes before flow implementation</Description>
+        <Test>Verify Phase 2.5 completion before Phase 3</Test>
+        <Expected>Phase 3 only starts after Phase 2.5 success</Expected>
+      </Check>
+      <Check id="FC-006" priority="CRITICAL" automated="true">
+        <Description>Flows implement in correct sequence</Description>
+        <Test>Verify flow execution order</Test>
+        <Expected>Authorize → PSync → Capture → Void → Refund → RSync</Expected>
+      </Check>
+      <Check id="FC-007" priority="CRITICAL" automated="true">
+        <Description>Each flow uses macro_connector_implementation!</Description>
+        <Test>Inspect generated connector code</Test>
+        <Expected>Macro invocation present for each flow</Expected>
+      </Check>
+      <Check id="FC-008" priority="CRITICAL" automated="true">
+        <Description>Status mapping derives from response, not hardcoded</Description>
+        <Test>Search for hardcoded AttemptStatus values</Test>
+        <Expected>No hardcoded status values found</Expected>
+      </Check>
+      <Check id="FC-009" priority="CRITICAL" automated="true">
+        <Description>Final cargo build succeeds</Description>
+        <Test>Run cargo build after all flows</Test>
+        <Expected>Build completes without errors</Expected>
+      </Check>
+      <Check id="FC-010" priority="CRITICAL" automated="true">
+        <Description>Quality guardian review passes</Description>
+        <Test>Execute quality review</Test>
+        <Expected>All quality checks pass</Expected>
+      </Check>
+      <Check id="FC-011" priority="CRITICAL" automated="true">
+        <Description>Timeline finalization is last step</Description>
+        <Test>Verify timeline.finalize() execution</Test>
+        <Expected>Finalize called after all other steps</Expected>
+      </Check>
+      <Check id="FC-012" priority="CRITICAL" automated="true">
+        <Description>Completion marker file created</Description>
+        <Test>Check for .resolved file</Test>
+        <Expected>generated-requirement-analysis.xml.resolved exists</Expected>
+      </Check>
+    </Category>
+
+    <Category name="Code Quality Standards">
+      <Check id="QC-001" priority="HIGH" automated="true">
+        <Description>No TODO comments in generated code</Description>
+        <Test>Grep for TODO in generated files</Test>
+        <Expected>Zero TODO matches</Expected>
+      </Check>
+      <Check id="QC-002" priority="HIGH" automated="true">
+        <Description>No mock implementations</Description>
+        <Test>Grep for mock/Mock in generated files</Test>
+        <Expected>Zero mock-related matches</Expected>
+      </Check>
+      <Check id="QC-003" priority="HIGH" automated="true">
+        <Description>No hardcoded None values in structs</Description>
+        <Test>Inspect struct definitions</Test>
+        <Expected>No fields always set to None</Expected>
+      </Check>
+      <Check id="QC-004" priority="HIGH" automated="true">
+        <Description>Specific NotSupported error messages</Description>
+        <Test>Grep for NotSupported errors</Test>
+        <Expected>All messages specify exact feature</Expected>
+      </Check>
+      <Check id="QC-005" priority="HIGH" automated="true">
+        <Description>All struct fields are used</Description>
+        <Test>Verify field usage in transformers</Test>
+        <Expected>No unused fields present</Expected>
+      </Check>
+      <Check id="QC-006" priority="HIGH" automated="true">
+        <Description>Option only for truly optional fields</Description>
+        <Test>Compare Option usage with API spec</Test>
+        <Expected>Option matches API optional fields</Expected>
+      </Check>
+      <Check id="QC-007" priority="HIGH" automated="true">
+        <Description>Complete status mapping coverage</Description>
+        <Test>Compare status enum with API docs</Test>
+        <Expected>All API statuses mapped</Expected>
+      </Check>
+    </Category>
+
+    <Category name="UCS Conventions">
+      <Check id="UC-001" priority="CRITICAL" automated="true">
+        <Description>RouterDataV2 used instead of RouterData</Description>
+        <Test>Grep for RouterData usage</Test>
+        <Expected>Only RouterDataV2 found</Expected>
+      </Check>
+      <Check id="UC-002" priority="CRITICAL" automated="true">
+        <Description>ConnectorIntegrationV2 used instead of ConnectorIntegration</Description>
+        <Test>Grep for ConnectorIntegration usage</Test>
+        <Expected>Only ConnectorIntegrationV2 found</Expected>
+      </Check>
+      <Check id="UC-003" priority="CRITICAL" automated="true">
+        <Description>domain_types imports used</Description>
+        <Test>Grep for hyperswitch_domain_models</Test>
+        <Expected>Zero matches</Expected>
+      </Check>
+      <Check id="UC-004" priority="HIGH" automated="true">
+        <Description>Generic struct pattern: ConnectorName&lt;T&gt;</Description>
+        <Test>Verify connector struct definition</Test>
+        <Expected>Generic parameter present where required</Expected>
+      </Check>
+      <Check id="UC-005" priority="HIGH" automated="true">
+        <Description>Correct FlowData type per flow</Description>
+        <Test>Verify FlowData usage</Test>
+        <Expected>PaymentFlowData/RefundFlowData/DisputeFlowData as appropriate</Expected>
+      </Check>
+    </Category>
+
+    <Category name="Build and Compilation">
+      <Check id="BC-001" priority="CRITICAL" automated="true">
+        <Description>Single binary output</Description>
+        <Test>Run cargo build --release</Test>
+        <Expected>Only one binary in target/release/</Expected>
+      </Check>
+      <Check id="BC-002" priority="CRITICAL" automated="true">
+        <Description>No compilation warnings</Description>
+        <Test>Run cargo build with -D warnings</Test>
+        <Expected>Build succeeds with zero warnings</Expected>
+      </Check>
+      <Check id="BC-003" priority="HIGH" automated="true">
+        <Description>Clippy passes</Description>
+        <Test>Run cargo clippy</Test>
+        <Expected>Zero clippy warnings</Expected>
+      </Check>
+      <Check id="BC-004" priority="HIGH" automated="true">
+        <Description>Formatted code</Description>
+        <Test>Run cargo fmt --check</Test>
+        <Expected>No formatting differences</Expected>
+      </Check>
+    </Category>
+
+    <Category name="Security">
+      <Check id="SC-001" priority="CRITICAL" automated="true">
+        <Description>Path traversal prevention</Description>
+        <Test>Attempt path with ../ sequences</Test>
+        <Expected>Access denied</Expected>
+      </Check>
+      <Check id="SC-002" priority="CRITICAL" automated="true">
+        <Description>Command injection prevention</Description>
+        <Test>Attempt connector name with shell metacharacters</Test>
+        <Expected>Input rejected</Expected>
+      </Check>
+      <Check id="SC-003" priority="HIGH" automated="true">
+        <Description>Input validation</Description>
+        <Test>Submit various invalid inputs</Test>
+        <Expected>All invalid inputs rejected</Expected>
+      </Check>
+      <Check id="SC-004" priority="MEDIUM" automated="true">
+        <Description>No sensitive data in code</Description>
+        <Test>Grep for keys, secrets, passwords</Test>
+        <Expected>Zero matches</Expected>
+      </Check>
+    </Category>
+
+    <Category name="Documentation">
+      <Check id="DC-001" priority="MEDIUM" automated="false">
+        <Description>Technical spec is complete</Description>
+        <Test>Manual review of tech spec</Test>
+        <Expected>All required sections present</Expected>
+      </Check>
+      <Check id="DC-002" priority="MEDIUM" automated="false">
+        <Description>Pattern guides are accessible</Description>
+        <Test>Verify all pattern files exist</Test>
+        <Expected>All pattern files readable</Expected>
+      </Check>
+      <Check id="DC-003" priority="LOW" automated="false">
+        <Description>Code is well-commented</Description>
+        <Test>Manual code review</Test>
+        <Expected>Complex logic explained</Expected>
+      </Check>
+    </Category>
+  </ComplianceChecklist>
+
+  <!-- ======================================================================= -->
+  <!-- RISK ASSESSMENT -->
+  <!-- ======================================================================= -->
+  <RiskAssessment>
+    <Risk id="RISK-001" severity="HIGH" likelihood="MEDIUM">
+      <Title>Macro Expansion Failures</Title>
+      <Description>Macro-based code generation may fail due to type mismatches or incorrect parameters</Description>
+      <Impact>Workflow halts, partial code generation, difficult debugging</Impact>
+      <Mitigation>
+        <Mitigation>Validate macro parameters before expansion</Mitigation>
+        <Mitigation>Provide clear error messages for macro failures</Mitigation>
+        <Mitigation>Implement rollback mechanism for partial generations</Mitigation>
+        <Mitigation>Unit test macro expansions with various inputs</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify macro expansion with valid parameters</Test>
+        <Test>Verify error handling with invalid parameters</Test>
+        <Test>Verify rollback on partial failure</Test>
+      </Tests>
+    </Risk>
+
+    <Risk id="RISK-002" severity="HIGH" likelihood="LOW">
+      <Title>Command Injection via Connector Name</Title>
+      <Description>Malicious connector name could inject commands into shell script execution</Description>
+      <Impact>Arbitrary code execution, system compromise</Impact>
+      <Mitigation>
+        <Mitigation>Strict regex validation of connector names</Mitigation>
+        <Mitigation>Use parameterized execution where possible</Mitigation>
+        <Mitigation>Never concatenate user input into shell commands</Mitigation>
+        <Mitigation>Run scripts in restricted environment</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify rejection of names with shell metacharacters</Test>
+        <Test>Verify safe execution of sanitized names</Test>
+        <Test>Fuzz test connector name input</Test>
+      </Tests>
+    </Risk>
+
+    <Risk id="RISK-003" severity="MEDIUM" likelihood="MEDIUM">
+      <Title>Path Traversal Attacks</Title>
+      <Description>Attacker could use path traversal to access unauthorized files</Description>
+      <Impact>Unauthorized file access, information disclosure</Impact>
+      <Mitigation>
+        <Mitigation>Validate all file paths against allowed directories</Mitigation>
+        <Mitigation>Normalize paths before access</Mitigation>
+        <Mitigation>Reject paths containing ".." sequences</Mitigation>
+        <Mitigation>Use canonical paths for comparison</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify rejection of paths with "../"</Test>
+        <Test>Verify rejection of absolute paths outside allowed dirs</Test>
+        <Test>Verify path normalization prevents bypass</Test>
+      </Tests>
+    </Risk>
+
+    <Risk id="RISK-004" severity="MEDIUM" likelihood="MEDIUM">
+      <Title>Incomplete Status Mapping</Title>
+      <Description>Missing status mappings could cause undefined behavior</Description>
+      <Impact>Incorrect transaction status, financial discrepancies</Impact>
+      <Mitigation>
+        <Mitigation>Require explicit mapping for all API statuses</Mitigation>
+        <Mitigation>Fail build if unmapped statuses detected</Mitigation>
+        <Mitigation>Generate warning for unmapped statuses</Mitigation>
+        <Mitigation>Document all possible connector statuses</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify all API statuses are mapped</Test>
+        <Test>Verify build fails with unmapped status</Test>
+        <Test>Verify status mapping function completeness</Test>
+      </Tests>
+    </Risk>
+
+    <Risk id="RISK-005" severity="MEDIUM" likelihood="LOW">
+      <Title>Hardcoded Status Values</Title>
+      <Description>Developers may hardcode status values instead of deriving from response</Description>
+      <Impact>Incorrect transaction status, lost money</Impact>
+      <Mitigation>
+        <Mitigation>Automated detection of hardcoded status values</Mitigation>
+        <Mitigation>Quality gate check for hardcoded values</Mitigation>
+        <Mitigation>Code review requirement for status handling</Mitigation>
+        <Mitigation>Lint rule to flag hardcoded AttemptStatus</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify detection of hardcoded AttemptStatus</Test>
+        <Test>Verify quality gate rejects hardcoded values</Test>
+        <Test>Verify linter flags violations</Test>
+      </Tests>
+    </Risk>
+
+    <Risk id="RISK-006" severity="MEDIUM" likelihood="MEDIUM">
+      <Title>Multiple Binary Generation</Title>
+      <Description>Cargo may generate multiple binaries causing confusion</Description>
+      <Impact>Deployment issues, runtime confusion</Impact>
+      <Mitigation>
+        <Mitigation>Configure Cargo.toml for single binary</Mitigation>
+        <Mitigation>Validate binary count after build</Mitigation>
+        <Mitigation>Fail build if multiple binaries detected</Mitigation>
+        <Mitigation>Document expected binary name</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify single binary output after build</Test>
+        <Test>Verify build fails with multiple binaries</Test>
+        <Test>Verify binary name matches expectation</Test>
+      </Tests>
+    </Risk>
+
+    <Risk id="RISK-007" severity="LOW" likelihood="MEDIUM">
+      <Title>TODO Comments in Production</Title>
+        <Impact>Incomplete functionality, maintenance burden</Impact>
+      <Mitigation>
+        <Mitigation>Automated detection of TODO comments</Mitigation>
+        <Mitigation>Quality gate check for TODOs</Mitigation>
+        <Mitigation>Pre-commit hook to prevent TODO commits</Mitigation>
+        <Mitigation>CI pipeline check for TODOs</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify detection of TODO comments</Test>
+        <Test>Verify quality gate rejects TODOs</Test>
+        <Test>Verify pre-commit hook blocks TODOs</Test>
+      </Tests>
+    </Risk>
+
+    <Risk id="RISK-008" severity="MEDIUM" likelihood="LOW">
+      <Title>Timeline Tampering</Title>
+      <Description>Timeline logs could be modified to hide failures</Description>
+      <Impact>Fraudulent success reporting, audit trail corruption</Impact>
+      <Mitigation>
+        <Mitigation>Immutable timeline after finalization</Mitigation>
+        <Mitigation>Cryptographic signing of timeline entries</Mitigation>
+        <Mitigation>Append-only log structure</Mitigation>
+        <Mitigation>Audit trail of timeline modifications</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify finalized timeline cannot be modified</Test>
+        <Test>Verify timeline entries are signed</Test>
+        <Test>Verify append-only behavior</Test>
+      </Tests>
+    </Risk>
+
+    <Risk id="RISK-009" severity="LOW" likelihood="MEDIUM">
+      <Title>Phase Execution Order Violation</Title>
+      <Description>Phases could execute out of order causing inconsistencies</Description>
+      <Impact>Partial implementation, broken dependencies</Impact>
+      <Mitigation>
+        <Mitigation>State machine enforcing phase order</Mitigation>
+        <Mitigation>Phase completion prerequisites</Mitigation>
+        <Mitigation>Timeline verification of order</Mitigation>
+        <Mitigation>Explicit phase transition validation</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify phase order enforcement</Test>
+        <Test>Verify blocked phase transitions</Test>
+        <Test>Verify timeline reflects correct order</Test>
+      </Tests>
+    </Risk>
+
+    <Risk id="RISK-010" severity="MEDIUM" likelihood="LOW">
+      <Title>Dependency Conflicts</Title>
+      <Description>Cargo dependencies may conflict causing build failures</Description>
+      <Impact>Build failures, delayed delivery</Impact>
+      <Mitigation>
+        <Mitigation>Pinned dependency versions</Mitigation>
+        <Mitigation>Cargo.lock committed to repository</Mitigation>
+        <Mitigation>Regular dependency updates</Mitigation>
+        <Mitigation>Dependency vulnerability scanning</Mitigation>
+      </Mitigation>
+      <Tests>
+        <Test>Verify Cargo.lock integrity</Test>
+        <Test>Verify dependency resolution</Test>
+        <Test>Verify vulnerability scan results</Test>
+      </Tests>
+    </Risk>
+  </RiskAssessment>
+
+  <!-- ======================================================================= -->
+  <!-- TEST CASE DERIVATION -->
+  <!-- ======================================================================= -->
+  <TestCaseDerivation>
+    <TestSuite name="WorkflowControllerTests">
+      <TestCase id="TC-WC-001" name="ValidWorkflowInitialization">
+        <Given>A valid connector name and rules path</Given>
+        <When>WorkflowController::new is called</When>
+        <Then>Controller is created successfully</Then>
+        <And>Phase 1 is ready to start</And>
+      </TestCase>
+      <TestCase id="TC-WC-002" name="InvalidConnectorNameRejected">
+        <Given>An invalid connector name with special characters</Given>
+        <When>WorkflowController::new is called</When>
+        <Then>Returns InvalidConnectorName error</Then>
+      </TestCase>
+      <TestCase id="TC-WC-003" name="MissingRulesFile">
+        <Given>A non-existent rules path</Given>
+        <When>WorkflowController::new is called</When>
+        <Then>Returns RulesNotFound error</Then>
+      </TestCase>
+      <TestCase id="TC-WC-004" name="CompleteWorkflowExecution">
+        <Given>A valid connector with complete tech spec</Given>
+        <When>WorkflowController::execute is called</When>
+        <Then>All phases complete successfully</Then>
+        <And>CompletionReport is returned</Then>
+        <And>Timeline is finalized</And>
+        <And>.resolved file is created</And>
+      </TestCase>
+      <TestCase id="TC-WC-005" name="PhaseOrderEnforcement">
+        <Given>A workflow in progress</Given>
+        <When>Attempting to skip a phase</When>
+        <Then>Skip is prevented</Then>
+        <And>Previous phase must complete first</And>
+      </TestCase>
+    </TestSuite>
+
+    <TestSuite name="FoundationAgentTests">
+      <TestCase id="TC-FA-001" name="SuccessfulFoundationSetup">
+        <Given>A valid connector name and base URL</Given>
+        <When>FoundationAgent::setup is called</When>
+        <Then>add_connector.sh executes successfully</Then>
+        <And>Cargo build succeeds</Then>
+        <And>UCS conventions are validated</Then>
+        <And>SetupResult is returned</And>
+      </TestCase>
+      <TestCase id="TC-FA-002" name="ScriptExecutionFailure">
+        <Given>add_connector.sh will fail</Given>
+        <When>FoundationAgent::setup is called</When>
+        <Then>Returns ScriptExecutionFailed error</Then>
+        <And>Error details are provided</Then>
+      </TestCase>
+      <TestCase id="TC-FA-003" name="BuildFailureHandling">
+        <Given>add_connector.sh succeeds but cargo build fails</Given>
+        <When>FoundationAgent::setup is called</When>
+        <Then>Returns BuildFailed error</Then>
+        <And>Compilation errors are analyzed</Then>
+      </TestCase>
+      <TestCase id="TC-FA-004" name="ConventionViolationDetection">
+        <Generated code violates UCS conventions</Given>
+        <When>FoundationAgent::setup validates</When>
+        <Then>Returns ConventionViolation error</Then>
+        <And>Specific violations are listed</Then>
+      </TestCase>
+    </TestSuite>
+
+    <TestSuite name="FlowAgentTests">
+      <TestCase id="TC-FL-001" name="AuthorizeFlowImplementation">
+        <Given>Authorize flow requirements and tech spec</Given>
+        <When>FlowAgent::implement_flow is called with Authorize</When>
+        <Then>Flow is added to create_all_prerequisites!</Then>
+        <And>macro_connector_implementation! is invoked</And>
+        <And>Request/Response types are created</And>
+        <And>Status mapping is implemented</And>
+        <And>Cargo build succeeds</And>
+      </TestCase>
+      <TestCase id="TC-FL-002" name="GetEndpointNoRequestBody">
+        <Given>A flow using GET method</Given>
+        <When>FlowAgent::implement_flow is called</When>
+        <Then>curl_request parameter is omitted from macro</Then>
+        <And>Request type is not defined</Then>
+      </TestCase>
+      <TestCase id="TC-FL-003" name="StatusMappingCompleteness">
+        <Given>Connector API with multiple status values</Given>
+        <When>FlowAgent::implement_flow creates status mapping</When>
+        <Then>All API statuses are mapped</Then>
+        <And>No unmapped statuses remain</Then>
+      </TestCase>
+      <TestCase id="TC-FL-004" name="NoHardcodedStatus">
+        <Given>Response transformer implementation</Given>
+        <When>FlowAgent::implement_flow generates code</When>
+        <Then>No hardcoded AttemptStatus values</Then>
+        <And>Status is derived from response</Then>
+      </TestCase>
+      <TestCase id="TC-FL-005" name="SpecificNotSupportedErrors">
+        <Given>Unsupported payment method scenario</Given>
+        <When>FlowAgent::implement_flow generates error</When>
+        <Then>Error specifies exact feature name</Then>
+        <And>Not generic "Not supported" message</Then>
+      </TestCase>
+    </TestSuite>
+
+    <TestSuite name="QualityGuardianTests">
+      <TestCase id="TC-QG-001" name="NoTodosDetected">
+        <Given>Generated connector code</Given>
+        <When>QualityGuardian::review is called</When>
+        <Then>TODO comments are detected</Then>
+        <And>Returns TodosFound error if present</Then>
+      </TestCase>
+      <TestCase id="TC-QG-002" name="NoMocksDetected">
+        <Given>Generated connector code</Given>
+        <When>QualityGuardian::review is called</When>
+        <Then>Mock implementations are detected</Then>
+        <And>Returns MocksFound error if present</Then>
+      </TestCase>
+      <TestCase id="TC-QG-003" name="HardcodedNoneDetection">
+        <Given>Generated connector structs</Given>
+        <When>QualityGuardian::review is called</When>
+        <Then>Fields always set to None are detected</Then>
+        <And>Returns HardcodedValuesFound error</Then>
+      </TestCase>
+      <TestCase id="TC-QG-004" name="ImportValidation">
+        <Given>Generated connector code</Given>
+        <When>QualityGuardian::review is called</When>
+        <Then>domain_types imports are verified</Then>
+        <And>hyperswitch_* imports are rejected</Then>
+      </TestCase>
+      <TestCase id="TC-QG-005" name="RouterDataV2Usage">
+        <Given>Generated connector code</Given>
+        <When>QualityGuardian::review is called</When>
+        <Then>RouterDataV2 usage is verified</Then>
+        <And>RouterData usage is rejected</Then>
+      </TestCase>
+    </TestSuite>
+
+    <TestSuite name="SecurityTests">
+      <TestCase id="TC-SEC-101" name="PathTraversalPrevention">
+        <Given>A file path with "../" sequences</Given>
+        <When>Attempting to read the file</When>
+        <Then>Access is denied</Then>
+        <And>Security event is logged</Then>
+      </TestCase>
+      <TestCase id="TC-SEC-102" name="CommandInjectionPrevention">
+        <Given>A connector name with shell metacharacters</Given>
+        <When>Attempting to execute integration</Given>
+        <Then>Input is rejected</Then>
+        <And>No command is executed</Then>
+      </TestCase>
+      <TestCase id="TC-SEC-103" name="InputValidation">
+        <Given>Various invalid input formats</Given>
+        <When>Submitting to workflow</When>
+        <Then>All invalid inputs are rejected</Then>
+        <And>Appropriate error messages returned</Then>
+      </TestCase>
+      <TestCase id="TC-SEC-104" name="TimelineIntegrity">
+        <Given>A finalized timeline</Given>
+        <When>Attempting to modify it</When>
+        <Then>Modification is prevented</Then>
+        <And>Timeline remains unchanged</Then>
+      </TestCase>
+    </TestSuite>
+
+    <TestSuite name="BuildTests">
+      <TestCase id="TC-BLD-001" name="SingleBinaryOutput">
+        <Given>Complete connector implementation</Given>
+        <When>Running cargo build --release</When>
+        <Then>Only one binary is generated</Then>
+        <And>Binary name is correct</Then>
+      </TestCase>
+      <TestCase id="TC-BLD-002" name="NoCompilationWarnings">
+        <Given>Complete connector implementation</Given>
+        <When>Running cargo build with -D warnings</When>
+        <Then>Build succeeds</Then>
+        <And>Zero warnings are produced</Then>
+      </TestCase>
+      <TestCase id="TC-BLD-003" name="ClippyPasses">
+        <Given>Complete connector implementation</Given>
+        <When>Running cargo clippy</When>
+        <Then>Zero clippy warnings</Then>
+      </TestCase>
+      <TestCase id="TC-BLD-004" name="CodeFormatting">
+        <Given>Complete connector implementation</Given>
+        <When>Running cargo fmt --check</When>
+        <Then>No formatting differences</Then>
+      </TestCase>
+    </TestSuite>
+  </TestCaseDerivation>
+
+  <!-- ======================================================================= -->
+  <!-- ACCEPTANCE CRITERIA SUMMARY -->
+  <!-- ======================================================================= -->
+  <AcceptanceCriteriaSummary>
+    <Criterion id="AC-001" priority="CRITICAL">
+      <Description>Workflow executes all phases in strict sequential order</Description>
+      <Verification>Automated test verifies phase sequence</Verification>
+    </Criterion>
+    <Criterion id="AC-002" priority="CRITICAL">
+      <Description>Each phase must complete successfully before next begins</Description>
+      <Verification>State machine enforces phase transitions</Verification>
+    </Criterion>
+    <Criterion id="AC-003" priority="CRITICAL">
+      <Description>All generated code compiles without errors</Description>
+      <Verification>cargo build succeeds</Verification>
+    </Criterion>
+    <Criterion id="AC-004" priority="CRITICAL">
+      <Description>Single binary output from cargo build</Description>
+      <Verification>Verify binary count in target/</Verification>
+    </Criterion>
+    <Criterion id="AC-005" priority="CRITICAL">
+      <Description>No TODO comments in production code</Description>
+      <Verification>Automated grep for TODO</Verification>
+    </Criterion>
+    <Criterion id="AC-006" priority="CRITICAL">
+      <Description>No mock implementations</Description>
+      <Verification>Automated grep for mock</Verification>
+    </Criterion>
+    <Criterion id="AC-007" priority="CRITICAL">
+      <Description>Status mapping derives from response, not hardcoded</Description>
+      <Verification>Code inspection and automated check</Verification>
+    </Criterion>
+    <Criterion id="AC-008" priority="CRITICAL">
+      <Description>timeline.finalize() is always the final step</Description>
+      <Verification>Workflow execution trace</Verification>
+    </Criterion>
+    <Criterion id="AC-009" priority="CRITICAL">
+      <Description>generated-requirement-analysis.xml.resolved is created</Description>
+      <Verification>File existence check</Verification>
+    </Criterion>
+    <Criterion id="AC-010" priority="HIGH">
+      <Description>RouterDataV2 used instead of RouterData</Description>
+      <Verification>Automated grep check</Verification>
+    </Criterion>
+    <Criterion id="AC-011" priority="HIGH">
+      <Description>ConnectorIntegrationV2 used instead of ConnectorIntegration</Description>
+      <Verification>Automated grep check</Verification>
+    </Criterion>
+    <Criterion id="AC-012" priority="HIGH">
+      <Description>domain_types imports used, not hyperswitch_*</Description>
+      <Verification>Automated grep check</Verification>
+    </Criterion>
+    <Criterion id="AC-013" priority="HIGH">
+      <Description>All flows use macro_connector_implementation!</Description>
+      <Verification>Code inspection</Verification>
+    </Criterion>
+    <Criterion id="AC-014" priority="HIGH">
+      <Description>Specific NotSupported error messages</Description>
+      <Verification>Code inspection</Verification>
+    </Criterion>
+    <Criterion id="AC-015" priority="MEDIUM">
+      <Description>Zero compilation warnings</Description>
+      <Verification>cargo build -D warnings</Verification>
+    </Criterion>
+    <Criterion id="AC-016" priority="MEDIUM">
+      <Description>Zero clippy warnings</Description>
+      <Verification>cargo clippy</Verification>
+    </Criterion>
+    <Criterion id="AC-017" priority="MEDIUM">
+      <Description>Code is properly formatted</Description>
+      <Verification>cargo fmt --check</Verification>
+    </Criterion>
+  </AcceptanceCriteriaSummary>
+
+  <!-- ======================================================================= -->
+  <!-- IMPLEMENTATION NOTES -->
+  <!-- ======================================================================= -->
+  <ImplementationNotes>
+    <Note id="IN-001">
+      <Topic>Single Binary Constraint</Topic>
+      <Content>Ensure Cargo.toml [[bin]] section specifies only one binary. Use lib.rs for shared code and main.rs for the single entry point.</Content>
+    </Note>
+    <Note id="IN-002">
+      <Topic>Macro Expansion Debugging</Topic>
+      <Content>Use cargo expand --bin &lt;binary_name&gt; to view macro-expanded code for debugging. Install with: cargo install cargo-expand</Content>
+    </Note>
+    <Note id="IN-003">
+      <Topic>Timeline Finalization</Topic>
+      <Content>The timeline.finalize() call must be the absolute last step, even after creating the .resolved file. This ensures audit trail completeness.</Content>
+    </Note>
+    <Note id="IN-004">
+      <Topic>Status Enum Creation</Topic>
+      <Content>Always create a dedicated status enum (e.g., StripeStatus) with #[derive(Debug, Deserialize)] and map all variants to AttemptStatus.</Content>
+    </Note>
+    <Note id="IN-005">
+      <Topic>Generic Type Parameters</Topic>
+      <Content>Only use generic &lt;T&gt; for flows that require PaymentMethodDataTypes (typically Authorize). Other flows don't need generics.</Content>
+    </Note>
+    <Note id="IN-006">
+      <Topic>GET Endpoints</Topic>
+      <Content>For GET endpoints, omit the curl_request parameter entirely from macro_connector_implementation!. Do not pass an empty value.</Content>
+    </Note>
+    <Note id="IN-007">
+      <Topic>Field Cleanup</Topic>
+      <Content>After implementing transformers, review all struct fields and remove any that are always None. If a field is always None, it shouldn't exist.</Content>
+    </Note>
+    <Note id="IN-008">
+      <Topic>Error Context</Topic>
+      <Content>Always use error_stack::Report for error propagation and provide context using .attach() or .change_context().</Content>
+    </Note>
+  </ImplementationNotes>
+
+</RequirementAnalysis>
