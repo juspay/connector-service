@@ -242,7 +242,7 @@ pub struct FiservemeaSyncResponse {
     pub processor: Option<FiservemeaProcessor>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaVoidRequest {
     pub request_type: String,
