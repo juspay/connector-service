@@ -328,8 +328,11 @@ pub fn emit_event_with_config(event: Event, config: &EventConfig) {
     };
 
     // This provides observability even when Kafka publishing is disabled
+    let event_json = serde_json::to_string(&processed_event).unwrap_or_else(|e| {
+        format!("Failed to serialize event: {}", e)
+    });
     tracing::info!(
-        full_event = ?processed_event,
+        full_event = %event_json,
         events_enabled = config.enabled,
         "Event processed (Kafka publishing: {})",
         if config.enabled { "enabled" } else { "disabled" }
