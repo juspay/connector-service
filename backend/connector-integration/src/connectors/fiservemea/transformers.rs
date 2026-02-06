@@ -403,11 +403,6 @@ pub struct FiservemeaPaymentMethodDetails {
     pub payment_method_brand: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct FiservemeaRouterData<RD> {
-    pub router_data: RD,
-}
-
 impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for FiservemeaPaymentsRequest
 {
