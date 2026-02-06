@@ -215,7 +215,7 @@ pub struct FiservemeaAuthorizeResponse {
     pub payment_method_details: Option<FiservemeaPaymentMethodDetails>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaSyncResponse {
     pub client_request_id: String,
