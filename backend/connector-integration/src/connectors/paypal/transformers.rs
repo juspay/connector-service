@@ -1823,78 +1823,79 @@ where
         let status = payment_collection_item.status.clone();
         let status = common_enums::AttemptStatus::from(status);
 
-        if utils::is_payment_failure(status) {
-            let error_code = payment_collection_item
-                .processor_response
-                .as_ref()
-                .and_then(|response| response.response_code.clone());
+        match utils::is_payment_failure(status) {
+            true => {
+                let error_code = payment_collection_item
+                    .processor_response
+                    .as_ref()
+                    .and_then(|response| response.response_code.clone());
 
-            let error_message = error_code
-                .as_deref()
-                .and_then(get_paypal_error_message)
-                .map(|message| message.to_string());
+                let error_message = error_code
+                    .as_deref()
+                    .and_then(get_paypal_error_message)
+                    .map(|message| message.to_string());
 
-            return Ok(Self {
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Err(domain_types::router_data::ErrorResponse {
+                        code: error_code.unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+                        message: error_message
+                            .clone()
+                            .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+                        reason: error_message,
+                        status_code: item.http_code,
+                        attempt_status: None,
+                        connector_transaction_id: Some(item.response.id.clone()),
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    }),
+                    ..item.router_data
+                })
+            }
+            false => Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
                     ..item.router_data.resource_common_data
                 },
-                response: Err(domain_types::router_data::ErrorResponse {
-                    code: error_code.unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-                    message: error_message
-                        .clone()
-                        .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-                    reason: error_message,
+                response: Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: order_id,
+                    redirection_data: None,
+                    mandate_reference: Some(Box::new(MandateReference {
+                        connector_mandate_id: match item.response.payment_source.clone() {
+                            Some(paypal_source) => match paypal_source {
+                                PaymentSourceItemResponse::Paypal(paypal_source) => {
+                                    paypal_source.attributes.map(|attr| attr.vault.id)
+                                }
+                                PaymentSourceItemResponse::Card(card) => {
+                                    card.attributes.map(|attr| attr.vault.id)
+                                }
+                                PaymentSourceItemResponse::Eps(_)
+                                | PaymentSourceItemResponse::Ideal(_) => None,
+                            },
+                            None => None,
+                        },
+                        payment_method_id: None,
+                        connector_mandate_request_reference_id: None,
+                    })),
                     status_code: item.http_code,
-                    attempt_status: None,
-                    connector_transaction_id: Some(item.response.id.clone()),
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
+                    connector_metadata: Some(connector_meta),
+                    network_txn_id: None,
+                    connector_response_reference_id: purchase_units
+                        .invoice_id
+                        .clone()
+                        .or(Some(item.response.id)),
+                    incremental_authorization_allowed: item
+                        .router_data
+                        .request
+                        .get_request_incremental_authorization(),
                 }),
                 ..item.router_data
-            });
-        }
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: order_id,
-                redirection_data: None,
-                mandate_reference: Some(Box::new(MandateReference {
-                    connector_mandate_id: match item.response.payment_source.clone() {
-                        Some(paypal_source) => match paypal_source {
-                            PaymentSourceItemResponse::Paypal(paypal_source) => {
-                                paypal_source.attributes.map(|attr| attr.vault.id)
-                            }
-                            PaymentSourceItemResponse::Card(card) => {
-                                card.attributes.map(|attr| attr.vault.id)
-                            }
-                            PaymentSourceItemResponse::Eps(_)
-                            | PaymentSourceItemResponse::Ideal(_) => None,
-                        },
-                        None => None,
-                    },
-                    payment_method_id: None,
-                    connector_mandate_request_reference_id: None,
-                })),
-                status_code: item.http_code,
-                connector_metadata: Some(connector_meta),
-                network_txn_id: None,
-                connector_response_reference_id: purchase_units
-                    .invoice_id
-                    .clone()
-                    .or(Some(item.response.id)),
-                incremental_authorization_allowed: item
-                    .router_data
-                    .request
-                    .get_request_incremental_authorization(),
             }),
-            ..item.router_data
-        })
+        }
     }
 }
 
