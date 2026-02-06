@@ -4,6 +4,25 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.06.1
+
+### Features
+
+- **framework:** Added missing CardNetwork Types ([#483](https://github.com/juspay/connector-service/pull/483)) ([`14ae8ee`](https://github.com/juspay/connector-service/commit/14ae8eef28619843086e07e34849117f2d0fb199))
+
+### Bug Fixes
+
+- **connector:**
+  - [NEXIXPAY] DIFF FIX ([#476](https://github.com/juspay/connector-service/pull/476)) ([`d0592cc`](https://github.com/juspay/connector-service/commit/d0592cc54f405450e7e2c869dc3dba6516344000))
+  - [Fiuu] Fixed payment status being sent as Pending for Fiuu when the connector response is FiuuPaymentsResponse::Error ([#482](https://github.com/juspay/connector-service/pull/482)) ([`00ffd3b`](https://github.com/juspay/connector-service/commit/00ffd3b1d753f72a93b3882585b3eda2a9c9ec55))
+- Handled metadata Parsing Err Gracefully in Core ([#472](https://github.com/juspay/connector-service/pull/472)) ([`d0f78b5`](https://github.com/juspay/connector-service/commit/d0f78b529753ec573c6460aca6a36e06decb1cb8))
+- Revert "Handled metadata Parsing Err Gracefully in Core" ([#489](https://github.com/juspay/connector-service/pull/489)) ([`ff256ac`](https://github.com/juspay/connector-service/commit/ff256ac10da20915a03673be4237a3a85e738c3a))
+- PAYPAL Authorize 2xx error handling and connector_metadata diff in psync ([#477](https://github.com/juspay/connector-service/pull/477)) ([`884abad`](https://github.com/juspay/connector-service/commit/884abaded66344ff4a1e81719e57bf442c5e2f05))
+
+**Full Changelog:** [`2026.02.06.0...2026.02.06.1`](https://github.com/juspay/connector-service/compare/2026.02.06.0...2026.02.06.1)
+
+- - -
+
 ## 2026.02.06.0
 
 ### Features
