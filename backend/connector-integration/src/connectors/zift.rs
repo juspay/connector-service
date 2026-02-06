@@ -1,7 +1,8 @@
+use super::macros;
 pub mod transformers;
 use crate::{types::ResponseRouterData, with_error_response_body};
 use common_enums::{CaptureMethod, CardNetwork, CurrencyUnit, PaymentMethod, PaymentMethodType};
-use common_utils::{errors::CustomResult, events};
+use common_utils::{errors::CustomResult, events, StringMinorUnit};
 use hyperswitch_masking::Maskable;
 use serde_json::Value;
 use std::{
@@ -51,9 +52,10 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     ZiftAuthPaymentsResponse, ZiftAuthPaymentsResponse as ZiftSetupMandateResponse,
-    ZiftCaptureRequest, ZiftCaptureResponse, ZiftErrorResponse, ZiftPaymentsRequest,
-    ZiftRefundRequest, ZiftRefundResponse, ZiftSetupMandateRequest, ZiftSyncRequest,
-    ZiftSyncResponse, ZiftVoidRequest, ZiftVoidResponse,
+    ZiftAuthPaymentsResponse as ZiftRepeatPaymentResponse, ZiftCaptureRequest, ZiftCaptureResponse,
+    ZiftErrorResponse, ZiftPaymentsRequest, ZiftRefundRequest, ZiftRefundResponse,
+    ZiftRepeatPaymentsRequest, ZiftSetupMandateRequest, ZiftSyncRequest, ZiftSyncResponse,
+    ZiftVoidRequest, ZiftVoidResponse,
 };
 
 pub(crate) mod headers {
@@ -198,13 +200,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Sour
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Zift<T>
 {
-    fn should_do_payment_method_token(
-        &self,
-        _payment_method: PaymentMethod,
-        _payment_method_type: Option<PaymentMethodType>,
-    ) -> bool {
-        false
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -227,16 +222,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         VoidPC,
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Zift<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Zift<T>
 {
@@ -362,7 +347,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 macros::create_amount_converter_wrapper!(connector_name: Zift, amount_type: StringMinorUnit);
 
-use super::macros;
 macros::create_all_prerequisites!(
     connector_name: Zift,
     generic_type: T,
@@ -402,9 +386,18 @@ macros::create_all_prerequisites!(
             request_body: ZiftRefundRequest,
             response_body: ZiftRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: ZiftRepeatPaymentsRequest<T>,
+            response_body: ZiftRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
+
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: StringMinorUnit
+    ],
     member_functions: {
         fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
@@ -517,7 +510,7 @@ static ZIFT_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
 
     zift_supported_payment_methods.add(
         PaymentMethod::Card,
-        PaymentMethodType::Card, //Credit
+        PaymentMethodType::Card,
         PaymentMethodDetails {
             mandates: FeatureStatus::Supported,
             refunds: FeatureStatus::Supported,
@@ -531,23 +524,6 @@ static ZIFT_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
             })),
         },
     );
-
-    // zift_supported_payment_methods.add(
-    //     PaymentMethod::Card,
-    //     PaymentMethodType::Debit,
-    //     PaymentMethodDetails {
-    //         mandates: FeatureStatus::Supported,
-    //         refunds: FeatureStatus::Supported,
-    //         supported_capture_methods: zift_supported_capture_methods.clone(),
-    //         specific_features: Some(PaymentMethodSpecificFeatures::Card({
-    //             CardSpecificFeatures {
-    //                 three_ds: FeatureStatus::NotSupported,
-    //                 no_three_ds: FeatureStatus::Supported,
-    //                 supported_card_networks: zift_supported_card_network.clone(),
-    //             }
-    //         })),
-    //     },
-    // );
 
     zift_supported_payment_methods
 });
@@ -775,6 +751,35 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}gates/xurl", self.connector_base_url_refunds(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Zift,
+    curl_request: FormUrlEncoded(ZiftRepeatPaymentsRequest<T>),
+    curl_response: ZiftRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>,errors::ConnectorError>{
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}gates/xurl", self.connector_base_url_payments(req)))
         }
     }
 );
