@@ -304,7 +304,7 @@ pub struct FiservemeaRefundRequest {
     pub comments: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaRefundResponse {
     pub client_request_id: String,
