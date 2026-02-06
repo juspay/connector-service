@@ -3973,6 +3973,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Eps(_)),
             } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Blik(_)),
+            } => Ok(Self::BankRedirect),
             _ => Ok(Self::Card), // Default fallback
         }
     }
