@@ -404,19 +404,28 @@ pub struct FiservemeaPaymentMethodDetails {
 }
 
 #[derive(Debug, Clone)]
-pub struct FiservemeaRouterData<RD> {
+pub struct FiservemeaRouterData<RD, T> {
     pub router_data: RD,
+    pub _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<&FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
-    for FiservemeaPaymentsRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservemeaPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
+        item: FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let payment_method = value.router_data.request.payment_method_data.clone();
+        let payment_method = item.router_data.request.payment_method_data.clone();
 
         let payment_method_obj = match payment_method {
             PaymentMethodData::Card(card) => Some(FiservemeaPaymentMethod {
@@ -464,7 +473,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&FiservemeaRouterData<RouterDataV2<Autho
             }))?,
         };
 
-        let order = value.router_data
+        let order = item.router_data
             .request
             .order_details
             .as_ref()
@@ -484,8 +493,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<&FiservemeaRouterData<RouterDataV2<Autho
         Ok(FiservemeaPaymentsRequest {
             request_type: "PaymentCardSaleTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: value.router_data.request.amount.to_string(),
-                currency: value.router_data.request.currency.to_string(),
+                total: item.router_data.request.amount.to_string(),
+                currency: item.router_data.request.currency.to_string(),
             },
             payment_method: payment_method_obj,
             order,
@@ -493,13 +502,21 @@ impl<T: PaymentMethodDataTypes> TryFrom<&FiservemeaRouterData<RouterDataV2<Autho
     }
 }
 
-impl TryFrom<&FiservemeaRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>>
-    for FiservemeaVoidRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservemeaVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _value: &FiservemeaRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
+        _item: FiservemeaRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaVoidRequest {
             request_type: "VoidTransaction".to_string(),
@@ -508,37 +525,53 @@ impl TryFrom<&FiservemeaRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVo
     }
 }
 
-impl TryFrom<&FiservemeaRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
-    for FiservemeaCaptureRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservemeaCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &FiservemeaRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
+        item: FiservemeaRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaCaptureRequest {
             request_type: "PostAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: value.router_data.request.amount.to_string(),
-                currency: value.router_data.request.currency.to_string(),
+                total: item.router_data.request.amount.to_string(),
+                currency: item.router_data.request.currency.to_string(),
             },
         })
     }
 }
 
-impl TryFrom<&FiservemeaRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
-    for FiservemeaRefundRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for FiservemeaRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: &FiservemeaRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+        item: FiservemeaRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(FiservemeaRefundRequest {
             request_type: "ReturnTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: value.router_data.request.amount.to_string(),
-                currency: value.router_data.request.currency.to_string(),
+                total: item.router_data.request.amount.to_string(),
+                currency: item.router_data.request.currency.to_string(),
             },
             comments: None,
         })
