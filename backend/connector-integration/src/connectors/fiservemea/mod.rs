@@ -57,6 +57,12 @@ pub(crate) mod headers {
     pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
 }
 
+#[derive(Debug, Clone)]
+pub struct FiservemeaRouterData<RD, T> {
+    pub router_data: RD,
+    pub _phantom: std::marker::PhantomData<T>,
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         IncrementalAuthorization,
