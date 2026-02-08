@@ -24,8 +24,8 @@ use domain_types::{
     errors,
     payment_method_data::{
         BankDebitData, BankRedirectData, BankTransferData, Card, CardRedirectData,
-        DefaultPCIHolder, GiftCardData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        WalletData,
+        DefaultPCIHolder, GiftCardData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber, WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -159,6 +159,22 @@ pub struct AdyenNetworkTokenData {
 pub enum AdyenPaymentMethod<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
+    #[serde(rename = "klarna")]
+    Klarna,
+    #[serde(rename = "affirm")]
+    AdyenAffirm,
+    #[serde(rename = "afterpaytouch")]
+    AfterPay,
+    #[serde(rename = "clearpay")]
+    ClearPay,
+    #[serde(rename = "paybright")]
+    PayBright,
+    #[serde(rename = "walley")]
+    Walley,
+    #[serde(rename = "alma")]
+    AlmaPayLater,
+    #[serde(rename = "atome")]
+    Atome,
     #[serde(rename = "scheme")]
     AdyenCard(Box<AdyenCard<T>>),
     #[serde(rename = "networkToken")]
@@ -2677,8 +2693,257 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::GiftCard(ref gift_card) => {
                     Self::try_from((item, gift_card.as_ref()))
                 }
-                PaymentMethodData::PayLater(_)
-                | PaymentMethodData::Voucher(_)
+                PaymentMethodData::PayLater(pay_later_data) => {
+                    let payment_method = match pay_later_data {
+                        PayLaterData::KlarnaRedirect { .. } => {
+                            let billing = item.router_data.resource_common_data.get_billing()?;
+                            billing.email.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "email",
+                                }
+                            })?;
+                            item.router_data
+                                .resource_common_data
+                                .customer_id
+                                .as_ref()
+                                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                                    field_name: "customer_id",
+                                })?;
+                            let _country = item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_country()?;
+                            AdyenPaymentMethod::Klarna
+                        }
+                        PayLaterData::KlarnaSdk { token } => {
+                            if token.is_empty() {
+                                return Err(errors::ConnectorError::MissingRequiredField {
+                                    field_name: "token",
+                                }
+                                .into());
+                            }
+                            AdyenPaymentMethod::Klarna
+                        }
+                        PayLaterData::AffirmRedirect { .. } => {
+                            let billing = item.router_data.resource_common_data.get_billing()?;
+                            billing.email.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "email",
+                                }
+                            })?;
+                            billing.address.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.address",
+                                }
+                            })?;
+                            billing.phone.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.phone",
+                                }
+                            })?;
+                            AdyenPaymentMethod::AdyenAffirm
+                        }
+                        PayLaterData::AfterpayClearpayRedirect { .. } => {
+                            let billing = item.router_data.resource_common_data.get_billing()?;
+                            billing.email.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "email",
+                                }
+                            })?;
+                            billing.address.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.address",
+                                }
+                            })?;
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_shipping()
+                                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                                    field_name: "shipping",
+                                })?;
+                            let country = item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_country()?;
+                            match country {
+                                common_enums::CountryAlpha2::IT
+                                | common_enums::CountryAlpha2::FR
+                                | common_enums::CountryAlpha2::ES
+                                | common_enums::CountryAlpha2::GB => AdyenPaymentMethod::ClearPay,
+                                _ => AdyenPaymentMethod::AfterPay,
+                            }
+                        }
+                        PayLaterData::PayBrightRedirect { .. } => {
+                            let billing = item.router_data.resource_common_data.get_billing()?;
+                            billing.address.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.address",
+                                }
+                            })?;
+                            billing.phone.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.phone",
+                                }
+                            })?;
+                            billing.email.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.email",
+                                }
+                            })?;
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_shipping()
+                                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                                    field_name: "shipping",
+                                })?;
+                            let _country = item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_country()?;
+                            AdyenPaymentMethod::PayBright
+                        }
+                        PayLaterData::WalleyRedirect { .. } => {
+                            let billing = item.router_data.resource_common_data.get_billing()?;
+                            billing.phone.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.phone",
+                                }
+                            })?;
+                            billing.email.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.email",
+                                }
+                            })?;
+                            AdyenPaymentMethod::Walley
+                        }
+                        PayLaterData::AlmaRedirect { .. } => {
+                            let billing = item.router_data.resource_common_data.get_billing()?;
+                            billing.phone.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.phone",
+                                }
+                            })?;
+                            billing.email.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.email",
+                                }
+                            })?;
+                            billing.address.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.address",
+                                }
+                            })?;
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_shipping()
+                                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                                    field_name: "shipping",
+                                })?;
+                            AdyenPaymentMethod::AlmaPayLater
+                        }
+                        PayLaterData::AtomeRedirect { .. } => {
+                            let billing = item.router_data.resource_common_data.get_billing()?;
+                            billing.email.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.email",
+                                }
+                            })?;
+                            billing.phone.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.phone",
+                                }
+                            })?;
+                            billing.address.as_ref().ok_or_else(|| {
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "billing.address",
+                                }
+                            })?;
+                            AdyenPaymentMethod::Atome
+                        }
+                    };
+
+                    let amount = get_amount_data(&item);
+                    let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+                    let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+                    let return_url = item.router_data.request.get_router_return_url()?;
+                    let additional_data = get_additional_data(&item.router_data);
+
+                    let payment_method_wrapper =
+                        PaymentMethod::AdyenPaymentMethod(Box::new(payment_method));
+
+                    let billing_address = get_address_info(
+                        item.router_data
+                            .resource_common_data
+                            .address
+                            .get_payment_billing(),
+                    )
+                    .and_then(Result::ok);
+
+                    let delivery_address = get_address_info(
+                        item.router_data
+                            .resource_common_data
+                            .get_optional_shipping(),
+                    )
+                    .and_then(Result::ok);
+
+                    let adyen_metadata = get_adyen_metadata(
+                        item.router_data.request.metadata.clone().expose_option(),
+                    );
+
+                    Ok(Self {
+                        amount,
+                        merchant_account: auth_type.merchant_account,
+                        payment_method: payment_method_wrapper,
+                        reference: item
+                            .router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        return_url,
+                        shopper_interaction,
+                        recurring_processing_model: None,
+                        browser_info: None,
+                        additional_data,
+                        mpi_data: None,
+                        telephone_number: item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing_phone_number(),
+                        shopper_name: None,
+                        shopper_email: item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing_email(),
+                        shopper_locale: item.router_data.request.locale.clone(),
+                        social_security_number: None,
+                        billing_address,
+                        delivery_address,
+                        country_code: None,
+                        line_items: None,
+                        shopper_reference: None,
+                        store_payment_method: None,
+                        channel: None,
+                        shopper_statement: None,
+                        shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+                        merchant_order_reference: item
+                            .router_data
+                            .request
+                            .merchant_order_reference_id
+                            .clone(),
+                        store: adyen_metadata.store.clone(),
+                        splits: None,
+                        device_fingerprint: adyen_metadata.device_fingerprint.clone(),
+                        platform_chargeback_logic: adyen_metadata.platform_chargeback_logic.clone(),
+                        metadata: item
+                            .router_data
+                            .request
+                            .metadata
+                            .clone()
+                            .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+                        session_validity: None,
+                    })
+                }
+                PaymentMethodData::Voucher(_)
                 | PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
