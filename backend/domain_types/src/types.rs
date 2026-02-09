@@ -3989,6 +3989,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_)),
             } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Affirm(_)),
+            } => Ok(Self::PayLater),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::AfterpayClearpay(_)),
+            } => Ok(Self::PayLater),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Klarna(_)),
+            } => Ok(Self::PayLater),
             _ => Ok(Self::Card), // Default fallback
         }
     }

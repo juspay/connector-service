@@ -2818,7 +2818,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             return_url,
             shopper_interaction,
             recurring_processing_model,
-            browser_info: None,
+            browser_info: get_browser_info(&item.router_data)?,
             additional_data,
             mpi_data: None,
             telephone_number: item
