@@ -295,23 +295,394 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-// ===== EMPTY IMPLEMENTATIONS FOR OTHER FLOWS =====
-// Implement these as needed for your connector
-
-// Payment Sync
+// ===== CAPTURE FLOW IMPLEMENTATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Fiservemea<T>
 {
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            Capture,
+            PaymentFlowData,
+            PaymentsCaptureData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+        header.append(&mut auth_header);
+        Ok(header)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        "application/json"
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            Capture,
+            PaymentFlowData,
+            PaymentsCaptureData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let connector_transaction_id = req
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id();
+        Ok(format!(
+            "{}/payments/{}/capture",
+            self.base_url(&req.resource_common_data.connectors),
+            connector_transaction_id
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            Capture,
+            PaymentFlowData,
+            PaymentsCaptureData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let request = fiservemea::FiservemeaCaptureRequest::try_from(req)?;
+        Ok(Some(RequestContent::Json(Box::new(request))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            Capture,
+            PaymentFlowData,
+            PaymentsCaptureData,
+            PaymentsResponseData,
+        >,
+        _event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: fiservemea::FiservemeaCaptureResponse = res
+            .response
+            .parse_struct("FiservemeaCaptureResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 
-// Payment Void
+// ===== VOID FLOW IMPLEMENTATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Fiservemea<T>
 {
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+        header.append(&mut auth_header);
+        Ok(header)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        "application/json"
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let connector_transaction_id = req
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id();
+        Ok(format!(
+            "{}/payments/{}/void",
+            self.base_url(&req.resource_common_data.connectors),
+            connector_transaction_id
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        _event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: fiservemea::FiservemeaVoidResponse = res
+            .response
+            .parse_struct("FiservemeaVoidResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 
+// ===== REFUND FLOW IMPLEMENTATION =====
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Fiservemea<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+        header.append(&mut auth_header);
+        Ok(header)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        "application/json"
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Ok(format!(
+            "{}/refunds",
+            self.base_url(&req.resource_common_data.connectors)
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let request = fiservemea::FiservemeaRefundRequest::try_from(req)?;
+        Ok(Some(RequestContent::Json(Box::new(request))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        _event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: fiservemea::FiservemeaRefundResponse = res
+            .response
+            .parse_struct("FiservemeaRefundResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
+
+// ===== PAYMENT SYNC FLOW IMPLEMENTATION =====
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Fiservemea<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+        header.append(&mut auth_header);
+        Ok(header)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        "application/json"
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let connector_transaction_id = req
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id();
+        Ok(format!(
+            "{}/payments/{}",
+            self.base_url(&req.resource_common_data.connectors),
+            connector_transaction_id
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: fiservemea::FiservemeaPaymentsResponse = res
+            .response
+            .parse_struct("FiservemeaPaymentsResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
+
+// ===== REFUND SYNC FLOW IMPLEMENTATION =====
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Fiservemea<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+        header.append(&mut auth_header);
+        Ok(header)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        "application/json"
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let connector_transaction_id = req
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id();
+        Ok(format!(
+            "{}/refunds/{}",
+            self.base_url(&req.resource_common_data.connectors),
+            connector_transaction_id
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        _event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: fiservemea::FiservemeaRefundResponse = res
+            .response
+            .parse_struct("FiservemeaRefundResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
+
+// ===== EMPTY IMPLEMENTATIONS FOR OTHER FLOWS =====
 // Payment Void Post Capture
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -323,13 +694,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Payment Capture
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Fiservemea<T>
-{
-}
-
 // Payment Incremental Authorization
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -338,20 +702,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsIncrementalAuthorizationData,
         PaymentsResponseData,
     > for Fiservemea<T>
-{
-}
-
-// Refund
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Fiservemea<T>
-{
-}
-
-// Refund Sync
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Fiservemea<T>
 {
 }
 
