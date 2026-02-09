@@ -288,29 +288,25 @@ impl ForeignTryFrom<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsR
     }
 }
 
-impl<F> TryFrom<RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for FiservEMEASyncRequest
-where
-    F: Clone,
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        _item: RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {})
     }
 }
 
-impl<F> TryFrom<RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>>
+impl TryFrom<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
     for FiservEMEASyncRequest
-where
-    F: Clone,
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        _item: RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        _item: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {})
     }
