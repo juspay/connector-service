@@ -224,7 +224,7 @@ macros::create_all_prerequisites!(
         (
             flow: PSync,
             request_body: FiservEMEASyncRequest,
-            response_body: FiservEMEASyncResponse,
+            response_body: FiservEMEAPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
@@ -248,7 +248,7 @@ macros::create_all_prerequisites!(
         (
             flow: RSync,
             request_body: FiservEMEASyncRequest,
-            response_body: FiservEMEASyncResponse,
+            response_body: FiservEMEARefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
