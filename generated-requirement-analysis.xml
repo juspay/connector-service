@@ -1,0 +1,1427 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RequirementAnalysis xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Metadata>
+    <DocumentTitle>GRACE-UCS Authorize Flow Implementation - Requirement Analysis</DocumentTitle>
+    <Version>1.0.0</Version>
+    <GeneratedDate>2026-02-09</GeneratedDate>
+    <Project>GRACE-UCS Connector Integration</Project>
+    <Component>Main Workflow Controller</Component>
+    <Classification>Production-Ready Specification</Classification>
+  </Metadata>
+
+  <!-- ========================================================= -->
+  <!-- SECURITY REQUIREMENTS                                      -->
+  <!-- ========================================================= -->
+  <SecurityRequirements>
+    <Requirement id="SEC-001" priority="CRITICAL">
+      <Title>Type Safety Enforcement</Title>
+      <Description>All connector implementations must enforce compile-time type safety through Rust's type system and generics.</Description>
+      <AcceptanceCriteria>
+        <Criterion>Generic type T must be bounded by PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize</Criterion>
+        <Criterion>No use of unwrap() or expect() in production code paths</Criterion>
+        <Criterion>All Option types must be properly handled with explicit error propagation</Criterion>
+        <Test>Compile-time verification of trait bounds</Test>
+        <Test>Unit tests covering all Result branches</Test>
+      </AcceptanceCriteria>
+    </Requirement>
+
+    <Requirement id="SEC-002" priority="CRITICAL">
+      <Title>Input Validation</Title>
+      <Description>All incoming payment authorization requests must be validated before processing.</Description>
+      <AcceptanceCriteria>
+        <Criterion>Amount must be positive and non-zero</Criterion>
+        <Criterion>Currency must be valid ISO 4217 code</Criterion>
+        <Criterion>Payment method data must conform to connector-specific schema</Criterion>
+        <Test>Validation test for zero/negative amounts</Test>
+        <Test>Validation test for invalid currency codes</Test>
+        <Test>Validation test for malformed payment method data</Test>
+      </AcceptanceCriteria>
+    </Requirement>
+
+    <Requirement id="SEC-003" priority="HIGH">
+      <Title>Sensitive Data Protection</Title>
+      <Description>Payment card data and sensitive credentials must never be logged or exposed in error messages.</Description>
+      <AcceptanceCriteria>
+        <Criterion>Debug implementations must redact sensitive fields</Criterion>
+        <Criterion>Error responses must not contain raw payment details</Criterion>
+        <Criterion>Logs must exclude PAN, CVV, and authentication tokens</Criterion>
+        <Test>Log redaction verification test</Test>
+        <Test>Error message sanitization test</Test>
+      </AcceptanceCriteria>
+    </Requirement>
+
+    <Requirement id="SEC-004" priority="HIGH">
+      <Title>Connector Response Validation</Title>
+      <Description>All responses from external connectors must be validated and sanitized before internal processing.</Description>
+      <AcceptanceCriteria>
+        <Criterion>Status values must be mapped through verified enum conversion</Criterion>
+        <Criterion>Unexpected status values must trigger error handling</Criterion>
+        <Criterion>Response structure must match expected schema</Criterion>
+        <Test>Malformed response handling test</Test>
+        <Test>Unknown status value rejection test</Test>
+      </AcceptanceCriteria>
+    </Requirement>
+
+    <Requirement id="SEC-005" priority="MEDIUM">
+      <Title>Rate Limiting Awareness</Title>
+      <Description>The implementation must respect connector rate limits and handle throttling gracefully.</Description>
+      <AcceptanceCriteria>
+        <Criterion>HTTP 429 responses must be handled appropriately</Criterion>
+        <Criterion>Retry logic must respect Retry-After headers</Criterion>
+        <Test>Rate limit response handling test</Test>
+      </AcceptanceCriteria>
+    </Requirement>
+
+    <Requirement id="SEC-006" priority="MEDIUM">
+      <Title>Idempotency Support</Title>
+      <Description>Authorization requests should support idempotency to prevent duplicate transactions.</Description>
+      <AcceptanceCriteria>
+        <Criterion>Idempotency key must be passed to connector when supported</Criterion>
+        <Criterion>Duplicate requests must return original response</Criterion>
+        <Test>Idempotent request handling test</Test>
+      </AcceptanceCriteria>
+    </Requirement>
+  </SecurityRequirements>
+
+  <!-- ========================================================= -->
+  <!-- TECHNICAL SCOPE                                           -->
+  <!-- ========================================================= -->
+  <TechnicalScope>
+    <CoreOperations>
+      <Operation id="OP-001" name="Authorize Payment">
+        <Description>Process a payment authorization request through the FiservMEA connector using macro-based implementation.</Description>
+        <SuccessConditions>
+          <Condition>Valid request transformed to connector-specific format</Condition>
+          <Condition>HTTP POST request successfully sent to connector endpoint</Condition>
+          <Condition>Connector response received and parsed</Condition>
+          <Condition>Status mapped to internal AttemptStatus enum</Condition>
+          <Condition>PaymentsResponseData returned with valid transaction details</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Invalid input data triggers validation error</Condition>
+          <Condition>Network timeout results in appropriate error response</Condition>
+          <Condition>Connector returns error status mapped to failure</Condition>
+          <Condition>Malformed response triggers parsing error</Condition>
+          <Condition>Unsupported payment method type returns NotSupported error</Condition>
+        </FailureConditions>
+        <InputTypes>
+          <Type>RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Type>
+        </InputTypes>
+        <OutputTypes>
+          <Type>PaymentsResponseData</Type>
+          <Type>CustomError&lt;ConnectorError&gt;</Type>
+        </OutputTypes>
+      </Operation>
+
+      <Operation id="OP-002" name="Status Mapping">
+        <Description>Convert connector-specific status values to unified internal AttemptStatus enum.</Description>
+        <SuccessConditions>
+          <Condition>All documented connector statuses have mappings</Condition>
+          <Condition>Unknown statuses default to appropriate failure state</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Panic occurs on unmapped status (forbidden)</Condition>
+        </FailureConditions>
+      </Operation>
+
+      <Operation id="OP-003" name="Request Transformation">
+        <Description>Transform internal payment data to connector-specific request format.</Description>
+        <SuccessConditions>
+          <Condition>All required fields populated from source data</Condition>
+          <Condition>Optional fields included only when present</Condition>
+          <Condition>Serialization produces valid JSON with camelCase naming</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Required field missing causes compile-time error</Condition>
+          <Condition>Serialization fails due to invalid data</Condition>
+        </FailureConditions>
+      </Operation>
+
+      <Operation id="OP-004" name="Response Transformation">
+        <Description>Parse and transform connector response to internal format.</Description>
+        <SuccessConditions>
+          <Condition>JSON deserialization succeeds for valid responses</Condition>
+          <Condition>Transaction ID extracted correctly</Condition>
+          <Condition>Status converted via mapping function</Condition>
+          <Condition>Error details captured when present</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Invalid JSON triggers appropriate error</Condition>
+          <Condition>Missing required fields handled gracefully</Condition>
+        </FailureConditions>
+      </Operation>
+    </CoreOperations>
+
+    <Flows>
+      <Flow id="FLOW-001" name="Authorize Flow">
+        <Scope>ONLY flow to be implemented</Scope>
+        <TraitImplementation>ConnectorIntegrationV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</TraitImplementation>
+        <MacrosRequired>
+          <Macro>create_all_prerequisites!</Macro>
+          <Macro>macro_connector_implementation!</Macro>
+        </MacrosRequired>
+        <PrerequisiteSteps>
+          <Step order="1">Read flow pattern from guides/patterns/pattern_authorize.md</Step>
+          <Step order="2">Add Authorize entry to create_all_prerequisites! macro</Step>
+          <Step order="3">Define {ConnectorName}AuthorizeRequest&lt;T&gt; struct</Step>
+          <Step order="4">Define {ConnectorName}AuthorizeResponse struct</Step>
+          <Step order="5">Define {ConnectorName}Status enum</Step>
+          <Step order="6">Implement map_{connector_name}_status_to_attempt_status function</Step>
+          <Step order="7">Invoke macro_connector_implementation! with Authorize configuration</Step>
+        </PrerequisiteSteps>
+      </Flow>
+    </Flows>
+
+    <Exclusions>
+      <Exclusion>Capture flow implementation</Exclusion>
+      <Exclusion>Refund flow implementation</Exclusion>
+      <Exclusion>Void flow implementation</Exclusion>
+      <Exclusion>Dispute flow implementation</Exclusion>
+      <Exclusion>Manual ConnectorIntegrationV2 trait implementation</Exclusion>
+      <Exclusion>Non-macro based approaches</Exclusion>
+    </Exclusions>
+  </TechnicalScope>
+
+  <!-- ========================================================= -->
+  <!-- ARCHITECTURE GUIDANCE                                      -->
+  <!-- ========================================================= -->
+  <ArchitectureGuidance>
+    <DesignPrinciples>
+      <Principle id="ARCH-001" name="Macro-First Approach">
+        <Description>All connector implementations must use the provided macro system rather than manual trait implementations.</Description>
+        <Rationale>Ensures consistency, reduces boilerplate, and enforces architectural patterns.</Rationale>
+        <Implementation>
+          <Rule>Use create_all_prerequisites! macro to declare flow prerequisites</Rule>
+          <Rule>Use macro_connector_implementation! for actual flow implementation</Rule>
+          <Rule>Never manually implement ConnectorIntegrationV2 methods</Rule>
+        </Implementation>
+      </Principle>
+
+      <Principle id="ARCH-002" name="Type-Level Safety">
+        <Description>Leverage Rust's type system to prevent invalid states at compile time.</Description>
+        <Rationale>Eliminates entire classes of runtime errors through compile-time checking.</Rationale>
+        <Implementation>
+          <Rule>Use enums for status values instead of strings</Rule>
+          <Rule>Use generic type T with proper trait bounds</Rule>
+          <Rule>Avoid Option for fields that are always required</Rule>
+          <Rule>Use newtype patterns for domain-specific values</Rule>
+        </Implementation>
+      </Principle>
+
+      <Principle id="ARCH-003" name="Separation of Concerns">
+        <Description>Keep transformation logic separate from flow orchestration.</Description>
+        <Rationale>Maintains testability and modularity of connector implementations.</Rationale>
+        <Implementation>
+          <Rule>Request/Response structs in transformers.rs module</Rule>
+          <Rule>Status mapping as pure function</Rule>
+          <Rule>Flow logic handled entirely by macros</Rule>
+        </Implementation>
+      </Principle>
+
+      <Principle id="ARCH-004" name="Zero-Cost Abstractions">
+        <Description>Use abstractions that compile away to efficient machine code.</Description>
+        <Rationale>Payment processing requires optimal performance characteristics.</Rationale>
+        <Implementation>
+          <Rule>Prefer stack allocation over heap where possible</Rule>
+          <Rule>Use iterators instead of intermediate collections</Rule>
+          <Rule>Leverage serde's zero-copy deserialization where applicable</Rule>
+        </Implementation>
+      </Principle>
+    </DesignPrinciples>
+
+    <ModuleStructure>
+      <Module name="connectors">
+        <File path="backend/connector-integration/src/connectors/fiservemea.rs">
+          <Purpose>Connector module declaration and macro invocations</Purpose>
+          <Contents>
+            <Content>mod transformers;</Content>
+            <Content>mod utils;</Content>
+            <Content>create_all_prerequisites! macro invocation</Content>
+            <Content>macro_connector_implementation! invocations</Content>
+          </Contents>
+        </File>
+        <File path="backend/connector-integration/src/connectors/fiservemea/transformers.rs">
+          <Purpose>Request/response type definitions and transformations</Purpose>
+          <Contents>
+            <Content>{ConnectorName}AuthorizeRequest&lt;T&gt; struct definition</Content>
+            <Content>{ConnectorName}AuthorizeResponse struct definition</Content>
+            <Content>{ConnectorName}Status enum definition</Content>
+            <Content>map_{connector_name}_status_to_attempt_status function</Content>
+            <Content>AuthType enum if needed</Content>
+          </Contents>
+        </File>
+        <File path="backend/connector-integration/src/connectors/fiservemea/utils.rs">
+          <Purpose>Connector-specific utility functions</Purpose>
+          <Contents>
+            <Content>Helper functions for data transformation</Content>
+            <Content>Common validation logic</Content>
+          </Contents>
+        </File>
+      </Module>
+    </ModuleStructure>
+
+    <TestabilityConsiderations>
+      <Consideration id="TEST-001" name="Pure Functions">
+        <Description>Status mapping and transformation functions should be pure and easily unit-testable.</Description>
+        <Implementation>
+          <Rule>No side effects in transformation functions</Rule>
+          <Rule>Deterministic outputs for given inputs</Rule>
+          <Rule>Easy to construct test cases</Rule>
+        </Implementation>
+      </Consideration>
+
+      <Consideration id="TEST-002" name="Mockable Dependencies">
+        <Description>External HTTP calls should be abstracted for integration testing.</Description>
+        <Implementation>
+          <Rule>Use trait-based abstraction for HTTP client</Rule>
+          <Rule>Support mock implementations in test builds</Rule>
+        </Implementation>
+      </Consideration>
+
+      <Consideration id="TEST-003" name="Property-Based Testing">
+        <Description>Consider property-based tests for transformation logic.</Description>
+        <Implementation>
+          <Rule>Round-trip serialization/deserialization tests</Rule>
+          <Rule>Status mapping exhaustiveness tests</Rule>
+        </Implementation>
+      </Consideration>
+    </TestabilityConsiderations>
+  </ArchitectureGuidance>
+
+  <!-- ========================================================= -->
+  <!-- API DESIGN                                                 -->
+  <!-- ========================================================= -->
+  <APIDesign>
+    <InternalAPI>
+      <Endpoint name="execute_authorize_flow">
+        <Description>Entry point for authorize flow execution via macro-generated implementation.</Description>
+        <Method>Generated via macro_connector_implementation!</Method>
+        <InputSchema>
+          <TypeName>RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</TypeName>
+          <Fields>
+            <Field name="flow" type="PhantomData&lt;Authorize&gt;" description="Flow type marker"/>
+            <Field name="resource_common_data" type="PaymentFlowData" description="Common payment flow data"/>
+            <Field name="request" type="PaymentsAuthorizeData&lt;T&gt;" description="Authorization request data"/>
+          </Fields>
+        </InputSchema>
+        <OutputSchema>
+          <TypeName>Result&lt;PaymentsResponseData, CustomError&lt;ConnectorError&gt;&gt;</TypeName>
+          <SuccessFields>
+            <Field name="connector_transaction_id" type="String" description="Transaction ID from connector"/>
+            <Field name="status" type="AttemptStatus" description="Mapped transaction status"/>
+            <Field name="response" type="Option&lt;serde_json::Value&gt;" description="Raw response data"/>
+          </SuccessFields>
+          <ErrorVariants>
+            <Variant name="ConnectorError">Connector-specific errors</Variant>
+            <Variant name="ValidationError">Input validation failures</Variant>
+            <Variant name="NetworkError">Network communication failures</Variant>
+          </ErrorVariants>
+        </OutputSchema>
+      </Endpoint>
+    </InternalAPI>
+
+    <ExternalConnectorAPI>
+      <Endpoint name="Authorize Transaction">
+        <Description>FiservMEA connector authorization endpoint.</Description>
+        <Method>POST</Method>
+        <Path>/payments/authorize</Path>
+        <Headers>
+          <Header name="Content-Type" required="true">application/json</Header>
+          <Header name="Authorization" required="true">Bearer {api_key}</Header>
+          <Header name="Idempotency-Key" required="false">UUID v4</Header>
+        </Headers>
+        <RequestSchema>
+          <TypeName>FiservemeaAuthorizeRequest&lt;T&gt;</TypeName>
+          <ContentType>application/json</ContentType>
+          <SerializationRules>
+            <Rule>snake_case Rust fields → camelCase JSON</Rule>
+            <Rule>#[serde(rename_all = "camelCase")]</Rule>
+          </SerializationRules>
+          <Fields>
+            <Field name="amount" type="MinorUnit" required="true">
+              <Description>Transaction amount in minor currency units</Description>
+              <Validation>Must be positive integer</Validation>
+            </Field>
+            <Field name="currency" type="String" required="true">
+              <Description>ISO 4217 currency code</Description>
+              <Validation>3-letter uppercase ISO code</Validation>
+            </Field>
+            <Field name="payment_method" type="FiservemeaPaymentMethod&lt;T&gt;" required="true">
+              <Description>Payment method details</Description>
+            </Field>
+            <Field name="merchant_reference" type="String" required="false">
+              <Description>Merchant-provided reference number</Description>
+              <MaxLength>255</MaxLength>
+            </Field>
+            <Field name="customer" type="Option&lt;CustomerData&gt;" required="false">
+              <Description>Customer information</Description>
+            </Field>
+            <Field name="metadata" type="Option&lt;HashMap&lt;String, String&gt;&gt;" required="false">
+              <Description>Additional metadata</Description>
+            </Field>
+          </Fields>
+        </RequestSchema>
+        <ResponseSchema>
+          <TypeName>FiservemeaAuthorizeResponse</TypeName>
+          <ContentType>application/json</ContentType>
+          <DeserializationRules>
+            <Rule>camelCase JSON → snake_case Rust fields</Rule>
+            <Rule>#[serde(rename_all = "camelCase")]</Rule>
+          </DeserializationRules>
+          <Fields>
+            <Field name="id" type="String" required="true">
+              <Description>Unique transaction identifier</Description>
+            </Field>
+            <Field name="status" type="FiservemeaStatus" required="true">
+              <Description>Transaction status</Description>
+            </Field>
+            <Field name="amount" type="MinorUnit" required="true">
+              <Description>Processed amount</Description>
+            </Field>
+            <Field name="currency" type="String" required="true">
+              <Description>Processed currency</Description>
+            </Field>
+            <Field name="created_at" type="DateTime&lt;Utc&gt;" required="true">
+              <Description>Transaction timestamp</Description>
+            </Field>
+            <Field name="response_code" type="Option&lt;String&gt;" required="false">
+              <Description>Connector response code</Description>
+            </Field>
+            <Field name="response_message" type="Option&lt;String&gt;" required="false">
+              <Description>Human-readable response message</Description>
+            </Field>
+            <Field name="risk_data" type="Option&lt;RiskData&gt;" required="false">
+              <Description>Risk assessment data</Description>
+            </Field>
+          </Fields>
+        </ResponseSchema>
+        <ErrorResponses>
+          <Error code="400">
+            <Name>Bad Request</Name>
+            <Description>Invalid request parameters</Description>
+            <Handling>Return ValidationError with details</Handling>
+          </Error>
+          <Error code="401">
+            <Name>Unauthorized</Name>
+            <Description>Invalid API credentials</Description>
+            <Handling>Return ConnectorError::AuthenticationFailed</Handling>
+          </Error>
+          <Error code="403">
+            <Name>Forbidden</Name>
+            <Description>Insufficient permissions</Description>
+            <Handling>Return ConnectorError::AccessDenied</Handling>
+          </Error>
+          <Error code="404">
+            <Name>Not Found</Name>
+            <Description>Resource not found</Description>
+            <Handling>Return ConnectorError::NotFound</Handling>
+          </Error>
+          <Error code="422">
+            <Name>Unprocessable Entity</Name>
+            <Description>Business logic validation failed</Description>
+            <Handling>Return ValidationError with business rule details</Handling>
+          </Error>
+          <Error code="429">
+            <Name>Too Many Requests</Name>
+            <Description>Rate limit exceeded</Description>
+            <Handling>Return ConnectorError::RateLimited with Retry-After</Handling>
+          </Error>
+          <Error code="500">
+            <Name>Internal Server Error</Name>
+            <Description>Connector internal error</Description>
+            <Handling>Return ConnectorError::InternalError</Handling>
+          </Error>
+          <Error code="503">
+            <Name>Service Unavailable</Name>
+            <Description>Connector temporarily unavailable</Description>
+            <Handling>Return ConnectorError::TemporaryError</Handling>
+          </Error>
+        </ErrorResponses>
+      </Endpoint>
+    </ExternalConnectorAPI>
+
+    <ValidationRules>
+      <RuleSet name="RequestValidation">
+        <Rule field="amount">
+          <Check type="range">value > 0</Check>
+          <ErrorMessage>Amount must be greater than zero</ErrorMessage>
+        </Rule>
+        <Rule field="currency">
+          <Check type="pattern">^[A-Z]{3}$</Check>
+          <ErrorMessage>Currency must be valid ISO 4217 code</ErrorMessage>
+        </Rule>
+        <Rule field="payment_method">
+          <Check type="required">Must be present and valid</Check>
+          <ErrorMessage>Payment method is required</ErrorMessage>
+        </Rule>
+      </RuleSet>
+      <RuleSet name="ResponseValidation">
+        <Rule field="id">
+          <Check type="non_empty">Must not be empty string</Check>
+        </Rule>
+        <Rule field="status">
+          <Check type="enum">Must be valid FiservemeaStatus variant</Check>
+        </Rule>
+      </RuleSet>
+    </ValidationRules>
+  </APIDesign>
+
+  <!-- ========================================================= -->
+  <!-- STORAGE REQUIREMENTS                                       -->
+  <!-- ========================================================= -->
+  <StorageRequirements>
+    <DataModels>
+      <Model name="PaymentFlowData">
+        <Description>Common data shared across payment flows</Description>
+        <Fields>
+          <Field name="connector" type="api_models::enums::Connector">Connector identifier</Field>
+          <Field name="payment_method" type="api_models::payments::PaymentMethodData">Payment method details</Field>
+          <Field name="connector_auth_type" type="ConnectorAuthType">Authentication type</Field>
+          <Field name="description" type="Option&lt;String&gt;">Transaction description</Field>
+          <Field name="return_url" type="Option&lt;String&gt;">Return URL for redirects</Field>
+        </Fields>
+        <Constraints>
+          <Constraint>connector must be valid enum value</Constraint>
+          <Constraint>payment_method must match connector capabilities</Constraint>
+        </Constraints>
+      </Model>
+
+      <Model name="PaymentsAuthorizeData&lt;T&gt;">
+        <Description>Authorization request data with generic payment method</Description>
+        <GenericBounds>T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize</GenericBounds>
+        <Fields>
+          <Field name="amount" type="u64">Amount in minor units</Field>
+          <Field name="currency" type="Currency">Currency enum</Field>
+          <Field name="payment_method" type="T">Generic payment method data</Field>
+          <Field name="confirm" type="bool">Whether to confirm immediately</Field>
+          <Field name="mandate_id" type="Option&lt;String&gt;">Mandate identifier for recurring payments</Field>
+          <Field name="off_session" type="bool">Whether this is an off-session payment</Field>
+          <Field name="setup_mandate" type="Option&lt;MandateSetup&gt;">Mandate setup details</Field>
+          <Field name="browser_info" type="Option&lt;BrowserInfo&gt;">Browser information for 3DS</Field>
+          <Field name="order_details" type="Option&lt;OrderDetails&gt;">Order line items</Field>
+          <Field name="metadata" type="Option&lt;Vec&lt;(String, String)&gt;&gt;">Key-value metadata pairs</Field>
+        </Fields>
+        <Constraints>
+          <Constraint>amount must be positive</Constraint>
+          <Constraint>currency must be supported by connector</Constraint>
+        </Constraints>
+      </Model>
+
+      <Model name="PaymentsResponseData">
+        <Description>Standardized payment response data</Description>
+        <Fields>
+          <Field name="connector_transaction_id" type="String">Connector's transaction ID</Field>
+          <Field name="status" type="AttemptStatus">Mapped transaction status</Field>
+          <Field name="amount" type="Option&lt;i64&gt;">Processed amount</Field>
+          <Field name="currency" type="Option&lt;Currency&gt;">Processed currency</Field>
+          <Field name="connector_response" type="Option&lt;serde_json::Value&gt;">Raw connector response</Field>
+          <Field name="error_code" type="Option&lt;String&gt;">Connector error code if failed</Field>
+          <Field name="error_message" type="Option&lt;String&gt;">Connector error message if failed</Field>
+          <Field name="redirect_url" type="Option&lt;String&gt;">Redirect URL if applicable</Field>
+          <Field name="reference_id" type="Option&lt;String&gt;">Merchant reference ID</Field>
+          <Field name="network_txn_id" type="Option&lt;String&gt;">Network transaction ID</Field>
+          <Field name="processor_response" type="Option&lt;String&gt;">Processor response code</Field>
+          <Field name="authentication_data" type="Option&lt;AuthenticationData&gt;">3DS authentication data</Field>
+        </Fields>
+        <Constraints>
+          <Constraint>connector_transaction_id required on success</Constraint>
+          <Constraint>status is always populated</Constraint>
+        </Constraints>
+      </Model>
+
+      <Model name="FiservemeaAuthorizeRequest&lt;T&gt;">
+        <Description>Connector-specific authorization request</Description>
+        <GenericBounds>T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize</GenericBounds>
+        <Fields>
+          <Field name="amount" type="u64">Amount in minor units</Field>
+          <Field name="currency" type="String">ISO 4217 currency code</Field>
+          <Field name="payment_method" type="FiservemeaPaymentMethod&lt;T&gt;">Payment method wrapper</Field>
+          <Field name="merchant_reference" type="Option&lt;String&gt;">Merchant reference</Field>
+          <Field name="customer" type="Option&lt;CustomerData&gt;">Customer information</Field>
+          <Field name="metadata" type="Option&lt;HashMap&lt;String, String&gt;&gt;">Additional metadata</Field>
+        </Fields>
+        <SerdeAttributes>
+          <Attribute>#[derive(Debug, Serialize)]</Attribute>
+          <Attribute>#[serde(rename_all = "camelCase")]</Attribute>
+        </SerdeAttributes>
+      </Model>
+
+      <Model name="FiservemeaAuthorizeResponse">
+        <Description>Connector-specific authorization response</Description>
+        <Fields>
+          <Field name="id" type="String">Transaction ID</Field>
+          <Field name="status" type="FiservemeaStatus">Transaction status</Field>
+          <Field name="amount" type="u64">Processed amount</Field>
+          <Field name="currency" type="String">Processed currency</Field>
+          <Field name="created_at" type="String">ISO 8601 timestamp</Field>
+          <Field name="response_code" type="Option&lt;String&gt;">Response code</Field>
+          <Field name="response_message" type="Option&lt;String&gt;">Response message</Field>
+          <Field name="risk_data" type="Option&lt;RiskData&gt;">Risk assessment</Field>
+        </Fields>
+        <SerdeAttributes>
+          <Attribute>#[derive(Debug, Deserialize)]</Attribute>
+          <Attribute>#[serde(rename_all = "camelCase")]</Attribute>
+        </SerdeAttributes>
+      </Model>
+
+      <Model name="FiservemeaStatus">
+        <Description>Connector status enumeration</Description>
+        <Variants>
+          <Variant name="Approved">Transaction approved</Variant>
+          <Variant name="Declined">Transaction declined</Variant>
+          <Variant name="Pending">Transaction pending</Variant>
+          <Variant name="Processing">Transaction being processed</Variant>
+          <Variant name="Failed">Transaction failed</Variant>
+          <Variant name="Cancelled">Transaction cancelled</Variant>
+          <Variant name="Unknown">Unknown status</Variant>
+        </Variants>
+        <SerdeAttributes>
+          <Attribute>#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]</Attribute>
+          <Attribute>#[serde(rename_all = "SCREAMING_SNAKE_CASE")]</Attribute>
+        </SerdeAttributes>
+      </Model>
+
+      <Model name="FiservemeaPaymentMethod&lt;T&gt;">
+        <Description>Payment method wrapper for connector</Description>
+        <GenericBounds>T: PaymentMethodDataTypes</GenericBounds>
+        <Fields>
+          <Field name="card" type="Option&lt;CardData&gt;">Card payment method</Field>
+          <Field name="wallet" type="Option&lt;WalletData&gt;">Wallet payment method</Field>
+          <Field name="bank_transfer" type="Option&lt;BankTransferData&gt;">Bank transfer method</Field>
+        </Fields>
+        <SerdeAttributes>
+          <Attribute>#[derive(Debug, Serialize)]</Attribute>
+          <Attribute>#[serde(untagged)]</Attribute>
+        </SerdeAttributes>
+      </Model>
+    </DataModels>
+
+    <IdentityMapping>
+      <Mapping source="internal" target="connector">
+        <Entry internal="AttemptStatus::Charged" connector="FiservemeaStatus::Approved"/>
+        <Entry internal="AttemptStatus::AuthorizationFailed" connector="FiservemeaStatus::Declined"/>
+        <Entry internal="AttemptStatus::Pending" connector="FiservemeaStatus::Pending"/>
+        <Entry internal="AttemptStatus::Processing" connector="FiservemeaStatus::Processing"/>
+        <Entry internal="AttemptStatus::Failure" connector="FiservemeaStatus::Failed"/>
+        <Entry internal="AttemptStatus::Voided" connector="FiservemeaStatus::Cancelled"/>
+      </Mapping>
+    </IdentityMapping>
+
+    <ForbiddenDataStorage>
+      <Prohibition>
+        <DataType>Full PAN (Primary Account Number)</DataType>
+        <Reason>PCI DSS compliance</Reason>
+        <AllowedStorage>Tokenized card reference only</AllowedStorage>
+      </Prohibition>
+      <Prohibition>
+        <DataType>CVV/CVC</DataType>
+        <Reason>PCI DSS compliance</Reason>
+        <AllowedStorage>Never store, even encrypted</AllowedStorage>
+      </Prohibition>
+      <Prohibition>
+        <DataType>PIN blocks</DataType>
+        <Reason>PCI DSS compliance</Reason>
+        <AllowedStorage>Never store, even encrypted</AllowedStorage>
+      </Prohibition>
+      <Prohibition>
+        <DataType>Track data (magnetic stripe)</DataType>
+        <Reason>PCI DSS compliance</Reason>
+        <AllowedStorage>Never store, even encrypted</AllowedStorage>
+      </Prohibition>
+      <Prohibition>
+        <DataType>Raw connector API keys</DataType>
+        <Reason>Security best practice</Reason>
+        <AllowedStorage>Encrypted at rest with key rotation</AllowedStorage>
+      </Prohibition>
+    </ForbiddenDataStorage>
+
+    <DatabaseConsistency>
+      <Requirement id="DB-001">
+        <Title>Transaction Atomicity</Title>
+        <Description>Payment authorization records must be written atomically.</Description>
+        <Implementation>
+          <Rule>Use database transactions for multi-table updates</Rule>
+          <Rule>Ensure connector_transaction_id is unique constraint</Rule>
+        </Implementation>
+      </Requirement>
+      <Requirement id="DB-002">
+        <Title>Status Consistency</Title>
+        <Description>Status transitions must follow valid state machine.</Description>
+        <Implementation>
+          <Rule>Enforce status transition constraints at database level</Rule>
+          <Rule>Audit log all status changes</Rule>
+        </Implementation>
+      </Requirement>
+      <Requirement id="DB-003">
+        <Title>Idempotency Key Storage</Title>
+        <Description>Idempotency keys must be stored with TTL to prevent reuse.</Description>
+        <Implementation>
+          <Rule>Unique constraint on idempotency_key + merchant_id</Rule>
+          <Rule>Automatic expiration after configured period</Rule>
+        </Implementation>
+      </Requirement>
+    </DatabaseConsistency>
+  </StorageRequirements>
+
+  <!-- ========================================================= -->
+  <!-- COMPLIANCE CHECKLIST                                       -->
+  <!-- ========================================================= -->
+  <ComplianceChecklist>
+    <ComplianceFramework name="PCI DSS">
+      <Requirement id="PCI-001" priority="CRITICAL" testable="true">
+        <Title>Cardholder Data Protection</Title>
+        <Description>Protect stored cardholder data</Description>
+        <Verification>
+          <Test>Verify no full PAN stored in logs or database</Test>
+          <Test>Verify CVV never persisted</Test>
+          <Test>Verify encryption at rest for sensitive data</Test>
+        </Verification>
+        <AutomatedTest>test_cardholder_data_protection()</AutomatedTest>
+      </Requirement>
+      <Requirement id="PCI-002" priority="CRITICAL" testable="true">
+        <Title>Transmission Security</Title>
+        <Description>Encrypt transmission of cardholder data</Description>
+        <Verification>
+          <Test>Verify TLS 1.2+ for all external connections</Test>
+          <Test>Verify certificate validation enabled</Test>
+        </Verification>
+        <AutomatedTest>test_transmission_encryption()</AutomatedTest>
+      </Requirement>
+      <Requirement id="PCI-003" priority="HIGH" testable="true">
+        <Title>Logging and Monitoring</Title>
+        <Description>Track and monitor all access to network resources</Description>
+        <Verification>
+          <Test>Verify audit trail for all payment operations</Test>
+          <Test>Verify log integrity protection</Test>
+        </Verification>
+        <AutomatedTest>test_audit_trail_completeness()</AutomatedTest>
+      </Requirement>
+    </ComplianceFramework>
+
+    <ComplianceFramework name="GDPR">
+      <Requirement id="GDPR-001" priority="HIGH" testable="true">
+        <Title>Data Minimization</Title>
+        <Description>Collect only data necessary for payment processing</Description>
+        <Verification>
+          <Test>Verify no unnecessary personal data collected</Test>
+          <Test>Verify data retention policies enforced</Test>
+        </Verification>
+        <AutomatedTest>test_data_minimization()</AutomatedTest>
+      </Requirement>
+      <Requirement id="GDPR-002" priority="HIGH" testable="true">
+        <Title>Right to Erasure</Title>
+        <Description>Support deletion of customer data upon request</Description>
+        <Verification>
+          <Test>Verify customer data deletion capability</Test>
+          <Test>Verify cascade deletion of related records</Test>
+        </Verification>
+        <AutomatedTest>test_right_to_erasure()</AutomatedTest>
+      </Requirement>
+    </ComplianceFramework>
+
+    <ComplianceFramework name="SOC 2 Type II">
+      <Requirement id="SOC2-001" priority="HIGH" testable="true">
+        <Title>Change Management</Title>
+        <Description>Track all changes to production systems</Description>
+        <Verification>
+          <Test>Verify version control for all code</Test>
+          <Test>Verify deployment audit trail</Test>
+        </Verification>
+        <AutomatedTest>test_change_management()</AutomatedTest>
+      </Requirement>
+      <Requirement id="SOC2-002" priority="HIGH" testable="true">
+        <Title>Incident Response</Title>
+        <Description>Document and respond to security incidents</Description>
+        <Verification>
+          <Test>Verify incident logging capability</Test>
+          <Test>Verify alert mechanisms functional</Test>
+        </Verification>
+        <AutomatedTest>test_incident_response_logging()</AutomatedTest>
+      </Requirement>
+    </ComplianceFramework>
+
+    <ComplianceFramework name="Internal Code Quality">
+      <Requirement id="INT-001" priority="CRITICAL" testable="true">
+        <Title>No Manual Trait Implementation</Title>
+        <Description>ConnectorIntegrationV2 must use macro implementation</Description>
+        <Verification>
+          <Test>Verify macro_connector_implementation! used</Test>
+          <Test>Verify no manual impl ConnectorIntegrationV2 blocks</Test>
+        </Verification>
+        <AutomatedTest>test_macro_only_implementation()</AutomatedTest>
+      </Requirement>
+      <Requirement id="INT-002" priority="CRITICAL" testable="true">
+        <Title>Prerequisites Macro Updated</Title>
+        <Description>create_all_prerequisites! must include Authorize flow</Description>
+        <Verification>
+          <Test>Verify Authorize entry in prerequisites macro</Test>
+          <Test>Verify type names match between macros</Test>
+        </Verification>
+        <AutomatedTest>test_prerequisites_macro_complete()</AutomatedTest>
+      </Requirement>
+      <Requirement id="INT-003" priority="HIGH" testable="true">
+        <Title>Status Enum Defined</Title>
+        <Description>Connector status must use enum, not string</Description>
+        <Verification>
+          <Test>Verify FiservemeaStatus enum exists</Test>
+          <Test>Verify all variants cover API documentation</Test>
+        </Verification>
+        <AutomatedTest>test_status_enum_coverage()</AutomatedTest>
+      </Requirement>
+      <Requirement id="INT-004" priority="HIGH" testable="true">
+        <Title>Status Mapping Function</Title>
+        <Description>Status must be mapped via dedicated function</Description>
+        <Verification>
+          <Test>Verify map_fiservemea_status_to_attempt_status exists</Test>
+          <Test>Verify all status variants have mappings</Test>
+          <Test>Verify no hardcoded status strings in transformers</Test>
+        </Verification>
+        <AutomatedTest>test_status_mapping_function()</AutomatedTest>
+      </Requirement>
+      <Requirement id="INT-005" priority="HIGH" testable="true">
+        <Title>No Unwrap/Expect</Title>
+        <Description>Code must not use unwrap() or expect()</Description>
+        <Verification>
+          <Test>Clippy deny unwrap_used</Test>
+          <Test>Clippy deny expect_used</Test>
+        </Verification>
+        <AutomatedTest>test_no_unwrap_expect()</AutomatedTest>
+      </Requirement>
+      <Requirement id="INT-006" priority="MEDIUM" testable="true">
+        <Title>Serde Naming Convention</Title>
+        <Description>JSON must use camelCase, Rust uses snake_case</Description>
+        <Verification>
+          <Test>Verify #[serde(rename_all = "camelCase")] on structs</Test>
+          <Test>Verify field names are snake_case</Test>
+        </Verification>
+        <AutomatedTest>test_serde_naming_convention()</AutomatedTest>
+      </Requirement>
+      <Requirement id="INT-007" priority="MEDIUM" testable="true">
+        <Title>No None Fields</Title>
+        <Description>Remove fields that are always None</Description>
+        <Verification>
+          <Test>Review all Option fields for necessity</Test>
+          <Test>Remove fields that never have Some value</Test>
+        </Verification>
+        <AutomatedTest>test_no_redundant_option_fields()</AutomatedTest>
+      </Requirement>
+      <Requirement id="INT-008" priority="CRITICAL" testable="true">
+        <Title>Compilation Success</Title>
+        <Description>Code must compile without errors</Description>
+        <Verification>
+          <Test>cargo build succeeds</Test>
+          <Test>No compiler warnings</Test>
+        </Verification>
+        <AutomatedTest>test_compilation_success()</AutomatedTest>
+      </Requirement>
+      <Requirement id="INT-009" priority="HIGH" testable="true">
+        <Title>Clippy Clean</Title>
+        <Description>Code must pass clippy lints</Description>
+        <Verification>
+          <Test>cargo clippy passes</Test>
+          <Test>No clippy warnings</Test>
+        </Verification>
+        <AutomatedTest>test_clippy_clean()</AutomatedTest>
+      </Requirement>
+      <Requirement id="INT-010" priority="HIGH" testable="true">
+        <Title>Single Binary</Title>
+        <Description>Project must not create multiple binaries</Description>
+        <Verification>
+          <Test>Verify only [[bin]] in Cargo.toml if specified</Test>
+          <Test>Verify cargo run executes correctly</Test>
+        </Verification>
+        <AutomatedTest>test_single_binary()</AutomatedTest>
+      </Requirement>
+    </ComplianceFramework>
+  </ComplianceChecklist>
+
+  <!-- ========================================================= -->
+  <!-- RISK ASSESSMENT                                            -->
+  <!-- ========================================================= -->
+  <RiskAssessment>
+    <Threat id="THREAT-001" severity="HIGH">
+      <Title>Injection Attack via Payment Data</Title>
+      <Description>Malicious actors could attempt to inject payloads through payment method fields.</Description>
+      <Impact>Unauthorized transactions, data breach, compliance violations</Impact>
+      <Mitigations>
+        <Mitigation>Strict input validation on all fields</Mitigation>
+        <Mitigation>Type-safe serialization preventing injection</Mitigation>
+        <Mitigation>Parameterized queries for database operations</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>SQL injection attempt on metadata fields</Test>
+        <Test>XSS payload in description field</Test>
+        <Test>Special characters in all string fields</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-002" severity="CRITICAL">
+      <Title>Credential Exposure</Title>
+      <Description>Connector API credentials could be leaked through logs or error messages.</Description>
+      <Impact>Unauthorized access to connector account, financial loss</Impact>
+      <Mitigations>
+        <Mitigation>Redact credentials from all logs</Mitigation>
+        <Mitigation>Secure credential storage with encryption</Mitigation>
+        <Mitigation>Never include credentials in error responses</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>Verify credentials not in debug output</Test>
+        <Test>Verify credentials not in error messages</Test>
+        <Test>Verify credentials not in logs</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-003" severity="HIGH">
+      <Title>Man-in-the-Middle Attack</Title>
+      <Description>Interception of communication between application and connector.</Description>
+      <Impact>Transaction tampering, data theft</Impact>
+      <Mitigations>
+        <Mitigation>Enforce TLS 1.2+ for all HTTP connections</Mitigation>
+        <Mitigation>Certificate pinning for critical endpoints</Mitigation>
+        <Mitigation>HSTS enforcement</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>Verify TLS connection establishment</Test>
+        <Test>Verify certificate validation</Test>
+        <Test>Test with self-signed cert rejection</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-004" severity="MEDIUM">
+      <Title>Denial of Service</Title>
+      <Description>Overwhelming the system with authorization requests causing service degradation.</Description>
+      <Impact>Service unavailability, revenue loss</Impact>
+      <Mitigations>
+        <Mitigation>Rate limiting at application level</Mitigation>
+        <Mitigation>Circuit breaker pattern for connector calls</Mitigation>
+        <Mitigation>Request timeout enforcement</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>High volume request handling</Test>
+        <Test>Slowloris attack simulation</Test>
+        <Test>Circuit breaker activation test</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-005" severity="HIGH">
+      <Title>Race Condition in Idempotency</Title>
+        <Description>Concurrent requests with same idempotency key could cause duplicate transactions.</Description>
+      <Impact>Duplicate charges, customer disputes</Impact>
+      <Mitigations>
+        <Mitigation>Database-level unique constraints</Mitigation>
+        <Mitigation>Optimistic locking with version checks</Mitigation>
+        <Mitigation>Distributed locking for critical sections</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>Concurrent identical request test</Test>
+        <Test>Idempotency key collision handling</Test>
+        <Test>Database constraint violation test</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-006" severity="MEDIUM">
+      <Title>Status Mapping Errors</Title>
+      <Description>Incorrect status mapping could lead to wrong transaction state.</Description>
+        <Impact>Incorrect business logic, reconciliation issues</Impact>
+      <Mitigations>
+        <Mitigation>Exhaustive enum matching</Mitigation>
+        <Mitigation>Comprehensive test coverage for all statuses</Mitigation>
+        <Mitigation>Default fallback for unknown statuses</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>All documented status values mapped</Test>
+        <Test>Unknown status handling</Test>
+        <Test>Status round-trip verification</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-007" severity="MEDIUM">
+      <Title>Serialization/Deserialization Failures</Title>
+      <Description>Malformed JSON could cause panics or incorrect data parsing.</Description>
+      <Impact>Application crash, data corruption</Impact>
+      <Mitigations>
+        <Mitigation>Graceful error handling for parse failures</Mitigation>
+        <Mitigation>Schema validation before deserialization</Mitigation>
+        <Mitigation>Fallback to safe defaults where appropriate</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>Malformed JSON handling</Test>
+        <Test>Missing required field handling</Test>
+        <Test>Unexpected data type handling</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-008" severity="LOW">
+      <Title>Memory Exhaustion</Title>
+      <Description>Large payloads could cause memory exhaustion.</Description>
+      <Impact>Service crash, denial of service</Impact>
+      <Mitigations>
+        <Mitigation>Request size limits</Mitigation>
+        <Mitigation>Streaming for large responses</Mitigation>
+        <Mitigation>Memory monitoring and alerts</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>Oversized request rejection</Test>
+        <Test>Memory usage under load</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-009" severity="HIGH">
+      <Title>Incorrect Macro Usage</Title>
+      <Description>Improper macro configuration could lead to incorrect code generation.</Description>
+      <Impact>Runtime errors, incorrect behavior</Impact>
+      <Mitigations>
+        <Mitigation>Compile-time macro validation</Mitigation>
+        <Mitigation>Integration tests for macro-generated code</Mitigation>
+        <Mitigation>Code review of macro invocations</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>Macro expansion verification</Test>
+        <Test>Generated code compilation</Test>
+        <Test>Integration test with generated code</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-010" severity="MEDIUM">
+      <Title>Generic Type Misuse</Title>
+      <Description>Incorrect generic type bounds could cause runtime failures.</Description>
+      <Impact>Compilation errors, runtime panics</Impact>
+      <Mitigations>
+        <Mitigation>Explicit trait bounds on all generics</Mitigation>
+        <Mitigation>Where clauses for complex constraints</Mitigation>
+        <Mitigation>Unit tests for different type instantiations</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>Multiple payment method type tests</Test>
+        <Test>Trait bound verification</Test>
+        <Test>Generic instantiation edge cases</Test>
+      </Tests>
+    </Threat>
+  </RiskAssessment>
+
+  <!-- ========================================================= -->
+  <!-- IMPLEMENTATION TASKS                                       -->
+  <!-- ========================================================= -->
+  <ImplementationTasks>
+    <Phase id="PHASE-1" name="TECH_SPEC_VALIDATION">
+      <Task id="TASK-1-1" status="pending">
+        <Description>Read tech spec from grace/rulesbook/codegen/references/fiservemea/technical_specification.md</Description>
+        <Deliverable>Understanding of connector requirements and supported features</Deliverable>
+        <Validation>Document extracted requirements</Validation>
+      </Task>
+      <Task id="TASK-1-2" status="pending">
+        <Description>Validate tech spec completeness and UCS compatibility</Description>
+        <Deliverable>Validation report with any gaps identified</Deliverable>
+        <Validation>All required fields documented</Validation>
+      </Task>
+      <Task id="TASK-1-3" status="pending">
+        <Description>Extract all connector requirements and supported features</Description>
+        <Deliverable>Feature matrix document</Deliverable>
+        <Validation>Features mapped to implementation requirements</Validation>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-2" name="MACRO_PATTERN_REFERENCE_STUDY">
+      <Task id="TASK-2-1" status="pending">
+        <Description>Read guides/patterns/macro_patterns_reference.md</Description>
+        <Deliverable>Understanding of macro system architecture</Deliverable>
+        <Validation>Notes on macro usage patterns</Validation>
+      </Task>
+      <Task id="TASK-2-2" status="pending">
+        <Description>Read guides/patterns/flow_macro_guide.md</Description>
+        <Deliverable>Understanding of flow-specific macro configurations</Deliverable>
+        <Validation>Flow macro configuration documented</Validation>
+      </Task>
+      <Task id="TASK-2-3" status="pending">
+        <Description>Read template-generation/macro_templates.md</Description>
+        <Deliverable>Understanding of macro templates</Deliverable>
+        <Validation>Template patterns understood</Validation>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-3" name="AUTHORIZE_FLOW_IMPLEMENTATION">
+      <Task id="TASK-3-1" status="pending">
+        <Description>Read flow pattern: guides/patterns/pattern_authorize.md</Description>
+        <Deliverable>Authorize flow pattern understanding</Deliverable>
+        <Validation>Flow steps documented</Validation>
+      </Task>
+      <Task id="TASK-3-2" status="pending">
+        <Description>Read utils and enums from backend modules</Description>
+        <Deliverable>Understanding of available utilities and enums</Deliverable>
+        <Validation>Relevant imports identified</Validation>
+      </Task>
+      <Task id="TASK-3-3" status="pending">
+        <Description>Generate implementation plan for Authorize flow</Description>
+        <Deliverable>Detailed implementation plan</Deliverable>
+        <Validation>Plan reviewed and approved</Validation>
+      </Task>
+      <Task id="TASK-3-4" status="pending">
+        <Description>Add Authorize flow to create_all_prerequisites! macro</Description>
+        <Deliverable>Updated macro with Authorize entry</Deliverable>
+        <Validation>Macro compiles successfully</Validation>
+      </Task>
+      <Task id="TASK-3-5" status="pending">
+        <Description>Implement Authorize flow with macro_connector_implementation!</Description>
+        <Deliverable>Macro invocation for Authorize flow</Deliverable>
+        <Validation>Code compiles without errors</Validation>
+      </Task>
+      <Task id="TASK-3-6" status="pending">
+        <Description>Create Request/Response types in transformers.rs</Description>
+        <Deliverable>FiservemeaAuthorizeRequest&lt;T&gt; and FiservemeaAuthorizeResponse structs</Deliverable>
+        <Validation>Structs compile and serialize/deserialize correctly</Validation>
+      </Task>
+      <Task id="TASK-3-7" status="pending">
+        <Description>Add status mapping function</Description>
+        <Deliverable>map_fiservemea_status_to_attempt_status function</Deliverable>
+        <Validation>All status variants covered</Validation>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-4" name="FINAL_VALIDATION">
+      <Task id="TASK-4-1" status="pending">
+        <Description>Run cargo build</Description>
+        <Deliverable>Successful compilation</Deliverable>
+        <Validation>No compilation errors</Validation>
+      </Task>
+      <Task id="TASK-4-2" status="pending">
+        <Description>Run cargo clippy</Description>
+        <Deliverable>Lint-free code</Deliverable>
+        <Validation>No clippy warnings</Validation>
+      </Task>
+      <Task id="TASK-4-3" status="pending">
+        <Description>Confirm Authorize flow implementation completed</Description>
+        <Deliverable>Completion confirmation</Deliverable>
+        <Validation>All acceptance criteria met</Validation>
+      </Task>
+      <Task id="TASK-4-4" status="pending">
+        <Description>Mark generated-requirement-analysis.xml as resolved</Description>
+        <Deliverable>generated-requirement-analysis.xml.resolved file created</Deliverable>
+        <Validation>File exists and contains completion marker</Validation>
+      </Task>
+    </Phase>
+  </ImplementationTasks>
+
+  <!-- ========================================================= -->
+  <!-- ACCEPTANCE CRITERIA                                        -->
+  <!-- ========================================================= -->
+  <AcceptanceCriteria>
+    <Criterion id="AC-001" priority="CRITICAL">
+      <Title>Only Authorize Flow Implemented</Title>
+      <Description>No other payment flows (Capture, Refund, Void, etc.) are implemented.</Description>
+      <Verification>
+        <Check>grep -r "Capture\|Refund\|Void" backend/connector-integration/src/connectors/fiservemea/ returns no flow implementations</Check>
+        <Check>Only Authorize appears in macro_connector_implementation! invocations</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-002" priority="CRITICAL">
+      <Title>Macro-Based Implementation</Title>
+      <Description>ConnectorIntegrationV2 trait is implemented via macros only.</Description>
+      <Verification>
+        <Check>No manual "impl ConnectorIntegrationV2" blocks exist</Check>
+        <Check>macro_connector_implementation! is used for Authorize flow</Check>
+        <Check>create_all_prerequisites! includes Authorize entry</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-003" priority="CRITICAL">
+      <Title>Correct Type Parameters</Title>
+      <Description>All type parameters match specification exactly.</Description>
+      <Verification>
+        <Check>PaymentFlowData used as resource_common_data</Check>
+        <Check>PaymentsAuthorizeData&lt;T&gt; used as flow_request</Check>
+        <Check>PaymentsResponseData used as flow_response</Check>
+        <Check>T bounded by PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-004" priority="HIGH">
+      <Title>Status Enum Defined</Title>
+      <Description>Connector-specific status enum is defined with all variants.</Description>
+      <Verification>
+        <Check>FiservemeaStatus enum exists</Check>
+        <Check>All documented status values have enum variants</Check>
+        <Check>Enum derives Debug, Deserialize, Clone, PartialEq, Eq</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-005" priority="HIGH">
+      <Title>Status Mapping Function</Title>
+      <Description>Status mapping function converts all connector statuses to AttemptStatus.</Description>
+      <Verification>
+        <Check>map_fiservemea_status_to_attempt_status function exists</Check>
+        <Check>All FiservemeaStatus variants have mappings</Check>
+        <Check>Function returns AttemptStatus enum</Check>
+        <Check>No hardcoded status strings in transformers</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-006" priority="HIGH">
+      <Title>Request/Response Types</Title>
+      <Description>Request and response types are properly defined.</Description>
+      <Verification>
+        <Check>FiservemeaAuthorizeRequest&lt;T&gt; struct exists with correct fields</Check>
+        <Check>FiservemeaAuthorizeResponse struct exists with correct fields</Check>
+        <Check>Both structs have appropriate serde attributes</Check>
+        <Check>#[serde(rename_all = "camelCase")] applied</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-007" priority="HIGH">
+      <Title>No Unwrap/Expect</Title>
+      <Description>Code does not use unwrap() or expect().</Description>
+      <Verification>
+        <Check>grep -r "unwrap()\|expect()" returns no matches in connector code</Check>
+        <Check>clippy deny unwrap_used passes</Check>
+        <Check>clippy deny expect_used passes</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-008" priority="HIGH">
+      <Title>No Redundant Option Fields</Title>
+      <Description>Fields that are always None are removed.</Description>
+      <Verification>
+        <Check>All Option fields can potentially be Some</Check>
+        <Check>No fields are hardcoded to None in construction</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-009" priority="CRITICAL">
+      <Title>Compilation Success</Title>
+      <Description>Code compiles without errors.</Description>
+      <Verification>
+        <Check>cargo build completes successfully</Check>
+        <Check>No compiler warnings</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-010" priority="HIGH">
+      <Title>Clippy Clean</Title>
+      <Description>Code passes all clippy lints.</Description>
+      <Verification>
+        <Check>cargo clippy completes with no warnings</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-011" priority="MEDIUM">
+      <Title>Single Binary</Title>
+      <Description>Project produces only one binary.</Description>
+      <Verification>
+        <Check>cargo run executes without ambiguity</Check>
+        <Check>Only one [[bin]] section in Cargo.toml if specified</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-012" priority="MEDIUM">
+      <Title>Domain Types Imports</Title>
+      <Description>Code uses domain_types imports, not hyperswitch_*.</Description>
+      <Verification>
+        <Check>No hyperswitch_* imports in connector code</Check>
+        <Check>domain_types imports used for shared types</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-013" priority="MEDIUM">
+      <Title>RouterDataV2 Usage</Title>
+      <Description>RouterDataV2 is used, not RouterData.</Description>
+      <Verification>
+        <Check>RouterDataV2 appears in type signatures</Check>
+        <Check>RouterData (V1) does not appear</Check>
+      </Verification>
+    </Criterion>
+
+    <Criterion id="AC-014" priority="HIGH">
+      <Title>Requirement Analysis Resolved</Title>
+      <Description>Requirement analysis is marked as complete.</Description>
+      <Verification>
+        <Check>generated-requirement-analysis.xml.resolved file exists</Check>
+        <Check>File contains completion timestamp</Check>
+      </Verification>
+    </Criterion>
+  </AcceptanceCriteria>
+
+  <!-- ========================================================= -->
+  <!-- TEST CASES                                                 -->
+  <!-- ========================================================= -->
+  <TestCases>
+    <TestCase id="TC-001" name="Authorize_Success_Card">
+      <Description>Test successful authorization with card payment method</Description>
+      <Preconditions>
+        <Condition>Valid card payment method data</Condition>
+        <Condition>Positive amount</Condition>
+        <Condition>Valid currency</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Create RouterDataV2 with valid card payment method</Step>
+        <Step>Call execute_authorize_flow</Step>
+        <Step>Verify PaymentsResponseData returned</Step>
+        <Step>Verify status is Charged</Step>
+        <Step>Verify connector_transaction_id is present</Step>
+      </Steps>
+      <ExpectedResult>Successful authorization with Charged status</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-002" name="Authorize_Failure_InvalidAmount">
+      <Description>Test authorization failure with invalid amount</Description>
+      <Preconditions>
+        <Condition>Valid card payment method data</Condition>
+        <Condition>Zero or negative amount</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Create RouterDataV2 with zero amount</Step>
+        <Step>Call execute_authorize_flow</Step>
+        <Step>Verify error returned</Step>
+      </Steps>
+      <ExpectedResult>ValidationError with amount validation message</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-003" name="Authorize_Failure_InvalidCurrency">
+      <Description>Test authorization failure with invalid currency</Description>
+      <Preconditions>
+        <Condition>Valid card payment method data</Condition>
+        <Condition>Positive amount</Condition>
+        <Condition>Invalid currency code</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Create RouterDataV2 with invalid currency</Step>
+        <Step>Call execute_authorize_flow</Step>
+        <Step>Verify error returned</Step>
+      </Steps>
+      <ExpectedResult>ValidationError with currency validation message</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-004" name="Authorize_Connector_Decline">
+      <Description>Test authorization declined by connector</Description>
+      <Preconditions>
+        <Condition>Card payment method that will be declined</Condition>
+        <Condition>Valid amount and currency</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Create RouterDataV2 with decline-triggering card</Step>
+        <Step>Call execute_authorize_flow</Step>
+        <Step>Verify PaymentsResponseData returned</Step>
+        <Step>Verify status is AuthorizationFailed</Step>
+      </Steps>
+      <ExpectedResult>Failed authorization with AuthorizationFailed status</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-005" name="Status_Mapping_All_Variants">
+      <Description>Test all status enum variants map correctly</Description>
+      <Preconditions>
+        <Condition>All FiservemeaStatus variants defined</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>For each FiservemeaStatus variant</Step>
+        <Step>Call map_fiservemea_status_to_attempt_status</Step>
+        <Step>Verify correct AttemptStatus returned</Step>
+      </Steps>
+      <ExpectedResult>All variants map to correct AttemptStatus</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-006" name="Request_Serialization">
+      <Description>Test request serializes to correct JSON format</Description>
+      <Preconditions>
+        <Condition>FiservemeaAuthorizeRequest instance</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Create request with sample data</Step>
+        <Step>Serialize to JSON</Step>
+        <Step>Verify camelCase field names</Step>
+        <Step>Verify all required fields present</Step>
+      </Steps>
+      <ExpectedResult>Valid JSON with camelCase naming</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-007" name="Response_Deserialization">
+      <Description>Test response deserializes from connector JSON</Description>
+      <Preconditions>
+        <Condition>Sample connector JSON response</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Parse JSON to FiservemeaAuthorizeResponse</Step>
+        <Step>Verify all fields populated correctly</Step>
+        <Step>Verify status enum parses correctly</Step>
+      </Steps>
+      <ExpectedResult>Successfully parsed response struct</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-008" name="Generic_Payment_Method_Types">
+      <Description>Test implementation works with different payment method types</Description>
+      <Preconditions>
+        <Condition>Multiple payment method types available</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Test with Card payment method</Step>
+        <Step>Test with Wallet payment method</Step>
+        <Step>Test with Bank Transfer payment method</Step>
+        <Step>Verify all compile and execute correctly</Step>
+      </Steps>
+      <ExpectedResult>All payment method types work correctly</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-009" name="Network_Timeout_Handling">
+      <Description>Test graceful handling of network timeouts</Description>
+      <Preconditions>
+        <Condition>Simulated network timeout</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Mock HTTP client to timeout</Step>
+        <Step>Call execute_authorize_flow</Step>
+        <Step>Verify appropriate error returned</Step>
+      </Steps>
+      <ExpectedResult>NetworkError with timeout details</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-010" name="Malformed_Response_Handling">
+      <Description>Test handling of malformed connector responses</Description>
+      <Preconditions>
+        <Condition>Invalid JSON response from connector</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Mock HTTP client to return invalid JSON</Step>
+        <Step>Call execute_authorize_flow</Step>
+        <Step>Verify appropriate error returned</Step>
+      </Steps>
+      <ExpectedResult>ConnectorError with parsing failure details</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-011" name="Idempotency_Key_Reuse">
+      <Description>Test idempotency key prevents duplicate transactions</Description>
+      <Preconditions>
+        <Condition>Valid idempotency key</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Send first authorization request with idempotency key</Step>
+        <Step>Send second identical request with same key</Step>
+        <Step>Verify second request returns first response</Step>
+      </Steps>
+      <ExpectedResult>Second request returns cached response</ExpectedResult>
+    </TestCase>
+
+    <TestCase id="TC-012" name="Sensitive_Data_Redaction">
+      <Description>Test sensitive data is redacted from logs</Description>
+      <Preconditions>
+        <Condition>Payment with card data</Condition>
+      </Preconditions>
+      <Steps>
+        <Step>Execute authorization</Step>
+        <Step>Check logs for card data</Step>
+        <Step>Verify PAN, CVV not present</Step>
+      </Steps>
+      <ExpectedResult>No sensitive data in logs</ExpectedResult>
+    </TestCase>
+  </TestCases>
+
+  <!-- ========================================================= -->
+  <!-- SIGN-OFF                                                   -->
+  <!-- ========================================================= -->
+  <SignOff>
+    <GeneratedBy>Open-Thinking Model</GeneratedBy>
+    <GeneratedOn>2026-02-09</GeneratedTo>
+    <ReviewStatus>Pending Review</ReviewStatus>
+    <ApprovalStatus>Pending Approval</ApprovalStatus>
+    <VersionHistory>
+      <Entry version="1.0.0" date="2026-02-09" author="Open-Thinking Model">Initial requirement analysis generation</Entry>
+    </VersionHistory>
+  </SignOff>
+</RequirementAnalysis>
