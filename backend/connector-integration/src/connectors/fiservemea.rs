@@ -242,9 +242,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{{https://prod.emea.api.fiservapps.com/sandbox}}/payments"
-        ))
+        Ok("https://prod.emea.api.fiservapps.com/sandbox/payments".to_string())
     }
 
     fn get_request_body(
