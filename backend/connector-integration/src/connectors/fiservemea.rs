@@ -432,7 +432,7 @@ macros::macro_connector_implementation!(
                 .connector_transaction_id
                 .clone()
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id".to_string(),
+                    field_name: "connector_transaction_id",
                 })?;
             Ok(format!(
                 "{}/ipp/payments-gateway/v2/payments/{}",
@@ -471,7 +471,7 @@ macros::macro_connector_implementation!(
                 .connector_transaction_id
                 .clone()
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id".to_string(),
+                    field_name: "connector_transaction_id",
                 })?;
             Ok(format!(
                 "{}/ipp/payments-gateway/v2/payments/{}",
@@ -510,7 +510,7 @@ macros::macro_connector_implementation!(
                 .connector_transaction_id
                 .clone()
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id".to_string(),
+                    field_name: "connector_transaction_id",
                 })?;
             Ok(format!(
                 "{}/ipp/payments-gateway/v2/payments/{}",
@@ -549,7 +549,7 @@ macros::macro_connector_implementation!(
                 .connector_transaction_id
                 .clone()
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id".to_string(),
+                    field_name: "connector_transaction_id",
                 })?;
             Ok(format!(
                 "{}/ipp/payments-gateway/v2/payments/{}",
@@ -588,7 +588,7 @@ macros::macro_connector_implementation!(
                 .connector_transaction_id
                 .clone()
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id".to_string(),
+                    field_name: "connector_transaction_id",
                 })?;
             Ok(format!(
                 "{}/ipp/payments-gateway/v2/payments/{}",
