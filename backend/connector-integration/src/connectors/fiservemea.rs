@@ -247,7 +247,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: RSync,
-            request_body: FiservEMEASyncRequest,
+            request_body: FiservEMEARefundSyncRequest,
             response_body: FiservEMEARefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
