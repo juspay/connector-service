@@ -604,10 +604,9 @@ macros::macro_connector_implementation!(
             let connector_metadata = req.resource_common_data.connector_meta_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
-            let reference_id = req.resource_common_data.get_reference_id()?;
             self.build_headers(
                 &access_token.access_token,
-                &reference_id,
+                &req.resource_common_data.connector_request_reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
             )
