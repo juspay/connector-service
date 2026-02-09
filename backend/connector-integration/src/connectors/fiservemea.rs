@@ -4,6 +4,7 @@ use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
     events,
+    ext_traits::BytesExt,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
