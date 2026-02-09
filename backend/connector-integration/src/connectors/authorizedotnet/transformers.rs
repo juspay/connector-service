@@ -3171,7 +3171,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
                     code: error_code.to_string(),
                     message: error_text.to_string(),
                     reason: Some(error_text.to_string()),
-                    attempt_status: None,
+                    attempt_status: Some(AttemptStatus::Failure),// Marking attempt as failure for non-duplicate errors
                     connector_transaction_id: None,
                     network_decline_code: None,
                     network_advice_code: None,
