@@ -51,8 +51,8 @@ pub mod transformers;
 use transformers::{
     FiservEMEACaptureRequest, FiservEMEACaptureResponse, FiservEMEAPaymentsRequest,
     FiservEMEAPaymentsResponse, FiservEMEARefundRequest, FiservEMEARefundResponse,
-    FiservEMEASyncRequest, FiservEMEASyncResponse, FiservEMEAVoidRequest, FiservEMEAVoidResponse,
-    FiservEMEAAuthType,
+    FiservEMEASyncRequest, FiservEMEAPSyncResponse, FiservEMEARefundSyncResponse,
+    FiservEMEAVoidRequest, FiservEMEAVoidResponse, FiservEMEAAuthType,
 };
 
 use super::macros;
