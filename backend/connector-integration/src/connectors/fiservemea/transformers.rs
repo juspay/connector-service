@@ -557,8 +557,8 @@ where
     fn foreign_try_from(
         _item: RouterDataV2<T, F, Req, Res>,
     ) -> Result<Self, Self::Error> {
-        Err(report!(utils::not_implemented_error(
-            "ForeignTryFrom for FiservEMEAPaymentsResponse is not implemented",
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "ForeignTryFrom for FiservEMEAPaymentsResponse is not implemented".to_string(),
         )))
     }
 }
