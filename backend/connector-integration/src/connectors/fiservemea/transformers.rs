@@ -1,6 +1,5 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::request::Method;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
