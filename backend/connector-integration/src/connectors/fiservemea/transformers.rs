@@ -172,8 +172,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
+impl TryFrom<
         &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     > for FiservemeaCaptureRequest
 {
@@ -183,13 +182,12 @@ impl<T: PaymentMethodDataTypes>
         item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: Some(item.request.minor_amount.get_amount_as_i64()),
+            amount: Some(item.request.minor_amount_to_capture.get_amount_as_i64()),
         })
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             FiservemeaCaptureResponse,
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -231,8 +229,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             FiservemeaVoidResponse,
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -274,8 +271,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
+impl TryFrom<
         &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     > for FiservemeaRefundRequest
 {
@@ -285,20 +281,15 @@ impl<T: PaymentMethodDataTypes>
         item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            payment_id: item
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .to_string(),
-            amount: Some(item.request.minor_amount.get_amount_as_i64()),
+            payment_id: item.request.connector_transaction_id.clone(),
+            amount: Some(item.request.minor_refund_amount.get_amount_as_i64()),
             currency: item.request.currency.to_string(),
-            reason: item.request.refund_reason.clone(),
+            reason: item.request.reason.clone(),
         })
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             FiservemeaRefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -324,7 +315,7 @@ impl<T: PaymentMethodDataTypes>
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id,
                 refund_status: status,
-                connector_response_reference_id: None,
+                status_code: item.http_code,
             }),
             resource_common_data: item.router_data.resource_common_data,
             ..item.router_data
@@ -332,8 +323,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             FiservemeaPaymentsResponse,
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -376,8 +366,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             FiservemeaRefundResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -403,7 +392,7 @@ impl<T: PaymentMethodDataTypes>
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id,
                 refund_status: status,
-                connector_response_reference_id: None,
+                status_code: item.http_code,
             }),
             resource_common_data: item.router_data.resource_common_data,
             ..item.router_data
