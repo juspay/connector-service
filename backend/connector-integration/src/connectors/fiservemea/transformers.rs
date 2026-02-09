@@ -129,9 +129,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let card = match payment_method_data {
             PaymentMethodData::Card(card) => card,
             _ => {
-                return Err(report!(ConnectorError::NotImplemented(
+                return Err(ConnectorError::NotImplemented(
                     "Only card payments are supported for FiservEMEA".to_string(),
-                )))
+                ).into())
             }
         };
 
