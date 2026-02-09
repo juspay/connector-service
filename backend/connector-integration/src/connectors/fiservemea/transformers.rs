@@ -386,7 +386,44 @@ pub struct FiservEMEAPaymentsResponse {
 pub type FiservEMEACaptureResponse = FiservEMEAPaymentsResponse;
 pub type FiservEMEARefundResponse = FiservEMEAPaymentsResponse;
 pub type FiservEMEAVoidResponse = FiservEMEAPaymentsResponse;
-pub type FiservEMEASyncResponse = FiservEMEAPaymentsResponse;
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservEMEAPSyncResponse {
+    pub client_request_id: String,
+    pub api_trace_id: String,
+    pub ipg_transaction_id: String,
+    pub order_id: Option<String>,
+    pub transaction_type: String,
+    pub transaction_result: String,
+    pub transaction_state: String,
+    pub approval_code: Option<String>,
+    pub scheme_response_code: Option<String>,
+    pub error_message: Option<String>,
+    pub approved_amount: Option<ApprovedAmount>,
+    pub processor: Option<Processor>,
+    pub payment_method_details: Option<PaymentMethodDetails>,
+    pub error: Option<Error>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservEMEARefundSyncResponse {
+    pub client_request_id: String,
+    pub api_trace_id: String,
+    pub ipg_transaction_id: String,
+    pub order_id: Option<String>,
+    pub transaction_type: String,
+    pub transaction_result: String,
+    pub transaction_state: String,
+    pub approval_code: Option<String>,
+    pub scheme_response_code: Option<String>,
+    pub error_message: Option<String>,
+    pub approved_amount: Option<ApprovedAmount>,
+    pub processor: Option<Processor>,
+    pub payment_method_details: Option<PaymentMethodDetails>,
+    pub error: Option<Error>,
+}
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
