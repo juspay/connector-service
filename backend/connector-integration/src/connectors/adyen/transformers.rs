@@ -1728,7 +1728,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
                         field_name: "customer_id",
                     })?;
-                let _country = router_data.resource_common_data.get_billing_country()?;
+                router_data.resource_common_data.get_billing_country()?;
                 Ok(Self::Klarna)
             }
             PayLaterData::KlarnaSdk { token } => {
@@ -1747,14 +1747,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         field_name: "email",
                     }
                 })?;
-                billing.address.as_ref().ok_or_else(|| {
-                    errors::ConnectorError::MissingRequiredField {
-                        field_name: "billing.address",
-                    }
-                })?;
+                router_data.resource_common_data.get_billing_full_name()?;
                 billing.phone.as_ref().ok_or_else(|| {
                     errors::ConnectorError::MissingRequiredField {
                         field_name: "billing.phone",
+                    }
+                })?;
+                billing.address.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
                     }
                 })?;
                 Ok(Self::AdyenAffirm)
@@ -1766,6 +1767,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         field_name: "email",
                     }
                 })?;
+                router_data.resource_common_data.get_billing_full_name()?;
                 billing.address.as_ref().ok_or_else(|| {
                     errors::ConnectorError::MissingRequiredField {
                         field_name: "billing.address",
@@ -1788,11 +1790,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             PayLaterData::PayBrightRedirect { .. } => {
                 let billing = router_data.resource_common_data.get_billing()?;
-                billing.address.as_ref().ok_or_else(|| {
-                    errors::ConnectorError::MissingRequiredField {
-                        field_name: "billing.address",
-                    }
-                })?;
+                router_data.resource_common_data.get_billing_full_name()?;
                 billing.phone.as_ref().ok_or_else(|| {
                     errors::ConnectorError::MissingRequiredField {
                         field_name: "billing.phone",
@@ -1803,13 +1801,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         field_name: "billing.email",
                     }
                 })?;
+                billing.address.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    }
+                })?;
                 router_data
                     .resource_common_data
                     .get_optional_shipping()
                     .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
                         field_name: "shipping",
                     })?;
-                let _country = router_data.resource_common_data.get_billing_country()?;
+                router_data.resource_common_data.get_billing_country()?;
                 Ok(Self::PayBright)
             }
             PayLaterData::WalleyRedirect { .. } => {
@@ -1855,9 +1858,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let billing = router_data.resource_common_data.get_billing()?;
                 billing.email.as_ref().ok_or_else(|| {
                     errors::ConnectorError::MissingRequiredField {
-                        field_name: "billing.email",
+                        field_name: "email",
                     }
                 })?;
+                router_data.resource_common_data.get_billing_full_name()?;
                 billing.phone.as_ref().ok_or_else(|| {
                     errors::ConnectorError::MissingRequiredField {
                         field_name: "billing.phone",
@@ -2905,6 +2909,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.metadata.clone().expose_option(),
                     );
 
+                    let country_code = get_country_code(
+                        item.router_data.resource_common_data.get_optional_billing(),
+                    );
+
                     Ok(Self {
                         amount,
                         merchant_account: auth_type.merchant_account,
@@ -2924,7 +2932,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .router_data
                             .resource_common_data
                             .get_optional_billing_phone_number(),
-                        shopper_name: None,
+                        shopper_name: get_shopper_name(
+                            item.router_data.resource_common_data.get_optional_billing(),
+                        ),
                         shopper_email: item
                             .router_data
                             .resource_common_data
@@ -2933,12 +2943,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         social_security_number: None,
                         billing_address,
                         delivery_address,
-                        country_code: None,
-                        line_items: None,
-                        shopper_reference: None,
+                        country_code,
+                        line_items: Some(get_line_items(&item)),
+                        shopper_reference: item.router_data.resource_common_data.get_connector_customer_id().ok(),
                         store_payment_method: None,
                         channel: None,
-                        shopper_statement: None,
+                        shopper_statement: get_shopper_statement(&item.router_data),
                         shopper_ip: item.router_data.request.get_ip_address_as_optional(),
                         merchant_order_reference: item
                             .router_data
