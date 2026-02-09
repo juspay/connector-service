@@ -12,11 +12,11 @@ use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
-pub struct FiservemeaAuthType {
+pub struct FiservmeaAuthType {
     pub api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
+impl TryFrom<&ConnectorAuthType> for FiservmeaAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
@@ -32,22 +32,81 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FiservemeaErrorResponse {
-    pub code: String,
-    pub message: String,
+pub struct FiservmeaErrorResponse {
+    pub code: Option<String>,
+    pub message: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct FiservemeaPaymentsRequest {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservmeaStatus {
+    Authorized,
+    Declined,
+    Pending,
+    Failed,
+    Unknown,
+}
+
+pub fn map_fiservmea_status_to_attempt_status(status: &FiservmeaStatus) -> AttemptStatus {
+    match status {
+        FiservmeaStatus::Authorized => AttemptStatus::Authorized,
+        FiservmeaStatus::Declined => AttemptStatus::Failure,
+        FiservmeaStatus::Pending => AttemptStatus::Pending,
+        FiservmeaStatus::Failed => AttemptStatus::Failure,
+        FiservmeaStatus::Unknown => AttemptStatus::Pending,
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservmeaPaymentMethod<T> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card: Option<FiservmeaCard>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bank_transfer: Option<FiservmeaBankTransfer>,
+    #[serde(skip)]
+    pub _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T> Default for FiservmeaPaymentMethod<T> {
+    fn default() -> Self {
+        Self {
+            card: None,
+            bank_transfer: None,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservmeaCard {
+    pub number: String,
+    pub expiry_month: String,
+    pub expiry_year: String,
+    pub cvv: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservmeaBankTransfer {
+    pub account_number: String,
+    pub routing_number: String,
+    pub account_holder_name: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservmeaAuthorizeRequest<T> {
     pub amount: i64,
     pub currency: String,
-    pub reference: String,
+    pub payment_method: FiservmeaPaymentMethod<T>,
 }
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaPaymentsRequest
+    > for FiservmeaAuthorizeRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -59,29 +118,39 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
+        let payment_method = FiservmeaPaymentMethod {
+            card: None,
+            bank_transfer: None,
+            _phantom: std::marker::PhantomData,
+        };
+
         Ok(Self {
             amount: item.request.minor_amount.get_amount_as_i64(),
             currency: item.request.currency.to_string(),
-            reference: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            payment_method,
         })
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FiservemeaPaymentsResponse {
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservmeaAuthorizeResponse {
     pub id: String,
-    pub status: String,
-    pub amount: i64,
-    pub currency: String,
+    pub status: FiservmeaStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub amount: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
-            FiservemeaPaymentsResponse,
+            FiservmeaAuthorizeResponse,
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -95,7 +164,7 @@ impl<T: PaymentMethodDataTypes>
 
     fn try_from(
         item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
+            FiservmeaAuthorizeResponse,
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -104,13 +173,7 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.status.as_str() {
-            "succeeded" | "completed" => AttemptStatus::Charged,
-            "pending" | "processing" => AttemptStatus::Pending,
-            "failed" | "error" => AttemptStatus::Failure,
-            "cancelled" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
-        };
+        let status = map_fiservmea_status_to_attempt_status(&item.response.status);
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
