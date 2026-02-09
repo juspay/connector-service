@@ -2450,6 +2450,8 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Testing Data
   optional SecretString connector_testing_data = 40; // Connector-specific testing data (JSON stringified)
+
+  optional bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
 }
 
 // Container for recurring mandate payment data

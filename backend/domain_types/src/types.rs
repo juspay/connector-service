@@ -8535,6 +8535,7 @@ impl<
             }),
             merchant_account_id: value.merchant_account_id,
             merchant_configured_currency,
+            request_incremental_authorization: value.request_incremental_authorization,
         })
     }
 }

@@ -1,5 +1,8 @@
 use super::PaypalRouterData;
-use crate::{types::ResponseRouterData, utils::to_connector_meta};
+use crate::{
+    types::ResponseRouterData,
+    utils::{to_connector_meta, ErrorCodeAndMessage},
+};
 use base64::Engine;
 use cards;
 use common_enums;
@@ -56,7 +59,7 @@ impl<
     > GetRequestIncrementalAuthorization for RepeatPaymentData<T>
 {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
-        None
+        self.request_incremental_authorization
     }
 }
 
@@ -2898,6 +2901,32 @@ pub struct PaypalPaymentErrorResponse {
     pub message: String,
     pub debug_id: Option<String>,
     pub details: Option<Vec<ErrorDetails>>,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct PaypalOrderErrorResponse {
+    pub name: Option<String>,
+    pub message: String,
+    pub debug_id: Option<String>,
+    pub details: Option<Vec<OrderErrorDetails>>,
+}
+
+impl From<OrderErrorDetails> for ErrorCodeAndMessage {
+    fn from(error: OrderErrorDetails) -> Self {
+        Self {
+            error_code: error.issue.to_string(),
+            error_message: error.issue,
+        }
+    }
+}
+
+impl From<ErrorDetails> for ErrorCodeAndMessage {
+    fn from(error: ErrorDetails) -> Self {
+        Self {
+            error_code: error.issue.to_string(),
+            error_message: error.issue.to_string(),
+        }
+    }
 }
 
 fn get_paypal_error_message(error_code: &str) -> Option<&str> {
