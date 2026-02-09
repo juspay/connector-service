@@ -305,7 +305,7 @@ impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResp
 }
 
 impl TryFrom<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
-    for FiservEMEASyncRequest
+    for FiservEMEARefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
