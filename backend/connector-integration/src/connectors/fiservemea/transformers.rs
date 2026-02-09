@@ -425,6 +425,117 @@ pub struct FiservEMEARefundSyncResponse {
     pub error: Option<Error>,
 }
 
+impl<F> utils::ForeignFrom<(FiservEMEAPSyncResponse, RouterDataV2<PSync, F, PaymentsSyncData, PaymentsResponseData>)>
+    for PaymentsResponseData
+{
+    fn foreign_from(
+        item: (FiservEMEAPSyncResponse, RouterDataV2<PSync, F, PaymentsSyncData, PaymentsResponseData>),
+    ) -> Self {
+        let (response, _req) = item;
+        let status = get_transaction_status(&response.transaction_result, &response.transaction_state);
+
+        let error_code = response
+            .error
+            .as_ref()
+            .and_then(|e| e.code.clone())
+            .or_else(|| response.error_message.clone())
+            .unwrap_or_else(|| NO_ERROR_CODE.to_string());
+
+        let error_message = response
+            .error
+            .as_ref()
+            .and_then(|e| e.message.clone())
+            .or_else(|| response.error_message.clone())
+            .unwrap_or_else(|| "".to_string());
+
+        let connector_transaction_id = Some(response.ipg_transaction_id.clone());
+
+        let amount = response
+            .approved_amount
+            .as_ref()
+            .and_then(|a| a.total.clone())
+            .and_then(|s| s.parse::<i64>().ok());
+
+        let currency = response
+            .approved_amount
+            .as_ref()
+            .and_then(|a| a.currency.clone());
+
+        let processor_response_code = response
+            .processor
+            .as_ref()
+            .and_then(|p| p.response_code.clone());
+
+        let processor_response_message = response
+            .processor
+            .as_ref()
+            .and_then(|p| p.response_message.clone());
+
+        let authorization_code = response.approval_code.clone();
+
+        Self {
+            status,
+            error_code: Some(error_code),
+            error_message: Some(error_message),
+            connector_transaction_id,
+            amount,
+            currency,
+            processor_response_code,
+            processor_response_message,
+            authorization_code,
+            ..Default::default()
+        }
+    }
+}
+
+impl<F> utils::ForeignFrom<(FiservEMEARefundSyncResponse, RouterDataV2<RSync, F, RefundSyncData, RefundsResponseData>)>
+    for RefundsResponseData
+{
+    fn foreign_from(
+        item: (FiservEMEARefundSyncResponse, RouterDataV2<RSync, F, RefundSyncData, RefundsResponseData>),
+    ) -> Self {
+        let (response, _req) = item;
+        let status = get_transaction_status(&response.transaction_result, &response.transaction_state);
+
+        let error_code = response
+            .error
+            .as_ref()
+            .and_then(|e| e.code.clone())
+            .or_else(|| response.error_message.clone())
+            .unwrap_or_else(|| NO_ERROR_CODE.to_string());
+
+        let error_message = response
+            .error
+            .as_ref()
+            .and_then(|e| e.message.clone())
+            .or_else(|| response.error_message.clone())
+            .unwrap_or_else(|| "".to_string());
+
+        let connector_transaction_id = Some(response.ipg_transaction_id.clone());
+
+        let amount = response
+            .approved_amount
+            .as_ref()
+            .and_then(|a| a.total.clone())
+            .and_then(|s| s.parse::<i64>().ok());
+
+        let currency = response
+            .approved_amount
+            .as_ref()
+            .and_then(|a| a.currency.clone());
+
+        Self {
+            status,
+            error_code: Some(error_code),
+            error_message: Some(error_message),
+            connector_transaction_id,
+            amount,
+            currency,
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservEMEAErrorResponse {
