@@ -2799,7 +2799,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let (recurring_processing_model, store_payment_method, shopper_reference) =
             get_recurring_processing_model(&item.router_data)?;
-        
+
         let (store, splits) = get_adyen_split_request(
             &item.router_data.request.metadata,
             &adyen_metadata.store,
