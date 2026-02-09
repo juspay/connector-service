@@ -121,12 +121,7 @@ impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
             FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -135,12 +130,7 @@ impl<T: PaymentMethodDataTypes>
     fn try_from(
         item: ResponseRouterData<
             FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let status = match item.response.status.as_str() {
@@ -189,7 +179,7 @@ impl TryFrom<
 impl TryFrom<
         ResponseRouterData<
             FiservemeaCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
@@ -198,7 +188,7 @@ impl TryFrom<
     fn try_from(
         item: ResponseRouterData<
             FiservemeaCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let status = match item.response.status.as_str() {
@@ -231,7 +221,7 @@ impl TryFrom<
 impl TryFrom<
         ResponseRouterData<
             FiservemeaVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
@@ -240,7 +230,7 @@ impl TryFrom<
     fn try_from(
         item: ResponseRouterData<
             FiservemeaVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let status = match item.response.status.as_str() {
@@ -291,7 +281,7 @@ impl TryFrom<
 impl TryFrom<
         ResponseRouterData<
             FiservemeaRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
@@ -300,7 +290,7 @@ impl TryFrom<
     fn try_from(
         item: ResponseRouterData<
             FiservemeaRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let status = match item.response.status.as_str() {
@@ -325,7 +315,7 @@ impl TryFrom<
 impl TryFrom<
         ResponseRouterData<
             FiservemeaPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
@@ -334,7 +324,7 @@ impl TryFrom<
     fn try_from(
         item: ResponseRouterData<
             FiservemeaPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let status = match item.response.status.as_str() {
@@ -368,7 +358,7 @@ impl TryFrom<
 impl TryFrom<
         ResponseRouterData<
             FiservemeaRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            Self,
         >,
     > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
@@ -377,7 +367,7 @@ impl TryFrom<
     fn try_from(
         item: ResponseRouterData<
             FiservemeaRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let status = match item.response.status.as_str() {
