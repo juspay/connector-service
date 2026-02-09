@@ -260,7 +260,7 @@ impl ForeignTryFrom<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, Payment
     }
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservEMEASyncRequest {}
 
