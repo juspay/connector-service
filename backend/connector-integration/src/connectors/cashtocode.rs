@@ -35,10 +35,8 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types,
-    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers::{self as cashtocode, CashtocodePaymentsRequest, CashtocodePaymentsResponse};
@@ -55,16 +53,6 @@ pub(crate) mod headers {
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Cashtocode<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
         IncrementalAuthorization,
         PaymentFlowData,
         PaymentsIncrementalAuthorizationData,
@@ -134,6 +122,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::DisputeDefend for Cashtocode<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyRedirectResponse for Cashtocode<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Cashtocode<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -579,192 +575,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
-    > for Cashtocode<T>
-{
-}
-
-// SourceVerification implementations for all flows
-macro_rules! impl_source_verification_stub {
-    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
-        impl<
-                T: PaymentMethodDataTypes
-                    + std::fmt::Debug
-                    + std::marker::Sync
-                    + std::marker::Send
-                    + 'static
-                    + Serialize,
-            > SourceVerification<$flow, $common_data, $req, $resp> for Cashtocode<T>
-        {
-            fn get_secrets(
-                &self,
-                _secrets: ConnectorSourceVerificationSecrets,
-            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-                Ok(Vec::new()) // STUB - will be implemented in Phase 10
-            }
-            fn get_algorithm(
-                &self,
-            ) -> CustomResult<
-                Box<dyn common_utils::crypto::VerifySignature + Send>,
-                errors::ConnectorError,
-            > {
-                Ok(Box::new(common_utils::crypto::NoAlgorithm)) // STUB - will be implemented in Phase 10
-            }
-            fn get_signature(
-                &self,
-                _payload: &[u8],
-                _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
-                _secrets: &[u8],
-            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-                Ok(Vec::new()) // STUB - will be implemented in Phase 10
-            }
-            fn get_message(
-                &self,
-                payload: &[u8],
-                _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
-                _secrets: &[u8],
-            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-                Ok(payload.to_owned()) // STUB - will be implemented in Phase 10
-            }
-        }
-    };
-}
-
-// Apply to all flows
-impl_source_verification_stub!(
-    Authorize,
-    PaymentFlowData,
-    PaymentsAuthorizeData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    PSync,
-    PaymentFlowData,
-    PaymentsSyncData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Capture,
-    PaymentFlowData,
-    PaymentsCaptureData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
-impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
-impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
-impl_source_verification_stub!(
-    SetupMandate,
-    PaymentFlowData,
-    SetupMandateRequestData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    RepeatPayment,
-    PaymentFlowData,
-    RepeatPaymentData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Accept,
-    DisputeFlowData,
-    AcceptDisputeData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    SubmitEvidence,
-    DisputeFlowData,
-    SubmitEvidenceData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    DefendDispute,
-    DisputeFlowData,
-    DisputeDefendData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    CreateOrder,
-    PaymentFlowData,
-    PaymentCreateOrderData,
-    PaymentCreateOrderResponse
-);
-impl_source_verification_stub!(
-    PreAuthenticate,
-    PaymentFlowData,
-    PaymentsPreAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Authenticate,
-    PaymentFlowData,
-    PaymentsAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    PostAuthenticate,
-    PaymentFlowData,
-    PaymentsPostAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    VoidPC,
-    PaymentFlowData,
-    PaymentsCancelPostCaptureData,
-    PaymentsResponseData
-);
-
-impl_source_verification_stub!(
-    MandateRevoke,
-    PaymentFlowData,
-    MandateRevokeRequestData,
-    MandateRevokeResponseData
-);
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Cashtocode<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Cashtocode<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Cashtocode<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Cashtocode<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
     > for Cashtocode<T>
 {
 }
