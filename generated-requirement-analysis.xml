@@ -1,0 +1,1252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RequirementAnalysis xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Metadata>
+    <DocumentTitle>UCS Connector Authorize Flow - Requirement Analysis</DocumentTitle>
+    <Version>1.0.0</Version>
+    <GeneratedDate>2026-02-09</GeneratedDate>
+    <Project>GRACE-UCS Connector Integration</Project>
+    <Component>FiservMEA Connector - Authorize Flow</Component>
+    <Classification>Production-Ready Specification</Classification>
+  </Metadata>
+
+  <!-- ========================================================= -->
+  <!-- SECURITY REQUIREMENTS                                      -->
+  <!-- ========================================================= -->
+  <SecurityRequirements>
+    <Section id="SEC-001" priority="CRITICAL">
+      <Title>Authentication and Authorization</Title>
+      <Description>All connector requests must be authenticated using valid credentials</Description>
+      <AcceptanceCriteria>
+        <Criterion id="SEC-001-01" testable="true">
+          <Description>Connector API keys must be stored securely and never logged</Description>
+          <TestType>Unit Test</TestType>
+          <TestMethod>verify_api_key_not_logged_in_debug_output</TestMethod>
+        </Criterion>
+        <Criterion id="SEC-001-02" testable="true">
+          <Description>API credentials must be validated before making external requests</Description>
+          <TestType>Integration Test</TestType>
+          <TestMethod>test_invalid_credentials_rejected</TestMethod>
+        </Criterion>
+        <Criterion id="SEC-001-03" testable="true">
+          <Description>Sensitive data must be redacted from error responses</Description>
+          <TestType>Unit Test</TestType>
+          <TestMethod>verify_sensitive_data_redaction</TestMethod>
+        </Criterion>
+      </AcceptanceCriteria>
+    </Section>
+
+    <Section id="SEC-002" priority="CRITICAL">
+      <Title>Data Protection in Transit</Title>
+      <Description>All external communications must use TLS 1.2 or higher</Description>
+      <AcceptanceCriteria>
+        <Criterion id="SEC-002-01" testable="true">
+          <Description>HTTPS must be enforced for all connector API calls</Description>
+          <TestType>Integration Test</TestType>
+          <TestMethod>test_https_only_enforcement</TestMethod>
+        </Criterion>
+        <Criterion id="SEC-002-02" testable="true">
+          <Description>Certificate validation must not be disabled</Description>
+          <TestType>Static Analysis</TestType>
+          <TestMethod>verify_no_dangerous_ssl_config</TestMethod>
+        </Criterion>
+      </AcceptanceCriteria>
+    </Section>
+
+    <Section id="SEC-003" priority="HIGH">
+      <Title>Input Validation and Sanitization</Title>
+      <Description>All inputs must be validated before processing</Description>
+      <AcceptanceCriteria>
+        <Criterion id="SEC-003-01" testable="true">
+          <Description>Payment amount must be positive and within allowed range</Description>
+          <TestType>Unit Test</TestType>
+          <TestMethod>test_amount_validation_bounds</TestMethod>
+        </Criterion>
+        <Criterion id="SEC-003-02" testable="true">
+          <Description>Currency codes must be valid ISO 4217 codes</Description>
+          <TestType>Unit Test</TestType>
+          <TestMethod>test_currency_iso_validation</TestMethod>
+        </Criterion>
+        <Criterion id="SEC-003-03" testable="true">
+          <Description>Payment method data must be validated against connector requirements</Description>
+          <TestType>Unit Test</TestType>
+          <TestMethod>test_payment_method_validation</TestMethod>
+        </Criterion>
+      </AcceptanceCriteria>
+    </Section>
+
+    <Section id="SEC-004" priority="HIGH">
+      <Title>Error Handling and Information Disclosure</Title>
+      <Description>Error messages must not expose sensitive system information</Description>
+      <AcceptanceCriteria>
+        <Criterion id="SEC-004-01" testable="true">
+          <Description>Internal errors must return generic messages to clients</Description>
+          <TestType>Unit Test</TestType>
+          <TestMethod>verify_internal_error_message_sanitization</TestMethod>
+        </Criterion>
+        <Criterion id="SEC-004-02" testable="true">
+          <Description>Connector-specific errors must be mapped to standard error types</Description>
+          <TestType>Unit Test</TestType>
+          <TestMethod>test_error_mapping_completeness</TestMethod>
+        </Criterion>
+      </AcceptanceCriteria>
+    </Section>
+
+    <Section id="SEC-005" priority="MEDIUM">
+      <Title>Audit Logging</Title>
+      <Description>All authorize transactions must be logged for audit purposes</Description>
+      <AcceptanceCriteria>
+        <Criterion id="SEC-005-01" testable="true">
+          <Description>Transaction ID must be logged for all authorize requests</Description>
+          <TestType>Integration Test</TestType>
+          <TestMethod>verify_transaction_id_logging</TestMethod>
+        </Criterion>
+        <Criterion id="SEC-005-02" testable="true">
+          <Description>Timestamp must be recorded for all authorize attempts</Description>
+          <TestType>Integration Test</TestType>
+          <TestMethod>verify_timestamp_logging</TestMethod>
+        </Criterion>
+      </AcceptanceCriteria>
+    </Section>
+
+    <Section id="SEC-006" priority="CRITICAL">
+      <Title>PCI DSS Compliance</Title>
+      <Description>Cardholder data must never be stored in logs or memory longer than necessary</Description>
+      <AcceptanceCriteria>
+        <Criterion id="SEC-006-01" testable="true">
+          <Description>PAN must be masked in all log outputs</Description>
+          <TestType>Unit Test</TestType>
+          <TestMethod>verify_pan_masking_in_logs</TestMethod>
+        </Criterion>
+        <Criterion id="SEC-006-02" testable="true">
+          <Description>CVV/CVC must never be logged under any circumstances</Description>
+          <TestType>Static Analysis</TestType>
+          <TestMethod>verify_cvv_never_logged</TestMethod>
+        </Criterion>
+        <Criterion id="SEC-006-03" testable="true">
+          <Description>Card data must be zeroized after use</Description>
+          <TestType>Unit Test</TestType>
+          <TestMethod>verify_card_data_zeroization</TestMethod>
+        </Criterion>
+      </AcceptanceCriteria>
+    </Section>
+  </SecurityRequirements>
+
+  <!-- ========================================================= -->
+  <!-- TECHNICAL SCOPE                                           -->
+  <!-- ========================================================= -->
+  <TechnicalScope>
+    <CoreOperations>
+      <Operation id="OP-001" name="Authorize Payment">
+        <Description>Process a payment authorization request through the FiservMEA connector</Description>
+        <SuccessConditions>
+          <Condition id="OP-001-S01">Valid payment method data provided</Condition>
+          <Condition id="OP-001-S02">Connector API responds successfully</Condition>
+          <Condition id="OP-001-S03">Response status maps to valid AttemptStatus</Condition>
+          <Condition id="OP-001-S04">Transaction ID is returned and stored</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition id="OP-001-F01">Invalid or missing payment method data</Condition>
+          <Condition id="OP-001-F02">Connector API returns error response</Condition>
+          <Condition id="OP-001-F03">Network timeout or connectivity failure</Condition>
+          <Condition id="OP-001-F04">Invalid authentication credentials</Condition>
+          <Condition id="OP-001-F05">Unsupported payment method type</Condition>
+        </FailureConditions>
+        <Preconditions>
+          <Precondition>Connector is configured with valid API credentials</Precondition>
+          <Precondition>Merchant account is active</Precondition>
+          <Precondition>Payment method is supported by connector</Precondition>
+        </Preconditions>
+        <Postconditions>
+          <Postcondition>Authorization attempt is recorded</Postcondition>
+          <Postcondition>Response is transformed to standard format</Postcondition>
+          <Postcondition>Status is mapped to common enum</Postcondition>
+        </Postconditions>
+      </Operation>
+    </CoreOperations>
+
+    <Flows>
+      <Flow id="FLW-001" name="Authorize Flow">
+        <TraitImplementation>ConnectorIntegrationV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</TraitImplementation>
+        <MacroUsage>
+          <Macro name="create_all_prerequisites!">
+            <Purpose>Register flow prerequisites before implementation</Purpose>
+            <Parameters>
+              <Parameter>Authorize</Parameter>
+              <Parameter>{ConnectorName}AuthorizeRequest</Parameter>
+              <Parameter>{ConnectorName}AuthorizeResponse</Parameter>
+              <Parameter>RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Parameter>
+            </Parameters>
+          </Macro>
+          <Macro name="macro_connector_implementation!">
+            <Purpose>Generate connector integration code</Purpose>
+            <Parameters>
+              <Parameter>connector = {ConnectorName}</Parameter>
+              <Parameter>flow_name = Authorize</Parameter>
+              <Parameter>resource_common_data = PaymentFlowData</Parameter>
+              <Parameter>flow_request = PaymentsAuthorizeData&lt;T&gt;</Parameter>
+              <Parameter>flow_response = PaymentsResponseData</Parameter>
+              <Parameter>http_method = Post</Parameter>
+              <Parameter>curl_request = Json({ConnectorName}AuthorizeRequest)</Parameter>
+              <Parameter>curl_response = {ConnectorName}AuthorizeResponse</Parameter>
+            </Parameters>
+          </Macro>
+        </MacroUsage>
+        <RequestFlow>
+          <Step order="1">Receive RouterDataV2 with PaymentsAuthorizeData&lt;T&gt;</Step>
+          <Step order="2">Transform to {ConnectorName}AuthorizeRequest</Step>
+          <Step order="3">Make HTTP POST request to connector API</Step>
+          <Step order="4">Receive {ConnectorName}AuthorizeResponse</Step>
+          <Step order="5">Transform to PaymentsResponseData</Step>
+          <Step order="6">Map connector status to AttemptStatus</Step>
+          <Step order="7">Return result</Step>
+        </RequestFlow>
+      </Flow>
+    </Flows>
+
+    <DataTransformations>
+      <Transformation id="DT-001" name="Request Transformation">
+        <InputType>RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</InputType>
+        <OutputType>{ConnectorName}AuthorizeRequest&lt;T&gt;</OutputType>
+        <FieldMappings>
+          <Mapping source="amount" destination="amount" transformer="convert_to_minor_units"/>
+          <Mapping source="currency" destination="currency" transformer="to_uppercase"/>
+          <Mapping source="payment_method" destination="payment_method" transformer="transform_payment_method"/>
+        </FieldMappings>
+      </Transformation>
+      <Transformation id="DT-002" name="Response Transformation">
+        <InputType>{ConnectorName}AuthorizeResponse</InputType>
+        <OutputType>PaymentsResponseData</OutputType>
+        <FieldMappings>
+          <Mapping source="id" destination="connector_transaction_id"/>
+          <Mapping source="status" destination="status" transformer="map_status_to_attempt_status"/>
+        </FieldMappings>
+      </Transformation>
+    </DataTransformations>
+
+    <Exclusions>
+      <Exclusion>Capture flow implementation</Exclusion>
+      <Exclusion>Refund flow implementation</Exclusion>
+      <Exclusion>Void flow implementation</Exclusion>
+      <Exclusion>Dispute flow implementation</Exclusion>
+      <Exclusion>Manual ConnectorIntegrationV2 trait implementation</Exclusion>
+      <Exclusion>Non-macro based implementations</Exclusion>
+    </Exclusions>
+  </TechnicalScope>
+
+  <!-- ========================================================= -->
+  <!-- ARCHITECTURE GUIDANCE                                     -->
+  <!-- ========================================================= -->
+  <ArchitectureGuidance>
+    <DesignPrinciples>
+      <Principle id="ARCH-001" name="Macro-First Approach">
+        <Description>All connector implementations must use provided macros</Description>
+        <Rationale>Ensures consistency, reduces boilerplate, and enforces patterns</Rationale>
+        <Implementation>
+          <Rule>Never manually implement ConnectorIntegrationV2 trait</Rule>
+          <Rule>Always use macro_connector_implementation! for flow implementations</Rule>
+          <Rule>Always register flows in create_all_prerequisites! first</Rule>
+        </Implementation>
+      </Principle>
+      <Principle id="ARCH-002" name="Type Safety">
+        <Description>Leverage Rust's type system for compile-time guarantees</Description>
+        <Rationale>Prevents runtime errors and ensures correct data flow</Rationale>
+        <Implementation>
+          <Rule>Use generic &lt;T&gt; for PaymentMethodDataTypes in Authorize flow</Rule>
+          <Rule>Create dedicated enums for connector status values</Rule>
+          <Rule>Avoid String types where enums are appropriate</Rule>
+        </Implementation>
+      </Principle>
+      <Principle id="ARCH-003" name="Separation of Concerns">
+        <Description>Separate transformation logic from connector integration</Description>
+        <Rationale>Improves testability and maintainability</Rationale>
+        <Implementation>
+          <Rule>Place request/response types in transformers.rs module</Rule>
+          <Rule>Keep status mapping functions separate</Rule>
+          <Rule>Isolate connector-specific logic</Rule>
+        </Implementation>
+      </Principle>
+      <Principle id="ARCH-004" name="Zero-Cost Abstractions">
+        <Description>Use abstractions that compile to efficient code</Description>
+        <Rationale>Maintains performance while providing clean interfaces</Rationale>
+        <Implementation>
+          <Rule>Use derive macros for serialization</Rule>
+          <Rule>Avoid unnecessary allocations</Rule>
+          <Rule>Use references where appropriate</Rule>
+        </Implementation>
+      </Principle>
+    </DesignPrinciples>
+
+    <ModuleStructure>
+      <Module path="backend/connector-integration/src/connectors/{connector_name}.rs">
+        <Purpose>Main connector module with macro invocations</Purpose>
+        <Exports>
+          <Export>Connector struct</Export>
+          <Export>ConnectorIntegrationV2 implementation (via macro)</Export>
+        </Exports>
+        <Dependencies>
+          <Dependency>domain_types</Dependency>
+          <Dependency>common_enums</Dependency>
+          <Dependency>connector_utils</Dependency>
+        </Dependencies>
+      </Module>
+      <Module path="backend/connector-integration/src/connectors/{connector_name}/transformers.rs">
+        <Purpose>Request/response type definitions and transformations</Purpose>
+        <Exports>
+          <Export>{ConnectorName}AuthorizeRequest&lt;T&gt;</Export>
+          <Export>{ConnectorName}AuthorizeResponse</Export>
+          <Export>{ConnectorName}Status enum</Export>
+          <Export>{ConnectorName}PaymentMethod&lt;T&gt;</Export>
+          <Export>map_{connector_name}_status_to_attempt_status function</Export>
+        </Exports>
+        <Dependencies>
+          <Dependency>serde</Dependency>
+          <Dependency>domain_types</Dependency>
+          <Dependency>common_enums</Dependency>
+        </Dependencies>
+      </Module>
+      <Module path="backend/connector-integration/src/connectors/{connector_name}/mod.rs">
+        <Purpose>Module organization and re-exports</Purpose>
+        <Exports>
+          <Export>pub use self::{connector_name}::Connector;</Export>
+          <Export>pub use self::transformers::*;</Export>
+        </Exports>
+      </Module>
+    </ModuleStructure>
+
+    <TestabilityConsiderations>
+      <Consideration id="TEST-001" name="Unit Testing Transformers">
+        <Description>All transformation functions must be independently testable</Description>
+        <Approach>
+          <Item>Create test fixtures for request/response types</Item>
+          <Item>Test serialization/deserialization round-trips</Item>
+          <Item>Test status mapping for all enum variants</Item>
+        </Approach>
+      </Consideration>
+      <Consideration id="TEST-002" name="Mock Integration Testing">
+        <Description>Connector integration must be testable with mocked responses</Description>
+        <Approach>
+          <Item>Use mock server for HTTP responses</Item>
+          <Item>Test success and failure scenarios</Item>
+          <Item>Test timeout handling</Item>
+        </Approach>
+      </Consideration>
+      <Consideration id="TEST-003" name="Property-Based Testing">
+        <Description>Use property-based testing for data transformations</Description>
+        <Approach>
+          <Item>Test amount conversion properties</Item>
+          <Item>Test currency code validation</Item>
+          <Item>Test status mapping exhaustiveness</Item>
+        </Approach>
+      </Consideration>
+    </TestabilityConsiderations>
+
+    <ErrorHandlingStrategy>
+      <Strategy id="ERR-001" name="Typed Errors">
+        <Description>Use specific error types for different failure modes</Description>
+        <ErrorTypes>
+          <ErrorType>ConnectorError - For connector-specific failures</ErrorType>
+          <ErrorType>ValidationError - For input validation failures</ErrorType>
+          <ErrorType>NetworkError - For network-related failures</ErrorType>
+          <ErrorType>TransformationError - For data transformation failures</ErrorType>
+        </ErrorTypes>
+      </Strategy>
+      <Strategy id="ERR-002" name="Error Propagation">
+        <Description>Propagate errors with context using ? operator</Description>
+        <Rules>
+          <Rule>Never use unwrap() or expect() in production code</Rule>
+          <Rule>Use map_err() to add context to errors</Rule>
+          <Rule>Ensure all error paths are tested</Rule>
+        </Rules>
+      </Strategy>
+    </ErrorHandlingStrategy>
+  </ArchitectureGuidance>
+
+  <!-- ========================================================= -->
+  <!-- API DESIGN                                                -->
+  <!-- ========================================================= -->
+  <APIDesign>
+    <InternalAPI>
+      <Endpoint id="API-001" name="Execute Authorize">
+        <Method>execute_authorize</Method>
+        <Signature>
+          <Input>RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Input>
+          <Output>Result&lt;PaymentsResponseData, Error&gt;</Output>
+          <Constraints>T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize</Constraints>
+        </Signature>
+        <ValidationRules>
+          <Rule id="VAL-001">Amount must be greater than zero</Rule>
+          <Rule id="VAL-002">Currency must be valid ISO 4217 code</Rule>
+          <Rule id="VAL-003">Payment method must be non-empty</Rule>
+          <Rule id="VAL-004">Connector must support the payment method type</Rule>
+        </ValidationRules>
+        <ErrorResponses>
+          <Error code="INVALID_INPUT">Input validation failed</Error>
+          <Error code="UNSUPPORTED_PAYMENT_METHOD">Payment method not supported</Error>
+          <Error code="CONNECTOR_ERROR">Connector returned error</Error>
+          <Error code="NETWORK_ERROR">Network communication failed</Error>
+        </ErrorResponses>
+      </Endpoint>
+    </InternalAPI>
+
+    <ExternalAPI>
+      <Endpoint id="EXT-001" name="FiservMEA Authorize API">
+        <Method>POST</Method>
+        <Path>/v1/payments/authorize</Path>
+        <Headers>
+          <Header name="Content-Type" required="true">application/json</Header>
+          <Header name="Authorization" required="true">Bearer {api_key}</Header>
+          <Header name="X-Merchant-Id" required="true">{merchant_id}</Header>
+        </Headers>
+        <RequestBody>
+          <Schema name="{ConnectorName}AuthorizeRequest">
+            <Field name="amount" type="AmountType" required="true">
+              <Description>Transaction amount in minor units</Description>
+              <Validation>Must be positive integer</Validation>
+            </Field>
+            <Field name="currency" type="String" required="true">
+              <Description>ISO 4217 currency code</Description>
+              <Validation>3-letter uppercase ISO code</Validation>
+            </Field>
+            <Field name="payment_method" type="{ConnectorName}PaymentMethod&lt;T&gt;" required="true">
+              <Description>Payment method details</Description>
+              <Validation>Must contain valid payment method data</Validation>
+            </Field>
+            <Field name="merchant_reference" type="String" required="false">
+              <Description>Merchant reference number</Description>
+              <Validation>Max length 255 characters</Validation>
+            </Field>
+            <Field name="metadata" type="Option&lt;HashMap&lt;String, String&gt;&gt;" required="false">
+              <Description>Additional metadata</Description>
+              <Validation>Key-value pairs, max 20 entries</Validation>
+            </Field>
+          </Schema>
+        </RequestBody>
+        <ResponseBody>
+          <Schema name="{ConnectorName}AuthorizeResponse">
+            <Field name="id" type="String" required="true">
+              <Description>Unique transaction identifier</Description>
+            </Field>
+            <Field name="status" type="{ConnectorName}Status" required="true">
+              <Description>Transaction status</Description>
+            </Field>
+            <Field name="amount" type="AmountType" required="true">
+              <Description>Authorized amount</Description>
+            </Field>
+            <Field name="currency" type="String" required="true">
+              <Description>Transaction currency</Description>
+            </Field>
+            <Field name="created_at" type="String" required="true">
+              <Description>ISO 8601 timestamp</Description>
+            </Field>
+            <Field name="response_code" type="String" required="false">
+              <Description>Processor response code</Description>
+            </Field>
+            <Field name="response_message" type="String" required="false">
+              <Description>Human-readable response message</Description>
+            </Field>
+          </Schema>
+        </ResponseBody>
+        <SuccessCodes>
+          <Code>200 OK</Code>
+          <Code>201 Created</Code>
+        </SuccessCodes>
+        <ErrorCodes>
+          <Code>400 Bad Request</Code>
+          <Code>401 Unauthorized</Code>
+          <Code>403 Forbidden</Code>
+          <Code>404 Not Found</Code>
+          <Code>422 Unprocessable Entity</Code>
+          <Code>429 Too Many Requests</Code>
+          <Code>500 Internal Server Error</Code>
+          <Code>502 Bad Gateway</Code>
+          <Code>503 Service Unavailable</Code>
+          <Code>504 Gateway Timeout</Code>
+        </ErrorCodes>
+      </Endpoint>
+    </ExternalAPI>
+
+    <RequestResponseSchemas>
+      <Schema id="SCHEMA-001" name="PaymentsAuthorizeData&lt;T&gt;">
+        <Description>Standard authorize request data structure</Description>
+        <Fields>
+          <Field name="amount" type="MinorUnit">Payment amount in minor units</Field>
+          <Field name="currency" type="Currency">ISO 4217 currency code</Field>
+          <Field name="payment_method" type="T">Payment method data</Field>
+          <Field name="confirm" type="bool">Whether to confirm the payment</Field>
+          <Field name="mandate_id" type="Option&lt;String&gt;">Mandate identifier for recurring payments</Field>
+          <Field name="off_session" type="bool">Whether payment is off-session</Field>
+          <Field name="setup_future_usage" type="Option&lt;PaymentIntentType&gt;">Future usage intent</Field>
+        </Fields>
+      </Schema>
+      <Schema id="SCHEMA-002" name="PaymentsResponseData">
+        <Description>Standard payment response data structure</Description>
+        <Fields>
+          <Field name="connector_transaction_id" type="String">Connector's transaction ID</Field>
+          <Field name="status" type="AttemptStatus">Mapped transaction status</Field>
+          <Field name="amount" type="Option&lt;MinorUnit&gt;">Processed amount</Field>
+          <Field name="currency" type="Option&lt;Currency&gt;">Transaction currency</Field>
+          <Field name="error_code" type="Option&lt;String&gt;">Error code if failed</Field>
+          <Field name="error_message" type="Option&lt;String&gt;">Error message if failed</Field>
+          <Field name="redirect_url" type="Option&lt;String&gt;">Redirect URL if applicable</Field>
+          <Field name="connector_response" type="Option&lt;serde_json::Value&gt;">Raw connector response</Field>
+        </Fields>
+      </Schema>
+      <Schema id="SCHEMA-003" name="RouterDataV2">
+        <Description>Router data container for flow execution</Description>
+        <TypeParameters>
+          <TypeParam name="F">Flow type (Authorize, Capture, etc.)</TypeParam>
+          <TypeParam name="R">Resource common data type</TypeParam>
+          <TypeParam name="REQ">Request data type</TypeParam>
+          <TypeParam name="RES">Response data type</TypeParam>
+        </TypeParameters>
+        <Fields>
+          <Field name="connector" type="Connector">Connector configuration</Field>
+          <Field name="merchant_account" type="MerchantAccount">Merchant account details</Field>
+          <Field name="request" type="REQ">Flow request data</Field>
+          <Field name="resource" type="R">Resource common data</Field>
+          <Field name="call_connector_action" type="bool">Whether to call connector</Field>
+          <Field name="test_mode" type="bool">Whether in test mode</Field>
+        </Fields>
+      </Schema>
+    </RequestResponseSchemas>
+
+    <ValidationRules>
+      <RuleSet id="VR-001" name="Amount Validation">
+        <Rule>Amount must be greater than 0</Rule>
+        <Rule>Amount must not exceed maximum allowed value</Rule>
+        <Rule>Amount precision must match currency requirements</Rule>
+      </RuleSet>
+      <RuleSet id="VR-002" name="Currency Validation">
+        <Rule>Currency must be 3-character ISO 4217 code</Rule>
+        <Rule>Currency must be uppercase</Rule>
+        <Rule>Currency must be supported by connector</Rule>
+      </RuleSet>
+      <RuleSet id="VR-003" name="Payment Method Validation">
+        <Rule>Payment method type must be supported</Rule>
+        <Rule>Required payment method fields must be present</Rule>
+        <Rule>Payment method data must pass connector validation</Rule>
+      </RuleSet>
+    </ValidationRules>
+
+    <ErrorHandling>
+      <ErrorCategory id="EH-001" name="Validation Errors">
+        <HTTPCode>400</HTTPCode>
+        <ErrorCode>VALIDATION_ERROR</ErrorCode>
+        <UserMessage>Invalid input data</UserMessage>
+        <LoggingLevel>WARN</LoggingLevel>
+        <Retryable>false</Retryable>
+      </ErrorCategory>
+      <ErrorCategory id="EH-002" name="Authentication Errors">
+        <HTTPCode>401</HTTPCode>
+        <ErrorCode>AUTHENTICATION_FAILED</ErrorCode>
+        <UserMessage>Authentication failed</UserMessage>
+        <LoggingLevel>ERROR</LoggingLevel>
+        <Retryable>false</Retryable>
+      </ErrorCategory>
+      <ErrorCategory id="EH-003" name="Rate Limit Errors">
+        <HTTPCode>429</HTTPCode>
+        <ErrorCode>RATE_LIMIT_EXCEEDED</ErrorCode>
+        <UserMessage>Too many requests</UserMessage>
+        <LoggingLevel>WARN</LoggingLevel>
+        <Retryable>true</Retryable>
+        <RetryStrategy>ExponentialBackoff</RetryStrategy>
+      </ErrorCategory>
+      <ErrorCategory id="EH-004" name="Connector Errors">
+        <HTTPCode>502</HTTPCode>
+        <ErrorCode>CONNECTOR_ERROR</ErrorCode>
+        <UserMessage>Payment processor error</UserMessage>
+        <LoggingLevel>ERROR</LoggingLevel>
+        <Retryable>true</Retryable>
+        <RetryStrategy>LinearBackoff</RetryStrategy>
+      </ErrorCategory>
+      <ErrorCategory id="EH-005" name="Timeout Errors">
+        <HTTPCode>504</HTTPCode>
+        <ErrorCode>TIMEOUT</ErrorCode>
+        <UserMessage>Request timed out</UserMessage>
+        <LoggingLevel>WARN</LoggingLevel>
+        <Retryable>true</Retryable>
+        <RetryStrategy>ExponentialBackoff</RetryStrategy>
+      </ErrorCategory>
+    </ErrorHandling>
+  </APIDesign>
+
+  <!-- ========================================================= -->
+  <!-- STORAGE REQUIREMENTS                                      -->
+  <!-- ========================================================= -->
+  <StorageRequirements>
+    <DataModels>
+      <Model id="DM-001" name="Connector Configuration">
+        <Description>Stores connector-specific configuration</Description>
+        <Table>connector_configurations</Table>
+        <Fields>
+          <Field name="id" type="UUID" primaryKey="true">Unique identifier</Field>
+          <Field name="merchant_id" type="UUID" foreignKey="merchants.id" nullable="false">Merchant reference</Field>
+          <Field name="connector_name" type="String" nullable="false">Connector identifier</Field>
+          <Field name="api_key" type="String" encrypted="true" nullable="false">Encrypted API key</Field>
+          <Field name="secret_key" type="String" encrypted="true" nullable="true">Encrypted secret key</Field>
+          <Field name="merchant_account_id" type="String" nullable="false">Connector merchant ID</Field>
+          <Field name="test_mode" type="Boolean" nullable="false">Test mode flag</Field>
+          <Field name="enabled" type="Boolean" nullable="false">Enabled flag</Field>
+          <Field name="created_at" type="Timestamp" nullable="false">Creation timestamp</Field>
+          <Field name="updated_at" type="Timestamp" nullable="false">Last update timestamp</Field>
+        </Fields>
+        <Indexes>
+          <Index name="idx_connector_merchant" fields="merchant_id, connector_name"/>
+          <Index name="idx_connector_enabled" fields="enabled"/>
+        </Indexes>
+      </Model>
+
+      <Model id="DM-002" name="Payment Attempt">
+        <Description>Stores payment attempt records</Description>
+        <Table>payment_attempts</Table>
+        <Fields>
+          <Field name="id" type="UUID" primaryKey="true">Unique identifier</Field>
+          <Field name="payment_id" type="UUID" foreignKey="payments.id" nullable="false">Payment reference</Field>
+          <Field name="connector" type="String" nullable="false">Connector used</Field>
+          <Field name="connector_transaction_id" type="String" nullable="true">Connector's transaction ID</Field>
+          <Field name="attempt_status" type="Enum" nullable="false">Attempt status</Field>
+          <Field name="amount" type="BigInt" nullable="false">Amount in minor units</Field>
+          <Field name="currency" type="String" nullable="false">Currency code</Field>
+          <Field name="error_code" type="String" nullable="true">Error code if failed</Field>
+          <Field name="error_message" type="String" nullable="true">Error message if failed</Field>
+          <Field name="connector_response" type="JSONB" nullable="true">Raw connector response</Field>
+          <Field name="created_at" type="Timestamp" nullable="false">Creation timestamp</Field>
+          <Field name="modified_at" type="Timestamp" nullable="false">Last modification timestamp</Field>
+        </Fields>
+        <Indexes>
+          <Index name="idx_attempt_payment" fields="payment_id"/>
+          <Index name="idx_attempt_connector_txn" fields="connector, connector_transaction_id"/>
+          <Index name="idx_attempt_status" fields="attempt_status"/>
+          <Index name="idx_attempt_created" fields="created_at"/>
+        </Indexes>
+      </Model>
+
+      <Model id="DM-003" name="Payment">
+        <Description>Stores payment records</Description>
+        <Table>payments</Table>
+        <Fields>
+          <Field name="id" type="UUID" primaryKey="true">Unique identifier</Field>
+          <Field name="merchant_id" type="UUID" foreignKey="merchants.id" nullable="false">Merchant reference</Field>
+          <Field name="customer_id" type="UUID" foreignKey="customers.id" nullable="true">Customer reference</Field>
+          <Field name="payment_method_id" type="UUID" foreignKey="payment_methods.id" nullable="true">Payment method reference</Field>
+          <Field name="amount" type="BigInt" nullable="false">Amount in minor units</Field>
+          <Field name="currency" type="String" nullable="false">Currency code</Field>
+          <Field name="status" type="Enum" nullable="false">Payment status</Field>
+          <Field name="client_secret" type="String" nullable="true">Client secret for client-side confirmation</Field>
+          <Field name="description" type="String" nullable="true">Payment description</Field>
+          <Field name="metadata" type="JSONB" nullable="true">Additional metadata</Field>
+          <Field name="created_at" type="Timestamp" nullable="false">Creation timestamp</Field>
+          <Field name="modified_at" type="Timestamp" nullable="false">Last modification timestamp</Field>
+        </Fields>
+        <Indexes>
+          <Index name="idx_payment_merchant" fields="merchant_id"/>
+          <Index name="idx_payment_customer" fields="customer_id"/>
+          <Index name="idx_payment_status" fields="status"/>
+          <Index name="idx_payment_created" fields="created_at"/>
+        </Indexes>
+      </Model>
+    </DataModels>
+
+    <IdentityMapping>
+      <Mapping id="IM-001" name="Transaction ID Mapping">
+        <Description>Maps internal payment IDs to connector transaction IDs</Description>
+        <Source>payment_attempts.connector_transaction_id</Source>
+        <Target>Connector API response.id</Target>
+        <UniquenessConstraint>Each connector transaction ID must be unique per connector</Mapping>
+      </Mapping>
+      <Mapping id="IM-002" name="Status Mapping">
+        <Description>Maps connector status values to internal AttemptStatus enum</Description>
+        <Source>Connector API response.status</Source>
+        <Target>payment_attempts.attempt_status</Target>
+        <MappingFunction>map_{connector_name}_status_to_attempt_status</MappingFunction>
+      </Mapping>
+    </IdentityMapping>
+
+    <DataValidation>
+      <Validation id="DV-001" name="Connector Transaction ID Uniqueness">
+        <Description>Ensure connector transaction IDs are unique per connector</Description>
+        <Scope>Database constraint</Scope>
+        <Implementation>Unique index on (connector, connector_transaction_id)</Implementation>
+      </Validation>
+      <Validation id="DV-002" name="Amount Precision">
+        <Description>Ensure amounts are stored correctly in minor units</Description>
+        <Scope>Application validation</Scope>
+        <Implementation>Convert and validate before storage</Implementation>
+      </Validation>
+      <Validation id="DV-003" name="Currency Code Format">
+        <Description>Ensure currency codes follow ISO 4217 format</Description>
+        <Scope>Application validation</Scope>
+        <Implementation>Validate against ISO 4217 list</Implementation>
+      </Validation>
+    </DataValidation>
+
+    <ForbiddenDataStorage>
+      <Prohibition id="FD-001" name="Cardholder Data">
+        <Description>Never store full cardholder data</Description>
+        <ForbiddenFields>
+          <Field>Full PAN (Primary Account Number)</Field>
+          <Field>CVV/CVC (Card Verification Value)</Field>
+          <Field>PIN (Personal Identification Number)</Field>
+          <Field>Track data (magnetic stripe data)</Field>
+        </ForbiddenFields>
+        <AllowedStorage>
+          <Field>Last 4 digits of PAN (for display)</Field>
+          <Field>Card brand/type</Field>
+          <Field>Expiration month/year</Field>
+          <Field>Tokenized card reference</Field>
+        </AllowedStorage>
+      </Prohibition>
+      <Prohibition id="FD-002" name="Connector Credentials">
+        <Description>Never store unencrypted connector credentials</Description>
+        <ForbiddenFields>
+          <Field>Plain text API keys</Field>
+          <Field>Plain text secret keys</Field>
+          <Field>Plain text passwords</Field>
+        </ForbiddenFields>
+        <RequiredProtection>
+          <Field>Encryption at rest using AES-256</Field>
+          <Field>Encryption in transit using TLS 1.2+</Field>
+          <Field>Key rotation capability</Field>
+        </RequiredProtection>
+      </Prohibition>
+      <Prohibition id="FD-003" name="PII in Logs">
+        <Description>Never log personally identifiable information</Description>
+        <ForbiddenFields>
+          <Field>Full customer names</Field>
+          <Field>Email addresses</Field>
+          <Field>Phone numbers</Field>
+          <Field>Addresses</Field>
+        </ForbiddenFields>
+      </Prohibition>
+    </ForbiddenDataStorage>
+
+    <DataRetention>
+      <Policy id="DR-001" name="Payment Attempt Retention">
+        <Description>Retention policy for payment attempt records</Description>
+        <RetentionPeriod>7 years</RetentionPeriod>
+        <Reason>Regulatory compliance and dispute resolution</Reason>
+      </Policy>
+      <Policy id="DR-002" name="Connector Response Retention">
+        <Description>Retention policy for raw connector responses</Description>
+        <RetentionPeriod>90 days</RetentionPeriod>
+        <Reason>Debugging and troubleshooting</Reason>
+      </Policy>
+      <Policy id="DR-003" name="Log Retention">
+        <Description>Retention policy for application logs</Description>
+        <RetentionPeriod>1 year</RetentionPeriod>
+        <Reason>Security auditing and compliance</Reason>
+      </Policy>
+    </DataRetention>
+  </StorageRequirements>
+
+  <!-- ========================================================= -->
+  <!-- COMPLIANCE CHECKLIST                                      -->
+  <!-- ========================================================= -->
+  <ComplianceChecklist>
+    <Framework id="PCI-DSS" name="PCI DSS Compliance">
+      <Requirement id="PCI-001" priority="CRITICAL">
+        <Description>Protect stored cardholder data</Description>
+        <Verification>
+          <Test id="PCI-001-T01">Verify no full PAN stored in database</Test>
+          <Test id="PCI-001-T02">Verify CVV never stored</Test>
+          <Test id="PCI-001-T03">Verify encryption at rest for sensitive data</Test>
+        </Verification>
+        <Automated>true</Automated>
+      </Requirement>
+      <Requirement id="PCI-002" priority="CRITICAL">
+        <Description>Encrypt transmission of cardholder data</Description>
+        <Verification>
+          <Test id="PCI-002-T01">Verify TLS 1.2+ for all external connections</Test>
+          <Test id="PCI-002-T02">Verify certificate validation enabled</Test>
+          <Test id="PCI-002-T03">Verify no plaintext HTTP connections</Test>
+        </Verification>
+        <Automated>true</Automated>
+      </Requirement>
+      <Requirement id="PCI-003" priority="HIGH">
+        <Description>Restrict access to cardholder data</Description>
+        <Verification>
+          <Test id="PCI-003-T01">Verify role-based access control</Test>
+          <Test id="PCI-003-T02">Verify audit logging for data access</Test>
+        </Verification>
+        <Automated>false</Automated>
+      </Requirement>
+      <Requirement id="PCI-004" priority="HIGH">
+        <Description>Track and monitor all access to network resources</Description>
+        <Verification>
+          <Test id="PCI-004-T01">Verify all API calls logged</Test>
+          <Test id="PCI-004-T02">Verify authentication events logged</Test>
+        </Verification>
+        <Automated>true</Automated>
+      </Requirement>
+    </Framework>
+
+    <Framework id="GDPR" name="GDPR Compliance">
+      <Requirement id="GDPR-001" priority="HIGH">
+        <Description>Data minimization - collect only necessary data</Description>
+        <Verification>
+          <Test id="GDPR-001-T01">Verify no unnecessary data collected</Test>
+          <Test id="GDPR-001-T02">Verify data fields have business justification</Test>
+        </Verification>
+        <Automated>false</Automated>
+      </Requirement>
+      <Requirement id="GDPR-002" priority="HIGH">
+        <Description>Right to erasure</Description>
+        <Verification>
+          <Test id="GDPR-002-T01">Verify customer data deletion capability</Test>
+          <Test id="GDPR-002-T02">Verify payment method token revocation</Test>
+        </Verification>
+        <Automated>true</Automated>
+      </Requirement>
+      <Requirement id="GDPR-003" priority="MEDIUM">
+        <Description>Data portability</Description>
+        <Verification>
+          <Test id="GDPR-003-T01">Verify data export functionality</Test>
+        </Verification>
+        <Automated>false</Automated>
+      </Requirement>
+    </Framework>
+
+    <Framework id="SOC2" name="SOC 2 Type II Compliance">
+      <Requirement id="SOC2-001" priority="HIGH">
+        <Description>Change management</Description>
+        <Verification>
+          <Test id="SOC2-001-T01">Verify code review process</Test>
+          <Test id="SOC2-001-T02">Verify deployment tracking</Test>
+        </Verification>
+        <Automated>false</Automated>
+      </Requirement>
+      <Requirement id="SOC2-002" priority="HIGH">
+        <Description>Incident response</Description>
+        <Verification>
+          <Test id="SOC2-002-T01">Verify incident logging</Test>
+          <Test id="SOC2-002-T02">Verify notification procedures</Test>
+        </Verification>
+        <Automated>false</Automated>
+      </Requirement>
+    </Framework>
+
+    <Framework id="INTERNAL" name="Internal Standards">
+      <Requirement id="INT-001" priority="CRITICAL">
+        <Description>No unwrap() or expect() in production code</Description>
+        <Verification>
+          <Test id="INT-001-T01">Static analysis for unwrap usage</Test>
+          <Test id="INT-001-T02">Static analysis for expect usage</Test>
+        </Verification>
+        <Automated>true</Automated>
+      </Requirement>
+      <Requirement id="INT-002" priority="CRITICAL">
+        <Description>Macro-based implementation only</Description>
+        <Verification>
+          <Test id="INT-002-T01">Verify no manual ConnectorIntegrationV2 impl</Test>
+          <Test id="INT-002-T02">Verify macro_connector_implementation! used</Test>
+        </Verification>
+        <Automated>true</Automated>
+      </Requirement>
+      <Requirement id="INT-003" priority="HIGH">
+        <Description>Complete implementations only</Description>
+        <Verification>
+          <Test id="INT-003-T01">Verify no TODO comments</Test>
+          <Test id="INT-003-T02">Verify no FIXME comments</Test>
+          <Test id="INT-003-T03">Verify no placeholder implementations</Test>
+        </Verification>
+        <Automated>true</Automated>
+      </Requirement>
+      <Requirement id="INT-004" priority="HIGH">
+        <Description>Code compiles without warnings</Description>
+        <Verification>
+          <Test id="INT-004-T01">cargo build --all-targets succeeds</Test>
+          <Test id="INT-004-T02">cargo clippy -- -D warnings passes</Test>
+        </Verification>
+        <Automated>true</Automated>
+      </Requirement>
+      <Requirement id="INT-005" priority="MEDIUM">
+        <Description>Test coverage requirements</Description>
+        <Verification>
+          <Test id="INT-005-T01">Minimum 80% line coverage</Test>
+          <Test id="INT-005-T02">All public functions tested</Test>
+        </Verification>
+        <Automated>true</Automated>
+      </Requirement>
+    </Framework>
+  </ComplianceChecklist>
+
+  <!-- ========================================================= -->
+  <!-- RISK ASSESSMENT                                           -->
+  <!-- ========================================================= -->
+  <RiskAssessment>
+    <Risk id="RISK-001" severity="HIGH" likelihood="MEDIUM">
+      <Title>Credential Exposure</Title>
+      <Description>Connector API credentials could be exposed through logs, error messages, or memory dumps</Description>
+      <Impact>Unauthorized access to payment processing capabilities, financial loss</Impact>
+      <Mitigations>
+        <Mitigation priority="CRITICAL">Encrypt all credentials at rest</Mitigation>
+        <Mitigation priority="CRITICAL">Redact credentials from all logs</Mitigation>
+        <Mitigation priority="HIGH">Use secure string types for in-memory credentials</Mitigation>
+        <Mitigation priority="HIGH">Implement credential rotation mechanism</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>verify_credentials_not_logged</Test>
+        <Test>verify_credentials_not_in_error_messages</Test>
+        <Test>verify_encryption_at_rest</Test>
+      </Tests>
+      <ResidualRisk>LOW</ResidualRisk>
+    </Risk>
+
+    <Risk id="RISK-002" severity="CRITICAL" likelihood="LOW">
+      <Title>Cardholder Data Compromise</Title>
+      <Description>Full cardholder data could be inadvertently stored or logged</Description>
+      <Impact>PCI DSS violation, regulatory fines, reputational damage</Impact>
+      <Mitigations>
+        <Mitigation priority="CRITICAL">Never store full PAN, CVV, or PIN</Mitigation>
+        <Mitigation priority="CRITICAL">Implement automatic PAN masking in logs</Mitigation>
+        <Mitigation priority="CRITICAL">Static analysis to detect card data storage</Mitigation>
+        <Mitigation priority="HIGH">Regular security audits</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>verify_pan_masking</Test>
+        <Test>verify_cvv_never_stored</Test>
+        <Test>static_analysis_card_data</Test>
+      </Tests>
+      <ResidualRisk>LOW</ResidualRisk>
+    </Risk>
+
+    <Risk id="RISK-003" severity="MEDIUM" likelihood="MEDIUM">
+      <Title>Status Mapping Errors</Title>
+      <Description>Incorrect mapping of connector status to internal status could cause incorrect payment state</Description>
+        <Mitigation priority="HIGH">Create exhaustive status enum</Mitigation>
+        <Mitigation priority="HIGH">Implement comprehensive mapping function</Mitigation>
+        <Mitigation priority="HIGH">Test all status values</Mitigation>
+        <Mitigation priority="MEDIUM">Document all status mappings</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_all_status_mappings</Test>
+        <Test>test_exhaustive_status_coverage</Test>
+        <Test>test_unknown_status_handling</Test>
+      </Tests>
+      <ResidualRisk>LOW</ResidualRisk>
+    </Risk>
+
+    <Risk id="RISK-004" severity="MEDIUM" likelihood="MEDIUM">
+      <Title>Network Failures</Title>
+      <Description>Network issues could cause payment authorization failures or duplicate charges</Description>
+      <Impact>Failed transactions, poor user experience, potential duplicate charges</Impact>
+      <Mitigations>
+        <Mitigation priority="HIGH">Implement proper retry logic with exponential backoff</Mitigation>
+        <Mitigation priority="HIGH">Implement idempotency using connector transaction IDs</Mitigation>
+        <Mitigation priority="MEDIUM">Set appropriate timeouts</Mitigation>
+        <Mitigation priority="MEDIUM">Monitor network error rates</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_timeout_handling</Test>
+        <Test>test_retry_logic</Test>
+        <Test>test_idempotency</Test>
+      </Tests>
+      <ResidualRisk>LOW</ResidualRisk>
+    </Risk>
+
+    <Risk id="RISK-005" severity="MEDIUM" likelihood="LOW">
+      <Title>API Version Compatibility</Title>
+      <Description>Connector API changes could break integration</Description>
+      <Impact>Service disruption, failed transactions</Impact>
+      <Mitigations>
+        <Mitigation priority="HIGH">Version API endpoints explicitly</Mitigation>
+        <Mitigation priority="HIGH">Implement graceful degradation for unknown responses</Mitigation>
+        <Mitigation priority="MEDIUM">Monitor for API deprecation notices</Mitigation>
+        <Mitigation priority="MEDIUM">Maintain backward compatibility where possible</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_unknown_response_fields</Test>
+        <Test>test_missing_optional_fields</Test>
+      </Tests>
+      <ResidualRisk>MEDIUM</ResidualRisk>
+    </Risk>
+
+    <Risk id="RISK-006" severity="LOW" likelihood="MEDIUM">
+      <Title>Serialization/Deserialization Errors</Title>
+      <Description>Malformed JSON or unexpected data types could cause parsing failures</Description>
+      <Impact>Failed transactions, error propagation issues</Impact>
+      <Mitigations>
+        <Mitigation priority="HIGH">Use strict deserialization settings</Mitigation>
+        <Mitigation priority="HIGH">Handle all deserialization errors gracefully</Mitigation>
+        <Mitigation priority="MEDIUM">Validate data after deserialization</Mitigation>
+        <Mitigation priority="MEDIUM">Log serialization failures for debugging</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_malformed_json_handling</Test>
+        <Test>test_unexpected_type_handling</Test>
+        <Test>test_missing_required_field_handling</Test>
+      </Tests>
+      <ResidualRisk>LOW</ResidualRisk>
+    </Risk>
+
+    <Risk id="RISK-007" severity="HIGH" likelihood="LOW">
+      <Title>Injection Attacks</Title>
+      <Description>Malicious input could be injected into API requests or logs</Description>
+      <Impact>Data corruption, log injection, potential system compromise</Impact>
+      <Mitigations>
+        <Mitigation priority="CRITICAL">Use parameterized queries for database access</Mitigation>
+        <Mitigation priority="HIGH">Sanitize all log output</Mitigation>
+        <Mitigation priority="HIGH">Validate all input data</Mitigation>
+        <Mitigation priority="MEDIUM">Use prepared statements</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_sql_injection_prevention</Test>
+        <Test>test_log_injection_prevention</Test>
+        <Test>test_input_sanitization</Test>
+      </Tests>
+      <ResidualRisk>LOW</ResidualRisk>
+    </Risk>
+
+    <Risk id="RISK-008" severity="MEDIUM" likelihood="LOW">
+      <Title>Memory Leaks</Title>
+      <Description>Improper resource management could lead to memory leaks</Description>
+      <Impact>Performance degradation, service instability</Impact>
+      <Mitigations>
+        <Mitigation priority="HIGH">Use RAII patterns for resource management</Mitigation>
+        <Mitigation priority="MEDIUM">Run memory profiling in CI/CD</Mitigation>
+        <Mitigation priority="MEDIUM">Monitor memory usage in production</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>memory_leak_detection_tests</Test>
+        <Test>long_running_stability_test</Test>
+      </Tests>
+      <ResidualRisk>LOW</ResidualRisk>
+    </Risk>
+  </RiskAssessment>
+
+  <!-- ========================================================= -->
+  <!-- IMPLEMENTATION TASKS                                      -->
+  <!-- ========================================================= -->
+  <ImplementationTasks>
+    <Phase id="PHASE-1" name="Setup and Preparation">
+      <Task id="TASK-001" priority="CRITICAL" status="pending">
+        <Description>Read and validate technical specification</Description>
+        <Deliverable>Validated tech spec document</Deliverable>
+        <Dependencies>None</Dependencies>
+        <EstimatedEffort>30 minutes</EstimatedEffort>
+      </Task>
+      <Task id="TASK-002" priority="CRITICAL" status="pending">
+        <Description>Study macro patterns and templates</Description>
+        <Deliverable>Understanding of macro usage patterns</Deliverable>
+        <Dependencies>TASK-001</Dependencies>
+        <EstimatedEffort>1 hour</EstimatedEffort>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-2" name="Transformer Implementation">
+      <Task id="TASK-003" priority="CRITICAL" status="pending">
+        <Description>Create transformers.rs module</Description>
+        <Deliverable>backend/connector-integration/src/connectors/{connector_name}/transformers.rs</Deliverable>
+        <Dependencies>TASK-002</Dependencies>
+        <EstimatedEffort>2 hours</EstimatedEffort>
+        <Subtasks>
+          <Subtask>Define {ConnectorName}Status enum</Subtask>
+          <Subtask>Define {ConnectorName}PaymentMethod&lt;T&gt; enum</Subtask>
+          <Subtask>Define {ConnectorName}AuthorizeRequest&lt;T&gt; struct</Subtask>
+          <Subtask>Define {ConnectorName}AuthorizeResponse struct</Subtask>
+          <Subtask>Implement map_{connector_name}_status_to_attempt_status function</Subtask>
+        </Subtasks>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-3" name="Connector Implementation">
+      <Task id="TASK-004" priority="CRITICAL" status="pending">
+        <Description>Create main connector module</Description>
+        <Deliverable>backend/connector-integration/src/connectors/{connector_name}.rs</Deliverable>
+        <Dependencies>TASK-003</Dependencies>
+        <EstimatedEffort>1 hour</EstimatedEffort>
+        <Subtasks>
+          <Subtask>Add create_all_prerequisites! macro invocation</Subtask>
+          <Subtask>Add macro_connector_implementation! for Authorize flow</Subtask>
+          <Subtask>Implement get_content_type default</Subtask>
+          <Subtask>Implement get_error_response_v2 default</Subtask>
+        </Subtasks>
+      </Task>
+      <Task id="TASK-005" priority="HIGH" status="pending">
+        <Description>Create mod.rs for connector package</Description>
+        <Deliverable>backend/connector-integration/src/connectors/{connector_name}/mod.rs</Deliverable>
+        <Dependencies>TASK-004</Dependencies>
+        <EstimatedEffort>15 minutes</EstimatedEffort>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-4" name="Testing">
+      <Task id="TASK-006" priority="CRITICAL" status="pending">
+        <Description>Write unit tests for transformers</Description>
+        <Deliverable>Unit tests with &gt;80% coverage</Deliverable>
+        <Dependencies>TASK-003</Dependencies>
+        <EstimatedEffort>2 hours</EstimatedEffort>
+      </Task>
+      <Task id="TASK-007" priority="HIGH" status="pending">
+        <Description>Write integration tests for Authorize flow</Description>
+        <Deliverable>Integration tests with mock server</Deliverable>
+        <Dependencies>TASK-004</Dependencies>
+        <EstimatedEffort>2 hours</EstimatedEffort>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-5" name="Validation">
+      <Task id="TASK-008" priority="CRITICAL" status="pending">
+        <Description>Run cargo build</Description>
+        <Deliverable>Successful compilation</Deliverable>
+        <Dependencies>TASK-005, TASK-006</Dependencies>
+        <EstimatedEffort>10 minutes</EstimatedEffort>
+      </Task>
+      <Task id="TASK-009" priority="CRITICAL" status="pending">
+        <Description>Run cargo clippy</Description>
+        <Deliverable>Clippy passes with no warnings</Deliverable>
+        <Dependencies>TASK-008</Dependencies>
+        <EstimatedEffort>10 minutes</EstimatedEffort>
+      </Task>
+      <Task id="TASK-010" priority="HIGH" status="pending">
+        <Description>Run cargo test</Description>
+        <Deliverable>All tests pass</Deliverable>
+        <Dependencies>TASK-009</Dependencies>
+        <EstimatedEffort>15 minutes</EstimatedEffort>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-6" name="Finalization">
+      <Task id="TASK-011" priority="CRITICAL" status="pending">
+        <Description>Mark requirement analysis as resolved</Description>
+        <Deliverable>generated-requirement-analysis.xml.resolved</Deliverable>
+        <Dependencies>TASK-010</Dependencies>
+        <EstimatedEffort>5 minutes</EstimatedEffort>
+      </Task>
+    </Phase>
+  </ImplementationTasks>
+
+  <!-- ========================================================= -->
+  <!-- ACCEPTANCE CRITERIA                                       -->
+  <!-- ========================================================= -->
+  <AcceptanceCriteria>
+    <Criterion id="AC-001" priority="CRITICAL">
+      <Description>Only Authorize flow is implemented</Description>
+      <Verification>Code review confirms no other flows present</Verification>
+      <Test>verify_only_authorize_flow_implemented</Test>
+    </Criterion>
+    <Criterion id="AC-002" priority="CRITICAL">
+      <Description>Macro-based implementation used exclusively</Description>
+      <Verification>Code review confirms macro_connector_implementation! used</Verification>
+      <Test>verify_macro_based_implementation</Test>
+    </Criterion>
+    <Criterion id="AC-003" priority="CRITICAL">
+      <Description>create_all_prerequisites! macro invoked before implementation</Description>
+      <Verification>Code review confirms correct order</Verification>
+      <Test>verify_prerequisites_macro_order</Test>
+    </Criterion>
+    <Criterion id="AC-004" priority="CRITICAL">
+      <Description>Request/Response types defined in transformers.rs</Description>
+      <Verification>File contains all required types</Verification>
+      <Test>verify_transformer_types_exist</Test>
+    </Criterion>
+    <Criterion id="AC-005" priority="CRITICAL">
+      <Description>Status mapping function implemented</Description>
+      <Verification>Function exists and handles all cases</Verification>
+      <Test>test_status_mapping_completeness</Test>
+    </Criterion>
+    <Criterion id="AC-006" priority="CRITICAL">
+      <Description>No unwrap() or expect() in code</Description>
+      <Verification>Static analysis scan</Verification>
+      <Test>verify_no_unwrap_or_expect</Test>
+    </Criterion>
+    <Criterion id="AC-007" priority="CRITICAL">
+      <Description>No TODO or FIXME comments</Description>
+      <Verification>Code review and grep scan</Verification>
+      <Test>verify_no_todo_comments</Test>
+    </Criterion>
+    <Criterion id="AC-008" priority="CRITICAL">
+      <Description>cargo build succeeds</Description>
+      <Verification>Build command completes successfully</Verification>
+      <Test>cargo_build_test</Test>
+    </Criterion>
+    <Criterion id="AC-009" priority="CRITICAL">
+      <Description>cargo clippy passes with no warnings</Description>
+      <Verification>Clippy command completes with exit code 0</Verification>
+      <Test>cargo_clippy_test</Test>
+    </Criterion>
+    <Criterion id="AC-010" priority="HIGH">
+      <Description>All tests pass</Description>
+      <Verification>cargo test completes successfully</Verification>
+      <Test>cargo_test_passes</Test>
+    </Criterion>
+    <Criterion id="AC-011" priority="HIGH">
+      <Description>Test coverage meets minimum threshold</Description>
+      <Verification>Coverage report shows &gt;80% line coverage</Verification>
+      <Test>coverage_threshold_test</Test>
+    </Criterion>
+    <Criterion id="AC-012" priority="MEDIUM">
+      <Description>Code follows project style guidelines</Description>
+      <Verification>rustfmt check passes</Verification>
+      <Test>cargo_fmt_check</Test>
+    </Criterion>
+  </AcceptanceCriteria>
+
+  <!-- ========================================================= -->
+  <!-- SUCCESS METRICS                                           -->
+  <!-- ========================================================= -->
+  <SuccessMetrics>
+    <Metric id="SM-001" name="Code Quality">
+      <Target>Zero clippy warnings</Target>
+      <Measurement>Number of clippy warnings</Measurement>
+      <Threshold>0</Threshold>
+    </Metric>
+    <Metric id="SM-002" name="Test Coverage">
+      <Target>80% line coverage minimum</Target>
+      <Measurement>Percentage of lines covered by tests</Measurement>
+      <Threshold>80%</Threshold>
+    </Metric>
+    <Metric id="SM-003" name="Build Time">
+      <Target>Build completes in under 5 minutes</Target>
+      <Measurement>Time for cargo build</Measurement>
+      <Threshold>300 seconds</Threshold>
+    </Metric>
+    <Metric id="SM-004" name="Test Execution Time">
+      <Target>All tests complete in under 2 minutes</Target>
+      <Measurement>Time for cargo test</Measurement>
+      <Threshold>120 seconds</Threshold>
+    </Metric>
+    <Metric id="SM-005" name="Code Size">
+      <Target>Minimal code footprint</Target>
+      <Measurement>Lines of code</Measurement>
+      <Threshold>&lt;500 LOC for connector implementation</Threshold>
+    </Metric>
+  </SuccessMetrics>
+
+  <!-- ========================================================= -->
+  <!-- DOCUMENTATION REQUIREMENTS                                -->
+  <!-- ========================================================= -->
+  <DocumentationRequirements>
+    <Requirement id="DOC-001" name="Inline Documentation">
+      <Description>All public functions must have rustdoc comments</Description>
+      <Standard>Follow rustdoc conventions</Standard>
+      <Verification>cargo doc generates without warnings</Verification>
+    </Requirement>
+    <Requirement id="DOC-002" name="Status Mapping Documentation">
+      <Description>All status mappings must be documented</Description>
+      <Standard>Include connector status and mapped internal status</Standard>
+      <Verification>Documentation matches implementation</Verification>
+    </Requirement>
+    <Requirement id="DOC-003" name="Error Documentation">
+      <Description>All error types must be documented</Description>
+      <Standard>Include when each error occurs</Standard>
+      <Verification>Error documentation is comprehensive</Verification>
+    </Requirement>
+  </DocumentationRequirements>
+
+  <!-- ========================================================= -->
+  <!-- SIGN-OFF                                                  -->
+  <!-- ========================================================= -->
+  <SignOff>
+    <GeneratedBy>Open-Thinking Model</GeneratedBy>
+    <GeneratedOn>2026-02-09</GeneratedBy>
+    <Version>1.0.0</Version>
+    <Status>DRAFT</Status>
+    <NextSteps>
+      <Step>Review and approve requirement analysis</Step>
+      <Step>Begin implementation according to tasks</Step>
+      <Step>Execute validation phase</Step>
+      <Step>Mark as resolved upon completion</Step>
+    </NextSteps>
+  </SignOff>
+</RequirementAnalysis>
