@@ -36,7 +36,7 @@ impl TryFrom<&ConnectorAuthType> for FiservEMEAAuthType {
                 api_key: api_key.clone(),
                 api_secret: api_secret.clone(),
             }),
-            _ => Err(report!(ConnectorError::FailedToObtainAuthType)),
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
