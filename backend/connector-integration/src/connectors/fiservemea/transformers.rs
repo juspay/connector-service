@@ -944,7 +944,7 @@ where
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<FiservEMEASyncResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<FiservEMEAPSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 where
     F: Clone,
@@ -952,7 +952,7 @@ where
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<FiservEMEASyncResponse, Self>,
+        item: ResponseRouterData<FiservEMEAPSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -971,7 +971,7 @@ where
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<FiservEMEASyncResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<FiservEMEARefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 where
     F: Clone,
@@ -979,7 +979,7 @@ where
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<FiservEMEASyncResponse, Self>,
+        item: ResponseRouterData<FiservEMEARefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
