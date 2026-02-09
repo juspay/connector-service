@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <RequirementAnalysis xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <DocumentInfo>
-    <Title>UCS Connector Integration - FiservMEA Authorize Flow</title>
-    <Version>1.0.0</version>
-    <GeneratedDate>2026-02-09</generatedDate>
-    <Status>PENDING</status>
-    <ConnectorName>fiservmea</connectorName>
+    <Title>UCS Connector Integration - FiservMEA Authorize Flow</Title>
+    <Version>1.0.0</Version>
+    <GeneratedDate>2026-02-09</GeneratedDate>
+    <Status>PENDING</Status>
+    <ConnectorName>fiservmea</ConnectorName>
   </DocumentInfo>
 
   <!-- ========================================================= -->
