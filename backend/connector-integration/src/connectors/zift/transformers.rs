@@ -461,7 +461,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             auth,
                             account_number: card.card_number.clone(),
                             account_accessory: card
-                                .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
+                                .get_card_expiry_month_year_2_digit_with_delimiter(
+                                    "".to_string(),
+                                )?,
                             transaction_industry_type: TransactionIndustryType::Ecommerce,
                             transaction_category_code: TransactionCategoryCode::Ecommerce,
                             holder_name: item
@@ -473,12 +475,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             holder_type: HolderType::Personal,
                             authentication_status,
                             authentication_code: auth_data.ds_trans_id.clone().map(Secret::new),
-                            authentication_verification_value: auth_data
-                                .cavv
-                                .clone()
-                                .ok_or(ConnectorError::MissingRequiredField {
-                                    field_name: "cavv",
-                                })?,
+                            authentication_verification_value: auth_data.cavv.clone().ok_or(
+                                ConnectorError::MissingRequiredField { field_name: "cavv" },
+                            )?,
                             authentication_version: auth_data
                                 .message_version
                                 .as_ref()
@@ -497,7 +496,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             auth,
                             account_number: card.card_number.clone(),
                             account_accessory: card
-                                .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
+                                .get_card_expiry_month_year_2_digit_with_delimiter(
+                                    "".to_string(),
+                                )?,
                             transaction_industry_type: TransactionIndustryType::Ecommerce,
                             transaction_category_code: TransactionCategoryCode::Ecommerce,
                             holder_name: item
@@ -516,7 +517,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         };
                         Ok(Self::Card(card_request))
                     }
-                }}
+                }
+            }
             _ => Err(error_stack::report!(ConnectorError::NotImplemented(
                 "Payment method".to_string()
             ),)),
