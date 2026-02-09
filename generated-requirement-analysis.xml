@@ -2,16 +2,46 @@
 <RequirementAnalysis xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Metadata>
     <Title>FiservEMEA Connector Integration Requirement Analysis</Title>
-    <Version>1.0.0</Title>
+    <Version>1.0.0</Version>
     <GeneratedDate>2026-02-09</GeneratedDate>
     <ConnectorName>FiservEMEA</ConnectorName>
-    <ConnectorType>Payment Gateway</ConnectorName>
+    <ConnectorType>Payment Gateway</ConnectorType>
     <Region>EMEA (Europe, Middle East, Africa)</Region>
-    <ImplementationFramework>GRACE-UCS (Global Rapid Agentic Connector Exchange for UCS)</GenerationMethod>
+    <ImplementationFramework>GRACE-UCS (Global Rapid Agentic Connector Exchange for UCS)</ImplementationFramework>
+    <BaseURL>https://prod.emea.api.fiservapps.com/sandbox</BaseURL>
   </Metadata>
 
   <!-- ================================================================= -->
-  <!-- SECTION 1: SECURITY REQUIREMENTS -->
+  <!-- SECTION 1: PROJECT OVERVIEW -->
+  <!-- ================================================================= -->
+  <ProjectOverview>
+    <Objective>Integrate FiservEMEA payment gateway into the Unified Connector Service (UCS) using the GRACE framework for automated connector generation.</Objective>
+    <Scope>
+      <Item>Implement core payment flows: Authorize, Capture, Void, Refund</Item>
+      <Item>Implement synchronization flows: PSync, RSync</Item>
+      <Item>Support card payments (Visa, Mastercard, Amex, etc.)</Item>
+      <Item>HMAC-SHA256 signature authentication</Item>
+      <Item>Comprehensive error handling and status mapping</Item>
+      <Item>Production-ready implementation with no TODOs or mocks</Item>
+    </Scope>
+    <OutOfScope>
+      <Item>3DS authentication (initially)</Item>
+      <Item>Alternative payment methods (wallets, bank transfers)</Item>
+      <Item>Webhook handling</Item>
+      <Item>Recurring payments</Item>
+    </OutOfScope>
+    <SuccessCriteria>
+      <Criterion>Project compiles without errors</Criterion>
+      <Criterion>Single binary workspace (no cargo run confusion)</Criterion>
+      <Criterion>All flows functional with test coverage</Criterion>
+      <Criterion>No TODO comments or mock implementations</Criterion>
+      <Criterion>Database schema consistent with requirements</Criterion>
+      <Criterion>Requirement analysis marked as resolved upon completion</Criterion>
+    </SuccessCriteria>
+  </ProjectOverview>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 2: SECURITY REQUIREMENTS -->
   <!-- ================================================================= -->
   <SecurityRequirements>
     <Requirement id="SEC-001" priority="CRITICAL" category="Authentication">
@@ -24,6 +54,12 @@
         <Criterion>Timestamp must be within 5 minutes of server time</Criterion>
         <Criterion>Client-Request-Id must be unique per request (UUID v4 recommended)</Criterion>
       </AcceptanceCriteria>
+      <ImplementationNotes>
+        <Note>Use ring::hmac crate for HMAC-SHA256</Note>
+        <Note>Use base64 crate for Base64 encoding</Note>
+        <Note>Generate UUID using uuid crate</Note>
+        <Note>Get timestamp using time::OffsetDateTime::now_utc()</Note>
+      </ImplementationNotes>
       <TestCases>
         <TestCase id="TC-SEC-001-01">Valid signature generates successful request</TestCase>
         <TestCase id="TC-SEC-001-02">Invalid signature returns 401 Unauthorized</TestCase>
@@ -42,6 +78,11 @@
         <Criterion>Credentials not included in error responses</Criterion>
         <Criterion>Credentials not serialized in debug output</Criterion>
       </AcceptanceCriteria>
+      <ImplementationNotes>
+        <Note>Use hyperswitch_masking::Secret for credential storage</Note>
+        <Note>Use hyperswitch_masking::Maskable for header values</Note>
+        <Note>Implement proper masking in all transformer outputs</Note>
+      </ImplementationNotes>
       <TestCases>
         <TestCase id="TC-SEC-002-01">Credentials masked in structured logs</TestCase>
         <TestCase id="TC-SEC-002-02">Credentials not exposed in error stack traces</TestCase>
@@ -59,6 +100,11 @@
         <Criterion>Use hyperswitch_masking for all sensitive card fields</Criterion>
         <Criterion>Card data only transmitted to FiservEMEA API</Criterion>
       </AcceptanceCriteria>
+      <ImplementationNotes>
+        <Note>Use RawCardNumber&lt;T&gt; type for card numbers</Note>
+        <Note>Use Secret&lt;String&gt; for CVV/CVC</Note>
+        <Note>Never serialize card data in debug output</Note>
+      </ImplementationNotes>
       <TestCases>
         <TestCase id="TC-SEC-003-01">Card number masked in request transformation</TestCase>
         <TestCase id="TC-SEC-003-02">CVV not present in any log output</TestCase>
@@ -75,6 +121,10 @@
         <Criterion>Certificate validation enabled</Criterion>
         <Criterion>Insecure connections rejected</Criterion>
       </AcceptanceCriteria>
+      <ImplementationNotes>
+        <Note>Use reqwest with rustls-tls feature</Note>
+        <Note>Configure min TLS version in HTTP client</Note>
+      </ImplementationNotes>
       <TestCases>
         <TestCase id="TC-SEC-004-01">Connection succeeds with valid TLS certificate</TestCase>
         <TestCase id="TC-SEC-004-02">Connection fails with invalid certificate</TestCase>
@@ -102,7 +152,7 @@
   </SecurityRequirements>
 
   <!-- ================================================================= -->
-  <!-- SECTION 2: TECHNICAL SCOPE -->
+  <!-- SECTION 3: TECHNICAL SCOPE -->
   <!-- ================================================================= -->
   <TechnicalScope>
     <CoreOperations>
@@ -125,6 +175,7 @@
           <RequestType>PaymentCardSaleTransaction</RequestType>
           <RequestType>PaymentCardPreAuthTransaction</RequestType>
         </RequestTypes>
+        <Endpoint>POST /ipp/payments-gateway/v2/payments</Endpoint>
       </Operation>
 
       <Operation id="OP-002" name="Capture">
@@ -143,6 +194,7 @@
         <RequestTypes>
           <RequestType>PostAuthTransaction</RequestType>
         </RequestTypes>
+        <Endpoint>POST /ipp/payments-gateway/v2/payments/{transaction-id}</Endpoint>
       </Operation>
 
       <Operation id="OP-003" name="Void">
@@ -162,6 +214,7 @@
           <RequestType>VoidTransaction</RequestType>
           <RequestType>VoidPreAuthTransactions</RequestType>
         </RequestTypes>
+        <Endpoint>POST /ipp/payments-gateway/v2/payments/{transaction-id}</Endpoint>
       </Operation>
 
       <Operation id="OP-004" name="Refund">
@@ -181,6 +234,7 @@
           <RequestType>ReturnTransaction</RequestType>
           <RequestType>PaymentCardCreditTransaction</RequestType>
         </RequestTypes>
+        <Endpoint>POST /ipp/payments-gateway/v2/payments/{transaction-id}</Endpoint>
       </Operation>
 
       <Operation id="OP-005" name="PaymentSync">
@@ -195,9 +249,7 @@
           <Condition>Invalid transaction ID format</Condition>
           <Condition>Authentication failure</Condition>
         </FailureConditions>
-        <RequestTypes>
-          <RequestType>GET /payments/{transaction-id}</RequestType>
-        </RequestTypes>
+        <Endpoint>GET /ipp/payments-gateway/v2/payments/{transaction-id}</Endpoint>
       </Operation>
 
       <Operation id="OP-006" name="RefundSync">
@@ -212,9 +264,7 @@
           <Condition>Invalid transaction ID format</Condition>
           <Condition>Authentication failure</Condition>
         </FailureConditions>
-        <RequestTypes>
-          <RequestType>GET /payments/{transaction-id}</RequestType>
-        </RequestTypes>
+        <Endpoint>GET /ipp/payments-gateway/v2/payments/{transaction-id}</Endpoint>
       </Operation>
     </CoreOperations>
 
@@ -254,11 +304,17 @@
       <Currency code="PLN" name="Polish Zloty"/>
       <Currency code="CZK" name="Czech Koruna"/>
       <Currency code="HUF" name="Hungarian Forint"/>
+      <Currency code="AED" name="UAE Dirham"/>
+      <Currency code="SAR" name="Saudi Riyal"/>
+      <Currency code="ZAR" name="South African Rand"/>
+      <Currency code="EGP" name="Egyptian Pound"/>
+      <Currency code="NGN" name="Nigerian Naira"/>
+      <Currency code="KES" name="Kenyan Shilling"/>
     </Currencies>
   </TechnicalScope>
 
   <!-- ================================================================= -->
-  <!-- SECTION 3: ARCHITECTURE GUIDANCE -->
+  <!-- SECTION 4: ARCHITECTURE GUIDANCE -->
   <!-- ================================================================= -->
   <ArchitectureGuidance>
     <DesignPrinciples>
@@ -275,7 +331,7 @@
       <Principle id="ARCH-002" name="GenericConnectorPattern">
         <Description>Use generic connector struct with PaymentMethodDataTypes constraint.</Description>
         <Implementation>
-          <Item>struct FiservEMEA&lt;T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize&gt;</Item>
+          <Item>struct FiservEMEA&lt;T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize&gt;;</Item>
           <Item>Support multiple payment methods through generic type</Item>
           <Item>Type-safe request/response transformations</Item>
         </Implementation>
@@ -311,6 +367,17 @@
           <Item>All workspace members configured as library crates except grpc-server</Item>
         </Implementation>
       </Principle>
+
+      <Principle id="ARCH-006" name="ProductionReadyCode">
+        <Description>No TODOs, mocks, or placeholder implementations.</Description>
+        <Implementation>
+          <Item>All code fully implemented and tested</Item>
+          <Item>No TODO comments anywhere in the codebase</Item>
+          <Item>No unimplemented! macros</Item>
+          <Item>No todo! macros</Item>
+          <Item>All error paths properly handled</Item>
+        </Implementation>
+      </Principle>
     </DesignPrinciples>
 
     <ModuleStructure>
@@ -342,10 +409,10 @@
         </Responsibilities>
       </Module>
 
-      <Module name="DomainTypes" location="backend/domain_types/src/connector_types.rs">
+      <Module name="DomainTypes" location="backend/domain_types/src/types.rs">
         <Responsibilities>
-          <Item>Add FiservEMEA to ConnectorEnum</Item>
           <Item>Add fiservemea field to Connectors struct</Item>
+          <Item>Ensure ConnectorParams type is used</Item>
         </Responsibilities>
       </Module>
 
@@ -393,7 +460,7 @@
   </ArchitectureGuidance>
 
   <!-- ================================================================= -->
-  <!-- SECTION 4: API DESIGN -->
+  <!-- SECTION 5: API DESIGN -->
   <!-- ================================================================= -->
   <APIDesign>
     <Endpoints>
@@ -624,8 +691,8 @@
         <Checks>
           <Check>Amount is greater than zero</Check>
           <Check>Amount has maximum 2 decimal places</Check>
-          <Check>Capture amount <= authorized amount</Check>
-          <Check>Refund amount <= original amount</Check>
+          <Check>Capture amount &lt;= authorized amount</Check>
+          <Check>Refund amount &lt;= original amount</Check>
         </Checks>
       </Rule>
 
@@ -698,7 +765,7 @@
   </APIDesign>
 
   <!-- ================================================================= -->
-  <!-- SECTION 5: STORAGE REQUIREMENTS -->
+  <!-- SECTION 6: STORAGE REQUIREMENTS -->
   <!-- ================================================================= -->
   <StorageRequirements>
     <DataModels>
@@ -843,7 +910,7 @@
   </StorageRequirements>
 
   <!-- ================================================================= -->
-  <!-- SECTION 6: COMPLIANCE CHECKLIST -->
+  <!-- SECTION 7: COMPLIANCE CHECKLIST -->
   <!-- ================================================================= -->
   <ComplianceChecklist>
     <ComplianceItem id="CMP-001" category="PCI_DSS">
@@ -935,10 +1002,22 @@
       </Verification>
       <AutomatedTest>test_no_placeholders</AutomatedTest>
     </ComplianceItem>
+
+    <ComplianceItem id="CMP-009" category="BUILD_SYSTEM">
+      <Requirement>Single Binary Workspace</Requirement>
+      <Description>Workspace builds as single binary to avoid cargo run confusion.</Description>
+      <Verification>
+        <Check>No [[bin]] sections in workspace member Cargo.toml files</Check>
+        <Check>Only grpc-server crate has binary target</Check>
+        <Check>cargo build produces single binary</Check>
+        <Check>cargo run executes without ambiguity</Check>
+      </Verification>
+      <AutomatedTest>test_single_binary_build</AutomatedTest>
+    </ComplianceItem>
   </ComplianceChecklist>
 
   <!-- ================================================================= -->
-  <!-- SECTION 7: RISK ASSESSMENT -->
+  <!-- SECTION 8: RISK ASSESSMENT -->
   <!-- ================================================================= -->
   <RiskAssessment>
     <Threat id="THREAT-001" severity="HIGH" likelihood="MEDIUM">
@@ -1058,7 +1137,7 @@
   </RiskAssessment>
 
   <!-- ================================================================= -->
-  <!-- SECTION 8: IMPLEMENTATION TASKS -->
+  <!-- SECTION 9: IMPLEMENTATION TASKS -->
   <!-- ================================================================= -->
   <ImplementationTasks>
     <Task id="TASK-001" priority="CRITICAL" phase="Foundation">
@@ -1071,6 +1150,11 @@
       </Steps>
       <Dependencies>None</Dependencies>
       <EstimatedEffort>1 hour</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>FiservEMEA enum variant added</Criterion>
+        <Criterion>fiservemea field added to Connectors struct</Criterion>
+        <Criterion>Code compiles without errors</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-002" priority="CRITICAL" phase="Foundation">
@@ -1083,6 +1167,10 @@
       </Steps>
       <Dependencies>TASK-001</Dependencies>
       <EstimatedEffort>0.5 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>Configuration added to all environment files</Criterion>
+        <Criterion>Base URLs are correct for each environment</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-003" priority="CRITICAL" phase="Foundation">
@@ -1096,6 +1184,11 @@
       </Steps>
       <Dependencies>TASK-001, TASK-002</Dependencies>
       <EstimatedEffort>0.5 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>All module files created</Criterion>
+        <Criterion>Module declarations added</Criterion>
+        <Criterion>Code compiles without errors</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-004" priority="CRITICAL" phase="Foundation">
@@ -1109,6 +1202,12 @@
       </Steps>
       <Dependencies>TASK-003</Dependencies>
       <EstimatedEffort>2 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>Auth type defined with Secret&lt;String&gt; fields</Criterion>
+        <Criterion>Signature generation implemented correctly</Criterion>
+        <Criterion>Headers include all required fields</Criterion>
+        <Criterion>Unit tests for signature generation pass</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-005" priority="HIGH" phase="Transformers">
@@ -1125,6 +1224,12 @@
       </Steps>
       <Dependencies>TASK-004</Dependencies>
       <EstimatedEffort>4 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>All request types defined</Criterion>
+        <Criterion>All transformations implemented</Criterion>
+        <Criterion>Card data properly masked</Criterion>
+        <Criterion>Unit tests for all transformations pass</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-006" priority="HIGH" phase="Transformers">
@@ -1141,6 +1246,12 @@
       </Steps>
       <Dependencies>TASK-005</Dependencies>
       <EstimatedEffort>4 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>All response types defined</Criterion>
+        <Criterion>All transformations implemented</Criterion>
+        <Criterion>Status mappings correct</Criterion>
+        <Criterion>Unit tests for all transformations pass</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-007" priority="HIGH" phase="Flows">
@@ -1155,6 +1266,11 @@
       </Steps>
       <Dependencies>TASK-006</Dependencies>
       <EstimatedEffort>3 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>Authorize flow implemented</Criterion>
+        <Criterion>Card payments supported</Criterion>
+        <Criterion>Integration tests pass</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-008" priority="HIGH" phase="Flows">
@@ -1169,6 +1285,11 @@
       </Steps>
       <Dependencies>TASK-007</Dependencies>
       <EstimatedEffort>2 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>Capture flow implemented</Criterion>
+        <Criterion>Amount validation implemented</Criterion>
+        <Criterion>Integration tests pass</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-009" priority="HIGH" phase="Flows">
@@ -1182,6 +1303,10 @@
       </Steps>
       <Dependencies>TASK-007</Dependencies>
       <EstimatedEffort>2 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>Void flow implemented</Criterion>
+        <Criterion>Integration tests pass</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-010" priority="HIGH" phase="Flows">
@@ -1196,6 +1321,11 @@
       </Steps>
       <Dependencies>TASK-007</Dependencies>
       <EstimatedEffort>2 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>Refund flow implemented</Criterion>
+        <Criterion>Amount validation implemented</Criterion>
+        <Criterion>Integration tests pass</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-011" priority="HIGH" phase="Flows">
@@ -1210,6 +1340,11 @@
       </Steps>
       <Dependencies>TASK-007</Dependencies>
       <EstimatedEffort>2 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>PSync flow implemented</Criterion>
+        <Criterion>Status mappings correct</Criterion>
+        <Criterion>Integration tests pass</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-012" priority="HIGH" phase="Flows">
@@ -1224,6 +1359,11 @@
       </Steps>
       <Dependencies>TASK-010</Dependencies>
       <EstimatedEffort>2 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>RSync flow implemented</Criterion>
+        <Criterion>Status mappings correct</Criterion>
+        <Criterion>Integration tests pass</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-013" priority="MEDIUM" phase="Integration">
@@ -1236,6 +1376,10 @@
       </Steps>
       <Dependencies>TASK-012</Dependencies>
       <EstimatedEffort>0.5 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>Connector registered in module</Criterion>
+        <Criterion>Code compiles without errors</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-014" priority="MEDIUM" phase="Testing">
@@ -1249,8 +1393,13 @@
         <Step>Test error parsing</Step>
         <Step>Test status mapping</Step>
       </Steps>
-      <Dependencies>TASK-012</Dependencies>
+      <Dependencies>TASK-013</Dependencies>
       <EstimatedEffort>4 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>All unit tests written</Criterion>
+        <Criterion>All unit tests pass</Criterion>
+        <Criterion>Test coverage meets requirements</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-015" priority="MEDIUM" phase="Testing">
@@ -1267,6 +1416,11 @@
       </Steps>
       <Dependencies>TASK-014</Dependencies>
       <EstimatedEffort>6 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>All integration tests written</Criterion>
+        <Criterion>All integration tests pass</Criterion>
+        <Criterion>Error scenarios covered</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-016" priority="MEDIUM" phase="Build">
@@ -1280,6 +1434,12 @@
       </Steps>
       <Dependencies>TASK-015</Dependencies>
       <EstimatedEffort>1 hour</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>cargo check passes</Criterion>
+        <Criterion>cargo clippy passes</Criterion>
+        <Criterion>No compilation errors</Criterion>
+        <Criterion>No clippy warnings</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-017" priority="MEDIUM" phase="Build">
@@ -1292,6 +1452,11 @@
       </Steps>
       <Dependencies>TASK-016</Dependencies>
       <EstimatedEffort>0.5 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>Single binary produced</Criterion>
+        <Criterion>cargo run executes correctly</Criterion>
+        <Criterion>No binary conflicts</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-018" priority="LOW" phase="Documentation">
@@ -1304,6 +1469,11 @@
       </Steps>
       <Dependencies>TASK-017</Dependencies>
       <EstimatedEffort>1 hour</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>CONNECTORS.md updated</Criterion>
+        <Criterion>Inline documentation added</Criterion>
+        <Criterion>FiservEMEA-specific behaviors documented</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-019" priority="LOW" phase="Finalization">
@@ -1318,6 +1488,13 @@
       </Steps>
       <Dependencies>TASK-018</Dependencies>
       <EstimatedEffort>0.5 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>Code formatted</Criterion>
+        <Criterion>No TODO comments</Criterion>
+        <Criterion>No mock implementations</Criterion>
+        <Criterion>No unimplemented! macros</Criterion>
+        <Criterion>No todo! macros</Criterion>
+      </AcceptanceCriteria>
     </Task>
 
     <Task id="TASK-020" priority="CRITICAL" phase="Finalization">
@@ -1330,11 +1507,16 @@
       </Steps>
       <Dependencies>All previous tasks</Dependencies>
       <EstimatedEffort>0.25 hours</EstimatedEffort>
+      <AcceptanceCriteria>
+        <Criterion>All tasks verified complete</Criterion>
+        <Criterion>Project compiles and runs</Criterion>
+        <Criterion>File renamed to .resolved</Criterion>
+      </AcceptanceCriteria>
     </Task>
   </ImplementationTasks>
 
   <!-- ================================================================= -->
-  <!-- SECTION 9: ACCEPTANCE CRITERIA SUMMARY -->
+  <!-- SECTION 10: ACCEPTANCE CRITERIA SUMMARY -->
   <!-- ================================================================= -->
   <AcceptanceCriteriaSummary>
     <FunctionalCriteria>
@@ -1344,8 +1526,7 @@
       <Criterion id="AC-FUNC-004">Refund flow processes refunds successfully</Criterion>
       <Criterion id="AC-FUNC-005">Payment sync retrieves transaction status correctly</Criterion>
       <Criterion id="AC-FUNC-006">Refund sync retrieves refund status correctly</Criterion>
-      <Criterion id="AC-FUNC-007">3DS authentication is supported</Criterion>
-      <Criterion id="AC-FUNC-008">Error responses are properly parsed and mapped</Criterion>
+      <Criterion id="AC-FUNC-007">Error responses are properly parsed and mapped</Criterion>
     </FunctionalCriteria>
 
     <NonFunctionalCriteria>
@@ -1364,13 +1545,13 @@
     <ComplianceCriteria>
       <Criterion id="AC-COMP-001">PCI DSS compliance for card data handling</Criterion>
       <Criterion id="AC-COMP-002">GDPR compliance for data protection</Criterion>
-      <Criterion id="AC-COMP-003">PSD2 compliance for SCA</Criterion>
-      <Criterion id="AC-COMP-004">UCS pattern compliance</Criterion>
+      <Criterion id="AC-COMP-003">UCS pattern compliance</Criterion>
+      <Criterion id="AC-COMP-004">Single binary workspace compliance</Criterion>
     </ComplianceCriteria>
   </AcceptanceCriteriaSummary>
 
   <!-- ================================================================= -->
-  <!-- SECTION 10: REFERENCES -->
+  <!-- SECTION 11: REFERENCES -->
   <!-- ================================================================= -->
   <References>
     <Reference id="REF-001" type="Documentation">
@@ -1396,6 +1577,10 @@
     <Reference id="REF-006" type="Documentation">
       <Title>Connector Flow Matrix</Title>
       <Location>CONNECTORS.md</Location>
+    </Reference>
+    <Reference id="REF-007" type="Documentation">
+      <Title>GRACE Workflow Templates</Title>
+      <Location>grace/rulesbook/codegen/connector_integration/template/</Location>
     </Reference>
   </References>
 </RequirementAnalysis>
