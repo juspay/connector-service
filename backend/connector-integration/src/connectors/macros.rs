@@ -1138,6 +1138,8 @@ macro_rules! expand_imports {
             NoRequestBodyTemplating,
         };
         #[allow(unused_imports)]
+        use interfaces::api::ConnectorCommon;
+        #[allow(unused_imports)]
         mod macro_types {
             // pub(super) use domain_models::{
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
@@ -1148,7 +1150,6 @@ macro_rules! expand_imports {
                 router_response_types::Response,
             };
             pub(super) use hyperswitch_masking::Maskable;
-            pub(super) use interfaces::api::ConnectorCommon;
 
             pub(super) use crate::types::*;
         }
