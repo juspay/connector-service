@@ -19,6 +19,7 @@ use domain_types::{
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, Secret};
 use serde::{Deserialize, Serialize};
+use crate::types::ResponseRouterData;
 
 #[derive(Debug, Clone)]
 pub struct FiservEMEAAuthType {
