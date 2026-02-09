@@ -770,3 +770,251 @@ impl<F> utils::ForeignFrom<(FiservEMEAPaymentsResponse, RouterDataV2<RSync, F, R
         }
     }
 }
+
+impl<F> TryFrom<ResponseRouterData<FiservEMEAPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<F>, PaymentsResponseData>
+where
+    F: Clone,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservEMEAPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let response_payload =
+            PaymentsResponseData::foreign_from((response, router_data.clone()));
+
+        let mut router_data_out = router_data;
+        router_data_out.response = Ok(response_payload);
+        router_data_out.resource_common_data.status = response_payload.status;
+
+        Ok(router_data_out)
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<FiservEMEACaptureResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+where
+    F: Clone,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservEMEACaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let response_payload =
+            PaymentsResponseData::foreign_from((response, router_data.clone()));
+
+        let mut router_data_out = router_data;
+        router_data_out.response = Ok(response_payload);
+        router_data_out.resource_common_data.status = response_payload.status;
+
+        Ok(router_data_out)
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<FiservEMEAVoidResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+where
+    F: Clone,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservEMEAVoidResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let response_payload =
+            PaymentsResponseData::foreign_from((response, router_data.clone()));
+
+        let mut router_data_out = router_data;
+        router_data_out.response = Ok(response_payload);
+        router_data_out.resource_common_data.status = response_payload.status;
+
+        Ok(router_data_out)
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<FiservEMEARefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
+where
+    F: Clone,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservEMEARefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let response_payload =
+            RefundsResponseData::foreign_from((response, router_data.clone()));
+
+        let mut router_data_out = router_data;
+        router_data_out.response = Ok(response_payload);
+        router_data_out.resource_common_data.status = response_payload.status;
+
+        Ok(router_data_out)
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<FiservEMEASyncResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+where
+    F: Clone,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservEMEASyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let response_payload =
+            PaymentsResponseData::foreign_from((response, router_data.clone()));
+
+        let mut router_data_out = router_data;
+        router_data_out.response = Ok(response_payload);
+        router_data_out.resource_common_data.status = response_payload.status;
+
+        Ok(router_data_out)
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<FiservEMEASyncResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
+where
+    F: Clone,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservEMEASyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let response_payload =
+            RefundsResponseData::foreign_from((response, router_data.clone()));
+
+        let mut router_data_out = router_data;
+        router_data_out.response = Ok(response_payload);
+        router_data_out.resource_common_data.status = response_payload.status;
+
+        Ok(router_data_out)
+    }
+}
+
+impl<F, Req, Res> TryFrom<ResponseRouterData<FiservEMEAErrorResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, Req, Res>
+where
+    F: Clone,
+    Req: Clone,
+    Res: Clone,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservEMEAErrorResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let error_code = response
+            .error
+            .code
+            .clone()
+            .unwrap_or_else(|| NO_ERROR_CODE.to_string());
+
+        let error_message = response
+            .error
+            .message
+            .clone()
+            .unwrap_or_else(|| "".to_string());
+
+        let mut router_data_out = router_data;
+        router_data_out.response = Err(ErrorResponse {
+            code: error_code,
+            message: error_message,
+            reason: None,
+            status_code: http_code,
+            attempt_status: None,
+        });
+
+        Ok(router_data_out)
+    }
+}
+
+impl<F, Req, Res> TryFrom<ResponseRouterData<FiservEMEAErrorResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, Req, Res>
+where
+    F: Clone,
+    Req: Clone,
+    Res: Clone,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservEMEAErrorResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let error_code = response
+            .error
+            .code
+            .clone()
+            .unwrap_or_else(|| NO_ERROR_CODE.to_string());
+
+        let error_message = response
+            .error
+            .message
+            .clone()
+            .unwrap_or_else(|| "".to_string());
+
+        let mut router_data_out = router_data;
+        router_data_out.response = Err(ErrorResponse {
+            code: error_code,
+            message: error_message,
+            reason: None,
+            status_code: http_code,
+            attempt_status: None,
+        });
+
+        Ok(router_data_out)
+    }
+}
