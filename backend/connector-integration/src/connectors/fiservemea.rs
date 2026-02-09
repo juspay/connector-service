@@ -564,7 +564,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: FiservEMEA,
     curl_request: Json(FiservEMEASyncRequest),
-    curl_response: FiservEMEASyncResponse,
+    curl_response: FiservEMEARefundSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
