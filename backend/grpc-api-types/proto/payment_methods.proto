@@ -22,6 +22,16 @@ enum CardNetwork {
   MAESTRO = 8;
   CARTES_BANCAIRES = 9;
   RUPAY = 10;
+  INTERAC_CARD = 11;
+  STAR = 12;
+  PULSE = 13;
+  ACCEL = 14;
+  NYCE = 15;
+}
+
+// Paysafecard - Prepaid payment method
+message PaySafeCard {
+  // Fields will be added as needed for Paysafecard integration
 }
 
 // ============================================================================
@@ -121,6 +131,10 @@ message PaymentMethod {
     // NETWORK TRANSACTION METHODS (120-129) - For recurring payments with network transaction IDs
     CardDetailsForNetworkTransactionId card_details_for_network_transaction_id = 120; // Card details with network transaction ID
     NetworkTokenData network_token = 121; // Network token data
+    
+    // GIFT CARDS (130-139)
+    Givex givex = 137;                                         // Givex gift card
+    PaySafeCard pay_safe_card = 138;                           // Paysafecard - Prepaid payment method
   }
 }
 
@@ -542,6 +556,8 @@ enum UpiSource {
   UPI_CL = 1;    // UPI Credit Line
   UPI_ACCOUNT = 2; // UPI Bank Account (Savings)
   UPI_CC_CL = 3; // UPI Credit Card + Credit Line
+  UPI_PPI = 4;   // UPI Prepaid Payment Instrument
+  UPI_VOUCHER = 5; // UPI Voucher
 }
 
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
@@ -562,6 +578,17 @@ message UpiIntent {
 message UpiQr {
   // UPI source type
   optional UpiSource upi_source = 1;
+}
+
+// Additional payment method data for UPI payments
+// Note: This struct uses `upi_mode` (not `upi_source`) to represent the final
+// payment instrument selected by the customer at the connector end.
+//
+// - `upi_source` in UpiCollect/UpiIntent/UpiQr: The intended UPI source type
+//   requested by the merchant (e.g., customer wants to pay via UPI_CC).
+
+message UpiConnectorResponse {
+  optional UpiSource upi_mode = 1; // Final UPI source detected from connector response
 }
 
 // PIX - Brazilian instant payment ecosystem
@@ -756,7 +783,11 @@ message Ideal {
 
 // Sofort - German online banking payment method
 message Sofort {
-  // Fields will be added as needed for Sofort integration
+    // The country for bank payment
+    optional CountryAlpha2 country = 1;
+    
+    // Preferred language for bank payment
+    optional string preferred_language = 2;
 }
 
 // Trustly - European online banking payment method
@@ -988,15 +1019,6 @@ message EVoucher {
   // Fields will be added as needed for E-Voucher integration
 }
 
-// Givex - Gift card and loyalty program provider
-message Givex {
-  // The gift card number
-  SecretString number = 1 [(validate.rules).string = {min_len: 1}];
-  
-  // The card verification code
-  SecretString cvc = 2;
-}
-
 // Indomaret - Indonesian convenience store payment
 message Indomaret {
   // Fields will be added as needed for Indomaret integration
@@ -1010,11 +1032,6 @@ message OXXO {
 // PagoEfectivo - Peruvian cash payment method
 message PagoEfectivo {
   // Fields will be added as needed for PagoEfectivo integration
-}
-
-// Paysafecard - Prepaid payment method
-message PaySafeCard {
-  // Fields will be added as needed for Paysafecard integration
 }
 
 // 7-Eleven - Convenience store payment
@@ -1194,6 +1211,19 @@ message EVoucher {
 
 message SecretString {
   string value = 1;
+}
+
+// ============================================================================
+// GIFT CARDS
+// ============================================================================
+
+// Givex - Gift card and loyalty program provider
+message Givex {
+  // The gift card number
+  SecretString number = 1;
+
+  // The card verification code
+  SecretString cvc = 2;
 }
 
 enum BankNames {

@@ -84,10 +84,10 @@ use crate::{
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -192,6 +192,8 @@ pub struct Connectors {
     pub gigadat: ConnectorParams,
     pub loonio: ConnectorParams,
     pub wellsfargo: ConnectorParams,
+    pub hyperpg: ConnectorParams,
+    pub zift: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -324,6 +326,11 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
             grpc_api_types::payments::CardNetwork::Unionpay => Ok(Self::UnionPay),
             grpc_api_types::payments::CardNetwork::Rupay => Ok(Self::RuPay),
             grpc_api_types::payments::CardNetwork::Maestro => Ok(Self::Maestro),
+            grpc_api_types::payments::CardNetwork::InteracCard => Ok(Self::Interac),
+            grpc_api_types::payments::CardNetwork::Star => Ok(Self::Star),
+            grpc_api_types::payments::CardNetwork::Pulse => Ok(Self::Pulse),
+            grpc_api_types::payments::CardNetwork::Accel => Ok(Self::Accel),
+            grpc_api_types::payments::CardNetwork::Nyce => Ok(Self::Nyce),
             grpc_api_types::payments::CardNetwork::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CARD_NETWORK".to_owned(),
@@ -390,6 +397,21 @@ impl ForeignTryFrom<grpc_api_types::payments::UpiSource> for payment_method_data
             grpc_api_types::payments::UpiSource::UpiCl => Ok(Self::UpiCl),
             grpc_api_types::payments::UpiSource::UpiAccount => Ok(Self::UpiAccount),
             grpc_api_types::payments::UpiSource::UpiCcCl => Ok(Self::UpiCcCl),
+            grpc_api_types::payments::UpiSource::UpiPpi => Ok(Self::UpiPpi),
+            grpc_api_types::payments::UpiSource::UpiVoucher => Ok(Self::UpiVoucher),
+        }
+    }
+}
+
+impl ForeignFrom<payment_method_data::UpiSource> for grpc_api_types::payments::UpiSource {
+    fn foreign_from(value: payment_method_data::UpiSource) -> Self {
+        match value {
+            payment_method_data::UpiSource::UpiCc => Self::UpiCc,
+            payment_method_data::UpiSource::UpiCl => Self::UpiCl,
+            payment_method_data::UpiSource::UpiAccount => Self::UpiAccount,
+            payment_method_data::UpiSource::UpiCcCl => Self::UpiCcCl,
+            payment_method_data::UpiSource::UpiPpi => Self::UpiPpi,
+            payment_method_data::UpiSource::UpiVoucher => Self::UpiVoucher,
         }
     }
 }
@@ -888,6 +910,15 @@ impl<
                         },
                     }),
                 ),
+                grpc_api_types::payments::payment_method::PaymentMethod::Sofort(sofort) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::Sofort {
+                        country: match sofort.country() {
+                            grpc_payment_types::CountryAlpha2::Unspecified => None,
+                            _ => Some(CountryAlpha2::foreign_try_from(sofort.country())?),
+                        },
+                        preferred_language: sofort.preferred_language,
+                    }),
+                ),
                 grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(przelewy24) => {
                     Ok(Self::BankRedirect(
                         payment_method_data::BankRedirectData::Przelewy24 {
@@ -1219,6 +1250,31 @@ impl<
                     )))
                 }
 
+                grpc_api_types::payments::payment_method::PaymentMethod::Givex(givex_data) => {
+                    Ok(Self::GiftCard(Box::new(
+                        payment_method_data::GiftCardData::Givex(payment_method_data::GiftCardDetails {
+                            number: givex_data.number.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "MISSING_GIVEX_NUMBER".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Missing Givex gift card number".to_owned(),
+                                error_object: None,
+                            }))?,
+                            cvc: givex_data.cvc.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "MISSING_GIVEX_CVC".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Missing Givex gift card CVC".to_owned(),
+                                error_object: None,
+                            }))?,
+                        }),
+                    )))
+                }
+
+                grpc_api_types::payments::payment_method::PaymentMethod::PaySafeCard(_) => {
+                    Ok(Self::GiftCard(Box::new(
+                        payment_method_data::GiftCardData::PaySafeCard {},
+                    )))
+                }
+
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                     error_identifier: 400,
@@ -1451,6 +1507,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(_) => Ok(Some(PaymentMethodType::Przelewy24)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BancontactCard(_) => Ok(Some(PaymentMethodType::BancontactCard)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Blik(_) => Ok(Some(PaymentMethodType::Blik)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_) => Ok(Some(PaymentMethodType::Sofort)),
                 // ============================================================================
                 // MOBILE & CRYPTO PAYMENTS - PaymentMethodType mappings
                 // ============================================================================
@@ -1474,6 +1531,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::CardDetailsForNetworkTransactionId(_) => Ok(Some(PaymentMethodType::Card)),
                 grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(_) => Ok(Some(PaymentMethodType::Card)),
+                // ============================================================================
+                // GIFT CARDS
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Givex(_) => {
+                    Ok(Some(PaymentMethodType::Givex))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PaySafeCard(_) => {
+                    Ok(Some(PaymentMethodType::PaySafeCard))
+                }
                 // ============================================================================
                 // UNSUPPORTED ONLINE BANKING - Direct error generation
                 // ============================================================================
@@ -1530,14 +1596,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                         error_identifier: 400,
                         error_message: "Local bank redirect is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Sofort is not yet supported".to_owned(),
                         error_object: None,
                     })))
                 }
@@ -3458,17 +3516,35 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                             card_network,
                             domestic_network,
                         } => grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
-                            card: Some(grpc_api_types::payments::CardConnectorResponse {
-                                authentication_data: authentication_data
-                                    .as_ref()
-                                    .and_then(|data| serde_json::to_vec(data).ok()),
-                                payment_checks: payment_checks
-                                    .as_ref()
-                                    .and_then(|checks| serde_json::to_vec(checks).ok()),
-                                card_network: card_network.clone(),
-                                domestic_network: domestic_network.clone(),
-                            }),
+                            payment_method_data: Some(
+                                grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Card(
+                                    grpc_api_types::payments::CardConnectorResponse {
+                                        authentication_data: authentication_data
+                                            .as_ref()
+                                            .and_then(|data| serde_json::to_vec(data).ok()),
+                                        payment_checks: payment_checks
+                                            .as_ref()
+                                            .and_then(|checks| serde_json::to_vec(checks).ok()),
+                                        card_network: card_network.clone(),
+                                        domestic_network: domestic_network.clone(),
+                                    }
+                                )
+                            ),
                         },
+                        AdditionalPaymentMethodConnectorResponse::Upi { upi_mode } => {
+                            grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
+                                payment_method_data: Some(
+                                    grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Upi(
+                                        grpc_api_types::payments::UpiConnectorResponse {
+                                            upi_mode: upi_mode.clone().map(|source| {
+                                                let proto_source: grpc_api_types::payments::UpiSource = ForeignFrom::foreign_from(source);
+                                                proto_source as i32
+                                            }),
+                                        }
+                                    )
+                                ),
+                            }
+                        }
                     }
                 },
             ),
@@ -3905,6 +3981,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Eps(_)),
             } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Blik(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_)),
+            } => Ok(Self::BankRedirect),
             _ => Ok(Self::Card), // Default fallback
         }
     }
@@ -3964,8 +4048,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         };
 
         let connector_metadata = value
-            .merchant_account_metadata
-            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .connector_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
             .transpose()?;
 
         Ok(Self {
@@ -5408,6 +5492,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                 .connector_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
+            merchant_order_reference_id: value.merchant_order_reference_id,
         })
     }
 }
@@ -6138,6 +6223,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .connector_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
+            merchant_order_reference_id: value.merchant_order_reference_id,
         })
     }
 }
@@ -6611,6 +6697,12 @@ impl
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
+        // Extract connector_meta_data from merchant_account_metadata
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -6636,7 +6728,7 @@ impl
             connector_customer: value.connector_customer_id,
             description,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -9313,6 +9405,7 @@ impl<
                     )
                 })
                 .transpose()?,
+            mandate_reference: None,
         })
     }
 }
@@ -9588,7 +9681,7 @@ impl
             ),
             customer_id: None,
             connector_customer: None,
-            description: None,
+            description: value.description,
             return_url: value.return_url.clone(),
             connector_meta_data: value
                 .merchant_account_metadata
@@ -9869,6 +9962,49 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+        })
+    }
+}
+
+impl ForeignTryFrom<(bool, RedirectDetailsResponse)>
+    for grpc_api_types::payments::PaymentServiceVerifyRedirectResponseResponse
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (source_verified, redirect_details_response): (bool, RedirectDetailsResponse),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            source_verified,
+            transaction_id: redirect_details_response
+                .resource_id
+                .map(|resource_id| {
+                    grpc_api_types::payments::Identifier::foreign_try_from(resource_id)
+                })
+                .transpose()?,
+            response_ref_id: redirect_details_response
+                .connector_response_reference_id
+                .map(|id| grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                }),
+            response_minor_amount: redirect_details_response
+                .response_minor_amount
+                .map(|amount| amount.get_amount_as_i64()),
+            response_currency: redirect_details_response
+                .response_currency
+                .map(grpc_api_types::payments::Currency::foreign_try_from)
+                .transpose()?
+                .map(|currency| currency.into()),
+            status: redirect_details_response
+                .status
+                .map(grpc_api_types::payments::PaymentStatus::foreign_from)
+                .map(|status| status as i32),
+            error_code: redirect_details_response.error_code,
+            error_reason: redirect_details_response.error_reason,
+            error_message: redirect_details_response.error_message,
+            raw_connector_response: redirect_details_response
+                .raw_connector_response
+                .map(|response| response.into()),
         })
     }
 }
