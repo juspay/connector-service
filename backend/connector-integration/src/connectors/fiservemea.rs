@@ -334,7 +334,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let connector_transaction_id = req
             .request
             .connector_transaction_id
-            .get_connector_transaction_id();
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
         Ok(format!(
             "{}/payments/{}/capture",
             self.base_url(&req.resource_common_data.connectors),
@@ -419,7 +420,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let connector_transaction_id = req
             .request
             .connector_transaction_id
-            .get_connector_transaction_id();
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
         Ok(format!(
             "{}/payments/{}/void",
             self.base_url(&req.resource_common_data.connectors),
@@ -563,7 +565,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let connector_transaction_id = req
             .request
             .connector_transaction_id
-            .get_connector_transaction_id();
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
         Ok(format!(
             "{}/payments/{}",
             self.base_url(&req.resource_common_data.connectors),
@@ -637,7 +640,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let connector_transaction_id = req
             .request
             .connector_transaction_id
-            .get_connector_transaction_id();
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
         Ok(format!(
             "{}/refunds/{}",
             self.base_url(&req.resource_common_data.connectors),
