@@ -1696,6 +1696,186 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        &PayLaterData,
+    )> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+
+    fn try_from(
+        (router_data, pay_later_data): (
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            &PayLaterData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match pay_later_data {
+            PayLaterData::KlarnaRedirect { .. } => {
+                let billing = router_data.resource_common_data.get_billing()?;
+                billing.email.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "email",
+                    }
+                })?;
+                router_data
+                    .resource_common_data
+                    .customer_id
+                    .as_ref()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "customer_id",
+                    })?;
+                let _country = router_data.resource_common_data.get_billing_country()?;
+                Ok(Self::Klarna)
+            }
+            PayLaterData::KlarnaSdk { token } => {
+                if token.is_empty() {
+                    return Err(errors::ConnectorError::MissingRequiredField {
+                        field_name: "token",
+                    }
+                    .into());
+                }
+                Ok(Self::Klarna)
+            }
+            PayLaterData::AffirmRedirect { .. } => {
+                let billing = router_data.resource_common_data.get_billing()?;
+                billing.email.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "email",
+                    }
+                })?;
+                billing.address.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    }
+                })?;
+                billing.phone.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.phone",
+                    }
+                })?;
+                Ok(Self::AdyenAffirm)
+            }
+            PayLaterData::AfterpayClearpayRedirect { .. } => {
+                let billing = router_data.resource_common_data.get_billing()?;
+                billing.email.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "email",
+                    }
+                })?;
+                billing.address.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    }
+                })?;
+                router_data
+                    .resource_common_data
+                    .get_optional_shipping()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "shipping",
+                    })?;
+                let country = router_data.resource_common_data.get_billing_country()?;
+                match country {
+                    common_enums::CountryAlpha2::IT
+                    | common_enums::CountryAlpha2::FR
+                    | common_enums::CountryAlpha2::ES
+                    | common_enums::CountryAlpha2::GB => Ok(Self::ClearPay),
+                    _ => Ok(Self::AfterPay),
+                }
+            }
+            PayLaterData::PayBrightRedirect { .. } => {
+                let billing = router_data.resource_common_data.get_billing()?;
+                billing.address.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    }
+                })?;
+                billing.phone.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.phone",
+                    }
+                })?;
+                billing.email.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.email",
+                    }
+                })?;
+                router_data
+                    .resource_common_data
+                    .get_optional_shipping()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "shipping",
+                    })?;
+                let _country = router_data.resource_common_data.get_billing_country()?;
+                Ok(Self::PayBright)
+            }
+            PayLaterData::WalleyRedirect { .. } => {
+                let billing = router_data.resource_common_data.get_billing()?;
+                billing.phone.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.phone",
+                    }
+                })?;
+                billing.email.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.email",
+                    }
+                })?;
+                Ok(Self::Walley)
+            }
+            PayLaterData::AlmaRedirect { .. } => {
+                let billing = router_data.resource_common_data.get_billing()?;
+                billing.phone.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.phone",
+                    }
+                })?;
+                billing.email.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.email",
+                    }
+                })?;
+                billing.address.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    }
+                })?;
+                router_data
+                    .resource_common_data
+                    .get_optional_shipping()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "shipping",
+                    })?;
+                Ok(Self::AlmaPayLater)
+            }
+            PayLaterData::AtomeRedirect { .. } => {
+                let billing = router_data.resource_common_data.get_billing()?;
+                billing.email.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.email",
+                    }
+                })?;
+                billing.phone.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.phone",
+                    }
+                })?;
+                billing.address.as_ref().ok_or_else(|| {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    }
+                })?;
+                Ok(Self::Atome)
+            }
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
         AdyenRouterData<
             RouterDataV2<
                 Authorize,
@@ -2693,174 +2873,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::GiftCard(ref gift_card) => {
                     Self::try_from((item, gift_card.as_ref()))
                 }
-                PaymentMethodData::PayLater(pay_later_data) => {
-                    let payment_method = match pay_later_data {
-                        PayLaterData::KlarnaRedirect { .. } => {
-                            let billing = item.router_data.resource_common_data.get_billing()?;
-                            billing.email.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "email",
-                                }
-                            })?;
-                            item.router_data
-                                .resource_common_data
-                                .customer_id
-                                .as_ref()
-                                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
-                                    field_name: "customer_id",
-                                })?;
-                            let _country = item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_country()?;
-                            AdyenPaymentMethod::Klarna
-                        }
-                        PayLaterData::KlarnaSdk { token } => {
-                            if token.is_empty() {
-                                return Err(errors::ConnectorError::MissingRequiredField {
-                                    field_name: "token",
-                                }
-                                .into());
-                            }
-                            AdyenPaymentMethod::Klarna
-                        }
-                        PayLaterData::AffirmRedirect { .. } => {
-                            let billing = item.router_data.resource_common_data.get_billing()?;
-                            billing.email.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "email",
-                                }
-                            })?;
-                            billing.address.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.address",
-                                }
-                            })?;
-                            billing.phone.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.phone",
-                                }
-                            })?;
-                            AdyenPaymentMethod::AdyenAffirm
-                        }
-                        PayLaterData::AfterpayClearpayRedirect { .. } => {
-                            let billing = item.router_data.resource_common_data.get_billing()?;
-                            billing.email.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "email",
-                                }
-                            })?;
-                            billing.address.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.address",
-                                }
-                            })?;
-                            item.router_data
-                                .resource_common_data
-                                .get_optional_shipping()
-                                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
-                                    field_name: "shipping",
-                                })?;
-                            let country = item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_country()?;
-                            match country {
-                                common_enums::CountryAlpha2::IT
-                                | common_enums::CountryAlpha2::FR
-                                | common_enums::CountryAlpha2::ES
-                                | common_enums::CountryAlpha2::GB => AdyenPaymentMethod::ClearPay,
-                                _ => AdyenPaymentMethod::AfterPay,
-                            }
-                        }
-                        PayLaterData::PayBrightRedirect { .. } => {
-                            let billing = item.router_data.resource_common_data.get_billing()?;
-                            billing.address.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.address",
-                                }
-                            })?;
-                            billing.phone.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.phone",
-                                }
-                            })?;
-                            billing.email.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.email",
-                                }
-                            })?;
-                            item.router_data
-                                .resource_common_data
-                                .get_optional_shipping()
-                                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
-                                    field_name: "shipping",
-                                })?;
-                            let _country = item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_country()?;
-                            AdyenPaymentMethod::PayBright
-                        }
-                        PayLaterData::WalleyRedirect { .. } => {
-                            let billing = item.router_data.resource_common_data.get_billing()?;
-                            billing.phone.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.phone",
-                                }
-                            })?;
-                            billing.email.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.email",
-                                }
-                            })?;
-                            AdyenPaymentMethod::Walley
-                        }
-                        PayLaterData::AlmaRedirect { .. } => {
-                            let billing = item.router_data.resource_common_data.get_billing()?;
-                            billing.phone.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.phone",
-                                }
-                            })?;
-                            billing.email.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.email",
-                                }
-                            })?;
-                            billing.address.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.address",
-                                }
-                            })?;
-                            item.router_data
-                                .resource_common_data
-                                .get_optional_shipping()
-                                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
-                                    field_name: "shipping",
-                                })?;
-                            AdyenPaymentMethod::AlmaPayLater
-                        }
-                        PayLaterData::AtomeRedirect { .. } => {
-                            let billing = item.router_data.resource_common_data.get_billing()?;
-                            billing.email.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.email",
-                                }
-                            })?;
-                            billing.phone.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.phone",
-                                }
-                            })?;
-                            billing.address.as_ref().ok_or_else(|| {
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "billing.address",
-                                }
-                            })?;
-                            AdyenPaymentMethod::Atome
-                        }
-                    };
+                PaymentMethodData::PayLater(ref pay_later_data) => {
+                    let payment_method =
+                        AdyenPaymentMethod::try_from((&item.router_data, pay_later_data))?;
 
                     let amount = get_amount_data(&item);
                     let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
