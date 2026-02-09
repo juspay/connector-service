@@ -3,7 +3,7 @@ use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     types::{MinorUnit, StringMinorUnit},
 };
-use error_stack::{report, ResultExt};
+use error_stack::ResultExt;
 use std::fmt::Debug;
 
 use domain_types::{
@@ -431,96 +431,92 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(request_data.minor_amount, request_data.currency)
-            .map_err(|e| {
-                report!(ConnectorError::AmountConversionFailed)
-                    .attach_printable(format!("Failed to convert amount: {e}"))
-            })?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
 
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(card) => {
-                if item.router_data.resource_common_data.is_three_ds()
-                    && item.router_data.request.authentication_data.is_none()
-                {
-                    Err(ConnectorError::NotSupported {
+                match (
+                    item.router_data.resource_common_data.is_three_ds(),
+                    item.router_data.request.authentication_data.is_some(),
+                ) {
+                    (true, false) => Err(ConnectorError::NotSupported {
                         message: "3DS flow".to_string(),
                         connector: "Zift",
                     }
-                    .into())
-                }
-                // Check if this is an external 3DS payment - both is_three_ds() and authentication_data must be present
-                else if item.router_data.resource_common_data.is_three_ds()
-                    && item.router_data.request.authentication_data.is_some()
-                {
-                    // Handle external 3DS authentication
-                    let auth_data = item
-                        .router_data
-                        .request
-                        .authentication_data
-                        .as_ref()
-                        .ok_or(ConnectorError::MissingRequiredField {
-                            field_name: "authentication_data",
-                        })?;
-
-                    let authentication_status = AuthenticationStatus::try_from(auth_data)?;
-
-                    let external_3ds_request = ZiftExternalThreeDsPaymentRequest {
-                        request_type,
-                        auth,
-                        account_number: card.card_number.clone(),
-                        account_accessory: card
-                            .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
-                        transaction_industry_type: TransactionIndustryType::Ecommerce,
-                        transaction_category_code: TransactionCategoryCode::Ecommerce,
-                        holder_name: item
+                    .into()),
+                    (true, true) => {
+                        let auth_data = item
                             .router_data
-                            .resource_common_data
-                            .get_billing_full_name()?,
-                        amount,
-                        account_type: AccountType::PaymentCard,
-                        holder_type: HolderType::Personal,
-                        authentication_status,
-                        authentication_code: auth_data.ds_trans_id.clone().map(Secret::new),
-                        authentication_verification_value: auth_data
-                            .cavv
-                            .clone()
-                            .ok_or(ConnectorError::MissingRequiredField { field_name: "cavv" })?,
-                        authentication_version: auth_data
-                            .message_version
+                            .request
+                            .authentication_data
                             .as_ref()
-                            .map(|v| Secret::new(v.to_string())),
-                        transaction_code: item
-                            .router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
-                    };
-                    Ok(Self::ExternalThreeDs(external_3ds_request))
-                } else {
-                    let card_request = ZiftCardPaymentRequest {
-                        request_type,
-                        auth,
-                        account_number: card.card_number.clone(),
-                        account_accessory: card
-                            .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
-                        transaction_industry_type: TransactionIndustryType::Ecommerce,
-                        transaction_category_code: TransactionCategoryCode::Ecommerce,
-                        holder_name: item
-                            .router_data
-                            .resource_common_data
-                            .get_billing_full_name()?,
-                        amount,
-                        account_type: AccountType::PaymentCard,
-                        holder_type: HolderType::Personal,
-                        csc: card.card_cvc,
-                        transaction_code: item
-                            .router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
-                    };
-                    Ok(Self::Card(card_request))
-                }
-            }
+                            .ok_or(ConnectorError::MissingRequiredField {
+                                field_name: "authentication_data",
+                            })?;
+
+                        let authentication_status = AuthenticationStatus::try_from(auth_data)?;
+
+                        let external_3ds_request = ZiftExternalThreeDsPaymentRequest {
+                            request_type,
+                            auth,
+                            account_number: card.card_number.clone(),
+                            account_accessory: card
+                                .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
+                            transaction_industry_type: TransactionIndustryType::Ecommerce,
+                            transaction_category_code: TransactionCategoryCode::Ecommerce,
+                            holder_name: item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_full_name()?,
+                            amount,
+                            account_type: AccountType::PaymentCard,
+                            holder_type: HolderType::Personal,
+                            authentication_status,
+                            authentication_code: auth_data.ds_trans_id.clone().map(Secret::new),
+                            authentication_verification_value: auth_data
+                                .cavv
+                                .clone()
+                                .ok_or(ConnectorError::MissingRequiredField {
+                                    field_name: "cavv",
+                                })?,
+                            authentication_version: auth_data
+                                .message_version
+                                .as_ref()
+                                .map(|v| Secret::new(v.to_string())),
+                            transaction_code: item
+                                .router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
+                        };
+                        Ok(Self::ExternalThreeDs(external_3ds_request))
+                    }
+                    _ => {
+                        let card_request = ZiftCardPaymentRequest {
+                            request_type,
+                            auth,
+                            account_number: card.card_number.clone(),
+                            account_accessory: card
+                                .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
+                            transaction_industry_type: TransactionIndustryType::Ecommerce,
+                            transaction_category_code: TransactionCategoryCode::Ecommerce,
+                            holder_name: item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_full_name()?,
+                            amount,
+                            account_type: AccountType::PaymentCard,
+                            holder_type: HolderType::Personal,
+                            csc: card.card_cvc,
+                            transaction_code: item
+                                .router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
+                        };
+                        Ok(Self::Card(card_request))
+                    }
+                }}
             _ => Err(error_stack::report!(ConnectorError::NotImplemented(
                 "Payment method".to_string()
             ),)),
@@ -646,10 +642,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(request_data.minor_amount, request_data.currency)
-            .map_err(|e| {
-                report!(ConnectorError::AmountConversionFailed)
-                    .attach_printable(format!("Failed to convert amount: {e}"))
-            })?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
 
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::MandatePayment => {
