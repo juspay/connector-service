@@ -1150,6 +1150,7 @@ macro_rules! expand_imports {
                 router_response_types::Response,
             };
             pub(super) use hyperswitch_masking::Maskable;
+            pub(super) use interfaces::api::ConnectorCommon;
 
             pub(super) use crate::types::*;
         }
