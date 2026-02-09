@@ -644,33 +644,18 @@ where
 
         let network_response_code = response.scheme_response_code.clone();
 
-        let card_last_four = response
+        let connector_metadata = response
             .payment_method_details
             .as_ref()
             .and_then(|pmd| p.card.as_ref())
-            .and_then(|c| c.last_four.clone());
-
-        let card_bin = response
-            .payment_method_details
-            .as_ref()
-            .and_then(|pmd| p.card.as_ref())
-            .and_then(|c| c.bin.clone());
-
-        let card_brand = response
-            .payment_method_details
-            .as_ref()
-            .and_then(|pmd| p.card.as_ref())
-            .and_then(|c| c.card_type.clone());
-
-        let card_metadata = if card_last_four.is_some() || card_bin.is_some() {
-            Some(common_utils::types::CardMetadata {
-                card_last_four,
-                card_bin,
-                card_brand,
-            })
-        } else {
-            None
-        };
+            .map(|c| {
+                serde_json::json!({
+                    "card_last_four": c.last_four,
+                    "card_bin": c.bin,
+                    "card_brand": c.card_type,
+                })
+                .to_string()
+            });
 
         Self {
             status,
@@ -684,7 +669,7 @@ where
             processor_response_message,
             authorization_code,
             network_response_code,
-            card_metadata,
+            connector_metadata,
             ..Default::default()
         }
     }
