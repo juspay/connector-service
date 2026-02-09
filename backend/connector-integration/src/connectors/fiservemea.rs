@@ -637,11 +637,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let connector_transaction_id = req
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let connector_transaction_id = req.request.connector_transaction_id.clone();
         Ok(format!(
             "{}/refunds/{}",
             self.base_url(&req.resource_common_data.connectors),
