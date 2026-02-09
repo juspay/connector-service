@@ -4,6 +4,7 @@ pub mod razorpay;
 
 pub mod authorizedotnet;
 pub mod fiserv;
+pub mod fiservema;
 pub mod razorpayv2;
 
 pub use self::{
