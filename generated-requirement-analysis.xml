@@ -7,7 +7,8 @@
     <ConnectorName>fiservemea</ConnectorName>
     <Framework>GRACE-UCS (Global Rapid Agentic Connector Exchange for UCS)</Framework>
     <RulesPath>grace/rulesbook/codegen/.gracerules</RulesPath>
-    <ProjectRoot>/tmp/cmlffclqd0012o4bhnyu23n9b</ProjectRoot>
+    <ProjectRoot>/private/tmp/cmlffclqd0012o4bhnyu23n9b</ProjectRoot>
+    <ImplementationStatus>Partial - Authorize flow implemented, remaining flows need completion</ImplementationStatus>
   </Metadata>
 
   <!-- SECTION 1: SECURITY REQUIREMENTS -->
@@ -96,8 +97,14 @@
   <!-- SECTION 2: TECHNICAL SCOPE -->
   <TechnicalScope>
     <CoreOperations>
-      <Operation id="OP-001" name="Authorize" flow="Authorize">
+      <Operation id="OP-001" name="Authorize" flow="Authorize" status="PARTIAL">
         <Description>Initiate a payment authorization with Fiserv EMEA</Description>
+        <CurrentState>Basic implementation exists with get_headers, get_url, get_request_body, handle_response_v2, get_error_response_v2</CurrentState>
+        <RemainingWork>
+          <Item>Enhance payment method support (currently minimal)</Item>
+          <Item>Add comprehensive error handling</Item>
+          <Item>Add webhook support if needed</Item>
+        </RemainingWork>
         <SuccessConditions>
           <Condition>Valid payment request transformed to Fiserv format</Condition>
           <Condition>HTTP POST sent to /payments endpoint</Condition>
@@ -117,8 +124,17 @@
         </PaymentMethods>
       </Operation>
 
-      <Operation id="OP-002" name="Capture" flow="Capture">
+      <Operation id="OP-002" name="Capture" flow="Capture" status="NOT_IMPLEMENTED">
         <Description>Capture a previously authorized payment</Description>
+        <CurrentState>Empty trait implementation exists</CurrentState>
+        <RemainingWork>
+          <Item>Implement get_headers method</Item>
+          <Item>Implement get_url method with transaction ID</Item>
+          <Item>Implement get_request_body method</Item>
+          <Item>Implement handle_response_v2 method</Item>
+          <Item>Implement get_error_response_v2 method</Item>
+          <Item>Create Capture request/response transformers</Item>
+        </RemainingWork>
         <SuccessConditions>
           <Condition>Capture request sent with valid transaction ID</Condition>
           <Condition>Amount validated against original authorization</Condition>
@@ -132,8 +148,17 @@
         </FailureConditions>
       </Operation>
 
-      <Operation id="OP-003" name="Void" flow="Void">
+      <Operation id="OP-003" name="Void" flow="Void" status="NOT_IMPLEMENTED">
         <Description>Cancel a pending authorization</Description>
+        <CurrentState>Empty trait implementation exists</CurrentState>
+        <RemainingWork>
+          <Item>Implement get_headers method</Item>
+          <Item>Implement get_url method with transaction ID</Item>
+          <Item>Implement get_request_body method</Item>
+          <Item>Implement handle_response_v2 method</Item>
+          <Item>Implement get_error_response_v2 method</Item>
+          <Item>Create Void request/response transformers</Item>
+        </RemainingWork>
         <SuccessConditions>
           <Condition>Void request sent with valid transaction ID</Condition>
           <Condition>Only pending authorizations can be voided</Condition>
@@ -145,8 +170,17 @@
         </FailureConditions>
       </Operation>
 
-      <Operation id="OP-004" name="Refund" flow="Refund">
+      <Operation id="OP-004" name="Refund" flow="Refund" status="NOT_IMPLEMENTED">
         <Description>Process a refund for a captured payment</Description>
+        <CurrentState>Empty trait implementation exists</CurrentState>
+        <RemainingWork>
+          <Item>Implement get_headers method</Item>
+          <Item>Implement get_url method</Item>
+          <Item>Implement get_request_body method</Item>
+          <Item>Implement handle_response_v2 method</Item>
+          <Item>Implement get_error_response_v2 method</Item>
+          <Item>Create Refund request/response transformers</Item>
+        </RemainingWork>
         <SuccessConditions>
           <Condition>Refund request sent with valid payment ID</Condition>
           <Condition>Partial refund supported</Condition>
@@ -161,8 +195,16 @@
         </FailureConditions>
       </Operation>
 
-      <Operation id="OP-005" name="Payment Sync" flow="PSync">
+      <Operation id="OP-005" name="Payment Sync" flow="PSync" status="NOT_IMPLEMENTED">
         <Description>Synchronize payment status with Fiserv EMEA</Description>
+        <CurrentState>Empty trait implementation exists</CurrentState>
+        <RemainingWork>
+          <Item>Implement get_headers method</Item>
+          <Item>Implement get_url method with transaction ID</Item>
+          <Item>Implement handle_response_v2 method</Item>
+          <Item>Implement get_error_response_v2 method</Item>
+          <Item>Create Sync request/response transformers</Item>
+        </RemainingWork>
         <SuccessConditions>
           <Condition>Sync request sent with valid transaction ID</Condition>
           <Condition>Current status retrieved from connector</Condition>
@@ -175,8 +217,16 @@
         </FailureConditions>
       </Operation>
 
-      <Operation id="OP-006" name="Refund Sync" flow="RSync">
+      <Operation id="OP-006" name="Refund Sync" flow="RSync" status="NOT_IMPLEMENTED">
         <Description>Synchronize refund status with Fiserv EMEA</Description>
+        <CurrentState>Empty trait implementation exists</CurrentState>
+        <RemainingWork>
+          <Item>Implement get_headers method</Item>
+          <Item>Implement get_url method with refund ID</Item>
+          <Item>Implement handle_response_v2 method</Item>
+          <Item>Implement get_error_response_v2 method</Item>
+          <Item>Create Refund Sync request/response transformers</Item>
+        </RemainingWork>
         <SuccessConditions>
           <Condition>Sync request sent with valid refund ID</Condition>
           <Condition>Current refund status retrieved</Condition>
@@ -190,7 +240,7 @@
     </CoreOperations>
 
     <DataFlows>
-      <Flow id="DF-001" name="AuthorizationFlow">
+      <Flow id="DF-001" name="AuthorizationFlow" status="IMPLEMENTED">
         <Steps>
           <Step order="1">Receive gRPC PaymentServiceAuthorizeRequest</Step>
           <Step order="2">Transform to RouterDataV2&lt;Authorize, ...&gt;</Step>
@@ -204,7 +254,75 @@
         </Steps>
       </Flow>
 
-      <Flow id="DF-002" name="ErrorHandlingFlow">
+      <Flow id="DF-002" name="CaptureFlow" status="NOT_IMPLEMENTED">
+        <Steps>
+          <Step order="1">Receive gRPC PaymentServiceCaptureRequest</Step>
+          <Step order="2">Transform to RouterDataV2&lt;Capture, ...&gt;</Step>
+          <Step order="3">Extract authentication from ConnectorAuthType</Step>
+          <Step order="4">Build FiservemeaCaptureRequest</Step>
+          <Step order="5">Add Authorization header with Bearer token</Step>
+          <Step order="6">Send HTTP POST to base_url/payments/{id}/capture</Step>
+          <Step order="7">Parse FiservemeaCaptureResponse</Step>
+          <Step order="8">Map status to AttemptStatus</Step>
+          <Step order="9">Return RouterDataV2 with PaymentsResponseData</Step>
+        </Steps>
+      </Flow>
+
+      <Flow id="DF-003" name="VoidFlow" status="NOT_IMPLEMENTED">
+        <Steps>
+          <Step order="1">Receive gRPC PaymentServiceVoidRequest</Step>
+          <Step order="2">Transform to RouterDataV2&lt;Void, ...&gt;</Step>
+          <Step order="3">Extract authentication from ConnectorAuthType</Step>
+          <Step order="4">Build FiservemeaVoidRequest</Step>
+          <Step order="5">Add Authorization header with Bearer token</Step>
+          <Step order="6">Send HTTP POST to base_url/payments/{id}/void</Step>
+          <Step order="7">Parse FiservemeaVoidResponse</Step>
+          <Step order="8">Map status to AttemptStatus</Step>
+          <Step order="9">Return RouterDataV2 with PaymentsResponseData</Step>
+        </Steps>
+      </Flow>
+
+      <Flow id="DF-004" name="RefundFlow" status="NOT_IMPLEMENTED">
+        <Steps>
+          <Step order="1">Receive gRPC PaymentServiceRefundRequest</Step>
+          <Step order="2">Transform to RouterDataV2&lt;Refund, ...&gt;</Step>
+          <Step order="3">Extract authentication from ConnectorAuthType</Step>
+          <Step order="4">Build FiservemeaRefundRequest</Step>
+          <Step order="5">Add Authorization header with Bearer token</Step>
+          <Step order="6">Send HTTP POST to base_url/refunds</Step>
+          <Step order="7">Parse FiservemeaRefundResponse</Step>
+          <Step order="8">Map status to RefundStatus</Step>
+          <Step order="9">Return RouterDataV2 with RefundsResponseData</Step>
+        </Steps>
+      </Flow>
+
+      <Flow id="DF-005" name="PSyncFlow" status="NOT_IMPLEMENTED">
+        <Steps>
+          <Step order="1">Receive gRPC PaymentServiceSyncRequest</Step>
+          <Step order="2">Transform to RouterDataV2&lt;PSync, ...&gt;</Step>
+          <Step order="3">Extract authentication from ConnectorAuthType</Step>
+          <Step order="4">Add Authorization header with Bearer token</Step>
+          <Step order="5">Send HTTP GET to base_url/payments/{id}</Step>
+          <Step order="6">Parse FiservemeaPaymentsResponse</Step>
+          <Step order="7">Map status to AttemptStatus</Step>
+          <Step order="8">Return RouterDataV2 with PaymentsResponseData</Step>
+        </Steps>
+      </Flow>
+
+      <Flow id="DF-006" name="RSyncFlow" status="NOT_IMPLEMENTED">
+        <Steps>
+          <Step order="1">Receive gRPC PaymentServiceRefundSyncRequest</Step>
+          <Step order="2">Transform to RouterDataV2&lt;RSync, ...&gt;</Step>
+          <Step order="3">Extract authentication from ConnectorAuthType</Step>
+          <Step order="4">Add Authorization header with Bearer token</Step>
+          <Step order="5">Send HTTP GET to base_url/refunds/{id}</Step>
+          <Step order="6">Parse FiservemeaRefundResponse</Step>
+          <Step order="7">Map status to RefundStatus</Step>
+          <Step order="8">Return RouterDataV2 with RefundsResponseData</Step>
+        </Steps>
+      </Flow>
+
+      <Flow id="DF-007" name="ErrorHandlingFlow" status="IMPLEMENTED">
         <Steps>
           <Step order="1">Receive HTTP error response</Step>
           <Step order="2">Parse FiservemeaErrorResponse</Step>
@@ -226,6 +344,7 @@
           <Item>All connector code resides in backend/connector-integration crate</Item>
           <Item>No standalone binaries or executables in connector directories</Item>
           <Item>cargo run executes the main grpc-server binary</Item>
+          <Item>Workspace members configured correctly in Cargo.toml</Item>
         </Implementation>
       </Principle>
 
@@ -268,10 +387,20 @@
           <Item>Create gRPC integration tests for all flows</Item>
         </Implementation>
       </Principle>
+
+      <Principle id="AP-006" name="ProductionReady">
+        <Description>All code must be production-ready with no placeholders or TODOs.</Description>
+        <Implementation>
+          <Item>No TODO comments in any code</Item>
+          <Item>No unimplemented!() macros</Item>
+          <Item>No mock implementations in production code</Item>
+          <Item>Complete error handling for all code paths</Item>
+        </Implementation>
+      </Principle>
     </DesignPrinciples>
 
     <ModuleStructure>
-      <Module name="fiservemea.rs" path="backend/connector-integration/src/connectors/fiservemea.rs">
+      <Module name="fiservemea.rs" path="backend/connector-integration/src/connectors/fiservemea.rs" status="PARTIAL">
         <Responsibilities>
           <Item>Connector struct definition with PhantomData</Item>
           <Item>ConnectorCommon trait implementation</Item>
@@ -280,9 +409,15 @@
           <Item>Authentication header generation</Item>
           <Item>Error response building</Item>
         </Responsibilities>
+        <CurrentState>
+          <Item>Connector struct defined</Item>
+          <Item>ConnectorCommon implemented</Item>
+          <Item>Authorize flow fully implemented</Item>
+          <Item>All other flows have empty trait implementations</Item>
+        </CurrentState>
       </Module>
 
-      <Module name="transformers.rs" path="backend/connector-integration/src/connectors/fiservemea/transformers.rs">
+      <Module name="transformers.rs" path="backend/connector-integration/src/connectors/fiservemea/transformers.rs" status="PARTIAL">
         <Responsibilities>
           <Item>FiservemeaAuthType definition and conversion</Item>
           <Item>FiservemeaPaymentsRequest definition</Item>
@@ -292,9 +427,17 @@
           <Item>TryFrom implementations for response transformation</Item>
           <Item>Status mapping logic</Item>
         </Responsibilities>
+        <CurrentState>
+          <Item>FiservemeaAuthType implemented</Item>
+          <Item>FiservemeaPaymentsRequest implemented</Item>
+          <Item>FiservemeaPaymentsResponse implemented</Item>
+          <Item>FiservemeaErrorResponse implemented</Item>
+          <Item>Authorize flow transformers implemented</Item>
+          <Item>Missing: Capture, Void, Refund, Sync transformers</Item>
+        </CurrentState>
       </Module>
 
-      <Module name="tests" path="backend/grpc-server/tests/fiservemea_test.rs">
+      <Module name="tests" path="backend/grpc-server/tests/fiservemea_test.rs" status="NOT_IMPLEMENTED">
         <Responsibilities>
           <Item>gRPC integration tests for all flows</Item>
           <Item>Payment method specific tests</Item>
@@ -329,7 +472,7 @@
   <!-- SECTION 4: API DESIGN -->
   <APIDesign>
     <Endpoints>
-      <Endpoint id="EP-001" method="POST" path="/payments" flow="Authorize">
+      <Endpoint id="EP-001" method="POST" path="/payments" flow="Authorize" status="IMPLEMENTED">
         <Description>Create a new payment authorization</Description>
         <RequestHeaders>
           <Header name="Content-Type" value="application/json" required="true"/>
@@ -356,7 +499,7 @@
         </ErrorResponses>
       </Endpoint>
 
-      <Endpoint id="EP-002" method="POST" path="/payments/{id}/capture" flow="Capture">
+      <Endpoint id="EP-002" method="POST" path="/payments/{id}/capture" flow="Capture" status="NOT_IMPLEMENTED">
         <Description>Capture a previously authorized payment</Description>
         <RequestHeaders>
           <Header name="Content-Type" value="application/json" required="true"/>
@@ -372,7 +515,7 @@
         </ResponseBody>
       </Endpoint>
 
-      <Endpoint id="EP-003" method="POST" path="/payments/{id}/void" flow="Void">
+      <Endpoint id="EP-003" method="POST" path="/payments/{id}/void" flow="Void" status="NOT_IMPLEMENTED">
         <Description>Void a pending authorization</Description>
         <RequestHeaders>
           <Header name="Content-Type" value="application/json" required="true"/>
@@ -384,7 +527,7 @@
         </ResponseBody>
       </Endpoint>
 
-      <Endpoint id="EP-004" method="POST" path="/refunds" flow="Refund">
+      <Endpoint id="EP-004" method="POST" path="/refunds" flow="Refund" status="NOT_IMPLEMENTED">
         <Description>Create a refund</Description>
         <RequestHeaders>
           <Header name="Content-Type" value="application/json" required="true"/>
@@ -403,7 +546,7 @@
         </ResponseBody>
       </Endpoint>
 
-      <Endpoint id="EP-005" method="GET" path="/payments/{id}" flow="PSync">
+      <Endpoint id="EP-005" method="GET" path="/payments/{id}" flow="PSync" status="NOT_IMPLEMENTED">
         <Description>Retrieve payment status</Description>
         <RequestHeaders>
           <Header name="Authorization" value="Bearer {api_key}" required="true"/>
@@ -416,7 +559,7 @@
         </ResponseBody>
       </Endpoint>
 
-      <Endpoint id="EP-006" method="GET" path="/refunds/{id}" flow="RSync">
+      <Endpoint id="EP-006" method="GET" path="/refunds/{id}" flow="RSync" status="NOT_IMPLEMENTED">
         <Description>Retrieve refund status</Description>
         <RequestHeaders>
           <Header name="Authorization" value="Bearer {api_key}" required="true"/>
@@ -498,7 +641,7 @@
   <!-- SECTION 5: STORAGE REQUIREMENTS -->
   <StorageRequirements>
     <DataModels>
-      <Model name="FiservemeaAuthType">
+      <Model name="FiservemeaAuthType" status="IMPLEMENTED">
         <Purpose>Store connector authentication credentials</Purpose>
         <Fields>
           <Field name="api_key" type="Secret&lt;String&gt;" required="true" description="API key for authentication"/>
@@ -514,7 +657,7 @@
         </ForbiddenStorage>
       </Model>
 
-      <Model name="FiservemeaPaymentsRequest">
+      <Model name="FiservemeaPaymentsRequest" status="IMPLEMENTED">
         <Purpose>Request payload for payment authorization</Purpose>
         <Fields>
           <Field name="amount" type="i64" required="true" description="Amount in minor units"/>
@@ -529,7 +672,7 @@
         </Validation>
       </Model>
 
-      <Model name="FiservemeaPaymentsResponse">
+      <Model name="FiservemeaPaymentsResponse" status="IMPLEMENTED">
         <Purpose>Response payload from payment endpoint</Purpose>
         <Fields>
           <Field name="id" type="String" required="true" description="Transaction ID"/>
@@ -539,11 +682,54 @@
         </Fields>
       </Model>
 
-      <Model name="FiservemeaErrorResponse">
+      <Model name="FiservemeaErrorResponse" status="IMPLEMENTED">
         <Purpose>Error response from connector</Purpose>
         <Fields>
           <Field name="code" type="String" required="true" description="Error code"/>
           <Field name="message" type="String" required="true" description="Error message"/>
+        </Fields>
+      </Model>
+
+      <Model name="FiservemeaCaptureRequest" status="NOT_IMPLEMENTED">
+        <Purpose>Request payload for capture operation</Purpose>
+        <Fields>
+          <Field name="amount" type="Option&lt;i64&gt;" required="false" description="Amount to capture (None for full)"/>
+        </Fields>
+      </Model>
+
+      <Model name="FiservemeaCaptureResponse" status="NOT_IMPLEMENTED">
+        <Purpose>Response payload from capture endpoint</Purpose>
+        <Fields>
+          <Field name="id" type="String" required="true" description="Transaction ID"/>
+          <Field name="status" type="String" required="true" description="Transaction status"/>
+          <Field name="captured_amount" type="i64" required="true" description="Captured amount"/>
+        </Fields>
+      </Model>
+
+      <Model name="FiservemeaVoidResponse" status="NOT_IMPLEMENTED">
+        <Purpose>Response payload from void endpoint</Purpose>
+        <Fields>
+          <Field name="id" type="String" required="true" description="Transaction ID"/>
+          <Field name="status" type="String" required="true" description="Transaction status"/>
+        </Fields>
+      </Model>
+
+      <Model name="FiservemeaRefundRequest" status="NOT_IMPLEMENTED">
+        <Purpose>Request payload for refund operation</Purpose>
+        <Fields>
+          <Field name="payment_id" type="String" required="true" description="Original payment ID"/>
+          <Field name="amount" type="Option&lt;i64&gt;" required="false" description="Refund amount (None for full)"/>
+          <Field name="currency" type="String" required="true" description="Currency code"/>
+          <Field name="reason" type="Option&lt;String&gt;" required="false" description="Refund reason"/>
+        </Fields>
+      </Model>
+
+      <Model name="FiservemeaRefundResponse" status="NOT_IMPLEMENTED">
+        <Purpose>Response payload from refund endpoint</Purpose>
+        <Fields>
+          <Field name="id" type="String" required="true" description="Refund ID"/>
+          <Field name="status" type="String" required="true" description="Refund status"/>
+          <Field name="amount" type="i64" required="true" description="Refunded amount"/>
         </Fields>
       </Model>
     </DataModels>
@@ -648,7 +834,7 @@
 
     <ComplianceItem id="CC-004" category="SOC2" priority="HIGH">
       <Requirement>Access control</Requirement>
-      <Description>Restrict access to sensitive data</Requirement>
+      <Description>Restrict access to sensitive data</Description>
       <Verification>
         <Check>Role-based access control</Check>
         <Check>Audit logging for access</Check>
@@ -854,7 +1040,7 @@
   <!-- SECTION 8: IMPLEMENTATION TASKS -->
   <ImplementationTasks>
     <Phase id="PHASE-1" name="Foundation Setup">
-      <Task id="TASK-001" priority="CRITICAL" estimatedHours="2">
+      <Task id="TASK-001" priority="CRITICAL" estimatedHours="1">
         <Title>Verify Existing Connector Structure</Title>
         <Description>Review and verify the existing fiservemea connector structure</Description>
         <Deliverables>
@@ -865,101 +1051,90 @@
         <Dependencies>None</Dependencies>
       </Task>
 
-      <Task id="TASK-002" priority="CRITICAL" estimatedHours="4">
-        <Title>Complete Authorize Flow Implementation</Title>
-        <Description>Implement full ConnectorIntegrationV2 for Authorize flow</Description>
+      <Task id="TASK-002" priority="CRITICAL" estimatedHours="2">
+        <Title>Enhance Authorize Flow Implementation</Title>
+        <Description>Enhance existing Authorize flow with payment method support</Description>
+        <Deliverables>
+          <Deliverable>Enhanced payment method handling in transformers</Deliverable>
+          <Deliverable>Card payment support</Deliverable>
+          <Deliverable>Digital wallet support (Apple Pay, Google Pay)</Deliverable>
+        </Deliverables>
+        <Dependencies>TASK-001</Dependencies>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-2" name="Core Payment Flows">
+      <Task id="TASK-003" priority="CRITICAL" estimatedHours="3">
+        <Title>Implement Capture Flow</Title>
+        <Description>Implement ConnectorIntegrationV2 for Capture flow</Description>
         <Deliverables>
           <Deliverable>Complete get_headers implementation</Deliverable>
           <Deliverable>Complete get_url implementation</Deliverable>
           <Deliverable>Complete get_request_body implementation</Deliverable>
           <Deliverable>Complete handle_response_v2 implementation</Deliverable>
           <Deliverable>Complete get_error_response_v2 implementation</Deliverable>
+          <Deliverable>FiservemeaCaptureRequest transformer</Deliverable>
+          <Deliverable>FiservemeaCaptureResponse transformer</Deliverable>
         </Deliverables>
         <Dependencies>TASK-001</Dependencies>
       </Task>
 
-      <Task id="TASK-003" priority="CRITICAL" estimatedHours="3">
-        <Title>Complete Transformer Implementations</Title>
-        <Description>Implement all request/response transformers</Description>
-        <Deliverables>
-          <Deliverable>FiservemeaPaymentsRequest with all fields</Deliverable>
-          <Deliverable>FiservemeaPaymentsResponse with all fields</Deliverable>
-          <Deliverable>FiservemeaErrorResponse with all fields</Deliverable>
-          <Deliverable>TryFrom implementations for all transformations</Deliverable>
-          <Deliverable>Complete status mapping logic</Deliverable>
-        </Deliverables>
-        <Dependencies>TASK-001</Dependencies>
-      </Task>
-
-      <Task id="TASK-004" priority="HIGH" estimatedHours="2">
-        <Title>Implement Payment Method Support</Title>
-        <Description>Add support for all payment methods</Description>
-        <Deliverables>
-          <Deliverable>Card payment handling</Deliverable>
-          <Deliverable>Apple Pay handling</Deliverable>
-          <Deliverable>Google Pay handling</Deliverable>
-          <Deliverable>Payment method validation</Deliverable>
-        </Deliverables>
-        <Dependencies>TASK-002, TASK-003</Dependencies>
-      </Task>
-    </Phase>
-
-    <Phase id="PHASE-2" name="Core Payment Flows">
-      <Task id="TASK-005" priority="CRITICAL" estimatedHours="3">
-        <Title>Implement Capture Flow</Title>
-        <Description>Implement ConnectorIntegrationV2 for Capture flow</Description>
-        <Deliverables>
-          <Deliverable>Complete Capture flow implementation</Deliverable>
-          <Deliverable>Capture request/response transformers</Deliverable>
-          <Deliverable>Partial capture support</Deliverable>
-        </Deliverables>
-        <Dependencies>TASK-002, TASK-003</Dependencies>
-      </Task>
-
-      <Task id="TASK-006" priority="CRITICAL" estimatedHours="2">
+      <Task id="TASK-004" priority="CRITICAL" estimatedHours="2">
         <Title>Implement Void Flow</Title>
         <Description>Implement ConnectorIntegrationV2 for Void flow</Description>
         <Deliverables>
-          <Deliverable>Complete Void flow implementation</Deliverable>
-          <Deliverable>Void request/response transformers</Deliverable>
+          <Deliverable>Complete get_headers implementation</Deliverable>
+          <Deliverable>Complete get_url implementation</Deliverable>
+          <Deliverable>Complete get_request_body implementation</Deliverable>
+          <Deliverable>Complete handle_response_v2 implementation</Deliverable>
+          <Deliverable>Complete get_error_response_v2 implementation</Deliverable>
+          <Deliverable>FiservemeaVoidResponse transformer</Deliverable>
         </Deliverables>
-        <Dependencies>TASK-002, TASK-003</Dependencies>
+        <Dependencies>TASK-001</Dependencies>
       </Task>
 
-      <Task id="TASK-007" priority="CRITICAL" estimatedHours="3">
+      <Task id="TASK-005" priority="CRITICAL" estimatedHours="3">
         <Title>Implement Refund Flow</Title>
         <Description>Implement ConnectorIntegrationV2 for Refund flow</Description>
         <Deliverables>
-          <Deliverable>Complete Refund flow implementation</Deliverable>
-          <Deliverable>Refund request/response transformers</Deliverable>
-          <Deliverable>Partial refund support</Deliverable>
+          <Deliverable>Complete get_headers implementation</Deliverable>
+          <Deliverable>Complete get_url implementation</Deliverable>
+          <Deliverable>Complete get_request_body implementation</Deliverable>
+          <Deliverable>Complete handle_response_v2 implementation</Deliverable>
+          <Deliverable>Complete get_error_response_v2 implementation</Deliverable>
+          <Deliverable>FiservemeaRefundRequest transformer</Deliverable>
+          <Deliverable>FiservemeaRefundResponse transformer</Deliverable>
         </Deliverables>
-        <Dependencies>TASK-002, TASK-003</Dependencies>
+        <Dependencies>TASK-001</Dependencies>
       </Task>
 
-      <Task id="TASK-008" priority="CRITICAL" estimatedHours="2">
+      <Task id="TASK-006" priority="CRITICAL" estimatedHours="2">
         <Title>Implement PSync Flow</Title>
         <Description>Implement ConnectorIntegrationV2 for PSync flow</Description>
         <Deliverables>
-          <Deliverable>Complete PSync flow implementation</Deliverable>
-          <Deliverable>Sync request/response transformers</Deliverable>
+          <Deliverable>Complete get_headers implementation</Deliverable>
+          <Deliverable>Complete get_url implementation</Deliverable>
+          <Deliverable>Complete handle_response_v2 implementation</Deliverable>
+          <Deliverable>Complete get_error_response_v2 implementation</Deliverable>
         </Deliverables>
-        <Dependencies>TASK-002, TASK-003</Dependencies>
+        <Dependencies>TASK-001</Dependencies>
       </Task>
 
-      <Task id="TASK-009" priority="CRITICAL" estimatedHours="2">
+      <Task id="TASK-007" priority="CRITICAL" estimatedHours="2">
         <Title>Implement RSync Flow</Title>
         <Description>Implement ConnectorIntegrationV2 for RSync flow</Description>
         <Deliverables>
-          <Deliverable>Complete RSync flow implementation</Deliverable>
-          <Deliverable>Refund sync request/response transformers</Deliverable>
+          <Deliverable>Complete get_headers implementation</Deliverable>
+          <Deliverable>Complete get_url implementation</Deliverable>
+          <Deliverable>Complete handle_response_v2 implementation</Deliverable>
+          <Deliverable>Complete get_error_response_v2 implementation</Deliverable>
         </Deliverables>
-        <Dependencies>TASK-007</Dependencies>
+        <Dependencies>TASK-005</Dependencies>
       </Task>
     </Phase>
 
     <Phase id="PHASE-3" name="Testing &amp; Quality">
-      <Task id="TASK-010" priority="CRITICAL" estimatedHours="4">
+      <Task id="TASK-008" priority="CRITICAL" estimatedHours="4">
         <Title>Write Unit Tests</Title>
         <Description>Create comprehensive unit tests for all transformers</Description>
         <Deliverables>
@@ -968,10 +1143,10 @@
           <Deliverable>Unit tests for status mapping</Deliverable>
           <Deliverable>Unit tests for error handling</Deliverable>
         </Deliverables>
-        <Dependencies>TASK-003, TASK-005, TASK-006, TASK-007, TASK-008, TASK-009</Dependencies>
+        <Dependencies>TASK-002, TASK-003, TASK-004, TASK-005, TASK-006, TASK-007</Dependencies>
       </Task>
 
-      <Task id="TASK-011" priority="CRITICAL" estimatedHours="6">
+      <Task id="TASK-009" priority="CRITICAL" estimatedHours="6">
         <Title>Write gRPC Integration Tests</Title>
         <Description>Create gRPC integration tests for all flows</Description>
         <Deliverables>
@@ -982,10 +1157,10 @@
           <Deliverable>PSync flow integration tests</Deliverable>
           <Deliverable>RSync flow integration tests</Deliverable>
         </Deliverables>
-        <Dependencies>TASK-005, TASK-006, TASK-007, TASK-008, TASK-009</Dependencies>
+        <Dependencies>TASK-003, TASK-004, TASK-005, TASK-006, TASK-007</Dependencies>
       </Task>
 
-      <Task id="TASK-012" priority="HIGH" estimatedHours="3">
+      <Task id="TASK-010" priority="HIGH" estimatedHours="3">
         <Title>Write Error Scenario Tests</Title>
         <Description>Create tests for all error scenarios</Description>
         <Deliverables>
@@ -994,10 +1169,10 @@
           <Deliverable>Network error tests</Deliverable>
           <Deliverable>Business logic error tests</Deliverable>
         </Deliverables>
-        <Dependencies>TASK-010, TASK-011</Dependencies>
+        <Dependencies>TASK-008, TASK-009</Dependencies>
       </Task>
 
-      <Task id="TASK-013" priority="HIGH" estimatedHours="2">
+      <Task id="TASK-011" priority="CRITICAL" estimatedHours="2">
         <Title>Verify Compilation</Title>
         <Description>Ensure project compiles without errors</Description>
         <Deliverables>
@@ -1008,7 +1183,7 @@
         <Dependencies>All previous tasks</Dependencies>
       </Task>
 
-      <Task id="TASK-014" priority="HIGH" estimatedHours="2">
+      <Task id="TASK-012" priority="HIGH" estimatedHours="2">
         <Title>Run Linting</Title>
         <Description>Run and fix all linting issues</Description>
         <Deliverables>
@@ -1017,19 +1192,41 @@
           <Deliverable>No TODO comments</Deliverable>
           <Deliverable>No unimplemented!() macros</Deliverable>
         </Deliverables>
-        <Dependencies>TASK-013</Dependencies>
+        <Dependencies>TASK-011</Dependencies>
       </Task>
     </Phase>
 
     <Phase id="PHASE-4" name="Finalization">
-      <Task id="TASK-015" priority="CRITICAL" estimatedHours="2">
+      <Task id="TASK-013" priority="CRITICAL" estimatedHours="2">
         <Title>Verify Database Schema</Title>
         <Description>Ensure database schema is consistent with requirements</Description>
         <Deliverables>
           <Deliverable>Schema validation report</Deliverable>
           <Deliverable>Migration scripts if needed</Deliverable>
         </Deliverables>
-        <Dependencies>TASK-013</Dependencies>
+        <Dependencies>TASK-011</Dependencies>
+      </Task>
+
+      <Task id="TASK-014" priority="CRITICAL" estimatedHours="1">
+        <Title>Verify Single Binary Compilation</Title>
+        <Description>Ensure project compiles to single binary without creating additional binaries</Description>
+        <Deliverables>
+          <Deliverable>Confirmation of single binary output</Deliverable>
+          <Deliverable>Verification of workspace configuration</Deliverable>
+          <Deliverable>Test of cargo run command</Deliverable>
+        </Deliverables>
+        <Dependencies>TASK-011</Dependencies>
+      </Task>
+
+      <Task id="TASK-015" priority="CRITICAL" estimatedHours="1">
+        <Title>Verify Production Readiness</Title>
+        <Description>Ensure all code is production-ready with no placeholders</Description>
+        <Deliverables>
+          <Deliverable>Verification of no TODO comments</Deliverable>
+          <Deliverable>Verification of no unimplemented!() macros</Deliverable>
+          <Deliverable>Verification of no mock implementations</Deliverable>
+        </Deliverables>
+        <Dependencies>TASK-012</Dependencies>
       </Task>
 
       <Task id="TASK-016" priority="CRITICAL" estimatedHours="1">
