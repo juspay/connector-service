@@ -2802,6 +2802,124 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &PayLaterData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &PayLaterData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, pay_later_data) = value;
+        let payment_method = AdyenPaymentMethod::try_from((&item.router_data, pay_later_data))?;
+
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let return_url = item.router_data.request.get_router_return_url()?;
+        let additional_data = get_additional_data(&item.router_data);
+
+        let payment_method_wrapper = PaymentMethod::AdyenPaymentMethod(Box::new(payment_method));
+
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+
+        let delivery_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .get_optional_shipping(),
+        )
+        .and_then(Result::ok);
+
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+
+        let country_code =
+            get_country_code(item.router_data.resource_common_data.get_optional_billing());
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method: payment_method_wrapper,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model: None,
+            browser_info: None,
+            additional_data,
+            mpi_data: None,
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
+            shopper_name: get_shopper_name(
+                item.router_data.resource_common_data.get_optional_billing(),
+            ),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number: None,
+            billing_address,
+            delivery_address,
+            country_code,
+            line_items: Some(get_line_items(&item)),
+            shopper_reference: item
+                .router_data
+                .resource_common_data
+                .get_connector_customer_id()
+                .ok(),
+            store_payment_method: None,
+            channel: None,
+            shopper_statement: get_shopper_statement(&item.router_data),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store: adyen_metadata.store.clone(),
+            splits: None,
+            device_fingerprint: adyen_metadata.device_fingerprint.clone(),
+            platform_chargeback_logic: adyen_metadata.platform_chargeback_logic.clone(),
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+            session_validity: None,
+        })
+    }
+}
+
 fn get_redirect_extra_details<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
@@ -2878,95 +2996,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Self::try_from((item, gift_card.as_ref()))
                 }
                 PaymentMethodData::PayLater(ref pay_later_data) => {
-                    let payment_method =
-                        AdyenPaymentMethod::try_from((&item.router_data, pay_later_data))?;
-
-                    let amount = get_amount_data(&item);
-                    let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
-                    let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
-                    let return_url = item.router_data.request.get_router_return_url()?;
-                    let additional_data = get_additional_data(&item.router_data);
-
-                    let payment_method_wrapper =
-                        PaymentMethod::AdyenPaymentMethod(Box::new(payment_method));
-
-                    let billing_address = get_address_info(
-                        item.router_data
-                            .resource_common_data
-                            .address
-                            .get_payment_billing(),
-                    )
-                    .and_then(Result::ok);
-
-                    let delivery_address = get_address_info(
-                        item.router_data
-                            .resource_common_data
-                            .get_optional_shipping(),
-                    )
-                    .and_then(Result::ok);
-
-                    let adyen_metadata = get_adyen_metadata(
-                        item.router_data.request.metadata.clone().expose_option(),
-                    );
-
-                    let country_code = get_country_code(
-                        item.router_data.resource_common_data.get_optional_billing(),
-                    );
-
-                    Ok(Self {
-                        amount,
-                        merchant_account: auth_type.merchant_account,
-                        payment_method: payment_method_wrapper,
-                        reference: item
-                            .router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
-                        return_url,
-                        shopper_interaction,
-                        recurring_processing_model: None,
-                        browser_info: None,
-                        additional_data,
-                        mpi_data: None,
-                        telephone_number: item
-                            .router_data
-                            .resource_common_data
-                            .get_optional_billing_phone_number(),
-                        shopper_name: get_shopper_name(
-                            item.router_data.resource_common_data.get_optional_billing(),
-                        ),
-                        shopper_email: item
-                            .router_data
-                            .resource_common_data
-                            .get_optional_billing_email(),
-                        shopper_locale: item.router_data.request.locale.clone(),
-                        social_security_number: None,
-                        billing_address,
-                        delivery_address,
-                        country_code,
-                        line_items: Some(get_line_items(&item)),
-                        shopper_reference: item.router_data.resource_common_data.get_connector_customer_id().ok(),
-                        store_payment_method: None,
-                        channel: None,
-                        shopper_statement: get_shopper_statement(&item.router_data),
-                        shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-                        merchant_order_reference: item
-                            .router_data
-                            .request
-                            .merchant_order_reference_id
-                            .clone(),
-                        store: adyen_metadata.store.clone(),
-                        splits: None,
-                        device_fingerprint: adyen_metadata.device_fingerprint.clone(),
-                        platform_chargeback_logic: adyen_metadata.platform_chargeback_logic.clone(),
-                        metadata: item
-                            .router_data
-                            .request
-                            .metadata
-                            .clone()
-                            .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
-                        session_validity: None,
-                    })
+                    Self::try_from((item, pay_later_data))
                 }
                 PaymentMethodData::Voucher(_)
                 | PaymentMethodData::Crypto(_)
