@@ -171,21 +171,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-macros::create_all_prerequisites!(
-    connector_name: Fiservmea,
-    generic_type: T,
-    api: [
-        (
-            flow: Authorize,
-            request_body: FiservmeaAuthorizeRequest<T>,
-            response_body: FiservmeaAuthorizeResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        )
-    ],
-    amount_converters: [],
-    member_functions: {}
-);
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Fiservemea<T>
 {
@@ -218,9 +203,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: fiservemea::FiservmeaErrorResponse = res
+        let response: fiservemea::FiservemeaErrorResponse = res
             .response
-            .parse_struct("FiservmeaErrorResponse")
+            .parse_struct("FiservemeaErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
@@ -238,6 +223,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         })
     }
 }
+
+macros::create_all_prerequisites!(
+    connector_name: Fiservmea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: FiservmeaAuthorizeRequest<T>,
+            response_body: FiservmeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        )
+    ],
+    amount_converters: [],
+    member_functions: {}
+);
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
