@@ -8,8 +8,8 @@ pub mod fiservema;
 pub mod razorpayv2;
 
 pub use self::{
-    adyen::Adyen, authorizedotnet::Authorizedotnet, fiserv::Fiserv, mifinity::Mifinity,
-    razorpay::Razorpay, razorpayv2::RazorpayV2,
+    adyen::Adyen, authorizedotnet::Authorizedotnet, fiserv::Fiserv, fiservema::Fiservema,
+    mifinity::Mifinity, razorpay::Razorpay, razorpayv2::RazorpayV2,
 };
 
 pub mod elavon;
