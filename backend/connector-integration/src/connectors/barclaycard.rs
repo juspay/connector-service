@@ -25,6 +25,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    verification::SourceVerification,
 };
 use ring::{digest, hmac};
 use serde::Serialize;
@@ -55,16 +56,6 @@ macros::create_amount_converter_wrapper!(connector_name: Barclaycard, amount_typ
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
         IncrementalAuthorization,
         PaymentFlowData,
         PaymentsIncrementalAuthorizationData,
@@ -170,6 +161,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyRedirectResponse for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Barclaycard<T>
 {
 }
 
@@ -730,226 +731,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Capture,
-        PaymentFlowData,
-        PaymentsCaptureData,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Void,
-        PaymentFlowData,
-        PaymentVoidData,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PSync,
-        PaymentFlowData,
-        PaymentsSyncData,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        RSync,
-        RefundFlowData,
-        RefundSyncData,
-        RefundsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::PostAuthenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::Authenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::PreAuthenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::SubmitEvidence,
-        domain_types::connector_types::DisputeFlowData,
-        domain_types::connector_types::SubmitEvidenceData,
-        domain_types::connector_types::DisputeResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::DefendDispute,
-        domain_types::connector_types::DisputeFlowData,
-        domain_types::connector_types::DisputeDefendData,
-        domain_types::connector_types::DisputeResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::Accept,
-        domain_types::connector_types::DisputeFlowData,
-        domain_types::connector_types::AcceptDisputeData,
-        domain_types::connector_types::DisputeResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::RepeatPayment,
-        PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::SetupMandate,
-        PaymentFlowData,
-        domain_types::connector_types::SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::VoidPC,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::PaymentMethodToken,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentMethodTokenizationData<T>,
-        domain_types::connector_types::PaymentMethodTokenResponse,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::CreateConnectorCustomer,
-        PaymentFlowData,
-        domain_types::connector_types::ConnectorCustomerData,
-        domain_types::connector_types::ConnectorCustomerResponse,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::CreateAccessToken,
-        PaymentFlowData,
-        domain_types::connector_types::AccessTokenRequestData,
-        domain_types::connector_types::AccessTokenResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::CreateSessionToken,
-        PaymentFlowData,
-        domain_types::connector_types::SessionTokenRequestData,
-        domain_types::connector_types::SessionTokenResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::SdkSessionToken,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::CreateOrder,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentCreateOrderData,
-        domain_types::connector_types::PaymentCreateOrderResponse,
-    > for Barclaycard<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::MandateRevoke,
-        PaymentFlowData,
-        domain_types::connector_types::MandateRevokeRequestData,
-        domain_types::connector_types::MandateRevokeResponseData,
-    > for Barclaycard<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Barclaycard<T>

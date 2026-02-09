@@ -1780,6 +1780,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
+fn is_setup_future_usage_supported(
+    payment_method_type: Option<common_enums::PaymentMethodType>,
+) -> bool {
+    !matches!(
+        payment_method_type,
+        Some(common_enums::PaymentMethodType::Affirm)
+            | Some(common_enums::PaymentMethodType::Klarna)
+    )
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
@@ -1872,7 +1882,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_method_types,
             setup_future_usage,
         ) = if payment_method_token.is_some() {
-            (None, None, StripeBillingAddress::default(), None, None)
+            let setup_future_usage =
+                if is_setup_future_usage_supported(item.request.payment_method_type) {
+                    item.request.setup_future_usage
+                } else {
+                    None
+                };
+
+            (
+                None,
+                None,
+                StripeBillingAddress::default(),
+                None,
+                setup_future_usage,
+            )
         } else {
             let (payment_method_data, payment_method_type, billing_address) =
                 create_stripe_payment_method(
@@ -1910,12 +1933,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 payment_method_type.as_ref(),
             )?;
 
+            let setup_future_usage =
+                if is_setup_future_usage_supported(item.request.payment_method_type) {
+                    item.request.setup_future_usage
+                } else {
+                    None
+                };
+
             (
                 Some(payment_method_data),
                 None,
                 billing_address,
                 payment_method_type,
-                item.request.setup_future_usage,
+                setup_future_usage,
             )
         };
 

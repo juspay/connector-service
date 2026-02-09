@@ -84,10 +84,10 @@ use crate::{
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -325,6 +325,11 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
             grpc_api_types::payments::CardNetwork::Unionpay => Ok(Self::UnionPay),
             grpc_api_types::payments::CardNetwork::Rupay => Ok(Self::RuPay),
             grpc_api_types::payments::CardNetwork::Maestro => Ok(Self::Maestro),
+            grpc_api_types::payments::CardNetwork::InteracCard => Ok(Self::Interac),
+            grpc_api_types::payments::CardNetwork::Star => Ok(Self::Star),
+            grpc_api_types::payments::CardNetwork::Pulse => Ok(Self::Pulse),
+            grpc_api_types::payments::CardNetwork::Accel => Ok(Self::Accel),
+            grpc_api_types::payments::CardNetwork::Nyce => Ok(Self::Nyce),
             grpc_api_types::payments::CardNetwork::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CARD_NETWORK".to_owned(),
@@ -4032,8 +4037,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         };
 
         let connector_metadata = value
-            .merchant_account_metadata
-            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .connector_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
             .transpose()?;
 
         Ok(Self {
@@ -5476,6 +5481,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                 .connector_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
+            merchant_order_reference_id: value.merchant_order_reference_id,
         })
     }
 }
@@ -6206,6 +6212,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .connector_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
+            merchant_order_reference_id: value.merchant_order_reference_id,
         })
     }
 }
@@ -9387,6 +9394,7 @@ impl<
                     )
                 })
                 .transpose()?,
+            mandate_reference: None,
         })
     }
 }
@@ -9662,7 +9670,7 @@ impl
             ),
             customer_id: None,
             connector_customer: None,
-            description: None,
+            description: value.description,
             return_url: value.return_url.clone(),
             connector_meta_data: value
                 .merchant_account_metadata
@@ -9943,6 +9951,49 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+        })
+    }
+}
+
+impl ForeignTryFrom<(bool, RedirectDetailsResponse)>
+    for grpc_api_types::payments::PaymentServiceVerifyRedirectResponseResponse
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (source_verified, redirect_details_response): (bool, RedirectDetailsResponse),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            source_verified,
+            transaction_id: redirect_details_response
+                .resource_id
+                .map(|resource_id| {
+                    grpc_api_types::payments::Identifier::foreign_try_from(resource_id)
+                })
+                .transpose()?,
+            response_ref_id: redirect_details_response
+                .connector_response_reference_id
+                .map(|id| grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                }),
+            response_minor_amount: redirect_details_response
+                .response_minor_amount
+                .map(|amount| amount.get_amount_as_i64()),
+            response_currency: redirect_details_response
+                .response_currency
+                .map(grpc_api_types::payments::Currency::foreign_try_from)
+                .transpose()?
+                .map(|currency| currency.into()),
+            status: redirect_details_response
+                .status
+                .map(grpc_api_types::payments::PaymentStatus::foreign_from)
+                .map(|status| status as i32),
+            error_code: redirect_details_response.error_code,
+            error_reason: redirect_details_response.error_reason,
+            error_message: redirect_details_response.error_message,
+            raw_connector_response: redirect_details_response
+                .raw_connector_response
+                .map(|response| response.into()),
         })
     }
 }
