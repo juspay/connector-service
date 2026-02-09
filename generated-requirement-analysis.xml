@@ -1,0 +1,1401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RequirementAnalysis xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Metadata>
+    <Title>FiservEMEA Connector Integration Requirement Analysis</Title>
+    <Version>1.0.0</Title>
+    <GeneratedDate>2026-02-09</GeneratedDate>
+    <ConnectorName>FiservEMEA</ConnectorName>
+    <ConnectorType>Payment Gateway</ConnectorName>
+    <Region>EMEA (Europe, Middle East, Africa)</Region>
+    <ImplementationFramework>GRACE-UCS (Global Rapid Agentic Connector Exchange for UCS)</GenerationMethod>
+  </Metadata>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 1: SECURITY REQUIREMENTS -->
+  <!-- ================================================================= -->
+  <SecurityRequirements>
+    <Requirement id="SEC-001" priority="CRITICAL" category="Authentication">
+      <Title>HMAC-SHA256 Message Signature Authentication</Title>
+      <Description>All API requests must be authenticated using HMAC-SHA256 message signature.</Description>
+      <AcceptanceCriteria>
+        <Criterion>Signature generated using API-Key + ClientRequestId + Timestamp + RequestBody</Criterion>
+        <Criterion>Signature computed with HMAC-SHA256 algorithm using API Secret</Criterion>
+        <Criterion>Final signature Base64 encoded</Criterion>
+        <Criterion>Timestamp must be within 5 minutes of server time</Criterion>
+        <Criterion>Client-Request-Id must be unique per request (UUID v4 recommended)</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-001-01">Valid signature generates successful request</TestCase>
+        <TestCase id="TC-SEC-001-02">Invalid signature returns 401 Unauthorized</TestCase>
+        <TestCase id="TC-SEC-001-03">Expired timestamp (older than 5 minutes) returns 401</TestCase>
+        <TestCase id="TC-SEC-001-04">Duplicate Client-Request-Id handled appropriately</TestCase>
+      </TestCases>
+    </Requirement>
+
+    <Requirement id="SEC-002" priority="CRITICAL" category="CredentialManagement">
+      <Title>API Credential Storage and Handling</Title>
+      <Description>API Key and API Secret must be securely stored and never exposed in logs or error messages.</Description>
+      <AcceptanceCriteria>
+        <Criterion>API Key stored as Secret&lt;String&gt; using hyperswitch_masking</Criterion>
+        <Criterion>API Secret stored as Secret&lt;String&gt; using hyperswitch_masking</Criterion>
+        <Criterion>Credentials masked in all log outputs</Criterion>
+        <Criterion>Credentials not included in error responses</Criterion>
+        <Criterion>Credentials not serialized in debug output</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-002-01">Credentials masked in structured logs</TestCase>
+        <TestCase id="TC-SEC-002-02">Credentials not exposed in error stack traces</TestCase>
+        <TestCase id="TC-SEC-002-03">Credentials properly redacted in request/response logging</TestCase>
+      </TestCases>
+    </Requirement>
+
+    <Requirement id="SEC-003" priority="HIGH" category="PCICompliance">
+      <Title>PCI DSS Compliance for Card Data</Title>
+      <Description>Card data must be handled according to PCI DSS requirements.</Description>
+      <AcceptanceCriteria>
+        <Criterion>Card number never logged or stored in plain text</Criterion>
+        <Criterion>CVV/CVC never logged or stored</Criterion>
+        <Criterion>Card data masked in all transformer outputs</Criterion>
+        <Criterion>Use hyperswitch_masking for all sensitive card fields</Criterion>
+        <Criterion>Card data only transmitted to FiservEMEA API</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-003-01">Card number masked in request transformation</TestCase>
+        <TestCase id="TC-SEC-003-02">CVV not present in any log output</TestCase>
+        <TestCase id="TC-SEC-003-03">Expiry date handled securely</TestCase>
+      </TestCases>
+    </Requirement>
+
+    <Requirement id="SEC-004" priority="HIGH" category="TLS">
+      <Title>TLS 1.2+ for All Communications</Title>
+      <Description>All communications with FiservEMEA API must use TLS 1.2 or higher.</Description>
+      <AcceptanceCriteria>
+        <Criterion>HTTP client configured with rustls-tls</Criterion>
+        <Criterion>TLS 1.2 minimum version enforced</Criterion>
+        <Criterion>Certificate validation enabled</Criterion>
+        <Criterion>Insecure connections rejected</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-004-01">Connection succeeds with valid TLS certificate</TestCase>
+        <TestCase id="TC-SEC-004-02">Connection fails with invalid certificate</TestCase>
+        <TestCase id="TC-SEC-004-03">Connection fails with TLS 1.0/1.1</TestCase>
+      </TestCases>
+    </Requirement>
+
+    <Requirement id="SEC-005" priority="MEDIUM" category="InputValidation">
+      <Title>Request Input Validation</Title>
+      <Description>All input parameters must be validated before sending to FiservEMEA.</Description>
+      <AcceptanceCriteria>
+        <Criterion>Amount validated as positive number</Criterion>
+        <Criterion>Currency validated against supported currencies</Criterion>
+        <Criterion>Card number format validated (Luhn check optional)</Criterion>
+        <Criterion>Expiry date validated (not in past)</Criterion>
+        <Criterion>CVV length validated based on card brand</Criterion>
+      </AcceptanceCriteria>
+      <TestCases>
+        <TestCase id="TC-SEC-005-01">Negative amount rejected</TestCase>
+        <TestCase id="TC-SEC-005-02">Invalid currency code rejected</TestCase>
+        <TestCase id="TC-SEC-005-03">Past expiry date rejected</TestCase>
+        <TestCase id="TC-SEC-005-04">Invalid CVV length rejected</TestCase>
+      </TestCases>
+    </Requirement>
+  </SecurityRequirements>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 2: TECHNICAL SCOPE -->
+  <!-- ================================================================= -->
+  <TechnicalScope>
+    <CoreOperations>
+      <Operation id="OP-001" name="Authorize">
+        <Description>Process a payment authorization (sale or pre-auth).</Description>
+        <SuccessConditions>
+          <Condition>Transaction approved by FiservEMEA</Condition>
+          <Condition>Valid ipgTransactionId returned</Condition>
+          <Condition>Transaction state is AUTHORIZED or CAPTURED</Condition>
+          <Condition>Approval code received</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Transaction declined by processor</Condition>
+          <Condition>Invalid card details</Condition>
+          <Condition>Insufficient funds</Condition>
+          <Condition>Authentication failure</Condition>
+          <Condition>Network/timeout error</Condition>
+        </FailureConditions>
+        <RequestTypes>
+          <RequestType>PaymentCardSaleTransaction</RequestType>
+          <RequestType>PaymentCardPreAuthTransaction</RequestType>
+        </RequestTypes>
+      </Operation>
+
+      <Operation id="OP-002" name="Capture">
+        <Description>Capture a previously authorized payment.</Description>
+        <SuccessConditions>
+          <Condition>Pre-auth successfully captured</Condition>
+          <Condition>Transaction state changes to CAPTURED</Condition>
+          <Condition>Capture amount equals or less than authorized amount</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Original transaction not found</Condition>
+          <Condition>Transaction already captured</Condition>
+          <Condition>Capture amount exceeds authorized amount</Condition>
+          <Condition>Transaction already voided</Condition>
+        </FailureConditions>
+        <RequestTypes>
+          <RequestType>PostAuthTransaction</RequestType>
+        </RequestTypes>
+      </Operation>
+
+      <Operation id="OP-003" name="Void">
+        <Description>Cancel a previously authorized transaction.</Description>
+        <SuccessConditions>
+          <Condition>Transaction successfully voided</Condition>
+          <Condition>Transaction state changes to VOIDED</Condition>
+          <Condition>Void performed same day as original transaction</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Transaction already settled</Condition>
+          <Condition>Transaction already voided</Condition>
+          <Condition>Transaction not found</Condition>
+          <Condition>Void window expired</Condition>
+        </FailureConditions>
+        <RequestTypes>
+          <RequestType>VoidTransaction</RequestType>
+          <RequestType>VoidPreAuthTransactions</RequestType>
+        </RequestTypes>
+      </Operation>
+
+      <Operation id="OP-004" name="Refund">
+        <Description>Process a refund against a previous transaction.</Description>
+        <SuccessConditions>
+          <Condition>Refund successfully processed</Condition>
+          <Condition>Refund transaction created with new ipgTransactionId</Condition>
+          <Condition>Refund amount equals or less than original amount</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Original transaction not found</Condition>
+          <Condition>Refund amount exceeds original amount</Condition>
+          <Condition>Total refunded amount exceeds original amount</Condition>
+          <Condition>Merchant account not configured for refunds</Condition>
+        </FailureConditions>
+        <RequestTypes>
+          <RequestType>ReturnTransaction</RequestType>
+          <RequestType>PaymentCardCreditTransaction</RequestType>
+        </RequestTypes>
+      </Operation>
+
+      <Operation id="OP-005" name="PaymentSync">
+        <Description>Retrieve the current state of a payment transaction.</Description>
+        <SuccessConditions>
+          <Condition>Current transaction state retrieved</Condition>
+          <Condition>Transaction details returned</Condition>
+          <Condition>Processor response details included</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Transaction not found</Condition>
+          <Condition>Invalid transaction ID format</Condition>
+          <Condition>Authentication failure</Condition>
+        </FailureConditions>
+        <RequestTypes>
+          <RequestType>GET /payments/{transaction-id}</RequestType>
+        </RequestTypes>
+      </Operation>
+
+      <Operation id="OP-006" name="RefundSync">
+        <Description>Retrieve the current state of a refund transaction.</Description>
+        <SuccessConditions>
+          <Condition>Current refund state retrieved</Condition>
+          <Condition>Refund status determined</Condition>
+          <Condition>Processor response details included</Condition>
+        </SuccessConditions>
+        <FailureConditions>
+          <Condition>Refund transaction not found</Condition>
+          <Condition>Invalid transaction ID format</Condition>
+          <Condition>Authentication failure</Condition>
+        </FailureConditions>
+        <RequestTypes>
+          <RequestType>GET /payments/{transaction-id}</RequestType>
+        </RequestTypes>
+      </Operation>
+    </CoreOperations>
+
+    <PaymentMethods>
+      <PaymentMethod id="PM-001" name="Card">
+        <SupportedBrands>
+          <Brand>VISA</Brand>
+          <Brand>MASTERCARD</Brand>
+          <Brand>AMEX</Brand>
+          <Brand>JCB</Brand>
+          <Brand>DINERS</Brand>
+          <Brand>DISCOVER</Brand>
+          <Brand>MAESTRO</Brand>
+        </SupportedBrands>
+        <RequiredFields>
+          <Field>card_number</Field>
+          <Field>card_exp_month</Field>
+          <Field>card_exp_year</Field>
+          <Field>card_cvc</Field>
+        </RequiredFields>
+        <OptionalFields>
+          <Field>card_holder_name</Field>
+          <Field>card_issuer</Field>
+          <Field>card_network</Field>
+        </OptionalFields>
+      </PaymentMethod>
+    </PaymentMethods>
+
+    <Currencies>
+      <Currency code="GBP" name="British Pound"/>
+      <Currency code="EUR" name="Euro"/>
+      <Currency code="USD" name="US Dollar"/>
+      <Currency code="CHF" name="Swiss Franc"/>
+      <Currency code="SEK" name="Swedish Krona"/>
+      <Currency code="NOK" name="Norwegian Krone"/>
+      <Currency code="DKK" name="Danish Krone"/>
+      <Currency code="PLN" name="Polish Zloty"/>
+      <Currency code="CZK" name="Czech Koruna"/>
+      <Currency code="HUF" name="Hungarian Forint"/>
+    </Currencies>
+  </TechnicalScope>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 3: ARCHITECTURE GUIDANCE -->
+  <!-- ================================================================= -->
+  <ArchitectureGuidance>
+    <DesignPrinciples>
+      <Principle id="ARCH-001" name="ModularStructure">
+        <Description>Connector implementation follows UCS modular architecture pattern.</Description>
+        <Implementation>
+          <Item>Main connector file: backend/connector-integration/src/connectors/fiservemea.rs</Item>
+          <Item>Transformers: backend/connector-integration/src/connectors/fiservemea/transformers.rs</Item>
+          <Item>Separate modules for request/response types</Item>
+          <Item>Re-use common utilities from backend/common_utils</Item>
+        </Implementation>
+      </Principle>
+
+      <Principle id="ARCH-002" name="GenericConnectorPattern">
+        <Description>Use generic connector struct with PaymentMethodDataTypes constraint.</Description>
+        <Implementation>
+          <Item>struct FiservEMEA&lt;T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize&gt;</Item>
+          <Item>Support multiple payment methods through generic type</Item>
+          <Item>Type-safe request/response transformations</Item>
+        </Implementation>
+      </Principle>
+
+      <Principle id="ARCH-003" name="TraitBasedIntegration">
+        <Description>Implement ConnectorIntegrationV2 trait for all flows.</Description>
+        <Implementation>
+          <Item>Authorize flow: ConnectorIntegrationV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Item>
+          <Item>Capture flow: ConnectorIntegrationV2&lt;Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData&gt;</Item>
+          <Item>Void flow: ConnectorIntegrationV2&lt;Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData&gt;</Item>
+          <Item>Refund flow: ConnectorIntegrationV2&lt;Refund, RefundFlowData, RefundsData, RefundsResponseData&gt;</Item>
+          <Item>PSync flow: ConnectorIntegrationV2&lt;PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData&gt;</Item>
+          <Item>RSync flow: ConnectorIntegrationV2&lt;RSync, RefundFlowData, RefundSyncData, RefundsResponseData&gt;</Item>
+        </Implementation>
+      </Principle>
+
+      <Principle id="ARCH-004" name="MacroBasedImplementation">
+        <Description>Use UCS macros for consistent connector implementation.</Description>
+        <Implementation>
+          <Item>create_all_prerequisites! macro for API definitions</Item>
+          <Item>macro_connector_implementation! for flow implementations</Item>
+          <Item>with_error_response_body! macro for error handling</Item>
+        </Implementation>
+      </Principle>
+
+      <Principle id="ARCH-005" name="SingleBinaryWorkspace">
+        <Description>Ensure workspace builds as single binary to avoid cargo run confusion.</Description>
+        <Implementation>
+          <Item>No [[bin]] sections in Cargo.toml</Item>
+          <Item>Single lib target in connector-integration crate</Item>
+          <Item>Binary only in grpc-server crate</Item>
+          <Item>All workspace members configured as library crates except grpc-server</Item>
+        </Implementation>
+      </Principle>
+    </DesignPrinciples>
+
+    <ModuleStructure>
+      <Module name="MainConnector" path="backend/connector-integration/src/connectors/fiservemea.rs">
+        <Responsibilities>
+          <Item>Connector struct definition</Item>
+          <Item>Trait implementations for all flows</Item>
+          <Item>Authentication header generation</Item>
+          <Item>URL construction for endpoints</Item>
+          <Item>Error response building</Item>
+        </Responsibilities>
+      </Module>
+
+      <Module name="Transformers" path="backend/connector-integration/src/connectors/fiservemea/transformers.rs">
+        <Responsibilities>
+          <Item>Request type definitions (FiservEMEAPaymentsRequest, etc.)</Item>
+          <Item>Response type definitions (FiservEMEAPaymentsResponse, etc.)</Item>
+          <Item>Auth type definition (FiservEMEAAuthType)</Item>
+          <Item>Error response type (FiservEMEAErrorResponse)</Item>
+          <Item>RouterData type aliases</Item>
+          <Item>ForeignTryFrom implementations for transformations</Item>
+        </Responsibilities>
+      </Module>
+
+      <Module name="Enums" location="backend/common_enums/src/enums.rs">
+        <Responsibilities>
+          <Item>Add FiservEMEA to ConnectorEnum</Item>
+          <Item>Ensure all required enums are present</Item>
+        </Responsibilities>
+      </Module>
+
+      <Module name="DomainTypes" location="backend/domain_types/src/connector_types.rs">
+        <Responsibilities>
+          <Item>Add FiservEMEA to ConnectorEnum</Item>
+          <Item>Add fiservemea field to Connectors struct</Item>
+        </Responsibilities>
+      </Module>
+
+      <Module name="Config" location="config/*.toml">
+        <Responsibilities>
+          <Item>Add fiservemea.base_url configuration</Item>
+          <Item>Configure for development, sandbox, production environments</Item>
+        </Responsibilities>
+      </Module>
+    </ModuleStructure>
+
+    <TestabilityConsiderations>
+      <Consideration id="TEST-001" name="UnitTests">
+        <Description>Comprehensive unit tests for all transformers.</Description>
+        <Coverage>
+          <Item>Request serialization tests</Item>
+          <Item>Response deserialization tests</Item>
+          <Item>Status mapping tests</Item>
+          <Item>Error parsing tests</Item>
+          <Item>Signature generation tests</Item>
+        </Coverage>
+      </Consideration>
+
+      <Consideration id="TEST-002" name="IntegrationTests">
+        <Description>Integration tests for complete flows.</Description>
+        <Coverage>
+          <Item>End-to-end authorize flow</Item>
+          <Item>Capture flow with pre-auth</Item>
+          <Item>Void flow scenarios</Item>
+          <Item>Refund flow scenarios</Item>
+          <Item>Sync operations</Item>
+        </Coverage>
+      </Consideration>
+
+      <Consideration id="TEST-003" name="MockServer">
+        <Description>Mock FiservEMEA API for testing.</Description>
+        <Implementation>
+          <Item>Use wiremock or similar for HTTP mocking</Item>
+          <Item>Mock success and failure responses</Item>
+          <Item>Mock timeout scenarios</Item>
+          <Item>Mock authentication failures</Item>
+        </Implementation>
+      </Consideration>
+    </TestabilityConsiderations>
+  </ArchitectureGuidance>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 4: API DESIGN -->
+  <!-- ================================================================= -->
+  <APIDesign>
+    <Endpoints>
+      <Endpoint id="EP-001" name="PrimaryTransaction">
+        <Method>POST</Method>
+        <Path>/ipp/payments-gateway/v2/payments</Path>
+        <BaseUrl>https://prod.emea.api.fiservapps.com/sandbox</BaseUrl>
+        <Description>Create a primary transaction (sale, pre-auth, credit).</Description>
+        <RequestHeaders>
+          <Header name="Content-Type" required="true">application/json</Header>
+          <Header name="Client-Request-Id" required="true">UUID v4</Header>
+          <Header name="Api-Key" required="true">Merchant API Key</Header>
+          <Header name="Timestamp" required="true">Epoch milliseconds</Header>
+          <Header name="Message-Signature" required="true">Base64 HMAC-SHA256</Header>
+        </RequestHeaders>
+        <RequestBody>
+          <Field name="requestType" required="true" type="enum">
+            <Values>PaymentCardSaleTransaction, PaymentCardPreAuthTransaction, PaymentCardCreditTransaction</Values>
+          </Field>
+          <Field name="transactionAmount" required="true" type="object">
+            <SubField name="total" required="true" type="string">Amount in major units</SubField>
+            <SubField name="currency" required="true" type="string">ISO 4217 currency code</SubField>
+          </Field>
+          <Field name="paymentMethod" required="true" type="object">
+            <SubField name="paymentCard" type="object">
+              <SubField name="number" required="true" type="string">Card number</SubField>
+              <SubField name="securityCode" required="true" type="string">CVV/CVC</SubField>
+              <SubField name="expiryDate" required="true" type="object">
+                <SubField name="month" required="true" type="string">MM</SubField>
+                <SubField name="year" required="true" type="string">YY</SubField>
+              </SubField>
+            </SubField>
+          </Field>
+          <Field name="order" required="false" type="object">
+            <SubField name="orderId" type="string">Merchant order ID</SubField>
+            <SubField name="billing" type="object">Billing details</SubField>
+            <SubField name="shipping" type="object">Shipping details</SubField>
+          </Field>
+        </RequestBody>
+        <ResponseCodes>
+          <Code value="200">Success</Code>
+          <Code value="400">Bad Request</Code>
+          <Code value="401">Unauthorized</Code>
+          <Code value="403">Forbidden</Code>
+          <Code value="404">Not Found</Code>
+          <Code value="409">Conflict</Code>
+          <Code value="415">Unsupported Media Type</Code>
+          <Code value="422">Unprocessable Entity (Declined)</Code>
+          <Code value="500">Internal Server Error</Code>
+          <Code value="502">Bad Gateway</Code>
+        </ResponseCodes>
+      </Endpoint>
+
+      <Endpoint id="EP-002" name="SecondaryTransaction">
+        <Method>POST</Method>
+        <Path>/ipp/payments-gateway/v2/payments/{transaction-id}</Path>
+        <BaseUrl>https://prod.emea.api.fiservapps.com/sandbox</BaseUrl>
+        <Description>Perform secondary transaction (void, post-auth, return).</Description>
+        <PathParameters>
+          <Parameter name="transaction-id" required="true">ipgTransactionId from primary transaction</Parameter>
+        </PathParameters>
+        <RequestHeaders>
+          <Header name="Content-Type" required="true">application/json</Header>
+          <Header name="Client-Request-Id" required="true">UUID v4</Header>
+          <Header name="Api-Key" required="true">Merchant API Key</Header>
+          <Header name="Timestamp" required="true">Epoch milliseconds</Header>
+          <Header name="Message-Signature" required="true">Base64 HMAC-SHA256</Header>
+        </RequestHeaders>
+        <RequestBody>
+          <Field name="requestType" required="true" type="enum">
+            <Values>VoidTransaction, VoidPreAuthTransactions, PostAuthTransaction, ReturnTransaction</Values>
+          </Field>
+          <Field name="transactionAmount" required="false" type="object">
+            <SubField name="total" required="true" type="string">Amount in major units</SubField>
+            <SubField name="currency" required="true" type="string">ISO 4217 currency code</SubField>
+          </Field>
+          <Field name="comments" required="false" type="string">Transaction comments</Field>
+        </RequestBody>
+      </Endpoint>
+
+      <Endpoint id="EP-003" name="TransactionInquiry">
+        <Method>GET</Method>
+        <Path>/ipp/payments-gateway/v2/payments/{transaction-id}</Path>
+        <BaseUrl>https://prod.emea.api.fiservapps.com/sandbox</BaseUrl>
+        <Description>Retrieve transaction state and details.</Description>
+        <PathParameters>
+          <Parameter name="transaction-id" required="true">ipgTransactionId to query</Parameter>
+        </PathParameters>
+        <RequestHeaders>
+          <Header name="Client-Request-Id" required="true">UUID v4</Header>
+          <Header name="Api-Key" required="true">Merchant API Key</Header>
+          <Header name="Timestamp" required="true">Epoch milliseconds</Header>
+          <Header name="Message-Signature" required="true">Base64 HMAC-SHA256</Header>
+        </RequestHeaders>
+        <ResponseBody>
+          <Field name="clientRequestId" type="string">Echoed request ID</Field>
+          <Field name="ipgTransactionId" type="string">Transaction ID</Field>
+          <Field name="transactionType" type="string">SALE, PREAUTH, CREDIT, VOID, RETURN, POSTAUTH</Field>
+          <Field name="transactionResult" type="string">APPROVED, DECLINED, FAILED, WAITING, PARTIAL, FRAUD</Field>
+          <Field name="transactionState" type="string">AUTHORIZED, CAPTURED, DECLINED, VOIDED, SETTLED, WAITING</Field>
+          <Field name="approvedAmount" type="object">Amount details</Field>
+          <Field name="processor" type="object">Processor response</Field>
+          <Field name="paymentMethodDetails" type="object">Payment method info</Field>
+        </ResponseBody>
+      </Endpoint>
+    </Endpoints>
+
+    <RequestSchemas>
+      <Schema name="FiservEMEAPaymentsRequest">
+        <Type>Struct</Type>
+        <Generics>&lt;T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize&gt;</Generics>
+        <Fields>
+          <Field name="request_type" type="String">Transaction type</Field>
+          <Field name="transaction_amount" type="TransactionAmount">Amount details</Field>
+          <Field name="payment_method" type="PaymentMethod">Payment method details</Field>
+          <Field name="order" type="Option&lt;Order&gt;">Order details</Field>
+          <Field name="authentication_request" type="Option&lt;AuthenticationRequest&gt;">3DS details</Field>
+        </Fields>
+      </Schema>
+
+      <Schema name="FiservEMEACaptureRequest">
+        <Type>Struct</Type>
+        <Fields>
+          <Field name="request_type" type="String">"PostAuthTransaction"</Field>
+          <Field name="transaction_amount" type="TransactionAmount">Amount to capture</Field>
+          <Field name="order" type="Option&lt;Order&gt;">Order details</Field>
+        </Fields>
+      </Schema>
+
+      <Schema name="FiservEMEARefundRequest">
+        <Type>Struct</Type>
+        <Fields>
+          <Field name="request_type" type="String">"ReturnTransaction"</Field>
+          <Field name="transaction_amount" type="TransactionAmount">Refund amount</Field>
+          <Field name="comments" type="Option&lt;String&gt;">Refund reason</Field>
+        </Fields>
+      </Schema>
+
+      <Schema name="FiservEMEAVoidRequest">
+        <Type>Struct</Type>
+        <Fields>
+          <Field name="request_type" type="String">"VoidTransaction"</Field>
+          <Field name="comments" type="Option&lt;String&gt;">Void reason</Field>
+        </Fields>
+      </Schema>
+
+      <Schema name="FiservEMEASyncRequest">
+        <Type>Struct</Type>
+        <Fields>
+          <Field name="transaction_id" type="String">Transaction ID to query</Field>
+        </Fields>
+      </Schema>
+    </RequestSchemas>
+
+    <ResponseSchemas>
+      <Schema name="FiservEMEAPaymentsResponse">
+        <Type>Struct</Type>
+        <Fields>
+          <Field name="client_request_id" type="String">Echoed request ID</Field>
+          <Field name="api_trace_id" type="String">API trace ID</Field>
+          <Field name="ipg_transaction_id" type="String">Transaction ID</Field>
+          <Field name="order_id" type="String">Order ID</Field>
+          <Field name="transaction_type" type="String">Transaction type</Field>
+          <Field name="transaction_result" type="String">APPROVED, DECLINED, FAILED, WAITING, PARTIAL, FRAUD</Field>
+          <Field name="transaction_state" type="String">AUTHORIZED, CAPTURED, DECLINED, VOIDED, SETTLED, WAITING</Field>
+          <Field name="approval_code" type="Option&lt;String&gt;">Approval code</Field>
+          <Field name="scheme_response_code" type="Option&lt;String&gt;">Scheme response code</Field>
+          <Field name="error_message" type="Option&lt;String&gt;">Error message</Field>
+          <Field name="approved_amount" type="Option&lt;TransactionAmount&gt;">Approved amount</Field>
+          <Field name="processor" type="Option&lt;Processor&gt;">Processor response</Field>
+          <Field name="payment_method_details" type="Option&lt;PaymentMethodDetails&gt;">Payment method info</Field>
+          <Field name="error" type="Option&lt;Error&gt;">Error details</Field>
+        </Fields>
+      </Schema>
+
+      <Schema name="FiservEMEAErrorResponse">
+        <Type>Struct</Type>
+        <Fields>
+          <Field name="client_request_id" type="String">Echoed request ID</Field>
+          <Field name="api_trace_id" type="String">API trace ID</Field>
+          <Field name="response_type" type="String">Error type</Field>
+          <Field name="error" type="Error">Error details</Field>
+        </Fields>
+      </Schema>
+
+      <Schema name="Error">
+        <Type>Struct</Type>
+        <Fields>
+          <Field name="code" type="String">Error code</Field>
+          <Field name="message" type="String">Error message</Field>
+          <Field name="details" type="Vec&lt;ErrorDetail&gt;">Detailed errors</Field>
+          <Field name="decline_reason_code" type="Option&lt;String&gt;">Decline reason</Field>
+        </Fields>
+      </Schema>
+
+      <Schema name="ErrorDetail">
+        <Type>Struct</Type>
+        <Fields>
+          <Field name="field" type="String">Field with error</Field>
+          <Field name="message" type="String">Error message</Field>
+        </Fields>
+      </Schema>
+    </ResponseSchemas>
+
+    <ValidationRules>
+      <Rule id="VAL-001" scope="Request">
+        <Description>Validate required fields are present</Description>
+        <Checks>
+          <Check>requestType is required and valid</Check>
+          <Check>transactionAmount.total is required and numeric</Check>
+          <Check>transactionAmount.currency is required and valid ISO code</Check>
+          <Check>paymentMethod is required for primary transactions</Check>
+        </Checks>
+      </Rule>
+
+      <Rule id="VAL-002" scope="CardData">
+        <Description>Validate card data format</Description>
+        <Checks>
+          <Check>Card number is 13-19 digits</Check>
+          <Check>Expiry month is 01-12</Check>
+          <Check>Expiry year is current or future</Check>
+          <Check>CVV is 3-4 digits</Check>
+        </Checks>
+      </Rule>
+
+      <Rule id="VAL-003" scope="Amount">
+        <Description>Validate amount constraints</Description>
+        <Checks>
+          <Check>Amount is greater than zero</Check>
+          <Check>Amount has maximum 2 decimal places</Check>
+          <Check>Capture amount <= authorized amount</Check>
+          <Check>Refund amount <= original amount</Check>
+        </Checks>
+      </Rule>
+
+      <Rule id="VAL-004" scope="Response">
+        <Description>Validate response structure</Description>
+        <Checks>
+          <Check>ipgTransactionId is present on success</Check>
+          <Check>transactionResult is present</Check>
+          <Check>transactionState is present</Check>
+          <Check>Error details present on failure</Check>
+        </Checks>
+      </Rule>
+    </ValidationRules>
+
+    <ErrorHandling>
+      <ErrorMapping>
+        <FiservEMEAError code="VALIDATION_ERROR" statusCode="400">
+          <UCSError>RequestValidationFailed</UCSError>
+          <Message>Invalid request format or missing required fields</Message>
+        </FiservEMEAError>
+        <FiservEMEAError code="AUTHENTICATION_FAILED" statusCode="401">
+          <UCSError>AuthenticationFailed</UCSError>
+          <Message>Invalid API credentials or signature</Message>
+        </FiservEMEAError>
+        <FiservEMEAError code="UNAUTHORIZED" statusCode="403">
+          <UCSError>AuthorizationFailed</UCSError>
+          <Message>Insufficient permissions for requested operation</Message>
+        </FiservEMEAError>
+        <FiservEMEAError code="TRANSACTION_NOT_FOUND" statusCode="404">
+          <UCSError>TransactionNotFound</UCSError>
+          <Message>Requested transaction does not exist</Message>
+        </FiservEMEAError>
+        <FiservEMEAError code="DUPLICATE_TRANSACTION" statusCode="409">
+          <UCSError>DuplicateTransaction</UCSError>
+          <Message>Transaction with same order ID already exists</Message>
+        </FiservEMEAError>
+        <FiservEMEAError code="UNSUPPORTED_MEDIA_TYPE" statusCode="415">
+          <UCSError>UnsupportedMediaType</UCSError>
+          <Message>Content-Type must be application/json</Message>
+        </FiservEMEAError>
+        <FiservEMEAError code="TRANSACTION_DECLINED" statusCode="422">
+          <UCSError>TransactionDeclined</UCSError>
+          <Message>Transaction declined by processor</Message>
+        </FiservEMEAError>
+        <FiservEMEAError code="SERVER_ERROR" statusCode="500">
+          <UCSError>UpstreamServerError</UCSError>
+          <Message>FiservEMEA internal server error</Message>
+        </FiservEMEAError>
+        <FiservEMEAError code="ENDPOINT_COMMUNICATION_ERROR" statusCode="502">
+          <UCSError>UpstreamConnectionError</UCSError>
+          <Message>Unable to communicate with payment processor</Message>
+        </FiservEMEAError>
+      </ErrorMapping>
+
+      <RetryStrategy>
+        <RetryableErrors>
+          <Error>SERVER_ERROR</Error>
+          <Error>ENDPOINT_COMMUNICATION_ERROR</Error>
+        </RetryableErrors>
+        <NonRetryableErrors>
+          <Error>VALIDATION_ERROR</Error>
+          <Error>AUTHENTICATION_FAILED</Error>
+          <Error>UNAUTHORIZED</Error>
+          <Error>TRANSACTION_DECLINED</Error>
+        </NonRetryableErrors>
+        <MaxRetries>3</MaxRetries>
+        <BackoffStrategy>Exponential with jitter</BackoffStrategy>
+      </RetryStrategy>
+    </ErrorHandling>
+  </APIDesign>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 5: STORAGE REQUIREMENTS -->
+  <!-- ================================================================= -->
+  <StorageRequirements>
+    <DataModels>
+      <Model name="ConnectorConfiguration">
+        <Description>Configuration for FiservEMEA connector.</Description>
+        <Fields>
+          <Field name="connector_name" type="String">"fiservemea"</Field>
+          <Field name="base_url" type="String">API base URL</Field>
+          <Field name="api_key" type="Secret&lt;String&gt;">Merchant API key</Field>
+          <Field name="api_secret" type="Secret&lt;String&gt;">Merchant API secret</Field>
+          <Field name="enabled" type="Boolean">Connector enabled flag</Field>
+        </Fields>
+        <Constraints>
+          <Constraint>api_key must be non-empty</Constraint>
+          <Constraint>api_secret must be non-empty</Constraint>
+          <Constraint>base_url must be valid HTTPS URL</Constraint>
+        </Constraints>
+      </Model>
+
+      <Model name="TransactionRecord">
+        <Description>Record of FiservEMEA transaction.</Description>
+        <Fields>
+          <Field name="connector_transaction_id" type="String">ipgTransactionId from FiservEMEA</Field>
+          <Field name="merchant_order_id" type="String">Merchant order ID</Field>
+          <Field name="transaction_type" type="String">SALE, PREAUTH, CREDIT, VOID, RETURN, POSTAUTH</Field>
+          <Field name="transaction_state" type="String">AUTHORIZED, CAPTURED, DECLINED, VOIDED, SETTLED</Field>
+          <Field name="transaction_result" type="String">APPROVED, DECLINED, FAILED, WAITING</Field>
+          <Field name="amount" type="Decimal">Transaction amount</Field>
+          <Field name="currency" type="String">ISO currency code</Field>
+          <Field name="approval_code" type="Option&lt;String&gt;">Processor approval code</Field>
+          <Field name="scheme_response_code" type="Option&lt;String&gt;">Scheme response code</Field>
+          <Field name="processor_reference" type="Option&lt;String&gt;">Processor reference number</Field>
+          <Field name="created_at" type="DateTime">Transaction timestamp</Field>
+          <Field name="updated_at" type="DateTime">Last update timestamp</Field>
+        </Fields>
+        <Indexes>
+          <Index name="idx_connector_transaction_id" unique="true">connector_transaction_id</Index>
+          <Index name="idx_merchant_order_id">merchant_order_id</Index>
+          <Index name="idx_transaction_state">transaction_state</Index>
+          <Index name="idx_created_at">created_at</Index>
+        </Indexes>
+      </Model>
+    </DataModels>
+
+    <IdentityMapping>
+      <Mapping>
+        <UCSField>connector_transaction_id</UCSField>
+        <FiservEMEAField>ipgTransactionId</FiservEMEAField>
+        <Description>Primary transaction identifier from FiservEMEA</Description>
+      </Mapping>
+      <Mapping>
+        <UCSField>merchant_order_id</UCSField>
+        <FiservEMEAField>orderId</FiservEMEAField>
+        <Description>Merchant's order identifier</Description>
+      </Mapping>
+      <Mapping>
+        <UCSField>attempt_status</UCSField>
+        <FiservEMEAField>transactionResult</FiservEMEAField>
+        <Description>Transaction result mapped to attempt status</Description>
+        <ValueMap>
+          <Map from="APPROVED" to="PaymentSuccess"/>
+          <Map from="DECLINED" to="PaymentFailure"/>
+          <Map from="FAILED" to="PaymentFailure"/>
+          <Map from="WAITING" to="Pending"/>
+          <Map from="PARTIAL" to="PartialSuccess"/>
+          <Map from="FRAUD" to="PaymentFailure"/>
+        </ValueMap>
+      </Mapping>
+      <Mapping>
+        <UCSField>capture_method</UCSField>
+        <FiservEMEAField>transactionType</FiservEMEAField>
+        <Description>Transaction type determines capture method</Description>
+        <ValueMap>
+          <Map from="SALE" to="Automatic"/>
+          <Map from="PREAUTH" to="Manual"/>
+        </ValueMap>
+      </Mapping>
+    </IdentityMapping>
+
+    <ForbiddenDataStorage>
+      <ForbiddenItem>
+        <DataType>Card Number (PAN)</DataType>
+        <Reason>PCI DSS compliance</Reason>
+        <Action>Never store, only transmit to FiservEMEA</Action>
+      </ForbiddenItem>
+      <ForbiddenItem>
+        <DataType>CVV/CVC</DataType>
+        <Reason>PCI DSS compliance</Reason>
+        <Action>Never store, only transmit to FiservEMEA</Action>
+      </ForbiddenItem>
+      <ForbiddenItem>
+        <DataType>API Secret</DataType>
+        <Reason>Security credential</Reason>
+        <Action>Store only in encrypted vault, never in application logs</Action>
+      </ForbiddenItem>
+      <ForbiddenItem>
+        <DataType>Full Request/Response Bodies</DataType>
+        <Reason>May contain sensitive data</Reason>
+        <Action>Log only masked/redacted versions</Action>
+      </ForbiddenItem>
+    </ForbiddenDataStorage>
+
+    <DatabaseSchema>
+      <Table name="connector_configurations">
+        <Columns>
+          <Column name="id" type="UUID" primaryKey="true"/>
+          <Column name="connector_name" type="VARCHAR(50)" notNull="true"/>
+          <Column name="merchant_id" type="VARCHAR(100)" notNull="true"/>
+          <Column name="config" type="JSONB" notNull="true"/>
+          <Column name="is_active" type="BOOLEAN" default="true"/>
+          <Column name="created_at" type="TIMESTAMP" default="CURRENT_TIMESTAMP"/>
+          <Column name="updated_at" type="TIMESTAMP" default="CURRENT_TIMESTAMP"/>
+        </Columns>
+        <Constraints>
+          <Constraint type="UNIQUE">(connector_name, merchant_id)</Constraint>
+        </Constraints>
+      </Table>
+
+      <Table name="payment_attempts">
+        <Columns>
+          <Column name="id" type="UUID" primaryKey="true"/>
+          <Column name="payment_id" type="UUID" notNull="true"/>
+          <Column name="connector" type="VARCHAR(50)" notNull="true"/>
+          <Column name="connector_transaction_id" type="VARCHAR(100)"/>
+          <Column name="attempt_status" type="VARCHAR(50)" notNull="true"/>
+          <Column name="amount" type="DECIMAL(19,6)" notNull="true"/>
+          <Column name="currency" type="VARCHAR(3)" notNull="true"/>
+          <Column name="error_message" type="TEXT"/>
+          <Column name="error_code" type="VARCHAR(100)"/>
+          <Column name="connector_metadata" type="JSONB"/>
+          <Column name="created_at" type="TIMESTAMP" default="CURRENT_TIMESTAMP"/>
+          <Column name="modified_at" type="TIMESTAMP" default="CURRENT_TIMESTAMP"/>
+        </Columns>
+        <Indexes>
+          <Index name="idx_payment_attempts_payment_id">payment_id</Index>
+          <Index name="idx_payment_attempts_connector">connector</Index>
+          <Index name="idx_payment_attempts_connector_tx_id">connector_transaction_id</Index>
+          <Index name="idx_payment_attempts_status">attempt_status</Index>
+        </Indexes>
+      </Table>
+    </DatabaseSchema>
+  </StorageRequirements>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 6: COMPLIANCE CHECKLIST -->
+  <!-- ================================================================= -->
+  <ComplianceChecklist>
+    <ComplianceItem id="CMP-001" category="PCI_DSS">
+      <Requirement>PCI DSS Requirement 3: Protect stored cardholder data</Requirement>
+      <Description>Never store full card number, CVV, or PIN data.</Description>
+      <Verification>
+        <Check>Code review for card data storage</Check>
+        <Check>Automated scan for hardcoded card data</Check>
+        <Check>Log analysis for exposed card data</Check>
+      </Verification>
+      <AutomatedTest>test_no_card_data_storage</AutomatedTest>
+    </ComplianceItem>
+
+    <ComplianceItem id="CMP-002" category="PCI_DSS">
+      <Requirement>PCI DSS Requirement 4: Encrypt transmission of cardholder data</Requirement>
+      <Description>Use TLS 1.2+ for all communications.</Description>
+      <Verification>
+        <Check>HTTP client configuration review</Check>
+        <Check>TLS version enforcement test</Check>
+        <Check>Certificate validation test</Check>
+      </Verification>
+      <AutomatedTest>test_tls_enforcement</AutomatedTest>
+    </ComplianceItem>
+
+    <ComplianceItem id="CMP-003" category="PCI_DSS">
+      <Requirement>PCI DSS Requirement 8: Identify and authenticate access</Requirement>
+      <Description>Secure API credential management.</Description>
+      <Verification>
+        <Check>Credential storage in vault</Check>
+        <Check>Credential masking in logs</Check>
+        <Check>Access control review</Check>
+      </Verification>
+      <AutomatedTest>test_credential_masking</AutomatedTest>
+    </ComplianceItem>
+
+    <ComplianceItem id="CMP-004" category="GDPR">
+      <Requirement>GDPR Article 32: Security of processing</Requirement>
+      <Description>Implement appropriate technical security measures.</Description>
+      <Verification>
+        <Check>Encryption at rest for sensitive data</Check>
+        <Check>Encryption in transit for all communications</Check>
+        <Check>Access logging and monitoring</Check>
+      </Verification>
+      <AutomatedTest>test_encryption_standards</AutomatedTest>
+    </ComplianceItem>
+
+    <ComplianceItem id="CMP-005" category="PSD2">
+      <Requirement>PSD2 Strong Customer Authentication (SCA)</Requirement>
+      <Description>Support 3D Secure 2.0 authentication.</Description>
+      <Verification>
+        <Check>3DS request/response handling</Check>
+        <Check>Challenge flow implementation</Check>
+        <Check>Frictionless flow support</Check>
+      </Verification>
+      <AutomatedTest>test_3ds_authentication</AutomatedTest>
+    </ComplianceItem>
+
+    <ComplianceItem id="CMP-006" category="SOX">
+      <Requirement>Sarbanes-Oxley: Audit trail</Requirement>
+      <Description>Maintain complete audit trail for all transactions.</Description>
+      <Verification>
+        <Check>Transaction logging completeness</Check>
+        <Check>Immutable audit records</Check>
+        <Check>Log retention policy</Check>
+      </Verification>
+      <AutomatedTest>test_audit_trail_completeness</AutomatedTest>
+    </ComplianceItem>
+
+    <ComplianceItem id="CMP-007" category="UCS">
+      <Requirement>UCS Pattern Compliance</Requirement>
+      <Description>Follow UCS connector implementation patterns.</Description>
+      <Verification>
+        <Check>RouterDataV2 usage (not RouterData)</Check>
+        <Check>ConnectorIntegrationV2 usage (not ConnectorIntegration)</Check>
+        <Check>domain_types imports (not hyperswitch_*)</Check>
+        <Check>Generic connector struct pattern</Check>
+      </Verification>
+      <AutomatedTest>test_ucs_pattern_compliance</AutomatedTest>
+    </ComplianceItem>
+
+    <ComplianceItem id="CMP-008" category="CODE_QUALITY">
+      <Requirement>No TODOs or Mock Implementations</Requirement>
+      <Description>Production-ready code with no placeholders.</Description>
+      <Verification>
+        <Check>Code scan for TODO comments</Check>
+        <Check>Code scan for mock implementations</Check>
+        <Check>Code scan for unimplemented! macros</Check>
+        <Check>Code scan for todo! macros</Check>
+      </Verification>
+      <AutomatedTest>test_no_placeholders</AutomatedTest>
+    </ComplianceItem>
+  </ComplianceChecklist>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 7: RISK ASSESSMENT -->
+  <!-- ================================================================= -->
+  <RiskAssessment>
+    <Threat id="THREAT-001" severity="HIGH" likelihood="MEDIUM">
+      <Name>Credential Exposure</Name>
+      <Description>API credentials could be exposed in logs, error messages, or debugging output.</Description>
+      <Impact>Unauthorized access to merchant account, fraudulent transactions</Impact>
+      <Mitigations>
+        <Mitigation>Use Secret&lt;String&gt; type for all credentials</Mitigation>
+        <Mitigation>Implement hyperswitch_masking for credential masking</Mitigation>
+        <Mitigation>Disable debug logging in production</Mitigation>
+        <Mitigation>Regular log audits for exposed credentials</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_credentials_masked_in_logs</Test>
+        <Test>test_credentials_not_in_error_responses</Test>
+        <Test>test_credentials_not_serialized</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-002" severity="HIGH" likelihood="LOW">
+      <Name>Man-in-the-Middle Attack</Name>
+      <Description>Attacker intercepting communication between UCS and FiservEMEA.</Description>
+      <Impact>Transaction data theft, credential theft, fraudulent transactions</Impact>
+      <Mitigations>
+        <Mitigation>Enforce TLS 1.2+ with certificate validation</Mitigation>
+        <Mitigation>Use rustls for secure TLS implementation</Mitigation>
+        <Mitigation>Disable insecure cipher suites</Mitigation>
+        <Mitigation>Implement certificate pinning (optional)</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_tls_certificate_validation</Test>
+        <Test>test_reject_invalid_certificates</Test>
+        <Test>test_reject_tls_1_0_1_1</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-003" severity="MEDIUM" likelihood="MEDIUM">
+      <Name>Replay Attack</Name>
+      <Description>Attacker replaying a valid request with valid signature.</Description>
+      <Impact>Duplicate transactions, financial loss</Impact>
+      <Mitigations>
+        <Mitigation>Timestamp validation (5-minute window)</Mitigation>
+        <Mitigation>Unique Client-Request-Id per request</Mitigation>
+        <Mitigation>Idempotency handling at UCS layer</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_timestamp_validation</Test>
+        <Test>test_expired_timestamp_rejected</Test>
+        <Test>test_duplicate_request_id_handling</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-004" severity="MEDIUM" likelihood="LOW">
+      <Name>Signature Forgery</Name>
+      <Description>Attacker forging valid HMAC signature.</Description>
+      <Impact>Unauthorized transactions, credential theft</Impact>
+      <Mitigations>
+        <Mitigation>Secure storage of API Secret</Mitigation>
+        <Mitigation>Use strong HMAC-SHA256 algorithm</Mitigation>
+        <Mitigation>Regular credential rotation</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_signature_generation_correctness</Test>
+        <Test>test_invalid_signature_rejected</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-005" severity="MEDIUM" likelihood="MEDIUM">
+      <Name>Injection Attack</Name>
+      <Description>Malicious data injected into request parameters.</Description>
+      <Impact>Data corruption, unauthorized access, system compromise</Impact>
+      <Mitigations>
+        <Mitigation>Input validation for all parameters</Mitigation>
+        <Mitigation>Use prepared statements for database queries</Mitigation>
+        <Mitigation>Sanitize all user inputs</Mitigation>
+        <Mitigation>Use serde for safe serialization/deserialization</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_input_validation</Test>
+        <Test>test_sql_injection_prevention</Test>
+        <Test>test_xss_prevention</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-006" severity="LOW" likelihood="MEDIUM">
+      <Name>Denial of Service</Name>
+      <Description>Overwhelming the connector with excessive requests.</Description>
+      <Impact>Service unavailability, degraded performance</Impact>
+      <Mitigations>
+        <Mitigation>Rate limiting at UCS layer</Mitigation>
+        <Mitigation>Request timeout configuration</Mitigation>
+        <Mitigation>Circuit breaker pattern for upstream failures</Mitigation>
+        <Mitigation>Connection pooling limits</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_rate_limiting</Test>
+        <Test>test_timeout_handling</Test>
+        <Test>test_circuit_breaker</Test>
+      </Tests>
+    </Threat>
+
+    <Threat id="THREAT-007" severity="LOW" likelihood="LOW">
+      <Name>Data Leakage</Name>
+      <Description>Sensitive payment data leaked through logs or monitoring.</Description>
+      <Impact>Regulatory fines, reputational damage, fraud</Impact>
+      <Mitigations>
+        <Mitigation>Comprehensive data masking in logs</Mitigation>
+        <Mitigation>Restricted access to logs</Mitigation>
+        <Mitigation>Log retention and deletion policies</Mitigation>
+        <Mitigation>Regular security audits</Mitigation>
+      </Mitigations>
+      <Tests>
+        <Test>test_sensitive_data_masking</Test>
+        <Test>test_log_access_controls</Test>
+      </Tests>
+    </Threat>
+  </RiskAssessment>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 8: IMPLEMENTATION TASKS -->
+  <!-- ================================================================= -->
+  <ImplementationTasks>
+    <Task id="TASK-001" priority="CRITICAL" phase="Foundation">
+      <Title>Add FiservEMEA to Domain Types</Title>
+      <Description>Add FiservEMEA enum variant and configuration fields.</Description>
+      <Steps>
+        <Step>Add FiservEMEA variant to ConnectorEnum in backend/domain_types/src/connector_types.rs</Step>
+        <Step>Add fiservemea field to Connectors struct with ConnectorParams type</Step>
+        <Step>Add FiservEMEA to common_enums if needed</Step>
+      </Steps>
+      <Dependencies>None</Dependencies>
+      <EstimatedEffort>1 hour</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-002" priority="CRITICAL" phase="Foundation">
+      <Title>Add FiservEMEA Configuration</Title>
+      <Description>Add base URL configuration for all environments.</Description>
+      <Steps>
+        <Step>Add fiservemea.base_url to config/development.toml</Step>
+        <Step>Add fiservemea.base_url to config/sandbox.toml</Step>
+        <Step>Add fiservemea.base_url to config/production.toml</Step>
+      </Steps>
+      <Dependencies>TASK-001</Dependencies>
+      <EstimatedEffort>0.5 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-003" priority="CRITICAL" phase="Foundation">
+      <Title>Create Connector Module Structure</Title>
+      <Description>Create the basic module structure for FiservEMEA connector.</Description>
+      <Steps>
+        <Step>Create backend/connector-integration/src/connectors/fiservemea.rs</Step>
+        <Step>Create backend/connector-integration/src/connectors/fiservemea/transformers.rs</Step>
+        <Step>Create backend/connector-integration/src/connectors/fiservemea/mod.rs</Step>
+        <Step>Add module declaration in backend/connector-integration/src/connectors.rs</Step>
+      </Steps>
+      <Dependencies>TASK-001, TASK-002</Dependencies>
+      <EstimatedEffort>0.5 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-004" priority="CRITICAL" phase="Foundation">
+      <Title>Implement Authentication Types</Title>
+      <Description>Define authentication type and signature generation.</Description>
+      <Steps>
+        <Step>Define FiservEMEAAuthType struct with api_key and api_secret</Step>
+        <Step>Implement TryFrom&lt;ConnectorAuthType&gt; for FiservEMEAAuthType</Step>
+        <Step>Implement generate_authorization_signature method</Step>
+        <Step>Implement build_headers method with all required headers</Step>
+      </Steps>
+      <Dependencies>TASK-003</Dependencies>
+      <EstimatedEffort>2 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-005" priority="HIGH" phase="Transformers">
+      <Title>Implement Request Transformers</Title>
+      <Description>Define all request types for FiservEMEA API.</Description>
+      <Steps>
+        <Step>Define FiservEMEAPaymentsRequest&lt;T&gt; struct</Step>
+        <Step>Define FiservEMEACaptureRequest struct</Step>
+        <Step>Define FiservEMEARefundRequest struct</Step>
+        <Step>Define FiservEMEAVoidRequest struct</Step>
+        <Step>Define FiservEMEASyncRequest struct</Step>
+        <Step>Define supporting types (TransactionAmount, PaymentMethod, Order, etc.)</Step>
+        <Step>Implement ForeignTryFrom transformations for all requests</Step>
+      </Steps>
+      <Dependencies>TASK-004</Dependencies>
+      <EstimatedEffort>4 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-006" priority="HIGH" phase="Transformers">
+      <Title>Implement Response Transformers</Title>
+      <Description>Define all response types for FiservEMEA API.</Description>
+      <Steps>
+        <Step>Define FiservEMEAPaymentsResponse struct</Step>
+        <Step>Define FiservEMEACaptureResponse struct</Step>
+        <Step>Define FiservEMEARefundResponse struct</Step>
+        <Step>Define FiservEMEAVoidResponse struct</Step>
+        <Step>Define FiservEMEASyncResponse struct</Step>
+        <Step>Define FiservEMEAErrorResponse struct</Step>
+        <Step>Implement ForeignTryFrom transformations for all responses</Step>
+      </Steps>
+      <Dependencies>TASK-005</Dependencies>
+      <EstimatedEffort>4 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-007" priority="HIGH" phase="Flows">
+      <Title>Implement Authorize Flow</Title>
+      <Description>Implement payment authorization flow.</Description>
+      <Steps>
+        <Step>Implement ConnectorIntegrationV2&lt;Authorize&gt; trait</Step>
+        <Step>Implement get_url method for authorize endpoint</Step>
+        <Step>Implement get_headers method using build_headers</Step>
+        <Step>Implement get_request_body method</Step>
+        <Step>Handle 3DS authentication responses</Step>
+      </Steps>
+      <Dependencies>TASK-006</Dependencies>
+      <EstimatedEffort>3 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-008" priority="HIGH" phase="Flows">
+      <Title>Implement Capture Flow</Title>
+      <Description>Implement payment capture flow.</Description>
+      <Steps>
+        <Step>Implement ConnectorIntegrationV2&lt;Capture&gt; trait</Step>
+        <Step>Implement get_url method for capture endpoint</Step>
+        <Step>Implement get_headers method using build_headers</Step>
+        <Step>Implement get_request_body method</Step>
+        <Step>Validate capture amount against authorized amount</Step>
+      </Steps>
+      <Dependencies>TASK-007</Dependencies>
+      <EstimatedEffort>2 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-009" priority="HIGH" phase="Flows">
+      <Title>Implement Void Flow</Title>
+      <Description>Implement payment void flow.</Description>
+      <Steps>
+        <Step>Implement ConnectorIntegrationV2&lt;Void&gt; trait</Step>
+        <Step>Implement get_url method for void endpoint</Step>
+        <Step>Implement get_headers method using build_headers</Step>
+        <Step>Implement get_request_body method</Step>
+      </Steps>
+      <Dependencies>TASK-007</Dependencies>
+      <EstimatedEffort>2 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-010" priority="HIGH" phase="Flows">
+      <Title>Implement Refund Flow</Title>
+      <Description>Implement payment refund flow.</Description>
+      <Steps>
+        <Step>Implement ConnectorIntegrationV2&lt;Refund&gt; trait</Step>
+        <Step>Implement get_url method for refund endpoint</Step>
+        <Step>Implement get_headers method using build_headers</Step>
+        <Step>Implement get_request_body method</Step>
+        <Step>Validate refund amount against original amount</Step>
+      </Steps>
+      <Dependencies>TASK-007</Dependencies>
+      <EstimatedEffort>2 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-011" priority="HIGH" phase="Flows">
+      <Title>Implement Payment Sync Flow</Title>
+      <Description>Implement payment status synchronization.</Description>
+      <Steps>
+        <Step>Implement ConnectorIntegrationV2&lt;PSync&gt; trait</Step>
+        <Step>Implement get_url method for transaction inquiry</Step>
+        <Step>Implement get_headers method using build_headers</Step>
+        <Step>Implement get_request_body method (empty for GET)</Step>
+        <Step>Map transaction states to UCS statuses</Step>
+      </Steps>
+      <Dependencies>TASK-007</Dependencies>
+      <EstimatedEffort>2 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-012" priority="HIGH" phase="Flows">
+      <Title>Implement Refund Sync Flow</Title>
+      <Description>Implement refund status synchronization.</Description>
+      <Steps>
+        <Step>Implement ConnectorIntegrationV2&lt;RSync&gt; trait</Step>
+        <Step>Implement get_url method for transaction inquiry</Step>
+        <Step>Implement get_headers method using build_headers</Step>
+        <Step>Implement get_request_body method (empty for GET)</Step>
+        <Step>Map refund states to UCS statuses</Step>
+      </Steps>
+      <Dependencies>TASK-010</Dependencies>
+      <EstimatedEffort>2 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-013" priority="MEDIUM" phase="Integration">
+      <Title>Register Connector in Module</Title>
+      <Description>Add FiservEMEA to connector registry.</Description>
+      <Steps>
+        <Step>Add pub mod fiservemea; to connectors.rs</Step>
+        <Step>Add pub use self::fiservemea::FiservEMEA; to connectors.rs</Step>
+        <Step>Update connector routing logic if needed</Step>
+      </Steps>
+      <Dependencies>TASK-012</Dependencies>
+      <EstimatedEffort>0.5 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-014" priority="MEDIUM" phase="Testing">
+      <Title>Write Unit Tests</Title>
+      <Description>Write comprehensive unit tests for transformers.</Description>
+      <Steps>
+        <Step>Test request serialization for all flows</Step>
+        <Step>Test response deserialization for all flows</Step>
+        <Step>Test signature generation</Step>
+        <Step>Test header building</Step>
+        <Step>Test error parsing</Step>
+        <Step>Test status mapping</Step>
+      </Steps>
+      <Dependencies>TASK-012</Dependencies>
+      <EstimatedEffort>4 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-015" priority="MEDIUM" phase="Testing">
+      <Title>Write Integration Tests</Title>
+      <Description>Write integration tests for complete flows.</Description>
+      <Steps>
+        <Step>Set up mock FiservEMEA server</Step>
+        <Step>Test authorize flow end-to-end</Step>
+        <Step>Test capture flow end-to-end</Step>
+        <Step>Test void flow end-to-end</Step>
+        <Step>Test refund flow end-to-end</Step>
+        <Step>Test sync operations</Step>
+        <Step>Test error scenarios</Step>
+      </Steps>
+      <Dependencies>TASK-014</Dependencies>
+      <EstimatedEffort>6 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-016" priority="MEDIUM" phase="Build">
+      <Title>Verify Compilation</Title>
+      <Description>Ensure project compiles without errors.</Description>
+      <Steps>
+        <Step>Run cargo check --workspace</Step>
+        <Step>Run cargo clippy --workspace</Step>
+        <Step>Fix any compilation errors</Step>
+        <Step>Fix any clippy warnings</Step>
+      </Steps>
+      <Dependencies>TASK-015</Dependencies>
+      <EstimatedEffort>1 hour</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-017" priority="MEDIUM" phase="Build">
+      <Title>Verify Single Binary</Title>
+      <Description>Ensure workspace builds as single binary.</Description>
+      <Steps>
+        <Step>Run cargo build --release</Step>
+        <Step>Verify only grpc-server produces binary</Step>
+        <Step>Verify cargo run works without confusion</Step>
+      </Steps>
+      <Dependencies>TASK-016</Dependencies>
+      <EstimatedEffort>0.5 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-018" priority="LOW" phase="Documentation">
+      <Title>Update Documentation</Title>
+      <Description>Update project documentation.</Description>
+      <Steps>
+        <Step>Update CONNECTORS.md with FiservEMEA flows</Step>
+        <Step>Add inline documentation to connector code</Step>
+        <Step>Document any FiservEMEA-specific behaviors</Step>
+      </Steps>
+      <Dependencies>TASK-017</Dependencies>
+      <EstimatedEffort>1 hour</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-019" priority="LOW" phase="Finalization">
+      <Title>Code Quality Check</Title>
+      <Description>Final code quality and compliance checks.</Description>
+      <Steps>
+        <Step>Run cargo fmt --all</Step>
+        <Step>Verify no TODO comments in code</Step>
+        <Step>Verify no mock implementations</Step>
+        <Step>Verify no unimplemented! macros</Step>
+        <Step>Verify no todo! macros</Step>
+      </Steps>
+      <Dependencies>TASK-018</Dependencies>
+      <EstimatedEffort>0.5 hours</EstimatedEffort>
+    </Task>
+
+    <Task id="TASK-020" priority="CRITICAL" phase="Finalization">
+      <Title>Mark Requirement Analysis as Resolved</Title>
+      <Description>Rename generated-requirement-analysis.xml to .resolved</Description>
+      <Steps>
+        <Step>Verify all tasks completed</Step>
+        <Step>Verify project compiles and runs</Step>
+        <Step>Rename file to generated-requirement-analysis.xml.resolved</Step>
+      </Steps>
+      <Dependencies>All previous tasks</Dependencies>
+      <EstimatedEffort>0.25 hours</EstimatedEffort>
+    </Task>
+  </ImplementationTasks>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 9: ACCEPTANCE CRITERIA SUMMARY -->
+  <!-- ================================================================= -->
+  <AcceptanceCriteriaSummary>
+    <FunctionalCriteria>
+      <Criterion id="AC-FUNC-001">Authorize flow processes card payments successfully</Criterion>
+      <Criterion id="AC-FUNC-002">Capture flow completes pre-authorizations successfully</Criterion>
+      <Criterion id="AC-FUNC-003">Void flow cancels transactions successfully</Criterion>
+      <Criterion id="AC-FUNC-004">Refund flow processes refunds successfully</Criterion>
+      <Criterion id="AC-FUNC-005">Payment sync retrieves transaction status correctly</Criterion>
+      <Criterion id="AC-FUNC-006">Refund sync retrieves refund status correctly</Criterion>
+      <Criterion id="AC-FUNC-007">3DS authentication is supported</Criterion>
+      <Criterion id="AC-FUNC-008">Error responses are properly parsed and mapped</Criterion>
+    </FunctionalCriteria>
+
+    <NonFunctionalCriteria>
+      <Criterion id="AC-NF-001">All API requests use HMAC-SHA256 signature authentication</Criterion>
+      <Criterion id="AC-NF-002">All credentials are masked in logs and error messages</Criterion>
+      <Criterion id="AC-NF-003">All communications use TLS 1.2+</Criterion>
+      <Criterion id="AC-NF-004">Card data is never stored or logged in plain text</Criterion>
+      <Criterion id="AC-NF-005">Project compiles without errors or warnings</Criterion>
+      <Criterion id="AC-NF-006">Workspace builds as single binary</Criterion>
+      <Criterion id="AC-NF-007">No TODO comments in production code</Criterion>
+      <Criterion id="AC-NF-008">No mock implementations in production code</Criterion>
+      <Criterion id="AC-NF-009">All unit tests pass</Criterion>
+      <Criterion id="AC-NF-010">All integration tests pass</Criterion>
+    </NonFunctionalCriteria>
+
+    <ComplianceCriteria>
+      <Criterion id="AC-COMP-001">PCI DSS compliance for card data handling</Criterion>
+      <Criterion id="AC-COMP-002">GDPR compliance for data protection</Criterion>
+      <Criterion id="AC-COMP-003">PSD2 compliance for SCA</Criterion>
+      <Criterion id="AC-COMP-004">UCS pattern compliance</Criterion>
+    </ComplianceCriteria>
+  </AcceptanceCriteriaSummary>
+
+  <!-- ================================================================= -->
+  <!-- SECTION 10: REFERENCES -->
+  <!-- ================================================================= -->
+  <References>
+    <Reference id="REF-001" type="Documentation">
+      <Title>FiservEMEA Technical Specification</Title>
+      <Location>grace/rulesbook/codegen/references/fiservemea/technicalspecification.md</Location>
+    </Reference>
+    <Reference id="REF-002" type="Documentation">
+      <Title>GRACE-UCS Rulesbook</Title>
+      <Location>grace/rulesbook/codegen/README.md</Location>
+    </Reference>
+    <Reference id="REF-003" type="Documentation">
+      <Title>UCS Connector Integration Guide</Title>
+      <Location>grace/rulesbook/codegen/guides/connector_integration_guide.md</Location>
+    </Reference>
+    <Reference id="REF-004" type="Documentation">
+      <Title>UCS Pattern Documentation</Title>
+      <Location>grace/rulesbook/codegen/guides/patterns/</Location>
+    </Reference>
+    <Reference id="REF-005" type="Documentation">
+      <Title>Existing Fiserv Connector Implementation</Title>
+      <Location>backend/connector-integration/src/connectors/fiserv.rs</Location>
+    </Reference>
+    <Reference id="REF-006" type="Documentation">
+      <Title>Connector Flow Matrix</Title>
+      <Location>CONNECTORS.md</Location>
+    </Reference>
+  </References>
+</RequirementAnalysis>
