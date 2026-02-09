@@ -252,7 +252,11 @@ fn set_nested_value(
     }
 
     if path_parts.len() == 1 {
-        let key = path_parts[0];
+        let key = path_parts.first().ok_or_else(|| {
+            error_stack::Report::new(EventPublisherError::InvalidPath {
+                path: path.to_string(),
+            })
+        })?;
         target[key] = value;
         return Ok(());
     }
@@ -328,36 +332,33 @@ pub fn emit_event_with_config(event: Event, config: &EventConfig) {
     };
 
     // This provides observability even when Kafka publishing is disabled
-    let event_json = serde_json::to_string(&processed_event).unwrap_or_else(|e| {
-        format!("Failed to serialize event: {}", e)
-    });
+    let event_json = serde_json::to_string(&processed_event)
+        .unwrap_or_else(|e| format!("{{\"error\":\"Failed to serialize event: {}\"}}", e));
     tracing::info!(
-        full_event = %event_json,
         events_enabled = config.enabled,
-        "Event processed (Kafka publishing: {})",
-        if config.enabled { "enabled" } else { "disabled" }
+        "Event processed (Kafka publishing: {}) - Event JSON: {}",
+        if config.enabled {
+            "enabled"
+        } else {
+            "disabled"
+        },
+        event_json
     );
 
     // Only publish to Kafka if enabled
-    match config.enabled {
-        false => {
-            // Event processed and logged, but Kafka publishing is disabled
-            return;
-        }
-        true => {
-            let _ = get_event_publisher(config)
-                .and_then(|publisher| {
-                    let metadata = publisher.build_kafka_metadata(&event);
-                    publisher.publish_event_with_metadata(
-                        processed_event,
-                        &config.topic,
-                        &config.partition_key_field,
-                        metadata,
-                    )
-                })
-                .inspect_err(|e| {
-                    tracing::error!(error = ?e, "Failed to publish event to Kafka");
-                });
-        }
+    if config.enabled {
+        let _ = get_event_publisher(config)
+            .and_then(|publisher| {
+                let metadata = publisher.build_kafka_metadata(&event);
+                publisher.publish_event_with_metadata(
+                    processed_event,
+                    &config.topic,
+                    &config.partition_key_field,
+                    metadata,
+                )
+            })
+            .inspect_err(|e| {
+                tracing::error!(error = ?e, "Failed to publish event to Kafka");
+            });
     }
 }
