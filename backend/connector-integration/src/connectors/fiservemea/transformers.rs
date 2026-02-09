@@ -387,7 +387,7 @@ pub type FiservEMEACaptureResponse = FiservEMEAPaymentsResponse;
 pub type FiservEMEARefundResponse = FiservEMEAPaymentsResponse;
 pub type FiservEMEAVoidResponse = FiservEMEAPaymentsResponse;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservEMEAPSyncResponse {
     pub client_request_id: String,
@@ -406,7 +406,7 @@ pub struct FiservEMEAPSyncResponse {
     pub error: Option<Error>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservEMEARefundSyncResponse {
     pub client_request_id: String,
