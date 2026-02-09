@@ -647,7 +647,7 @@ where
         let connector_metadata = response
             .payment_method_details
             .as_ref()
-            .and_then(|pmd| p.card.as_ref())
+            .and_then(|pmd| pmd.card.as_ref())
             .map(|c| {
                 serde_json::json!({
                     "card_last_four": c.last_four,
