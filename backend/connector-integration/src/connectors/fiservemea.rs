@@ -52,7 +52,7 @@ use transformers::{
     FiservEMEACaptureRequest, FiservEMEACaptureResponse, FiservEMEAPaymentsRequest,
     FiservEMEAPaymentsResponse, FiservEMEARefundRequest, FiservEMEARefundResponse,
     FiservEMEASyncRequest, FiservEMEAPSyncResponse, FiservEMEARefundSyncRequest,
-    FiservEMEAVoidRequest, FiservEMEAVoidResponse, FiservEMEAAuthType, FiservEMEARefundSyncRequest,
+    FiservEMEAVoidRequest, FiservEMEAVoidResponse, FiservEMEAAuthType,
 };
 
 use super::macros;
