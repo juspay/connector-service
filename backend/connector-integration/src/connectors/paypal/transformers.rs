@@ -59,7 +59,7 @@ impl<
     > GetRequestIncrementalAuthorization for RepeatPaymentData<T>
 {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
-        self.request_incremental_authorization
+        Some(false)
     }
 }
 
