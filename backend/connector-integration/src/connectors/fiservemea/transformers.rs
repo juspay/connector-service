@@ -364,7 +364,7 @@ pub struct Error {
     pub decline_reason_code: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservEMEAPaymentsResponse {
     pub client_request_id: String,
