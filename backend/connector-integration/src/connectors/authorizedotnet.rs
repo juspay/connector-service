@@ -45,6 +45,7 @@ use interfaces::{
         PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2,
         ValidationTrait,
     },
+    decode::BodyDecoding,
     verification::SourceVerification,
 };
 use serde::Serialize;
@@ -400,6 +401,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     SourceVerification for Authorizedotnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for Authorizedotnet<T>
 {
 }
 

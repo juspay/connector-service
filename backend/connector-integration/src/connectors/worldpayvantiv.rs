@@ -50,6 +50,7 @@ use interfaces::{
         RefundV2, RepeatPaymentV2, SdkSessionTokenV2, SetupMandateV2, SubmitEvidenceV2,
         ValidationTrait, VerifyRedirectResponse,
     },
+    decode::BodyDecoding,
     verification::SourceVerification,
 };
 use serde::Serialize;
@@ -178,6 +179,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     SourceVerification for Worldpayvantiv<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for Worldpayvantiv<T>
 {
 }
 
