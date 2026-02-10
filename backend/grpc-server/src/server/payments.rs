@@ -344,9 +344,11 @@ impl Payments {
             let event_params = EventParams {
                 _connector_name: &connector.to_string(),
                 _service_name: service_name,
+                service_type: utils::service_type_str(&config.server.type_),
                 request_id,
                 lineage_ids,
                 reference_id,
+                resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
             };
 
