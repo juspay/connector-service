@@ -389,7 +389,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience>
                 Ok(Self::DisplayWaitScreen)
             }
             grpc_api_types::payments::PaymentExperience::CollectOtp => Ok(Self::CollectOtp),
-            grpc_api_types::payments::PaymentExperience::Unspecified => Ok(Self::default()),
+            grpc_api_types::payments::PaymentExperience::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_PAYMENT_EXPERIENCE".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Payment experience must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
         }
     }
 }
@@ -4075,21 +4083,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             }
         };
 
-        let payment_experience = value
-            .payment_experience
-            .map(|pe| {
-                grpc_api_types::payments::PaymentExperience::try_from(pe)
-                    .map_err(|_| {
-                        error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "INVALID_PAYMENT_EXPERIENCE".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid payment experience value".to_owned(),
-                            error_object: None,
-                        }))
-                    })
-                    .and_then(common_enums::PaymentExperience::foreign_try_from)
-            })
-            .transpose()?;
+        let payment_experience = match value.payment_experience() {
+            grpc_payment_types::PaymentExperience::Unspecified => None,
+            _ => Some(common_enums::PaymentExperience::foreign_try_from(
+                value.payment_experience(),
+            )?),
+        };
 
         let connector_metadata = value
             .connector_metadata
