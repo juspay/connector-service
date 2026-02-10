@@ -418,6 +418,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         sync_type: None,
         connector_order_reference_id: None,
         test_mode: None,
+        payment_experience: None,
     }
 }
 
@@ -444,6 +445,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         state: None,
         merchant_account_metadata: None,
         test_mode: None,
+        merchant_order_reference_id: None,
     }
 }
 

@@ -29,6 +29,13 @@ use tonic::metadata;
 
 use crate::{configs, error::ResultExtGrpc, request::RequestData};
 
+pub fn service_type_str(service_type: &configs::ServiceType) -> &'static str {
+    match service_type {
+        configs::ServiceType::Grpc => "grpc",
+        configs::ServiceType::Http => "http",
+    }
+}
+
 // Helper function to map flow markers to flow names
 pub fn flow_marker_to_flow_name<F>() -> FlowName
 where
@@ -158,6 +165,7 @@ pub struct MetadataPayload {
     pub connector_auth_type: ConnectorAuthType,
     pub reference_id: Option<String>,
     pub shadow_mode: bool,
+    pub resource_id: Option<String>,
 }
 
 pub fn get_metadata_payload(
@@ -171,6 +179,7 @@ pub fn get_metadata_payload(
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
     let connector_auth_type = auth_from_metadata(metadata)?;
     let reference_id = reference_id_from_metadata(metadata)?;
+    let resource_id = resource_id_from_metadata(metadata)?;
     let shadow_mode = shadow_mode_from_metadata(metadata);
     Ok(MetadataPayload {
         tenant_id,
@@ -181,6 +190,7 @@ pub fn get_metadata_payload(
         connector_auth_type,
         reference_id,
         shadow_mode,
+        resource_id,
     })
 }
 
@@ -241,6 +251,12 @@ pub fn reference_id_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<Option<String>, ApplicationErrorResponse> {
     parse_optional_metadata(metadata, consts::X_REFERENCE_ID).map(|s| s.map(|s| s.to_string()))
+}
+
+pub fn resource_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<Option<String>, ApplicationErrorResponse> {
+    parse_optional_metadata(metadata, consts::X_RESOURCE_ID).map(|s| s.map(|s| s.to_string()))
 }
 
 pub fn shadow_mode_from_metadata(metadata: &metadata::MetadataMap) -> bool {
@@ -556,6 +572,7 @@ where
         &grpc_response,
         start_time,
         flow_name,
+        service_name,
         &config,
         event_metadata_payload.as_ref(),
         event_headers,
@@ -564,11 +581,13 @@ where
     grpc_response
 }
 
+#[allow(clippy::too_many_arguments)]
 fn create_and_emit_grpc_event<R>(
     masked_request_data: Option<MaskedSerdeValue>,
     grpc_response: &Result<tonic::Response<R>, tonic::Status>,
     start_time: tokio::time::Instant,
     flow_name: FlowName,
+    service_name: &str,
     config: &configs::Config,
     metadata_payload: Option<&MetadataPayload>,
     masked_headers: HashMap<String, String>,
@@ -594,6 +613,10 @@ fn create_and_emit_grpc_event<R>(
 
     grpc_event
         .add_reference_id(metadata_payload.and_then(|metadata| metadata.reference_id.as_deref()));
+    grpc_event
+        .add_resource_id(metadata_payload.and_then(|metadata| metadata.resource_id.as_deref()));
+    grpc_event.add_service_type(service_type_str(&config.server.type_));
+    grpc_event.add_service_name(service_name);
 
     match grpc_response {
         Ok(response) => grpc_event.set_grpc_success_response(response.get_ref()),
@@ -718,11 +741,13 @@ macro_rules! implement_connector_operation {
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
+                service_type: $crate::utils::service_type_str(&config.server.type_),
                 flow_name,
                 event_config: &config.events,
                 request_id: &request_id,
                 lineage_ids: &metadata_payload.lineage_ids,
                 reference_id: &metadata_payload.reference_id,
+                resource_id: &metadata_payload.resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
             };
             let response_result = external_services::service::execute_connector_processing_step(
