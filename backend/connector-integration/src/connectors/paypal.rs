@@ -1,7 +1,7 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_enums::CurrencyUnit;
+use common_enums::{AttemptStatus, CurrencyUnit};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -383,7 +383,7 @@ macros::create_all_prerequisites!(
                 .map(|error_code_message| error_code_message.error_message)
                 .unwrap_or(NO_ERROR_MESSAGE.to_string()),
             reason: error_reason.or(Some(response.message)),
-            attempt_status: None,
+            attempt_status: Some(AttemptStatus::Failure),
             connector_transaction_id: response.debug_id,
             network_advice_code: None,
             network_decline_code: None,
