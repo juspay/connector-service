@@ -44,7 +44,6 @@ pub trait BodyDecoding {
         let extracted_secrets = self.get_secrets(secrets)?;
         let message = self.get_message(body)?;
 
-        // Verify the signature against the message
         algorithm
             .decode_message(&extracted_secrets, message.into())
             .change_context(domain_types::errors::ConnectorError::DecodingFailed)
