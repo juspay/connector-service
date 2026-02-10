@@ -234,7 +234,7 @@ impl Payments {
                 // If provided cached token - use it, don't generate new one
                 tracing::info!("Using cached access from request");
                 AccessTokenResponseData::foreign_try_from(cached_access_token)
-                        .map_err(|e| e.into_grpc_status())?
+                    .map_err(|e| e.into_grpc_status())?
             }
             None => {
                 // No cached token - generate fresh one
