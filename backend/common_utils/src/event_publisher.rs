@@ -70,17 +70,6 @@ impl EventPublisher {
         })
     }
 
-    /// Publishes a single event to Kafka with metadata as headers.
-    pub fn publish_event(
-        &self,
-        event: serde_json::Value,
-        topic: &str,
-        partition_key_field: &str,
-    ) -> CustomResult<(), EventPublisherError> {
-        let metadata = OwnedHeaders::new();
-        self.publish_event_with_metadata(event, topic, partition_key_field, metadata)
-    }
-
     /// Publishes a single event to Kafka with custom metadata.
     pub fn publish_event_with_metadata(
         &self,
@@ -119,42 +108,20 @@ impl EventPublisher {
         })?;
 
         self.writer
-            .publish_event(&self.config.topic, key, &event_bytes, Some(headers))
+            .publish_event(topic, key, &event_bytes, Some(headers))
             .map_err(|e| {
                 let event_json = serde_json::to_string(&event).unwrap_or_default();
                 error_stack::Report::new(EventPublisherError::EventPublishFailed)
                     .attach_printable(format!("Kafka publish failed: {e}"))
                     .attach_printable(format!(
                         "Topic: {}, Event size: {} bytes",
-                        self.config.topic,
+                        topic,
                         event_bytes.len()
                     ))
                     .attach_printable(format!("Failed event: {event_json}"))
             })?;
 
-        let event_json = serde_json::to_string(&event).unwrap_or_default();
-        tracing::info!(
-            full_event = %event_json,
-            "Event successfully published to Kafka"
-        );
-
         Ok(())
-    }
-
-    pub fn emit_event_with_config(
-        &self,
-        base_event: Event,
-        config: &EventConfig,
-    ) -> CustomResult<(), EventPublisherError> {
-        let metadata = self.build_kafka_metadata(&base_event);
-        let processed_event = self.process_event(&base_event)?;
-
-        self.publish_event_with_metadata(
-            processed_event,
-            &config.topic,
-            &config.partition_key_field,
-            metadata,
-        )
     }
 
     fn build_kafka_metadata(&self, event: &Event) -> OwnedHeaders {
@@ -194,132 +161,137 @@ impl EventPublisher {
 
         headers
     }
+}
 
-    fn process_event(&self, event: &Event) -> CustomResult<serde_json::Value, EventPublisherError> {
-        let mut result = event.masked_serialize().map_err(|e| {
-            error_stack::Report::new(EventPublisherError::EventSerializationFailed)
-                .attach_printable(format!("Event masked serialization failed: {e}"))
-        })?;
+/// Process an event by applying masking, transformations, static values, and extractions.
+/// This function does not require Kafka initialization and can be used for logging purposes.
+fn process_event_with_config(
+    event: &Event,
+    config: &EventConfig,
+) -> CustomResult<serde_json::Value, EventPublisherError> {
+    let mut result = event.masked_serialize().map_err(|e| {
+        error_stack::Report::new(EventPublisherError::EventSerializationFailed)
+            .attach_printable(format!("Event masked serialization failed: {e}"))
+    })?;
 
-        // Process transformations
-        for (target_path, source_field) in &self.config.transformations {
-            if let Some(value) = result.get(source_field).cloned() {
-                // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
-                let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
-                if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
-                    tracing::warn!(
-                        target_path = %target_path,
-                        normalized_path = %normalized_path,
-                        source_field = %source_field,
-                        error = %e,
-                        "Failed to set transformation, continuing with event processing"
-                    );
-                }
-            }
-        }
+    // Helper function to normalize paths (replace _DOT_ and _dot_ with .)
+    let normalize_path =
+        |path: &str| -> String { path.replace("_DOT_", ".").replace("_dot_", ".") };
 
-        // Process static values - log warnings but continue processing
-        for (target_path, static_value) in &self.config.static_values {
-            // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
-            let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
-            let value = serde_json::json!(static_value);
-            if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
+    // Process transformations
+    for (target_path, source_field) in &config.transformations {
+        if let Some(value) = result.get(source_field).cloned() {
+            let normalized_path = normalize_path(target_path);
+            if let Err(e) = set_nested_value(&mut result, &normalized_path, value) {
                 tracing::warn!(
                     target_path = %target_path,
                     normalized_path = %normalized_path,
-                    static_value = %static_value,
+                    source_field = %source_field,
                     error = %e,
-                    "Failed to set static value, continuing with event processing"
+                    "Failed to set transformation, continuing with event processing"
                 );
             }
         }
+    }
 
-        // Process extraction
-        for (target_path, extraction_path) in &self.config.extractions {
-            if let Some(value) = self.extract_from_request(&result, extraction_path) {
-                // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
-                let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
-                if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
-                    tracing::warn!(
-                        target_path = %target_path,
-                        normalized_path = %normalized_path,
-                        extraction_path = %extraction_path,
-                        error = %e,
-                        "Failed to set extraction, continuing with event processing"
-                    );
-                }
+    // Process static values - log warnings but continue processing
+    for (target_path, static_value) in &config.static_values {
+        let normalized_path = normalize_path(target_path);
+        let value = serde_json::json!(static_value);
+        if let Err(e) = set_nested_value(&mut result, &normalized_path, value) {
+            tracing::warn!(
+                target_path = %target_path,
+                normalized_path = %normalized_path,
+                static_value = %static_value,
+                error = %e,
+                "Failed to set static value, continuing with event processing"
+            );
+        }
+    }
+
+    // Process extraction
+    for (target_path, extraction_path) in &config.extractions {
+        if let Some(value) = extract_from_request(&result, extraction_path) {
+            let normalized_path = normalize_path(target_path);
+            if let Err(e) = set_nested_value(&mut result, &normalized_path, value) {
+                tracing::warn!(
+                    target_path = %target_path,
+                    normalized_path = %normalized_path,
+                    extraction_path = %extraction_path,
+                    error = %e,
+                    "Failed to set extraction, continuing with event processing"
+                );
             }
         }
-
-        Ok(result)
     }
 
-    fn extract_from_request(
-        &self,
-        event_value: &serde_json::Value,
-        extraction_path: &str,
-    ) -> Option<serde_json::Value> {
-        let mut path_parts = extraction_path.split('.');
+    Ok(result)
+}
 
-        let first_part = path_parts.next()?;
+fn extract_from_request(
+    event_value: &serde_json::Value,
+    extraction_path: &str,
+) -> Option<serde_json::Value> {
+    let mut path_parts = extraction_path.split('.');
 
-        let source = match first_part {
-            "req" => event_value.get("request_data")?.clone(),
-            _ => return None,
-        };
+    let first_part = path_parts.next()?;
 
-        let mut current = &source;
-        for part in path_parts {
-            current = current.get(part)?;
-        }
+    let source = match first_part {
+        "req" => event_value.get("request_data")?.clone(),
+        _ => return None,
+    };
 
-        Some(current.clone())
+    let mut current = &source;
+    for part in path_parts {
+        current = current.get(part)?;
     }
 
-    fn set_nested_value(
-        &self,
-        target: &mut serde_json::Value,
-        path: &str,
-        value: serde_json::Value,
-    ) -> CustomResult<(), EventPublisherError> {
-        let path_parts: Vec<&str> = path.split('.').filter(|s| !s.is_empty()).collect();
+    Some(current.clone())
+}
 
-        if path_parts.is_empty() {
-            return Err(error_stack::Report::new(EventPublisherError::InvalidPath {
+fn set_nested_value(
+    target: &mut serde_json::Value,
+    path: &str,
+    value: serde_json::Value,
+) -> CustomResult<(), EventPublisherError> {
+    let path_parts: Vec<&str> = path.split('.').filter(|s| !s.is_empty()).collect();
+
+    if path_parts.is_empty() {
+        return Err(error_stack::Report::new(EventPublisherError::InvalidPath {
+            path: path.to_string(),
+        }));
+    }
+
+    if path_parts.len() == 1 {
+        let key = path_parts.first().ok_or_else(|| {
+            error_stack::Report::new(EventPublisherError::InvalidPath {
                 path: path.to_string(),
-            }));
-        }
-
-        if path_parts.len() == 1 {
-            if let Some(key) = path_parts.first() {
-                target[*key] = value;
-                return Ok(());
-            }
-        }
-
-        let result = path_parts.iter().enumerate().try_fold(
-            target,
-            |current,
-             (index, &part)|
-             -> CustomResult<&mut serde_json::Value, EventPublisherError> {
-                if index == path_parts.len() - 1 {
-                    current[part] = value.clone();
-                    Ok(current)
-                } else {
-                    if !current[part].is_object() {
-                        current[part] = serde_json::json!({});
-                    }
-                    current.get_mut(part).ok_or_else(|| {
-                        error_stack::Report::new(EventPublisherError::InvalidPath {
-                            path: format!("{path}.{part}"),
-                        })
-                    })
-                }
-            },
-        );
-
-        result.map(|_| ())
+            })
+        })?;
+        target[key] = value;
+        return Ok(());
     }
+
+    let result = path_parts.iter().enumerate().try_fold(
+        target,
+        |current, (index, &part)| -> CustomResult<&mut serde_json::Value, EventPublisherError> {
+            if index == path_parts.len() - 1 {
+                current[part] = value.clone();
+                Ok(current)
+            } else {
+                if !current[part].is_object() {
+                    current[part] = serde_json::json!({});
+                }
+                current.get_mut(part).ok_or_else(|| {
+                    error_stack::Report::new(EventPublisherError::InvalidPath {
+                        path: format!("{path}.{part}"),
+                    })
+                })
+            }
+        },
+    );
+
+    result.map(|_| ())
 }
 
 /// Initialize the global EventPublisher with the given configuration
@@ -355,17 +327,49 @@ fn get_event_publisher(
     EVENT_PUBLISHER.get_or_try_init(|| EventPublisher::new(config))
 }
 
-/// Standalone function to emit events using the global EventPublisher
+/// Standalone function to emit events using the global EventPublisher.
+/// This function always processes and logs events, but only publishes to Kafka when enabled.
 pub fn emit_event_with_config(event: Event, config: &EventConfig) {
-    if !config.enabled {
-        tracing::info!("Event publishing disabled");
-        return;
-    }
+    // Always process the event to get masked/parsed data for logging
+    let processed_event = match process_event_with_config(&event, config) {
+        Ok(processed) => processed,
+        Err(e) => {
+            tracing::error!(
+                error = ?e,
+                "Failed to process event"
+            );
+            return;
+        }
+    };
 
-    // just log the error if publishing fails
-    let _ = get_event_publisher(config)
-        .and_then(|publisher| publisher.emit_event_with_config(event, config))
-        .inspect_err(|e| {
-            tracing::error!(error = ?e, "Failed to emit event");
-        });
+    // This provides observability even when Kafka publishing is disabled
+    let event_json = serde_json::to_string(&processed_event)
+        .unwrap_or_else(|e| format!("{{\"error\":\"Failed to serialize event: {}\"}}", e));
+    tracing::info!(
+        events_enabled = config.enabled,
+        "Event processed (Kafka publishing: {}) - Event JSON: {}",
+        if config.enabled {
+            "enabled"
+        } else {
+            "disabled"
+        },
+        event_json
+    );
+
+    // Only publish to Kafka if enabled
+    if config.enabled {
+        let _ = get_event_publisher(config)
+            .and_then(|publisher| {
+                let metadata = publisher.build_kafka_metadata(&event);
+                publisher.publish_event_with_metadata(
+                    processed_event,
+                    &config.topic,
+                    &config.partition_key_field,
+                    metadata,
+                )
+            })
+            .inspect_err(|e| {
+                tracing::error!(error = ?e, "Failed to publish event to Kafka");
+            });
+    }
 }

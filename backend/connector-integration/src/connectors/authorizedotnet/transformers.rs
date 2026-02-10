@@ -1458,6 +1458,7 @@ fn convert_to_additional_payment_method_connector_response(
                     payment_checks: Some(payment_checks),
                     card_network: None,
                     domestic_network: None,
+                    auth_code: None,
                 },
             )
         }
@@ -3157,7 +3158,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
                         code: error_code.to_string(),
                         message: error_text.to_string(),
                         reason: Some(error_text.to_string()),
-                        attempt_status: None,
+                        attempt_status: Some(AttemptStatus::Failure), // Marking attempt as failure since we couldn't confirm existing profile ID
                         connector_transaction_id: None,
                         network_decline_code: None,
                         network_advice_code: None,
@@ -3171,7 +3172,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
                     code: error_code.to_string(),
                     message: error_text.to_string(),
                     reason: Some(error_text.to_string()),
-                    attempt_status: None,
+                    attempt_status: Some(AttemptStatus::Failure), // Marking attempt as failure for non-duplicate errors
                     connector_transaction_id: None,
                     network_decline_code: None,
                     network_advice_code: None,

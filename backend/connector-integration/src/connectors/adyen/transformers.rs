@@ -786,6 +786,7 @@ pub struct AdditionalData {
     #[serde(flatten)]
     riskdata: Option<RiskData>,
     sca_exemption: Option<AdyenExemptionValues>,
+    pub auth_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3673,11 +3674,15 @@ pub fn get_adyen_response(
             payment_method_id: None,
             connector_mandate_request_reference_id: None,
         });
-    let network_txn_id = response.additional_data.and_then(|additional_data| {
-        additional_data
-            .network_tx_reference
-            .map(|network_tx_id| network_tx_id.expose())
-    });
+    let network_txn_id = response
+        .additional_data
+        .as_ref()
+        .and_then(|additional_data| {
+            additional_data
+                .network_tx_reference
+                .as_ref()
+                .map(|network_tx_id| network_tx_id.clone().expose())
+        });
 
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: ResponseId::ConnectorTransactionId(response.psp_reference),
@@ -3691,13 +3696,20 @@ pub fn get_adyen_response(
     };
 
     let txn_amount = response.amount.map(|amount| amount.value);
+    let connector_response = pmt.and_then(|pmt| {
+        response
+            .additional_data
+            .as_ref()
+            .and_then(|additional_data| additional_data.auth_code.clone())
+            .map(|auth_code| ConnectorResponseData::with_auth_code(auth_code, pmt))
+    });
 
     Ok(AdyenPaymentsResponseData {
         status,
         error,
         payments_response_data,
         txn_amount,
-        connector_response: None,
+        connector_response,
     })
 }
 
