@@ -499,6 +499,7 @@ fn handle_payment_response<F, T>(
                         payment_checks: Some(payment_checks),
                         card_network: None,
                         domestic_network: None,
+                        auth_code: None,
                     }
                 })
                 .map(ConnectorResponseData::with_additional_payment_method_data);

@@ -64,6 +64,10 @@ pub fn create_router(state: AppState) -> Router {
             post(handlers::payments::create_access_token),
         )
         .route("/payments/transform", post(handlers::payments::transform))
+        .route(
+            "/payments/verify_redirect_response",
+            post(handlers::payments::verify_redirect_response),
+        )
         // RefundService routes
         .route("/refunds/get", post(handlers::refunds::get_refund))
         .route(
