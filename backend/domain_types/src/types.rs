@@ -366,6 +366,42 @@ impl ForeignTryFrom<grpc_api_types::payments::Tokenization> for common_enums::To
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience>
+    for common_enums::PaymentExperience
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentExperience,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::PaymentExperience::RedirectToUrl => Ok(Self::RedirectToUrl),
+            grpc_api_types::payments::PaymentExperience::InvokeSdkClient => {
+                Ok(Self::InvokeSdkClient)
+            }
+            grpc_api_types::payments::PaymentExperience::DisplayQrCode => Ok(Self::DisplayQrCode),
+            grpc_api_types::payments::PaymentExperience::OneClick => Ok(Self::OneClick),
+            grpc_api_types::payments::PaymentExperience::LinkWallet => Ok(Self::LinkWallet),
+            grpc_api_types::payments::PaymentExperience::InvokePaymentApp => {
+                Ok(Self::InvokePaymentApp)
+            }
+            grpc_api_types::payments::PaymentExperience::DisplayWaitScreen => {
+                Ok(Self::DisplayWaitScreen)
+            }
+            grpc_api_types::payments::PaymentExperience::CollectOtp => Ok(Self::CollectOtp),
+            grpc_api_types::payments::PaymentExperience::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_PAYMENT_EXPERIENCE".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Payment experience must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
+        }
+    }
+}
+
 // Helper function to extract and convert UPI source from gRPC type
 fn convert_upi_source(
     source_option: Option<i32>,
@@ -4077,6 +4113,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             }
         };
 
+        let payment_experience = match value.payment_experience() {
+            grpc_payment_types::PaymentExperience::Unspecified => None,
+            _ => Some(common_enums::PaymentExperience::foreign_try_from(
+                value.payment_experience(),
+            )?),
+        };
+
         let connector_metadata = value
             .connector_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
@@ -4091,7 +4134,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             mandate_id: None,
             payment_method_type: None,
             currency,
-            payment_experience: None,
+            payment_experience,
             amount,
             integrity_object: None,
             all_keys_required: None, // Field not available in new proto structure

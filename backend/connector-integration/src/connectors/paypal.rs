@@ -1,7 +1,7 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_enums::CurrencyUnit;
+use common_enums::{AttemptStatus, CurrencyUnit};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -55,7 +55,7 @@ use crate::{
         PaypalSyncResponse, PaypalZeroMandateRequest, RefundResponse, RefundSyncResponse,
     },
     types::ResponseRouterData,
-    utils::{self, ConnectorErrorTypeMapping, ErrorCodeAndMessage},
+    utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping},
     with_error_response_body,
 };
 
@@ -329,6 +329,67 @@ macros::create_all_prerequisites!(
         ) -> &'a str {
             &req.resource_common_data.connectors.paypal.base_url
         }
+
+     pub fn get_order_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+        //Handled error response separately for Orders as the end point is different for Orders - (Authorize) and Payments - (Capture, void, refund, rsync).
+        //Error response have different fields for Orders and Payments.
+        let response: paypal::PaypalOrderErrorResponse = res
+            .response
+            .parse_struct("Paypal ErrorResponse")
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+
+        with_error_response_body!(event_builder, response);
+
+        let error_reason = response.details.clone().map(|order_errors| {
+            order_errors
+                .iter()
+                .map(|error| {
+                    let mut reason = format!("description - {}", error.description);
+                    if let Some(value) = &error.value {
+                        reason.push_str(&format!(", value - {value}"));
+                    }
+                    if let Some(field) = error
+                        .field
+                        .as_ref()
+                        .and_then(|field| field.split('/').next_back())
+                    {
+                        reason.push_str(&format!(", field - {field}"));
+                    }
+                    reason.push(';');
+                    reason
+                })
+                .collect::<String>()
+        });
+        let errors_list = response.details.unwrap_or_default();
+        let option_error_code_message =
+            utils::get_error_code_error_message_based_on_priority(
+                self.clone(),
+                errors_list
+                    .into_iter()
+                    .map(|errors| errors.into())
+                    .collect(),
+            );
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: option_error_code_message
+                .clone()
+                .map(|error_code_message| error_code_message.error_code)
+                .unwrap_or(NO_ERROR_CODE.to_string()),
+            message: option_error_code_message
+                .map(|error_code_message| error_code_message.error_message)
+                .unwrap_or(NO_ERROR_MESSAGE.to_string()),
+            reason: error_reason.or(Some(response.message)),
+            attempt_status: Some(AttemptStatus::Failure),
+            connector_transaction_id: response.debug_id,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
+        })
+    }
     }
 );
 
@@ -478,12 +539,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.get_order_error_response(res, event_builder)
     }
 }
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector_default_implementations: [get_content_type],
     connector: Paypal,
     curl_request: FormUrlEncoded(PaypalAuthUpdateRequest),
     curl_response: PaypalAuthUpdateResponse,
@@ -517,6 +578,30 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}v1/oauth2/token", self.connector_base_url_payments(req)))
         }
+        fn get_error_response_v2(
+                &self,
+                res: Response,
+                event_builder: Option<&mut events::Event>,
+            ) -> CustomResult<ErrorResponse, ConnectorError> {
+            let response: paypal::PaypalAccessTokenErrorResponse = res
+            .response
+            .parse_struct("Paypal AccessTokenErrorResponse")
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+
+        with_error_response_body!(event_builder, response);
+
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.error.clone(),
+            message: response.error.clone(),
+            reason: Some(response.error_description),
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
+        })
+        }
     }
 );
 
@@ -543,10 +628,9 @@ macros::macro_connector_implementation!(
             let connector_metadata = req.resource_common_data.connector_meta_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
-            let reference_id = req.resource_common_data.get_reference_id()?;
             self.build_headers(
                 &access_token.access_token,
-                &reference_id,
+                &req.resource_common_data.connector_request_reference_id,
                 &req.connector_auth_type,
                 connector_metadata.as_ref(),
             )
@@ -1111,13 +1195,112 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorErrorTypeMapping for Paypal<T>
 {
-}
-
-impl From<paypal::ErrorDetails> for ErrorCodeAndMessage {
-    fn from(error_details: paypal::ErrorDetails) -> Self {
-        Self {
-            error_code: error_details.issue,
-            error_message: error_details.description.unwrap_or_default(),
+    fn get_connector_error_type(
+        &self,
+        error_code: String,
+        _error_message: String,
+    ) -> ConnectorErrorType {
+        match error_code.as_str() {
+            "CANNOT_BE_NEGATIVE" => ConnectorErrorType::UserError,
+            "CANNOT_BE_ZERO_OR_NEGATIVE" => ConnectorErrorType::UserError,
+            "CARD_EXPIRED" => ConnectorErrorType::UserError,
+            "DECIMAL_PRECISION" => ConnectorErrorType::UserError,
+            "DUPLICATE_INVOICE_ID" => ConnectorErrorType::UserError,
+            "INSTRUMENT_DECLINED" => ConnectorErrorType::BusinessError,
+            "INTERNAL_SERVER_ERROR" => ConnectorErrorType::TechnicalError,
+            "INVALID_ACCOUNT_STATUS" => ConnectorErrorType::BusinessError,
+            "INVALID_CURRENCY_CODE" => ConnectorErrorType::UserError,
+            "INVALID_PARAMETER_SYNTAX" => ConnectorErrorType::UserError,
+            "INVALID_PARAMETER_VALUE" => ConnectorErrorType::UserError,
+            "INVALID_RESOURCE_ID" => ConnectorErrorType::UserError,
+            "INVALID_STRING_LENGTH" => ConnectorErrorType::UserError,
+            "MISSING_REQUIRED_PARAMETER" => ConnectorErrorType::UserError,
+            "PAYER_ACCOUNT_LOCKED_OR_CLOSED" => ConnectorErrorType::BusinessError,
+            "PAYER_ACCOUNT_RESTRICTED" => ConnectorErrorType::BusinessError,
+            "PAYER_CANNOT_PAY" => ConnectorErrorType::BusinessError,
+            "PERMISSION_DENIED" => ConnectorErrorType::BusinessError,
+            "INVALID_ARRAY_MAX_ITEMS" => ConnectorErrorType::UserError,
+            "INVALID_ARRAY_MIN_ITEMS" => ConnectorErrorType::UserError,
+            "INVALID_COUNTRY_CODE" => ConnectorErrorType::UserError,
+            "NOT_SUPPORTED" => ConnectorErrorType::BusinessError,
+            "PAYPAL_REQUEST_ID_REQUIRED" => ConnectorErrorType::UserError,
+            "MALFORMED_REQUEST_JSON" => ConnectorErrorType::UserError,
+            "PERMISSION_DENIED_FOR_DONATION_ITEMS" => ConnectorErrorType::BusinessError,
+            "MALFORMED_REQUEST" => ConnectorErrorType::TechnicalError,
+            "AMOUNT_MISMATCH" => ConnectorErrorType::UserError,
+            "BILLING_ADDRESS_INVALID" => ConnectorErrorType::UserError,
+            "CITY_REQUIRED" => ConnectorErrorType::UserError,
+            "DONATION_ITEMS_NOT_SUPPORTED" => ConnectorErrorType::BusinessError,
+            "DUPLICATE_REFERENCE_ID" => ConnectorErrorType::UserError,
+            "INVALID_PAYER_ID" => ConnectorErrorType::UserError,
+            "ITEM_TOTAL_REQUIRED" => ConnectorErrorType::UserError,
+            "MAX_VALUE_EXCEEDED" => ConnectorErrorType::UserError,
+            "MISSING_PICKUP_ADDRESS" => ConnectorErrorType::UserError,
+            "MULTI_CURRENCY_ORDER" => ConnectorErrorType::BusinessError,
+            "MULTIPLE_ITEM_CATEGORIES" => ConnectorErrorType::UserError,
+            "MULTIPLE_SHIPPING_ADDRESS_NOT_SUPPORTED" => ConnectorErrorType::UserError,
+            "MULTIPLE_SHIPPING_TYPE_NOT_SUPPORTED" => ConnectorErrorType::BusinessError,
+            "PAYEE_ACCOUNT_INVALID" => ConnectorErrorType::UserError,
+            "PAYEE_ACCOUNT_LOCKED_OR_CLOSED" => ConnectorErrorType::UserError,
+            "REFERENCE_ID_REQUIRED" => ConnectorErrorType::UserError,
+            "PAYMENT_SOURCE_CANNOT_BE_USED" => ConnectorErrorType::BusinessError,
+            "PAYMENT_SOURCE_DECLINED_BY_PROCESSOR" => ConnectorErrorType::BusinessError,
+            "PAYMENT_SOURCE_INFO_CANNOT_BE_VERIFIED" => ConnectorErrorType::BusinessError,
+            "POSTAL_CODE_REQUIRED" => ConnectorErrorType::UserError,
+            "SHIPPING_ADDRESS_INVALID" => ConnectorErrorType::UserError,
+            "TAX_TOTAL_MISMATCH" => ConnectorErrorType::UserError,
+            "TAX_TOTAL_REQUIRED" => ConnectorErrorType::UserError,
+            "UNSUPPORTED_INTENT" => ConnectorErrorType::BusinessError,
+            "UNSUPPORTED_PAYMENT_INSTRUCTION" => ConnectorErrorType::UserError,
+            "SHIPPING_TYPE_NOT_SUPPORTED_FOR_CLIENT" => ConnectorErrorType::BusinessError,
+            "UNSUPPORTED_SHIPPING_TYPE" => ConnectorErrorType::BusinessError,
+            "PREFERRED_SHIPPING_OPTION_AMOUNT_MISMATCH" => ConnectorErrorType::UserError,
+            "CARD_CLOSED" => ConnectorErrorType::BusinessError,
+            "ORDER_CANNOT_BE_SAVED" => ConnectorErrorType::BusinessError,
+            "SAVE_ORDER_NOT_SUPPORTED" => ConnectorErrorType::BusinessError,
+            "FIELD_NOT_PATCHABLE" => ConnectorErrorType::UserError,
+            "AMOUNT_NOT_PATCHABLE" => ConnectorErrorType::UserError,
+            "INVALID_PATCH_OPERATION" => ConnectorErrorType::UserError,
+            "PAYEE_ACCOUNT_NOT_SUPPORTED" => ConnectorErrorType::UserError,
+            "PAYEE_ACCOUNT_NOT_VERIFIED" => ConnectorErrorType::UserError,
+            "PAYEE_NOT_CONSENTED" => ConnectorErrorType::UserError,
+            "INVALID_JSON_POINTER_FORMAT" => ConnectorErrorType::BusinessError,
+            "INVALID_PARAMETER" => ConnectorErrorType::UserError,
+            "NOT_PATCHABLE" => ConnectorErrorType::BusinessError,
+            "PATCH_VALUE_REQUIRED" => ConnectorErrorType::UserError,
+            "PATCH_PATH_REQUIRED" => ConnectorErrorType::UserError,
+            "REFERENCE_ID_NOT_FOUND" => ConnectorErrorType::UserError,
+            "SHIPPING_OPTION_NOT_SELECTED" => ConnectorErrorType::UserError,
+            "SHIPPING_OPTIONS_NOT_SUPPORTED" => ConnectorErrorType::BusinessError,
+            "MULTIPLE_SHIPPING_OPTION_SELECTED" => ConnectorErrorType::UserError,
+            "ORDER_ALREADY_COMPLETED" => ConnectorErrorType::BusinessError,
+            "ACTION_DOES_NOT_MATCH_INTENT" => ConnectorErrorType::BusinessError,
+            "AGREEMENT_ALREADY_CANCELLED" => ConnectorErrorType::BusinessError,
+            "BILLING_AGREEMENT_NOT_FOUND" => ConnectorErrorType::BusinessError,
+            "DOMESTIC_TRANSACTION_REQUIRED" => ConnectorErrorType::BusinessError,
+            "ORDER_NOT_APPROVED" => ConnectorErrorType::UserError,
+            "MAX_NUMBER_OF_PAYMENT_ATTEMPTS_EXCEEDED" => ConnectorErrorType::TechnicalError,
+            "PAYEE_BLOCKED_TRANSACTION" => ConnectorErrorType::BusinessError,
+            "TRANSACTION_LIMIT_EXCEEDED" => ConnectorErrorType::UserError,
+            "TRANSACTION_RECEIVING_LIMIT_EXCEEDED" => ConnectorErrorType::BusinessError,
+            "TRANSACTION_REFUSED" => ConnectorErrorType::TechnicalError,
+            "ORDER_ALREADY_AUTHORIZED" => ConnectorErrorType::BusinessError,
+            "AUTH_CAPTURE_NOT_ENABLED" => ConnectorErrorType::BusinessError,
+            "AMOUNT_CANNOT_BE_SPECIFIED" => ConnectorErrorType::BusinessError,
+            "AUTHORIZATION_AMOUNT_EXCEEDED" => ConnectorErrorType::UserError,
+            "AUTHORIZATION_CURRENCY_MISMATCH" => ConnectorErrorType::UserError,
+            "MAX_AUTHORIZATION_COUNT_EXCEEDED" => ConnectorErrorType::BusinessError,
+            "ORDER_COMPLETED_OR_VOIDED" => ConnectorErrorType::BusinessError,
+            "ORDER_EXPIRED" => ConnectorErrorType::BusinessError,
+            "INVALID_PICKUP_ADDRESS" => ConnectorErrorType::UserError,
+            "CONSENT_NEEDED" => ConnectorErrorType::UserError,
+            "COMPLIANCE_VIOLATION" => ConnectorErrorType::BusinessError,
+            "REDIRECT_PAYER_FOR_ALTERNATE_FUNDING" => ConnectorErrorType::TechnicalError,
+            "ORDER_ALREADY_CAPTURED" => ConnectorErrorType::UserError,
+            "TRANSACTION_BLOCKED_BY_PAYEE" => ConnectorErrorType::BusinessError,
+            "NOT_ENABLED_FOR_CARD_PROCESSING" => ConnectorErrorType::BusinessError,
+            "PAYEE_NOT_ENABLED_FOR_CARD_PROCESSING" => ConnectorErrorType::BusinessError,
+            _ => ConnectorErrorType::UnknownError,
         }
     }
 }
