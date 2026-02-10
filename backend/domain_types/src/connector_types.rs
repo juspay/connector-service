@@ -1413,6 +1413,7 @@ pub struct PaymentCreateOrderData {
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
 }
 
 #[derive(Debug, Clone)]

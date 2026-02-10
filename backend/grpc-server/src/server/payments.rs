@@ -922,6 +922,18 @@ impl Payments {
                 )
             })?;
 
+        // Extract payment_method_type from PaymentsAuthorizeData
+        let payment_authorize_data: PaymentsAuthorizeData<DefaultPCIHolder> =
+            PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(|err| {
+                tracing::error!("Failed to process payment authorize data: {:?}", err);
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some("Failed to process payment authorize data".to_string()),
+                    Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
         let order_create_data = PaymentCreateOrderData {
             amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
@@ -933,6 +945,7 @@ impl Payments {
                 Secret::new(value)
             }),
             webhook_url: payload.webhook_url.clone(),
+            payment_method_type: payment_authorize_data.payment_method_type,
         };
 
         let order_router_data = RouterDataV2::<
@@ -1073,6 +1086,8 @@ impl Payments {
                 Secret::new(value)
             }),
             webhook_url: payload.webhook_url.clone(),
+            // Setup mandate flow doesn't use wallets, so payment_method_type is not applicable
+            payment_method_type: None,
         };
 
         let order_router_data = RouterDataV2::<
