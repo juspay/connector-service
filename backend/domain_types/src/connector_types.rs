@@ -1418,6 +1418,10 @@ pub struct PaymentCreateOrderData {
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
+    /// Optional session token for wallet flows (Apple Pay, Google Pay)
+    pub session_token: Option<String>,
+    /// Optional connector metadata for storing additional response data
+    pub connector_metadata: Option<SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone)]

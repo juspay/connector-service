@@ -1005,7 +1005,20 @@ impl Payments {
         )?;
 
         match response.response {
-            Ok(PaymentCreateOrderResponse { order_id, .. }) => Ok(order_id),
+            Ok(PaymentCreateOrderResponse {
+                order_id,
+                session_token,
+                connector_metadata,
+            }) => {
+                if let Some(token) = session_token {
+                    let mut updated_flow_data = payment_flow_data.clone();
+                    updated_flow_data.session_token = Some(token);
+                    if let Some(metadata) = connector_metadata {
+                        updated_flow_data.connector_meta_data = Some(metadata);
+                    }
+                }
+                Ok(order_id)
+            }
             Err(e) => Err(PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(e.message.clone()),
@@ -4647,7 +4660,11 @@ pub fn generate_create_order_response(
         .get_connector_response_headers_as_map();
 
     let response = match transaction_response {
-        Ok(PaymentCreateOrderResponse { order_id }) => PaymentServiceCreateOrderResponse {
+        Ok(PaymentCreateOrderResponse {
+            order_id,
+            session_token,
+            connector_metadata,
+        }) => PaymentServiceCreateOrderResponse {
             order_id: Some(grpc_api_types::payments::Identifier {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::Id(order_id)),
             }),
@@ -4659,6 +4676,9 @@ pub fn generate_create_order_response(
             response_ref_id: None,
             raw_connector_request,
             raw_connector_response,
+            session_token,
+            connector_metadata: connector_metadata
+                .map(|metadata| metadata.map(|value| value.to_string())),
         },
         Err(err) => PaymentServiceCreateOrderResponse {
             order_id: Some(grpc_api_types::payments::Identifier {
@@ -4676,6 +4696,8 @@ pub fn generate_create_order_response(
             response_ref_id: None,
             raw_connector_request,
             raw_connector_response,
+            connector_metadata: None,
+            session_token: None,
         },
     };
     Ok(response)
