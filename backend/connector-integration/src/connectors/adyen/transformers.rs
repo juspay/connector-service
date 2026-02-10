@@ -25,7 +25,7 @@ use domain_types::{
     payment_method_data::{
         BankDebitData, BankRedirectData, BankTransferData, Card, CardRedirectData,
         DefaultPCIHolder, GiftCardData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        WalletData,
+        VoucherData, WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -219,12 +219,42 @@ pub enum AdyenPaymentMethod<
     Benefit,
     #[serde(rename = "momo_atm")]
     MomoAtm,
+    // Voucher payment methods
+    #[serde(rename = "boletobancario")]
+    BoletoBancario,
+    #[serde(rename = "doku_alfamart")]
+    Alfamart(Box<DokuBankData>),
+    #[serde(rename = "doku_indomaret")]
+    Indomaret(Box<DokuBankData>),
+    #[serde(rename = "oxxo")]
+    Oxxo,
+    #[serde(rename = "econtext_seven_eleven")]
+    SevenEleven(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    Lawson(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    MiniStop(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    FamilyMart(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    Seicomart(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    PayEasy(Box<JCSVoucherData>),
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlikRedirectionData {
     blik_code: Secret<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JCSVoucherData {
+    first_name: Secret<String>,
+    last_name: Option<Secret<String>>,
+    shopper_email: common_utils::pii::Email,
+    telephone_number: Secret<String>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -1389,6 +1419,78 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Ok(Self::AdyenGiftCard(Box::new(gift_card_pm)))
             }
         }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &VoucherData,
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    )> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+    fn try_from(
+        (voucher_data, item): (
+            &VoucherData,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match voucher_data {
+            VoucherData::Boleto(_) => Ok(Self::BoletoBancario),
+            VoucherData::Alfamart(_) => Ok(Self::Alfamart(Box::new(DokuBankData::try_from(item)?))),
+            VoucherData::Indomaret(_) => {
+                Ok(Self::Indomaret(Box::new(DokuBankData::try_from(item)?)))
+            }
+            VoucherData::Oxxo => Ok(Self::Oxxo),
+            VoucherData::SevenEleven(_) => {
+                Ok(Self::SevenEleven(Box::new(JCSVoucherData::try_from(item)?)))
+            }
+            VoucherData::Lawson(_) => Ok(Self::Lawson(Box::new(JCSVoucherData::try_from(item)?))),
+            VoucherData::MiniStop(_) => {
+                Ok(Self::MiniStop(Box::new(JCSVoucherData::try_from(item)?)))
+            }
+            VoucherData::FamilyMart(_) => {
+                Ok(Self::FamilyMart(Box::new(JCSVoucherData::try_from(item)?)))
+            }
+            VoucherData::Seicomart(_) => {
+                Ok(Self::Seicomart(Box::new(JCSVoucherData::try_from(item)?)))
+            }
+            VoucherData::PayEasy(_) => Ok(Self::PayEasy(Box::new(JCSVoucherData::try_from(item)?))),
+            VoucherData::Efecty
+            | VoucherData::PagoEfectivo
+            | VoucherData::RedCompra
+            | VoucherData::RedPagos => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Adyen"),
+            ))?,
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    > for JCSVoucherData
+{
+    type Error = Error;
+    fn try_from(
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            first_name: item.resource_common_data.get_billing_first_name()?,
+            last_name: item.resource_common_data.get_optional_billing_last_name(),
+            shopper_email: item.resource_common_data.get_billing_email()?,
+            telephone_number: item.resource_common_data.get_billing_phone_number()?,
+        })
     }
 }
 
@@ -2602,6 +2704,148 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &VoucherData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &VoucherData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, voucher_data) = value;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from((voucher_data, &item.router_data))?,
+        ));
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let return_url = item.router_data.request.get_router_return_url()?;
+
+        let social_security_number = get_social_security_number(voucher_data);
+
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+        let delivery_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .get_optional_shipping(),
+        )
+        .and_then(Result::ok);
+
+        let shopper_name =
+            get_shopper_name(item.router_data.resource_common_data.get_optional_billing());
+        let shopper_email = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_email();
+        let telephone_number = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_phone_number();
+        let (recurring_processing_model, store_payment_method, shopper_reference) =
+            get_recurring_processing_model(&item.router_data)?;
+        let country_code =
+            get_country_code(item.router_data.resource_common_data.get_optional_billing());
+        let (store, splits) = get_adyen_split_request(
+            &item.router_data.request.metadata,
+            &adyen_metadata.store,
+            item.router_data.request.currency,
+        );
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info: get_browser_info(&item.router_data)?,
+            additional_data: get_additional_data(&item.router_data),
+            mpi_data: None,
+            telephone_number,
+            shopper_name,
+            shopper_email,
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number,
+            billing_address,
+            delivery_address,
+            country_code,
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: get_shopper_statement(&item.router_data),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store,
+            splits,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+            platform_chargeback_logic,
+            session_validity: None,
+        })
+    }
+}
+
+fn get_social_security_number(voucher_data: &VoucherData) -> Option<Secret<String>> {
+    match voucher_data {
+        VoucherData::Boleto(boleto_data) => boleto_data.social_security_number.clone(),
+        VoucherData::Alfamart { .. }
+        | VoucherData::Indomaret { .. }
+        | VoucherData::Efecty
+        | VoucherData::PagoEfectivo
+        | VoucherData::RedCompra
+        | VoucherData::RedPagos
+        | VoucherData::Oxxo
+        | VoucherData::SevenEleven { .. }
+        | VoucherData::Lawson { .. }
+        | VoucherData::MiniStop { .. }
+        | VoucherData::FamilyMart { .. }
+        | VoucherData::Seicomart { .. }
+        | VoucherData::PayEasy { .. } => None,
+    }
+}
+
 fn get_redirect_extra_details<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
@@ -2677,8 +2921,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::GiftCard(ref gift_card) => {
                     Self::try_from((item, gift_card.as_ref()))
                 }
+                PaymentMethodData::Voucher(ref voucher_data) => {
+                    Self::try_from((item, voucher_data))
+                }
                 PaymentMethodData::PayLater(_)
-                | PaymentMethodData::Voucher(_)
                 | PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
