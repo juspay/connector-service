@@ -372,7 +372,7 @@ impl<F, T> TryFrom<ResponseRouterData<VoltAuthUpdateResponse, Self>>
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
-                access_token: item.response.access_token.expose(),
+                access_token: item.response.access_token,
                 expires_in: Some(item.response.expires_in),
                 token_type: Some(item.response.token_type),
             }),

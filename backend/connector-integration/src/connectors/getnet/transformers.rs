@@ -14,7 +14,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -633,7 +633,7 @@ impl<F, T> TryFrom<ResponseRouterData<GetnetAccessTokenResponse, Self>>
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
-                access_token: item.response.access_token.expose(),
+                access_token: item.response.access_token,
                 expires_in: Some(item.response.expires_in),
                 token_type: Some(item.response.token_type),
             }),
