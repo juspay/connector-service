@@ -4,6 +4,28 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.10.0
+
+### Features
+
+- **connector:** Zift Connector Integration ([#480](https://github.com/juspay/connector-service/pull/480)) ([`21eb98b`](https://github.com/juspay/connector-service/commit/21eb98bf89c4597abb41d092b056a61c0222ed4a))
+
+### Bug Fixes
+
+- **payment_method:** Blik and sofort bank redirect payment method type defaulting to card ([#493](https://github.com/juspay/connector-service/pull/493)) ([`0c04185`](https://github.com/juspay/connector-service/commit/0c0418526daa56bcdd588d010229793834db57cd))
+
+### Refactors
+
+- Event publisher to log processed event even when publisher is disabled ([#491](https://github.com/juspay/connector-service/pull/491)) ([`9f83fd6`](https://github.com/juspay/connector-service/commit/9f83fd6eb1f938e8b02c0c09d0e3540d2b9ca025))
+
+### Miscellaneous Tasks
+
+- Added Resource ID, Service Name, and Service Type for UCS Events ([#460](https://github.com/juspay/connector-service/pull/460)) ([`430946c`](https://github.com/juspay/connector-service/commit/430946cc565cfe933b3fcf524c4bff2738ee4966))
+
+**Full Changelog:** [`2026.02.06.1...2026.02.10.0`](https://github.com/juspay/connector-service/compare/2026.02.06.1...2026.02.10.0)
+
+- - -
+
 ## 2026.02.06.1
 
 ### Features

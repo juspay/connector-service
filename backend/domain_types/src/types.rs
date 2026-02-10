@@ -193,6 +193,7 @@ pub struct Connectors {
     pub loonio: ConnectorParams,
     pub wellsfargo: ConnectorParams,
     pub hyperpg: ConnectorParams,
+    pub zift: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -909,6 +910,15 @@ impl<
                         },
                     }),
                 ),
+                grpc_api_types::payments::payment_method::PaymentMethod::Sofort(sofort) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::Sofort {
+                        country: match sofort.country() {
+                            grpc_payment_types::CountryAlpha2::Unspecified => None,
+                            _ => Some(CountryAlpha2::foreign_try_from(sofort.country())?),
+                        },
+                        preferred_language: sofort.preferred_language,
+                    }),
+                ),
                 grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(przelewy24) => {
                     Ok(Self::BankRedirect(
                         payment_method_data::BankRedirectData::Przelewy24 {
@@ -1497,6 +1507,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(_) => Ok(Some(PaymentMethodType::Przelewy24)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BancontactCard(_) => Ok(Some(PaymentMethodType::BancontactCard)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Blik(_) => Ok(Some(PaymentMethodType::Blik)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_) => Ok(Some(PaymentMethodType::Sofort)),
                 // ============================================================================
                 // MOBILE & CRYPTO PAYMENTS - PaymentMethodType mappings
                 // ============================================================================
@@ -1585,14 +1596,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                         error_identifier: 400,
                         error_message: "Local bank redirect is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Sofort is not yet supported".to_owned(),
                         error_object: None,
                     })))
                 }
@@ -4007,6 +4010,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Eps(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Blik(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_)),
             } => Ok(Self::BankRedirect),
             _ => Ok(Self::Card), // Default fallback
         }
