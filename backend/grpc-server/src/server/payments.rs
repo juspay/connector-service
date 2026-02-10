@@ -86,9 +86,11 @@ use crate::{
 struct EventParams<'a> {
     _connector_name: &'a str,
     _service_name: &'a str,
+    service_type: &'a str,
     request_id: &'a str,
     lineage_ids: &'a lineage::LineageIds<'a>,
     reference_id: &'a Option<String>,
+    resource_id: &'a Option<String>,
     shadow_mode: bool,
 }
 
@@ -324,6 +326,7 @@ impl Payments {
 
         let lineage_ids = &metadata_payload.lineage_ids;
         let reference_id = &metadata_payload.reference_id;
+        let resource_id = &metadata_payload.resource_id;
 
         // Extract access token from request
         let cached_access_token = payload
@@ -382,9 +385,11 @@ impl Payments {
             let event_params = EventParams {
                 _connector_name: &connector.to_string(),
                 _service_name: service_name,
+                service_type: utils::service_type_str(&config.server.type_),
                 request_id,
                 lineage_ids,
                 reference_id,
+                resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
             };
 
@@ -412,9 +417,11 @@ impl Payments {
             let event_params = EventParams {
                 _connector_name: &connector.to_string(),
                 _service_name: service_name,
+                service_type: utils::service_type_str(&config.server.type_),
                 request_id,
                 lineage_ids,
                 reference_id,
+                resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
             };
 
@@ -453,9 +460,11 @@ impl Payments {
                     let event_params = EventParams {
                         _connector_name: &connector.to_string(),
                         _service_name: service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         request_id,
                         lineage_ids,
                         reference_id,
+                        resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -505,9 +514,11 @@ impl Payments {
             let event_params = EventParams {
                 _connector_name: &connector.to_string(),
                 _service_name: service_name,
+                service_type: utils::service_type_str(&config.server.type_),
                 request_id,
                 lineage_ids,
                 reference_id,
+                resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
             };
             let payment_method_token_data = self
@@ -561,11 +572,13 @@ impl Payments {
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
+            service_type: utils::service_type_str(&config.server.type_),
             flow_name: FlowName::Authorize,
             event_config: &config.events,
             request_id,
             lineage_ids,
             reference_id,
+            resource_id,
             shadow_mode: metadata_payload.shadow_mode,
         };
 
@@ -754,11 +767,13 @@ impl Payments {
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
+            service_type: utils::service_type_str(&config.server.type_),
             flow_name: FlowName::Authorize,
             event_config: &config.events,
             request_id,
             lineage_ids: &metadata_payload.lineage_ids,
             reference_id: &metadata_payload.reference_id,
+            resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
         };
 
@@ -936,11 +951,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateOrder,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1054,11 +1071,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateOrder,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1169,11 +1188,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateSessionToken,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1306,11 +1327,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateAccessToken,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1440,11 +1463,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateConnectorCustomer,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1556,11 +1581,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateConnectorCustomer,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1663,11 +1690,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::PaymentMethodToken,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
         let response = external_services::service::execute_connector_processing_step(
@@ -2160,6 +2189,7 @@ impl PaymentService for Payments {
                         ref request_id,
                         ref lineage_ids,
                         ref reference_id,
+                        ref resource_id,
                         ..
                     } = metadata_payload;
                     let payload = request_data.payload;
@@ -2205,9 +2235,11 @@ impl PaymentService for Payments {
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
                             _service_name: &service_name,
+                            service_type: utils::service_type_str(&config.server.type_),
                             request_id,
                             lineage_ids,
                             reference_id,
+                            resource_id,
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
@@ -2264,11 +2296,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &metadata_payload.connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name,
                         event_config: &config.events,
                         request_id: &metadata_payload.request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -2418,9 +2452,11 @@ impl PaymentService for Payments {
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
                             _service_name: &service_name,
+                            service_type: utils::service_type_str(&config.server.type_),
                             request_id: &metadata_payload.request_id,
                             lineage_ids: &metadata_payload.lineage_ids,
                             reference_id: &metadata_payload.reference_id,
+                            resource_id: &metadata_payload.resource_id,
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
@@ -2979,9 +3015,11 @@ impl PaymentService for Payments {
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
                             _service_name: &service_name,
+                            service_type: utils::service_type_str(&config.server.type_),
                             request_id: &metadata_payload.request_id,
                             lineage_ids: &metadata_payload.lineage_ids,
                             reference_id: &metadata_payload.reference_id,
+                            resource_id: &metadata_payload.resource_id,
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
@@ -3100,9 +3138,11 @@ impl PaymentService for Payments {
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
                             _service_name: &service_name,
+                            service_type: utils::service_type_str(&config.server.type_),
                             request_id: &request_id,
                             lineage_ids: &lineage_ids,
                             reference_id: &metadata_payload.reference_id,
+                            resource_id: &metadata_payload.resource_id,
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
@@ -3139,9 +3179,11 @@ impl PaymentService for Payments {
                                 let event_params = EventParams {
                                     _connector_name: &connector.to_string(),
                                     _service_name: &service_name,
+                                    service_type: utils::service_type_str(&config.server.type_),
                                     request_id: &request_id,
                                     lineage_ids: &lineage_ids,
                                     reference_id: &metadata_payload.reference_id,
+                                    resource_id: &metadata_payload.resource_id,
                                     shadow_mode: metadata_payload.shadow_mode,
                                 };
 
@@ -3201,11 +3243,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::SetupMandate,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -3320,11 +3364,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::SetupMandate,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -3421,9 +3467,11 @@ impl PaymentService for Payments {
                     let event_params = EventParams {
                         _connector_name: &connector.to_string(),
                         _service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -3565,11 +3613,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::RepeatPayment,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -3923,11 +3973,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::PaymentMethodToken,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -4078,11 +4130,13 @@ impl PaymentService for Payments {
                     let external_event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::CreateConnectorCustomer,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -4185,9 +4239,11 @@ impl PaymentService for Payments {
                     let event_params = EventParams {
                         _connector_name: &connector.to_string(),
                         _service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 

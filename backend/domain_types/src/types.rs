@@ -193,6 +193,7 @@ pub struct Connectors {
     pub loonio: ConnectorParams,
     pub wellsfargo: ConnectorParams,
     pub hyperpg: ConnectorParams,
+    pub zift: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -357,6 +358,42 @@ impl ForeignTryFrom<grpc_api_types::payments::Tokenization> for common_enums::To
                     sub_code: "UNSPECIFIED_TOKENIZATION_STRATEGY".to_owned(),
                     error_identifier: 400,
                     error_message: "Tokenization strategy must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience>
+    for common_enums::PaymentExperience
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentExperience,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::PaymentExperience::RedirectToUrl => Ok(Self::RedirectToUrl),
+            grpc_api_types::payments::PaymentExperience::InvokeSdkClient => {
+                Ok(Self::InvokeSdkClient)
+            }
+            grpc_api_types::payments::PaymentExperience::DisplayQrCode => Ok(Self::DisplayQrCode),
+            grpc_api_types::payments::PaymentExperience::OneClick => Ok(Self::OneClick),
+            grpc_api_types::payments::PaymentExperience::LinkWallet => Ok(Self::LinkWallet),
+            grpc_api_types::payments::PaymentExperience::InvokePaymentApp => {
+                Ok(Self::InvokePaymentApp)
+            }
+            grpc_api_types::payments::PaymentExperience::DisplayWaitScreen => {
+                Ok(Self::DisplayWaitScreen)
+            }
+            grpc_api_types::payments::PaymentExperience::CollectOtp => Ok(Self::CollectOtp),
+            grpc_api_types::payments::PaymentExperience::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_PAYMENT_EXPERIENCE".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Payment experience must be specified".to_owned(),
                     error_object: None,
                 })
                 .into())
@@ -907,6 +944,15 @@ impl<
                             grpc_payment_types::CountryAlpha2::Unspecified => None,
                             _ => Some(CountryAlpha2::foreign_try_from(eps.country())?),
                         },
+                    }),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::Sofort(sofort) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::Sofort {
+                        country: match sofort.country() {
+                            grpc_payment_types::CountryAlpha2::Unspecified => None,
+                            _ => Some(CountryAlpha2::foreign_try_from(sofort.country())?),
+                        },
+                        preferred_language: sofort.preferred_language,
                     }),
                 ),
                 grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(przelewy24) => {
@@ -1497,6 +1543,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(_) => Ok(Some(PaymentMethodType::Przelewy24)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BancontactCard(_) => Ok(Some(PaymentMethodType::BancontactCard)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Blik(_) => Ok(Some(PaymentMethodType::Blik)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_) => Ok(Some(PaymentMethodType::Sofort)),
                 // ============================================================================
                 // MOBILE & CRYPTO PAYMENTS - PaymentMethodType mappings
                 // ============================================================================
@@ -1585,14 +1632,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                         error_identifier: 400,
                         error_message: "Local bank redirect is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Sofort is not yet supported".to_owned(),
                         error_object: None,
                     })))
                 }
@@ -1966,13 +2005,11 @@ impl<
         let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
 
         // Store merchant_account_metadata for connector use
-        let merchant_account_metadata = value.clone().merchant_account_metadata.and_then(|m| {
-            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let merchant_account_metadata = value
+            .clone()
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
         let merchant_account_id = merchant_account_metadata
             .as_ref()
             .and_then(|m: &Secret<serde_json::Value>| m.peek().get("merchant_account_id"))
@@ -2113,11 +2150,10 @@ impl<
                     error_object: None,
                 }))?,
             request_incremental_authorization: value.request_incremental_authorization,
-            metadata: value.metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            }),
+            metadata: value
+                .metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
+                .transpose()?,
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
             shipping_cost,
@@ -2181,13 +2217,11 @@ impl<
         };
         let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
         // Store merchant_account_metadata for connector use
-        let merchant_account_metadata = value.clone().merchant_account_metadata.and_then(|m| {
-            SecretSerdeValue::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let merchant_account_metadata = value
+            .clone()
+            .merchant_account_metadata
+            .map(|m| SecretSerdeValue::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
         let merchant_account_id = merchant_account_metadata
             .as_ref()
             .and_then(|m| m.peek().get("merchant_account_id"))
@@ -2342,11 +2376,10 @@ impl<
                     error_object: None,
                 }))?,
             request_incremental_authorization: value.request_incremental_authorization,
-            metadata: value.metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            }),
+            metadata: value
+                .metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
+                .transpose()?,
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
             shipping_cost,
@@ -2845,6 +2878,12 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
+        // Extract connector_meta_data from merchant_account_metadata
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -2860,7 +2899,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -2870,7 +2909,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -2923,13 +2962,10 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
-            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
 
         let order_details = (!value.order_details.is_empty())
             .then(|| {
@@ -3037,13 +3073,10 @@ impl
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
-            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
 
         let order_details = (!value.order_details.is_empty())
             .then(|| {
@@ -3180,13 +3213,10 @@ impl
             connector_customer: value.connector_customer_id,
             description: value.description,
             return_url: None,
-            connector_meta_data: value.merchant_account_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            connector_meta_data: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -3312,13 +3342,10 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
-            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -3540,6 +3567,7 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                             payment_checks,
                             card_network,
                             domestic_network,
+                            auth_code,
                         } => grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
                             payment_method_data: Some(
                                 grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Card(
@@ -3552,6 +3580,7 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                                             .and_then(|checks| serde_json::to_vec(checks).ok()),
                                         card_network: card_network.clone(),
                                         domestic_network: domestic_network.clone(),
+                                        auth_code: auth_code.clone(),
                                     }
                                 )
                             ),
@@ -3565,6 +3594,28 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                                                 let proto_source: grpc_api_types::payments::UpiSource = ForeignFrom::foreign_from(source);
                                                 proto_source as i32
                                             }),
+                                        }
+                                    )
+                                ),
+                            }
+                        }
+                        AdditionalPaymentMethodConnectorResponse::GooglePay { auth_code } => {
+                            grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
+                                payment_method_data: Some(
+                                    grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::GooglePay(
+                                        grpc_api_types::payments::GooglePayConnectorResponse {
+                                            auth_code: auth_code.clone(),
+                                        }
+                                    )
+                                ),
+                            }
+                        }
+                        AdditionalPaymentMethodConnectorResponse::ApplePay { auth_code } => {
+                            grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
+                                payment_method_data: Some(
+                                    grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::ApplePay(
+                                        grpc_api_types::payments::ApplePayConnectorResponse {
+                                            auth_code: auth_code.clone(),
                                         }
                                     )
                                 ),
@@ -4006,6 +4057,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Eps(_)),
             } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Blik(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_)),
+            } => Ok(Self::BankRedirect),
             _ => Ok(Self::Card), // Default fallback
         }
     }
@@ -4064,13 +4123,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             }
         };
 
-        let connector_metadata = value.merchant_account_metadata.and_then(|m| {
-            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let payment_experience = match value.payment_experience() {
+            grpc_payment_types::PaymentExperience::Unspecified => None,
+            _ => Some(common_enums::PaymentExperience::foreign_try_from(
+                value.payment_experience(),
+            )?),
+        };
+
+        let connector_metadata = value
+            .connector_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
+            .transpose()?;
 
         Ok(Self {
             connector_transaction_id,
@@ -4081,67 +4144,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             mandate_id: None,
             payment_method_type: None,
             currency,
-            payment_experience: None,
+            payment_experience,
             amount,
             integrity_object: None,
             all_keys_required: None, // Field not available in new proto structure
             split_payments: None,
             setup_future_usage,
-        })
-    }
-}
-
-impl
-    ForeignTryFrom<(
-        grpc_api_types::payments::PaymentServiceGetRequest,
-        Connectors,
-    )> for PaymentFlowData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        (value, connectors): (
-            grpc_api_types::payments::PaymentServiceGetRequest,
-            Connectors,
-        ),
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(Self {
-            merchant_id: common_utils::id_type::MerchantId::default(),
-            payment_id: "PAYMENT_ID".to_string(),
-            attempt_id: "ATTEMPT_ID".to_string(),
-            status: common_enums::AttemptStatus::Pending,
-            payment_method: PaymentMethod::Card, // Default
-            address: PaymentAddress::default(),
-            auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: extract_connector_request_reference_id(
-                &value.request_ref_id,
-            ),
-            customer_id: None,
-            connector_customer: None,
-            description: None,
-            return_url: None,
-            connector_meta_data: None,
-            amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
-            access_token: None,
-            session_token: None,
-            reference_id: None,
-            payment_method_token: None,
-            preprocessing_id: None,
-            connector_api_version: None,
-            test_mode: None,
-            connector_http_status_code: None,
-            external_latency: None,
-            connectors,
-            raw_connector_response: None,
-            raw_connector_request: None,
-            connector_response_headers: None,
-            vault_headers: None,
-            connector_response: None,
-            recurring_mandate_payment_data: None,
-            order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -4757,13 +4765,10 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
             split_refunds: None,
-            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            merchant_account_metadata: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
         })
     }
 }
@@ -4791,13 +4796,10 @@ impl
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
-            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
 
         let payment_method = value
             .payment_method_type
@@ -4857,13 +4859,10 @@ impl
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
-            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
 
         let payment_method = value
             .payment_method_type
@@ -5510,23 +5509,19 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                     _ => None,
                 })
                 .unwrap_or_default(),
-            metadata: value.metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            }),
+            metadata: value
+                .metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
+                .transpose()?,
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
             integrity_object: None,
             amount,
             currency,
-            connector_metadata: value.connector_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "connector metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Connector metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            connector_metadata: value
+                .connector_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
+                .transpose()?,
             merchant_order_reference_id: value.merchant_order_reference_id,
         })
     }
@@ -5884,13 +5879,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
             refund_amount: value.refund_amount,
-            connector_metadata: value.connector_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "connector metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Connector metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            connector_metadata: value
+                .connector_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
+                .transpose()?,
             refund_connector_metadata: value
                 .refund_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "refund metadata")))
@@ -5913,13 +5905,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .transpose()?,
             integrity_object: None,
             split_refunds: None,
-            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            merchant_account_metadata: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
         })
     }
 }
@@ -6250,80 +6239,21 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
-            metadata: value.metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            }),
+            metadata: value
+                .metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
+                .transpose()?,
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             integrity_object: None,
             capture_method,
-            connector_metadata: value.connector_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "connector metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Connector metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            connector_metadata: value
+                .connector_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
+                .transpose()?,
             merchant_order_reference_id: value.merchant_order_reference_id,
-        })
-    }
-}
-
-impl
-    ForeignTryFrom<(
-        grpc_api_types::payments::PaymentServiceCaptureRequest,
-        Connectors,
-    )> for PaymentFlowData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        (value, connectors): (
-            grpc_api_types::payments::PaymentServiceCaptureRequest,
-            Connectors,
-        ),
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(Self {
-            raw_connector_response: None,
-            merchant_id: common_utils::id_type::MerchantId::default(),
-            payment_id: "PAYMENT_ID".to_string(),
-            attempt_id: "ATTEMPT_ID".to_string(),
-            status: common_enums::AttemptStatus::Pending,
-            payment_method: PaymentMethod::Card, // Default
-            address: PaymentAddress::default(),
-            auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: extract_connector_request_reference_id(
-                &value.request_ref_id,
-            ),
-            customer_id: None,
-            connector_customer: None,
-            description: None,
-            return_url: None,
-            connector_meta_data: None,
-            amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
-            access_token: None,
-            session_token: None,
-            reference_id: None,
-            payment_method_token: None,
-            preprocessing_id: None,
-            connector_api_version: None,
-            test_mode: None,
-            connector_http_status_code: None,
-            external_latency: None,
-            connectors,
-            raw_connector_request: None,
-            connector_response_headers: None,
-            vault_headers: None,
-            connector_response: None,
-            recurring_mandate_payment_data: None,
-            order_details: None,
-            minor_amount_authorized: None,
         })
     }
 }
@@ -6351,13 +6281,10 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
-        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
-            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -6737,11 +6664,10 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
-        let metadata = value.metadata.and_then(|m| {
-            SecretSerdeValue::foreign_try_from((m, "metadata"))
-                .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                .ok()
-        });
+        let metadata = value
+            .metadata
+            .map(|m| SecretSerdeValue::foreign_try_from((m, "metadata")))
+            .transpose()?;
         let description = metadata
             .as_ref()
             .and_then(|m| m.peek().get("description"))
@@ -6900,11 +6826,10 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             return_url: value.return_url.clone(),
             payment_method_type: None,
             request_incremental_authorization: false,
-            metadata: value.metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            }),
+            metadata: value
+                .metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
+                .transpose()?,
             complete_authorize_url: None,
             capture_method: None,
             integrity_object: None,
@@ -6923,13 +6848,10 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                 }))?,
             billing_descriptor,
             merchant_order_reference_id: value.merchant_order_reference_id,
-            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            merchant_account_metadata: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
@@ -7527,11 +7449,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
             amount: common_utils::types::MinorUnit::new(value.amount),
             currency,
             integrity_object: None,
-            metadata: value.metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            }),
+            metadata: value
+                .metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
+                .transpose()?,
             webhook_url: value.webhook_url,
         })
     }
@@ -7565,13 +7486,10 @@ impl
         );
 
         // Create connector metadata from the metadata field if present
-        let connector_meta_data = value.merchant_account_metadata.and_then(|m| {
-            ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                .inspect_err(|e| {
-                    tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                })
-                .ok()
-        });
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
 
         // Extract access token from state if present
         let access_token = value
@@ -7606,7 +7524,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -8035,6 +7953,12 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
+        // Extract connector_meta_data from merchant_account_metadata
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -8050,7 +7974,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -8060,7 +7984,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -8129,13 +8053,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodT
             setup_mandate_details: None,
             integrity_object: None,
             split_payments: None,
-            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            merchant_account_metadata: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
         })
     }
 }
@@ -8326,6 +8247,13 @@ impl
             })
             .transpose()?
             .unwrap_or_else(PaymentAddress::default);
+
+        // Extract connector_meta_data from merchant_account_metadata
+        let connector_meta_data = value
+            .merchant_account_metadata
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -8341,7 +8269,7 @@ impl
             connector_customer: None,
             description: None, // description field not available in this proto
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -8351,7 +8279,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -8549,11 +8477,10 @@ impl<
             minor_amount: common_utils::types::MinorUnit::new(minor_amount),
             currency: common_enums::Currency::foreign_try_from(currency)?,
             merchant_order_reference_id,
-            metadata: value.metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "metadata"))
-                    .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                    .ok()
-            }),
+            metadata: value
+                .metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
+                .transpose()?,
             webhook_url,
             router_return_url: value.return_url,
             integrity_object: None,
@@ -8564,13 +8491,10 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             payment_method_type,
-            merchant_account_metadata: value.merchant_account_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            merchant_account_metadata: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
             off_session: value.off_session,
             split_payments: None,
             recurring_mandate_payment_data: value.recurring_mandate_payment_data.map(|v| {
@@ -8628,8 +8552,7 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::foreign_try_from)
-            .transpose()?;
+            .map(AccessTokenResponseData::from);
 
         Ok(Self {
             merchant_id: common_utils::id_type::MerchantId::default(),
@@ -9763,13 +9686,10 @@ impl
             connector_customer: None,
             description: value.description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value.merchant_account_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            connector_meta_data: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -9826,11 +9746,10 @@ impl
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let metadata = value.metadata.and_then(|m| {
-            SecretSerdeValue::foreign_try_from((m, "metadata"))
-                .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                .ok()
-        });
+        let metadata = value
+            .metadata
+            .map(|m| SecretSerdeValue::foreign_try_from((m, "metadata")))
+            .transpose()?;
         let description = metadata
             .as_ref()
             .and_then(|m| m.peek().get("description"))
@@ -9854,13 +9773,10 @@ impl
             connector_customer: None,
             description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value.merchant_account_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            connector_meta_data: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,
@@ -9924,11 +9840,10 @@ impl
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let metadata = value.metadata.and_then(|m| {
-            SecretSerdeValue::foreign_try_from((m, "metadata"))
-                .inspect_err(|e| tracing::error!("Metadata conversion error: {:?}", e))
-                .ok()
-        });
+        let metadata = value
+            .metadata
+            .map(|m| SecretSerdeValue::foreign_try_from((m, "metadata")))
+            .transpose()?;
         let description = metadata
             .as_ref()
             .and_then(|m| m.peek().get("description"))
@@ -9952,13 +9867,10 @@ impl
             connector_customer: None,
             description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value.merchant_account_metadata.and_then(|m| {
-                ForeignTryFrom::foreign_try_from((m, "merchant account metadata"))
-                    .inspect_err(|e| {
-                        tracing::error!("Merchant account metadata conversion error: {:?}", e)
-                    })
-                    .ok()
-            }),
+            connector_meta_data: value
+                .merchant_account_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
             amount_captured: None,
             minor_amount_captured: None,
             access_token,
