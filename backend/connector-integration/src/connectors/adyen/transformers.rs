@@ -66,17 +66,6 @@ pub struct Amount {
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
-pub fn check_required_field<'a, T>(
-    field: &'a Option<T>,
-    message: &'static str,
-) -> Result<&'a T, errors::ConnectorError> {
-    field
-        .as_ref()
-        .ok_or(errors::ConnectorError::MissingRequiredField {
-            field_name: message,
-        })
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CardBrand {
@@ -1726,9 +1715,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         match pay_later_data {
             PayLaterData::KlarnaRedirect { .. } => {
-                let billing = router_data.resource_common_data.get_billing()?;
-                check_required_field(&billing.email, "email")?;
-                check_required_field(&router_data.resource_common_data.customer_id, "customer_id")?;
+                router_data.resource_common_data.get_billing_email()?;
+                router_data
+                    .resource_common_data
+                    .customer_id
+                    .clone()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "customer_id",
+                    })?;
                 router_data.resource_common_data.get_billing_country()?;
                 Ok(Self::Klarna)
             }
@@ -1742,18 +1736,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Ok(Self::Klarna)
             }
             PayLaterData::AffirmRedirect { .. } => {
-                let billing = router_data.resource_common_data.get_billing()?;
-                check_required_field(&billing.email, "email")?;
+                router_data.resource_common_data.get_billing_email()?;
                 router_data.resource_common_data.get_billing_full_name()?;
-                check_required_field(&billing.phone, "billing.phone")?;
-                check_required_field(&billing.address, "billing.address")?;
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    })?;
                 Ok(Self::AdyenAffirm)
             }
             PayLaterData::AfterpayClearpayRedirect { .. } => {
-                let billing = router_data.resource_common_data.get_billing()?;
-                check_required_field(&billing.email, "email")?;
+                router_data.resource_common_data.get_billing_email()?;
                 router_data.resource_common_data.get_billing_full_name()?;
-                check_required_field(&billing.address, "billing.address")?;
+                router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    })?;
                 router_data
                     .resource_common_data
                     .get_optional_shipping()
@@ -1770,11 +1776,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             }
             PayLaterData::PayBrightRedirect { .. } => {
-                let billing = router_data.resource_common_data.get_billing()?;
                 router_data.resource_common_data.get_billing_full_name()?;
-                check_required_field(&billing.phone, "billing.phone")?;
-                check_required_field(&billing.email, "billing.email")?;
-                check_required_field(&billing.address, "billing.address")?;
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data.resource_common_data.get_billing_email()?;
+                router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    })?;
                 router_data
                     .resource_common_data
                     .get_optional_shipping()
@@ -1785,16 +1798,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Ok(Self::PayBright)
             }
             PayLaterData::WalleyRedirect { .. } => {
-                let billing = router_data.resource_common_data.get_billing()?;
-                check_required_field(&billing.phone, "billing.phone")?;
-                check_required_field(&billing.email, "billing.email")?;
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data.resource_common_data.get_billing_email()?;
                 Ok(Self::Walley)
             }
             PayLaterData::AlmaRedirect { .. } => {
-                let billing = router_data.resource_common_data.get_billing()?;
-                check_required_field(&billing.phone, "billing.phone")?;
-                check_required_field(&billing.email, "billing.email")?;
-                check_required_field(&billing.address, "billing.address")?;
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data.resource_common_data.get_billing_email()?;
+                router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    })?;
                 router_data
                     .resource_common_data
                     .get_optional_shipping()
@@ -1804,11 +1825,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Ok(Self::AlmaPayLater)
             }
             PayLaterData::AtomeRedirect { .. } => {
-                let billing = router_data.resource_common_data.get_billing()?;
-                check_required_field(&billing.email, "email")?;
+                router_data.resource_common_data.get_billing_email()?;
                 router_data.resource_common_data.get_billing_full_name()?;
-                check_required_field(&billing.phone, "billing.phone")?;
-                check_required_field(&billing.address, "billing.address")?;
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    })?;
                 Ok(Self::Atome)
             }
         }
