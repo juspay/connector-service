@@ -2131,6 +2131,8 @@ message PaymentServiceCreateOrderRequest {
   // Environment Configuration
   optional bool test_mode = 9; // A boolean value to indicate if the connector is in Test mode
 
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 10; // The type of payment method (e.g., apple_pay, google_pay)
 }
 
 // Response message for create order operation.
