@@ -174,6 +174,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         sync_type: None,
         connector_order_reference_id: None,
         test_mode: None,
+        payment_experience: None,
     }
 }
 
@@ -517,6 +518,7 @@ async fn test_authorize_capture_refund_rsync() {
             sync_type: None,
             connector_order_reference_id: None,
             test_mode: None,
+            payment_experience: None,
         };
         let mut rsync_grpc_request = Request::new(rsync_request);
         add_payload_metadata(&mut rsync_grpc_request);

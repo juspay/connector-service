@@ -3714,6 +3714,7 @@ impl From<&ClientProcessorInformation> for AdditionalPaymentMethodConnectorRespo
             payment_checks,
             card_network: None,
             domestic_network: None,
+            auth_code: None,
         }
     }
 }
