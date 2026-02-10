@@ -544,7 +544,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector_default_implementations: [get_content_type],
     connector: Paypal,
     curl_request: FormUrlEncoded(PaypalAuthUpdateRequest),
     curl_response: PaypalAuthUpdateResponse,
@@ -577,6 +577,30 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}v1/oauth2/token", self.connector_base_url_payments(req)))
+        }
+        fn get_error_response_v2(
+                &self,
+                res: Response,
+                event_builder: Option<&mut events::Event>,
+            ) -> CustomResult<ErrorResponse, ConnectorError> {
+            let response: paypal::PaypalAccessTokenErrorResponse = res
+            .response
+            .parse_struct("Paypal AccessTokenErrorResponse")
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+
+        with_error_response_body!(event_builder, response);
+
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.error.clone(),
+            message: response.error.clone(),
+            reason: Some(response.error_description),
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
+        })
         }
     }
 );

@@ -1801,6 +1801,8 @@ message PaymentServiceGetRequest {
 
   // Environment Configuration
   optional bool test_mode = 16; // A boolean value to indicate if the connector is in Test mode
+
+  optional PaymentExperience payment_experience = 7; // Preferred payment experience
 }
 
 // Response message for a payment status synchronization.
