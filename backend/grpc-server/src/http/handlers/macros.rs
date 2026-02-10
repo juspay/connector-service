@@ -9,7 +9,8 @@ use axum::{
 use tonic;
 
 #[allow(unused_imports)]
-use crate::configs::Config;
+// use crate::configs::Config;
+use common_crate::configs::Config;
 #[allow(unused_imports)]
 use crate::http::{
     error::HttpError, http_headers_to_grpc_metadata, state::AppState,

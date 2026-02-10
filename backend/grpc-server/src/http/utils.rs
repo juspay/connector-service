@@ -10,7 +10,8 @@ use std::sync::Arc;
 use tonic::metadata::{Ascii, MetadataMap, MetadataValue};
 
 use super::error::HttpError;
-use crate::configs::Config;
+// use crate::configs::Config;
+use common_crate::configs::Config;
 
 /// Converts HTTP headers to gRPC metadata
 /// Extracts relevant headers and adds them to the gRPC metadata map

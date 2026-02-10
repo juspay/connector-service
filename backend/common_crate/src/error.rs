@@ -2,7 +2,7 @@ use domain_types::errors::{ApiClientError, ApiError, ApplicationErrorResponse, C
 use grpc_api_types::payments::PaymentServiceAuthorizeResponse;
 use tonic::Status;
 
-use common_crate::logger;
+use crate::logger;
 
 /// Allows [error_stack::Report] to change between error contexts
 /// using the dependent [ErrorSwitch] trait to define relations & mappings between traits

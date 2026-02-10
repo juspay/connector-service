@@ -1,4 +1,11 @@
 use crate::utils::{self, get_config_from_request};
+use crate::{
+    // error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
+    implement_connector_operation,
+    request::RequestData,
+    utils::{grpc_logging_wrapper, MetadataPayload},
+};
+use common_crate::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
@@ -27,13 +34,6 @@ use grpc_api_types::payments::{
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
-
-use crate::{
-    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    implement_connector_operation,
-    request::RequestData,
-    utils::{grpc_logging_wrapper, MetadataPayload},
-};
 
 // Helper trait for dispute operations
 trait DisputeOperationsInternal {

@@ -7,7 +7,7 @@ use common_utils::{
 };
 use domain_types::types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch};
 
-use common_crate::{
+use crate::{
     error::ConfigurationError,
     logger::config::{Log, LogPatch},
 };
