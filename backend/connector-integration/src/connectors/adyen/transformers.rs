@@ -2853,7 +2853,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             telephone_number: item
                 .router_data
                 .resource_common_data
-                .get_optional_billing_phone_number(),
+                .get_billing_phone_number()
+                .ok(),
             shopper_name: get_shopper_name(
                 item.router_data.resource_common_data.get_optional_billing(),
             ),
