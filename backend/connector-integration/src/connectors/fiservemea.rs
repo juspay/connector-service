@@ -190,6 +190,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // MACRO-BASED IMPLEMENTATION
 // ============================================================================
 
+macros::create_amount_converter_wrapper!(connector_name: Fiservemea, amount_type: StringMajorUnit);
 macros::create_all_prerequisites!(
     connector_name: Fiservemea,
     generic_type: T,
