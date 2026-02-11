@@ -28,8 +28,8 @@ readonly SCRIPT_NAME="Hyperswitch Connector Generator"
 # Paths configuration
 readonly ROOT_DIR="$(pwd)"
 readonly TEMPLATE_DIR="$ROOT_DIR/grace/rulesbook/codegen/template-generation"
-readonly BACKEND_DIR="$ROOT_DIR/connector-service/backend"
-readonly CONFIG_DIR="$ROOT_DIR/connector-service/config"
+readonly BACKEND_DIR="$ROOT_DIR/backend"
+readonly CONFIG_DIR="$ROOT_DIR/config"
 
 # File paths
 readonly CONNECTOR_TYPES_FILE="$BACKEND_DIR/interfaces/src/connector_types.rs"
