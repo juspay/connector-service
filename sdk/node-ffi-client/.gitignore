@@ -1,0 +1,6 @@
+/node_modules
+/dist
+.turbo
+.DS_Store
+target/
+artifacts/

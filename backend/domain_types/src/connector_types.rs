@@ -41,7 +41,7 @@ use crate::{
 use url::Url;
 
 // snake case for enum variants
-#[derive(Clone, Copy, Debug, Display, EnumString)]
+#[derive(Clone, Copy, Debug, Display, EnumString, serde::Deserialize)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,

@@ -7,7 +7,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(debug_assertions)]
     verify_other_config_files();
     #[allow(clippy::expect_used)]
-    let config = configs::Config::new().expect("Failed while parsing config");
+    let config_path = configs::workspace_path().join("config/development.toml");
+    let config = configs::Config::new(Some(config_path)).expect("Failed while parsing config");
     let _guard = logger::setup(
         &config.log,
         common_crate::service_name!(),

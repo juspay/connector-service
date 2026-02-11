@@ -191,8 +191,8 @@ pub enum ServiceType {
 
 impl Config {
     /// Function to build the configuration by picking it from default locations
-    pub fn new() -> Result<Self, config::ConfigError> {
-        Self::new_with_config_path(None)
+    pub fn new(explicit_config_path: Option<PathBuf>) -> Result<Self, config::ConfigError> {
+        Self::new_with_config_path(explicit_config_path)
     }
 
     /// Function to build the configuration by picking it from default locations

@@ -2902,7 +2902,8 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                 )?
             }
             None => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                return Err(ApplicationErrorResponse::DomainError(
+                    ApiError {
                     sub_code: "INVALID_ADDRESS".to_owned(),
                     error_identifier: 400,
                     error_message: "Address is required".to_owned(),

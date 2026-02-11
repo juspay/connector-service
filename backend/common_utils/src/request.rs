@@ -40,9 +40,10 @@ fn default_request_headers() -> [(String, Maskable<String>); 1] {
     [(header::VIA.to_string(), "HyperSwitch".to_string().into())]
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Request {
     pub url: String,
+    #[serde(skip)]
     pub headers: Headers,
     pub method: Method,
     pub certificate: Option<Secret<String>>,
@@ -62,10 +63,11 @@ impl std::fmt::Debug for RequestContent {
         })
     }
 }
-
+#[derive(Serialize)]
 pub enum RequestContent {
     Json(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     FormUrlEncoded(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
+    #[serde(skip)]
     FormData(reqwest::multipart::Form),
     Xml(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     RawBytes(Vec<u8>),

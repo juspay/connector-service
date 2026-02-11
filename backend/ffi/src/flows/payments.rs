@@ -1,16 +1,10 @@
 use connector_integration::types::ConnectorData;
 
-use common_crate::{
-    configs::Config,
-    error::{ErrorSwitch, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
-};
+use common_crate::{configs, configs::Config, error::PaymentAuthorizationError};
 use grpc_api_types::payments::PaymentServiceAuthorizeRequest;
 
-use common_utils::{
-    metadata::MaskedMetadata,
-    request::{Method, Request, RequestContent},
-};
-use std::{collections::HashMap, fmt::Debug, sync::Arc};
+use common_utils::{metadata::MaskedMetadata, request::Request};
+use std::{fmt::Debug, sync::Arc};
 
 use domain_types::{
     connector_flow::Authorize,
@@ -20,7 +14,7 @@ use domain_types::{
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    utils::{ForeignFrom, ForeignTryFrom},
+    utils::ForeignTryFrom,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 
@@ -53,12 +47,15 @@ fn authorize<
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     > = connector_data.connector.get_connector_integration_v2();
+    println!("{:?} PaymentServiceAuthorizeRequest", payload);
+    println!("{:?} MetaData", metadata);
     let payment_flow_data =
         PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone(), metadata))
             .map_err(|err| {
+            println!("{:?}", err);
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
-                Some("Failed to process payment flow data".to_string()),
+                Some(err.to_string()),
                 Some("PAYMENT_FLOW_ERROR".to_string()),
                 None,
             )
@@ -66,9 +63,10 @@ fn authorize<
 
     let payment_authorize_data = PaymentsAuthorizeData::<T>::foreign_try_from(payload.clone())
         .map_err(|err| {
+            println!("{:?}", err);
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
-                Some("Failed to process payment authorize data".to_string()),
+                Some(err.to_string()),
                 Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
                 None,
             )
@@ -91,7 +89,7 @@ fn authorize<
         .map_err(|err| {
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
-                Some("Failed to process payment authorize data".to_string()),
+                Some(err.to_string()),
                 Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
                 None,
             )
@@ -99,16 +97,18 @@ fn authorize<
     Ok(connector_request)
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct MetadataPayload {
     pub connector: ConnectorEnum,
     pub connector_auth_type: ConnectorAuthType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Deserialize)]
 pub struct RequestData {
     pub payload: PaymentServiceAuthorizeRequest,
     pub extracted_metadata: MetadataPayload,
+
+    #[serde(skip_deserializing, default)]
     pub masked_metadata: MaskedMetadata, // all metadata with masking config
 }
 
@@ -116,11 +116,12 @@ pub fn authorize_flow(request: RequestData) -> Result<Option<Request>, PaymentAu
     let metadata_payload = request.extracted_metadata;
     let metadata = &request.masked_metadata;
     let payload = request.payload;
+    let config_path = configs::workspace_path().join("config/development.toml");
     // Load default config
-    let config = Arc::new(Config::new().map_err(|e| {
+    let config = Arc::new(Config::new(Some(config_path)).map_err(|e| {
         PaymentAuthorizationError::new(
             grpc_api_types::payments::PaymentStatus::Pending,
-            Some("Failed to load configuration".to_string()),
+            Some(e.to_string()),
             Some("CONFIG_ERROR".to_string()),
             None,
         )
