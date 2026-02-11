@@ -366,6 +366,42 @@ impl ForeignTryFrom<grpc_api_types::payments::Tokenization> for common_enums::To
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience>
+    for common_enums::PaymentExperience
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentExperience,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::PaymentExperience::RedirectToUrl => Ok(Self::RedirectToUrl),
+            grpc_api_types::payments::PaymentExperience::InvokeSdkClient => {
+                Ok(Self::InvokeSdkClient)
+            }
+            grpc_api_types::payments::PaymentExperience::DisplayQrCode => Ok(Self::DisplayQrCode),
+            grpc_api_types::payments::PaymentExperience::OneClick => Ok(Self::OneClick),
+            grpc_api_types::payments::PaymentExperience::LinkWallet => Ok(Self::LinkWallet),
+            grpc_api_types::payments::PaymentExperience::InvokePaymentApp => {
+                Ok(Self::InvokePaymentApp)
+            }
+            grpc_api_types::payments::PaymentExperience::DisplayWaitScreen => {
+                Ok(Self::DisplayWaitScreen)
+            }
+            grpc_api_types::payments::PaymentExperience::CollectOtp => Ok(Self::CollectOtp),
+            grpc_api_types::payments::PaymentExperience::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_PAYMENT_EXPERIENCE".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Payment experience must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
+        }
+    }
+}
+
 // Helper function to extract and convert UPI source from gRPC type
 fn convert_upi_source(
     source_option: Option<i32>,
@@ -4089,6 +4125,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             }
         };
 
+        let payment_experience = match value.payment_experience() {
+            grpc_payment_types::PaymentExperience::Unspecified => None,
+            _ => Some(common_enums::PaymentExperience::foreign_try_from(
+                value.payment_experience(),
+            )?),
+        };
+
         let connector_metadata = value
             .connector_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
@@ -4103,7 +4146,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             mandate_id: None,
             payment_method_type: None,
             currency,
-            payment_experience: None,
+            payment_experience,
             amount,
             integrity_object: None,
             all_keys_required: None, // Field not available in new proto structure
@@ -8532,6 +8575,20 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .get_raw_connector_request();
 
+    let connector_response = router_data_v2
+        .resource_common_data
+        .connector_response
+        .clone()
+        .and_then(|data| {
+            match grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data) {
+                Ok(data) => Some(data),
+                Err(err) => {
+                    tracing::error!("Failed to convert ConnectorResponseData: {err:?}");
+                    None
+                }
+            }
+        });
+
     match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -8579,13 +8636,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                         .get_connector_response_headers_as_map(),
                     state,
                     raw_connector_request,
-                    connector_response: router_data_v2
-                        .resource_common_data
-                        .connector_response
-                        .and_then(|data| {
-                            grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data)
-                                .ok()
-                        }),
+                    connector_response,
                     captured_amount: router_data_v2.resource_common_data.amount_captured,
                     minor_captured_amount: router_data_v2
                         .resource_common_data
@@ -8640,7 +8691,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                     state,
                     mandate_reference: None,
                     raw_connector_request,
-                    connector_response: None,
+                    connector_response,
                     captured_amount: None,
                     minor_captured_amount: None,
                     incremental_authorization_allowed: None,
