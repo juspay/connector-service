@@ -294,19 +294,22 @@ pub struct FiservemeaPaymentMethodDetails {
 // ============================================================================
 
 impl<T: PaymentMethodDataTypes>
-    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
-    for FiservemeaAuthorizeRequest
+    TryFrom<
+        crate::connectors::macros::FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: crate::connectors::macros::FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
         // Extract payment method data
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
