@@ -303,9 +303,7 @@ macros::macro_connector_implementation!(
             // Serialize request body for signature generation
             let request_obj = FiservemeaAuthorizeRequest::try_from(req)?;
             let request_body = serde_json::to_string(&request_obj)
-                .map_err(|_| errors::ConnectorError::RequestEncodingFailed {
-                    message: "Failed to serialize request body".to_string(),
-                })?;
+                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
 
             // Generate message signature
             let signature = auth.generate_message_signature(&client_request_id, timestamp, &request_body)?;
