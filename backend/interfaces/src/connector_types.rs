@@ -14,7 +14,7 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
@@ -27,7 +27,12 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 
-use crate::{api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2};
+use crate::{
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    decode::BodyDecoding,
+    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
+};
 
 pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     ConnectorCommon
@@ -57,6 +62,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentIncrementalAuthorization
     + MandateRevokeV2
     + VerifyWebhookSourceV2
+    + VerifyRedirectResponse
 {
 }
 
@@ -409,6 +415,40 @@ pub trait IncomingWebhook {
     > {
         Err(domain_types::errors::ConnectorError::NotImplemented(
             "get_webhook_resource_object".to_string(),
+        )
+        .into())
+    }
+}
+
+pub trait VerifyRedirectResponse: SourceVerification + BodyDecoding {
+    /// fn decode_redirect_response_body
+    fn decode_redirect_response_body(
+        &self,
+        request: &RequestDetails,
+        secrets: Option<ConnectorSourceVerificationSecrets>,
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        self.decode(secrets, &request.body)
+    }
+
+    fn verify_redirect_response_source(
+        &self,
+        request: &RequestDetails,
+        secrets: Option<ConnectorSourceVerificationSecrets>,
+    ) -> CustomResult<bool, domain_types::errors::ConnectorError> {
+        let connector_source_verifacation_secrets =
+            secrets.ok_or(domain_types::errors::ConnectorError::MissingRequiredField {
+                field_name: "redirect response secrets",
+            })?;
+
+        self.verify(connector_source_verifacation_secrets, &request.body)
+    }
+
+    fn process_redirect_response(
+        &self,
+        _request: &RequestDetails,
+    ) -> CustomResult<RedirectDetailsResponse, domain_types::errors::ConnectorError> {
+        Err(domain_types::errors::ConnectorError::NotImplemented(
+            "process_redirect_response".to_string(),
         )
         .into())
     }

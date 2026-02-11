@@ -40,6 +40,8 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{self},
+    decode::BodyDecoding,
+    verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers as razorpayv2;
@@ -588,6 +590,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     connector_types::SdkSessionTokenV2 for RazorpayV2<T>
 {
 }
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyRedirectResponse for RazorpayV2<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    SourceVerification for RazorpayV2<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for RazorpayV2<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidPostCaptureV2 for RazorpayV2<T>
 {
@@ -927,35 +945,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for RazorpayV2<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -965,125 +954,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 // SourceVerification implementations for all flows
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PSync,
-        PaymentFlowData,
-        PaymentsSyncData,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Capture,
-        PaymentFlowData,
-        PaymentsCaptureData,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Void,
-        PaymentFlowData,
-        PaymentVoidData,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        RSync,
-        RefundFlowData,
-        RefundSyncData,
-        RefundsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        DefendDispute,
-        DisputeFlowData,
-        DisputeDefendData,
-        DisputeResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     domain_types::connector_types::ConnectorSpecifications for RazorpayV2<T>
@@ -1091,31 +961,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         RepeatPayment,
         PaymentFlowData,
         RepeatPaymentData<T>,
         PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
     > for RazorpayV2<T>
 {
 }
@@ -1171,71 +1021,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         IncrementalAuthorization,
         PaymentFlowData,
         PaymentsIncrementalAuthorizationData,
         PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for RazorpayV2<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
     > for RazorpayV2<T>
 {
 }

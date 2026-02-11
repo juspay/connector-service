@@ -37,6 +37,7 @@ use domain_types::{
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    decode::BodyDecoding, verification::SourceVerification,
 };
 use serde::Serialize;
 use std::fmt::Debug;
@@ -55,16 +56,6 @@ use error_stack::ResultExt;
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
         IncrementalAuthorization,
         PaymentFlowData,
         PaymentsIncrementalAuthorizationData,
@@ -271,175 +262,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // SourceVerification implementations for all flows
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PSync,
-        PaymentFlowData,
-        PaymentsSyncData,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Capture,
-        PaymentFlowData,
-        PaymentsCaptureData,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Void,
-        PaymentFlowData,
-        PaymentVoidData,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        RSync,
-        RefundFlowData,
-        RefundSyncData,
-        RefundsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        DefendDispute,
-        DisputeFlowData,
-        DisputeDefendData,
-        DisputeResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::VoidPC,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -453,16 +275,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
@@ -500,35 +312,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Forte<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -541,17 +324,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Forte<T>
+    connector_types::IncomingWebhook for Forte<T>
 {
 }
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Forte<T>
+    connector_types::VerifyRedirectResponse for Forte<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Forte<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for Forte<T>
 {
 }
 

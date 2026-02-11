@@ -1,4 +1,4 @@
-use crate::utils::get_config_from_request;
+use crate::utils::{self, get_config_from_request};
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
@@ -112,6 +112,7 @@ impl DisputeService for Disputes {
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
+                        resource_id,
                         shadow_mode,
                         ..
                     } = request_data.extracted_metadata;
@@ -150,11 +151,13 @@ impl DisputeService for Disputes {
                     let event_params = external_services::service::EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: common_utils::events::FlowName::SubmitEvidence,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        resource_id: &resource_id,
                         shadow_mode,
                     };
 
@@ -322,6 +325,7 @@ impl DisputeService for Disputes {
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
+                        resource_id,
                         shadow_mode,
                         ..
                     } = request_data.extracted_metadata;
@@ -362,11 +366,13 @@ impl DisputeService for Disputes {
                     let event_params = external_services::service::EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: common_utils::events::FlowName::AcceptDispute,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        resource_id: &resource_id,
                         shadow_mode,
                     };
 

@@ -36,6 +36,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    decode::BodyDecoding, verification::SourceVerification,
 };
 use serde::Serialize;
 use std::fmt::Debug;
@@ -56,16 +57,6 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
         IncrementalAuthorization,
         PaymentFlowData,
         PaymentsIncrementalAuthorizationData,
@@ -184,6 +175,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Paysafe<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyRedirectResponse for Paysafe<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Paysafe<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for Paysafe<T>
 {
 }
 
@@ -623,115 +626,6 @@ macros::macro_connector_implementation!(
 );
 
 // SourceVerification implementations for all flows
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PSync,
-        PaymentFlowData,
-        PaymentsSyncData,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Capture,
-        PaymentFlowData,
-        PaymentsCaptureData,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Void,
-        PaymentFlowData,
-        PaymentVoidData,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        RSync,
-        RefundFlowData,
-        RefundSyncData,
-        RefundsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        DefendDispute,
-        DisputeFlowData,
-        DisputeDefendData,
-        DisputeResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Paysafe<T>
-{
-}
 
 // Stub implementations for unsupported flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -779,16 +673,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Authenticate,
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Paysafe<T>
 {
@@ -863,102 +747,5 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // SourceVerification implementations for PaymentMethodToken and PreAuthenticate
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
 
 // SourceVerification implementations for unsupported flows
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Paysafe<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Paysafe<T>
-{
-}

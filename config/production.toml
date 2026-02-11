@@ -105,6 +105,7 @@ bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
 revolut.base_url = "https://oba-auth.revolut.com/"
 wellsfargo.base_url = "https://api.cybersource.com/"
+zift.base_url = "https://secure.zift.io/"
 
 # Generic Events Configuration
 [events]

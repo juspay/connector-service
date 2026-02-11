@@ -116,6 +116,7 @@ pub enum ConnectorEnum {
     Loonio,
     Wellsfargo,
     Hyperpg,
+    Zift,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -194,6 +195,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Loonio => Ok(Self::Loonio),
             grpc_api_types::payments::Connector::Wellsfargo => Ok(Self::Wellsfargo),
             grpc_api_types::payments::Connector::Hyperpg => Ok(Self::Hyperpg),
+            grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -973,6 +975,7 @@ pub struct PaymentVoidData {
     pub currency: Option<Currency>,
     pub connector_metadata: Option<SecretSerdeValue>,
     pub metadata: Option<SecretSerdeValue>,
+    pub merchant_order_reference_id: Option<String>,
 }
 
 impl PaymentVoidData {
@@ -1451,6 +1454,7 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
     pub capture_method: Option<common_enums::CaptureMethod>,
+    pub mandate_reference: Option<MandateReferenceId>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
@@ -1726,6 +1730,19 @@ impl RefundFlowData {
 }
 
 #[derive(Debug, Clone)]
+pub struct RedirectDetailsResponse {
+    pub resource_id: Option<ResponseId>,
+    pub status: Option<AttemptStatus>,
+    pub response_minor_amount: Option<MinorUnit>,
+    pub response_currency: Option<Currency>,
+    pub connector_response_reference_id: Option<String>,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+    pub error_reason: Option<String>,
+    pub raw_connector_response: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct WebhookDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: AttemptStatus,
@@ -1796,6 +1813,12 @@ pub struct RequestDetails {
 
 #[derive(Debug, Clone)]
 pub struct ConnectorWebhookSecrets {
+    pub secret: Vec<u8>,
+    pub additional_secret: Option<Secret<String>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectorRedirectResponseSecrets {
     pub secret: Vec<u8>,
     pub additional_secret: Option<Secret<String>>,
 }
@@ -2172,6 +2195,21 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebho
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::RedirectResponseSecrets>
+    for ConnectorRedirectResponseSecrets
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::RedirectResponseSecrets,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            secret: value.secret.into(),
+            additional_secret: value.additional_secret.map(Secret::new),
+        })
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundsData {
     pub refund_id: String,
@@ -2252,6 +2290,7 @@ pub struct PaymentsCaptureData {
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub metadata: Option<SecretSerdeValue>,
+    pub merchant_order_reference_id: Option<String>,
 }
 
 impl PaymentsCaptureData {

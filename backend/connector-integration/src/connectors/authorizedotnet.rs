@@ -45,6 +45,7 @@ use interfaces::{
         PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2,
         ValidationTrait,
     },
+    decode::BodyDecoding,
     verification::SourceVerification,
 };
 use serde::Serialize;
@@ -69,16 +70,6 @@ pub(crate) mod headers {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
         IncrementalAuthorization,
         PaymentFlowData,
         PaymentsIncrementalAuthorizationData,
@@ -402,6 +393,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Authorizedotnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyRedirectResponse for Authorizedotnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    SourceVerification for Authorizedotnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for Authorizedotnet<T>
 {
 }
 
@@ -944,116 +950,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     > for Authorizedotnet<T>
 {
 }
-// SourceVerification implementations for all flows
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Authorizedotnet<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -1066,71 +962,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorSpecifications for Authorizedotnet<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Authorizedotnet<T>
 {
 }
