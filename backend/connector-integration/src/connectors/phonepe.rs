@@ -303,7 +303,7 @@ macros::macro_connector_implementation!(
                 }
                 "ANDROID" | "IOS" => {
                     let is_android = source_channel == "ANDROID";
-                    
+
                     if let Some(user_agent) = browser_info.and_then(|bi| bi.user_agent.as_ref()) {
                         let version = match is_android {
                             true => phonepe::split_ua(user_agent),
@@ -312,13 +312,30 @@ macros::macro_connector_implementation!(
                         headers.push((headers::X_SOURCE_CHANNEL_VERSION.to_string(), version.into()));
                     }
 
-                    if let PaymentMethodData::Upi(UpiData::UpiCollect(collect_data)) = &req.request.payment_method_data {
-                        if let Some(vpa_id) = &collect_data.vpa_id {
-                            let app_id = match is_android {
-                                true => vpa_id.peek().to_string(),
-                                false => phonepe::map_ios_payment_source_to_target_app(Some(vpa_id.peek()))
-                                    .unwrap_or_else(|| vpa_id.peek().to_string()),
-                            };
+                    if let PaymentMethodData::Upi(upi_data) = &req.request.payment_method_data {
+                        let app_id_opt = match upi_data {
+                            UpiData::UpiCollect(collect_data) => {
+                                collect_data.vpa_id.as_ref().map(|vpa_id| {
+                                    match is_android {
+                                        true => vpa_id.peek().to_string(),
+                                        false => phonepe::map_ios_payment_source_to_target_app(Some(vpa_id.peek()))
+                                            .unwrap_or_else(|| vpa_id.peek().to_string()),
+                                    }
+                                })
+                            }
+                            UpiData::UpiIntent(intent_data) => {
+                                intent_data.app_name.as_ref().map(|app_name| {
+                                    match is_android {
+                                        true => app_name.clone(),
+                                        false => phonepe::map_ios_payment_source_to_target_app(Some(app_name))
+                                            .unwrap_or_else(|| app_name.clone()),
+                                    }
+                                })
+                            }
+                            _ => None,
+                        };
+
+                        if let Some(app_id) = app_id_opt {
                             headers.push((headers::X_MERCHANT_APP_ID.to_string(), app_id.into()));
                         }
                     }

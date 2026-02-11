@@ -254,7 +254,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
                 UpiData::UpiIntent(intent_data) => {
-                    let target_app = get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
+                    let target_app =
+                        get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
                     PhonepePaymentInstrument {
                         instrument_type: constants::UPI_INTENT.to_string(),
                         target_app,
@@ -409,7 +410,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
                 UpiData::UpiIntent(intent_data) => {
-                    let target_app = get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
+                    let target_app =
+                        get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
                     PhonepePaymentInstrument {
                         instrument_type: constants::UPI_INTENT.to_string(),
                         target_app,
@@ -1057,7 +1059,6 @@ pub fn get_source_channel(user_agent: Option<&String>) -> String {
     }
     "WEB".to_string()
 }
-
 
 /// Creates metadata for sync response with BIN from masked account number
 fn get_sync_metadata(bin: Option<String>) -> Option<serde_json::Value> {
