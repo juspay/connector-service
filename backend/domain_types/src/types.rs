@@ -8568,7 +8568,13 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
         .connector_response
         .clone()
         .and_then(|data| {
-            grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data).ok()
+            match grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data) {
+                Ok(data) => Some(data),
+                Err(err) => {
+                    tracing::error!("Failed to convert ConnectorResponseData: {err:?}");
+                    None
+                }
+            }
         });
 
     match transaction_response {
