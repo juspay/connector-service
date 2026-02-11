@@ -28,8 +28,8 @@ readonly SCRIPT_NAME="Hyperswitch Connector Generator"
 # Paths configuration
 readonly ROOT_DIR="$(pwd)"
 readonly TEMPLATE_DIR="$ROOT_DIR/grace/rulesbook/codegen/template-generation"
-readonly BACKEND_DIR="$ROOT_DIR/backend"
-readonly CONFIG_DIR="$ROOT_DIR/config"
+readonly BACKEND_DIR="$ROOT_DIR/connector-service/backend"
+readonly CONFIG_DIR="$ROOT_DIR/connector-service/config"
 
 # File paths
 readonly CONNECTOR_TYPES_FILE="$BACKEND_DIR/interfaces/src/connector_types.rs"
@@ -72,8 +72,8 @@ detect_flows_from_connector_service_trait() {
     # This looks for lines like "+ PaymentAuthorizeV2<T>" or "+ PaymentSyncV2"
     local detected_flows
     detected_flows=$(grep -A 50 "pub trait ConnectorServiceTrait" "$connector_types_file" | \
-                    grep -E "^\s*\+\s*[A-Z][A-Za-z0-9]*" | \
-                    sed -E 's/^\s*\+\s*([A-Z][A-Za-z0-9]*).*/\1/' | \
+                    grep -E "^[[:space:]]*\+[[:space:]]*[A-Z][A-Za-z0-9]*" | \
+                    sed -E 's/^[[:space:]]*\+[[:space:]]*([A-Z][A-Za-z0-9]*).*/\1/' | \
                     grep -v "ConnectorCommon" | \
                     sort -u)
 
@@ -115,9 +115,174 @@ get_flow_description() {
     esac
 }
 
-
 # =============================================================================
-# COLOR CONSTANTS
+# FLOW METADATA EXTRACTION FUNCTIONS
+# =============================================================================
+# These functions parse connector_types.rs to extract metadata about each flow
+# This metadata is used to generate trait implementations dynamically
+
+# Global indexed arrays to store flow metadata (Bash 3.x compatible)
+FLOW_NAMES=()                # All flow trait names
+FLOW_GENERICS=()             # "true" or "false" for each flow
+FLOW_INTEGRATION_PARAMS=()   # ConnectorIntegrationV2 params for each flow
+
+# Helper function to find index of a flow in FLOW_NAMES array
+get_flow_index() {
+    local flow_name="$1"
+    local i
+    for i in "${!FLOW_NAMES[@]}"; do
+        if [[ "${FLOW_NAMES[$i]}" == "$flow_name" ]]; then
+            echo "$i"
+            return 0
+        fi
+    done
+    echo "-1"
+}
+
+# Extract metadata for a specific flow trait from connector_types.rs
+extract_flow_metadata() {
+    local flow_trait="$1"
+    local connector_types_file="$CONNECTOR_TYPES_FILE"
+    
+    log_debug "Extracting metadata for flow: $flow_trait"
+    
+    # Add flow to the names array
+    FLOW_NAMES+=("$flow_trait")
+    local flow_idx=$((${#FLOW_NAMES[@]} - 1))
+    
+    # Check if trait has generics by looking for <T in trait definition
+    if grep -A 1 "pub trait $flow_trait" "$connector_types_file" | grep -q "<T"; then
+        FLOW_GENERICS[$flow_idx]="true"
+        log_debug "  └─ Has generics: true"
+    else
+        FLOW_GENERICS[$flow_idx]="false"
+        log_debug "  └─ Has generics: false"
+    fi
+    
+    # Extract ConnectorIntegrationV2 type parameters
+    # First check if this trait even has ConnectorIntegrationV2 to avoid grep hanging
+    local trait_def
+    trait_def=$(sed -n "/pub trait $flow_trait/,/^}/p" "$connector_types_file")
+    
+    if ! echo "$trait_def" | grep -q "ConnectorIntegrationV2"; then
+        FLOW_INTEGRATION_PARAMS[$flow_idx]=""
+        log_debug "  └─ No ConnectorIntegrationV2 found (webhook/validation/redirect trait)"
+        return 0
+    fi
+    
+    
+    # Extract the ConnectorIntegrationV2 type parameters
+    # Join all lines first to handle multi-line definitions, then extract content
+    # between ConnectorIntegrationV2< and > (followed by whitespace/brace)
+    local integration_types
+    integration_types=$(echo "$trait_def" | \
+                       tr '\n' ' ' | \
+                       sed 's/.*ConnectorIntegrationV2<//;s/>[[:space:]]*{.*//' | \
+                       sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/[[:space:]][[:space:]]*/ /g')
+    
+    if [[ -n "$integration_types" ]]; then
+        FLOW_INTEGRATION_PARAMS[$flow_idx]="$integration_types"
+        log_debug "  └─ Integration types: $integration_types"
+    else
+        FLOW_INTEGRATION_PARAMS[$flow_idx]=""
+        log_debug "  └─ No integration types extracted"
+    fi
+}
+
+# Extract metadata for all detected flows
+extract_all_flow_metadata() {
+    log_step "Extracting flow metadata from connector_types.rs"
+    
+    # Clear arrays first
+    FLOW_NAMES=()
+    FLOW_GENERICS=()
+    FLOW_INTEGRATION_PARAMS=()
+    
+    local flow
+    for flow in "${AVAILABLE_FLOWS[@]}"; do
+        extract_flow_metadata "$flow"
+    done
+    
+    log_success "Extracted metadata for ${#FLOW_NAMES[@]} flows"
+}
+
+# Generate trait implementation code for a specific flow
+generate_trait_impl() {
+    local flow_trait="$1"
+    local flow_idx=$(get_flow_index "$flow_trait")
+    
+    if [[ $flow_idx -lt 0 ]]; then
+        log_debug "Flow $flow_trait not found in metadata"
+        return
+    fi
+    
+    local has_generics="${FLOW_GENERICS[$flow_idx]}"
+    
+    if [[ "$has_generics" == "true" ]]; then
+        cat <<EOF
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::${flow_trait}<T> for ${NAME_PASCAL}<T>
+{
+}
+
+EOF
+    else
+        cat <<EOF
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::${flow_trait} for ${NAME_PASCAL}<T>
+{
+}
+
+EOF
+    fi
+}
+
+# Generate ConnectorIntegrationV2 implementation for a specific flow
+generate_connector_integration_impl() {
+    local flow_trait="$1"
+    local flow_idx=$(get_flow_index "$flow_trait")
+    
+    if [[ $flow_idx -lt 0 ]]; then
+        log_debug "Flow $flow_trait not found in metadata"
+        return
+    fi
+    
+    local integration_types="${FLOW_INTEGRATION_PARAMS[$flow_idx]}"
+    
+    # Trim whitespace and check if empty or malformed
+    integration_types=$(echo "$integration_types" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    
+    # Skip if no integration types or malformed (e.g., IncomingWebhook, ValidationTrait)
+    if [[ -z "$integration_types" ]] || [[ "$integration_types" == "{" ]] || [[  "$integration_types" == "}" ]]; then
+        log_debug "Skipping ConnectorIntegrationV2 for $flow_trait (no integration types)"
+        return
+    fi
+    
+    # Parse the integration types
+    local flow_type data_types
+    flow_type=$(echo "$integration_types" | cut -d',' -f1 | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+    data_types=$(echo "$integration_types" | cut -d',' -f2- | sed 's/^[[:space:]]*//')
+    
+    # Additional validation - skip if flow_type is empty or invalid
+    if [[ -z "$flow_type" ]] || [[ "$flow_type" == "{" ]] || [[ "$flow_type" == "}"  ]]; then
+        log_debug "Skipping ConnectorIntegrationV2 for $flow_trait (invalid flow type)"
+        return
+    fi
+    
+    cat <<EOF
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<${flow_type}, ${data_types}>
+    for ${NAME_PASCAL}<T>
+{
+}
+
+EOF
+}
+
+# Generate SourceVerification implementation for flows that need it
+
+
+
 # =============================================================================
 
 readonly COLOR_RED='\033[0;31m'
@@ -555,15 +720,105 @@ create_connector_files() {
     local connectors_dir="$BACKEND_DIR/connector-integration/src/connectors"
     local connector_subdir="$connectors_dir/$NAME_SNAKE"
 
-    # Create main connector file
+    # Create main connector file from template
     substitute_template_variables "$CONNECTOR_TEMPLATE" "$connectors_dir/$NAME_SNAKE.rs"
 
     # Create connector subdirectory and transformers file
     mkdir -p "$connector_subdir"
     substitute_template_variables "$TRANSFORMERS_TEMPLATE" "$connector_subdir/transformers.rs"
+    
+    # Generate and append dynamic implementations
+    generate_dynamic_implementations "$connectors_dir/$NAME_SNAKE.rs"
 
-    log_success "Created connector files"
+    log_success "Created connector files with dynamic implementations"
 }
+
+# Generate dynamic implementation code for all flows and append to connector file
+generate_dynamic_implementations() {
+    local connector_file="$1"
+    
+    log_step "Generating dynamic implementations for all flows"
+    
+    # Create a temporary file for the dynamic implementations
+    local temp_file="${connector_file}.dynamic"
+    
+    # Add header comment
+    cat > "$temp_file" <<'EOF'
+
+// =============================================================================
+// DYNAMICALLY GENERATED IMPLEMENTATIONS
+// =============================================================================
+// The following implementations were auto-generated by add_connector.sh
+// based on the flows detected in ConnectorServiceTrait.
+// 
+// To customize a flow implementation:
+// 1. Move the empty impl block above (before this comment section)
+// 2. Add your custom logic inside the impl block
+// 3. The script will not regenerate moved implementations
+// =============================================================================
+
+// ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
+// Main service trait - aggregates all other traits
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for {{CONNECTOR_NAME_PASCAL}}<T>
+{
+}
+
+// ===== FLOW TRAIT IMPLEMENTATIONS =====
+EOF
+    
+    # Substitute connector name in the header
+    sed -i.tmp "s/{{CONNECTOR_NAME_PASCAL}}/$NAME_PASCAL/g" "$temp_file"
+    rm -f "${temp_file}.tmp"
+    
+    # Generate trait implementations for each flow
+    local flow
+    for flow in "${AVAILABLE_FLOWS[@]}"; do
+        # Skip special traits that don't need standard implementation
+        if [[ "$flow" == "ConnectorCommon" ]]; then
+            continue
+        fi
+        
+        generate_trait_impl "$flow" >> "$temp_file"
+    done
+    
+    # Add section for ConnectorIntegrationV2 implementations
+    cat >> "$temp_file" <<EOF
+
+// ===== CONNECTOR INTEGRATION V2 IMPLEMENTATIONS =====
+EOF
+    
+    # Generate ConnectorIntegrationV2 implementations
+    for flow in "${AVAILABLE_FLOWS[@]}"; do
+        if [[ "$flow" == "ConnectorCommon" ]] || [[ "$flow" == "IncomingWebhook" ]] || [[ "$flow" == "ValidationTrait" ]] || [[ "$flow" == "VerifyRedirectResponse" ]]; then
+            continue
+        fi
+        
+        generate_connector_integration_impl "$flow" >> "$temp_file"
+    done
+    
+    # SourceVerification is a simple non-generic trait required by VerifyRedirectResponse
+    # Add a single implementation for all connectors
+    cat >> "$temp_file" <<EOF
+
+
+
+// ===== SOURCE VERIFICATION IMPLEMENTATION =====
+// Simple non-generic trait for webhook signature verification
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification for ${NAME_PASCAL}<T>
+{
+}
+
+EOF
+    
+    # Append dynamic implementations to the connector file
+    cat "$temp_file" >> "$connector_file"
+    rm -f "$temp_file"
+    
+    log_success "Generated dynamic implementations for ${#AVAILABLE_FLOWS[@]} flows"
+}
+
 
 # =============================================================================
 # FILE UPDATE FUNCTIONS
@@ -707,7 +962,7 @@ validate_compilation() {
     if command -v cargo >/dev/null 2>&1; then
         log_info "Running cargo check..."
 
-        if cargo check 2>&1; then
+        if (cd "$BACKEND_DIR" && cargo check 2>&1); then
             log_success "Compilation validation passed"
             return 0
         else
@@ -862,6 +1117,9 @@ main() {
     validate_inputs
     check_naming_conflicts
     get_next_enum_ordinal
+    
+    # Extract flow metadata for dynamic generation
+    extract_all_flow_metadata
 
     # Show implementation plan and get confirmation
     show_implementation_plan
