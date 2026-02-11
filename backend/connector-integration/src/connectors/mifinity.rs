@@ -46,10 +46,12 @@ use crate::{
         MifinityPaymentsResponse, MifinityPsyncResponse,
     },
     types::ResponseRouterData,
+    utils,
 };
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
+    pub(crate) const KEY: &str = "key";
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -254,6 +256,13 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}pegasus-ci/api/gateway/init-iframe", self.connector_base_url_payments(req)))
         }
+        fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            self.build_error_response(res, event_builder)
+        }
     }
 );
 
@@ -279,8 +288,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
+            let payment_id = req.resource_common_data.connector_request_reference_id.clone();
             let merchant_id = &req.resource_common_data.merchant_id;
-            let payment_id = req.resource_common_data.get_reference_id()?;
             Ok(format!(
                 "{}api/gateway/payment-status/payment_validation_key_{}_{}",
                 self.connector_base_url_payments(req),
@@ -484,7 +493,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         let auth = MifinityAuthType::try_from(auth_type)
             .change_context(ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![("key".to_string(), auth.key.expose().into_masked())])
+        Ok(vec![(
+            headers::KEY.to_string(),
+            auth.key.expose().into_masked(),
+        )])
     }
 
     fn build_error_response(
@@ -540,11 +552,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     })
                 }
 
-                Err(_error_msg) => {
+                Err(error_msg) => {
                     if let Some(event) = event_builder {
                         event.set_connector_response(&serde_json::json!({"error": "Error response parsing failed", "status_code": res.status_code}));
                     }
-                    crate::utils::handle_json_response_deserialization_failure(res, "mifinity")
+                    tracing::error!(deserialization_error =? error_msg);
+                    utils::handle_json_response_deserialization_failure(res, "mifinity")
                 }
             }
         }

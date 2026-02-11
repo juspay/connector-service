@@ -576,7 +576,7 @@ macros::macro_connector_implementation!(
         Ok(format!(
             "{}payment/v1/order/getbyreference/{}",
             self.connector_base_url_payments(req),
-            req.resource_common_data.get_reference_id()?
+            req.resource_common_data.connector_request_reference_id,
         ))
         }
     }
