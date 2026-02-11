@@ -361,7 +361,7 @@ impl<T: PaymentMethodDataTypes>
             .resource_common_data
             .connector_request_reference_id
             .as_ref()
-            .map(|ref_id| FiservemeaOrder {
+            .map(|ref_id: &str| FiservemeaOrder {
                 order_id: ref_id.clone(),
                 billing: router_data.request.customer_name.as_ref().map(|name: &str| FiservemeaBilling {
                     name: name.to_string(),
