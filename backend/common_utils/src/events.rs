@@ -241,6 +241,35 @@ impl Event {
             });
     }
 
+    pub fn add_resource_id(&mut self, resource_id: Option<&str>) {
+        resource_id
+            .and_then(|res_id| {
+                MaskedSerdeValue::from_masked_optional(&res_id.to_string(), "resource_id")
+            })
+            .map(|masked_res| {
+                self.additional_fields
+                    .insert("resource_id".to_string(), masked_res);
+            });
+    }
+
+    pub fn add_service_type(&mut self, service_type: &str) {
+        MaskedSerdeValue::from_masked_optional(&service_type.to_string(), "service_type").map(
+            |masked_type| {
+                self.additional_fields
+                    .insert("service_type".to_string(), masked_type);
+            },
+        );
+    }
+
+    pub fn add_service_name(&mut self, service_name: &str) {
+        MaskedSerdeValue::from_masked_optional(&service_name.to_string(), "service_name").map(
+            |masked_name| {
+                self.additional_fields
+                    .insert("service_name".to_string(), masked_name);
+            },
+        );
+    }
+
     pub fn set_grpc_error_response(&mut self, tonic_error: &tonic::Status) {
         self.status_code = Some(tonic_error.code().into());
         let error_body = serde_json::json!({
@@ -278,6 +307,7 @@ pub enum FlowName {
     DefendDispute,
     Dsync,
     IncomingWebhook,
+    VerifyRedirectResponse,
     SetupMandate,
     RepeatPayment,
     CreateOrder,
@@ -309,6 +339,7 @@ impl FlowName {
             Self::DefendDispute => "DefendDispute",
             Self::Dsync => "Dsync",
             Self::IncomingWebhook => "IncomingWebhook",
+            Self::VerifyRedirectResponse => "VerifyRedirectResponse",
             Self::SetupMandate => "SetupMandate",
             Self::RepeatPayment => "RepeatPayment",
             Self::CreateOrder => "CreateOrder",
