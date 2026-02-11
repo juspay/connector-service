@@ -40,7 +40,7 @@ impl FiservemeaAuthType {
 
         // Concatenate signature components: API-Key + ClientRequestId + Timestamp + requestBody
         let signature_input = format!(
-            "{}{}{}{}",
+            "{}{}{}{}{}",
             self.api_key.expose(),
             client_request_id,
             timestamp,
@@ -50,7 +50,7 @@ impl FiservemeaAuthType {
         // Generate HMAC-SHA256
         let mut mac =
             HmacSha256::new_from_slice(self.api_secret.expose().as_bytes())
-                .map_err(|_| errors::ConnectorError::RequestEncodingFailed("Invalid API secret"))?;
+                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
         mac.update(signature_input.as_bytes());
 
         // Encode result as Base64
