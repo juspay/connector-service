@@ -1,5 +1,5 @@
 use crate::types::ResponseRouterData;
-use common_enums::AttemptStatus;
+use common_enums::{AttemptStatus, Currency};
 use common_utils::ext_traits::ByteSliceExt;
 use domain_types::{
     connector_flow::Authorize,
