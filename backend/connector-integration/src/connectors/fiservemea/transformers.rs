@@ -265,14 +265,14 @@ pub enum FiservemeaTransactionState {
     Waiting,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaApprovedAmount {
     pub total: f64,
     pub currency: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaProcessor {
     pub reference_number: Option<String>,
@@ -282,7 +282,7 @@ pub struct FiservemeaProcessor {
     pub security_code_response: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaPaymentMethodDetails {
     pub payment_method_type: Option<String>,
