@@ -217,14 +217,14 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = fiservemea::FiservemeaAuthType::try_from(&req.connector_auth_type)
+            let auth = FiservemeaAuthType::try_from(&req.connector_auth_type)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // Generate unique client request ID
-            let client_request_id = fiservemea::FiservemeaAuthType::generate_client_request_id();
+            let client_request_id = FiservemeaAuthType::generate_client_request_id();
 
             // Generate timestamp
-            let timestamp = fiservemea::FiservemeaAuthType::generate_timestamp();
+            let timestamp = FiservemeaAuthType::generate_timestamp();
 
             // Build headers
             let mut header = vec![
