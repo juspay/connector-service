@@ -311,15 +311,10 @@ impl<T: PaymentMethodDataTypes>
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         // Extract payment method data
-        let payment_method = match &item.request.payment_method_data {
+        let payment_method = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                // Get card number as string
-                let card_number = card_data
-                    .card_number
-                    .get_card_number()
-                    .change_context(errors::ConnectorError::RequestEncodingFailed {
-                        message: "Failed to get card number".to_string(),
-                    })?;
+                // Get card number directly
+                let card_number = card_data.card_number.clone();
 
                 // Get expiry month and year
                 let exp_month = card_data
@@ -368,9 +363,9 @@ impl<T: PaymentMethodDataTypes>
             .resource_common_data
             .connector_request_reference_id
             .as_ref()
-            .map(|ref_id| FiservemeaOrder {
+            .map(|ref_id: FiservemeaOrder {
                 order_id: ref_id.clone(),
-                billing: router_data.request.customer_name.as_ref().map(|name| FiservemeaBilling {
+                billing: router_data.request.customer_name.as_ref().map(|name: FiservemeaBilling {
                     name: name.clone(),
                     customer_id: None,
                 }),
