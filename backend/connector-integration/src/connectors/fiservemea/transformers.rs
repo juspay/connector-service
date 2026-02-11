@@ -237,7 +237,7 @@ pub struct FiservemeaAuthorizeResponse {
     pub payment_method_details: Option<FiservemeaPaymentMethodDetails>,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum FiservemeaTransactionResult {
     Approved,
@@ -248,7 +248,7 @@ pub enum FiservemeaTransactionResult {
     Fraud,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum FiservemeaTransactionState {
     Authorized,
