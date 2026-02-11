@@ -8460,6 +8460,14 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .get_raw_connector_request();
 
+    let connector_response = router_data_v2
+        .resource_common_data
+        .connector_response
+        .clone()
+        .and_then(|data| {
+            grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data).ok()
+        });
+
     match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -8507,13 +8515,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                         .get_connector_response_headers_as_map(),
                     state,
                     raw_connector_request,
-                    connector_response: router_data_v2
-                        .resource_common_data
-                        .connector_response
-                        .and_then(|data| {
-                            grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data)
-                                .ok()
-                        }),
+                    connector_response,
                     captured_amount: router_data_v2.resource_common_data.amount_captured,
                     minor_captured_amount: router_data_v2
                         .resource_common_data
@@ -8568,7 +8570,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                     state,
                     mandate_reference: None,
                     raw_connector_request,
-                    connector_response: None,
+                    connector_response,
                     captured_amount: None,
                     minor_captured_amount: None,
                     incremental_authorization_allowed: None,
