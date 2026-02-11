@@ -310,8 +310,8 @@ impl<T: PaymentMethodDataTypes>
         // Extract payment method data
         let payment_method = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                // Get card number directly
-                let card_number = card_data.card_number.clone();
+                // Get card number as string
+                let card_number = card_data.card_number.peek().to_string();
 
                 // Get expiry month and year
                 let exp_month = card_data
