@@ -276,8 +276,8 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Fiservemea,
-    curl_request: Json(fiservemea::FiservemeaAuthorizeRequest),
-    curl_response: fiservemea::FiservemeaAuthorizeResponse,
+    curl_request: Json(FiservemeaAuthorizeRequest),
+    curl_response: FiservemeaAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -300,7 +300,7 @@ macros::macro_connector_implementation!(
             let timestamp = fiservemea::FiservemeaAuthType::generate_timestamp();
 
             // Serialize request body for signature generation
-            let request_obj = fiservemea::FiservemeaAuthorizeRequest::try_from(req)?;
+            let request_obj = FiservemeaAuthorizeRequest::try_from(req)?;
             let request_body = serde_json::to_string(&request_obj)
                 .map_err(|_| errors::ConnectorError::RequestEncodingFailed {
                     message: "Failed to serialize request body".to_string(),
