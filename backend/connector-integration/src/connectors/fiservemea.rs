@@ -189,19 +189,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // ============================================================================
 
 macros::create_all_prerequisites!(
-    connector_name: Fiservemea,
-    generic_type: T,
-    api: [
+    Fiservemea,
+    T,
+    [
         (
-            flow: Authorize,
-            request_body: fiservemea::FiservemeaAuthorizeRequest,
-            response_body: fiservemea::FiservemeaAuthorizeResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            Authorize,
+            fiservemea::FiservemeaAuthorizeRequest,
+            fiservemea::FiservemeaAuthorizeResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
     ],
-    amount_converters: [
-        amount_converter: StringMajorUnit
-    ],
+    amount_converter: StringMajorUnit,
     member_functions: {
         /// Build authentication headers with message signature
         ///
