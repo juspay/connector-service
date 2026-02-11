@@ -424,6 +424,13 @@ macros::macro_connector_implementation!(
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
+        fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
     }
 );
 
