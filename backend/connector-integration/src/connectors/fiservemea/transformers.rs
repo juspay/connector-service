@@ -213,7 +213,7 @@ pub struct FiservemeaBilling {
 // RESPONSE STRUCTURES
 // ============================================================================
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaAuthorizeResponse {
     pub client_request_id: String,
