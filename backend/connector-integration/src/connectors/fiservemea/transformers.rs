@@ -360,24 +360,24 @@ impl<T: PaymentMethodDataTypes>
         // Convert amount to major units (string format)
         let amount_major = format!(
             "{:.2}",
-            item.request.minor_amount.get_amount_as_i64() as f64 / 100.0
+            router_data.request.minor_amount.get_amount_as_i64() as f64 / 100.0
         );
 
         // Build order if available
-        let order = item
+        let order = router_data
             .resource_common_data
             .connector_request_reference_id
             .as_ref()
             .map(|ref_id| FiservemeaOrder {
                 order_id: ref_id.clone(),
-                billing: item.request.customer_name.as_ref().map(|name| FiservemeaBilling {
+                billing: router_data.request.customer_name.as_ref().map(|name| FiservemeaBilling {
                     name: name.clone(),
                     customer_id: None,
                 }),
             });
 
         // Determine request type based on capture method
-        let request_type = if item.request.capture_method == Some(domain_types::connector_types::CaptureMethod::Automatic) {
+        let request_type = if router_data.request.capture_method == Some(domain_types::connector_types::CaptureMethod::Automatic) {
             FiservemeaRequestType::PaymentCardSaleTransaction
         } else {
             FiservemeaRequestType::PaymentCardPreAuthTransaction
@@ -387,7 +387,7 @@ impl<T: PaymentMethodDataTypes>
             request_type,
             transaction_amount: FiservemeaTransactionAmount {
                 total: amount_major,
-                currency: item.request.currency.to_string(),
+                currency: router_data.request.currency.to_string(),
             },
             payment_method,
             order,
