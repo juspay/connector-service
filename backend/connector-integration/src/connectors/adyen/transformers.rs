@@ -1793,7 +1793,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .get_billing_phone_number()?;
                 router_data.resource_common_data.get_billing_address()?;
-                    
+
                 Ok(Self::Atome)
             }
         }
