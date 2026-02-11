@@ -307,6 +307,7 @@ impl<T: PaymentMethodDataTypes>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
+
         // Extract payment method data
         let payment_method = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
@@ -360,10 +361,10 @@ impl<T: PaymentMethodDataTypes>
             .resource_common_data
             .connector_request_reference_id
             .as_ref()
-            .map(|ref_id: FiservemeaOrder {
+            .map(|ref_id| FiservemeaOrder {
                 order_id: ref_id.clone(),
-                billing: router_data.request.customer_name.as_ref().map(|name: FiservemeaBilling {
-                    name: name.clone(),
+                billing: router_data.request.customer_name.as_ref().map(|name: &str| FiservemeaBilling {
+                    name: name.to_string(),
                     customer_id: None,
                 }),
             });
