@@ -50,7 +50,7 @@ impl FiservemeaAuthType {
         // Generate HMAC-SHA256
         let mut mac =
             HmacSha256::new_from_slice(self.api_secret.expose().as_bytes())
-                .map_err(|_| errors::ConnectorError::RequestEncodingFailed("Invalid API secret for HMAC"))?;
+                .map_err(|_| errors::ConnectorError::RequestEncodingFailed("Invalid API secret"))?;
         mac.update(signature_input.as_bytes());
 
         // Encode result as Base64
