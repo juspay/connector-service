@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.11.1
+
+### Bug Fixes
+
+- Populate connector response for Repeat Everything Flow's Err response ([#504](https://github.com/juspay/connector-service/pull/504)) ([`1921e9d`](https://github.com/juspay/connector-service/commit/1921e9da5cab8c8edae0c62bf7961fbbecbfabb7))
+
+**Full Changelog:** [`2026.02.11.0...2026.02.11.1`](https://github.com/juspay/connector-service/compare/2026.02.11.0...2026.02.11.1)
+
+- - -
+
 ## 2026.02.11.0
 
 ### Features
