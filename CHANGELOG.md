@@ -4,6 +4,25 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.11.0
+
+### Features
+
+- **connector:** Gigadat Macro Implementation ([#501](https://github.com/juspay/connector-service/pull/501)) ([`1ba0591`](https://github.com/juspay/connector-service/commit/1ba05915c289966a6ba9cdc15b2a83b9a3363afb))
+- **payment_method_data:** [adyen] Auth code in payment response ([#498](https://github.com/juspay/connector-service/pull/498)) ([`d4b923c`](https://github.com/juspay/connector-service/commit/d4b923ce29c4c48cd9eb87682010ca7f5dee0ddc))
+
+### Bug Fixes
+
+- **connector:** Paypal Router Data Fix in Authorize and RepeatPayment Flow ([#499](https://github.com/juspay/connector-service/pull/499)) ([`cf8b523`](https://github.com/juspay/connector-service/commit/cf8b523d9019c98b70d3210fa96a5c4fcc6a7492))
+
+### Miscellaneous Tasks
+
+- Adding failure status to customer create response ([#497](https://github.com/juspay/connector-service/pull/497)) ([`558bac9`](https://github.com/juspay/connector-service/commit/558bac914e6e1453831460f8c6566cdec01aa40d))
+
+**Full Changelog:** [`2026.02.10.0...2026.02.11.0`](https://github.com/juspay/connector-service/compare/2026.02.10.0...2026.02.11.0)
+
+- - -
+
 ## 2026.02.10.0
 
 ### Features
