@@ -3,4 +3,4 @@
 .turbo
 .DS_Store
 target/
-artifacts/
+# artifacts/
