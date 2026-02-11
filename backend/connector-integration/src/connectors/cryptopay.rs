@@ -401,7 +401,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let custom_id = req.resource_common_data.get_reference_id()?;
+            let custom_id = req.resource_common_data.connector_request_reference_id.clone();
 
             Ok(format!(
                 "{}/api/invoices/custom_id/{custom_id}",
