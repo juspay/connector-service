@@ -915,6 +915,41 @@ pub struct WebhookPaymentInformation {
     pub status_reason_information: Option<StatusReasonInformation>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub struct TrustpayWebhookResponse {
+    pub payment_information: WebhookPaymentInformation,
+    pub signature: String,
+}
+
+pub fn get_event_type_from_webhook(
+    indicator: &CreditDebitIndicator,
+    status: &WebhookStatus,
+) -> domain_types::connector_types::EventType {
+    match (indicator, status) {
+        // Credit (Crdt) = Payment events
+        (CreditDebitIndicator::Crdt, WebhookStatus::Paid) => {
+            domain_types::connector_types::EventType::PaymentIntentSuccess
+        }
+        (CreditDebitIndicator::Crdt, WebhookStatus::Rejected) => {
+            domain_types::connector_types::EventType::PaymentIntentFailure
+        }
+        // Debit (Dbit) = Refund events
+        (CreditDebitIndicator::Dbit, WebhookStatus::Paid)
+        | (CreditDebitIndicator::Dbit, WebhookStatus::Refunded) => {
+            domain_types::connector_types::EventType::RefundSuccess
+        }
+        (CreditDebitIndicator::Dbit, WebhookStatus::Rejected) => {
+            domain_types::connector_types::EventType::RefundFailure
+        }
+        // Chargeback = Dispute event
+        (CreditDebitIndicator::Dbit, WebhookStatus::Chargebacked) => {
+            domain_types::connector_types::EventType::DisputeLost
+        }
+        _ => domain_types::connector_types::EventType::IncomingWebhookEventUnspecified,
+    }
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct TrustpayAuthUpdateRequest {
     pub grant_type: String,
@@ -1562,18 +1597,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     },
                 )))
             }
-            Some(enums::PaymentMethod::Card) => {
-                Ok(Self::CardsRefund(Box::new(TrustpayRefundRequestCards {
-                    instance_id: item.router_data.request.connector_transaction_id.clone(),
-                    amount,
-                    currency: item.router_data.request.currency.to_string(),
-                    reference: item.router_data.request.refund_id.clone(),
-                })))
-            }
-            _ => Err(ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("trustpay"),
-            )
-            .into()),
+            _ => Ok(Self::CardsRefund(Box::new(TrustpayRefundRequestCards {
+                instance_id: item.router_data.request.connector_transaction_id.clone(),
+                amount,
+                currency: item.router_data.request.currency.to_string(),
+                reference: item.router_data.request.refund_id.clone(),
+            }))),
         }
     }
 }
@@ -1661,7 +1690,7 @@ fn handle_cards_refund_response(
     Ok((error, refund_response_data))
 }
 
-fn handle_webhooks_refund_response(
+pub fn handle_webhooks_refund_response(
     response: WebhookPaymentInformation,
     status_code: u16,
 ) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorError> {
@@ -1683,7 +1712,7 @@ fn handle_webhooks_refund_response(
                 reason: reason_info.reason.reject_reason,
                 status_code,
                 attempt_status: None,
-                connector_transaction_id: response.references.payment_request_id.clone(),
+                connector_transaction_id: response.references.payment_id.clone(),
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
@@ -1694,7 +1723,7 @@ fn handle_webhooks_refund_response(
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response
             .references
-            .payment_request_id
+            .payment_id
             .ok_or(ConnectorError::MissingConnectorRefundID)?,
         refund_status,
         status_code,

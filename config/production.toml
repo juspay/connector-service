@@ -28,6 +28,7 @@ paybox.base_url = "https://ppps.paybox.com/PPPS.php"
 loonio.base_url = "https://loonio.ca/"
 getnet.base_url = "https://api.pre.globalgetnet.com"
 payme.base_url = "https://live.payme.io/api/"
+hyperpg.base_url = "https://api.hyperpg.in"
 barclaycard.base_url = "https://api.smartpayfuse.barclaycard"
 airwallex.base_url = "https://api.airwallex.com/api/v1"
 bambora.base_url = "https://api.na.bambora.com/v1"
@@ -104,6 +105,7 @@ bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
 revolut.base_url = "https://oba-auth.revolut.com/"
 wellsfargo.base_url = "https://api.cybersource.com/"
+zift.base_url = "https://secure.zift.io/"
 
 # Generic Events Configuration
 [events]

@@ -58,6 +58,7 @@ use grpc_api_types::payments::{
     PaymentServiceRevokeMandateRequest, PaymentServiceRevokeMandateResponse,
     PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse,
+    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
     WebhookTransformationStatus,
@@ -65,12 +66,17 @@ use grpc_api_types::payments::{
 use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::Secret;
 use injector::{TokenData, VaultConnectors};
-use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use interfaces::{
+    connector_integration_v2::BoxedConnectorIntegrationV2,
+    verification::ConnectorSourceVerificationSecrets,
+};
 use tracing::info;
 
 use crate::{
     configs::Config,
-    error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
+    error::{
+        ErrorSwitch, IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc,
+    },
     implement_connector_operation,
     request::RequestData,
     utils::{self, get_config_from_request, grpc_logging_wrapper},
@@ -80,9 +86,11 @@ use crate::{
 struct EventParams<'a> {
     _connector_name: &'a str,
     _service_name: &'a str,
+    service_type: &'a str,
     request_id: &'a str,
     lineage_ids: &'a lineage::LineageIds<'a>,
     reference_id: &'a Option<String>,
+    resource_id: &'a Option<String>,
     shadow_mode: bool,
 }
 
@@ -321,6 +329,7 @@ impl Payments {
 
         let lineage_ids = &metadata_payload.lineage_ids;
         let reference_id = &metadata_payload.reference_id;
+        let resource_id = &metadata_payload.resource_id;
 
         // Extract access token from Hyperswitch request
         let cached_access_token = payload
@@ -352,9 +361,11 @@ impl Payments {
                     let event_params = EventParams {
                         _connector_name: &connector.to_string(),
                         _service_name: service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         request_id,
                         lineage_ids,
                         reference_id,
+                        resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -391,9 +402,11 @@ impl Payments {
             let event_params = EventParams {
                 _connector_name: &connector.to_string(),
                 _service_name: service_name,
+                service_type: utils::service_type_str(&config.server.type_),
                 request_id,
                 lineage_ids,
                 reference_id,
+                resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
             };
 
@@ -421,9 +434,11 @@ impl Payments {
             let event_params = EventParams {
                 _connector_name: &connector.to_string(),
                 _service_name: service_name,
+                service_type: utils::service_type_str(&config.server.type_),
                 request_id,
                 lineage_ids,
                 reference_id,
+                resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
             };
 
@@ -462,9 +477,11 @@ impl Payments {
                     let event_params = EventParams {
                         _connector_name: &connector.to_string(),
                         _service_name: service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         request_id,
                         lineage_ids,
                         reference_id,
+                        resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -514,9 +531,11 @@ impl Payments {
             let event_params = EventParams {
                 _connector_name: &connector.to_string(),
                 _service_name: service_name,
+                service_type: utils::service_type_str(&config.server.type_),
                 request_id,
                 lineage_ids,
                 reference_id,
+                resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
             };
             let payment_method_token_data = self
@@ -570,11 +589,13 @@ impl Payments {
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
+            service_type: utils::service_type_str(&config.server.type_),
             flow_name: FlowName::Authorize,
             event_config: &config.events,
             request_id,
             lineage_ids,
             reference_id,
+            resource_id,
             shadow_mode: metadata_payload.shadow_mode,
         };
 
@@ -608,6 +629,10 @@ impl Payments {
             })?,
             Err(error_report) => {
                 tracing::error!("{:?}", error_report);
+                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
+                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
+                let api_error = app_err.get_api_error();
+
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
@@ -631,9 +656,9 @@ impl Payments {
                         },
                     )?,
                     response: Err(ErrorResponse {
-                        status_code: 400,
-                        code: "CONNECTOR_ERROR".to_string(),
-                        message: format!("{error_report}"),
+                        status_code: api_error.error_identifier,
+                        code: api_error.sub_code.clone(),
+                        message: api_error.error_message.clone(),
                         reason: None,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: None,
@@ -759,11 +784,13 @@ impl Payments {
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
+            service_type: utils::service_type_str(&config.server.type_),
             flow_name: FlowName::Authorize,
             event_config: &config.events,
             request_id,
             lineage_ids: &metadata_payload.lineage_ids,
             reference_id: &metadata_payload.reference_id,
+            resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
         };
 
@@ -796,6 +823,10 @@ impl Payments {
                 )
             })?,
             Err(error_report) => {
+                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
+                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
+                let api_error = app_err.get_api_error();
+
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
@@ -819,9 +850,9 @@ impl Payments {
                         },
                     )?,
                     response: Err(ErrorResponse {
-                        status_code: 400,
-                        code: "CONNECTOR_ERROR".to_string(),
-                        message: format!("{error_report}"),
+                        status_code: api_error.error_identifier,
+                        code: api_error.sub_code.clone(),
+                        message: api_error.error_message.clone(),
                         reason: None,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: None,
@@ -937,11 +968,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateOrder,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1055,11 +1088,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateOrder,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1170,11 +1205,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateSessionToken,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1307,11 +1344,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateAccessToken,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1441,11 +1480,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateConnectorCustomer,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1557,11 +1598,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::CreateConnectorCustomer,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
 
@@ -1664,11 +1707,13 @@ impl Payments {
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
+            service_type: event_params.service_type,
             flow_name: FlowName::PaymentMethodToken,
             event_config: &config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
         };
         let response = external_services::service::execute_connector_processing_step(
@@ -2161,6 +2206,7 @@ impl PaymentService for Payments {
                         ref request_id,
                         ref lineage_ids,
                         ref reference_id,
+                        ref resource_id,
                         ..
                     } = metadata_payload;
                     let payload = request_data.payload;
@@ -2207,9 +2253,11 @@ impl PaymentService for Payments {
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
                             _service_name: &service_name,
+                            service_type: utils::service_type_str(&config.server.type_),
                             request_id,
                             lineage_ids,
                             reference_id,
+                            resource_id,
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
@@ -2266,11 +2314,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &metadata_payload.connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name,
                         event_config: &config.events,
                         request_id: &metadata_payload.request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -2421,9 +2471,11 @@ impl PaymentService for Payments {
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
                             _service_name: &service_name,
+                            service_type: utils::service_type_str(&config.server.type_),
                             request_id: &metadata_payload.request_id,
                             lineage_ids: &metadata_payload.lineage_ids,
                             reference_id: &metadata_payload.reference_id,
+                            resource_id: &metadata_payload.resource_id,
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
@@ -2664,6 +2716,126 @@ impl PaymentService for Payments {
     }
 
     #[tracing::instrument(
+        name = "verify_redirect_response",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::VerifyRedirectResponse.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::VerifyRedirectResponse.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn verify_redirect_response(
+        &self,
+        request: tonic::Request<PaymentServiceVerifyRedirectResponseRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVerifyRedirectResponseResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::VerifyRedirectResponse,
+            |request_data| {
+                async move {
+                    let payload = request_data.payload;
+                    let metadata_payload = request_data.extracted_metadata;
+                    let connector = metadata_payload.connector;
+
+                    let request_details = payload
+                        .request_details
+                        .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+                        .transpose()
+                        .map_err(|e| e.into_grpc_status())?
+                        .ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?;
+
+                    let secrets = payload
+                        .redirect_response_secrets
+                        .map(domain_types::connector_types::ConnectorRedirectResponseSecrets::foreign_try_from)
+                        .transpose()
+                        .map_err(|e| e.into_grpc_status())?
+                        .map(ConnectorSourceVerificationSecrets::RedirectResponseSecret);
+
+                    // Get connector data
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    let decoded_body = match connector_data
+                        .connector
+                        .decode_redirect_response_body(
+                            &request_details,
+                            secrets.clone(),
+                        ) {
+                            Ok(result) => result,
+                            Err(err) => {
+                                tracing::warn!(
+                                    target: "decode_redirect_response_body",
+                                    "{:?}",
+                                    err
+                                );
+                                request_details.body
+                            }
+                        };
+
+                    // Create request_details with decoded body for connector processing
+                    let updated_request_details = domain_types::connector_types::RequestDetails {
+                        method: request_details.method.clone(),
+                        uri: request_details.uri.clone(),
+                        headers: request_details.headers,
+                        query_params: request_details.query_params.clone(),
+                        body: decoded_body,
+                    };
+
+                    let source_verified = match connector_data
+                        .connector
+                        .verify_redirect_response_source(
+                            &updated_request_details,
+                            secrets,
+                        ) {
+                            Ok(result) => result,
+                            Err(err) => {
+                                tracing::warn!(
+                                    target: "verify_redirect_response",
+                                    "{:?}",
+                                    err
+                                );
+                                false
+                            }
+                        };
+
+                    let redirect_details_response = connector_data
+                        .connector
+                        .process_redirect_response(
+                            &updated_request_details,
+                        )
+                        .switch()
+                        .into_grpc_status()?;
+
+                    let response = PaymentServiceVerifyRedirectResponseResponse::foreign_try_from((source_verified, redirect_details_response))
+                        .map_err(|e| e.into_grpc_status())?;
+
+                    Ok(tonic::Response::new(response))
+                }
+            }
+        ).await
+    }
+
+    #[tracing::instrument(
         name = "refund",
         fields(
             name = common_utils::consts::NAME,
@@ -2863,9 +3035,11 @@ impl PaymentService for Payments {
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
                             _service_name: &service_name,
+                            service_type: utils::service_type_str(&config.server.type_),
                             request_id: &metadata_payload.request_id,
                             lineage_ids: &metadata_payload.lineage_ids,
                             reference_id: &metadata_payload.reference_id,
+                            resource_id: &metadata_payload.resource_id,
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
@@ -2984,9 +3158,11 @@ impl PaymentService for Payments {
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
                             _service_name: &service_name,
+                            service_type: utils::service_type_str(&config.server.type_),
                             request_id: &request_id,
                             lineage_ids: &lineage_ids,
                             reference_id: &metadata_payload.reference_id,
+                            resource_id: &metadata_payload.resource_id,
                             shadow_mode: metadata_payload.shadow_mode,
                         };
 
@@ -3023,9 +3199,11 @@ impl PaymentService for Payments {
                                 let event_params = EventParams {
                                     _connector_name: &connector.to_string(),
                                     _service_name: &service_name,
+                                    service_type: utils::service_type_str(&config.server.type_),
                                     request_id: &request_id,
                                     lineage_ids: &lineage_ids,
                                     reference_id: &metadata_payload.reference_id,
+                                    resource_id: &metadata_payload.resource_id,
                                     shadow_mode: metadata_payload.shadow_mode,
                                 };
 
@@ -3085,11 +3263,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::SetupMandate,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -3204,11 +3384,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::SetupMandate,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -3305,9 +3487,11 @@ impl PaymentService for Payments {
                     let event_params = EventParams {
                         _connector_name: &connector.to_string(),
                         _service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -3449,11 +3633,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::RepeatPayment,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -3807,11 +3993,13 @@ impl PaymentService for Payments {
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::PaymentMethodToken,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -3962,11 +4150,13 @@ impl PaymentService for Payments {
                     let external_event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: FlowName::CreateConnectorCustomer,
                         event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
@@ -4069,9 +4259,11 @@ impl PaymentService for Payments {
                     let event_params = EventParams {
                         _connector_name: &connector.to_string(),
                         _service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 

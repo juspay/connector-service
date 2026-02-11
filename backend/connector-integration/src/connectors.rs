@@ -208,3 +208,9 @@ pub use self::loonio::Loonio;
 
 pub mod wellsfargo;
 pub use self::wellsfargo::Wellsfargo;
+
+pub mod hyperpg;
+pub use self::hyperpg::Hyperpg;
+
+pub mod zift;
+pub use self::zift::Zift;
