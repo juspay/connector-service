@@ -231,12 +231,14 @@ impl Payments {
         service_name: &str,
         event_params: EventParams<'_>,
     ) -> Result<AccessTokenResponseData, tonic::Status> {
-        let access_token_data = match access_token.filter(|t| t.token.is_some()) {
+        let access_token_result =
+            access_token.and_then(|token| AccessTokenResponseData::foreign_try_from(token).ok());
+
+        let access_token_data = match access_token_result {
             Some(cached_access_token) => {
                 // If provided cached token - use it, don't generate new one
                 tracing::info!("Using cached access from request");
-                AccessTokenResponseData::foreign_try_from(cached_access_token)
-                    .map_err(|e| e.into_grpc_status())?
+                cached_access_token
             }
             None => {
                 // No cached token - generate fresh one
@@ -367,10 +369,10 @@ impl Payments {
                 .map_err(|err| {
                     tracing::error!("Failed to process payment access token data: {:?}", err);
                     PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
+                        grpc_api_types::payments::PaymentStatus::Failure,
                         Some("Failed to process payment access token data".to_string()),
                         Some("ACCESS_TOKEN_ERROR".to_string()),
-                        None,
+                        Some(400),
                     )
                 })?;
 
