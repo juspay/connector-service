@@ -584,7 +584,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: fiservemea::FiservemeaErrorResponse = res
+        let response: FiservemeaErrorResponse = res
             .response
             .parse_struct("FiservemeaErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
@@ -593,16 +593,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         // Map response type to attempt status
         let attempt_status = match response.response_type {
-            fiservemea::FiservemeaResponseType::EndpointDeclined => {
-                Some(AttemptStatus::Failure)
-            }
-            fiservemea::FiservemeaResponseType::GatewayDeclined => {
-                Some(AttemptStatus::Failure)
-            }
-            fiservemea::FiservemeaResponseType::ServerError => Some(AttemptStatus::Pending),
-            fiservemea::FiservemeaResponseType::EndpointCommunicationError => {
-                Some(AttemptStatus::Pending)
-            }
+            FiservemeaResponseType::EndpointDeclined => Some(AttemptStatus::Failure),
+            FiservemeaResponseType::GatewayDeclined => Some(AttemptStatus::Failure),
+            FiservemeaResponseType::ServerError => Some(AttemptStatus::Pending),
+            FiservemeaResponseType::EndpointCommunicationError => Some(AttemptStatus::Pending),
             _ => None,
         };
 
