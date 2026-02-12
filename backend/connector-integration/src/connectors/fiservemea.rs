@@ -39,6 +39,9 @@ use serde::Serialize;
 use transformers as fiservemea;
 
 use super::macros;
+use transformers::{
+    FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
+};
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
 
