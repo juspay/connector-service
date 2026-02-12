@@ -210,7 +210,7 @@ macros::create_all_prerequisites!(
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
-            let auth = fiservmea::FiservmeaAuthType::try_from(&req.connector_auth_type)
+            let auth = FiservmeaAuthType::try_from(&req.connector_auth_type)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             let client_request_id = uuid::Uuid::new_v4().to_string();
@@ -255,11 +255,11 @@ macros::create_all_prerequisites!(
             Ok(header)
         }
 
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
+        pub fn connector_base_url_payments<F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.fiservmea.base_url
+            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> String {
+            req.resource_common_data.connectors.fiservemea.base_url.to_string()
         }
     }
 );
@@ -508,7 +508,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = fiservmea::FiservmeaAuthType::try_from(auth_type)
+        let auth = FiservmeaAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::API_KEY.to_string(),
@@ -521,7 +521,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: fiservmea::FiservmeaErrorResponse = res
+        let response: FiservmeaErrorResponse = res
             .response
             .parse_struct("FiservmeaErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
