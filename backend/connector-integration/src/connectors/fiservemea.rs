@@ -37,6 +37,10 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers as fiservmea;
+use transformers::{
+    FiservmeaAuthorizeRequest, FiservmeaAuthorizeResponse, FiservmeaAuthType,
+    FiservmeaErrorResponse,
+};
 
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
