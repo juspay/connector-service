@@ -321,7 +321,7 @@ impl<T: PaymentMethodDataTypes>
         let amount_converter = &StringMajorUnit;
         let total = amount_converter.convert(item.request.minor_amount.get_amount_as_i64())?;
 
-        let expiry_month = card_data.card_exp_month.to_string();
+        let expiry_month = card_data.card_exp_month.expose().to_string();
         let expiry_year = card_data.card_exp_year.expose().to_string();
 
         let order = if !item.resource_common_data.connector_request_reference_id.is_empty()
