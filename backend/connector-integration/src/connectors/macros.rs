@@ -753,8 +753,8 @@ macro_rules! impl_templating {
 
     (
         connector: $connector: ident,
-        curl_request: $curl_req: tt,
-        curl_response: $curl_res: ident,
+        curl_request: $curl_req: path,
+        curl_response: $curl_res: path,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
     ) => {
@@ -771,7 +771,7 @@ macro_rules! impl_templating {
     };
     (
         connector: $connector: ident,
-        curl_response: $curl_res: ident,
+        curl_response: $curl_res: path,
         router_data: $router_data: ty,
         generic_type: $generic_type:tt,
     ) => {
