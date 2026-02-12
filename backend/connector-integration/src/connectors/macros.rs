@@ -986,7 +986,7 @@ macro_rules! create_all_prerequisites {
         $(
             crate::connectors::macros::create_all_prerequisites_impl_templating!(
                 connector: $connector,
-                $(request_body: $flow_request $(<$generic_param>)?,)?
+                $(request_body: $flow_request,)?
                 response_body: $flow_response,
                 $(response_format: $response_format,)?
                 router_data: $router_data_type,
@@ -1000,7 +1000,7 @@ macro_rules! create_all_prerequisites {
                 )*
                 $(
                     [<$flow_name:snake>]: &'static dyn BridgeRequestResponse<
-                        RequestBody = crate::connectors::macros::create_all_prerequisites_resolve_request_body_type!($(request_body: $flow_request $(<$generic_param>)?,)? generic_type: $generic_type),
+                        RequestBody = crate::connectors::macros::create_all_prerequisites_resolve_request_body_type!($(request_body: $flow_request,)? generic_type: $generic_type),
                         ResponseBody = $flow_response,
                         ConnectorInputData = [<$connector RouterData>]<$router_data_type, $generic_type>,
                     >,
@@ -1028,7 +1028,7 @@ macro_rules! create_all_prerequisites {
                         )*
                         $(
                             [<$flow_name:snake>]: &Bridge::<
-                                    crate::connectors::macros::create_all_prerequisites_resolve_templating_type!($(request_body: $flow_request $(<$generic_param>)?,)?),
+                                    crate::connectors::macros::create_all_prerequisites_resolve_templating_type!($(request_body: $flow_request,)?),
                                     [<$flow_response Templating>], $generic_type
                                 >(PhantomData),
                         )*
@@ -1045,7 +1045,7 @@ macro_rules! create_all_prerequisites_impl_templating {
     // Pattern with request body and XML response format
     (
         connector: $connector: ident,
-        request_body: $flow_request: ident $(<$generic_param: ident>)?,
+        request_body: $flow_request: ty,
         response_body: $flow_response: ident,
         response_format: xml,
         router_data: $router_data_type: ty,
@@ -1053,7 +1053,7 @@ macro_rules! create_all_prerequisites_impl_templating {
     ) => {
         crate::connectors::macros::impl_templating_mixed!(
             connector: $connector,
-            curl_request: $flow_request $(<$generic_param>)?,
+            curl_request: $flow_request,
             curl_response: $flow_response,
             router_data: $router_data_type,
             generic_type: $generic_type,
@@ -1064,14 +1064,14 @@ macro_rules! create_all_prerequisites_impl_templating {
     // Pattern with request body (default JSON response format)
     (
         connector: $connector: ident,
-        request_body: $flow_request: ident $(<$generic_param: ident>)?,
+        request_body: $flow_request: ty,
         response_body: $flow_response: ident,
         router_data: $router_data_type: ty,
         generic_type: $generic_type: tt,
     ) => {
         crate::connectors::macros::impl_templating_mixed!(
             connector: $connector,
-            curl_request: $flow_request $(<$generic_param>)?,
+            curl_request: $flow_request,
             curl_response: $flow_response,
             router_data: $router_data_type,
             generic_type: $generic_type,
@@ -1098,10 +1098,10 @@ pub(crate) use create_all_prerequisites_impl_templating;
 macro_rules! create_all_prerequisites_resolve_request_body_type {
     // Pattern with request body
     (
-        request_body: $flow_request: ident $(<$generic_param: ident>)?,
+        request_body: $flow_request: ty,
         generic_type: $generic_type: tt
     ) => {
-        crate::connectors::macros::resolve_request_body_type!($flow_request $(<$generic_param>)?, $generic_type)
+        crate::connectors::macros::resolve_request_body_type!($flow_request, $generic_type)
     };
 
     // Pattern without request body
@@ -1116,9 +1116,9 @@ pub(crate) use create_all_prerequisites_resolve_request_body_type;
 macro_rules! create_all_prerequisites_resolve_templating_type {
     // Pattern with request body
     (
-        request_body: $flow_request: ident $(<$generic_param: ident>)?,
+        request_body: $flow_request: ty,
     ) => {
-        crate::connectors::macros::resolve_templating_type!($flow_request $(<$generic_param>)?)
+        crate::connectors::macros::resolve_templating_type!($flow_request)
     };
 
     // Pattern without request body
