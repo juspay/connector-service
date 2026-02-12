@@ -12,8 +12,6 @@ use domain_types::{
 use hyperswitch_masking::{ExposeInterface, RawCardNumber, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::connectors::fiservemea::FiservmeaRouterData;
-
 #[derive(Debug, Clone)]
 pub struct FiservmeaAuthType {
     pub api_key: Secret<String>,
