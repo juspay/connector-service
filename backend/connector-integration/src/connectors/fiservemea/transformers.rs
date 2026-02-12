@@ -194,7 +194,7 @@ pub struct FiservmeaPaymentMethodDetails {
     pub payment_method_brand: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservmeaErrorResponse {
     pub client_request_id: Option<String>,
