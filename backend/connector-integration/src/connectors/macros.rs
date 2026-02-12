@@ -753,7 +753,7 @@ macro_rules! impl_templating {
 
     (
         connector: $connector: ident,
-        curl_request: $curl_req: ident,
+        curl_request: $curl_req: ty,
         curl_response: $curl_res: ident,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
