@@ -3638,6 +3638,7 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                                             .and_then(|checks| serde_json::to_vec(checks).ok()),
                                         card_network: card_network.clone(),
                                         domestic_network: domestic_network.clone(),
+                                        auth_code: None,
                                     }
                                 )
                             ),
