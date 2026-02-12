@@ -177,7 +177,7 @@ pub struct FiservmeaAmount {
     pub currency: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservmeaProcessor {
     pub reference_number: Option<String>,
