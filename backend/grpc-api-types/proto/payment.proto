@@ -599,6 +599,7 @@ enum Connector {
   LOONIO = 105;
   GIGADAT = 106;
   HYPERPG = 107;
+  ZIFT = 108;
 }
 
 // Payment method types.
@@ -1237,13 +1238,26 @@ message CardConnectorResponse {
   optional bytes payment_checks = 2; // Payment checks as JSON bytes
   optional string card_network = 3; // Card network returned by the processor
   optional string domestic_network = 4; // Domestic (co-branded) card network
+  optional string auth_code = 5; // Unique authorisation code generated for the payment
+}
+
+// Additional payment method data for Google Pay
+message GooglePayConnectorResponse {
+  optional string auth_code = 1; // Unique authorisation code generated for the payment
+}
+
+// Additional payment method data for Apple Pay
+message ApplePayConnectorResponse {
+  optional string auth_code = 1; // Unique authorisation code generated for the payment
 }
 
 // Additional payment method connector response
 message AdditionalPaymentMethodConnectorResponse {
   oneof payment_method_data {
     CardConnectorResponse card = 1; // Card-specific response data
-    UpiConnectorResponse upi = 2; // UPI-specific response data
+    UpiConnectorResponse upi = 2;  // UPI-specific response data
+    GooglePayConnectorResponse google_pay = 3; // Google Pay-specific response data
+    ApplePayConnectorResponse apple_pay = 4; // Apple Pay-specific response data
   }
 }
 
@@ -1505,6 +1519,9 @@ message PaymentServiceCreateAccessTokenRequest {
   // Metadata
   optional SecretString metadata = 4; // Additional metadata for the connector
   optional SecretString connector_metadata = 5; // Connector-specific metadata for the transaction
+  
+  // Environment Configuration
+  optional bool test_mode = 6; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for creating an access token.
@@ -1800,6 +1817,8 @@ message PaymentServiceGetRequest {
 
   // Environment Configuration
   optional bool test_mode = 16; // A boolean value to indicate if the connector is in Test mode
+
+  optional PaymentExperience payment_experience = 7; // Preferred payment experience
 }
 
 // Response message for a payment status synchronization.
@@ -2105,6 +2124,10 @@ message PaymentServiceCreateOrderRequest {
 
   // State Information
   optional ConnectorState state = 6; // State data for access token storage and other connector-specific state
+
+  // Environment Configuration
+  optional bool test_mode = 9; // A boolean value to indicate if the connector is in Test mode
+
 }
 
 // Response message for create order operation.
@@ -2868,6 +2891,8 @@ message PaymentServiceCreateSessionTokenRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 7; // Information about the customer's browser
+
+  optional bool test_mode = 10; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for creating a session token
@@ -3368,6 +3393,8 @@ message PaymentServiceCreateConnectorCustomerRequest {
   // Additional Metadata
   optional SecretString metadata = 9; // Additional metadata for the connector
   optional SecretString connector_metadata = 10; // Connector-specific metadata for the transaction
+
+  optional bool test_mode = 11; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for creating a connector customer.

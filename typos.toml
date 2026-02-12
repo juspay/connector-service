@@ -26,6 +26,9 @@ ND = "ND"  # North Dakota
 # Financial transaction status codes
 FPR = "FPR"  # Financial processing response code
 
+# PayPal error code strings
+UNSUPPORT = "UNSUPPORT"  # PayPal error string prefix
+
 # Company/executable names
 jus = "jus"  # Company executable name
 
