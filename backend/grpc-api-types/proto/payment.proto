@@ -1239,26 +1239,14 @@ message CardConnectorResponse {
   optional bytes payment_checks = 2; // Payment checks as JSON bytes
   optional string card_network = 3; // Card network returned by the processor
   optional string domestic_network = 4; // Domestic (co-branded) card network
-  optional string auth_code = 5; // Unique authorisation code generated for the payment
 }
 
-// Additional payment method data for Google Pay payments
-message GooglePayConnectorResponse {
-  optional string auth_code = 1; // Unique authorisation code generated for the payment
-}
-
-// Additional payment method data for Apple Pay payments
-message ApplePayConnectorResponse {
-  optional string auth_code = 1; // Unique authorisation code generated for the payment
-}
 
 // Additional payment method connector response
 message AdditionalPaymentMethodConnectorResponse {
   oneof payment_method_data {
     CardConnectorResponse card = 1; // Card-specific response data
     UpiConnectorResponse upi = 2; // UPI-specific response data
-    GooglePayConnectorResponse google_pay = 3; // Google Pay-specific response data
-    ApplePayConnectorResponse apple_pay = 4; // Apple Pay-specific response data
   }
 }
 
