@@ -875,7 +875,7 @@ macro_rules! impl_templating_mixed {
     // Pattern for non-generic request with XML response parsing
     (
         connector: $connector: ident,
-        curl_request: $base_req: ident,
+        curl_request: $base_req: ty,
         curl_response: $curl_res: ident,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
