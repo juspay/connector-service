@@ -919,11 +919,11 @@ pub(crate) use impl_templating_mixed;
 
 macro_rules! resolve_request_body_type {
     // Generic type like AdyenPaymentRequest<T>
-    ($base_req: ident<$req_generic: ident>, $generic_type: tt) => {
+    ($base_req: ty<$req_generic: ident>, $generic_type: tt) => {
         $base_req<$generic_type>
     };
     // Non-generic type like AdyenRedirectRequest
-    ($base_req: ident, $generic_type: tt) => {
+    ($base_req: ty, $generic_type: tt) => {
         $base_req
     };
 }
@@ -931,11 +931,11 @@ pub(crate) use resolve_request_body_type;
 
 macro_rules! resolve_templating_type {
     // Generic type like AdyenPaymentRequest<T>
-    ($base_req: ident<$req_generic: ident>) => {
+    ($base_req: ty<$req_generic: ident>) => {
         paste::paste! { [<$base_req Templating>] }
     };
     // Non-generic type like AdyenRedirectRequest
-    ($base_req: ident) => {
+    ($base_req: ty) => {
         paste::paste! { [<$base_req Templating>] }
     };
 }
