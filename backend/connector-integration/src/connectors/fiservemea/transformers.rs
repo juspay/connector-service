@@ -170,7 +170,7 @@ pub struct FiservmeaAuthorizeResponse {
     pub payment_method_details: Option<FiservmeaPaymentMethodDetails>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservmeaAmount {
     pub total: Option<f64>,
