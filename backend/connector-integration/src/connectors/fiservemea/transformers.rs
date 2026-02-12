@@ -214,7 +214,7 @@ impl Default for FiservmeaErrorResponse {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservmeaErrorDetail {
     pub code: Option<String>,
