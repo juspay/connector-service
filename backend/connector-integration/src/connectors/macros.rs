@@ -1045,7 +1045,7 @@ macro_rules! create_all_prerequisites_impl_templating {
     // Pattern with request body and XML response format
     (
         connector: $connector: ident,
-        request_body: $flow_request: ty,
+        request_body: $flow_request: path,
         response_body: $flow_response: ident,
         response_format: xml,
         router_data: $router_data_type: ty,
@@ -1081,7 +1081,7 @@ macro_rules! create_all_prerequisites_impl_templating {
     // Pattern without request body
     (
         connector: $connector: ident,
-        response_body: $flow_response: ident,
+        response_body: $flow_response: path,
         router_data: $router_data_type: ty,
         generic_type: $generic_type: tt,
     ) => {
