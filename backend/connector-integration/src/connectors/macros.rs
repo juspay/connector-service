@@ -753,7 +753,7 @@ macro_rules! impl_templating {
 
     (
         connector: $connector: ident,
-        curl_request: $curl_req: ty,
+        curl_request: $curl_req: tt,
         curl_response: $curl_res: ident,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
@@ -792,7 +792,7 @@ macro_rules! impl_templating_mixed {
     // Pattern for generic request types like AdyenPaymentRequest<T>
     (
         connector: $connector: ident,
-        curl_request: $base_req: ty<$req_generic: ident>,
+        curl_request: $base_req: tt<$req_generic: ident>,
         curl_response: $curl_res: ident,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
@@ -812,7 +812,7 @@ macro_rules! impl_templating_mixed {
     // Pattern for non-generic request types like AdyenRedirectRequest
     (
         connector: $connector: ident,
-        curl_request: $base_req: ty,
+        curl_request: $base_req: tt,
         curl_response: $curl_res: ident,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
@@ -832,7 +832,7 @@ macro_rules! impl_templating_mixed {
     // Pattern for generic request with XML response parsing
     (
         connector: $connector: ident,
-        curl_request: $base_req: ty<$req_generic: ident>,
+        curl_request: $base_req: tt<$req_generic: ident>,
         curl_response: $curl_res: ident,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
@@ -875,7 +875,7 @@ macro_rules! impl_templating_mixed {
     // Pattern for non-generic request with XML response parsing
     (
         connector: $connector: ident,
-        curl_request: $base_req: ty,
+        curl_request: $base_req: tt,
         curl_response: $curl_res: ident,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
@@ -919,11 +919,11 @@ pub(crate) use impl_templating_mixed;
 
 macro_rules! resolve_request_body_type {
     // Generic type like AdyenPaymentRequest<T>
-    ($base_req: ty<$req_generic: ident>, $generic_type: tt) => {
+    ($base_req: tt<$req_generic: ident>, $generic_type: tt) => {
         $base_req<$generic_type>
     };
     // Non-generic type like AdyenRedirectRequest
-    ($base_req: ty, $generic_type: tt) => {
+    ($base_req: tt, $generic_type: tt) => {
         $base_req
     };
 }
@@ -931,11 +931,11 @@ pub(crate) use resolve_request_body_type;
 
 macro_rules! resolve_templating_type {
     // Generic type like AdyenPaymentRequest<T>
-    ($base_req: ty<$req_generic: ident>) => {
+    ($base_req: tt<$req_generic: ident>) => {
         paste::paste! { [<$base_req Templating>] }
     };
     // Non-generic type like AdyenRedirectRequest
-    ($base_req: ty) => {
+    ($base_req: tt) => {
         paste::paste! { [<$base_req Templating>] }
     };
 }
@@ -967,8 +967,8 @@ macro_rules! create_all_prerequisites {
             $(
                 (
                     flow: $flow_name: ident,
-                    $(request_body: $flow_request: ty,)?
-                    response_body: $flow_response: ident,
+                    $(request_body: $flow_request: tt,)?
+                    response_body: $flow_response: tt,
                     $(response_format: $response_format:ident,)?
                     router_data: $router_data_type: ty,
                 )
