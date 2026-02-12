@@ -232,9 +232,9 @@ impl<T: PaymentMethodDataTypes>
             billing: item.resource_common_data.get_optional_billing().and_then(|billing| {
                 billing.address.as_ref().map(|addr| FiservemeaBilling {
                     address: Some(FiservemeaAddress {
-                        city: addr.get_city().ok().cloned(),
-                        country: addr.get_country().ok().cloned(),
-                        zip: addr.get_zip().ok().cloned(),
+                        city: addr.get_city().ok().map(|s| s.expose()),
+                        country: addr.get_country().ok().map(|c| c.to_string()),
+                        zip: addr.get_zip().ok().map(|s| s.expose()),
                         state: addr.get_state().ok().map(|s| s.expose()),
                         street1: addr.get_line1().ok().map(|s| s.expose()),
                         street2: addr.get_line2().ok().map(|s| s.expose()),
