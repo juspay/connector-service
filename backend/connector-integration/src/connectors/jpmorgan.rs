@@ -282,7 +282,7 @@ macros::create_all_prerequisites!(
                     &req.resource_common_data
                         .access_token()
                         .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
-                        .access_token
+                        .access_token.peek()
                 )
                 .into_masked(),
             );

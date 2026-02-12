@@ -274,7 +274,7 @@ macros::create_all_prerequisites!(
 
             let auth_header = (
                 headers::AUTHORIZATION.to_string(),
-                format!("Bearer {}", access_token.access_token).into_masked(),
+                format!("Bearer {}", access_token.access_token.peek()).into_masked(),
             );
             header.push(auth_header);
             Ok(header)
@@ -305,7 +305,7 @@ macros::create_all_prerequisites!(
 
             let auth_header = (
                 headers::AUTHORIZATION.to_string(),
-                format!("Bearer {}", access_token.access_token).into_masked(),
+                format!("Bearer {}", access_token.access_token.peek()).into_masked(),
             );
             header.push(auth_header);
             Ok(header)
