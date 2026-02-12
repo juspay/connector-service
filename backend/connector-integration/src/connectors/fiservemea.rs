@@ -544,7 +544,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .error
             .as_ref()
             .and_then(|e| e.details.as_ref())
-            .map(|details| {
+            .map(|details: &Vec<fiservmea::FiservmeaErrorField>| {
                 details
                     .iter()
                     .filter_map(|d| d.message.as_ref())
