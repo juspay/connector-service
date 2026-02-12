@@ -223,7 +223,7 @@ pub struct FiservmeaErrorDetail {
     pub decline_reason_code: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservmeaErrorField {
     pub field: Option<String>,
