@@ -706,7 +706,6 @@ enum PaymentMethodType {
   REVOLUT_PAY = 99;
   INSTANT_BANK_TRANSFER_FINLAND = 100;
   INSTANT_BANK_TRANSFER_POLAND = 101;
-  VOUCHER = 102;
 }
 
 // Product type enumeration.
@@ -1240,7 +1239,6 @@ message CardConnectorResponse {
   optional string card_network = 3; // Card network returned by the processor
   optional string domestic_network = 4; // Domestic (co-branded) card network
 }
-
 
 // Additional payment method connector response
 message AdditionalPaymentMethodConnectorResponse {

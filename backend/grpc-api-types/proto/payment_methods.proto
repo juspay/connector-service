@@ -138,20 +138,7 @@ message PaymentMethod {
 
     // VOUCHER METHODS (140-149) - Cash and voucher payment methods
     Boleto boleto = 140;                                       // Boleto - Brazilian payment method
-    Efecty efecty = 141;                                      // Efecty - Colombian cash payment network
-    PagoEfectivo pago_efectivo = 142;                         // PagoEfectivo - Peruvian cash payment method
-    RedCompra red_compra = 143;                               // RedCompra - Chilean debit card network
-    RedPagos red_pagos = 144;                                  // RedPagos - Uruguayan payment network
-    Alfamart alfamart = 145;                                   // Alfamart - Indonesian convenience store payment
-    Indomaret indomaret = 146;                                // Indomaret - Indonesian convenience store payment
-    OXXOVoucher oxxo_voucher = 147;                            // OXXO - Mexican convenience store payment
     SevenEleven seven_eleven = 148;                            // 7-Eleven - Convenience store payment
-    Lawson lawson = 149;                                      // Lawson - Japanese convenience store payment
-    MiniStop mini_stop = 150;                                  // Ministop - Japanese convenience store payment
-    FamilyMart family_mart = 151;                             // FamilyMart - Japanese convenience store payment
-    Seicomart seicomart = 152;                                // Seicomart - Japanese convenience store payment
-    PayEasy pay_easy = 153;                                    // Pay-easy - Japanese bill payment service
-    VoucherWrapper voucher = 154;                              // Voucher payment method
   }
 }
 
@@ -1021,13 +1008,19 @@ message Alfamart {
 // Boleto - Brazilian payment method
 message Boleto {
   // The shopper's social security number
-  optional string social_security_number = 1;
+  optional string social_security_number = 1 [(validate.rules).string = {min_len: 11, max_len: 11, pattern: "^[0-9]{11}$"}];
 }
 
 // Efecty - Colombian cash payment network
 message Efecty {
   // Fields will be added as needed for Efecty integration
 }
+
+// E-Voucher - Generic electronic voucher payment
+message EVoucher {
+  // Fields will be added as needed for E-Voucher integration
+}
+
 
 // Indomaret - Indonesian convenience store payment
 message Indomaret {
@@ -1089,29 +1082,7 @@ message JCSVoucher {
   // Fields will be added as needed for JCS Voucher integration
 }
 
-// Voucher payment method enum
-enum Voucher {
-  VOUCHER_UNSPECIFIED = 0;
-  VOUCHER_BOLETO = 1;
-  VOUCHER_EFECTY = 2;
-  VOUCHER_PAGO_EFECTIVO = 3;
-  VOUCHER_RED_COMPRA = 4;
-  VOUCHER_RED_PAGOS = 5;
-  VOUCHER_ALFAMART = 6;
-  VOUCHER_INDOMARET = 7;
-  VOUCHER_OXXO = 8;
-  VOUCHER_SEVEN_ELEVEN = 9;
-  VOUCHER_LAWSON = 10;
-  VOUCHER_MINI_STOP = 11;
-  VOUCHER_FAMILY_MART = 12;
-  VOUCHER_SEICOMART = 13;
-  VOUCHER_PAY_EASY = 14;
-}
 
-// Voucher payment method wrapper
-message VoucherWrapper {
-  Voucher voucher = 1;
-}
 
 // ============================================================================
 // DIRECT DEBIT PAYMENT METHODS - TODO: Not yet supported
