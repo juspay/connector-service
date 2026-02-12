@@ -4,6 +4,21 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.12.0
+
+### Features
+
+- **connector:** Added Adyen paylater paymentmethod ([#496](https://github.com/juspay/connector-service/pull/496)) ([`f9e1283`](https://github.com/juspay/connector-service/commit/f9e1283687a9ae7d40b8eb10956aa98233b6f4f9))
+- **framework:** Introduce BodyDecoding trait ([#502](https://github.com/juspay/connector-service/pull/502)) ([`8e7eede`](https://github.com/juspay/connector-service/commit/8e7eede8f60ee8be4ad62788411aceddbad715de))
+
+### Bug Fixes
+
+- **connector:** Mifinity 5xx Error Handling ([#505](https://github.com/juspay/connector-service/pull/505)) ([`1045fd3`](https://github.com/juspay/connector-service/commit/1045fd37ab767cecf0ef64ca068160e650f3dcd2))
+
+**Full Changelog:** [`2026.02.11.1...2026.02.12.0`](https://github.com/juspay/connector-service/compare/2026.02.11.1...2026.02.12.0)
+
+- - -
+
 ## 2026.02.11.1
 
 ### Bug Fixes
