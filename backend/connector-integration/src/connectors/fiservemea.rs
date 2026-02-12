@@ -194,14 +194,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+type FiservemeaAuthorizeRequest<T> = fiservemea::FiservemeaAuthorizeRequest<T>;
+type FiservemeaAuthorizeResponse = fiservemea::FiservemeaAuthorizeResponse;
+
 macros::create_all_prerequisites!(
     connector_name: Fiservemea,
     generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: fiservemea::FiservemeaAuthorizeRequest<T>,
-            response_body: fiservemea::FiservemeaAuthorizeResponse,
+            request_body: FiservemeaAuthorizeRequest<T>,
+            response_body: FiservemeaAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
     ],
