@@ -24,8 +24,8 @@ use domain_types::{
     errors,
     payment_method_data::{
         BankDebitData, BankRedirectData, BankTransferData, Card, CardRedirectData,
-        DefaultPCIHolder, GiftCardData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        VoucherData, WalletData,
+        DefaultPCIHolder, GiftCardData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber,VoucherData, WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -159,6 +159,22 @@ pub struct AdyenNetworkTokenData {
 pub enum AdyenPaymentMethod<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
+    #[serde(rename = "klarna")]
+    Klarna,
+    #[serde(rename = "affirm")]
+    AdyenAffirm,
+    #[serde(rename = "afterpaytouch")]
+    AfterPay,
+    #[serde(rename = "clearpay")]
+    ClearPay,
+    #[serde(rename = "paybright")]
+    PayBright,
+    #[serde(rename = "walley")]
+    Walley,
+    #[serde(rename = "alma")]
+    AlmaPayLater,
+    #[serde(rename = "atome")]
+    Atome,
     #[serde(rename = "scheme")]
     AdyenCard(Box<AdyenCard<T>>),
     #[serde(rename = "networkToken")]
@@ -800,6 +816,7 @@ pub struct AdditionalData {
     #[serde(flatten)]
     riskdata: Option<RiskData>,
     sca_exemption: Option<AdyenExemptionValues>,
+    pub auth_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1782,6 +1799,111 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        &PayLaterData,
+    )> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+
+    fn try_from(
+        (router_data, pay_later_data): (
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            &PayLaterData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match pay_later_data {
+            PayLaterData::KlarnaRedirect { .. } => {
+                router_data.resource_common_data.get_billing_email()?;
+                router_data
+                    .resource_common_data
+                    .customer_id
+                    .clone()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "customer_id",
+                    })?;
+                router_data.resource_common_data.get_billing_country()?;
+                Ok(Self::Klarna)
+            }
+            PayLaterData::KlarnaSdk { token } => {
+                if token.is_empty() {
+                    return Err(errors::ConnectorError::MissingRequiredField {
+                        field_name: "token",
+                    }
+                    .into());
+                }
+                Ok(Self::Klarna)
+            }
+            PayLaterData::AffirmRedirect { .. } => {
+                router_data.resource_common_data.get_billing_email()?;
+                router_data.resource_common_data.get_billing_full_name()?;
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data.resource_common_data.get_billing_address()?;
+                Ok(Self::AdyenAffirm)
+            }
+            PayLaterData::AfterpayClearpayRedirect { .. } => {
+                router_data.resource_common_data.get_billing_email()?;
+                router_data.resource_common_data.get_billing_full_name()?;
+                router_data.resource_common_data.get_billing_address()?;
+                router_data.resource_common_data.get_shipping_address()?;
+                let country = router_data.resource_common_data.get_billing_country()?;
+                match country {
+                    common_enums::CountryAlpha2::IT
+                    | common_enums::CountryAlpha2::FR
+                    | common_enums::CountryAlpha2::ES
+                    | common_enums::CountryAlpha2::GB => Ok(Self::ClearPay),
+                    _ => Ok(Self::AfterPay),
+                }
+            }
+            PayLaterData::PayBrightRedirect { .. } => {
+                router_data.resource_common_data.get_billing_full_name()?;
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data.resource_common_data.get_billing_email()?;
+                router_data.resource_common_data.get_billing_address()?;
+                router_data.resource_common_data.get_shipping_address()?;
+                router_data.resource_common_data.get_billing_country()?;
+                Ok(Self::PayBright)
+            }
+            PayLaterData::WalleyRedirect { .. } => {
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data.resource_common_data.get_billing_email()?;
+                Ok(Self::Walley)
+            }
+            PayLaterData::AlmaRedirect { .. } => {
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data.resource_common_data.get_billing_email()?;
+                router_data.resource_common_data.get_billing_address()?;
+                router_data.resource_common_data.get_shipping_address()?;
+                Ok(Self::AlmaPayLater)
+            }
+            PayLaterData::AtomeRedirect { .. } => {
+                router_data.resource_common_data.get_billing_email()?;
+                router_data.resource_common_data.get_billing_full_name()?;
+                router_data
+                    .resource_common_data
+                    .get_billing_phone_number()?;
+                router_data.resource_common_data.get_billing_address()?;
+
+                Ok(Self::Atome)
+            }
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
         AdyenRouterData<
             RouterDataV2<
                 Authorize,
@@ -2715,7 +2837,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
+<<<<<<< HEAD
         &VoucherData,
+=======
+        &PayLaterData,
+>>>>>>> origin
     )> for AdyenPaymentRequest<T>
 {
     type Error = Error;
@@ -2730,6 +2856,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 >,
                 T,
             >,
+<<<<<<< HEAD
             &VoucherData,
         ),
     ) -> Result<Self, Self::Error> {
@@ -2748,6 +2875,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+=======
+            &PayLaterData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, pay_later_data) = value;
+        let payment_method = AdyenPaymentMethod::try_from((&item.router_data, pay_later_data))?;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let return_url = item.router_data.request.get_router_return_url()?;
+        let additional_data = get_additional_data(&item.router_data);
+        let payment_method_wrapper = PaymentMethod::AdyenPaymentMethod(Box::new(payment_method));
+>>>>>>> origin
         let billing_address = get_address_info(
             item.router_data
                 .resource_common_data
@@ -2755,6 +2895,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_payment_billing(),
         )
         .and_then(Result::ok);
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin
         let delivery_address = get_address_info(
             item.router_data
                 .resource_common_data
@@ -2762,6 +2906,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )
         .and_then(Result::ok);
 
+<<<<<<< HEAD
         let shopper_name =
             get_shopper_name(item.router_data.resource_common_data.get_optional_billing());
         let shopper_email = item
@@ -2776,6 +2921,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             get_recurring_processing_model(&item.router_data)?;
         let country_code =
             get_country_code(item.router_data.resource_common_data.get_optional_billing());
+=======
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+
+        let country_code =
+            get_country_code(item.router_data.resource_common_data.get_optional_billing());
+
+        let (recurring_processing_model, store_payment_method, shopper_reference) =
+            get_recurring_processing_model(&item.router_data)?;
+
+>>>>>>> origin
         let (store, splits) = get_adyen_split_request(
             &item.router_data.request.metadata,
             &adyen_metadata.store,
@@ -2785,7 +2941,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             amount,
             merchant_account: auth_type.merchant_account,
+<<<<<<< HEAD
             payment_method,
+=======
+            payment_method: payment_method_wrapper,
+>>>>>>> origin
             reference: item
                 .router_data
                 .resource_common_data
@@ -2795,6 +2955,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             shopper_interaction,
             recurring_processing_model,
             browser_info: get_browser_info(&item.router_data)?,
+<<<<<<< HEAD
             additional_data: get_additional_data(&item.router_data),
             mpi_data: None,
             telephone_number,
@@ -2806,6 +2967,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             delivery_address,
             country_code,
             line_items: None,
+=======
+            additional_data,
+            mpi_data: None,
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_billing_phone_number()
+                .ok(),
+            shopper_name: get_shopper_name(
+                item.router_data.resource_common_data.get_optional_billing(),
+            ),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number: None,
+            billing_address,
+            delivery_address,
+            country_code,
+            line_items: Some(get_line_items(&item)),
+>>>>>>> origin
             shopper_reference,
             store_payment_method,
             channel: None,
@@ -2814,19 +2997,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store,
             splits,
+<<<<<<< HEAD
             device_fingerprint,
+=======
+            device_fingerprint: adyen_metadata.device_fingerprint.clone(),
+            platform_chargeback_logic: adyen_metadata.platform_chargeback_logic.clone(),
+>>>>>>> origin
             metadata: item
                 .router_data
                 .request
                 .metadata
                 .clone()
                 .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+<<<<<<< HEAD
             platform_chargeback_logic,
+=======
+>>>>>>> origin
             session_validity: None,
         })
     }
 }
 
+<<<<<<< HEAD
 fn get_social_security_number(voucher_data: &VoucherData) -> Option<Secret<String>> {
     match voucher_data {
         VoucherData::Boleto(boleto_data) => boleto_data.social_security_number.clone(),
@@ -2846,6 +3038,8 @@ fn get_social_security_number(voucher_data: &VoucherData) -> Option<Secret<Strin
     }
 }
 
+=======
+>>>>>>> origin
 fn get_redirect_extra_details<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
@@ -2921,10 +3115,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::GiftCard(ref gift_card) => {
                     Self::try_from((item, gift_card.as_ref()))
                 }
+<<<<<<< HEAD
                 PaymentMethodData::Voucher(ref voucher_data) => {
                     Self::try_from((item, voucher_data))
                 }
                 PaymentMethodData::PayLater(_)
+=======
+                PaymentMethodData::PayLater(ref pay_later_data) => {
+                    Self::try_from((item, pay_later_data))
+                }
+                PaymentMethodData::Voucher(_)
+>>>>>>> origin
                 | PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
@@ -3632,11 +3833,15 @@ pub fn get_adyen_response(
             payment_method_id: None,
             connector_mandate_request_reference_id: None,
         });
-    let network_txn_id = response.additional_data.and_then(|additional_data| {
-        additional_data
-            .network_tx_reference
-            .map(|network_tx_id| network_tx_id.expose())
-    });
+    let network_txn_id = response
+        .additional_data
+        .as_ref()
+        .and_then(|additional_data| {
+            additional_data
+                .network_tx_reference
+                .as_ref()
+                .map(|network_tx_id| network_tx_id.clone().expose())
+        });
 
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: ResponseId::ConnectorTransactionId(response.psp_reference),
@@ -3650,13 +3855,20 @@ pub fn get_adyen_response(
     };
 
     let txn_amount = response.amount.map(|amount| amount.value);
+    let connector_response = pmt.and_then(|pmt| {
+        response
+            .additional_data
+            .as_ref()
+            .and_then(|additional_data| additional_data.auth_code.clone())
+            .map(|auth_code| ConnectorResponseData::with_auth_code(auth_code, pmt))
+    });
 
     Ok(AdyenPaymentsResponseData {
         status,
         error,
         payments_response_data,
         txn_amount,
-        connector_response: None,
+        connector_response,
     })
 }
 

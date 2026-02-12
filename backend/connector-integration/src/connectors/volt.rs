@@ -2,7 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_enums::CurrencyUnit;
+use common_enums::{AttemptStatus, CurrencyUnit};
 use common_utils::{consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
@@ -33,12 +33,12 @@ use domain_types::{
 use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    verification::SourceVerification,
+    decode::BodyDecoding, verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers::{
     self as volt, RefundResponse, VoltAuthUpdateRequest, VoltAuthUpdateResponse,
-    VoltPaymentsRequest, VoltPaymentsResponse, VoltPsyncRequest, VoltPsyncResponse,
+    VoltPaymentsRequest, VoltPaymentsResponse, VoltPaymentsResponseData, VoltPsyncRequest,
     VoltRefundRequest,
 };
 
@@ -169,6 +169,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Sour
     for Volt<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for Volt<T>
+{
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Volt<T>
 {
@@ -251,7 +255,7 @@ macros::create_all_prerequisites!(
         (
             flow: PSync,
             request_body: VoltPsyncRequest,
-            response_body: VoltPsyncResponse,
+            response_body: VoltPaymentsResponseData,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
@@ -393,7 +397,7 @@ macros::macro_connector_implementation!(
 );
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector_default_implementations: [get_content_type],
     connector: Volt,
     curl_request: Json(VoltAuthUpdateRequest),
     curl_response: VoltAuthUpdateResponse,
@@ -421,6 +425,31 @@ macros::macro_connector_implementation!(
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/oauth"))
         }
+        fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        // auth error have different structure than common error
+        let response: volt::VoltAuthErrorResponse = res
+            .response
+            .parse_struct("VoltAuthErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+         with_error_response_body!(event_builder, response);
+
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.code.to_string(),
+            message: response.message.clone(),
+            reason: Some(response.message),
+            attempt_status: Some(AttemptStatus::Failure),
+            connector_transaction_id: None,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
+        })
+    }
     }
 );
 
@@ -428,7 +457,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Volt,
     curl_request: Json(VoltPsyncRequest),
-    curl_response: VoltPsyncResponse,
+    curl_response: VoltPaymentsResponseData,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -628,5 +657,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Volt<T>
 {
 }
-
-// SourceVerification implementations for all flows
