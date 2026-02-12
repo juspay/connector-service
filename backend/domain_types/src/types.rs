@@ -1735,6 +1735,32 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CimbVaBankTransfer(_) => Ok(Some(PaymentMethodType::CimbVa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::DanamonVaBankTransfer(_) => Ok(Some(PaymentMethodType::DanamonVa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MandiriVaBankTransfer(_) => Ok(Some(PaymentMethodType::MandiriVa)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Voucher(voucher_wrapper) => {
+                    match grpc_api_types::payments::Voucher::try_from(voucher_wrapper.voucher) {
+                        Ok(grpc_api_types::payments::Voucher::Boleto) => Ok(Some(PaymentMethodType::Boleto)),
+                        Ok(grpc_api_types::payments::Voucher::Efecty) => Ok(Some(PaymentMethodType::Efecty)),
+                        Ok(grpc_api_types::payments::Voucher::PagoEfectivo) => Ok(Some(PaymentMethodType::PagoEfectivo)),
+                        Ok(grpc_api_types::payments::Voucher::RedCompra) => Ok(Some(PaymentMethodType::RedCompra)),
+                        Ok(grpc_api_types::payments::Voucher::RedPagos) => Ok(Some(PaymentMethodType::RedPagos)),
+                        Ok(grpc_api_types::payments::Voucher::Alfamart) => Ok(Some(PaymentMethodType::Alfamart)),
+                        Ok(grpc_api_types::payments::Voucher::Indomaret) => Ok(Some(PaymentMethodType::Indomaret)),
+                        Ok(grpc_api_types::payments::Voucher::Oxxo) => Ok(Some(PaymentMethodType::Oxxo)),
+                        Ok(grpc_api_types::payments::Voucher::SevenEleven) => Ok(Some(PaymentMethodType::SevenEleven)),
+                        Ok(grpc_api_types::payments::Voucher::Lawson) => Ok(Some(PaymentMethodType::Lawson)),
+                        Ok(grpc_api_types::payments::Voucher::MiniStop) => Ok(Some(PaymentMethodType::MiniStop)),
+                        Ok(grpc_api_types::payments::Voucher::FamilyMart) => Ok(Some(PaymentMethodType::FamilyMart)),
+                        Ok(grpc_api_types::payments::Voucher::Seicomart) => Ok(Some(PaymentMethodType::Seicomart)),
+                        Ok(grpc_api_types::payments::Voucher::PayEasy) => Ok(Some(PaymentMethodType::PayEasy)),
+                        Ok(grpc_api_types::payments::Voucher::Unspecified) | Err(_) => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_VOUCHER_TYPE".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Invalid voucher type".to_owned(),
+                                error_object: None,
+                            })))
+                        }
+                    }
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -3638,7 +3664,6 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                                             .and_then(|checks| serde_json::to_vec(checks).ok()),
                                         card_network: card_network.clone(),
                                         domestic_network: domestic_network.clone(),
-                                        auth_code: None,
                                     }
                                 )
                             ),

@@ -151,6 +151,7 @@ message PaymentMethod {
     FamilyMart family_mart = 151;                             // FamilyMart - Japanese convenience store payment
     Seicomart seicomart = 152;                                // Seicomart - Japanese convenience store payment
     PayEasy pay_easy = 153;                                    // Pay-easy - Japanese bill payment service
+    VoucherWrapper voucher = 154;                              // Voucher payment method
   }
 }
 
@@ -1086,6 +1087,30 @@ message PayEasy {
 // JCSVoucher - Japanese convenience store voucher (shared by Lawson, MiniStop, FamilyMart, Seicomart, PayEasy)
 message JCSVoucher {
   // Fields will be added as needed for JCS Voucher integration
+}
+
+// Voucher payment method enum
+enum Voucher {
+  VOUCHER_UNSPECIFIED = 0;
+  VOUCHER_BOLETO = 1;
+  VOUCHER_EFECTY = 2;
+  VOUCHER_PAGO_EFECTIVO = 3;
+  VOUCHER_RED_COMPRA = 4;
+  VOUCHER_RED_PAGOS = 5;
+  VOUCHER_ALFAMART = 6;
+  VOUCHER_INDOMARET = 7;
+  VOUCHER_OXXO = 8;
+  VOUCHER_SEVEN_ELEVEN = 9;
+  VOUCHER_LAWSON = 10;
+  VOUCHER_MINI_STOP = 11;
+  VOUCHER_FAMILY_MART = 12;
+  VOUCHER_SEICOMART = 13;
+  VOUCHER_PAY_EASY = 14;
+}
+
+// Voucher payment method wrapper
+message VoucherWrapper {
+  Voucher voucher = 1;
 }
 
 // ============================================================================
