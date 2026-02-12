@@ -229,15 +229,17 @@ impl<T: PaymentMethodDataTypes>
 
         let order = Some(FiservemeaOrder {
             order_id: order_id.clone(),
-            billing: item.request.billing_address.as_ref().map(|addr| FiservemeaBilling {
-                address: Some(FiservemeaAddress {
-                    city: addr.city.clone(),
-                    country: addr.country.map(|c| c.to_string()),
-                    zip: addr.zip.clone(),
-                    state: addr.state.clone(),
-                    street1: addr.line1.clone(),
-                    street2: addr.line2.clone(),
-                }),
+            billing: item.router_data.resource_common_data.get_optional_billing().and_then(|billing| {
+                billing.address.as_ref().map(|addr| FiservemeaBilling {
+                    address: Some(FiservemeaAddress {
+                        city: addr.get_city().ok().cloned(),
+                        country: addr.get_country().ok().cloned(),
+                        zip: addr.get_zip().ok().cloned(),
+                        state: addr.get_state().ok().cloned(),
+                        street1: addr.get_line1().ok().cloned(),
+                        street2: addr.get_line2().ok().cloned(),
+                    }),
+                })
             }),
         });
 
