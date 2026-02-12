@@ -753,8 +753,8 @@ macro_rules! impl_templating {
 
     (
         connector: $connector: ident,
-        curl_request: $curl_req: path,
-        curl_response: $curl_res: path,
+        curl_request: $curl_req: tt,
+        curl_response: $curl_res: tt,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
     ) => {
@@ -792,8 +792,8 @@ macro_rules! impl_templating_mixed {
     // Pattern for generic request types like AdyenPaymentRequest<T>
     (
         connector: $connector: ident,
-        curl_request: $base_req: path<$req_generic: ident>,
-        curl_response: $curl_res: path,
+        curl_request: $base_req: tt,
+        curl_response: $curl_res: tt,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
     ) => {
@@ -812,8 +812,8 @@ macro_rules! impl_templating_mixed {
     // Pattern for non-generic request types like AdyenRedirectRequest
     (
         connector: $connector: ident,
-        curl_request: $base_req: path,
-        curl_response: $curl_res: path,
+        curl_request: $base_req: tt,
+        curl_response: $curl_res: tt,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
     ) => {
@@ -832,8 +832,8 @@ macro_rules! impl_templating_mixed {
     // Pattern for generic request with XML response parsing
     (
         connector: $connector: ident,
-        curl_request: $base_req: path<$req_generic: ident>,
-        curl_response: $curl_res: path,
+        curl_request: $base_req: tt,
+        curl_response: $curl_res: tt,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
         response_format: xml,
@@ -875,8 +875,8 @@ macro_rules! impl_templating_mixed {
     // Pattern for non-generic request with XML response parsing
     (
         connector: $connector: ident,
-        curl_request: $base_req: path,
-        curl_response: $curl_res: path,
+        curl_request: $base_req: tt,
+        curl_response: $curl_res: tt,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
         response_format: xml,
@@ -919,11 +919,11 @@ pub(crate) use impl_templating_mixed;
 
 macro_rules! resolve_request_body_type {
     // Generic type like AdyenPaymentRequest<T>
-    ($base_req: path<$req_generic: ident>, $generic_type: tt) => {
+    ($base_req: tt, $generic_type: tt) => {
         $base_req<$generic_type>
     };
     // Non-generic type like AdyenRedirectRequest
-    ($base_req: path, $generic_type: tt) => {
+    ($base_req: tt, $generic_type: tt) => {
         $base_req
     };
 }
@@ -931,11 +931,11 @@ pub(crate) use resolve_request_body_type;
 
 macro_rules! resolve_templating_type {
     // Generic type like AdyenPaymentRequest<T>
-    ($base_req: path<$req_generic: ident>) => {
+    ($base_req: tt) => {
         paste::paste! { [<$base_req Templating>] }
     };
     // Non-generic type like AdyenRedirectRequest
-    ($base_req: path) => {
+    ($base_req: tt) => {
         paste::paste! { [<$base_req Templating>] }
     };
 }
@@ -967,8 +967,8 @@ macro_rules! create_all_prerequisites {
             $(
                 (
                     flow: $flow_name: ident,
-                    $(request_body: $flow_request: path,)?
-                    response_body: $flow_response: path,
+                    $(request_body: $flow_request: tt,)?
+                    response_body: $flow_response: tt,
                     $(response_format: $response_format:ident,)?
                     router_data: $router_data_type: ty,
                 )
@@ -1045,8 +1045,8 @@ macro_rules! create_all_prerequisites_impl_templating {
     // Pattern with request body and XML response format
     (
         connector: $connector: ident,
-        request_body: $flow_request: path,
-        response_body: $flow_response: path,
+        request_body: $flow_request: tt,
+        response_body: $flow_response: tt,
         response_format: xml,
         router_data: $router_data_type: ty,
         generic_type: $generic_type: tt,
@@ -1064,8 +1064,8 @@ macro_rules! create_all_prerequisites_impl_templating {
     // Pattern with request body (default JSON response format)
     (
         connector: $connector: ident,
-        request_body: $flow_request: path,
-        response_body: $flow_response: path,
+        request_body: $flow_request: tt,
+        response_body: $flow_response: tt,
         router_data: $router_data_type: ty,
         generic_type: $generic_type: tt,
     ) => {
@@ -1081,7 +1081,7 @@ macro_rules! create_all_prerequisites_impl_templating {
     // Pattern without request body
     (
         connector: $connector: ident,
-        response_body: $flow_response: path,
+        response_body: $flow_response: tt,
         router_data: $router_data_type: ty,
         generic_type: $generic_type: tt,
     ) => {
