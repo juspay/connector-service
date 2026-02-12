@@ -393,15 +393,15 @@ impl<T: PaymentMethodDataTypes>
     ) -> Result<Self, Self::Error> {
         let status =
             map_fiservmea_status_to_attempt_status(&item.response.transaction_result, &item.response.transaction_state);
-
+        let ipg_transaction_id = item.response.ipg_transaction_id.clone();
         let response = match status {
             AttemptStatus::Authorized => Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
+                resource_id: ResponseId::ConnectorTransactionId(ipg_transaction_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: item.response.processor.as_ref().and_then(|p| p.reference_number.clone()),
-                connector_response_reference_id: Some(item.response.ipg_transaction_id),
+                connector_response_reference_id: Some(ipg_transaction_id.clone()),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
@@ -415,28 +415,28 @@ impl<T: PaymentMethodDataTypes>
                 }),
                 reason: item.response.processor.as_ref().and_then(|p| p.response_message.clone()),
                 attempt_status: Some(status),
-                connector_transaction_id: Some(item.response.ipg_transaction_id),
+                connector_transaction_id: Some(ipg_transaction_id.clone()),
                 network_decline_code: item.response.scheme_response_code,
                 network_advice_code: None,
                 network_error_message: item.response.error_message,
             }),
             AttemptStatus::Pending => Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
+                resource_id: ResponseId::ConnectorTransactionId(ipg_transaction_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: item.response.processor.as_ref().and_then(|p| p.reference_number.clone()),
-                connector_response_reference_id: Some(item.response.ipg_transaction_id),
+                connector_response_reference_id: Some(ipg_transaction_id.clone()),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
             _ => Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
+                resource_id: ResponseId::ConnectorTransactionId(ipg_transaction_id),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: item.response.processor.as_ref().and_then(|p| p.reference_number.clone()),
-                connector_response_reference_id: Some(item.response.ipg_transaction_id),
+                connector_response_reference_id: Some(ipg_transaction_id),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
