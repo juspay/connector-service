@@ -290,6 +290,36 @@ impl<T: PaymentMethodDataTypes>
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
+        FiservmeaRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for FiservmeaAuthorizeRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: FiservmeaRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
+    }
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
         &RouterDataV2<
             Authorize,
             PaymentFlowData,
