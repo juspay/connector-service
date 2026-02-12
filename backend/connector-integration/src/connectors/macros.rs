@@ -793,7 +793,7 @@ macro_rules! impl_templating_mixed {
     (
         connector: $connector: ident,
         curl_request: $base_req: path<$req_generic: ident>,
-        curl_response: $curl_res: ident,
+        curl_response: $curl_res: path,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
     ) => {
@@ -813,7 +813,7 @@ macro_rules! impl_templating_mixed {
     (
         connector: $connector: ident,
         curl_request: $base_req: path,
-        curl_response: $curl_res: ident,
+        curl_response: $curl_res: path,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
     ) => {
@@ -833,7 +833,7 @@ macro_rules! impl_templating_mixed {
     (
         connector: $connector: ident,
         curl_request: $base_req: path<$req_generic: ident>,
-        curl_response: $curl_res: ident,
+        curl_response: $curl_res: path,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
         response_format: xml,
@@ -876,7 +876,7 @@ macro_rules! impl_templating_mixed {
     (
         connector: $connector: ident,
         curl_request: $base_req: path,
-        curl_response: $curl_res: ident,
+        curl_response: $curl_res: path,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
         response_format: xml,
