@@ -75,7 +75,7 @@ pub enum FiservmeaTransactionResult {
     Fraud,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, strum::Display)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, strum::Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservmeaTransactionState {
     Authorized,
