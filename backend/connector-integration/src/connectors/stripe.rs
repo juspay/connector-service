@@ -9,6 +9,7 @@ use common_utils::{
     errors::CustomResult,
     events,
     ext_traits::ByteSliceExt,
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -19,16 +20,17 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, DisputeWebhookDetailsResponse, EventType, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -36,6 +38,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
+    utils,
 };
 
 use error_stack::ResultExt;
@@ -53,7 +56,9 @@ use transformers::{
     PaymentsAuthorizeResponse, PaymentsAuthorizeResponse as RepeatPaymentResponse,
     PaymentsCaptureResponse, PaymentsVoidResponse, RefundResponse,
     RefundResponse as RefundSyncResponse, SetupMandateRequest, SetupMandateResponse,
-    StripeRefundRequest, StripeTokenResponse, TokenRequest,
+    StripeRefundRequest, StripeTokenResponse, TokenRequest, WebhookEvent, WebhookEventObjectType,
+    WebhookEventStatus, WebhookEventType, WebhookEventTypeBody, WebhookPaymentMethodDetails,
+    WebhookPaymentMethodType,
 };
 
 use super::macros;
@@ -65,6 +70,102 @@ pub(crate) mod headers {
     pub(crate) const STRIPE_COMPATIBLE_CONNECT_ACCOUNT: &str = "Stripe-Account";
 }
 use stripe::auth_headers;
+
+// Webhook helper functions
+
+/// Parses the Stripe-Signature header and extracts key-value pairs
+fn get_signature_elements_from_header(
+    headers: &std::collections::HashMap<String, String>,
+) -> Result<std::collections::HashMap<String, Vec<u8>>, ConnectorError> {
+    let security_header = headers
+        .get("Stripe-Signature")
+        .or_else(|| headers.get("stripe-signature"))
+        .ok_or(ConnectorError::WebhookSignatureNotFound)?;
+
+    let props = security_header.split(',').collect::<Vec<&str>>();
+    let mut security_header_kvs: std::collections::HashMap<String, Vec<u8>> =
+        std::collections::HashMap::with_capacity(props.len());
+
+    for prop_str in &props {
+        let (prop_key, prop_value) = prop_str
+            .split_once('=')
+            .ok_or(ConnectorError::WebhookSourceVerificationFailed)?;
+
+        security_header_kvs.insert(prop_key.to_string(), prop_value.bytes().collect());
+    }
+
+    Ok(security_header_kvs)
+}
+
+/// Get the transaction ID from a Stripe webhook event
+fn get_stripe_transaction_id(details: &WebhookEvent) -> Result<String, ConnectorError> {
+    match details.event_data.event_object.object {
+        WebhookEventObjectType::PaymentIntent => Ok(details.event_data.event_object.id.clone()),
+        WebhookEventObjectType::Charge => details
+            .event_data
+            .event_object
+            .payment_intent
+            .clone()
+            .ok_or(ConnectorError::WebhookReferenceIdNotFound),
+        WebhookEventObjectType::Dispute => details
+            .event_data
+            .event_object
+            .payment_intent
+            .clone()
+            .ok_or(ConnectorError::WebhookReferenceIdNotFound),
+        WebhookEventObjectType::Source => Ok(details.event_data.event_object.id.clone()),
+        WebhookEventObjectType::Refund => Ok(details.event_data.event_object.id.clone()),
+    }
+}
+
+/// Map webhook event to payment attempt status
+fn get_payment_status_from_webhook(details: &WebhookEvent) -> common_enums::AttemptStatus {
+    match &details.event_type {
+        WebhookEventType::PaymentIntentSucceed => common_enums::AttemptStatus::Charged,
+        WebhookEventType::PaymentIntentFailed => common_enums::AttemptStatus::Failure,
+        WebhookEventType::PaymentIntentCanceled => common_enums::AttemptStatus::Voided,
+        WebhookEventType::PaymentIntentProcessing => common_enums::AttemptStatus::Pending,
+        WebhookEventType::PaymentIntentAmountCapturableUpdated => {
+            common_enums::AttemptStatus::Authorized
+        }
+        WebhookEventType::PaymentIntentRequiresAction => {
+            common_enums::AttemptStatus::AuthenticationPending
+        }
+        WebhookEventType::PaymentIntentPartiallyFunded => {
+            common_enums::AttemptStatus::PartialCharged
+        }
+        WebhookEventType::ChargeCaptured => common_enums::AttemptStatus::Charged,
+        WebhookEventType::ChargeSucceeded => common_enums::AttemptStatus::Pending,
+        WebhookEventType::ChargeFailed => common_enums::AttemptStatus::Failure,
+        WebhookEventType::ChargeExpired => common_enums::AttemptStatus::Failure,
+        _ => {
+            // Map based on status field if available
+            details
+                .event_data
+                .event_object
+                .status
+                .as_ref()
+                .map(|status| match status {
+                    WebhookEventStatus::Succeeded => common_enums::AttemptStatus::Charged,
+                    WebhookEventStatus::Failed => common_enums::AttemptStatus::Failure,
+                    WebhookEventStatus::Processing => common_enums::AttemptStatus::Pending,
+                    WebhookEventStatus::RequiresCapture => common_enums::AttemptStatus::Authorized,
+                    WebhookEventStatus::RequiresAction => {
+                        common_enums::AttemptStatus::AuthenticationPending
+                    }
+                    WebhookEventStatus::RequiresConfirmation => {
+                        common_enums::AttemptStatus::ConfirmationAwaited
+                    }
+                    WebhookEventStatus::RequiresPaymentMethod => {
+                        common_enums::AttemptStatus::PaymentMethodAwaited
+                    }
+                    WebhookEventStatus::Canceled => common_enums::AttemptStatus::Voided,
+                    _ => common_enums::AttemptStatus::Pending,
+                })
+                .unwrap_or(common_enums::AttemptStatus::Pending)
+        }
+    }
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SdkSessionTokenV2 for Stripe<T>
@@ -179,6 +280,312 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Stripe<T>
 {
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<ConnectorError>> {
+        // If no webhook secret is provided, cannot verify
+        let webhook_secret = match connector_webhook_secret {
+            Some(secrets) => secrets.secret,
+            None => return Ok(false),
+        };
+
+        // Get signature and message
+        let signature = self.get_webhook_source_verification_signature(
+            &request,
+            &ConnectorWebhookSecrets {
+                secret: webhook_secret.clone(),
+                additional_secret: None,
+            },
+        )?;
+
+        let message = self.get_webhook_source_verification_message(
+            &request,
+            &ConnectorWebhookSecrets {
+                secret: webhook_secret.clone(),
+                additional_secret: None,
+            },
+        )?;
+
+        // Compute HMAC-SHA256 and verify
+        use common_utils::crypto::{HmacSha256, VerifySignature};
+        let crypto_algorithm = HmacSha256;
+        crypto_algorithm
+            .verify_signature(&webhook_secret, &signature, &message)
+            .map_err(|_| {
+                error_stack::report!(ConnectorError::WebhookSourceVerificationFailed)
+                    .attach_printable("Stripe webhook signature verification failed")
+            })
+    }
+
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<ConnectorError>> {
+        let mut security_header_kvs = get_signature_elements_from_header(&request.headers)?;
+
+        let signature = security_header_kvs
+            .remove("v1")
+            .ok_or(ConnectorError::WebhookSignatureNotFound)?;
+
+        hex::decode(signature).change_context(ConnectorError::WebhookSignatureNotFound)
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<ConnectorError>> {
+        let mut security_header_kvs = get_signature_elements_from_header(&request.headers)?;
+
+        let timestamp = security_header_kvs
+            .remove("t")
+            .ok_or(ConnectorError::WebhookSignatureNotFound)?;
+
+        Ok(format!(
+            "{}.{}",
+            String::from_utf8_lossy(&timestamp),
+            String::from_utf8_lossy(&request.body)
+        )
+        .into_bytes())
+    }
+
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<EventType, error_stack::Report<ConnectorError>> {
+        let details: WebhookEventTypeBody = request
+            .body
+            .parse_struct("WebhookEventTypeBody")
+            .change_context(ConnectorError::WebhookEventTypeNotFound)?;
+
+        Ok(match details.event_type {
+            WebhookEventType::PaymentIntentFailed => EventType::PaymentIntentFailure,
+            WebhookEventType::PaymentIntentSucceed => EventType::PaymentIntentSuccess,
+            WebhookEventType::PaymentIntentCanceled => EventType::PaymentIntentCancelled,
+            WebhookEventType::PaymentIntentAmountCapturableUpdated => {
+                EventType::PaymentIntentAuthorizationSuccess
+            }
+            WebhookEventType::ChargeSucceeded => {
+                if let Some(WebhookPaymentMethodDetails {
+                    payment_method:
+                        WebhookPaymentMethodType::AchCreditTransfer
+                        | WebhookPaymentMethodType::MultibancoBankTransfers,
+                }) = details.event_data.event_object.payment_method_details
+                {
+                    EventType::PaymentIntentSuccess
+                } else {
+                    EventType::IncomingWebhookEventUnspecified
+                }
+            }
+            WebhookEventType::ChargeRefundUpdated => details
+                .event_data
+                .event_object
+                .status
+                .map(|status| match status {
+                    WebhookEventStatus::Succeeded => EventType::RefundSuccess,
+                    WebhookEventStatus::Failed => EventType::RefundFailure,
+                    _ => EventType::IncomingWebhookEventUnspecified,
+                })
+                .unwrap_or(EventType::IncomingWebhookEventUnspecified),
+            WebhookEventType::SourceChargeable => EventType::SourceChargeable,
+            WebhookEventType::DisputeCreated => EventType::DisputeOpened,
+            WebhookEventType::DisputeClosed => EventType::DisputeCancelled,
+            WebhookEventType::DisputeUpdated => details
+                .event_data
+                .event_object
+                .status
+                .map(|status| match status {
+                    WebhookEventStatus::Won => EventType::DisputeWon,
+                    WebhookEventStatus::Lost => EventType::DisputeLost,
+                    WebhookEventStatus::NeedsResponse
+                    | WebhookEventStatus::WarningNeedsResponse => EventType::DisputeOpened,
+                    WebhookEventStatus::UnderReview | WebhookEventStatus::WarningUnderReview => {
+                        EventType::DisputeChallenged
+                    }
+                    WebhookEventStatus::WarningClosed => EventType::DisputeCancelled,
+                    _ => EventType::IncomingWebhookEventUnspecified,
+                })
+                .unwrap_or(EventType::IncomingWebhookEventUnspecified),
+            WebhookEventType::PaymentIntentPartiallyFunded => {
+                EventType::PaymentIntentPartiallyFunded
+            }
+            WebhookEventType::PaymentIntentRequiresAction => EventType::PaymentActionRequired,
+            WebhookEventType::ChargeDisputeFundsWithdrawn => EventType::DisputeLost,
+            WebhookEventType::ChargeDisputeFundsReinstated => EventType::DisputeWon,
+            WebhookEventType::Unknown
+            | WebhookEventType::ChargeCaptured
+            | WebhookEventType::ChargeExpired
+            | WebhookEventType::ChargeFailed
+            | WebhookEventType::ChargePending
+            | WebhookEventType::ChargeUpdated
+            | WebhookEventType::ChargeRefunded
+            | WebhookEventType::PaymentIntentCreated
+            | WebhookEventType::PaymentIntentProcessing
+            | WebhookEventType::SourceTransactionCreated => {
+                EventType::IncomingWebhookEventUnspecified
+            }
+        })
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorError>> {
+        let request_body_copy = request.body.clone();
+        let details: WebhookEvent = request
+            .body
+            .parse_struct("WebhookEvent")
+            .change_context(ConnectorError::WebhookResourceObjectNotFound)?;
+
+        let connector_transaction_id = get_stripe_transaction_id(&details)?;
+        let status = get_payment_status_from_webhook(&details);
+
+        Ok(WebhookDetailsResponse {
+            resource_id: Some(ResponseId::ConnectorTransactionId(
+                connector_transaction_id.clone(),
+            )),
+            status,
+            status_code: 200,
+            mandate_reference: None,
+            connector_response_reference_id: Some(connector_transaction_id),
+            error_code: details
+                .event_data
+                .event_object
+                .last_payment_error
+                .as_ref()
+                .and_then(|e| e.code.clone()),
+            error_message: details
+                .event_data
+                .event_object
+                .last_payment_error
+                .as_ref()
+                .and_then(|e| e.message.clone()),
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            response_headers: None,
+            minor_amount_captured: None,
+            amount_captured: None,
+            error_reason: None,
+            network_txn_id: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorError>> {
+        let request_body_copy = request.body.clone();
+        let details: WebhookEvent = request
+            .body
+            .parse_struct("WebhookEvent")
+            .change_context(ConnectorError::WebhookResourceObjectNotFound)?;
+
+        let refund_status = details
+            .event_data
+            .event_object
+            .status
+            .as_ref()
+            .map(|status| match status {
+                WebhookEventStatus::Succeeded => common_enums::RefundStatus::Success,
+                WebhookEventStatus::Failed => common_enums::RefundStatus::Failure,
+                WebhookEventStatus::Processing => common_enums::RefundStatus::Pending,
+                _ => common_enums::RefundStatus::Pending,
+            })
+            .unwrap_or(common_enums::RefundStatus::Pending);
+
+        Ok(RefundWebhookDetailsResponse {
+            connector_refund_id: Some(details.event_data.event_object.id.clone()),
+            status: refund_status,
+            status_code: 200,
+            connector_response_reference_id: Some(details.event_data.event_object.id),
+            error_code: None,
+            error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            response_headers: None,
+        })
+    }
+
+    fn process_dispute_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<ConnectorError>> {
+        let request_body_copy = request.body.clone();
+        let details: WebhookEvent = request
+            .body
+            .parse_struct("WebhookEvent")
+            .change_context(ConnectorError::WebhookResourceObjectNotFound)?;
+
+        let dispute_status = details
+            .event_data
+            .event_object
+            .status
+            .as_ref()
+            .map(|status| match status {
+                WebhookEventStatus::Won => common_enums::DisputeStatus::DisputeWon,
+                WebhookEventStatus::Lost => common_enums::DisputeStatus::DisputeLost,
+                WebhookEventStatus::NeedsResponse | WebhookEventStatus::WarningNeedsResponse => {
+                    common_enums::DisputeStatus::DisputeOpened
+                }
+                WebhookEventStatus::UnderReview | WebhookEventStatus::WarningUnderReview => {
+                    common_enums::DisputeStatus::DisputeChallenged
+                }
+                WebhookEventStatus::WarningClosed => common_enums::DisputeStatus::DisputeCancelled,
+                _ => common_enums::DisputeStatus::DisputeOpened,
+            })
+            .unwrap_or(common_enums::DisputeStatus::DisputeOpened);
+
+        let amount = utils::convert_amount(
+            self.amount_converter,
+            details
+                .event_data
+                .event_object
+                .amount
+                .unwrap_or(common_utils::types::MinorUnit::new(0)),
+            details.event_data.event_object.currency,
+        )
+        .unwrap_or_else(|_| StringMinorUnit::default());
+
+        Ok(DisputeWebhookDetailsResponse {
+            amount,
+            currency: details.event_data.event_object.currency,
+            dispute_id: details.event_data.event_object.id.clone(),
+            stage: common_enums::DisputeStage::Dispute,
+            status: dispute_status,
+            connector_response_reference_id: details.event_data.event_object.payment_intent.clone(),
+            dispute_message: details.event_data.event_object.reason.clone(),
+            connector_reason_code: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
+            response_headers: None,
+        })
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<ConnectorError>,
+    > {
+        let details: WebhookEvent = request
+            .body
+            .parse_struct("WebhookEvent")
+            .change_context(ConnectorError::WebhookBodyDecodingFailed)?;
+
+        Ok(Box::new(details.event_data.event_object))
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -289,7 +696,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<IncrementalAuthorization, PaymentFlowData, PaymentsIncrementalAuthorizationData, PaymentsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: StringMinorUnit
+    ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
