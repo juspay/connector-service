@@ -792,8 +792,8 @@ macro_rules! impl_templating_mixed {
     // Pattern for generic request types like AdyenPaymentRequest<T>
     (
         connector: $connector: ident,
-        curl_request: $base_req: ident<$req_generic: ident>,
-        curl_response: $curl_res: ident,
+        curl_request: $base_req: ty<$req_generic: ident>,
+        curl_response: $curl_res: ty,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
     ) => {
@@ -812,8 +812,8 @@ macro_rules! impl_templating_mixed {
     // Pattern for non-generic request types like AdyenRedirectRequest
     (
         connector: $connector: ident,
-        curl_request: $base_req: ident,
-        curl_response: $curl_res: ident,
+        curl_request: $base_req: ty,
+        curl_response: $curl_res: ty,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
     ) => {
@@ -832,8 +832,8 @@ macro_rules! impl_templating_mixed {
     // Pattern for generic request with XML response parsing
     (
         connector: $connector: ident,
-        curl_request: $base_req: ident<$req_generic: ident>,
-        curl_response: $curl_res: ident,
+        curl_request: $base_req: ty<$req_generic: ident>,
+        curl_response: $curl_res: ty,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
         response_format: xml,
@@ -875,8 +875,8 @@ macro_rules! impl_templating_mixed {
     // Pattern for non-generic request with XML response parsing
     (
         connector: $connector: ident,
-        curl_request: $base_req: ident,
-        curl_response: $curl_res: ident,
+        curl_request: $base_req: ty,
+        curl_response: $curl_res: ty,
         router_data: $router_data: ty,
         generic_type: $generic_type: tt,
         response_format: xml,
