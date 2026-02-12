@@ -1,6 +1,11 @@
+// Embedded development config - read at build time via include_str!
+// Path goes: flows/ -> src/ -> ffi/ -> backend/ -> project_root -> config/
+const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/development.toml");
+
+use crate::utils::load_development_config;
 use connector_integration::types::ConnectorData;
 
-use common_crate::{configs, configs::Config, error::PaymentAuthorizationError};
+use common_crate::{configs::Config, error::PaymentAuthorizationError};
 use grpc_api_types::payments::PaymentServiceAuthorizeRequest;
 
 use common_utils::{metadata::MaskedMetadata, request::Request};
@@ -47,8 +52,6 @@ fn authorize<
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     > = connector_data.connector.get_connector_integration_v2();
-    println!("{:?} PaymentServiceAuthorizeRequest", payload);
-    println!("{:?} MetaData", metadata);
     let payment_flow_data =
         PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone(), metadata))
             .map_err(|err| {
@@ -60,7 +63,6 @@ fn authorize<
                 None,
             )
         })?;
-
     let payment_authorize_data = PaymentsAuthorizeData::<T>::foreign_try_from(payload.clone())
         .map_err(|err| {
             println!("{:?}", err);
@@ -71,7 +73,6 @@ fn authorize<
                 None,
             )
         })?;
-
     let router_data = RouterDataV2::<
         Authorize,
         PaymentFlowData,
@@ -116,16 +117,9 @@ pub fn authorize_flow(request: RequestData) -> Result<Option<Request>, PaymentAu
     let metadata_payload = request.extracted_metadata;
     let metadata = &request.masked_metadata;
     let payload = request.payload;
-    let config_path = configs::workspace_path().join("config/development.toml");
-    // Load default config
-    let config = Arc::new(Config::new(Some(config_path)).map_err(|e| {
-        PaymentAuthorizationError::new(
-            grpc_api_types::payments::PaymentStatus::Pending,
-            Some(e.to_string()),
-            Some("CONFIG_ERROR".to_string()),
-            None,
-        )
-    })?);
+
+    // Load embedded development config (baked into binary at build time)
+    let config = load_development_config(EMBEDDED_DEVELOPMENT_CONFIG)?;
 
     authorize::<DefaultPCIHolder>(
         payload,

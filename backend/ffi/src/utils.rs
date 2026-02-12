@@ -1,8 +1,9 @@
+use common_crate::{configs::Config, error::PaymentAuthorizationError};
 use common_utils::consts;
 use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
 use std::collections::HashMap;
+use std::sync::Arc;
 use tonic::metadata::{Ascii, MetadataMap, MetadataValue};
-
 /// Creates hardcoded MaskedMetadata with default test header values
 pub fn create_hardcoded_masked_metadata() -> MaskedMetadata {
     let mut headers = HashMap::new();
@@ -71,4 +72,19 @@ pub fn ffi_headers_to_masked_metadata(headers: &HashMap<String, String>) -> Mask
 fn convert_to_metadata_value(header_value: &str) -> Result<MetadataValue<Ascii>, String> {
     MetadataValue::try_from(header_value)
         .map_err(|e| format!("Cannot convert header value to metadata: {e}"))
+}
+
+/// Load development config from the embedded config string
+/// This avoids runtime path lookup by embedding the config at build time
+pub fn load_development_config(
+    embedded_config: &str,
+) -> Result<Arc<Config>, PaymentAuthorizationError> {
+    toml::from_str(embedded_config).map(Arc::new).map_err(|e| {
+        PaymentAuthorizationError::new(
+            grpc_api_types::payments::PaymentStatus::Pending,
+            Some(e.to_string()),
+            Some("CONFIG_PARSE_ERROR".to_string()),
+            None,
+        )
+    })
 }

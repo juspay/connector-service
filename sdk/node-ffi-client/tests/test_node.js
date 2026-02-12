@@ -97,7 +97,8 @@ const tests = [
         console.log('========================================');
         console.log('RESULT');
         console.log('========================================');
-        console.log(result);
+        const parsed = JSON.parse(result);
+        console.log(parsed);
 
     })
 ];

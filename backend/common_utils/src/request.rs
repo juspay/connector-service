@@ -40,10 +40,10 @@ fn default_request_headers() -> [(String, Maskable<String>); 1] {
     [(header::VIA.to_string(), "HyperSwitch".to_string().into())]
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Request {
     pub url: String,
-    #[serde(skip)]
+    // #[serde(skip)]
     pub headers: Headers,
     pub method: Method,
     pub certificate: Option<Secret<String>>,
