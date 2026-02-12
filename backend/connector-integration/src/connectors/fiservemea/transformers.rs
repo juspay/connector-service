@@ -64,7 +64,7 @@ impl TryFrom<&ConnectorAuthType> for FiservmeaAuthType {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, strum::Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservmeaTransactionResult {
     Approved,
