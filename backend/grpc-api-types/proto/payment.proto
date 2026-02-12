@@ -706,6 +706,7 @@ enum PaymentMethodType {
   REVOLUT_PAY = 99;
   INSTANT_BANK_TRANSFER_FINLAND = 100;
   INSTANT_BANK_TRANSFER_POLAND = 101;
+  VOUCHER = 102;
 }
 
 // Product type enumeration.
