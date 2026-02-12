@@ -235,9 +235,9 @@ impl<T: PaymentMethodDataTypes>
                         city: addr.get_city().ok().cloned(),
                         country: addr.get_country().ok().cloned(),
                         zip: addr.get_zip().ok().cloned(),
-                        state: addr.get_state().ok().cloned(),
-                        street1: addr.get_line1().ok().cloned(),
-                        street2: addr.get_line2().ok().cloned(),
+                        state: addr.get_state().ok().map(|s| s.expose()),
+                        street1: addr.get_line1().ok().map(|s| s.expose()),
+                        street2: addr.get_line2().ok().map(|s| s.expose()),
                     }),
                 })
             }),
