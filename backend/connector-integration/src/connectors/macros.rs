@@ -1045,8 +1045,8 @@ macro_rules! create_all_prerequisites_impl_templating {
     // Pattern with request body and XML response format
     (
         connector: $connector: ident,
-        request_body: $flow_request: ident $(<$generic_param: ident>)?,
-        response_body: $flow_response: ident,
+        request_body: $flow_request: ty $(<$generic_param: ident>)?,
+        response_body: $flow_response: ty,
         response_format: xml,
         router_data: $router_data_type: ty,
         generic_type: $generic_type: tt,
@@ -1064,8 +1064,8 @@ macro_rules! create_all_prerequisites_impl_templating {
     // Pattern with request body (default JSON response format)
     (
         connector: $connector: ident,
-        request_body: $flow_request: ident $(<$generic_param: ident>)?,
-        response_body: $flow_response: ident,
+        request_body: $flow_request: ty $(<$generic_param: ident>)?,
+        response_body: $flow_response: ty,
         router_data: $router_data_type: ty,
         generic_type: $generic_type: tt,
     ) => {
