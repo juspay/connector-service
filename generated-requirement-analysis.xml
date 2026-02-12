@@ -1,0 +1,800 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RequirementAnalysis>
+  <FeatureOverview>
+    <FeatureName>FiservEMEA Authorize Flow Implementation</FeatureName>
+    <Description>Implement the Authorize flow for FiservEMEA connector using the macro-based architecture pattern. This involves converting the existing manual implementation to use the create_all_prerequisites! and macro_connector_implementation! macros.</Description>
+    <Scope>ONLY the Authorize flow will be implemented. No other flows (Capture, Refund, PSync, Void, etc.) will be modified or implemented.</Scope>
+    <Approach>Macro-based implementation using the UCS connector framework</Approach>
+  </FeatureOverview>
+
+  <CurrentStateAnalysis>
+    <RepositoryStructure>
+      <ProjectRoot>/tmp/cmljvze1n000heve88df2rhel</ProjectRoot>
+      <ConnectorPath>backend/connector-integration/src/connectors/fiservemea</ConnectorPath>
+      <Files>
+        <File path="backend/connector-integration/src/connectors/fiservemea.rs" status="exists" description="Main connector file with manual implementation"/>
+        <File path="backend/connector-integration/src/connectors/fiservemea/transformers.rs" status="exists" description="Transformers file with basic request/response types"/>
+      </Files>
+    </RepositoryStructure>
+
+    <ExistingImplementation>
+      <ConnectorName>Fiservemea</ConnectorName>
+      <CurrentPattern>Manual implementation of ConnectorIntegrationV2 trait</CurrentPattern>
+      <AuthType>HeaderKey (Bearer token)</AuthType>
+      <BaseUrl>https://prod.emea.api.fiservapps.com/sandbox</BaseUrl>
+      <Endpoint>/payments</Endpoint>
+      <ContentType>application/json</ContentType>
+      <CurrencyUnit>Minor</CurrencyUnit>
+    </ExistingImplementation>
+
+    <TechnicalSpecificationSummary>
+      <ConnectorDisplayName>Authipay Payments API</ConnectorDisplayName>
+      <ProductionUrl>https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments</ProductionUrl>
+      <Authentication>
+        <Method>Message Signature Authentication</Method>
+        <Headers>
+          <Header name="Api-Key" required="true" description="Key from Developer Portal"/>
+          <Header name="Client-Request-Id" required="true" description="UUID for request tracking"/>
+          <Header name="Timestamp" required="true" description="Epoch timestamp in milliseconds"/>
+          <Header name="Message-Signature" required="true" description="HMAC-SHA256 signature"/>
+        </Headers>
+      </Authentication>
+      <RequestTypes>
+        <RequestType name="PaymentCardSaleTransaction" description="Standard card sale"/>
+        <RequestType name="PaymentCardPreAuthTransaction" description="Pre-authorization"/>
+      </RequestTypes>
+      <ResponseStatuses>
+        <Status name="transactionResult" values="APPROVED, DECLINED, FAILED, WAITING, PARTIAL, FRAUD"/>
+        <Status name="transactionState" values="AUTHORIZED, CAPTURED, DECLINED, CHECKED, COMPLETED_GET, INITIALIZED, PENDING, READY, TEMPLATE, SETTLED, VOIDED, WAITING"/>
+      </ResponseStatuses>
+    </TechnicalSpecificationSummary>
+
+    <ReferencePatterns>
+      <PatternFile path="grace/rulesbook/codegen/guides/patterns/pattern_authorize.md" description="Authorize flow pattern"/>
+      <PatternFile path="grace/rulesbook/codegen/guides/patterns/macro_patterns_reference.md" description="Macro patterns reference"/>
+      <PatternFile path="grace/rulesbook/codegen/guides/patterns/flow_macro_guide.md" description="Flow macro guide"/>
+      <ReferenceConnector name="airwallex" path="backend/connector-integration/src/connectors/airwallex.rs" description="Macro-based implementation example"/>
+    </ReferencePatterns>
+  </CurrentStateAnalysis>
+
+  <RequirementsBreakdown>
+    <FunctionalRequirements>
+      <Requirement id="FR-001" priority="critical">
+        <Description>Convert FiservEMEA connector to use macro-based architecture</Description>
+        <AcceptanceCriteria>
+          <Criterion>Use create_all_prerequisites! macro for foundation setup</Criterion>
+          <Criterion>Use macro_connector_implementation! for Authorize flow</Criterion>
+          <Criterion>Remove manual ConnectorIntegrationV2 implementation</Criterion>
+        </AcceptanceCriteria>
+      </Requirement>
+
+      <Requirement id="FR-002" priority="critical">
+        <Description>Implement Authorize flow with proper request/response types</Description>
+        <AcceptanceCriteria>
+          <Criterion>Create FiservemeaAuthorizeRequest&lt;T&gt; with all required fields</Criterion>
+          <Criterion>Create FiservemeaAuthorizeResponse with status mapping</Criterion>
+          <Criterion>Implement TryFrom traits for request/response transformation</Criterion>
+        </AcceptanceCriteria>
+      </Requirement>
+
+      <Requirement id="FR-003" priority="critical">
+        <Description>Implement proper status mapping from FiservEMEA to UCS</Description>
+        <AcceptanceCriteria>
+          <Criterion>Create FiservemeaTransactionResult enum</Criterion>
+          <Criterion>Create FiservemeaTransactionState enum</Criterion>
+          <Criterion>Implement map_fiservemea_status_to_attempt_status function</Criterion>
+          <Criterion>Map all possible connector statuses to AttemptStatus</Criterion>
+        </AcceptanceCriteria>
+      </Requirement>
+
+      <Requirement id="FR-004" priority="high">
+        <Description>Support payment method transformation</Description>
+        <AcceptanceCriteria>
+          <Criterion>Support Card payment method</Criterion>
+          <Criterion>Extract card number, expiry, CVC from PaymentMethodData</Criterion>
+          <Criterion>Handle optional cardholder name</Criterion>
+        </AcceptanceCriteria>
+      </Requirement>
+
+      <Requirement id="FR-005" priority="high">
+        <Description>Implement proper error handling</Description>
+        <AcceptanceCriteria>
+          <Criterion>Create FiservemeaErrorResponse structure</Criterion>
+          <Criterion>Parse error responses correctly</Criterion>
+          <Criterion>Map error codes to appropriate attempt statuses</Criterion>
+        </AcceptanceCriteria>
+      </Requirement>
+
+      <Requirement id="FR-006" priority="medium">
+        <Description>Support FiservEMEA authentication headers</Description>
+        <AcceptanceCriteria>
+          <Criterion>Include Api-Key header</Criterion>
+          <Criterion>Include Client-Request-Id header</Criterion>
+          <Criterion>Include Timestamp header</Criterion>
+          <Criterion>Include Message-Signature header (future enhancement)</Criterion>
+        </AcceptanceCriteria>
+      </Requirement>
+    </FunctionalRequirements>
+
+    <Constraints>
+      <Constraint id="C-001" type="scope">
+        <Description>ONLY Authorize flow shall be implemented</Description>
+        <Impact>No other flows (Capture, Refund, PSync, Void, etc.) will be modified</Impact>
+      </Constraint>
+      <Constraint id="C-002" type="files">
+        <Description>Only fiservemea.rs and fiservemea/transformers.rs may be modified</Description>
+        <Impact>No changes to core files, other connectors, or framework code</Impact>
+      </Constraint>
+      <Constraint id="C-003" type="architecture">
+        <Description>Must use macro-based implementation</Description>
+        <Impact>Manual ConnectorIntegrationV2 implementation must be replaced</Impact>
+      </Constraint>
+      <Constraint id="C-004" type="quality">
+        <Description>No TODOs or mock implementations allowed</Description>
+        <Impact>All code must be production-ready and complete</Impact>
+      </Constraint>
+      <Constraint id="C-005" type="compilation">
+        <Description>Project must compile and run without errors</Description>
+        <Impact>cargo build and cargo run must succeed</Impact>
+      </Constraint>
+    </Constraints>
+
+    <Dependencies>
+      <Dependency id="D-001" type="internal">
+        <Name>Macro framework</Name>
+        <Location>backend/connector-integration/src/connectors/macros.rs</Location>
+        <Description>Provides create_all_prerequisites! and macro_connector_implementation! macros</Description>
+      </Dependency>
+      <Dependency id="D-002" type="internal">
+        <Name>Domain types</Name>
+        <Location>backend/domain_types</Location>
+        <Description>Provides PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, etc.</Description>
+      </Dependency>
+      <Dependency id="D-003" type="internal">
+        <Name>Common enums</Name>
+        <Location>backend/common_enums</Location>
+        <Description>Provides AttemptStatus, Currency, etc.</Description>
+      </Dependency>
+      <Dependency id="D-004" type="external">
+        <Name>Serde</Name>
+        <Description>Serialization/deserialization framework</Description>
+      </Dependency>
+      <Dependency id="D-005" type="external">
+        <Name>Hyperswitch masking</Name>
+        <Description>Secret handling and masking</Description>
+      </Dependency>
+    </Dependencies>
+  </RequirementsBreakdown>
+
+  <ImplementationPlan>
+    <Phase id="PHASE-1" name="Preparation and Analysis">
+      <Task id="T-001" name="Review existing implementation" estimatedComplexity="low">
+        <Description>Analyze current fiservemea.rs and transformers.rs implementation</Description>
+        <Deliverables>Understanding of current structure and required changes</Deliverables>
+        <Dependencies>None</Dependencies>
+      </Task>
+      <Task id="T-002" name="Study reference patterns" estimatedComplexity="low">
+        <Description>Review pattern_authorize.md, macro_patterns_reference.md, and airwallex implementation</Description>
+        <Deliverables>Clear understanding of macro-based pattern</Deliverables>
+        <Dependencies>T-001</Dependencies>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-2" name="Transformers Implementation">
+      <Task id="T-003" name="Define authentication type" estimatedComplexity="low">
+        <Description>Create/update FiservemeaAuthType struct with TryFrom implementation</Description>
+        <Deliverables>Complete auth type supporting HeaderKey authentication</Deliverables>
+        <Dependencies>T-002</Dependencies>
+        <File>fiservemea/transformers.rs</File>
+      </Task>
+      <Task id="T-004" name="Create request structures" estimatedComplexity="medium">
+        <Description>Create FiservemeaAuthorizeRequest&lt;T&gt; and related payment method structures</Description>
+        <Deliverables>
+          <Item>FiservemeaAuthorizeRequest&lt;T&gt; with requestType, transactionAmount, paymentMethod</Item>
+          <Item>FiservemeaPaymentMethod&lt;T&gt; enum with Card variant</Item>
+          <Item>FiservemeaCard&lt;T&gt; with number, expiryDate, securityCode</Item>
+          <Item>FiservemeaTransactionAmount with total and currency</Item>
+        </Deliverables>
+        <Dependencies>T-003</Dependencies>
+        <File>fiservemea/transformers.rs</File>
+      </Task>
+      <Task id="T-005" name="Create response structures" estimatedComplexity="medium">
+        <Description>Create FiservemeaAuthorizeResponse and status enums</Description>
+        <Deliverables>
+          <Item>FiservemeaAuthorizeResponse with ipgTransactionId, transactionResult, transactionState</Item>
+          <Item>FiservemeaTransactionResult enum (APPROVED, DECLINED, FAILED, WAITING, PARTIAL, FRAUD)</Item>
+          <Item>FiservemeaTransactionState enum (AUTHORIZED, CAPTURED, DECLINED, etc.)</Item>
+          <Item>FiservemeaErrorResponse for error handling</Item>
+        </Deliverables>
+        <Dependencies>T-003</Dependencies>
+        <File>fiservemea/transformers.rs</File>
+      </Task>
+      <Task id="T-006" name="Implement status mapping" estimatedComplexity="medium">
+        <Description>Create map_fiservemea_status_to_attempt_status function</Description>
+        <Deliverables>
+          <Item>Status mapping function combining transactionResult and transactionState</Item>
+          <Item>APPROVED + AUTHORIZED → AttemptStatus::Authorized</Item>
+          <Item>APPROVED + CAPTURED → AttemptStatus::Charged</Item>
+          <Item>DECLINED → AttemptStatus::Failure</Item>
+          <Item>FAILED → AttemptStatus::Failure</Item>
+          <Item>PENDING/WAITING → AttemptStatus::Pending</Item>
+        </Deliverables>
+        <Dependencies>T-005</Dependencies>
+        <File>fiservemea/transformers.rs</File>
+      </Task>
+      <Task id="T-007" name="Implement request transformation" estimatedComplexity="high">
+        <Description>Implement TryFrom for FiservemeaAuthorizeRequest&lt;T&gt;</Description>
+        <Deliverables>
+          <Item>TryFrom&lt;FiservemeaRouterData&lt;...&gt;&gt; for FiservemeaAuthorizeRequest&lt;T&gt;</Item>
+          <Item>Extract amount and currency from RouterDataV2</Item>
+          <Item>Transform payment method data to FiservEMEA format</Item>
+          <Item>Set requestType to "PaymentCardSaleTransaction"</Item>
+        </Deliverables>
+        <Dependencies>T-004</Dependencies>
+        <File>fiservemea/transformers.rs</File>
+      </Task>
+      <Task id="T-008" name="Implement response transformation" estimatedComplexity="high">
+        <Description>Implement TryFrom for RouterDataV2 response</Description>
+        <Deliverables>
+          <Item>TryFrom&lt;ResponseRouterData&lt;...&gt;&gt; for RouterDataV2&lt;Authorize, ...&gt;</Item>
+          <Item>Map connector status to AttemptStatus using mapping function</Item>
+          <Item>Extract ipgTransactionId as connector_transaction_id</Item>
+          <Item>Handle error responses appropriately</Item>
+        </Deliverables>
+        <Dependencies>T-006</Dependencies>
+        <File>fiservemea/transformers.rs</File>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-3" name="Main Connector Implementation">
+      <Task id="T-009" name="Add macro imports" estimatedComplexity="low">
+        <Description>Add necessary imports for macro-based implementation</Description>
+        <Deliverables>
+          <Item>Import super::macros</Item>
+          <Item>Import transformers types</Item>
+          <Item>Remove unused imports from manual implementation</Item>
+        </Deliverables>
+        <Dependencies>T-008</Dependencies>
+        <File>fiservemea.rs</File>
+      </Task>
+      <Task id="T-010" name="Implement create_all_prerequisites! macro" estimatedComplexity="high">
+        <Description>Set up connector foundation with macro</Description>
+        <Deliverables>
+          <Item>create_all_prerequisites! macro call with connector_name: Fiservemea</Item>
+          <Item>Authorize flow definition in api array</Item>
+          <Item>amount_converter: StringMajorUnit (API expects "100.00" format)</Item>
+          <Item>build_headers member function</Item>
+          <Item>connector_base_url_payments member function</Item>
+        </Deliverables>
+        <Dependencies>T-009</Dependencies>
+        <File>fiservemea.rs</File>
+      </Task>
+      <Task id="T-011" name="Implement macro_connector_implementation! for Authorize" estimatedComplexity="high">
+        <Description>Implement Authorize flow using macro</Description>
+        <Deliverables>
+          <Item>macro_connector_implementation! for Authorize flow</Item>
+          <Item>curl_request: Json(FiservemeaAuthorizeRequest)</Item>
+          <Item>curl_response: FiservemeaAuthorizeResponse</Item>
+          <Item>http_method: Post</Item>
+          <Item>get_headers function calling build_headers</Item>
+          <Item>get_url function returning full endpoint URL</Item>
+        </Deliverables>
+        <Dependencies>T-010</Dependencies>
+        <File>fiservemea.rs</File>
+      </Task>
+      <Task id="T-012" name="Update ConnectorCommon implementation" estimatedComplexity="medium">
+        <Description>Ensure ConnectorCommon trait works with macro-based setup</Description>
+        <Deliverables>
+          <Item>id() returns "fiservemea"</Item>
+          <Item>get_currency_unit() returns CurrencyUnit::Base (for StringMajorUnit)</Item>
+          <Item>base_url() returns connector base URL</Item>
+          <Item>get_auth_header() supports HeaderKey authentication</Item>
+          <Item>build_error_response() parses FiservemeaErrorResponse</Item>
+        </Deliverables>
+        <Dependencies>T-011</Dependencies>
+        <File>fiservemea.rs</File>
+      </Task>
+      <Task id="T-013" name="Remove manual implementation" estimatedComplexity="medium">
+        <Description>Remove old manual ConnectorIntegrationV2 implementation</Description>
+        <Deliverables>
+          <Item>Delete manual impl ConnectorIntegrationV2&lt;Authorize, ...&gt; block</Item>
+          <Item>Keep empty implementations for other flows</Item>
+          <Item>Clean up any unused code</Item>
+        </Deliverables>
+        <Dependencies>T-012</Dependencies>
+        <File>fiservemea.rs</File>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-4" name="Validation and Testing">
+      <Task id="T-014" name="Compile check" estimatedComplexity="low">
+        <Description>Run cargo build to verify compilation</Description>
+        <Deliverables>Successful compilation with no errors</Deliverables>
+        <Dependencies>T-013</Dependencies>
+      </Task>
+      <Task id="T-015" name="Clippy check" estimatedComplexity="low">
+        <Description>Run cargo clippy to verify code quality</Description>
+        <Deliverables>No clippy warnings</Deliverables>
+        <Dependencies>T-014</Dependencies>
+      </Task>
+      <Task id="T-016" name="Final validation" estimatedComplexity="low">
+        <Description>Verify all requirements met</Description>
+        <Deliverables>
+          <Item>Only Authorize flow implemented</Item>
+          <Item>Macro-based pattern used</Item>
+          <Item>No TODOs or mocks</Item>
+          <Item>Project compiles and runs</Item>
+        </Deliverables>
+        <Dependencies>T-015</Dependencies>
+      </Task>
+    </Phase>
+
+    <Phase id="PHASE-5" name="Completion">
+      <Task id="T-017" name="Mark requirement analysis as resolved" estimatedComplexity="low">
+        <Description>Rename generated-requirement-analysis.xml to generated-requirement-analysis.xml.resolved</Description>
+        <Deliverables>Resolved requirement analysis file</Deliverables>
+        <Dependencies>T-016</Dependencies>
+      </Task>
+    </Phase>
+  </ImplementationPlan>
+
+  <ArchitectureDesign>
+    <ComponentStructure>
+      <Component name="Fiservemea&lt;T&gt;" type="struct">
+        <Description>Main connector struct generated by create_all_prerequisites! macro</Description>
+        <Generics>T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize</Generics>
+      </Component>
+      <Component name="FiservemeaAuthorizeRequest&lt;T&gt;" type="struct" location="transformers.rs">
+        <Description>Request structure for Authorize API call</Description>
+        <Fields>
+          <Field name="requestType" type="String" required="true">"PaymentCardSaleTransaction"</Field>
+          <Field name="transactionAmount" type="FiservemeaTransactionAmount" required="true">Amount and currency</Field>
+          <Field name="paymentMethod" type="FiservemeaPaymentMethod&lt;T&gt;" required="true">Payment method details</Field>
+          <Field name="order" type="Option&lt;FiservemeaOrder&gt;" required="false">Order information</Field>
+        </Fields>
+      </Component>
+      <Component name="FiservemeaAuthorizeResponse" type="struct" location="transformers.rs">
+        <Description>Response structure from Authorize API call</Description>
+        <Fields>
+          <Field name="ipgTransactionId" type="String" required="true">Transaction ID</Field>
+          <Field name="transactionResult" type="FiservemeaTransactionResult" required="true">Result status</Field>
+          <Field name="transactionState" type="FiservemeaTransactionState" required="true">Transaction state</Field>
+          <Field name="approvalCode" type="Option&lt;String&gt;" required="false">Approval code</Field>
+          <Field name="schemeResponseCode" type="Option&lt;String&gt;" required="false">Scheme response code</Field>
+          <Field name="errorMessage" type="Option&lt;String&gt;" required="false">Error message</Field>
+        </Fields>
+      </Component>
+      <Component name="FiservemeaTransactionResult" type="enum" location="transformers.rs">
+        <Description>Transaction result status enum</Description>
+        <Variants>
+          <Variant name="Approved">Transaction approved</Variant>
+          <Variant name="Declined">Transaction declined</Variant>
+          <Variant name="Failed">Transaction failed</Variant>
+          <Variant name="Waiting">Transaction waiting</Variant>
+          <Variant name="Partial">Partial transaction</Variant>
+          <Variant name="Fraud">Fraud detected</Variant>
+        </Variants>
+      </Component>
+      <Component name="FiservemeaTransactionState" type="enum" location="transformers.rs">
+        <Description>Transaction state enum</Description>
+        <Variants>
+          <Variant name="Authorized">Authorized but not captured</Variant>
+          <Variant name="Captured">Captured successfully</Variant>
+          <Variant name="Declined">Declined</Variant>
+          <Variant name="Pending">Pending processing</Variant>
+          <Variant name="Settled">Settled</Variant>
+          <Variant name="Voided">Voided</Variant>
+          <Variant name="Waiting">Waiting for action</Variant>
+        </Variants>
+      </Component>
+    </ComponentStructure>
+
+    <DataFlow>
+      <Step number="1">
+        <Input>RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Input>
+        <Process>create_all_prerequisites! macro creates FiservemeaRouterData wrapper</Process>
+        <Output>FiservemeaRouterData with converted amount</Output>
+      </Step>
+      <Step number="2">
+        <Input>FiservemeaRouterData</Input>
+        <Process>TryFrom trait transforms to FiservemeaAuthorizeRequest&lt;T&gt;</Process>
+        <Output>FiservemeaAuthorizeRequest&lt;T&gt; JSON</Output>
+      </Step>
+      <Step number="3">
+        <Input>FiservemeaAuthorizeRequest&lt;T&gt;</Input>
+        <Process>HTTP POST to FiservEMEA API</Process>
+        <Output>JSON response</Output>
+      </Step>
+      <Step number="4">
+        <Input>JSON response</Input>
+        <Process>Deserialize to FiservemeaAuthorizeResponse</Process>
+        <Output>FiservemeaAuthorizeResponse</Output>
+      </Step>
+      <Step number="5">
+        <Input>FiservemeaAuthorizeResponse</Input>
+        <Process>TryFrom trait transforms to RouterDataV2 with status mapping</Process>
+        <Output>RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</Output>
+      </Step>
+    </DataFlow>
+
+    <IntegrationPoints>
+      <IntegrationPoint name="Macro Framework">
+        <Location>backend/connector-integration/src/connectors/macros.rs</Location>
+        <Usage>
+          <UsageItem>create_all_prerequisites! - Foundation setup</UsageItem>
+          <UsageItem>macro_connector_implementation! - Flow implementation</UsageItem>
+        </Usage>
+      </IntegrationPoint>
+      <IntegrationPoint name="Domain Types">
+        <Location>backend/domain_types</Location>
+        <Usage>
+          <UsageItem>PaymentFlowData - Resource common data</UsageItem>
+          <UsageItem>PaymentsAuthorizeData&lt;T&gt; - Flow request data</UsageItem>
+          <UsageItem>PaymentsResponseData - Flow response data</UsageItem>
+          <UsageItem>ResponseId - Transaction ID wrapper</UsageItem>
+        </Usage>
+      </IntegrationPoint>
+      <IntegrationPoint name="Common Enums">
+        <Location>backend/common_enums</Location>
+        <Usage>
+          <UsageItem>AttemptStatus - Payment status enumeration</UsageItem>
+          <UsageItem>Currency - Currency enumeration</UsageItem>
+          <UsageItem>CurrencyUnit - Currency unit (Base/Major/Minor)</UsageItem>
+        </Usage>
+      </IntegrationPoint>
+      <IntegrationPoint name="Router Data">
+        <Location>backend/domain_types/src/router_data_v2.rs</Location>
+        <Usage>
+          <UsageItem>RouterDataV2 - Main router data structure</UsageItem>
+          <UsageItem>ConnectorAuthType - Authentication type enum</UsageItem>
+        </Usage>
+      </IntegrationPoint>
+    </IntegrationPoints>
+  </ArchitectureDesign>
+
+  <DetailedSpecifications>
+    <RequestSpecification>
+      <StructName>FiservemeaAuthorizeRequest&lt;T&gt;</StructName>
+      <Derives>Debug, Serialize</Derives>
+      <SerdeAttributes>
+        <Attribute name="rename_all" value="camelCase"/>
+      </SerdeAttributes>
+      <Fields>
+        <Field name="requestType" type="String" required="true">
+          <Description>Type of transaction request</Description>
+          <DefaultValue>"PaymentCardSaleTransaction"</DefaultValue>
+        </Field>
+        <Field name="transactionAmount" type="FiservemeaTransactionAmount" required="true">
+          <Description>Transaction amount and currency</Description>
+        </Field>
+        <Field name="paymentMethod" type="FiservemeaPaymentMethod&lt;T&gt;" required="true">
+          <Description>Payment method details</Description>
+        </Field>
+        <Field name="order" type="Option&lt;FiservemeaOrder&gt;" required="false">
+          <Description>Order information (optional)</Description>
+        </Field>
+      </Fields>
+      <NestedStructs>
+        <Struct name="FiservemeaTransactionAmount">
+          <Fields>
+            <Field name="total" type="String">Amount in major unit (e.g., "100.00")</Field>
+            <Field name="currency" type="String">ISO 4217 currency code</Field>
+          </Fields>
+        </Struct>
+        <Struct name="FiservemeaPaymentMethod&lt;T&gt;">
+          <Type>Enum</Type>
+          <Variants>
+            <Variant name="Card" type="FiservemeaCard&lt;T&gt;">Card payment method</Variant>
+          </Variants>
+        </Struct>
+        <Struct name="FiservemeaCard&lt;T&gt;">
+          <Fields>
+            <Field name="paymentCard" type="FiservemeaPaymentCard&lt;T&gt;">Card details</Field>
+          </Fields>
+        </Struct>
+        <Struct name="FiservemeaPaymentCard&lt;T&gt;">
+          <Fields>
+            <Field name="number" type="Secret&lt;String&gt;">Card number</Field>
+            <Field name="securityCode" type="Secret&lt;String&gt;">CVV/CVC</Field>
+            <Field name="expiryDate" type="FiservemeaExpiryDate">Expiry date</Field>
+          </Fields>
+        </Struct>
+        <Struct name="FiservemeaExpiryDate">
+          <Fields>
+            <Field name="month" type="String">Expiry month (MM)</Field>
+            <Field name="year" type="String">Expiry year (YY)</Field>
+          </Fields>
+        </Struct>
+      </NestedStructs>
+    </RequestSpecification>
+
+    <ResponseSpecification>
+      <StructName>FiservemeaAuthorizeResponse</StructName>
+      <Derives>Debug, Deserialize</Derives>
+      <SerdeAttributes>
+        <Attribute name="rename_all" value="camelCase"/>
+      </SerdeAttributes>
+      <Fields>
+        <Field name="ipgTransactionId" type="String" required="true">
+          <Description>FiservEMEA transaction ID</Description>
+        </Field>
+        <Field name="transactionResult" type="FiservemeaTransactionResult" required="true">
+          <Description>Transaction result status</Description>
+        </Field>
+        <Field name="transactionState" type="FiservemeaTransactionState" required="true">
+          <Description>Transaction state</Description>
+        </Field>
+        <Field name="approvalCode" type="Option&lt;String&gt;" required="false">
+          <Description>Approval code from processor</Description>
+        </Field>
+        <Field name="schemeResponseCode" type="Option&lt;String&gt;" required="false">
+          <Description>Scheme response code</Description>
+        </Field>
+        <Field name="errorMessage" type="Option&lt;String&gt;" required="false">
+          <Description>Error message if failed</Description>
+        </Field>
+        <Field name="orderId" type="Option&lt;String&gt;" required="false">
+          <Description>Order ID</Description>
+        </Field>
+      </Fields>
+      <NestedEnums>
+        <Enum name="FiservemeaTransactionResult">
+          <Variants>
+            <Variant name="Approved" serde="APPROVED">Transaction approved</Variant>
+            <Variant name="Declined" serde="DECLINED">Transaction declined</Variant>
+            <Variant name="Failed" serde="FAILED">Transaction failed</Variant>
+            <Variant name="Waiting" serde="WAITING">Transaction waiting</Variant>
+            <Variant name="Partial" serde="PARTIAL">Partial transaction</Variant>
+            <Variant name="Fraud" serde="FRAUD">Fraud detected</Variant>
+          </Variants>
+        </Enum>
+        <Enum name="FiservemeaTransactionState">
+          <Variants>
+            <Variant name="Authorized" serde="AUTHORIZED">Authorized but not captured</Variant>
+            <Variant name="Captured" serde="CAPTURED">Captured successfully</Variant>
+            <Variant name="Declined" serde="DECLINED">Declined</Variant>
+            <Variant name="Pending" serde="PENDING">Pending processing</Variant>
+            <Variant name="Settled" serde="SETTLED">Settled</Variant>
+            <Variant name="Voided" serde="VOIDED">Voided</Variant>
+            <Variant name="Waiting" serde="WAITING">Waiting for action</Variant>
+          </Variants>
+        </Enum>
+      </NestedEnums>
+    </ResponseSpecification>
+
+    <StatusMappingSpecification>
+      <FunctionName>map_fiservemea_status_to_attempt_status</FunctionName>
+      <InputType>(FiservemeaTransactionResult, FiservemeaTransactionState)</InputType>
+      <OutputType>common_enums::AttemptStatus</OutputType>
+      <MappingRules>
+        <Rule>
+          <Condition>transactionResult == Approved AND transactionState == Authorized</Condition>
+          <Result>AttemptStatus::Authorized</Result>
+          <Description>Pre-authorization successful</Description>
+        </Rule>
+        <Rule>
+          <Condition>transactionResult == Approved AND transactionState == Captured</Condition>
+          <Result>AttemptStatus::Charged</Result>
+          <Description>Payment captured successfully</Description>
+        </Rule>
+        <Rule>
+          <Condition>transactionResult == Declined</Condition>
+          <Result>AttemptStatus::Failure</Result>
+          <Description>Payment declined</Description>
+        </Rule>
+        <Rule>
+          <Condition>transactionResult == Failed</Condition>
+          <Result>AttemptStatus::Failure</Result>
+          <Description>Payment failed</Description>
+        </Rule>
+        <Rule>
+          <Condition>transactionResult == Waiting OR transactionState == Pending</Condition>
+          <Result>AttemptStatus::Pending</Result>
+          <Description>Payment pending</Description>
+        </Rule>
+        <Rule>
+          <Condition>transactionResult == Fraud</Condition>
+          <Result>AttemptStatus::Failure</Result>
+          <Description>Fraud detected</Description>
+        </Rule>
+        <Rule>
+          <Condition>transactionState == Voided</Condition>
+          <Result>AttemptStatus::Voided</Result>
+          <Description>Payment voided</Description>
+        </Rule>
+        <Rule>
+          <Condition>Default</Condition>
+          <Result>AttemptStatus::Pending</Result>
+          <Description>Unknown status - treat as pending</Description>
+        </Rule>
+      </MappingRules>
+    </StatusMappingSpecification>
+
+    <ErrorHandlingSpecification>
+      <ErrorStructName>FiservemeaErrorResponse</ErrorStructName>
+      <Derives>Debug, Deserialize</Derives>
+      <Fields>
+        <Field name="code" type="String">Error code</Field>
+        <Field name="message" type="String">Error message</Field>
+        <Field name="details" type="Option&lt;Vec&lt;FiservemeaErrorDetail&gt;&gt;">Error details</Field>
+      </Fields>
+      <AttemptStatusMapping>
+        <Mapping>
+          <ErrorCode>TRANSACTION_DECLINED</ErrorCode>
+          <Status>AttemptStatus::Failure</Status>
+        </Mapping>
+        <Mapping>
+          <ErrorCode>INSUFFICIENT_FUNDS</ErrorCode>
+          <Status>AttemptStatus::Failure</Status>
+        </Mapping>
+        <Mapping>
+          <ErrorCode>INVALID_CARD</ErrorCode>
+          <Status>AttemptStatus::Failure</Status>
+        </Mapping>
+        <Mapping>
+          <ErrorCode>AUTHENTICATION_FAILED</ErrorCode>
+          <Status>AttemptStatus::AuthenticationFailed</Status>
+        </Mapping>
+        <Mapping>
+          <ErrorCode>Default</ErrorCode>
+          <Status>AttemptStatus::Failure</Status>
+        </Mapping>
+      </AttemptStatusMapping>
+    </ErrorHandlingSpecification>
+
+    <MacroConfiguration>
+      <CreateAllPrerequisites>
+        <Parameter name="connector_name">Fiservemea</Parameter>
+        <Parameter name="generic_type">T</Parameter>
+        <ApiArray>
+          <Entry>
+            <Flow>Authorize</Flow>
+            <RequestBody>FiservemeaAuthorizeRequest&lt;T&gt;</RequestBody>
+            <ResponseBody>FiservemeaAuthorizeResponse</ResponseBody>
+            <RouterData>RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;</RouterData>
+          </Entry>
+        </ApiArray>
+        <AmountConverters>
+          <Converter>
+            <Name>amount_converter</Name>
+            <Type>StringMajorUnit</Type>
+            <Reason>FiservEMEA API expects amounts in major unit format (e.g., "100.00")</Reason>
+          </Converter>
+        </AmountConverters>
+        <MemberFunctions>
+          <Function name="build_headers">
+            <Signature>pub fn build_headers&lt;F, FCD, Req, Res&gt;(&amp;self, req: &amp;RouterDataV2&lt;F, FCD, Req, Res&gt;) -&gt; CustomResult&lt;Vec&lt;(String, Maskable&lt;String&gt;)&gt;, errors::ConnectorError&gt;</Signature>
+            <Implementation>
+              <Step>Set Content-Type header to "application/json"</Step>
+              <Step>Get auth header from get_auth_header()</Step>
+              <Step>Combine and return headers</Step>
+            </Implementation>
+          </Function>
+          <Function name="connector_base_url_payments">
+            <Signature>pub fn connector_base_url_payments&lt;'a, F, Req, Res&gt;(&amp;self, req: &'a RouterDataV2&lt;F, PaymentFlowData, Req, Res&gt;) -&gt; &'a str</Signature>
+            <Implementation>Return &amp;req.resource_common_data.connectors.fiservemea.base_url</Implementation>
+          </Function>
+        </MemberFunctions>
+      </CreateAllPrerequisites>
+
+      <MacroConnectorImplementation>
+        <Parameter name="connector_default_implementations">[get_content_type, get_error_response_v2]</Parameter>
+        <Parameter name="connector">Fiservemea</Parameter>
+        <Parameter name="curl_request">Json(FiservemeaAuthorizeRequest)</Parameter>
+        <Parameter name="curl_response">FiservemeaAuthorizeResponse</Parameter>
+        <Parameter name="flow_name">Authorize</Parameter>
+        <Parameter name="resource_common_data">PaymentFlowData</Parameter>
+        <Parameter name="flow_request">PaymentsAuthorizeData&lt;T&gt;</Parameter>
+        <Parameter name="flow_response">PaymentsResponseData</Parameter>
+        <Parameter name="http_method">Post</Parameter>
+        <Parameter name="generic_type">T</Parameter>
+        <Parameter name="trait_bounds">[PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]</Parameter>
+        <OtherFunctions>
+          <Function name="get_headers">
+            <Signature>fn get_headers(&amp;self, req: &amp;RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;) -&gt; CustomResult&lt;Vec&lt;(String, Maskable&lt;String&gt;)&gt;, errors::ConnectorError&gt;</Signature>
+            <Implementation>Call self.build_headers(req)</Implementation>
+          </Function>
+          <Function name="get_url">
+            <Signature>fn get_url(&amp;self, req: &amp;RouterDataV2&lt;Authorize, PaymentFlowData, PaymentsAuthorizeData&lt;T&gt;, PaymentsResponseData&gt;) -&gt; CustomResult&lt;String, errors::ConnectorError&gt;</Signature>
+            <Implementation>format!("{}/ipp/payments-gateway/v2/payments", self.connector_base_url_payments(req))</Implementation>
+          </Function>
+        </OtherFunctions>
+      </MacroConnectorImplementation>
+    </MacroConfiguration>
+  </DetailedSpecifications>
+
+  <CodeQualityStandards>
+    <NamingConventions>
+      <Convention type="struct">PascalCase (e.g., FiservemeaAuthorizeRequest)</Convention>
+      <Convention type="enum">PascalCase (e.g., FiservemeaTransactionResult)</Convention>
+      <Convention type="function">snake_case (e.g., map_fiservemea_status_to_attempt_status)</Convention>
+      <Convention type="field">snake_case (e.g., transaction_amount)</Convention>
+    </NamingConventions>
+
+    <SerdeRules>
+      <Rule>Rust struct fields use snake_case</Rule>
+      <Rule>JSON serialization uses camelCase via #[serde(rename_all = "camelCase")]</Rule>
+      <Rule>Enum variants use PascalCase with #[serde(rename = "...")] for API values</Rule>
+    </SerdeRules>
+
+    <ErrorHandling>
+      <Rule>Use error_stack::ResultExt for error context</Rule>
+      <Rule>Use CustomResult&lt;T, ConnectorError&gt; for return types</Rule>
+      <Rule>Provide meaningful error messages with change_context</Rule>
+      <Rule>Never use unwrap() or expect() in production code</Rule>
+    </ErrorHandling>
+
+    <Security>
+      <Rule>Use Secret&lt;T&gt; for sensitive data (card numbers, API keys)</Rule>
+      <Rule>Use Maskable&lt;T&gt; for headers that may contain sensitive data</Rule>
+      <Rule>Never log sensitive payment information</Rule>
+    </Security>
+
+    <Documentation>
+      <Rule>Add doc comments to public structs and enums</Rule>
+      <Rule>Document non-obvious status mappings</Rule>
+      <Rule>Include examples in complex transformation logic</Rule>
+    </Documentation>
+  </CodeQualityStandards>
+
+  <ValidationCriteria>
+    <Compilation>
+      <Criterion>cargo build succeeds without errors</Criterion>
+      <Criterion>No compiler warnings</Criterion>
+      <Criterion>All dependencies resolve correctly</Criterion>
+    </Compilation>
+
+    <CodeQuality>
+      <Criterion>cargo clippy passes without warnings</Criterion>
+      <Criterion>cargo fmt produces no changes</Criterion>
+      <Criterion>No dead code warnings</Criterion>
+    </CodeQuality>
+
+    <Functional>
+      <Criterion>Authorize flow processes card payments correctly</Criterion>
+      <Criterion>Status mapping covers all FiservEMEA response statuses</Criterion>
+      <Criterion>Error responses are parsed and mapped correctly</Criterion>
+      <Criterion>Request transformation handles all required fields</Criterion>
+    </Functional>
+
+    <Compliance>
+      <Criterion>ONLY Authorize flow is implemented</Criterion>
+      <Criterion>Macro-based pattern is used throughout</Criterion>
+      <Criterion>No TODOs or mock implementations exist</Criterion>
+      <Criterion>Only fiservemea.rs and fiservemea/transformers.rs are modified</Criterion>
+    </Compliance>
+  </ValidationCriteria>
+
+  <RiskMitigation>
+    <Risk id="R-001" severity="medium">
+      <Description>Status mapping may miss edge cases</Description>
+      <Mitigation>Include default case mapping to AttemptStatus::Pending</Mitigation>
+    </Risk>
+    <Risk id="R-002" severity="low">
+      <Description>Amount conversion may have precision issues</Description>
+      <Mitigation>Use StringMajorUnit to preserve decimal precision</Mitigation>
+    </Risk>
+    <Risk id="R-003" severity="low">
+      <Description>Macro expansion may cause compilation errors</Description>
+      <Mitigation>Follow airwallex reference implementation closely</Mitigation>
+    </Risk>
+  </RiskMitigation>
+
+  <FinalChecklist>
+    <ChecklistItem id="FC-001" category="scope">Only Authorize flow implemented</ChecklistItem>
+    <ChecklistItem id="FC-002" category="architecture">create_all_prerequisites! macro used</ChecklistItem>
+    <ChecklistItem id="FC-003" category="architecture">macro_connector_implementation! used for Authorize</ChecklistItem>
+    <ChecklistItem id="FC-004" category="transformers">FiservemeaAuthorizeRequest&lt;T&gt; defined</ChecklistItem>
+    <ChecklistItem id="FC-005" category="transformers">FiservemeaAuthorizeResponse defined</ChecklistItem>
+    <ChecklistItem id="FC-006" category="transformers">Status mapping function implemented</ChecklistItem>
+    <ChecklistItem id="FC-007" category="transformers">Request TryFrom implemented</ChecklistItem>
+    <ChecklistItem id="FC-008" category="transformers">Response TryFrom implemented</ChecklistItem>
+    <ChecklistItem id="FC-009" category="quality">No TODOs in code</ChecklistItem>
+    <ChecklistItem id="FC-010" category="quality">No mock implementations</ChecklistItem>
+    <ChecklistItem id="FC-011" category="quality">cargo build succeeds</ChecklistItem>
+    <ChecklistItem id="FC-012" category="quality">cargo clippy passes</ChecklistItem>
+    <ChecklistItem id="FC-013" category="files">Only fiservemea.rs modified</ChecklistItem>
+    <ChecklistItem id="FC-014" category="files">Only fiservemea/transformers.rs modified</ChecklistItem>
+    <ChecklistItem id="FC-015" category="completion">Requirement analysis marked as resolved</ChecklistItem>
+  </FinalChecklist>
+</RequirementAnalysis>
