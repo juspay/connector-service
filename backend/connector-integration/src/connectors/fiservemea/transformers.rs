@@ -229,7 +229,7 @@ impl<T: PaymentMethodDataTypes>
 
         let order = Some(FiservemeaOrder {
             order_id: order_id.clone(),
-            billing: item.router_data.resource_common_data.get_optional_billing().and_then(|billing| {
+            billing: item.resource_common_data.get_optional_billing().and_then(|billing| {
                 billing.address.as_ref().map(|addr| FiservemeaBilling {
                     address: Some(FiservemeaAddress {
                         city: addr.get_city().ok().cloned(),
