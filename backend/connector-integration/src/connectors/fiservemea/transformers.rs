@@ -84,7 +84,7 @@ pub struct FiservemeaErrorResponse {
     pub error: Option<FiservemeaErrorDetail>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservemeaResponseType {
     BadRequest,
