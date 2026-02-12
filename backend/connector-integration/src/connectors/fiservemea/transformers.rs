@@ -324,19 +324,15 @@ impl<T: PaymentMethodDataTypes>
         let expiry_month = card_data.card_exp_month.to_string();
         let expiry_year = card_data.card_exp_year.to_string();
 
-        let order = if item
-            .resource_common_data
-            .connector_request_reference_id
-            .is_some()
+        let order = if !item.resource_common_data.connector_request_reference_id.is_empty()
             || item.resource_common_data.customer_id.is_some()
         {
             Some(FiservmeaOrder {
-                order_id: Some(
-                    item
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                ),
+                order_id: if item.resource_common_data.connector_request_reference_id.is_empty() {
+                    None
+                } else {
+                    Some(item.resource_common_data.connector_request_reference_id.clone())
+                },
                 billing: item.resource_common_data.customer_id.as_ref().map(|_| FiservmeaBilling {
                     name: None,
                     customer_id: item.resource_common_data.customer_id.as_ref().map(|id| id.get_string_repr().to_string()),
