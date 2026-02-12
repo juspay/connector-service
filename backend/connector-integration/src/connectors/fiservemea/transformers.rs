@@ -336,8 +336,8 @@ impl<T: PaymentMethodDataTypes>
                     .connector_request_reference_id
                     .clone(),
                 billing: item.resource_common_data.customer_id.as_ref().map(|_| FiservmeaBilling {
-                    name: item.resource_common_data.customer_name.clone().map(Secret::new),
-                    customer_id: item.resource_common_data.customer_id.as_ref().map(|id| id.get_id().to_string()),
+                    name: None,
+                    customer_id: item.resource_common_data.customer_id.as_ref().map(|id| id.0.clone()),
                 }),
             })
         } else {
