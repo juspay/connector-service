@@ -1098,7 +1098,7 @@ pub(crate) use create_all_prerequisites_impl_templating;
 macro_rules! create_all_prerequisites_resolve_request_body_type {
     // Pattern with request body
     (
-        request_body: $flow_request: ident $(<$generic_param: ident>)?,
+        request_body: $flow_request: ty $(<$generic_param: ident>)?,
         generic_type: $generic_type: tt
     ) => {
         crate::connectors::macros::resolve_request_body_type!($flow_request $(<$generic_param>)?, $generic_type)
