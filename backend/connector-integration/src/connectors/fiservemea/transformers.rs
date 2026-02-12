@@ -92,7 +92,7 @@ pub enum FiservmeaTransactionState {
     Waiting,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservmeaSecurityCodeResponse {
     Matched,
