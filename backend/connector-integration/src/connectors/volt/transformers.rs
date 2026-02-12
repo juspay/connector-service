@@ -550,7 +550,7 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
                             message: payment_response.status.clone().to_string(),
                             reason: Some(payment_response.status.to_string()),
                             status_code: item.http_code,
-                            attempt_status: None,
+                            attempt_status: Some(status),
                             connector_transaction_id: Some(payment_response.id),
                             network_advice_code: None,
                             network_decline_code: None,
@@ -597,7 +597,7 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
                                 .clone()
                                 .map(|volt_status| volt_status.to_string()),
                             status_code: item.http_code,
-                            attempt_status: None,
+                            attempt_status: Some(status),
                             connector_transaction_id: Some(webhook_response.payment.clone()),
                             network_advice_code: None,
                             network_decline_code: None,

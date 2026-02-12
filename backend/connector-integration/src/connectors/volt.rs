@@ -2,7 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_enums::CurrencyUnit;
+use common_enums::{AttemptStatus, CurrencyUnit};
 use common_utils::{consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
@@ -443,7 +443,7 @@ macros::macro_connector_implementation!(
             code: response.code.to_string(),
             message: response.message.clone(),
             reason: Some(response.message),
-            attempt_status: None,
+            attempt_status: Some(AttemptStatus::Failure),
             connector_transaction_id: None,
             network_advice_code: None,
             network_decline_code: None,
@@ -517,7 +517,7 @@ macros::macro_connector_implementation!(
             .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             let connector_payment_id = req.request.connector_transaction_id.clone();
             Ok(format!(
-                "{base_url}payments/{connector_payment_id}/request-refund",
+                "{base_url}/payments/{connector_payment_id}/request-refund",
             ))
         }
     }
