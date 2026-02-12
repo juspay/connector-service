@@ -967,7 +967,7 @@ macro_rules! create_all_prerequisites {
             $(
                 (
                     flow: $flow_name: ident,
-                    $(request_body: $flow_request: ident $(<$generic_param: ident>)?,)?
+                    $(request_body: $flow_request: ty,)?
                     response_body: $flow_response: ident,
                     $(response_format: $response_format:ident,)?
                     router_data: $router_data_type: ty,
