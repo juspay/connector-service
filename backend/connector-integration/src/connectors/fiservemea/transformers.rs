@@ -337,7 +337,7 @@ impl<T: PaymentMethodDataTypes>
                     .clone(),
                 billing: item.resource_common_data.customer_id.as_ref().map(|_| FiservmeaBilling {
                     name: None,
-                    customer_id: item.resource_common_data.customer_id.as_ref().map(|id| id.0.clone()),
+                    customer_id: item.resource_common_data.customer_id.as_ref().map(|id| id.get_string_repr().to_string()),
                 }),
             })
         } else {
