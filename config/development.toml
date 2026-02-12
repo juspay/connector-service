@@ -21,12 +21,34 @@ type = "grpc"
 
 [metrics]
 host = "0.0.0.0"
-port = 8080
+port = 8089
 
 [proxy]
 idle_pool_connection_timeout = 90
 bypass_proxy_urls = []
-mitm_proxy_enabled = false
+mitm_proxy_enabled = true
+http_url = "http://localhost:8081"
+https_url = "http://localhost:8081"
+mitm_ca_cert = """-----BEGIN CERTIFICATE-----
+MIIDNTCCAh2gAwIBAgIUUXtTkNlmVAnyVhL9YHCErmmHthQwDQYJKoZIhvcNAQEL
+BQAwKDESMBAGA1UEAwwJbWl0bXByb3h5MRIwEAYDVQQKDAltaXRtcHJveHkwHhcN
+MjYwMTI3MDgyMTQzWhcNMzYwMTI3MDgyMTQzWjAoMRIwEAYDVQQDDAltaXRtcHJv
+eHkxEjAQBgNVBAoMCW1pdG1wcm94eTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBAK7V9ICHsVS2vYD7tOd7ltsybYqUwjxe1YHCF6r9CrW+6HSUfNdNcGRj
+ofnDPWYsSLXEe9S+Pg8PCjjbJUhYdPauO18ue3AtBoIpMT9RlhVaq2xj5CW/AjjP
+umMKlFczFjnq+LZaXVlcsSIO4wa5PWyvFJifhCEXfDL4tGeu27T83cEkdca2t+2Q
+dWvbJ7q60j6+QAVY5y5PVnMD2YFq461KA8crt+AbPlEnepnVrLxk6Jj4krAoyQ2z
+Ect3EM2hUyrXueOE2wK1yyM1m3MFfxHC92qReHcK/Ch/N6I8hdEusKj0wniydNVm
+nWadoulJo2z8YOImjN4MgT8WUwyo2HUCAwEAAaNXMFUwDwYDVR0TAQH/BAUwAwEB
+/zATBgNVHSUEDDAKBggrBgEFBQcDATAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE
+FChgnDmuF7fvOWG46OHcHXRt5XCnMA0GCSqGSIb3DQEBCwUAA4IBAQAAuTB3n1dS
+5y/PZ4b3p0bGrob+BQ0svQzTv40GGkthqkpl9OxdKFCqXl1MCfaMrm2bm2M6z/n9
+OR/f5TFxd2B3wGJ0vs8pWxe+lTimMKJcF6WMPp7hHm8pUL3mvJROhRUY8rfUrdZw
+Imgvf0tkXrIHE2XcrbkLXSaFNnEjKldexuKJHU2pD58qY2frMDnxVS7GBmpQ+OGX
+8PTuq/PBRxBJbsUkfTPK6KRUpIg2C5qTyQwwmKvpaNxQqJhyggo78Ts5PRepegxI
+gHH+wcoJZLlmcGRv1VhysqSzoCu2Vn4WhbuH52wT24vaX/KFpJAmZswqTyrZAV9X
+Tegv2IiaTTLV
+-----END CERTIFICATE-----"""
 
 [test]
 enabled = false
@@ -126,6 +148,7 @@ bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
 revolut.base_url = "https://sandbox-merchant.revolut.com/"
 wellsfargo.base_url = "https://apitest.cybersource.com/"
+deutschebank.base_url = "https://testmerch.directpos.de/rest-api"
 
 # Generic Events Configuration
 [events]

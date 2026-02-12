@@ -115,6 +115,7 @@ pub enum ConnectorEnum {
     Gigadat,
     Loonio,
     Wellsfargo,
+    Deutschebank,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -192,6 +193,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Gigadat => Ok(Self::Gigadat),
             grpc_api_types::payments::Connector::Loonio => Ok(Self::Loonio),
             grpc_api_types::payments::Connector::Wellsfargo => Ok(Self::Wellsfargo),
+            grpc_api_types::payments::Connector::Deutschebank => Ok(Self::Deutschebank),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),

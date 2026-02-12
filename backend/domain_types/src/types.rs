@@ -192,6 +192,7 @@ pub struct Connectors {
     pub gigadat: ConnectorParams,
     pub loonio: ConnectorParams,
     pub wellsfargo: ConnectorParams,
+    pub deutschebank: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -3731,6 +3732,16 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                                                card_token,
                                                bin,
                                                acs_url,
+                                            }
+                                        ))
+                                    })
+                                },
+                                router_response_types::RedirectForm::DeutschebankThreeDSChallengeFlow { acs_url, creq } => {
+                                    Ok(grpc_api_types::payments::RedirectForm {
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Deutschebankthreedschallengeflow(
+                                            grpc_api_types::payments::DeutschebankThreeDsChallengeFlowData {
+                                                acs_url,
+                                                creq,
                                             }
                                         ))
                                     })

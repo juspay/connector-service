@@ -1071,6 +1071,9 @@ message RedirectForm {
 
     // Mifinity-specific redirection data for SDK-based flows.  
     MifinityData mifinity = 5;
+
+    //DEUTSCHEBANK-specific redirection data for SDK-based flows.
+    DeutschebankThreeDSChallengeFlowData deutschebankthreedschallengeflow = 6;
   }
 }
 
@@ -1118,6 +1121,12 @@ message MifinityData {
   // Initialization token for Mifinity SDK initialization
   string initialization_token = 1;
 } 
+
+message DeutschebankThreeDSChallengeFlowData {
+    string acs_url = 1;
+
+    string creq = 2;
+ }
 
 // Details of an HTTP request, typically for incoming webhooks.
 message RequestDetails {
