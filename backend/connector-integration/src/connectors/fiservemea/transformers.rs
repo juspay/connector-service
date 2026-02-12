@@ -431,7 +431,7 @@ impl<T: PaymentMethodDataTypes>
                 status_code: item.http_code,
             }),
             _ => Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(ipg_transaction_id),
+                resource_id: ResponseId::ConnectorTransactionId(ipg_transaction_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
