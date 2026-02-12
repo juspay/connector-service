@@ -430,6 +430,16 @@ impl<T: PaymentMethodDataTypes>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
+            _ => Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: item.response.processor.as_ref().and_then(|p| p.reference_number.clone()),
+                connector_response_reference_id: Some(item.response.ipg_transaction_id),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
         };
 
         Ok(Self {
