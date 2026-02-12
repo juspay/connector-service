@@ -152,7 +152,7 @@ pub struct FiservmeaBilling {
     pub customer_id: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservmeaAuthorizeResponse {
     pub client_request_id: String,
