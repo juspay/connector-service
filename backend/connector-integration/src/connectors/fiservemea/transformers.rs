@@ -187,7 +187,7 @@ pub struct FiservmeaProcessor {
     pub security_code_response: Option<FiservmeaSecurityCodeResponse>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservmeaPaymentMethodDetails {
     pub payment_method_type: Option<String>,
