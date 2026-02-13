@@ -180,20 +180,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?,
         };
 
-        let expiry_month = card_data
-            .card_exp_month
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_exp_month",
-            })?;
-
-        let expiry_year = card_data
-            .card_exp_year
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_exp_year",
-            })?;
-
         let amount = StringMajorUnit
             .convert(item.request.minor_amount, item.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
@@ -201,8 +187,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let order = item
             .resource_common_data
             .connector_request_reference_id
-            .as_ref()
-            .map(|order_id| FiservemeaOrder { order_id: order_id.clone() });
+            .clone()
+            .map(|order_id| FiservemeaOrder { order_id });
 
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
@@ -215,8 +201,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     number: Secret::new(card_data.card_number.peek().to_string()),
                     security_code: card_data.card_cvc.clone(),
                     expiry_date: FiservemeaExpiryDate {
-                        month: expiry_month.to_string(),
-                        year: expiry_year.to_string(),
+                        month: card_data.card_exp_month.peek().to_string(),
+                        year: card_data.card_exp_year.peek().to_string(),
                     },
                 },
             },
