@@ -108,7 +108,7 @@ pub struct FiservemeaPaymentCard {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
+pub struct FiservemeaPaymentMethod {
     pub payment_card: FiservemeaPaymentCard,
 }
 
