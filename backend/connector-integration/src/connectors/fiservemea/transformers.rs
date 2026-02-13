@@ -189,28 +189,9 @@ impl<T: PaymentMethodDataTypes>
             }
         };
 
-        let expiry_month = card_details
-            .card_exp_month
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_exp_month",
-            })?
-            .to_string();
-
-        let expiry_year = card_details
-            .card_exp_year
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_exp_year",
-            })?
-            .to_string();
-
-        let cvc = card_details
-            .card_cvc
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_cvc",
-            })?;
+        let expiry_month = card_details.card_exp_month.peek().clone();
+        let expiry_year = card_details.card_exp_year.peek().clone();
+        let cvc = card_details.card_cvc.peek().clone();
 
         let amount_major = item
             .request
@@ -225,8 +206,8 @@ impl<T: PaymentMethodDataTypes>
             },
             payment_method: FiservemeaPaymentMethod {
                 payment_card: FiservemeaPaymentCard {
-                    number: card_details.card_number.clone(),
-                    security_code: cvc.clone(),
+                    number: Secret::new(card_details.card_number.peek().to_string()),
+                    security_code: Secret::new(cvc),
                     expiry_date: FiservemeaExpiryDate {
                         month: expiry_month,
                         year: expiry_year,
