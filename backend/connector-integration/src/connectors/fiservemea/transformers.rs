@@ -174,13 +174,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let card_data = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
-            _ => {
-                return Err(error_stack::report!(
-                    errors::ConnectorError::MissingRequiredField {
-                        field_name: "payment_method_data.card",
-                    }
-                ))
-            }
+            payment_method_data => Err(errors::ConnectorError::NotSupported {
+                message: format!("Payment method {payment_method_data:?}"),
+                connector: "Fiservemea",
+            })?,
         };
 
         let expiry_month = card_data
@@ -197,20 +194,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 field_name: "card_exp_year",
             })?;
 
-        let card_number = card_data
-            .card_number
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_number",
-            })?;
-
-        let card_cvc = card_data
-            .card_cvc
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_cvc",
-            })?;
-
         let amount = StringMajorUnit
             .convert(item.request.minor_amount, item.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
@@ -218,8 +201,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let order = item
             .resource_common_data
             .connector_request_reference_id
-            .clone()
-            .map(|order_id| FiservemeaOrder { order_id });
+            .as_ref()
+            .map(|order_id| FiservemeaOrder { order_id: order_id.clone() });
 
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
@@ -229,8 +212,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             payment_method: FiservemeaPaymentMethod {
                 payment_card: FiservemeaPaymentCard {
-                    number: card_number.clone(),
-                    security_code: card_cvc.clone(),
+                    number: Secret::new(card_data.card_number.peek().to_string()),
+                    security_code: card_data.card_cvc.clone(),
                     expiry_date: FiservemeaExpiryDate {
                         month: expiry_month.to_string(),
                         year: expiry_year.to_string(),
