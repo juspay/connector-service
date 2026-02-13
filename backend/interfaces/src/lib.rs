@@ -2,6 +2,7 @@ pub mod api;
 pub mod authentication;
 pub mod connector_integration_v2;
 pub mod connector_types;
+pub mod decode;
 pub mod disputes;
 pub mod events;
 pub mod integrity;

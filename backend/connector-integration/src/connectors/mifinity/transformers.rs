@@ -441,7 +441,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
-                    status: item.router_data.resource_common_data.status,
+                    status: enums::AttemptStatus::Unspecified,
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
