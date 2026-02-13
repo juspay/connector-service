@@ -178,13 +178,16 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let card_details = item
-            .request
-            .payment_method_data
-            .get_card()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "payment_method.card",
-            })?;
+        let card_details = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card) => card,
+            _ => {
+                return Err(error_stack::report!(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "payment_method.card"
+                    }
+                ))
+            }
+        };
 
         let expiry_month = card_details
             .card_exp_month
