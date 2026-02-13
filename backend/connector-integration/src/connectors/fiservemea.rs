@@ -215,8 +215,8 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: fiservemea::FiservemeaAuthorizeRequest,
-            response_body: fiservemea::FiservemeaAuthorizeResponse,
+            request_body: FiservemeaAuthorizeRequest,
+            response_body: FiservemeaAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
     ],
@@ -247,18 +247,18 @@ macros::create_all_prerequisites!(
 );
 
 macros::macro_connector_implementation!(
-    [get_content_type, get_error_response_v2],
-    Fiservemea,
-    Json(fiservemea::FiservemeaAuthorizeRequest),
-    fiservemea::FiservemeaAuthorizeResponse,
-    Authorize,
-    PaymentFlowData,
-    PaymentsAuthorizeData<T>,
-    PaymentsResponseData,
-    Post,
-    T,
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiservemea,
+    curl_request: Json(FiservemeaAuthorizeRequest),
+    curl_response: FiservemeaAuthorizeResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    {
+    other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
