@@ -57,7 +57,7 @@ const SAMPLE_EXTRACTED_METADATA = {
     connector: "Stripe",
     connector_auth_type: {
         auth_type: "HeaderKey",
-        api_key: "sk_test_51ABC123XYZ..."
+        api_key: "sk_test_"
 
     }
 };
