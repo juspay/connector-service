@@ -10,7 +10,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -56,8 +56,6 @@ pub struct FiservemeaAuthorizeRequest<T> {
     pub payment_method: FiservemeaPaymentMethod,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_reference: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub _phantom: std::marker::PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -150,40 +148,21 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let payment_method = item
-            .request
-            .payment_method_data
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "payment_method_data",
-            })?;
+        let payment_method = &item.request.payment_method_data;
 
         let card_data = match payment_method {
-            PaymentMethodData::Card(card) => card,
+            PaymentMethodData::Card(card_data) => card_data,
             _ => {
                 return Err(error_stack::report!(
-                    errors::ConnectorError::NotImplemented {
-                        message: "Only card payments are supported".to_string()
-                    }
+                    errors::ConnectorError::NotImplemented(
+                        "Only card payments are supported".to_string()
+                    )
                 ))
             }
         };
 
-        let expiry_month = card_data
-            .card_exp_month
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_exp_month",
-            })?
-            .to_string();
-
-        let expiry_year = card_data
-            .card_exp_year
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_exp_year",
-            })?
-            .to_string();
+        let expiry_month = card_data.card_exp_month.peek().clone();
+        let expiry_year = card_data.card_exp_year.peek().clone();
 
         let amount_converter = common_utils::types::StringMajorUnitForConnector;
         let amount = amount_converter
@@ -197,13 +176,8 @@ impl<T: PaymentMethodDataTypes>
                 currency: item.request.currency.to_string(),
             },
             payment_method: FiservemeaPaymentMethod::PaymentCard(FiservemeaPaymentCard {
-                number: card_data.card_number.clone(),
-                security_code: card_data
-                    .card_cvc
-                    .clone()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "card_cvc",
-                    })?,
+                number: card_data.card_number.get_inner().clone(),
+                security_code: card_data.card_cvc.clone(),
                 expiry_date: FiservemeaExpiryDate {
                     month: expiry_month,
                     year: expiry_year,
@@ -214,7 +188,6 @@ impl<T: PaymentMethodDataTypes>
                     .connector_request_reference_id
                     .clone(),
             ),
-            _phantom: std::marker::PhantomData,
         })
     }
 }
