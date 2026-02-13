@@ -40,7 +40,7 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers as fiservemea;
-use transformers::FiservemeaAuthorizeResponse;
+use transformers::{FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse};
 
 use super::macros;
 use crate::types::ResponseRouterData;
