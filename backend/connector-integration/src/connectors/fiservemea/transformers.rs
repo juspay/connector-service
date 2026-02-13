@@ -81,7 +81,7 @@ pub struct FiservemeaProcessor {
     pub response_code: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaAuthorizeResponse {
     pub ipg_transaction_id: String,
