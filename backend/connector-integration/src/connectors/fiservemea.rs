@@ -532,16 +532,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
+        let error_detail = response.error;
+
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.code,
-            message: response.message,
+            code: error_detail.as_ref().and_then(|e| e.code.clone()),
+            message: error_detail
+                .as_ref()
+                .and_then(|e| e.message.clone())
+                .or_else(|| error_detail.as_ref().and_then(|e| e.details.clone())),
             reason: None,
             attempt_status: None,
             connector_transaction_id: None,
-            network_decline_code: None,
+            network_decline_code: error_detail
+                .as_ref()
+                .and_then(|e| e.decline_reason_code.clone()),
             network_advice_code: None,
-            network_error_message: None,
+            network_error_message: error_detail
+                .as_ref()
+                .and_then(|e| e.details.clone()),
         })
     }
 }
