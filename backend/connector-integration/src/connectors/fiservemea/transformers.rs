@@ -167,7 +167,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
-    > for FiservemeaAuthorizeRequest<T>
+    > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -185,7 +185,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         security_code: card_data.card_cvc.clone(),
                         expiry_date: FiservemeaExpiryDate {
                             month: card_data.card_exp_month.peek().to_string(),
-                            year: card_data.get_expiry_year_2_digit(),
+                            year: card_data.get_expiry_year_4_digit(),
                         },
                     },
                 })
