@@ -8,6 +8,7 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -50,7 +51,7 @@ pub struct FiservemeaErrorDetail {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest<T> {
+pub struct FiservemeaAuthorizeRequest {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
     pub payment_method: FiservemeaPaymentMethod,
@@ -85,7 +86,7 @@ pub struct FiservemeaExpiryDate {
     pub year: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaAuthorizeResponse {
     pub ipg_transaction_id: String,
@@ -97,7 +98,7 @@ pub struct FiservemeaAuthorizeResponse {
     pub processor: Option<FiservemeaProcessor>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservemeaTransactionResult {
     Approved,
@@ -108,7 +109,7 @@ pub enum FiservemeaTransactionResult {
     Fraud,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservemeaTransactionState {
     Authorized,
@@ -125,7 +126,7 @@ pub enum FiservemeaTransactionState {
     Waiting,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaProcessor {
     pub authorization_code: Option<String>,
@@ -136,7 +137,7 @@ pub struct FiservemeaProcessor {
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaAuthorizeRequest<T>
+    > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -164,10 +165,12 @@ impl<T: PaymentMethodDataTypes>
         let expiry_month = card_data.card_exp_month.peek().clone();
         let expiry_year = card_data.card_exp_year.peek().clone();
 
-        let amount_converter = common_utils::types::StringMajorUnitForConnector;
-        let amount = amount_converter
-            .convert(item.request.minor_amount, item.request.currency)
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+        let amount = utils::convert_amount(
+            &common_utils::types::StringMajorUnitForConnector,
+            item.request.minor_amount,
+            item.request.currency,
+        )
+        .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
@@ -176,7 +179,7 @@ impl<T: PaymentMethodDataTypes>
                 currency: item.request.currency.to_string(),
             },
             payment_method: FiservemeaPaymentMethod::PaymentCard(FiservemeaPaymentCard {
-                number: card_data.card_number.get_inner().clone(),
+                number: Secret::new(card_data.card_number.peek().to_string()),
                 security_code: card_data.card_cvc.clone(),
                 expiry_date: FiservemeaExpiryDate {
                     month: expiry_month,
@@ -223,15 +226,15 @@ impl<T: PaymentMethodDataTypes>
             &item.response.transaction_state,
         );
 
-        let network_decline_code = item
+        let _network_decline_code = item
             .response
             .processor
             .as_ref()
             .and_then(|p| p.response_code.clone());
 
-        let network_advice_code = item.response.approval_code.clone();
+        let _network_advice_code = item.response.approval_code.clone();
 
-        let network_error_message = item
+        let _network_error_message = item
             .response
             .processor
             .as_ref()
