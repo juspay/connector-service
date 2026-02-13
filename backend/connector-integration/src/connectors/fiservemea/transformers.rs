@@ -4,7 +4,7 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
