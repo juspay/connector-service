@@ -1,5 +1,4 @@
-use crate::types::ResponseRouterData;
-use common_enums::AttemptStatus;
+use common_enums::enums::AttemptStatus;
 use common_utils::types::StringMajorUnit;
 use domain_types::{
     connector_flow::Authorize,
@@ -13,6 +12,7 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::FiservemeaRouterData;
+use crate::types::ResponseRouterData;
 
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
