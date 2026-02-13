@@ -68,10 +68,10 @@ pub enum FiservemeaTransactionState {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest<T> {
+pub struct FiservemeaAuthorizeRequest {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod<T>,
+    pub payment_method: FiservemeaPaymentMethod,
 }
 
 #[derive(Debug, Serialize)]
