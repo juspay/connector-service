@@ -1885,6 +1885,9 @@ message PaymentServiceGetResponse {
 
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 35; // Data for redirecting the customer's browser
+
+  // Capability Flags
+  optional bool incremental_authorization_allowed = 36; // Whether incremental auth is allowed
 }
 
 // Request message for voiding a payment.
