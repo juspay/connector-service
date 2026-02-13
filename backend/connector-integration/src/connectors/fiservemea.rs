@@ -202,6 +202,48 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: fiservemea::FiservemeaAuthorizeRequest<T>,
+            response_body: fiservemea::FiservemeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+    ],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = fiservemea::FiservemeaAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+
+            let client_request_id = uuid::Uuid::new_v4().to_string();
+            let timestamp = chrono::Utc::now().timestamp_millis();
+
+            Ok(vec![
+                (headers::CONTENT_TYPE.to_string(), "application/json".to_string().into()),
+                ("Api-Key".to_string(), auth.api_key.expose().to_string().into()),
+                ("Client-Request-Id".to_string(), client_request_id.into()),
+                ("Timestamp".to_string(), timestamp.to_string().into()),
+            ])
+        }
+
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.fiservemea.base_url
+        }
+    }
+);
+
 // ===== MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS =====
 // Primary authorize implementation - customize as needed
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
