@@ -37,7 +37,7 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
-use transformers;
+use transformers as fiservemea;
 
 use crate::with_error_response_body;
 
