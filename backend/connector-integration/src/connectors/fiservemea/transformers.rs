@@ -83,7 +83,7 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum FiservemeaPaymentMethod<T> {
+pub enum FiservemeaPaymentMethod {
     Card(FiservemeaCardPaymentMethod),
 }
 
