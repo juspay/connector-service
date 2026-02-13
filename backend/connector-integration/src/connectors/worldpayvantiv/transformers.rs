@@ -21,8 +21,10 @@ use serde::{Deserialize, Serialize};
 use crate::{connectors::worldpayvantiv::WorldpayvantivRouterData, types::ResponseRouterData};
 
 // Helper function to extract report group from connector metadata
-fn extract_report_group(connector_meta_data: &Option<Secret<serde_json::Value>>) -> Option<String> {
-    connector_meta_data.as_ref().and_then(|metadata| {
+fn extract_report_group(
+    merchant_account_metadata: &Option<Secret<serde_json::Value>>,
+) -> Option<String> {
+    merchant_account_metadata.as_ref().and_then(|metadata| {
         let metadata_value = metadata.peek();
         if let serde_json::Value::String(metadata_str) = metadata_value {
             // Try to parse the metadata string as JSON

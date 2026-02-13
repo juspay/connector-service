@@ -463,7 +463,7 @@ fn get_preauthenticate_response(
         None => {
             return Ok(responses::PreAuthenticateResponseData {
                 redirection_data: None,
-                connector_meta_data: existing_connector_meta,
+                merchant_account_metadata: existing_connector_meta,
                 response_ref_id: Some(response_data.ds_order.clone()),
                 authentication_data: None,
             });
@@ -552,7 +552,7 @@ fn build_threeds_invoke_response(
 
     Ok(responses::PreAuthenticateResponseData {
         redirection_data: redirect_form,
-        connector_meta_data: None,
+        merchant_account_metadata: None,
         response_ref_id: Some(response_data.ds_order.clone()),
         authentication_data: None,
     })
@@ -564,7 +564,7 @@ fn build_threeds_exempt_response(
 ) -> Result<responses::PreAuthenticateResponseData, Error> {
     Ok(responses::PreAuthenticateResponseData {
         redirection_data: None,
-        connector_meta_data: None,
+        merchant_account_metadata: None,
         response_ref_id: Some(response_data.ds_order.clone()),
         authentication_data,
     })
@@ -816,7 +816,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
 
                 let responses::PreAuthenticateResponseData {
                     redirection_data,
-                    connector_meta_data,
+                    merchant_account_metadata,
                     response_ref_id,
                     authentication_data,
                 } = get_preauthenticate_response(
@@ -831,7 +831,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::AuthenticationPending,
-                        merchant_account_metadata: connector_meta_data,
+                        merchant_account_metadata,
                         reference_id: response_ref_id.clone(),
                         ..item.router_data.resource_common_data
                     },

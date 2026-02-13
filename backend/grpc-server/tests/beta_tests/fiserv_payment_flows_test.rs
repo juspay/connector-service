@@ -175,7 +175,7 @@ fn create_payment_authorize_request(
         serde_json::to_string(&connector_metadata).expect("Failed to serialize connector metadata");
 
     let mut metadata = HashMap::new();
-    metadata.insert("connector_meta_data".to_string(), connector_metadata_json);
+    metadata.insert("merchant_account_metadata".to_string(), connector_metadata_json);
 
     let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),

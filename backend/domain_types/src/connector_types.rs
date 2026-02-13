@@ -586,7 +586,7 @@ impl PaymentFlowData {
             .ok_or_else(missing_field_err("billing.address"))
     }
 
-    pub fn get_connector_meta(&self) -> Result<SecretSerdeValue, Error> {
+    pub fn get_merchant_account_metadata(&self) -> Result<SecretSerdeValue, Error> {
         self.merchant_account_metadata
             .clone()
             .ok_or_else(missing_field_err("merchant_account_metadata"))
@@ -815,7 +815,7 @@ impl PaymentFlowData {
     where
         T: serde::de::DeserializeOwned,
     {
-        self.get_connector_meta()?
+        self.get_merchant_account_metadata()?
             .parse_value(std::any::type_name::<T>())
             .change_context(ConnectorError::NoConnectorMetaData)
     }

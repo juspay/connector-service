@@ -375,7 +375,7 @@ mod tests {
         //                 None
         //             ),
         //             auth_type: common_enums::AuthenticationType::ThreeDs,
-        //             connector_meta_data: None,
+        //             merchant_account_metadata: None,
         //             amount_captured: None,
         //             minor_amount_captured: None,
         //             access_token: None,

@@ -123,16 +123,20 @@ impl TryFrom<&pii::SecretSerdeValue> for CalidaMetadataObject {
 
     fn try_from(secret_value: &pii::SecretSerdeValue) -> Result<Self, Self::Error> {
         match secret_value.peek() {
-            Value::String(s) => serde_json::from_str(s).change_context(
-                errors::ConnectorError::InvalidConnectorConfig {
-                    config: "Deserializing CalidaMetadataObject from connector_meta_data string",
-                },
-            ),
-            value => serde_json::from_value(value.clone()).change_context(
-                errors::ConnectorError::InvalidConnectorConfig {
-                    config: "Deserializing CalidaMetadataObject from connector_meta_data value",
-                },
-            ),
+            Value::String(s) => {
+                serde_json::from_str(s)
+                    .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                    config:
+                        "Deserializing CalidaMetadataObject from merchant_account_metadata string",
+                })
+            }
+            value => {
+                serde_json::from_value(value.clone())
+                    .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                    config:
+                        "Deserializing CalidaMetadataObject from merchant_account_metadata value",
+                })
+            }
         }
     }
 }
@@ -177,7 +181,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )
                     .change_context(errors::ConnectorError::RequestEncodingFailed)?;
                 let calida_mca_metadata = CalidaMetadataObject::try_from(
-                    &item.router_data.resource_common_data.get_connector_meta()?,
+                    &item
+                        .router_data
+                        .resource_common_data
+                        .get_merchant_account_metadata()?,
                 )?;
 
                 Ok(Self {

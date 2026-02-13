@@ -64,7 +64,7 @@ impl ForeignTryFrom<(Secret<String>, &'static str)> for SecretSerdeValue {
     }
 }
 
-// For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
+// For decoding merchant_account_metadata and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
         Accept, Authorize, Capture, CreateConnectorCustomer, CreateOrder, CreateSessionToken,

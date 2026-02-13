@@ -1862,7 +1862,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     )?
                             }
                             None => Err(ConnectorError::NoConnectorMetaData)
-                                .attach_printable("connector_meta_data is None")?,
+                                .attach_printable("merchant_account_metadata is None")?,
                         };
 
                         let session_token_data = Some(ApplePaySessionResponse::ThirdPartySdk(
@@ -1919,7 +1919,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 .change_context(ConnectorError::ParsingFailed)
                                 .attach_printable("Failed to parse gpay metadata")?,
                             None => Err(ConnectorError::NoConnectorMetaData)
-                                .attach_printable("connector_meta_data is None")?,
+                                .attach_printable("merchant_account_metadata is None")?,
                         };
 
                         SessionToken::GooglePay(Box::new(

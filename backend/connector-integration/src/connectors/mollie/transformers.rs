@@ -232,7 +232,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             };
 
         // Build metadata - match Hyperswitch format with orderId
-        // Always use orderId format, not connector_meta_data
+        // Always use orderId format, not merchant_account_metadata
         let mut metadata_map = serde_json::Map::new();
         metadata_map.insert(
             "orderId".to_string(),
