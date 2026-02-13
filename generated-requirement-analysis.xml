@@ -361,7 +361,7 @@
     <ComponentStructure>
       <Component name="FiservemeaAuthorizeRequest">
         <Type>Struct</Type>
-        <Generics>T: PaymentMethodDataTypes</Type>
+        <Generics>T: PaymentMethodDataTypes</Generics>
         <Purpose>Request body for FiservEMEA Authorize API</Purpose>
         <Fields>
           <Field name="requestType" type="String">Always "PaymentCardPreAuthTransaction"</Field>
