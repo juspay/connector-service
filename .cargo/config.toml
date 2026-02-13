@@ -1,5 +1,0 @@
-[build]
-target = "x86_64-apple-darwin"
-
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-args=-L/usr/local/lib"]
