@@ -73,7 +73,7 @@ pub enum FiservemeaTransactionState {
     Waiting,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaProcessor {
     pub approval_code: Option<String>,
