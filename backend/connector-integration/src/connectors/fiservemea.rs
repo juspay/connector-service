@@ -43,6 +43,8 @@ use transformers as fiservemea;
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
 use super::macros;
+use transformers as fiservemea;
+use fiservemea::{FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
