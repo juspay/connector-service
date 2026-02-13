@@ -40,7 +40,7 @@ use interfaces::{
 use serde::Serialize;
 use transformers as fiservemea;
 use transformers::{
-    FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse, FiservemeaErrorResponse,
+    FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
 };
 
 use super::macros;
