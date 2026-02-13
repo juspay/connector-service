@@ -153,6 +153,8 @@ impl RefundService for Refunds {
 
                 // Get connector data
                 let connector_data = ConnectorData::get_connector_by_name(&connector);
+                // Get base_url for the connector (needed for connectors like PayPal that make API calls for verification)
+                let base_url = connector_data.connector.base_url(&config.connectors);
 
                 let source_verified = connector_data
                     .connector
@@ -160,7 +162,9 @@ impl RefundService for Refunds {
                         request_details.clone(),
                         webhook_secrets.clone(),
                         Some(connector_auth_details.clone()),
+                        Some(base_url),
                     )
+                    .await
                     .switch()
                     .map_err(|e| e.into_grpc_status())?;
 

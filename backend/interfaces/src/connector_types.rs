@@ -14,13 +14,15 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::VerifyWebhookSourceResponseData,
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
@@ -59,6 +61,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + SdkSessionTokenV2
     + PaymentIncrementalAuthorization
     + MandateRevokeV2
+    + VerifyWebhookSourceV2
     + VerifyRedirectResponse
 {
 }
@@ -306,12 +309,26 @@ pub trait PaymentIncrementalAuthorization:
 {
 }
 
+pub trait VerifyWebhookSourceV2:
+    ConnectorIntegrationV2<
+    connector_flow::VerifyWebhookSource,
+    VerifyWebhookSourceFlowData,
+    VerifyWebhookSourceRequestData,
+    VerifyWebhookSourceResponseData,
+>
+{
+}
+
+use async_trait::async_trait;
+
+#[async_trait]
 pub trait IncomingWebhook {
-    fn verify_webhook_source(
+    async fn verify_webhook_source(
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
+        _base_url: Option<&str>,
     ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
         Ok(false)
     }
