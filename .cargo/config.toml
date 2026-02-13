@@ -1,2 +1,5 @@
 [target.aarch64-apple-darwin]
-rustflags = ["-C", "link-args=-Wl,-no_fixup_chains"]
+rustflags = ["-C", "link-arg=-Wl,-no_fixup_chains", "-C", "link-arg=-Wl,-no_adhoc_codesign"]
+
+[build]
+jobs = 1
