@@ -1,9 +1,5 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::{
-    self,
-    types::{AmountConvertor, StringMajorUnit},
-};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
