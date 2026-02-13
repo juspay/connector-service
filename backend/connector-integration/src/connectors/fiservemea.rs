@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent,
+    types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -39,6 +40,7 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers as fiservemea;
+use transformers::{FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse};
 
 use super::macros;
 use crate::types::ResponseRouterData;
@@ -536,11 +538,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: error_detail.as_ref().and_then(|e| e.code.clone()),
+            code: error_detail
+                .as_ref()
+                .and_then(|e| e.code.clone())
+                .unwrap_or_default(),
             message: error_detail
                 .as_ref()
                 .and_then(|e| e.message.clone())
-                .or_else(|| error_detail.as_ref().and_then(|e| e.details.clone())),
+                .or_else(|| error_detail.as_ref().and_then(|e| e.details.clone()))
+                .unwrap_or_default(),
             reason: None,
             attempt_status: None,
             connector_transaction_id: None,
