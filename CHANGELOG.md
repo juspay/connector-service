@@ -4,6 +4,17 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.13.1
+
+### Bug Fixes
+
+- **connector:** Noon RSync Url & Default Status ([#511](https://github.com/juspay/connector-service/pull/511)) ([`92950a7`](https://github.com/juspay/connector-service/commit/92950a78ac3a7eacc4455fb3044fc251ffe6315e))
+- Incremental_authorization_allowed and cybersource repeatpayment diff fix ([#510](https://github.com/juspay/connector-service/pull/510)) ([`e26ad9e`](https://github.com/juspay/connector-service/commit/e26ad9e26b30cc990e5b8c5b41d58ba6786cff19))
+
+**Full Changelog:** [`2026.02.13.0...2026.02.13.1`](https://github.com/juspay/connector-service/compare/2026.02.13.0...2026.02.13.1)
+
+- - -
+
 ## 2026.02.13.0
 
 ### Bug Fixes
