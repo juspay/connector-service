@@ -90,6 +90,120 @@ use tracing::field::Empty;
 use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+/// Handles the connector response, processing both successful and error responses
+#[allow(clippy::too_many_arguments)]
+pub fn handle_connector_response<F, ResourceCommonData, Req, Resp>(
+    response: CustomResult<Result<Response, Response>, ConnectorError>,
+    mut updated_router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
+    connector: &BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
+    mut event: Option<&mut Event>,
+    all_keys_required: Option<bool>,
+    method: Method,
+    url: String,
+    event_params: Option<&EventProcessingParams<'_>>,
+) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
+where
+    F: Clone + 'static,
+    Req: Clone + 'static + std::fmt::Debug,
+    Resp: Clone + 'static + std::fmt::Debug,
+    ResourceCommonData: Clone + RawConnectorRequestResponse + ConnectorResponseHeaders,
+{
+    match response {
+        Ok(body) => {
+            let response = match body {
+                Ok(body) => {
+                    let status_code = body.status_code;
+                    tracing::Span::current()
+                        .record("status_code", tracing::field::display(status_code));
+
+                    if all_keys_required.unwrap_or(true) {
+                        let raw_response_string = strip_bom_and_convert_to_string(&body.response);
+                        updated_router_data
+                            .resource_common_data
+                            .set_raw_connector_response(raw_response_string.map(Into::into));
+
+                        // Set response headers if available
+                        updated_router_data
+                            .resource_common_data
+                            .set_connector_response_headers(body.headers.clone());
+                    }
+
+                    let handle_response_result = connector.handle_response_v2(
+                        &updated_router_data,
+                        event.as_deref_mut(),
+                        body.clone(),
+                    );
+
+                    // Log response body and headers using properly masked data from connector
+                    if let Some(evt) = event.as_deref_mut() {
+                        if let Some(response_data) = &evt.response_data {
+                            tracing::Span::current().record(
+                                "response.body",
+                                tracing::field::display(response_data.inner()),
+                            );
+                        }
+
+                        // Log response headers from event (already masked)
+                        tracing::Span::current()
+                            .record("response.headers", tracing::field::debug(&evt.headers));
+                    }
+
+                    match handle_response_result {
+                        Ok(data) => {
+                            tracing::info!("Transformer completed successfully");
+                            Ok(data)
+                        }
+                        Err(err) => Err(err),
+                    }?
+                }
+                Err(body) => {
+                    // Record metrics only if event_params is provided
+                    if let Some(params) = event_params {
+                        metrics::EXTERNAL_SERVICE_API_CALLS_ERRORS
+                            .with_label_values(&[
+                                &method.to_string(),
+                                params.service_name,
+                                params.connector_name,
+                                body.status_code.to_string().as_str(),
+                            ])
+                            .inc();
+                    }
+
+                    if all_keys_required.unwrap_or(true) {
+                        let raw_response_string = strip_bom_and_convert_to_string(&body.response);
+                        updated_router_data
+                            .resource_common_data
+                            .set_raw_connector_response(raw_response_string.map(Into::into));
+                        updated_router_data
+                            .resource_common_data
+                            .set_connector_response_headers(body.headers.clone());
+                    }
+
+                    let error = match body.status_code {
+                        500..=511 => connector.get_5xx_error_response(body.clone(), event)?,
+                        _ => connector.get_error_response_v2(body.clone(), event)?,
+                    };
+                    tracing::Span::current().record(
+                        "response.error_message",
+                        tracing::field::display(&error.message),
+                    );
+                    tracing::Span::current().record(
+                        "response.status_code",
+                        tracing::field::display(error.status_code),
+                    );
+                    updated_router_data.response = Err(error);
+                    updated_router_data
+                }
+            };
+            Ok(response)
+        }
+        Err(err) => {
+            tracing::Span::current().record("url", tracing::field::display(url));
+            Err(err)
+        }
+    }
+}
+
 trait ToHttpMethod {
     fn to_http_method(&self) -> HttpMethod;
 }
@@ -477,111 +591,16 @@ where
                     event.add_service_type(event_params.service_type);
                     event.add_service_name(event_params.service_name);
 
-                    let result = match response {
-                        Ok(body) => {
-                            let response = match body {
-                                Ok(body) => {
-                                    let status_code = body.status_code;
-                                    tracing::Span::current().record(
-                                        "status_code",
-                                        tracing::field::display(status_code),
-                                    );
-
-                                    if all_keys_required.unwrap_or(true) {
-                                        let raw_response_string =
-                                            strip_bom_and_convert_to_string(&body.response);
-                                        updated_router_data
-                                            .resource_common_data
-                                            .set_raw_connector_response(
-                                                raw_response_string.map(Into::into),
-                                            );
-
-                                        // Set response headers if available
-                                        updated_router_data
-                                            .resource_common_data
-                                            .set_connector_response_headers(body.headers.clone());
-                                    }
-
-                                    let handle_response_result = connector.handle_response_v2(
-                                        &updated_router_data,
-                                        Some(&mut event),
-                                        body.clone(),
-                                    );
-
-                                    // Log response body and headers using properly masked data from connector
-                                    if let Some(response_data) = &event.response_data {
-                                        tracing::Span::current().record(
-                                            "response.body",
-                                            tracing::field::display(response_data.inner()),
-                                        );
-                                    }
-
-                                    // Log response headers from event (already masked)
-                                    tracing::Span::current().record(
-                                        "response.headers",
-                                        tracing::field::debug(&event.headers),
-                                    );
-
-                                    match handle_response_result {
-                                        Ok(data) => {
-                                            tracing::info!("Transformer completed successfully");
-                                            Ok(data)
-                                        }
-                                        Err(err) => Err(err),
-                                    }?
-                                }
-                                Err(body) => {
-                                    metrics::EXTERNAL_SERVICE_API_CALLS_ERRORS
-                                        .with_label_values(&[
-                                            &method.to_string(),
-                                            event_params.service_name,
-                                            event_params.connector_name,
-                                            body.status_code.to_string().as_str(),
-                                        ])
-                                        .inc();
-
-                                    if all_keys_required.unwrap_or(true) {
-                                        let raw_response_string =
-                                            strip_bom_and_convert_to_string(&body.response);
-                                        updated_router_data
-                                            .resource_common_data
-                                            .set_raw_connector_response(
-                                                raw_response_string.map(Into::into),
-                                            );
-                                        updated_router_data
-                                            .resource_common_data
-                                            .set_connector_response_headers(body.headers.clone());
-                                    }
-
-                                    let error = match body.status_code {
-                                        500..=511 => connector.get_5xx_error_response(
-                                            body.clone(),
-                                            Some(&mut event),
-                                        )?,
-                                        _ => connector.get_error_response_v2(
-                                            body.clone(),
-                                            Some(&mut event),
-                                        )?,
-                                    };
-                                    tracing::Span::current().record(
-                                        "response.error_message",
-                                        tracing::field::display(&error.message),
-                                    );
-                                    tracing::Span::current().record(
-                                        "response.status_code",
-                                        tracing::field::display(error.status_code),
-                                    );
-                                    updated_router_data.response = Err(error);
-                                    updated_router_data
-                                }
-                            };
-                            Ok(response)
-                        }
-                        Err(err) => {
-                            tracing::Span::current().record("url", tracing::field::display(url));
-                            Err(err.change_context(ConnectorError::ProcessingStepFailed(None)))
-                        }
-                    };
+                    let result = handle_connector_response(
+                        response.change_context(ConnectorError::ProcessingStepFailed(None)),
+                        updated_router_data,
+                        &connector,
+                        Some(&mut event),
+                        all_keys_required,
+                        method,
+                        url.clone(),
+                        Some(&event_params),
+                    );
 
                     emit_event_with_config(event, event_params.event_config);
                     result
