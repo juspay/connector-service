@@ -40,7 +40,7 @@ use domain_types::{
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    verification::SourceVerification,
+    decode::BodyDecoding, verification::SourceVerification,
 };
 use serde::Serialize;
 pub mod transformers;
@@ -155,6 +155,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
     for Noon<T>
 {
 }
@@ -576,7 +580,7 @@ macros::macro_connector_implementation!(
         Ok(format!(
             "{}payment/v1/order/getbyreference/{}",
             self.connector_base_url_payments(req),
-            req.resource_common_data.get_reference_id()?
+            req.resource_common_data.connector_request_reference_id,
         ))
         }
     }
@@ -691,13 +695,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-        let request_ref_id = req.request.connector_refund_id.clone();
-        // Validate the refund ID to prevent injection attacks
-        if request_ref_id.is_empty() {
-           return Err(errors::ConnectorError::MissingRequiredField {
-              field_name: "request_ref_id",
-           }.into());
-        }
+        let request_ref_id = req.resource_common_data.connector_request_reference_id.clone();
         Ok(format!(
             "{}payment/v1/order/getbyreference/{}",
             self.connector_base_url_refunds(req),
