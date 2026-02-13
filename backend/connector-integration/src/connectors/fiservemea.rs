@@ -43,7 +43,6 @@ use transformers as fiservemea;
 
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
-use transformers as fiservemea;
 
 pub use transformers::{
     FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse, FiservemeaAuthType, FiservemeaErrorResponse,
