@@ -2,7 +2,6 @@ use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
 use common_utils::{
     self,
-    errors::CustomResult,
     types::{AmountConvertor, StringMajorUnit},
 };
 use domain_types::{
@@ -14,7 +13,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::FiservemeaRouterData;
