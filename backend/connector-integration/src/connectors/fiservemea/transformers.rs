@@ -185,10 +185,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let order = Some(FiservemeaOrder {
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            order_id: item.resource_common_data.connector_request_reference_id.clone(),
         });
 
         Ok(Self {
