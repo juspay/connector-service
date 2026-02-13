@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.13.0
+
+### Bug Fixes
+
+- **connector:** Fixed Volt Default Response and PSync Response Handling ([#508](https://github.com/juspay/connector-service/pull/508)) ([`c10f357`](https://github.com/juspay/connector-service/commit/c10f357d26db23c34d777305c682ed743e5d411c))
+
+**Full Changelog:** [`2026.02.12.0...2026.02.13.0`](https://github.com/juspay/connector-service/compare/2026.02.12.0...2026.02.13.0)
+
+- - -
+
 ## 2026.02.12.0
 
 ### Features
