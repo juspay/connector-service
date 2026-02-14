@@ -4711,7 +4711,7 @@ pub fn generate_payment_sync_response(
                 connector_metadata: _,
                 network_txn_id,
                 connector_response_reference_id,
-                incremental_authorization_allowed: _,
+                incremental_authorization_allowed,
                 mandate_reference,
                 status_code,
             } => {
@@ -4776,6 +4776,7 @@ pub fn generate_payment_sync_response(
                     state,
                     raw_connector_request,
                     connector_response,
+                    incremental_authorization_allowed,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -4841,6 +4842,7 @@ pub fn generate_payment_sync_response(
                 raw_connector_request,
                 connector_response,
                 redirection_data: None,
+                incremental_authorization_allowed: None,
             })
         }
     }
@@ -5590,6 +5592,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             raw_connector_request: None,
             connector_response: None,
             redirection_data: None,
+            incremental_authorization_allowed: None,
         })
     }
 }

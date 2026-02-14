@@ -4418,37 +4418,41 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        match &item.router_data.request.payment_method_data {
-            PaymentMethodData::MandatePayment => {
-                let connector_mandate_id = item.router_data.request.connector_mandate_id().ok_or(
-                    ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                    },
-                )?;
-                Self::try_from((&item, connector_mandate_id))
-            }
-            PaymentMethodData::CardDetailsForNetworkTransactionId(card) => {
-                Self::try_from((&item, card))
-            }
-            PaymentMethodData::NetworkToken(token_data) => Self::try_from((&item, token_data)),
-            PaymentMethodData::CardRedirect(_)
-            | PaymentMethodData::PayLater(_)
-            | PaymentMethodData::Wallet(_)
-            | PaymentMethodData::Card(_)
-            | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
-            | PaymentMethodData::BankTransfer(_)
-            | PaymentMethodData::Crypto(_)
-            | PaymentMethodData::Reward
-            | PaymentMethodData::RealTimePayment(_)
-            | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::Upi(_)
-            | PaymentMethodData::Voucher(_)
-            | PaymentMethodData::GiftCard(_)
-            | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::CardToken(_) => Err(ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Cybersource"),
-            ))?,
+        match item.router_data.request.connector_mandate_id() {
+            Some(connector_mandate_id) => Self::try_from((&item, connector_mandate_id)),
+            None => match &item.router_data.request.payment_method_data {
+                PaymentMethodData::MandatePayment => {
+                    let connector_mandate_id =
+                        item.router_data.request.connector_mandate_id().ok_or(
+                            ConnectorError::MissingRequiredField {
+                                field_name: "connector_mandate_id",
+                            },
+                        )?;
+                    Self::try_from((&item, connector_mandate_id))
+                }
+                PaymentMethodData::CardDetailsForNetworkTransactionId(card) => {
+                    Self::try_from((&item, card))
+                }
+                PaymentMethodData::NetworkToken(token_data) => Self::try_from((&item, token_data)),
+                PaymentMethodData::CardRedirect(_)
+                | PaymentMethodData::PayLater(_)
+                | PaymentMethodData::Wallet(_)
+                | PaymentMethodData::Card(_)
+                | PaymentMethodData::BankRedirect(_)
+                | PaymentMethodData::BankDebit(_)
+                | PaymentMethodData::BankTransfer(_)
+                | PaymentMethodData::Crypto(_)
+                | PaymentMethodData::Reward
+                | PaymentMethodData::RealTimePayment(_)
+                | PaymentMethodData::MobilePayment(_)
+                | PaymentMethodData::Upi(_)
+                | PaymentMethodData::Voucher(_)
+                | PaymentMethodData::GiftCard(_)
+                | PaymentMethodData::OpenBanking(_)
+                | PaymentMethodData::CardToken(_) => Err(ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Cybersource"),
+                ))?,
+            },
         }
     }
 }
