@@ -150,22 +150,23 @@ pub struct FiservemeaAuthorizeResponse {
     pub error_message: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        super::FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: super::FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
-        let payment_card = match &item.request.payment_method_data {
+        let payment_card = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => FiservemeaPaymentCard {
                 number: Secret::new(card_data.card_number.peek().to_string()),
                 security_code: card_data.card_cvc.clone(),
@@ -184,13 +185,16 @@ impl<T: PaymentMethodDataTypes>
         };
 
         let amount = item
-            .resource_common_data
-            .connectors
-            .fiservemea
+            .connector
             .amount_converter
             .convert(
-                common_utils::MinorUnit::new(item.request.minor_amount.get_amount_as_i64()),
-                item.request.currency,
+                common_utils::MinorUnit::new(
+                    item.router_data
+                        .request
+                        .minor_amount
+                        .get_amount_as_i64(),
+                ),
+                item.router_data.request.currency,
             )
             .map_err(|e| {
                 errors::ConnectorError::RequestEncodingFailedWithReason(format!(
@@ -202,7 +206,7 @@ impl<T: PaymentMethodDataTypes>
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
                 total: amount,
-                currency: item.request.currency.to_string(),
+                currency: item.router_data.request.currency.to_string(),
             },
             payment_method: FiservemeaPaymentMethod { payment_card },
         })
