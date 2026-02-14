@@ -170,8 +170,8 @@ impl<T: PaymentMethodDataTypes>
                 number: Secret::new(card_data.card_number.peek().to_string()),
                 security_code: card_data.card_cvc.clone(),
                 expiry_date: FiservemeaExpiryDate {
-                    month: card_data.card_exp_month.clone(),
-                    year: card_data.get_expiry_year_2_digit(),
+                    month: card_data.card_exp_month.peek().to_string(),
+                    year: card_data.get_expiry_year_4_digit().peek().to_string(),
                 },
             },
             _ => {
