@@ -51,24 +51,19 @@ impl FiservemeaAuthType {
 
     pub fn generate_hmac_signature(
         &self,
-        _api_key: &str,
-        _client_request_id: &str,
-        _timestamp: &str,
+        api_key: &str,
+        client_request_id: &str,
+        timestamp: &str,
         request_body: &str,
     ) -> Result<String, errors::ConnectorError> {
-        
-        use sha2::Sha256;
+        let raw_signature = format!("{api_key}{client_request_id}{timestamp}{request_body}");
 
-        type HmacSha256 = Hmac<Sha256>;
-
-        let secret_bytes = self.secret.expose().as_bytes();
-        let mut mac =
-            HmacSha256::new_from_slice(secret_bytes).map_err(|_| {
-                errors::ConnectorError::RequestEncodingFailed
-            })?;
-
-        mac.update(request_body.as_bytes());
-        let signature = mac.finalize().into_bytes();
+        let signature = common_utils::crypto::HmacSha256
+            .sign_message(
+                self.secret.clone().expose().as_bytes(),
+                raw_signature.as_bytes(),
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         Ok(base64::encode(signature))
     }
