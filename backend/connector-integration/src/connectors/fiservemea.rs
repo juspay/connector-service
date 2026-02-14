@@ -129,71 +129,12 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}payments",
-                self.base_url(&req.resource_common_data.connectors)
+                self.base_url(&_req.resource_common_data.connectors)
             ))
         }
     }
 );
 
-// =============================================================================
-// CONNECTOR COMMON IMPLEMENTATION
-// =============================================================================
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Fiservemea<T>
-{
-    fn id(&self) -> &'static str {
-        "fiservemea"
-    }
-
-    fn get_currency_unit(&self) -> CurrencyUnit {
-        CurrencyUnit::Minor
-    }
-
-    fn common_get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
-        "https://prod.emea.api.fiservapps.com/sandbox"
-    }
-
-    fn get_auth_header(
-        &self,
-        auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
-            headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.expose()).into(),
-        )])
-    }
-
-    fn build_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
-        let response: fiservemea::FiservemeaErrorResponse = res
-            .response
-            .parse_struct("FiservemeaErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        with_error_response_body!(event_builder, response);
-
-        Ok(domain_types::router_data::ErrorResponse {
-            status_code: res.status_code,
-            code: response.code,
-            message: response.message,
-            reason: None,
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_decline_code: None,
-            network_advice_code: None,
-            network_error_message: None,
-        })
-    }
-}
 // =============================================================================
 // DYNAMICALLY GENERATED IMPLEMENTATIONS
 // =============================================================================
@@ -400,16 +341,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         connector_flow::Authenticate,
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Fiservemea<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        connector_flow::Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     > for Fiservemea<T>
 {
