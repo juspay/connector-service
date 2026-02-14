@@ -234,24 +234,13 @@ fn map_fiservemea_status_to_attempt_status(
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, super::FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
+    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaAuthorizeRequest>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservemeaAuthorizeResponse,
-            super::FiservemeaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-        >,
+        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaAuthorizeRequest>,
     ) -> Result<Self, Self::Error> {
         let status = map_fiservemea_status_to_attempt_status(
             &item.response.transaction_result,
@@ -276,9 +265,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }),
             resource_common_data: PaymentFlowData {
                 status,
-                ..item.router_data.router_data.resource_common_data
+                ..item.router_data.resource_common_data
             },
-            ..item.router_data.router_data
+            ..item.router_data
         })
     }
 }
