@@ -26,6 +26,7 @@ pub(crate) mod headers {
 // =============================================================================
 // MACRO PREREQUISITES
 // =============================================================================
+macros::create_amount_converter_wrapper!(connector_name: Fiservemea, amount_type: MinorUnit);
 macros::create_all_prerequisites!(
     connector_name: Fiservemea,
     generic_type: T,
