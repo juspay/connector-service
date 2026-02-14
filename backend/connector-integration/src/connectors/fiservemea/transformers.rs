@@ -293,35 +293,3 @@ fn map_fiservemea_status_to_attempt_status(
         _ => AttemptStatus::Pending,
     }
 }
-
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        FiservemeaAuthorizeRequest::try_from(&item.router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
-    ) -> Result<Self, Self::Error> {
-        let response_router_data = ResponseRouterData {
-            response: item.response,
-            http_code: item.http_code,
-            router_data: item.router_data.router_data,
-        };
-        RouterDataV2::try_from(response_router_data)
-    }
-}
