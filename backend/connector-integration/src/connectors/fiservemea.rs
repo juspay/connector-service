@@ -28,10 +28,6 @@ pub(crate) mod headers {
     pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
 }
 
-#[derive(Debug, Clone)]
-pub struct Fiservemea<T: PaymentMethodDataTypes> {
-    payment_method_type: std::marker::PhantomData<T>,
-}
 
 
 // =============================================================================
