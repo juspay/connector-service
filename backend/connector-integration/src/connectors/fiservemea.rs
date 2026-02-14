@@ -55,7 +55,7 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [
-        amount_converter: StringMinorUnit
+        amount_converter: MinorUnit
     ],
     member_functions: {
         /// Build headers with HMAC-SHA256 signature
