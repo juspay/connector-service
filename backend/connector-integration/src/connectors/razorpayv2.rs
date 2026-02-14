@@ -249,6 +249,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let order_response = PaymentCreateOrderResponse {
             order_id: response.id,
+            session_token: None,
+            connector_metadata: None,
         };
 
         Ok(RouterDataV2 {

@@ -51,14 +51,17 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 
 use transformers::{
     self as trustpay, RefundResponse, RefundResponse as RefundSyncResponse,
-    TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayErrorResponse,
-    TrustpayPaymentsRequest, TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
-    TrustpayPaymentsResponse, TrustpayRefundRequest,
+    TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayCreateIntentRequest,
+    TrustpayCreateIntentResponse, TrustpayErrorResponse, TrustpayPaymentsRequest,
+    TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse, TrustpayPaymentsResponse,
+    TrustpayRefundRequest,
 };
 
 use super::macros::{self, ContentTypeSelector};
 use crate::types::ResponseRouterData;
 use crate::utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping};
+
+macros::create_amount_converter_wrapper!(connector_name: Trustpay, amount_type: StringMajorUnit);
 
 // Local headers module
 mod headers {
@@ -445,6 +448,12 @@ macros::create_all_prerequisites!(
             request_body: TrustpayAuthUpdateRequest,
             response_body: TrustpayAuthUpdateResponse,
             router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ),
+        (
+            flow: CreateOrder,
+            request_body: TrustpayCreateIntentRequest,
+            response_body: TrustpayCreateIntentResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ),
         (
             flow: Authorize,
@@ -836,6 +845,39 @@ macros::macro_connector_implementation!(
     }
 );
 
+// Macro implementation for CreateOrder flow (used for wallet initialization)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Trustpay,
+    curl_request: FormUrlEncoded(TrustpayCreateIntentRequest),
+    curl_response: TrustpayCreateIntentResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_for_payments(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}{}",
+                self.connector_base_url_payments(req),
+                "api/v1/intent"
+            ))
+        }
+    }
+);
+
 // Macro implementation for Authorize flow using dynamic content types
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -976,16 +1018,6 @@ macros::macro_connector_implementation!(
 );
 
 // Implementation for empty stubs - these will need to be properly implemented later
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Trustpay<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
