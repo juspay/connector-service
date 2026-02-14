@@ -1,16 +1,15 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::types::StringMinorUnit;
+use common_utils::types::{AmountConvertor, FloatMajorUnitForConnector};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::{Mask, Maskable, Secret};
-use masking::Secret as NewSecret;
+use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -189,76 +188,42 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let payment_method_data = item
-            .request
-            .payment_method_data
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "payment_method_data",
-            })?;
+        let converter = FloatMajorUnitForConnector;
+        let amount_major = converter
+            .convert(item.request.minor_amount, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-        let card_data = match payment_method_data {
-            PaymentMethodDataTypes::Card(card) => card,
+        let payment_method = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                let year_yy = card_data.get_card_expiry_year_2_digit()?;
+
+                FiservemeaPaymentMethod::Card(FiservemeaCardData {
+                    payment_card: FiservemeaPaymentCard {
+                        number: card_data.card_number.clone(),
+                        security_code: card_data.card_cvc.clone(),
+                        expiry_date: FiservemeaExpiryDate {
+                            month: card_data.card_exp_month.peek().clone(),
+                            year: year_yy,
+                        },
+                    },
+                })
+            }
             _ => {
                 return Err(error_stack::report!(
-                    errors::ConnectorError::NotImplemented {
-                        message: "Only card payments are supported".to_string(),
-                    }
+                    errors::ConnectorError::NotImplemented(
+                        "Only card payments are supported".to_string()
+                    )
                 ))
             }
         };
 
-        let card_number = card
-            .card_number
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_number",
-            })?;
-
-        let card_cvc = card
-            .card_cvc
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_cvc",
-            })?;
-
-        let card_exp_month = card
-            .card_exp_month
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_exp_month",
-            })?;
-
-        let card_exp_year = card
-            .card_exp_year
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_exp_year",
-            })?;
-
-        let amount_str = StringMinorUnit::get_minor_unit_amount_as_string(
-            item.request.minor_amount.get_amount_as_i64(),
-        );
-
-        let expiry_month = format!("{:02}", card_exp_month.get_inner_value());
-        let expiry_year = format!("{:02}", card_exp_year.get_inner_value() % 100);
-
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: amount_str,
+                total: amount_major,
                 currency: item.request.currency.to_string(),
             },
-            payment_method: FiservemeaPaymentMethod::Card(FiservemeaCardData {
-                payment_card: FiservemeaPaymentCard {
-                    number: Secret::new(card_number.get_inner_value().clone()),
-                    security_code: Secret::new(card_cvc.get_inner_value().clone()),
-                    expiry_date: FiservemeaExpiryDate {
-                        month: expiry_month,
-                        year: expiry_year,
-                    },
-                },
-            }),
+            payment_method,
         })
     }
 }
@@ -290,18 +255,6 @@ impl<T: PaymentMethodDataTypes>
             .processor
             .as_ref()
             .and_then(|p| p.network.clone());
-
-        let network_decline_code = item
-            .response
-            .processor
-            .as_ref()
-            .and_then(|p| p.response_code.clone());
-
-        let network_error_message = item
-            .response
-            .processor
-            .as_ref()
-            .and_then(|p| p.response_message.clone());
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
