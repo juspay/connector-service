@@ -55,7 +55,7 @@ impl FiservemeaAuthType {
         client_request_id: &str,
         timestamp: &str,
         request_body: &str,
-    ) -> Result<String, errors::ConnectorError> {
+    ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
         let raw_signature = format!("{api_key}{client_request_id}{timestamp}{request_body}");
 
         let signature = common_utils::crypto::HmacSha256
