@@ -63,7 +63,7 @@ pub fn map_fiservemea_status(status: &str) -> AttemptStatus {
     }
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
         &FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -91,7 +91,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
         ResponseRouterData<
             FiservemeaPaymentsResponse,
