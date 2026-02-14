@@ -97,19 +97,19 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum FiservemeaPaymentMethod<T> {
+pub enum FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
     Card(FiservemeaCardData<T>),
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaCardData<T> {
+pub struct FiservemeaCardData<T: PaymentMethodDataTypes> {
     pub payment_card: FiservemeaPaymentCard<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentCard<T> {
+pub struct FiservemeaPaymentCard<T: PaymentMethodDataTypes> {
     pub number: RawCardNumber<T>,
     pub security_code: Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
