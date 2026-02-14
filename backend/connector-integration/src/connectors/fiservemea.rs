@@ -16,7 +16,7 @@ use interfaces::{
 use serde::Serialize;
 use transformers as fiservemea;
 
-use crate::with_error_response_body;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 use super::macros;
 
