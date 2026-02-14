@@ -115,7 +115,10 @@ impl<T: PaymentMethodDataTypes>
     ) -> Result<Self, Self::Error> {
         let card_data = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
-            _ => return Err(error_stack::report!(errors::ConnectorError::NotSupported)),
+            _ => return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                message: "Only card payments are supported".to_string(),
+                connector: "fiservemea".to_string(),
+            })),
         };
 
         let amount_i64 = item.request.minor_amount.get_amount_as_i64();
