@@ -5,7 +5,7 @@ use domain_types::{
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorAuthType,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::Secret;
