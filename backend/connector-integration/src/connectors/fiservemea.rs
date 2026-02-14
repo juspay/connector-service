@@ -17,6 +17,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers as fiservemea;
 
+use transformers::{FiservemeaPaymentsRequest, FiservemeaPaymentsResponse};
+
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 use super::macros;
