@@ -304,3 +304,15 @@ impl<T: PaymentMethodDataTypes>
         FiservemeaAuthorizeRequest::try_from(&item.router_data)
     }
 }
+
+pub struct FiservemeaRouterData<RD: FlowTypes, T: PaymentMethodDataTypes> {
+    pub connector: Fiservemea<T>,
+    pub router_data: RD,
+}
+
+impl<RD: FlowTypes, T: PaymentMethodDataTypes> FlowTypes for FiservemeaRouterData<RD, T> {
+    type Flow = RD::Flow;
+    type FlowCommonData = RD::FlowCommonData;
+    type Request = RD::Request;
+    type Response = RD::Response;
+}
