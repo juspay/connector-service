@@ -24,7 +24,6 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 use super::macros;
 
 pub(crate) mod headers {
-    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
