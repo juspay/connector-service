@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
-    connector_flow::{Authorize, *},
+    connector_flow::Authorize,
     connector_flow, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2, router_response_types::Response, types::Connectors,
 };
@@ -85,7 +85,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: fiservemea::FiservemeaErrorResponse = res
             .response
             .parse_struct("FiservemeaErrorResponse")
@@ -93,7 +93,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
-        Ok(domain_types::router_data::ErrorResponse {
+        Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.code,
             message: response.message,
