@@ -126,7 +126,7 @@ pub struct FiservemeaPaymentMethod {
     pub payment_card: FiservemeaPaymentCard,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FiservemeaTransactionAmount {
     pub total: String,
     pub currency: String,
