@@ -1,5 +1,5 @@
 use common_utils::crypto::SignMessage;
-use hmac::{Hmac, Mac};
+
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
 use common_utils::types::{AmountConvertor, FloatMajorUnitForConnector};
@@ -56,7 +56,7 @@ impl FiservemeaAuthType {
         _timestamp: &str,
         request_body: &str,
     ) -> Result<String, errors::ConnectorError> {
-        use hmac::{Hmac, Mac};
+        
         use sha2::Sha256;
 
         type HmacSha256 = Hmac<Sha256>;
