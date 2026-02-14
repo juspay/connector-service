@@ -5,10 +5,11 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
 use serde::{Deserialize, Serialize};
 
@@ -97,27 +98,27 @@ pub struct FiservemeaTransactionAmount {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum FiservemeaPaymentMethod<T> {
-    Card(FiservemeaCardData),
+    Card(FiservemeaCardData<T>),
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaCardData {
-    pub payment_card: FiservemeaPaymentCard,
+pub struct FiservemeaCardData<T> {
+    pub payment_card: FiservemeaPaymentCard<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentCard {
-    pub number: Secret<String>,
+pub struct FiservemeaPaymentCard<T> {
+    pub number: RawCardNumber<T>,
     pub security_code: Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
 }
 
 #[derive(Debug, Serialize)]
 pub struct FiservemeaExpiryDate {
-    pub month: String,
-    pub year: String,
+    pub month: Secret<String>,
+    pub year: Secret<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -202,7 +203,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
                         number: card_data.card_number.clone(),
                         security_code: card_data.card_cvc.clone(),
                         expiry_date: FiservemeaExpiryDate {
-                            month: card_data.card_exp_month.peek().clone(),
+                            month: card_data.card_exp_month.clone(),
                             year: year_yy,
                         },
                     },
