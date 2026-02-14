@@ -24,7 +24,7 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, secret } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, secret, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
                 secret: secret.to_owned(),
             }),
@@ -62,7 +62,7 @@ impl FiservemeaAuthType {
         let secret_bytes = self.secret.expose().as_bytes();
         let mut mac =
             HmacSha256::new_from_slice(secret_bytes).map_err(|_| {
-                errors::ConnectorError::InvalidRequestConfig {
+                errors::ConnectorError::InvalidRequestData {
                     message: "Invalid secret key length".to_string(),
                 }
             })?;
