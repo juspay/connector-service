@@ -3,7 +3,7 @@ use common_utils::crypto::SignMessage;
 use common_enums::AttemptStatus;
 use common_utils::types::{AmountConvertor, FloatMajorUnitForConnector};
 use domain_types::{
-    connector_flow::Authorize,
+    connector_flow::{Authorize, FlowTypes},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -13,6 +13,8 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
 use serde::{Deserialize, Serialize};
+
+use crate::{connectors::fiservemea::FiservemeaRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
@@ -291,230 +293,7 @@ fn map_fiservemea_status_to_attempt_status(
         _ => AttemptStatus::Pending,
     }
 }
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        FiservemeaAuthorizeRequest::try_from(&item.router_data)
-    }
-}
-
-
-impl<RD: FlowTypes, T: PaymentMethodDataTypes> FlowTypes for FiservemeaRouterData<RD, T> {
-    type Flow = RD::Flow;
-    type FlowCommonData = RD::FlowCommonData;
-    type Request = RD::Request;
-    type Response = RD::Response;
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
-    ) -> Result<Self, Self::Error> {
-        let response_router_data = ResponseRouterData {
-            response: item.response,
-            http_code: item.http_code,
-            router_data: item.router_data.router_data,
-        };
-        RouterDataV2::try_from(response_router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        FiservemeaAuthorizeRequest::try_from(&item.router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
-    ) -> Result<Self, Self::Error> {
-        let response_router_data = ResponseRouterData {
-            response: item.response,
-            http_code: item.http_code,
-            router_data: item.router_data.router_data,
-        };
-        RouterDataV2::try_from(response_router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        FiservemeaAuthorizeRequest::try_from(&item.router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
-    ) -> Result<Self, Self::Error> {
-        let response_router_data = ResponseRouterData {
-            response: item.response,
-            http_code: item.http_code,
-            router_data: item.router_data.router_data,
-        };
-        RouterDataV2::try_from(response_router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        FiservemeaAuthorizeRequest::try_from(&item.router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
-    ) -> Result<Self, Self::Error> {
-        let response_router_data = ResponseRouterData {
-            response: item.response,
-            http_code: item.http_code,
-            router_data: item.router_data.router_data,
-        };
-        RouterDataV2::try_from(response_router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        FiservemeaAuthorizeRequest::try_from(&item.router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
-    ) -> Result<Self, Self::Error> {
-        let response_router_data = ResponseRouterData {
-            response: item.response,
-            http_code: item.http_code,
-            router_data: item.router_data.router_data,
-        };
-        RouterDataV2::try_from(response_router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        FiservemeaAuthorizeRequest::try_from(&item.router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
-    ) -> Result<Self, Self::Error> {
-        let response_router_data = ResponseRouterData {
-            response: item.response,
-            http_code: item.http_code,
-            router_data: item.router_data.router_data,
-        };
-        RouterDataV2::try_from(response_router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        FiservemeaAuthorizeRequest::try_from(&item.router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes> 
-    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
-    ) -> Result<Self, Self::Error> {
-        let response_router_data = ResponseRouterData {
-            response: item.response,
-            http_code: item.http_code,
-            router_data: item.router_data.router_data,
-        };
-        RouterDataV2::try_from(response_router_data)
-    }
-}
 
 impl<T: PaymentMethodDataTypes> 
     TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
