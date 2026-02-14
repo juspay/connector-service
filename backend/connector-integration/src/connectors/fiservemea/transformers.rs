@@ -204,7 +204,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: amount.0,
+                total: amount.get_amount_as_string(),
                 currency: item.router_data.request.currency.to_string(),
             },
             payment_method: FiservemeaPaymentMethod { payment_card },
