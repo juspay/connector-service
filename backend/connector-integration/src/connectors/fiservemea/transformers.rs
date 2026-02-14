@@ -152,6 +152,65 @@ pub struct FiservemeaAuthorizeResponse {
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    > for FiservemeaAuthorizeRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let payment_card = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => FiservemeaPaymentCard {
+                number: Secret::new(card_data.card_number.peek().to_string()),
+                security_code: card_data.card_cvc.clone(),
+                expiry_date: FiservemeaExpiryDate {
+                    month: card_data.card_exp_month.clone(),
+                    year: card_data.get_expiry_year_2_digit(),
+                },
+            },
+            _ => {
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Payment Method".to_string(),
+                    connector: "fiservemea",
+                }
+                .into())
+            }
+        };
+
+        let amount = item
+            .resource_common_data
+            .connectors
+            .fiservemea
+            .amount_converter
+            .convert(
+                common_utils::MinorUnit::new(item.request.minor_amount.get_amount_as_i64()),
+                item.request.currency,
+            )
+            .map_err(|e| {
+                errors::ConnectorError::RequestEncodingFailedWithReason(format!(
+                    "Amount conversion failed: {e}"
+                ))
+            })?;
+
+        Ok(Self {
+            request_type: "PaymentCardPreAuthTransaction".to_string(),
+            transaction_amount: FiservemeaTransactionAmount {
+                total: amount,
+                currency: item.request.currency.to_string(),
+            },
+            payment_method: FiservemeaPaymentMethod { payment_card },
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
         ResponseRouterData<
             FiservemeaPaymentsResponse,
             RouterDataV2<
