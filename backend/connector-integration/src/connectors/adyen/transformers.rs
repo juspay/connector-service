@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use cards::NetworkToken;
+use cards::{NetworkToken, CardNumber};
 use common_enums::{self, AttemptStatus, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -65,6 +65,30 @@ pub struct Amount {
 }
 
 type Error = error_stack::Report<errors::ConnectorError>;
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenApplePayDecryptData {
+    number: CardNumber,
+    expiry_month: Secret<String>,
+    expiry_year: Secret<String>,
+    brand: String,
+    #[serde(rename = "type")]
+    payment_type: PaymentType,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenGooglePayDecryptData {
+    number: CardNumber,
+    expiry_month: Secret<String>,
+    expiry_year: Secret<String>,
+    brand: String,
+    #[serde(rename = "type")]
+    payment_type: PaymentType,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -181,7 +205,9 @@ pub enum AdyenPaymentMethod<
     NetworkToken(Box<AdyenNetworkTokenData>),
     #[serde(rename = "googlepay")]
     Gpay(Box<AdyenGPay>),
+    GooglePayDecrypt(Box<AdyenGooglePayDecryptData>),
     ApplePay(Box<AdyenApplePay>),
+    ApplePayDecrypt(Box<AdyenApplePayDecryptData>),
     #[serde(rename = "scheme")]
     BancontactCard(Box<AdyenCard<DefaultPCIHolder>>),
     Bizum,
@@ -1313,6 +1339,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<(
         &WalletData,
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        Option<domain_types::router_data::PaymentMethodToken>,
     )> for AdyenPaymentMethod<T>
 {
     type Error = Error;
@@ -1325,34 +1352,90 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
+            Option<domain_types::router_data::PaymentMethodToken>,
+
         ),
     ) -> Result<Self, Self::Error> {
-        let (wallet_data, _item) = value;
+        let (wallet_data, _item, payment_method_token) = value;
         match wallet_data {
             WalletData::GooglePay(data) => {
-                let gpay_data = AdyenGPay {
-                    google_pay_token: Secret::new(
-                        data.tokenization_data
-                            .get_encrypted_google_pay_token()
-                            .change_context(errors::ConnectorError::MissingRequiredField {
-                                field_name: "gpay wallet_token",
-                            })?
-                            .to_owned(),
-                    ),
+                let google_pay_wallet_data = match payment_method_token {
+                    Some(domain_types::router_data::PaymentMethodToken::GooglePayDecrypt(
+                        decrypt_data,
+                    )) => {
+                        let exp_month = Secret::new(decrypt_data.payment_method_details.expiration_month.two_digits());
+                        let exp_year = Secret::new(format!("{:04}", decrypt_data.payment_method_details.expiration_year.get_year()));
+
+                        let google_pay_decrypt_data = AdyenGooglePayDecryptData {
+                            number: decrypt_data.payment_method_details.pan.clone(),
+                            expiry_month: exp_month,
+                            expiry_year: exp_year,
+                            brand: "googlepay".to_string(),
+                            payment_type: PaymentType::Scheme,
+                        };
+
+                        Self::GooglePayDecrypt(Box::new(google_pay_decrypt_data))
+                    }
+                    _ => {
+                        let gpay_data = AdyenGPay {
+                            google_pay_token: Secret::new(
+                                data.tokenization_data
+                                    .get_encrypted_google_pay_token()
+                                    .change_context(errors::ConnectorError::MissingRequiredField {
+                                        field_name: "gpay wallet_token",
+                                    })?
+                                    .to_owned(),
+                            ),
+                        };
+
+                        Self::Gpay(Box::new(gpay_data))
+                    }
                 };
-                Ok(Self::Gpay(Box::new(gpay_data)))
+
+                Ok(google_pay_wallet_data)
             }
             WalletData::ApplePay(data) => {
-                let apple_pay_encrypted_data = data
-                    .payment_data
-                    .get_encrypted_apple_pay_payment_data_mandatory()
-                    .change_context(errors::ConnectorError::MissingRequiredField {
-                        field_name: "Apple pay encrypted data",
-                    })?;
-                let apple_pay_data = AdyenApplePay {
-                    apple_pay_token: Secret::new(apple_pay_encrypted_data.to_string()),
+                let apple_pay_wallet_data = match payment_method_token{
+                    Some(domain_types::router_data::PaymentMethodToken::ApplePayDecrypt(
+                        decrypt_data,
+                    ))=>{
+                            let expiry_year_4_digit = decrypt_data.get_four_digit_expiry_year();
+                            let exp_month = decrypt_data.get_expiry_month().change_context(
+                                errors::ConnectorError::InvalidDataFormat {
+                                    field_name: "expiration_month",
+                                },
+                            )?;
+
+                            let apple_pay_decrypt_data = AdyenApplePayDecryptData{
+                                number: decrypt_data.application_primary_account_number,
+                                expiry_month: exp_month,
+                                expiry_year: expiry_year_4_digit,
+                                brand: data.payment_method.network.clone(),
+                                payment_type: PaymentType::Scheme,
+                            };
+
+                            Self::ApplePayDecrypt(Box::new(
+                                apple_pay_decrypt_data
+                            ))
+                    }
+                    _ => {
+                            let apple_pay_encrypted_data = data
+                                    .payment_data
+                                    .get_encrypted_apple_pay_payment_data_mandatory()
+                                    .change_context(errors::ConnectorError::MissingRequiredField {
+                                        field_name: "Apple pay encrypted data",
+                                    })?;
+                            let apple_pay_data = AdyenApplePay {                                          
+                                    apple_pay_token: Secret::new(apple_pay_encrypted_data.to_string()), 
+                            };
+
+                            Self::ApplePay(Box::new(apple_pay_data))   
+                        
+                    }
                 };
-                Ok(Self::ApplePay(Box::new(apple_pay_data)))
+
+
+                Ok(apple_pay_wallet_data)
             }
 
             WalletData::PaypalRedirect(_)
@@ -2007,7 +2090,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = get_amount_data(&item);
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-            AdyenPaymentMethod::try_from((wallet_data, &item.router_data))?,
+            AdyenPaymentMethod::try_from((wallet_data, &item.router_data, item.router_data.resource_common_data.payment_method_token.clone() ))?,
         ));
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let (recurring_processing_model, store_payment_method, shopper_reference) =
@@ -2021,6 +2104,51 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
         let country_code =
             get_country_code(item.router_data.resource_common_data.get_optional_billing());
+
+        let mpi_data = if matches!(
+            wallet_data,
+            WalletData::ApplePay(_) | WalletData::GooglePay(_)
+        ) {
+            match &item.router_data.resource_common_data.payment_method_token {
+                Some(domain_types::router_data::PaymentMethodToken::ApplePayDecrypt(apple_data)) => {
+                    Some(AdyenMpiData {
+                        directory_response: common_enums::TransactionStatus::Success,
+                        authentication_response: common_enums::TransactionStatus::Success,
+                        cavv: Some(apple_data.payment_data.online_payment_cryptogram.clone()),
+                        token_authentication_verification_value: None,
+                        eci: apple_data.payment_data.eci_indicator.clone(),
+                        ds_trans_id: None,
+                        three_ds_version: None,
+                        challenge_cancel: None,
+                        risk_score: None,
+                        cavv_algorithm: None,
+                    })
+                }
+                Some(domain_types::router_data::PaymentMethodToken::GooglePayDecrypt(google_pay)) => {
+                    match (google_pay.payment_method_details.cryptogram.clone(), google_pay.payment_method_details.eci_indicator.clone()) {
+                        (Some(cryptogram), Some(eci_indicator)) => {
+                            Some(AdyenMpiData {
+                                directory_response: common_enums::TransactionStatus::Success,
+                                authentication_response: common_enums::TransactionStatus::Success,
+                                cavv: Some(cryptogram),
+                                token_authentication_verification_value: None,
+                                eci: Some(eci_indicator),
+                                ds_trans_id: None,
+                                three_ds_version: None,
+                                challenge_cancel: None,
+                                risk_score: None,
+                                cavv_algorithm: None,
+                            })
+                        }
+                        _ => None,
+                    }
+                }
+                _ => None,
+            }
+        } else {
+            None
+        };
+
         Ok(Self {
             amount,
             merchant_account: auth_type.merchant_account,
@@ -2035,7 +2163,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             recurring_processing_model,
             browser_info: get_browser_info(&item.router_data)?,
             additional_data,
-            mpi_data: None,
+            mpi_data,
             telephone_number: item
                 .router_data
                 .resource_common_data
