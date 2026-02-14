@@ -25,7 +25,7 @@ use domain_types::{
     payment_method_data::{
         BankDebitData, BankRedirectData, BankTransferData, Card, CardRedirectData,
         DefaultPCIHolder, GiftCardData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber,VoucherData, WalletData,
+        RawCardNumber, VoucherData, WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -3165,11 +3165,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
                 PaymentMethodData::Voucher(ref voucher_data) => {
                     Self::try_from((item, voucher_data))
-                },
+                }
                 PaymentMethodData::PayLater(ref pay_later_data) => {
                     Self::try_from((item, pay_later_data))
                 }
-                | PaymentMethodData::Crypto(_)
+                PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
                 | PaymentMethodData::RealTimePayment(_)
