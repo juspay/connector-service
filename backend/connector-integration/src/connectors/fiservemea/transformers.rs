@@ -62,9 +62,7 @@ impl FiservemeaAuthType {
         let secret_bytes = self.secret.expose().as_bytes();
         let mut mac =
             HmacSha256::new_from_slice(secret_bytes).map_err(|_| {
-                errors::ConnectorError::EncodingError {
-                    message: "Invalid secret key length".to_string(),
-                }
+                errors::ConnectorError::RequestEncodingFailed
             })?;
 
         mac.update(request_body.as_bytes());
