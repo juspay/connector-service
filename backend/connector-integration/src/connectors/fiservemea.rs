@@ -114,7 +114,7 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Fiservemea,
-    curl_request: Json(fiservemea::FiservemeaAuthorizeRequest<T>),
+    curl_request: Json(FiservemeaAuthorizeRequest<T>),
     curl_response: fiservemea::FiservemeaAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
