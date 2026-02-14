@@ -280,18 +280,18 @@ macros::create_all_prerequisites!(
             &req.resource_common_data.connectors.worldpay.base_url
         }
 
-        /// Helper function to extract link_data from connector_meta_data
+        /// Helper function to extract link_data from merchant_account_metadata
         /// Used by PreAuthenticate and PostAuthenticate flows to avoid code duplication
         pub fn extract_link_data_from_metadata<F, Req, Res>(
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
             let metadata_obj = req
                 .resource_common_data
-                .connector_meta_data
+                .merchant_account_metadata
                 .as_ref()
                 .and_then(|metadata| metadata.peek().as_object())
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data",
+                    field_name: "merchant_account_metadata",
                 })?;
 
             metadata_obj
@@ -299,7 +299,7 @@ macros::create_all_prerequisites!(
                 .and_then(|value| value.as_str())
                 .map(|s| s.to_string())
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data.link_data",
+                    field_name: "merchant_account_metadata.link_data",
                 }.into())
         }
     }

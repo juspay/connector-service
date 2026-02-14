@@ -65,7 +65,7 @@ pub struct RedsysThreedsChallengeResponse {
 /// Result type for pre-authenticate response building
 pub struct PreAuthenticateResponseData {
     pub authentication_data: Option<domain_types::router_request_types::AuthenticationData>,
-    pub connector_meta_data: Option<Secret<serde_json::Value>>,
+    pub merchant_account_metadata: Option<Secret<serde_json::Value>>,
     pub redirection_data: Option<Box<router_response_types::RedirectForm>>,
     pub response_ref_id: Option<String>,
 }

@@ -512,7 +512,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPaymentsRespo
         let mut metadata_map = item
             .router_data
             .resource_common_data
-            .connector_meta_data
+            .merchant_account_metadata
             .as_ref()
             .and_then(|meta| meta.peek().as_object())
             .cloned()
@@ -557,7 +557,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPaymentsRespo
             }),
             resource_common_data: PaymentFlowData {
                 status,
-                connector_meta_data: connector_metadata.clone().map(Secret::new),
+                merchant_account_metadata: connector_metadata.clone().map(Secret::new),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -688,7 +688,7 @@ impl TryFrom<ResponseRouterData<NexixpayCaptureResponse, Self>>
         let mut metadata_map = item
             .router_data
             .resource_common_data
-            .connector_meta_data
+            .merchant_account_metadata
             .as_ref()
             .and_then(|meta| meta.peek().as_object())
             .cloned()
@@ -727,7 +727,7 @@ impl TryFrom<ResponseRouterData<NexixpayCaptureResponse, Self>>
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Pending, // Capture call does not return status in their response
-                connector_meta_data: connector_metadata.clone().map(Secret::new),
+                merchant_account_metadata: connector_metadata.clone().map(Secret::new),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -892,7 +892,7 @@ impl TryFrom<ResponseRouterData<NexixpayVoidResponse, Self>>
         let mut metadata_map = item
             .router_data
             .resource_common_data
-            .connector_meta_data
+            .merchant_account_metadata
             .as_ref()
             .and_then(|meta| meta.peek().as_object())
             .cloned()
@@ -931,7 +931,7 @@ impl TryFrom<ResponseRouterData<NexixpayVoidResponse, Self>>
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Voided, // Void succeeded
-                connector_meta_data: connector_metadata.clone().map(Secret::new),
+                merchant_account_metadata: connector_metadata.clone().map(Secret::new),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1378,7 +1378,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPreAuthentica
             }),
             resource_common_data: PaymentFlowData {
                 status,
-                connector_meta_data: connector_metadata.map(Secret::new),
+                merchant_account_metadata: connector_metadata.map(Secret::new),
                 preprocessing_id: Some(operation.operation_id.clone()), // Store operationId for Authorize
                 ..item.router_data.resource_common_data
             },
@@ -1460,21 +1460,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?;
 
         // Extract operation_id from redirect payload (NexiXPay returns it as paymentId)
-        // Fallback to connector_meta_data using helper function
+        // Fallback to merchant_account_metadata using helper function
         let operation_id = redirect_payload
             .payment_id
             .or_else(|| {
                 // Use the helper function from Nexixpay struct
                 // Note: This is a workaround since we can't call the helper directly without Nexixpay instance
                 item.resource_common_data
-                    .connector_meta_data
+                    .merchant_account_metadata
                     .as_ref()
                     .and_then(|metadata| metadata.peek().get("operationId"))
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string())
             })
             .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "operationId (paymentId from redirect or connector_meta_data)",
+                field_name: "operationId (paymentId from redirect or merchant_account_metadata)",
             })?;
 
         // Extract PaRes (3DS authentication response) from redirect payload

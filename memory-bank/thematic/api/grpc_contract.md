@@ -38,7 +38,7 @@ message PaymentsAuthorizeRequest {
   optional string connector_customer = 1;
   PaymentAddress address = 3;
   AuthenticationType auth_type = 4;
-  optional bytes connector_meta_data = 5;
+  optional bytes merchant_account_metadata = 5;
   optional AccessToken access_token = 6;
   optional string session_token = 7;
   optional PaymentMethodToken payment_method_token = 8;
@@ -315,7 +315,7 @@ message PaymentsCaptureRequest {
   int64 amount_to_capture = 2;
   Currency currency = 15;
   optional MultipleCaptureRequestData multiple_capture_data = 21;
-  optional bytes connector_meta_data = 3;
+  optional bytes merchant_account_metadata = 3;
 }
 ```
 
@@ -355,7 +355,7 @@ message SetupMandateRequest {
   optional string connector_customer = 1;
   PaymentAddress address = 3;
   AuthenticationType auth_type = 4;
-  optional bytes connector_meta_data = 5;
+  optional bytes merchant_account_metadata = 5;
   optional AccessToken access_token = 6;
   optional string session_token = 7;
   optional PaymentMethodToken payment_method_token = 8;

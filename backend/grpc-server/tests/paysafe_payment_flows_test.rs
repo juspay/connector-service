@@ -195,7 +195,7 @@ fn create_payment_authorize_request(
     };
 
     // Paysafe requires merchant_account_metadata with account_id mapping
-    // This gets converted to connector_meta_data in domain_types
+    // This gets converted to merchant_account_metadata in domain_types
     // The structure should match PaysafeConnectorMetadataObject which has:
     // { "account_id": { "card": { "USD": { "no_three_ds": "..." } } } }
     let merchant_account_metadata_json = serde_json::json!({

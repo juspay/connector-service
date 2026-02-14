@@ -113,18 +113,18 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        /// Helper function to extract operationId from connector_meta_data
+        /// Helper function to extract operationId from merchant_account_metadata
         /// Used in PostAuthenticate flow to get the operationId from PreAuthenticate
         pub fn extract_operation_id_from_metadata<F, Req, Res>(
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let metadata_obj = req
                 .resource_common_data
-                .connector_meta_data
+                .merchant_account_metadata
                 .as_ref()
                 .and_then(|metadata| metadata.peek().as_object())
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data",
+                    field_name: "merchant_account_metadata",
                 })?;
 
             metadata_obj
@@ -132,7 +132,7 @@ macros::create_all_prerequisites!(
                 .and_then(|value| value.as_str())
                 .map(|s| s.to_string())
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data.operationId",
+                    field_name: "merchant_account_metadata.operationId",
                 }.into())
         }
 
@@ -382,7 +382,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let operation_id = if let Some(metadata) = req.resource_common_data.connector_meta_data.as_ref() {
+            let operation_id = if let Some(metadata) = req.resource_common_data.merchant_account_metadata.as_ref() {
                 // Try to use dynamic selection based on psync_flow
                 nexixpay::get_payment_id(
                     Some(metadata.peek().clone()),
@@ -433,7 +433,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let operation_id = if let Some(metadata) = req.resource_common_data.connector_meta_data.as_ref() {
+            let operation_id = if let Some(metadata) = req.resource_common_data.merchant_account_metadata.as_ref() {
                 // Try to get authorization operation ID from metadata
                 nexixpay::get_payment_id(
                     Some(metadata.peek().clone()),
@@ -491,7 +491,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let operation_id = if let Some(metadata) = req.resource_common_data.connector_meta_data.as_ref() {
+            let operation_id = if let Some(metadata) = req.resource_common_data.merchant_account_metadata.as_ref() {
                 // Try to get authorization operation ID from metadata
                 nexixpay::get_payment_id(
                     Some(metadata.peek().clone()),

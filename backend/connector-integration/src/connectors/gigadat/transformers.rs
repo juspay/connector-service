@@ -32,17 +32,14 @@ impl TryFrom<&Option<common_utils::pii::SecretSerdeValue>> for GigadatConnectorM
     fn try_from(
         meta_data: &Option<common_utils::pii::SecretSerdeValue>,
     ) -> Result<Self, Self::Error> {
-        let metadata: Self = meta_data
-            .clone()
-            .map(|data| {
-                serde_json::from_value::<Self>(data.expose()).change_context(
-                    ConnectorError::InvalidConnectorConfig {
-                        config: "merchant_connector_account.metadata",
-                    },
-                )
-            })
-            .transpose()?
-            .unwrap_or_default();
+        let metadata: Self = match meta_data.clone() {
+            Some(data) => serde_json::from_value::<Self>(data.expose()).map_err(|_| {
+                Report::from(ConnectorError::InvalidConnectorConfig {
+                    config: "merchant_connector_account.metadata",
+                })
+            })?,
+            None => Self::default(),
+        };
         Ok(metadata)
     }
 }
@@ -235,9 +232,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Get metadata for site - try connector_meta_data first, then fallback to request metadata
+        // Get metadata for site - try merchant_account_metadata first, then fallback to request metadata
         let metadata = GigadatConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_meta_data,
+            &item
+                .router_data
+                .resource_common_data
+                .merchant_account_metadata,
         )
         .or_else(|_| {
             // Try to get site from request metadata
@@ -252,7 +252,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
                 .ok_or_else(|| {
                     Report::from(ConnectorError::InvalidConnectorConfig {
-                        config: "missing 'site' in connector_meta_data or metadata",
+                        config: "missing 'site' in merchant_account_metadata or metadata",
                     })
                 })
         })?;

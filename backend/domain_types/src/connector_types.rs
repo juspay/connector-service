@@ -395,7 +395,7 @@ pub struct PaymentFlowData {
     pub return_url: Option<String>,
     pub address: payment_address::PaymentAddress,
     pub auth_type: AuthenticationType,
-    pub connector_meta_data: Option<SecretSerdeValue>,
+    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub amount_captured: Option<i64>,
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
@@ -586,10 +586,10 @@ impl PaymentFlowData {
             .ok_or_else(missing_field_err("billing.address"))
     }
 
-    pub fn get_connector_meta(&self) -> Result<SecretSerdeValue, Error> {
-        self.connector_meta_data
+    pub fn get_merchant_account_metadata(&self) -> Result<SecretSerdeValue, Error> {
+        self.merchant_account_metadata
             .clone()
-            .ok_or_else(missing_field_err("connector_meta_data"))
+            .ok_or_else(missing_field_err("merchant_account_metadata"))
     }
 
     pub fn get_session_token(&self) -> Result<String, Error> {
@@ -815,7 +815,7 @@ impl PaymentFlowData {
     where
         T: serde::de::DeserializeOwned,
     {
-        self.get_connector_meta()?
+        self.get_merchant_account_metadata()?
             .parse_value(std::any::type_name::<T>())
             .change_context(ConnectorError::NoConnectorMetaData)
     }
@@ -1676,7 +1676,7 @@ pub struct RefundFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
     pub access_token: Option<AccessTokenResponseData>,
-    pub connector_meta_data: Option<SecretSerdeValue>,
+    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub test_mode: Option<bool>,
     pub payment_method: Option<PaymentMethod>,
 }

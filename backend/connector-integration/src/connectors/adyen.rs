@@ -420,7 +420,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
@@ -460,7 +460,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/details"))
         }
@@ -497,7 +497,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/{id}/captures"))
         }
@@ -551,7 +551,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/{id}/cancels"))
         }
@@ -581,7 +581,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and merchant_account_metadata fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/defendDispute"))
@@ -857,7 +857,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_refunds(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!(
                 "{endpoint}{ADYEN_API_VERSION}/payments/{connector_payment_id}/refunds",
@@ -892,7 +892,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
@@ -922,7 +922,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and merchant_account_metadata fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/acceptDispute"))
@@ -953,7 +953,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and merchant_account_metadata fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"))
@@ -987,7 +987,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.merchant_account_metadata,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }

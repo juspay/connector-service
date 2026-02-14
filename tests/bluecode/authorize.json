@@ -45,6 +45,6 @@
     "ip_address": "13.232.74.226"
   },
   "metadata": {
-    "connector_meta_data": "{\"shop_name\":\"c2c_bluecode\"}"
+    "merchant_account_metadata": "{\"shop_name\":\"c2c_bluecode\"}"
   }
 }
