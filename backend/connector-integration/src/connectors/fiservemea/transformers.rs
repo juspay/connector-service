@@ -78,6 +78,76 @@ pub struct FiservemeaPaymentsResponse {
     pub currency: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionState {
+    Authorized,
+    Captured,
+    Declined,
+    Checked,
+    CompletedGet,
+    Initialized,
+    Pending,
+    Ready,
+    Template,
+    Settled,
+    Voided,
+    Waiting,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionResult {
+    Approved,
+    Declined,
+    Failed,
+    Waiting,
+    Partial,
+    Fraud,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaExpiryDate {
+    pub month: String,
+    pub year: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaPaymentCard {
+    pub number: Secret<String>,
+    pub security_code: Secret<String>,
+    pub expiry_date: FiservemeaExpiryDate,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaPaymentMethod {
+    pub payment_card: FiservemeaPaymentCard,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaTransactionAmount {
+    pub total: String,
+    pub currency: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaAuthorizeRequest {
+    pub request_type: String,
+    pub transaction_amount: FiservemeaTransactionAmount,
+    pub payment_method: FiservemeaPaymentMethod,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FiservemeaAuthorizeResponse {
+    pub ipg_transaction_id: String,
+    pub transaction_result: FiservemeaTransactionResult,
+    pub transaction_state: FiservemeaTransactionState,
+    pub approved_amount: Option<FiservemeaTransactionAmount>,
+    pub approval_code: Option<String>,
+    pub scheme_response_code: Option<String>,
+    pub error_message: Option<String>,
+}
+
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
