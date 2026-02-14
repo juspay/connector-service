@@ -234,23 +234,20 @@ fn map_fiservemea_status_to_attempt_status(
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<super::FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>, FiservemeaAuthorizeResponse>>
+    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
     for super::FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<
-            super::FiservemeaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
             FiservemeaAuthorizeResponse,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     ) -> Result<Self, Self::Error> {
         let status = map_fiservemea_status_to_attempt_status(
@@ -264,7 +261,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or(item.response.scheme_response_code);
 
         Ok(Self {
-            connector: item.router_data.connector,
+            connector: Self {
+                amount_converter: &common_utils::types::StringMajorUnitForConnector,
+                authorize: &crate::connectors::macros::Bridge::<
+                    crate::connectors::macros::FiservemeaAuthorizeRequestTemplating,
+                    crate::connectors::macros::FiservemeaAuthorizeResponseTemplating,
+                    T,
+                >(std::marker::PhantomData),
+            },
             router_data: RouterDataV2 {
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
@@ -278,9 +282,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }),
                 resource_common_data: PaymentFlowData {
                     status,
-                    ..item.router_data.router_data.resource_common_data
+                    ..item.router_data.resource_common_data
                 },
-                ..item.router_data.router_data
+                ..item.router_data
             },
         })
     }
