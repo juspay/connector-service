@@ -193,7 +193,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
         let amount_major = converter
             .convert(item.request.minor_amount, item.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        let amount_str = amount_major.to_string();
+        let amount_str = amount_major.0.to_string();
 
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
