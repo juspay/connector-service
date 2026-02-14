@@ -14,9 +14,9 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
-use transformers::{
-    self as fiservemea, FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
-};
+use transformers as fiservemea;
+
+use super::macros;
 
 use crate::with_error_response_body;
 
