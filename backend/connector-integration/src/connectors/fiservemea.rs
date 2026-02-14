@@ -25,27 +25,11 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-#[derive(Debug, Clone)]
-pub struct Fiservemea<T: PaymentMethodDataTypes> {
-    payment_method_type: std::marker::PhantomData<T>,
-}
-
-impl<T: PaymentMethodDataTypes> Fiservemea<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            payment_method_type: std::marker::PhantomData,
-        }
-    }
-}
-
 // =============================================================================
 // MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
 // =============================================================================
 // Primary authorize implementation - customize as needed
 // =============================================================================
-// MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
-// =============================================================================
-// Primary authorize implementation - customize as needed
 
 macros::create_all_prerequisites!(
     connector_name: Fiservemea,
