@@ -3,7 +3,7 @@ use common_utils::crypto::SignMessage;
 use common_enums::AttemptStatus;
 use common_utils::types::{AmountConvertor, FloatMajorUnitForConnector};
 use domain_types::{
-    connector_flow::{Authorize, FlowTypes},
+    connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -14,7 +14,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::fiservemea::FiservemeaRouterData, types::ResponseRouterData};
+use crate::{connectors::fiservemea::FiservemeaRouterData, connectors::macros::FlowTypes, types::ResponseRouterData};
 
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
