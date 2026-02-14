@@ -316,3 +316,21 @@ impl<RD: FlowTypes, T: PaymentMethodDataTypes> FlowTypes for FiservemeaRouterDat
     type Request = RD::Request;
     type Response = RD::Response;
 }
+
+impl<T: PaymentMethodDataTypes> 
+    TryFrom<ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservemeaAuthorizeResponse, FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
+    ) -> Result<Self, Self::Error> {
+        let response_router_data = ResponseRouterData {
+            response: item.response,
+            http_code: item.http_code,
+            router_data: item.router_data.router_data,
+        };
+        RouterDataV2::try_from(response_router_data)
+    }
+}
