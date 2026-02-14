@@ -1,4 +1,4 @@
-use crate::types::ResponseRouterData;
+use crate::{connectors::fiservemea::FiservemeaRouterData, types::ResponseRouterData};
 use common_enums::AttemptStatus;
 use domain_types::{
     connector_flow::Authorize,
@@ -44,32 +44,6 @@ pub struct FiservemeaPaymentsRequest {
     pub reference: String,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaPaymentsRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            amount: item.request.minor_amount.get_amount_as_i64(),
-            currency: item.request.currency.to_string(),
-            reference: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-        })
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FiservemeaPaymentsResponse {
     pub id: String,
@@ -78,16 +52,50 @@ pub struct FiservemeaPaymentsResponse {
     pub currency: String,
 }
 
+pub fn map_fiservemea_status(status: &str) -> AttemptStatus {
+    match status.to_lowercase().as_str() {
+        "succeeded" | "completed" | "captured" => AttemptStatus::Charged,
+        "authorized" => AttemptStatus::Authorized,
+        "pending" | "processing" => AttemptStatus::Pending,
+        "failed" | "error" | "declined" => AttemptStatus::Failure,
+        "cancelled" | "voided" => AttemptStatus::Voided,
+        _ => AttemptStatus::Pending,
+    }
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        &FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservemeaPaymentsRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            amount: item.router_data.request.minor_amount.get_amount_as_i64(),
+            currency: item.router_data.request.currency.to_string(),
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        })
+    }
+}
+
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
             FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -96,21 +104,10 @@ impl<T: PaymentMethodDataTypes>
     fn try_from(
         item: ResponseRouterData<
             FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.status.as_str() {
-            "succeeded" | "completed" => AttemptStatus::Charged,
-            "pending" | "processing" => AttemptStatus::Pending,
-            "failed" | "error" => AttemptStatus::Failure,
-            "cancelled" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
-        };
+        let status = map_fiservemea_status(&item.response.status);
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
