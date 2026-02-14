@@ -117,7 +117,7 @@ impl<T: PaymentMethodDataTypes>
             PaymentMethodData::Card(card) => card,
             _ => return Err(error_stack::report!(errors::ConnectorError::NotSupported {
                 message: "Only card payments are supported".to_string(),
-                connector: "fiservemea".to_string(),
+                connector: "fiservemea",
             })),
         };
 
