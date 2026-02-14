@@ -33,13 +33,6 @@ pub struct Fiservemea<T: PaymentMethodDataTypes> {
     payment_method_type: std::marker::PhantomData<T>,
 }
 
-impl<T: PaymentMethodDataTypes> Fiservemea<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            payment_method_type: std::marker::PhantomData,
-        }
-    }
-}
 
 // =============================================================================
 // MACRO PREREQUISITES
