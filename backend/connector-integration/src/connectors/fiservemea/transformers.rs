@@ -1,6 +1,5 @@
 use common_utils::crypto::SignMessage;
 
-use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
 use common_utils::types::{AmountConvertor, FloatMajorUnitForConnector};
 use domain_types::{
