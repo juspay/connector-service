@@ -15,6 +15,10 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers as fiservemea;
+use transformers::{
+    FiservemeaAuthorizeRequest,
+    FiservemeaAuthorizeResponse,
+};
 
 use super::macros;
 
