@@ -88,7 +88,7 @@ pub struct FiservemeaAuthorizeRequest<T> {
     pub payment_method: FiservemeaPaymentMethod<T>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaTransactionAmount {
     pub total: String,
@@ -193,6 +193,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
         let amount_major = converter
             .convert(item.request.minor_amount, item.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let amount_str = amount_major.to_string();
 
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
