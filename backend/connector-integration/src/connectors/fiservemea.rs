@@ -16,6 +16,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers as fiservemea;
 
+use super::macros;
+
 use crate::with_error_response_body;
 
 pub(crate) mod headers {
