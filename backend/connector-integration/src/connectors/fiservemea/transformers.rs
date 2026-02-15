@@ -138,7 +138,7 @@ pub struct FiservemeaAuthorizeRequest {
     pub payment_method: FiservemeaPaymentMethod,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct FiservemeaAuthorizeResponse {
     pub ipg_transaction_id: String,
     pub transaction_result: FiservemeaTransactionResult,
