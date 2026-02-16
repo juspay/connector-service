@@ -390,8 +390,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         generic_type: T,
         [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
         other_functions: {
-            fn get_headers(...) -> CustomResult<...> { ... }
-            fn get_url(...) -> CustomResult<String, ...> { ... }
+            fn get_headers(
+                &self,
+                req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+                self.build_headers(req)
+            }
+            fn get_url(
+                &self,
+                req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            ) -> CustomResult<String, errors::ConnectorError> {
+                Ok(format!("{}/ipp/payments-gateway/v2/payments", self.base_url(&req.connector)))
+            }
         }
     );
 }
