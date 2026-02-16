@@ -2181,9 +2181,6 @@ pub(crate) fn get_apple_pay_session(
         connector_merchant_id: None,
     }));
 
-    let session_token_str = serde_json::to_string(&session_token)
-        .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
     Ok(RouterDataV2 {
         flow: std::marker::PhantomData,
         resource_common_data: item.router_data.resource_common_data.clone(),
@@ -2191,8 +2188,7 @@ pub(crate) fn get_apple_pay_session(
         request: item.router_data.request.clone(),
         response: Ok(PaymentCreateOrderResponse {
             order_id: instance_id,
-            session_token: Some(session_token_str),
-            connector_metadata: None,
+            session_token: Some(session_token),
         }),
     })
 }
@@ -2239,9 +2235,6 @@ pub(crate) fn get_google_pay_session(
         }),
     ));
 
-    let session_token_str = serde_json::to_string(&session_token)
-        .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
     Ok(RouterDataV2 {
         flow: std::marker::PhantomData,
         resource_common_data: item.router_data.resource_common_data.clone(),
@@ -2249,8 +2242,7 @@ pub(crate) fn get_google_pay_session(
         request: item.router_data.request.clone(),
         response: Ok(PaymentCreateOrderResponse {
             order_id: instance_id,
-            session_token: Some(session_token_str),
-            connector_metadata: None,
+            session_token: Some(session_token),
         }),
     })
 }

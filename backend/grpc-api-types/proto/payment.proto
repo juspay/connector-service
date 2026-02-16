@@ -2157,10 +2157,7 @@ message PaymentServiceCreateOrderResponse {
   optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
 
   // Wallet Session Token
-  optional string session_token = 10; // JSON serialized session token for wallet payments (Apple Pay, Google Pay)
-
-  // Connector Metadata
-  optional SecretString connector_metadata = 11; // Additional connector-specific metadata
+  optional SessionToken session_token = 10; // JSON serialized session token for wallet payments (Apple Pay, Google Pay)
 }
 
 // Request message for processing a refund.

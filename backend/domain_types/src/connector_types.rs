@@ -882,6 +882,10 @@ impl PaymentFlowData {
         }
         self
     }
+    pub fn set_session_token(mut self, session_token: Option<String>) -> Self {
+        self.session_token = session_token;
+        self
+    }
     pub fn set_payment_method_token(mut self, payment_method_token: Option<String>) -> Self {
         if payment_method_token.is_some() && self.payment_method_token.is_none() {
             self.payment_method_token =
@@ -1420,9 +1424,7 @@ pub struct PaymentCreateOrderData {
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
     /// Optional session token for wallet flows (Apple Pay, Google Pay)
-    pub session_token: Option<String>,
-    /// Optional connector metadata for storing additional response data
-    pub connector_metadata: Option<SecretSerdeValue>,
+    pub session_token: Option<SessionToken>,
 }
 
 #[derive(Debug, Clone)]

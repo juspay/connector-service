@@ -21,7 +21,7 @@ use domain_types::{
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
-        RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
+        RefundsData, RefundsResponseData, RepeatPaymentData, SessionToken, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
@@ -410,7 +410,7 @@ impl Payments {
                 shadow_mode: metadata_payload.shadow_mode,
             };
 
-            let order_id = Box::pin(self.handle_order_creation(
+            let (order_id, session_token) = Box::pin(self.handle_order_creation(
                 config,
                 connector_data.clone(),
                 &payment_flow_data,
@@ -423,7 +423,14 @@ impl Payments {
             .await?;
 
             tracing::info!("Order created successfully with order_id: {}", order_id);
-            payment_flow_data.set_order_reference_id(Some(order_id))
+
+            // Serialize session token to JSON string if present
+            let session_token_str =
+                session_token.map(|token| serde_json::to_string(&token).unwrap_or_default());
+
+            payment_flow_data
+                .set_order_reference_id(Some(order_id))
+                .set_session_token(session_token_str)
         } else {
             payment_flow_data
         };
@@ -902,7 +909,7 @@ impl Payments {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-    ) -> Result<String, PaymentAuthorizationError> {
+    ) -> Result<(String, Option<SessionToken>), PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -1021,17 +1028,7 @@ impl Payments {
             Ok(PaymentCreateOrderResponse {
                 order_id,
                 session_token,
-                connector_metadata,
-            }) => {
-                if let Some(token) = session_token {
-                    let mut updated_flow_data = payment_flow_data.clone();
-                    updated_flow_data.session_token = Some(token);
-                    if let Some(metadata) = connector_metadata {
-                        updated_flow_data.connector_meta_data = Some(metadata);
-                    }
-                }
-                Ok(order_id)
-            }
+            }) => Ok((order_id, session_token)),
             Err(e) => Err(PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(e.message.clone()),
@@ -4678,23 +4675,26 @@ pub fn generate_create_order_response(
         Ok(PaymentCreateOrderResponse {
             order_id,
             session_token,
-            connector_metadata,
-        }) => PaymentServiceCreateOrderResponse {
-            order_id: Some(grpc_api_types::payments::Identifier {
-                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(order_id)),
-            }),
-            status: grpc_status.into(),
-            error_code: None,
-            error_message: None,
-            status_code: 200,
-            response_headers,
-            response_ref_id: None,
-            raw_connector_request,
-            raw_connector_response,
-            session_token,
-            connector_metadata: connector_metadata
-                .map(|metadata| metadata.map(|value| value.to_string())),
-        },
+        }) => {
+            let grpc_session_token = session_token
+                .map(grpc_api_types::payments::SessionToken::foreign_try_from)
+                .transpose()?;
+
+            PaymentServiceCreateOrderResponse {
+                order_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(order_id)),
+                }),
+                status: grpc_status.into(),
+                error_code: None,
+                error_message: None,
+                status_code: 200,
+                response_headers,
+                response_ref_id: None,
+                raw_connector_request,
+                raw_connector_response,
+                session_token: grpc_session_token,
+            }
+        }
         Err(err) => PaymentServiceCreateOrderResponse {
             order_id: Some(grpc_api_types::payments::Identifier {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(())),
