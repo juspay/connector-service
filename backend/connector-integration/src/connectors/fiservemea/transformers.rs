@@ -5,11 +5,11 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::{ExposeInterface, Maskable};
+use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -49,7 +49,7 @@ pub struct FiservemeaAuthorizeRequest {
     pub order: Option<FiservemeaOrder>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaTransactionAmount {
     pub total: String,
@@ -197,7 +197,7 @@ impl<T: PaymentMethodDataTypes>
                 };
 
                 FiservemeaPaymentMethod::Card(FiservemeaCard {
-                    number: card.card_number.0.clone(),
+                    number: hyperswitch_masking::Secret::new(card.card_number.peek().to_string()),
                     security_code: card.card_cvc.clone(),
                     expiry_date,
                 })
