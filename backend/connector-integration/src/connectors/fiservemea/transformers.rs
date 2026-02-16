@@ -90,7 +90,7 @@ pub struct FiservemeaOrder {
     pub order_id: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaAuthorizeResponse {
     pub ipg_transaction_id: String,
