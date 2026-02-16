@@ -30,6 +30,8 @@ use ring::hmac;
 use serde::Serialize;
 use time::OffsetDateTime;
 use transformers as fiservemea;
+use transformers::FiservemeaAuthorizeRequest;
+use transformers::FiservemeaAuthorizeResponse;
 use uuid::Uuid;
 
 use super::macros;
