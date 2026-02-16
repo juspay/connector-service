@@ -172,7 +172,7 @@ pub fn map_fiservemea_status_to_attempt_status(
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaAuthorizeRequest
+    > for FiservemeaAuthorizeRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
