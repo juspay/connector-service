@@ -131,7 +131,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         let client_request_id = uuid::Uuid::new_v4().to_string();
-        let timestamp = chrono::Utc::now().timestamp_millis().to_string();
+        let timestamp = Utc::now().timestamp_millis().to_string();
         let signature = format!(
             "{}{}{}",
             auth.api_key.expose(),
