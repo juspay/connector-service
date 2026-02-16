@@ -292,25 +292,25 @@ macros::macro_connector_implementation!(
 
             match source_channel.as_str() {
                 "WEB" => {
-                    if let Some(bi) = browser_info {
+                    browser_info.map(|bi| {
                         if let Some(user_agent) = &bi.user_agent {
                             headers.push((headers::USER_AGENT.to_string(), user_agent.clone().into()));
                         }
                         if let Some(referer) = &bi.referer {
                             headers.push((headers::X_MERCHANT_DOMAIN.to_string(), referer.clone().into()));
                         }
-                    }
+                    });
                 }
                 "ANDROID" | "IOS" => {
                     let is_android = source_channel == "ANDROID";
 
-                    if let Some(user_agent) = browser_info.and_then(|bi| bi.user_agent.as_ref()) {
+                    browser_info.and_then(|bi| bi.user_agent.as_ref()).map(|user_agent| {
                         let version = match is_android {
                             true => phonepe::split_ua(user_agent),
                             false => user_agent.clone(),
                         };
                         headers.push((headers::X_SOURCE_CHANNEL_VERSION.to_string(), version.into()));
-                    }
+                    });
 
                     if let PaymentMethodData::Upi(upi_data) = &req.request.payment_method_data {
                         let app_id_opt = match upi_data {
