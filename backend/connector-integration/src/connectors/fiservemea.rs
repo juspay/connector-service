@@ -40,9 +40,7 @@ macros::create_all_prerequisites!(
             router_data: domain_types::router_data_v2::RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
     ],
-    amount_converters: [
-        amount_converter: StringMajorUnit
-    ],
+    amount_converters: [],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
