@@ -39,7 +39,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: FiservemeaAuthorizeRequest<T>,
+            request_body: FiservemeaAuthorizeRequest,
             response_body: FiservemeaAuthorizeResponse,
             router_data: domain_types::router_data_v2::RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         )
