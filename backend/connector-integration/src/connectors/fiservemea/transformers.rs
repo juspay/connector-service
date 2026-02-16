@@ -107,7 +107,7 @@ pub enum FiservemeaPaymentMethod {
     Card(FiservemeaCard),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaAuthorizeResponse {
     pub ipg_transaction_id: String,
