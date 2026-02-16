@@ -1,6 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::{crypto::hmac_sha256, ext_traits::ByteSliceExt};
+use common_utils::ext_traits::ByteSliceExt;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -11,7 +11,6 @@ use domain_types::{
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
@@ -33,8 +32,8 @@ impl FiservemeaAuthType {
             timestamp,
             request_body
         );
-        let hmac_bytes = hmac_sha256(self.api_secret.expose().as_bytes(), signature_string.as_bytes());
-        base64::encode(hmac_bytes)
+        let hmac_bytes = common_utils::crypto::hmac_sha256(self.api_secret.expose().as_bytes(), signature_string.as_bytes());
+        base64::engine::general_purpose::STANDARD.encode(hmac_bytes)
     }
 }
 
@@ -62,10 +61,10 @@ pub struct FiservemeaErrorResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest<T> {
+pub struct FiservemeaAuthorizeRequest {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod<T>,
+    pub payment_method: FiservemeaPaymentMethod,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub order: Option<FiservemeaOrder>,
 }
@@ -180,7 +179,7 @@ pub fn map_fiservemea_status_to_attempt_status(
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaAuthorizeRequest<T>
+    > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -198,7 +197,7 @@ impl<T: PaymentMethodDataTypes>
                 return Err(error_stack::report!(
                     errors::ConnectorError::NotSupported {
                         message: "Only card payment method is supported".to_string(),
-                        connector: "fiservemea".to_string(),
+                        connector: "fiservemea",
                     }
                 ))
             }
