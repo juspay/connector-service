@@ -102,6 +102,81 @@ pub struct FiservemeaOrder {
     pub order_id: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaAuthorizeResponse {
+    pub ipg_transaction_id: String,
+    pub transaction_result: FiservemeaTransactionResult,
+    pub transaction_state: FiservemeaTransactionState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approval_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scheme_response_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub processor: Option<FiservemeaProcessor>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionResult {
+    Approved,
+    Declined,
+    Failed,
+    Waiting,
+    Partial,
+    Fraud,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionState {
+    Authorized,
+    Captured,
+    Declined,
+    Checked,
+    CompletedGet,
+    Initialized,
+    Pending,
+    Ready,
+    Template,
+    Settled,
+    Voided,
+    Waiting,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaProcessor {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approval_code: Option<String>,
+}
+
+pub fn map_fiservemea_status_to_attempt_status(
+    result: &FiservemeaTransactionResult,
+    state: &FiservemeaTransactionState,
+) -> AttemptStatus {
+    match (result, state) {
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Authorized) => {
+            AttemptStatus::Authorized
+        }
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Captured) => {
+            AttemptStatus::Charged
+        }
+        (FiservemeaTransactionResult::Declined, _)
+        | (FiservemeaTransactionResult::Failed, _)
+        | (FiservemeaTransactionResult::Fraud, _) => AttemptStatus::Failure,
+        (FiservemeaTransactionResult::Waiting, _)
+        | (FiservemeaTransactionResult::Partial, _) => AttemptStatus::Pending,
+        (_, FiservemeaTransactionState::Voided) => AttemptStatus::Voided,
+        (_, FiservemeaTransactionState::Pending) => AttemptStatus::Pending,
+        _ => AttemptStatus::Pending,
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct FiservemeaPaymentsRequest {
     pub amount: i64,
