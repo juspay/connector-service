@@ -383,9 +383,9 @@ macros::macro_connector_implementation!(
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/ipp/payments-gateway/v2/payments", self.base_url(&req.connector)))
+            Ok("https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments".to_string())
         }
     }
 );
