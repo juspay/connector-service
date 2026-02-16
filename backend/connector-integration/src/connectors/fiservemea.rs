@@ -375,6 +375,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Fiservemea<T>
 {
+    macros::macro_connector_implementation!(
+        connector_default_implementations: [get_content_type, get_error_response_v2],
+        connector: Fiservemea,
+        curl_request: Json(fiservemea::FiservemeaAuthorizeRequest),
+        curl_response: fiservemea::FiservemeaAuthorizeResponse,
+        flow_name: Authorize,
+        resource_common_data: PaymentFlowData,
+        flow_request: PaymentsAuthorizeData<T>,
+        flow_response: PaymentsResponseData,
+        http_method: Post,
+        generic_type: T,
+        [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+        other_functions: {
+            fn get_headers(...) -> CustomResult<...> { ... }
+            fn get_url(...) -> CustomResult<String, ...> { ... }
+        }
+    );
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
