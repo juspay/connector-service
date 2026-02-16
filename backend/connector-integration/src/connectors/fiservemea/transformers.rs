@@ -1,6 +1,6 @@
 use crate::{connectors::fiservemea::FiservemeaRouterData, types::ResponseRouterData};
 use common_enums::AttemptStatus;
-use common_utils::types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector};
+use common_utils::types::{AmountConvertor, StringMajorUnitForConnector};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -10,7 +10,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
