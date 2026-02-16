@@ -97,30 +97,10 @@ macros::macro_connector_implementation!(
         }
     }
 );
-    amount_converters: [
-        amount_converter: StringMajorUnit
-    ],
-    member_functions: {
-        /// Build headers with Fiserv signature-based authentication
-        pub fn build_headers(
-            &self,
-            api_key: &str,
-        ) -> Vec<(String, Maskable<String>)> {
-            vec![
-                (
-                    headers::CONTENT_TYPE.to_string(),
-                    self.common_get_content_type().to_string().into(),
-                ),
-                (
-                    headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {api_key}").into(),
-                ),
-            ]
-        }
-    }
-);
 
-macros::macro_connector_implementation!(
+// =============================================================================
+// CONNECTOR COMMON IMPLEMENTATION
+// =============================================================================
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Fiservemea,
     curl_request: Json(FiservemeaAuthorizeRequest),
