@@ -30,9 +30,7 @@ use ring::hmac;
 use serde::Serialize;
 use time::OffsetDateTime;
 use transformers as fiservemea;
-use transformers::{
-    FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse, FiservemeaAuthType,
-};
+use transformers::{FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse};
 use uuid::Uuid;
 
 use super::macros;
@@ -44,19 +42,6 @@ pub(crate) mod headers {
     pub(crate) const CLIENT_REQUEST_ID: &str = "Client-Request-Id";
     pub(crate) const TIMESTAMP: &str = "Timestamp";
     pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
-}
-
-#[derive(Debug, Clone)]
-pub struct Fiservemea<T: PaymentMethodDataTypes> {
-    payment_method_type: std::marker::PhantomData<T>,
-}
-
-impl<T: PaymentMethodDataTypes> Fiservemea<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            payment_method_type: std::marker::PhantomData,
-        }
-    }
 }
 
 macros::create_all_prerequisites!(
