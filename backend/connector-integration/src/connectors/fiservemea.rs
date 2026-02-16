@@ -70,7 +70,7 @@ macros::create_all_prerequisites!(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(format!("{}/ipp/payments-gateway/v2/payments", self.base_url(&_req.connector)))
+            Ok("https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments".to_string())
         }
     }
 );
