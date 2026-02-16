@@ -1028,11 +1028,6 @@ message Efecty {
   // Fields will be added as needed for Efecty integration
 }
 
-// E-Voucher - Generic electronic voucher payment
-message EVoucher {
-  // Fields will be added as needed for E-Voucher integration
-}
-
 // Indomaret - Indonesian convenience store payment
 message Indomaret {
   // Fields will be added as needed for Indomaret integration
