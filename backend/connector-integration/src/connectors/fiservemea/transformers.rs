@@ -51,10 +51,10 @@ pub struct FiservemeaErrorResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest {
+pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes> {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod,
+    pub payment_method: FiservemeaPaymentMethod<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub order: Option<FiservemeaOrder>,
 }
@@ -68,13 +68,13 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentMethod {
-    pub payment_card: FiservemeaCard,
+pub struct FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
+    pub payment_card: FiservemeaCard<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaCard {
+pub struct FiservemeaCard<T: PaymentMethodDataTypes> {
     pub number: Secret<String>,
     pub security_code: Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
@@ -177,7 +177,6 @@ fn map_fiservemea_status_to_attempt_status(
         }
         (FiservemeaTransactionResult::Fraud, _) => AttemptStatus::Failure,
         (_, FiservemeaTransactionState::Voided) => AttemptStatus::Voided,
-        _ => AttemptStatus::Pending,
     }
 }
 
@@ -192,7 +191,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for FiservemeaAuthorizeRequest
+    > for FiservemeaAuthorizeRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
