@@ -165,7 +165,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let request_type = match router_data.request.capture_method {
             Some(common_enums::CaptureMethod::Automatic) => "PaymentCardSaleTransaction".to_string(),
-            Some(common_enums::CaptureMethod::Manual) | None => "PaymentCardPreAuthTransaction".to_string(),
+            Some(common_enums::CaptureMethod::Manual)
+            | Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled)
+            | Some(common_enums::CaptureMethod::SequentialAutomatic)
+            | None => "PaymentCardPreAuthTransaction".to_string(),
         };
 
         let order = Some(FiservemeaOrder {
