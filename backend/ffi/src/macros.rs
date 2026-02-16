@@ -31,7 +31,7 @@
 /// }
 /// ```
 #[macro_export]
-macro_rules! napi_handler {
+macro_rules! napi_wrapper {
     ($fn_name:ident, $req_type:ty, $resp_type:ty, $flow_fn:ident) => {
         paste::paste! {
                         #[cfg(feature = "napi")]
@@ -41,7 +41,7 @@ macro_rules! napi_handler {
                             extracted_metadata: napi::JsString,
                         ) -> napi::Result<String> {
 
-                            use crate::types::{MetadataPayload, RequestData};
+                            use crate::types::{FFIMetadataPayload, FFIRequestData};
                             use crate::utils::create_hardcoded_masked_metadata;
 
                             // Convert inputs to Rust strings
@@ -68,13 +68,13 @@ macro_rules! napi_handler {
                             let masked_metadata = create_hardcoded_masked_metadata();
 
                             // Parse metadata
-                            let extracted_metadata_data: MetadataPayload =
+                            let extracted_metadata_data: FFIMetadataPayload =
                                 serde_json::from_str(&extracted_metadata_str)
                                     .map_err(|e| napi::Error::from_reason(format!(
                                         "Invalid metadata JSON: {e}"
                                     )))?;
 
-                            let request_data = RequestData {
+                            let request_data = FFIRequestData {
                                 payload: payload_data,
                                 extracted_metadata: extracted_metadata_data,
                                 masked_metadata,
@@ -130,7 +130,7 @@ macro_rules! payment_flow {
         $error_code:expr
     ) => {
         paste::paste! {
-            fn $fn_name<
+            pub fn $fn_name<
                 T: domain_types::payment_method_data::PaymentMethodDataTypes
                     + Default
                     + Eq
@@ -210,7 +210,7 @@ macro_rules! payment_flow {
 ///
 /// This generates the `authorize_flow` function that wraps the `authorize` function.
 #[macro_export]
-macro_rules! payment_flow_wrapper {
+macro_rules! payment_flow_handler {
     (
         $fn_name:ident,
         $inner_fn_name:ident,
@@ -219,14 +219,14 @@ macro_rules! payment_flow_wrapper {
     ) => {
         paste::paste! {
             pub fn $fn_name(
-                request: $crate::flows::payments::RequestData<$req_type>,
+                request: $crate::types::FFIRequestData<$req_type>,
             ) -> Result<Option<common_utils::request::Request>, common_crate::error::PaymentAuthorizationError> {
                 let metadata_payload = request.extracted_metadata;
                 let metadata = &request.masked_metadata;
                 let payload = request.payload;
 
                 // Load embedded development config (baked into binary at build time)
-                let config = $crate::utils::load_development_config($crate::flows::payments::EMBEDDED_DEVELOPMENT_CONFIG)?;
+                let config = $crate::utils::load_config($crate::handlers::payments::EMBEDDED_DEVELOPMENT_CONFIG)?;
 
                 $inner_fn_name::<$generic_type>(
                     payload,
@@ -240,6 +240,6 @@ macro_rules! payment_flow_wrapper {
     };
 }
 
-pub(crate) use napi_handler;
+pub(crate) use napi_wrapper;
 pub(crate) use payment_flow;
-pub(crate) use payment_flow_wrapper;
+pub(crate) use payment_flow_handler;

@@ -2,7 +2,7 @@ use common_crate::{configs::Config, error::PaymentAuthorizationError};
 use common_utils::consts;
 use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
 use domain_types::{
-    connector_types::{ConnectorEnum, PaymentFlowData, PaymentsResponseData},
+    connector_types::{PaymentFlowData, PaymentsResponseData},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -84,9 +84,7 @@ fn convert_to_metadata_value(header_value: &str) -> Result<MetadataValue<Ascii>,
 
 /// Load development config from the embedded config string
 /// This avoids runtime path lookup by embedding the config at build time
-pub fn load_development_config(
-    embedded_config: &str,
-) -> Result<Arc<Config>, PaymentAuthorizationError> {
+pub fn load_config(embedded_config: &str) -> Result<Arc<Config>, PaymentAuthorizationError> {
     toml::from_str(embedded_config).map(Arc::new).map_err(|e| {
         PaymentAuthorizationError::new(
             grpc_api_types::payments::PaymentStatus::Pending,
