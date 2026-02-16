@@ -131,7 +131,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         )])
     }
 
-    fn get_error_response_v2(
+    fn build_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
