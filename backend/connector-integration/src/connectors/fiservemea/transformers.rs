@@ -1,5 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
+use common_utils::{crypto::hmac_sha256, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -10,10 +11,31 @@ use domain_types::{
 };
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
     pub api_key: Secret<String>,
+    pub api_secret: Secret<String>,
+}
+
+impl FiservemeaAuthType {
+    pub fn generate_message_signature(
+        &self,
+        client_request_id: &str,
+        timestamp: u64,
+        request_body: &str,
+    ) -> String {
+        let signature_string = format!(
+            "{}{}{}{}",
+            self.api_key.expose(),
+            client_request_id,
+            timestamp,
+            request_body
+        );
+        let hmac_bytes = hmac_sha256(self.api_secret.expose().as_bytes(), signature_string.as_bytes());
+        base64::encode(hmac_bytes)
+    }
 }
 
 impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
@@ -21,8 +43,9 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, api_secret } => Ok(Self {
                 api_key: api_key.to_owned(),
+                api_secret: api_secret.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
