@@ -14,6 +14,13 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
+pub trait FlowTypes {
+    type Flow;
+    type FlowCommonData;
+    type Request;
+    type Response;
+}
+
 pub struct FiservemeaRouterData<RD: FlowTypes, T: PaymentMethodDataTypes> {
     pub connector: crate::connectors::fiservemea::Fiservemea<T>,
     pub router_data: RD,
