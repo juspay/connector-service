@@ -16,7 +16,7 @@ use interfaces::{
 use serde::Serialize;
 use transformers as fiservemea;
 
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::with_error_response_body;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
