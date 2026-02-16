@@ -1,4 +1,5 @@
 use crate::types::ResponseRouterData;
+use base64::Engine;
 use common_enums::AttemptStatus;
 use domain_types::{
     connector_flow::Authorize,
