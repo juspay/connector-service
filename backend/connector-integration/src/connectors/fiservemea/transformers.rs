@@ -23,7 +23,11 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, api_secret } => Ok(Self {
+            ConnectorAuthType::SignatureKey {
+                api_key,
+                api_secret,
+                ..
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
