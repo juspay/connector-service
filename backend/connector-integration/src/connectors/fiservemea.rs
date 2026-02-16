@@ -10,13 +10,13 @@ use domain_types::{
     router_data::ErrorResponse, router_data_v2::RouterDataV2, router_response_types::Response,
     types::Connectors,
 };
+use transformers as fiservemea;
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
-use transformers as fiservemea;
 
 use super::macros;
 use crate::types::ResponseRouterData;
