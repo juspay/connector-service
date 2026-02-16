@@ -327,15 +327,33 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        connector_flow::Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Fiservemea<T>
-{
-}
+super::macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiservemea,
+    curl_request: Json(FiservemeaAuthorizeRequest),
+    curl_response: FiservemeaAuthorizeResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/ipp/payments-gateway/v2/payments", self.base_url(&_req.resource_common_data.connectors)))
+        }
+    }
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
