@@ -153,10 +153,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             ),
         ])
     }
-            headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.expose()).into(),
-        )])
-    }
 
     fn build_error_response(
         &self,
