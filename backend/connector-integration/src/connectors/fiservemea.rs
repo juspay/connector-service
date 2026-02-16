@@ -136,7 +136,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         Ok(domain_types::router_data::ErrorResponse {
             status_code: res.status_code,
-            code: response.code,
+            code: response.code.unwrap_or_default(),
             message: response.message,
             reason: None,
             attempt_status: None,
