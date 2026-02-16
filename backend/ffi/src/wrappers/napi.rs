@@ -1,4 +1,6 @@
-use crate::handlers::payments::{authorize_req_flow, authorize_res_flow, capture_req_flow};
+use crate::handlers::payments::{
+    authorize_req_handler, authorize_res_handler, capture_req_handler,
+};
 use crate::macros::napi_wrapper;
 use crate::types::{FFIApiResponse, FFIMetadataPayload, FFIRequestData};
 use crate::utils::create_hardcoded_masked_metadata;
@@ -14,7 +16,6 @@ mod napi_bindings {
     //     JsRequest,
     //     authorize_req_flow
     // );
-
     #[::napi_derive::napi]
     pub fn authorize_req(payload: String, extracted_metadata: String) -> napi::Result<String> {
         if payload.trim().is_empty() {
@@ -49,7 +50,7 @@ mod napi_bindings {
             masked_metadata,
         };
 
-        let result = authorize_req_flow(request)
+        let result = authorize_req_handler(request)
             .map_err(|e| napi::Error::from_reason(format!("{:?}", e)))?;
         let request =
             result.ok_or_else(|| napi::Error::from_reason("No connector request generated"))?;
@@ -125,7 +126,7 @@ mod napi_bindings {
             masked_metadata,
         };
 
-        authorize_res_flow(request, response)
+        authorize_res_handler(request, response)
             .map_err(|e| napi::Error::from_reason(format!("{:?}", e)))
             .and_then(|response| {
                 serde_json::to_string(&response).map_err(|e| {
@@ -138,7 +139,7 @@ mod napi_bindings {
         capture_req,
         PaymentServiceCaptureRequest,
         JsRequest,
-        capture_req_flow
+        capture_req_handler
     );
 }
 

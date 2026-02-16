@@ -20,7 +20,7 @@ use domain_types::payment_method_data::DefaultPCIHolder;
 // );
 
 // Generate authorize_res_flow handler
-pub fn authorize_req_flow(
+pub fn authorize_req_handler(
     request: FFIRequestData<PaymentServiceAuthorizeRequest>,
 ) -> Result<Option<common_utils::request::Request>, PaymentAuthorizationError> {
     let metadata_payload = request.extracted_metadata;
@@ -38,7 +38,7 @@ pub fn authorize_req_flow(
 }
 
 // Generate authorize_res_flow handler
-pub fn authorize_res_flow(
+pub fn authorize_res_handler(
     request: FFIRequestData<PaymentServiceAuthorizeRequest>,
     response: domain_types::router_response_types::Response,
 ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
@@ -59,7 +59,7 @@ pub fn authorize_res_flow(
 
 // Generate capture_req_flow handler using payment_flow_handler! macro
 payment_flow_handler!(
-    capture_req_flow,
+    capture_req_handler,
     capture_req,
     PaymentServiceCaptureRequest,
     DefaultPCIHolder
