@@ -253,18 +253,10 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FiservemeaPaymentsResponse {
-    pub id: String,
-    pub status: String,
-    pub amount: i64,
-    pub currency: String,
-}
-
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
-            FiservemeaPaymentsResponse,
+            FiservemeaAuthorizeResponse,
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -278,7 +270,7 @@ impl<T: PaymentMethodDataTypes>
 
     fn try_from(
         item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
+            FiservemeaAuthorizeResponse,
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -287,22 +279,17 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.status.as_str() {
-            "succeeded" | "completed" => AttemptStatus::Charged,
-            "pending" | "processing" => AttemptStatus::Pending,
-            "failed" | "error" => AttemptStatus::Failure,
-            "cancelled" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
-        };
+        let status =
+            map_fiservemea_status_to_attempt_status(&item.response.transaction_result, &item.response.transaction_state);
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.id),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: None,
+                network_txn_id: item.response.processor.as_ref().and_then(|p| p.response_code.clone()),
+                connector_response_reference_id: item.response.approval_code,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
