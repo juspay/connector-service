@@ -98,6 +98,7 @@ pub struct LoonioAuthorizeRequest {
     pub transaction_id: String,
     pub payment_method_type: InteracPaymentMethodType,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub locale: Option<String>,
     pub redirect_url: Option<LoonioRedirectUrls>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook_url: Option<String>,
@@ -210,6 +211,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     customer_id: item.router_data.resource_common_data.get_customer_id()?,
                     transaction_id,
                     payment_method_type: InteracPaymentMethodType::InteracEtransfer,
+                    locale: Some("EN".to_string()),
                     redirect_url: Some(redirect_url),
                     webhook_url: Some(item.router_data.request.get_webhook_url()?),
                 })
