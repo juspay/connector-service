@@ -27,8 +27,8 @@ macros::create_all_prerequisites!(
         (
             flow: Authorize,
             request_body: FiservemeaAuthorizeRequest,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             response_body: FiservemeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
     ],
     amount_converters: [],
