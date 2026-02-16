@@ -1501,64 +1501,6 @@ fn get_bank_transfer_request_data<
     Ok(payment_request)
 }
 
-// fn get_wallet_request_data<
-//     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-// >(
-//     item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-//     wallet_data: &WalletData,
-//     amount: StringMajorUnit,
-// ) -> Result<TrustpayPaymentsRequest<T>, Error> {
-//     let return_url = item.request.get_router_return_url()?;
-
-//     println!(">>>>> {:?}", wallet_data.clone());
-
-//     match wallet_data {
-//         WalletData::ApplePay(apple_pay) => {
-//             let wallet_token = apple_pay
-//                 .get_applepay_decoded_payment_data()
-//                 .change_context(ConnectorError::MissingRequiredField {
-//                     field_name: "apple_pay_payment_data",
-//                 })?;
-//             Ok(TrustpayPaymentsRequest::WalletPaymentRequest(Box::new(
-//                 PaymentRequestWallet {
-//                     amount,
-//                     currency: item.request.currency.to_string(),
-//                     wallet_token: Secret::new(wallet_token.peek().to_string()),
-//                     reference: item
-//                         .resource_common_data
-//                         .connector_request_reference_id
-//                         .clone(),
-//                     redirect_url: return_url,
-//                 },
-//             )))
-//         }
-//         WalletData::GooglePay(google_pay) => {
-//             let wallet_token = google_pay
-//                 .tokenization_data
-//                 .get_encrypted_google_pay_token()
-//                 .change_context(ConnectorError::MissingRequiredField {
-//                     field_name: "google_pay_token",
-//                 })?;
-//             Ok(TrustpayPaymentsRequest::WalletPaymentRequest(Box::new(
-//                 PaymentRequestWallet {
-//                     amount,
-//                     currency: item.request.currency.to_string(),
-//                     wallet_token: Secret::new(wallet_token),
-//                     reference: item
-//                         .resource_common_data
-//                         .connector_request_reference_id
-//                         .clone(),
-//                     redirect_url: return_url,
-//                 },
-//             )))
-//         }
-//         _ => Err(ConnectorError::NotImplemented(
-//             utils::get_unimplemented_payment_method_error_message("trustpay"),
-//         )
-//         .into()),
-//     }
-// }
-
 // Implement GetFormData for TrustpayPaymentsRequest to satisfy the macro requirement
 // This will never be called since TrustPay only uses Json and FormUrlEncoded
 impl<T> connectors::macros::GetFormData for TrustpayPaymentsRequest<T>
