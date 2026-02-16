@@ -40,11 +40,11 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        pub fn build_headers(
+        pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let auth = fiservemea::FiservemeaAuthType::try_from(&req.auth)
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = fiservemea::FiservemeaAuthType::try_from(&req.connector_auth_type)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             let client_request_id = uuid::Uuid::new_v4().to_string();
@@ -67,10 +67,10 @@ macros::create_all_prerequisites!(
             ])
         }
 
-        pub fn get_url(
+        pub fn get_url<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, errors::ConnectorError> {
             Ok("https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments".to_string())
         }
     }
