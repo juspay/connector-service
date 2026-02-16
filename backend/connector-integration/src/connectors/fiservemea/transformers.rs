@@ -145,6 +145,24 @@ pub enum FiservemeaTransactionState {
     Waiting,
 }
 
+pub fn map_fiservemea_status_to_attempt_status(
+    result: &FiservemeaTransactionResult,
+    state: &FiservemeaTransactionState,
+) -> AttemptStatus {
+    match (result, state) {
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Authorized) => {
+            AttemptStatus::Authorized
+        }
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Captured) => {
+            AttemptStatus::Charged
+        }
+        (FiservemeaTransactionResult::Declined, _)
+        | (FiservemeaTransactionResult::Failed, _) => AttemptStatus::Failure,
+        (FiservemeaTransactionResult::Waiting, _) => AttemptStatus::Pending,
+        _ => AttemptStatus::Pending,
+    }
+}
+
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
