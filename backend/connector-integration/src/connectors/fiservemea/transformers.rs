@@ -246,7 +246,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let transaction_amount = FiservemeaTransactionAmount {
-            total: amount_total,
+            total: amount_total.0,
             currency: item.request.currency.to_string(),
         };
 
