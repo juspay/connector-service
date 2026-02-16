@@ -41,27 +41,6 @@ impl<T: PaymentMethodDataTypes> Fiservemea<T> {
 // MACRO SETUP
 // =============================================================================
 
-// Helper struct for router data transformation
-pub struct FiservemeaRouterData<T, U> {
-    pub amount: StringMajorUnit,
-    pub router_data: T,
-    pub connector: U,
-}
-
-impl<T, U> TryFrom<(StringMajorUnit, T, U)> for FiservemeaRouterData<T, U> {
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        (amount, router_data, connector): (StringMajorUnit, T, U),
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            amount,
-            router_data,
-            connector,
-        })
-    }
-}
-
 // Set up connector using macros with all framework integrations
 macros::create_all_prerequisites!(
     connector_name: Fiservemea,
