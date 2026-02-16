@@ -14,6 +14,18 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
+pub struct FiservemeaRouterData<RD: FlowTypes, T: PaymentMethodDataTypes> {
+    pub connector: crate::connectors::fiservemea::Fiservemea<T>,
+    pub router_data: RD,
+}
+
+impl<RD: FlowTypes, T: PaymentMethodDataTypes> FlowTypes for FiservemeaRouterData<RD, T> {
+    type Flow = RD::Flow;
+    type FlowCommonData = RD::FlowCommonData;
+    type Request = RD::Request;
+    type Response = RD::Response;
+}
+
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
     pub api_key: Secret<String>,
@@ -83,20 +95,22 @@ pub struct FiservemeaOrder {
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let payment_method_data = item
+            .router_data
             .request
             .payment_method_data
             .get_payment_method_value()
@@ -119,23 +133,32 @@ impl<T: PaymentMethodDataTypes>
             }
         };
 
-        let amount = utils::convert_amount(
+        let amount = utils::convert_amount::<StringMajorUnit>(
             &StringMajorUnitForConnector,
-            common_utils::types::MinorUnit::new(item.request.minor_amount.get_amount_as_i64()),
-            item.request.currency,
+            common_utils::types::MinorUnit::new(
+                item.router_data
+                    .request
+                    .minor_amount
+                    .get_amount_as_i64(),
+            ),
+            item.router_data.request.currency,
         )
         .change_context(errors::ConnectorError::AmountConversionFailed)?
         .to_string();
 
         let order = Some(FiservemeaOrder {
-            order_id: item.resource_common_data.connector_request_reference_id.clone(),
+            order_id: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
         });
 
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
                 total: amount,
-                currency: item.request.currency.to_string(),
+                currency: item.router_data.request.currency.to_string(),
             },
             payment_method: FiservemeaPaymentMethod {
                 payment_card: FiservemeaPaymentCard {
