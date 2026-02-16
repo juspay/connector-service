@@ -158,17 +158,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 // Implement Authorize flow using macro framework
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Fiservemea,
-    curl_request: Json(fiservemea::FiservemeaAuthorizeRequest),
-    curl_response: fiservemea::FiservemeaAuthorizeResponse,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
+    Fiservemea,
+    Json(fiservemea::FiservemeaAuthorizeRequest),
+    fiservemea::FiservemeaAuthorizeResponse,
+    Authorize,
+    PaymentFlowData,
+    PaymentsAuthorizeData<T>,
+    PaymentsResponseData,
+    Post,
+    T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
+    {
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
