@@ -10,6 +10,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     utils,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -98,7 +99,7 @@ impl<T: PaymentMethodDataTypes>
         let payment_method_data = item
             .request
             .payment_method_data
-            .get_payment_method()
+            .get_payment_method_value()
             .change_context(errors::ConnectorError::MissingRequiredField {
                 field_name: "payment_method_data",
             })?;
