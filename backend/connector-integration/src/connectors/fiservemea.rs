@@ -18,6 +18,8 @@ use transformers as fiservemea;
 
 use crate::with_error_response_body;
 
+use super::macros;
+
 macros::create_all_prerequisites!(
     connector_name: Fiservemea,
     generic_type: T,
