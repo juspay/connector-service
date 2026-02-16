@@ -130,18 +130,18 @@ pub struct FiservemeaPaymentsRequest {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
-        super::FiservemeaRouterData<
+        crate::connectors::fiservemea::FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            super::Fiservemea<T>,
+            crate::connectors::fiservemea::Fiservemea<T>,
         >,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::FiservemeaRouterData<
+        item: crate::connectors::fiservemea::FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            super::Fiservemea<T>,
+            crate::connectors::fiservemea::Fiservemea<T>,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
