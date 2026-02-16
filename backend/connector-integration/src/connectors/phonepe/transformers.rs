@@ -984,11 +984,6 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
 // ===== TARGET APP MAPPING FOR PHONEPE UPI INTENT =====
 
 /// Gets the target app for PhonePe UPI Intent based on OS and payment source
-/// This implements the same logic as makePhonepeUpiIntentV2Payload in euler-x
-///
-/// Logic:
-/// - On Android: Use the app_name from payment_source directly
-/// - On iOS: Map the payment_source to PhonePe's expected target app names
 fn get_target_app_for_phonepe(
     intent_data: &domain_types::payment_method_data::UpiIntentData,
     browser_info: &Option<BrowserInformation>,
@@ -1000,7 +995,6 @@ fn get_target_app_for_phonepe(
 }
 
 /// Detects the device OS from browser_info
-/// Matches the logic from makePhonepeUpiIntentV2Payload in euler-x
 fn get_device_os(browser_info: &Option<BrowserInformation>) -> String {
     browser_info
         .as_ref()
@@ -1009,20 +1003,13 @@ fn get_device_os(browser_info: &Option<BrowserInformation>) -> String {
             match os.to_uppercase().as_str() {
                 "IOS" | "IPHONE" | "IPAD" | "MACOS" | "DARWIN" => "IOS".to_string(),
                 "ANDROID" => "ANDROID".to_string(),
-                _ => "ANDROID".to_string(), // Default to ANDROID for unknown OS
+                _ => "ANDROID".to_string(), 
             }
         })
         .unwrap_or_else(|| "ANDROID".to_string())
 }
 
 /// Maps iOS payment source to PhonePe's expected target app names
-/// Matches the logic from makeiOSintentAppPackagename in euler-x
-///
-/// Mapping:
-/// - "tez" -> "GPAY"
-/// - "phonepe" -> "PHONEPE"
-/// - "paytm" -> "PAYTM"
-/// - Others -> None (will use service configuration mapping if available)
 pub fn map_ios_payment_source_to_target_app(payment_source: Option<&str>) -> Option<String> {
     payment_source.and_then(|source| {
         let source_lower = source.to_lowercase();
@@ -1030,15 +1017,12 @@ pub fn map_ios_payment_source_to_target_app(payment_source: Option<&str>) -> Opt
             s if s.contains("tez") => Some("GPAY".to_string()),
             s if s.contains("phonepe") => Some("PHONEPE".to_string()),
             s if s.contains("paytm") => Some("PAYTM".to_string()),
-            // For other apps, could add service configuration mapping here
-            // For now, return None and let PhonePe handle it
             _ => None,
         }
     })
 }
 
 /// Extract Android version from user agent string
-/// Example: "Mozilla/5.0 (Linux; Android 10; SM-G973F) ..." -> "10"
 pub fn split_ua(user_agent: &str) -> String {
     user_agent
         .split_whitespace()
