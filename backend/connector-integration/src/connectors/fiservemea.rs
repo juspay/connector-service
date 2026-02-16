@@ -18,6 +18,57 @@ use transformers as fiservemea;
 
 use crate::with_error_response_body;
 
+macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: fiservemea::FiservemeaAuthorizeRequest<T>,
+            response_body: fiservemea::FiservemeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+    ],
+    member_functions: {
+        pub fn build_headers(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            let auth = fiservemea::FiservemeaAuthType::try_from(&req.auth)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+
+            let client_request_id = uuid::Uuid::new_v4().to_string();
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|_| errors::ConnectorError::InternalServerError)?
+                .as_millis() as u64;
+
+            let request_body = serde_json::to_string(&req.request)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            let message_signature = auth.generate_message_signature(&client_request_id, timestamp, &request_body);
+
+            Ok(vec![
+                ("Content-Type".to_string(), "application/json".to_string().into()),
+                ("Api-Key".to_string(), auth.api_key.expose().to_string().into()),
+                ("Client-Request-Id".to_string(), client_request_id.into()),
+                ("Timestamp".to_string(), timestamp.to_string().into()),
+                ("Message-Signature".to_string(), message_signature.into()),
+            ])
+        }
+
+        pub fn get_url(
+            &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(format!("{}/ipp/payments-gateway/v2/payments", self.base_url(&_req.connector)))
+        }
+    }
+);
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
