@@ -40,7 +40,7 @@ const native = loadNative();
  * @returns {string} JSON string containing the response
  * @throws Error if payload or extractedMetadata is empty or invalid
  */
-function authorize(payload, extractedMetadata) {
+function authorizeReq(payload, extractedMetadata) {
   if (!payload || typeof payload !== 'object') {
     throw new Error('Payload must be a non-null object');
   }
@@ -49,11 +49,26 @@ function authorize(payload, extractedMetadata) {
   }
   const payloadJson = JSON.stringify(payload);
   const extractedMetadataJson = JSON.stringify(extractedMetadata);
-  const res = native.authorize(payloadJson, extractedMetadataJson);
+  const res = native.authorizeReq(payloadJson, extractedMetadataJson);
+  return typeof res === "string" ? res : JSON.stringify(res);
+}
+
+function authorizeRes(payload, extractedMetadata, response) {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Payload must be a non-null object');
+  }
+  if (!extractedMetadata || typeof extractedMetadata !== 'object') {
+    throw new Error('Extracted metadata must be a non-null object');
+  }
+  const payloadJson = JSON.stringify(payload);
+  const extractedMetadataJson = JSON.stringify(extractedMetadata);
+  const responseJSON = JSON.stringify(response)
+  const res = native.authorizeRes(responseJSON, payloadJson, extractedMetadataJson);
   return typeof res === "string" ? res : JSON.stringify(res);
 }
 
 module.exports = {
-  authorize,
+  authorizeReq,
+  authorizeRes,
   _native: native,
 };

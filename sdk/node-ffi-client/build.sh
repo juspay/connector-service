@@ -7,6 +7,8 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # Build release binary
 cd "$PROJECT_ROOT/backend/ffi"
 cargo build --release --features napi
+# cargo build --features napi
+
 
 # Create artifacts directory
 mkdir -p "$PROJECT_ROOT/sdk/node-ffi-client/artifacts"

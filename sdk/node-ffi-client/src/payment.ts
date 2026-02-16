@@ -79,26 +79,6 @@ export interface AuthorizeResponse {
 // Import the native FFI module (CommonJS)
 const ffi = require('../index');
 
-/**
- * Authorize a payment with the provided payload and extracted metadata
- * 
- * @param payload - Payment authorization request with payment details
- * @param extractedMetadata - Metadata containing connector and auth information
- * @returns JSON string containing the authorization response
- * @throws Error if payload or extractedMetadata is invalid
- */
-export function authorize(
-  payload: PaymentServiceAuthorizeRequest,
-  extractedMetadata: MetadataPayload
-): string {
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('Payload must be a non-null object');
-  }
-  if (!extractedMetadata || typeof extractedMetadata !== 'object') {
-    throw new Error('Extracted metadata must be a non-null object');
-  }
-  return ffi.authorize(payload, extractedMetadata);
-}
 
 /**
  * Access to the underlying native module for advanced use cases
