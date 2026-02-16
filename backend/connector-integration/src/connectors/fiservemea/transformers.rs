@@ -129,20 +129,22 @@ pub struct FiservemeaPaymentsRequest {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        crate::connectors::fiservemea::FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            crate::connectors::fiservemea::Fiservemea<T>,
+        >,
     > for FiservemeaAuthorizeRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: crate::connectors::fiservemea::FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            crate::connectors::fiservemea::Fiservemea<T>,
         >,
     ) -> Result<Self, Self::Error> {
-        let payment_method_data = &item.request.payment_method_data;
+        let router_data = &item.router_data;
+        let payment_method_data = &router_data.request.payment_method_data;
 
         let payment_card = match payment_method_data {
             PaymentMethodData::Card(card_data) => Some(FiservemeaPaymentCard {
@@ -160,13 +162,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .into()),
         };
 
-        let request_type = match item.request.capture_method {
+        let request_type = match router_data.request.capture_method {
             Some(common_enums::CaptureMethod::Automatic) => "PaymentCardSaleTransaction".to_string(),
             Some(common_enums::CaptureMethod::Manual) | None => "PaymentCardPreAuthTransaction".to_string(),
         };
 
         let order = Some(FiservemeaOrder {
-            order_id: item
+            order_id: router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
@@ -176,7 +178,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             request_type,
             transaction_amount: FiservemeaTransactionAmount {
                 total: item.amount,
-                currency: item.request.currency.to_string(),
+                currency: router_data.request.currency.to_string(),
             },
             payment_method: FiservemeaPaymentMethod { payment_card },
             order,
