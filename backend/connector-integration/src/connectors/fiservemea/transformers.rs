@@ -61,7 +61,7 @@ pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes> {
     pub order: Option<FiservemeaOrder>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaTransactionAmount {
     pub total: String,
@@ -193,7 +193,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     security_code: Some(card_data.card_cvc.clone()),
                     expiry_date: FiservemeaExpiryDate {
                         month: card_data.card_exp_month.expose().to_string(),
-                        year: card_data.get_expiry_year_4_digit()?,
+                        year: card_data.get_expiry_year_4_digit().expose().to_string(),
                     },
                 })
             }
