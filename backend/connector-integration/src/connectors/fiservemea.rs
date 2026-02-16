@@ -377,7 +377,24 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            let auth = fiservemea::FiservemeaAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+
+            let client_request_id = uuid::Uuid::new_v4().to_string();
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?
+                .as_millis() as u64;
+
+            let message_signature = auth.generate_message_signature(&client_request_id, timestamp, "");
+
+            Ok(vec![
+                ("Content-Type".to_string(), "application/json".to_string().into()),
+                ("Api-Key".to_string(), auth.api_key.expose().to_string().into()),
+                ("Client-Request-Id".to_string(), client_request_id.into()),
+                ("Timestamp".to_string(), timestamp.to_string().into()),
+                ("Message-Signature".to_string(), message_signature.into()),
+            ])
         }
         fn get_url(
             &self,
