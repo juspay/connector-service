@@ -240,12 +240,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let payment_method = FiservemeaPaymentMethod { payment_card: card };
 
-        let amount_total = StringMajorUnitForConnector::convert(
-            item.request.minor_amount,
-            item.request.currency,
-            item.request.currency.get_minor_unit(),
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let amount_converter = StringMajorUnitForConnector;
+        let amount_total = amount_converter
+            .convert(item.request.minor_amount, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let transaction_amount = FiservemeaTransactionAmount {
             total: amount_total,
