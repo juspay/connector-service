@@ -13,15 +13,6 @@ use hyperswitch_masking::PeekInterface;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
-pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes> {
-    pub request_type: String,
-    pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod,
-    pub order: Option<FiservemeaOrder>,
-    pub _phantom: std::marker::PhantomData<T>,
-}
-
-#[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
     pub api_key: hyperswitch_masking::Secret<String>,
     pub api_secret: hyperswitch_masking::Secret<String>,
