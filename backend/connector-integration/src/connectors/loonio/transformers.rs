@@ -147,11 +147,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })
                     .attach_printable("Failed to get billing details")?;
 
-                let billing_address = billing.address.as_ref().ok_or(
-                    errors::ConnectorError::MissingRequiredField {
-                        field_name: "billing.address",
-                    },
-                )?;
+                let billing_address = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_address()?;
 
                 // Extract optional address fields with proper Secret wrapping
                 let phone = billing
