@@ -9,7 +9,7 @@ use domain_types::{
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -78,12 +78,12 @@ pub struct FiservemeaTransactionAmount {
 }
 
 #[derive(Debug, Serialize)]
-pub struct FiservemeaPaymentMethod<T> {
-    pub payment_card: FiservemeaCard<T>,
+pub struct FiservemeaPaymentMethod {
+    pub payment_card: FiservemeaCard,
 }
 
 #[derive(Debug, Serialize)]
-pub struct FiservemeaCard<T> {
+pub struct FiservemeaCard {
     pub number: Secret<String>,
     pub security_code: Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
@@ -198,6 +198,7 @@ impl<T: PaymentMethodDataTypes>
                 return Err(error_stack::report!(
                     errors::ConnectorError::NotSupported {
                         message: "Only card payment method is supported".to_string(),
+                        connector: "fiservemea".to_string(),
                     }
                 ))
             }
