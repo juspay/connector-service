@@ -53,10 +53,7 @@ macros::create_all_prerequisites!(
                 .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?
                 .as_millis() as u64;
 
-            let request_body = serde_json::to_string(&req.request)
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-            let message_signature = auth.generate_message_signature(&client_request_id, timestamp, &request_body);
+            let message_signature = auth.generate_message_signature(&client_request_id, timestamp, "");
 
             Ok(vec![
                 ("Content-Type".to_string(), "application/json".to_string().into()),
