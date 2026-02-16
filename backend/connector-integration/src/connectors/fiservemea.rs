@@ -116,8 +116,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         "application/json"
     }
 
-    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
-        "https://prod.emea.api.fiservapps.com/sandbox"
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        &connectors.fiservemea.base_url
     }
 
     fn get_auth_header(
@@ -126,7 +126,33 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
+        let client_request_id = uuid::Uuid::new_v4().to_string();
+        let timestamp = chrono::Utc::now().timestamp_millis().to_string();
+        let signature = format!(
+            "{}{}{}",
+            auth.api_key.expose(),
+            client_request_id,
+            timestamp
+        );
+        Ok(vec![
+            (
+                headers::API_KEY.to_string(),
+                auth.api_key.expose().to_string().into(),
+            ),
+            (
+                headers::CLIENT_REQUEST_ID.to_string(),
+                client_request_id.into(),
+            ),
+            (
+                headers::TIMESTAMP.to_string(),
+                timestamp.into(),
+            ),
+            (
+                headers::MESSAGE_SIGNATURE.to_string(),
+                signature.into(),
+            ),
+        ])
+    }
             headers::AUTHORIZATION.to_string(),
             format!("Bearer {}", auth.api_key.expose()).into(),
         )])
