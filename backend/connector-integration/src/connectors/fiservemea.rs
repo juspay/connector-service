@@ -22,6 +22,10 @@ use transformers::{
 use super::macros;
 use crate::with_error_response_body;
 
+pub use transformers::{
+    FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
+};
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
