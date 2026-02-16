@@ -126,11 +126,9 @@ impl<T: PaymentMethodDataTypes>
         .change_context(errors::ConnectorError::AmountConversionFailed)?
         .to_string();
 
-        let order = item
-            .resource_common_data
-            .connector_request_reference_id
-            .as_ref()
-            .map(|ref_id| FiservemeaOrder { order_id: ref_id.clone() });
+        let order = Some(FiservemeaOrder {
+            order_id: item.resource_common_data.connector_request_reference_id.clone(),
+        });
 
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
