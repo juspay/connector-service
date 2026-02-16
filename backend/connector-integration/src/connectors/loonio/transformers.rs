@@ -20,7 +20,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 // ===== AUTH TYPE =====
@@ -63,6 +63,18 @@ pub struct LoonioCustomerProfile {
     pub first_name: Secret<String>,
     pub last_name: Secret<String>,
     pub email: Email,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address_a: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub city: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub province: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub postal_code: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -124,6 +136,43 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .connector_request_reference_id
                     .clone();
 
+                // Get billing details
+                let billing = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing()
+                    .change_context(errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing",
+                    })
+                    .attach_printable("Failed to get billing details")?;
+
+                let billing_address = billing.address.as_ref().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.address",
+                    },
+                )?;
+
+                // Extract optional address fields with proper Secret wrapping
+                let phone = billing
+                    .phone
+                    .as_ref()
+                    .and_then(|p| p.number.as_ref())
+                    .map(|n| Secret::new(n.peek().clone()));
+                let address_a = billing_address
+                    .line1
+                    .as_ref()
+                    .map(|l| Secret::new(l.peek().clone()));
+                let city = billing_address.city.as_ref().map(|c| c.peek().clone());
+                let province = billing_address
+                    .state
+                    .as_ref()
+                    .map(|s| Secret::new(s.peek().clone()));
+                let postal_code = billing_address
+                    .zip
+                    .as_ref()
+                    .map(|z| Secret::new(z.peek().clone()));
+                let country = billing_address.country.as_ref().map(|c| c.to_string());
+
                 let customer_profile = LoonioCustomerProfile {
                     first_name: item
                         .router_data
@@ -134,6 +183,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .get_billing_last_name()?,
                     email: item.router_data.resource_common_data.get_billing_email()?,
+                    phone,
+                    address_a,
+                    city,
+                    province,
+                    postal_code,
+                    country,
                 };
 
                 let redirect_url = LoonioRedirectUrls {
