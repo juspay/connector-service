@@ -5,8 +5,8 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
-    connector_flow::{Accept, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, RSync, SdkSessionToken, SetupMandate, SubmitEvidence, ValidationTrait, VerifyRedirectResponse, Void, VoidPC},
-    connector_types::{AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrder, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentPostAuthenticateData, PaymentPreAuthenticateData, PaymentsAuthorizeData, PaymentsAuthenticateData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, PaymentVoidData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData},
+    connector_flow,
+    connector_types::*,
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
