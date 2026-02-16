@@ -214,7 +214,7 @@ impl<T: PaymentMethodDataTypes>
     TryFrom<ResponseRouterData<
         FiservemeaAuthorizeResponse,
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    >
+    > >
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
