@@ -148,7 +148,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     TryFrom<
         super::FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            super::Fiservemea<T>,
+            T,
         >,
     > for FiservemeaAuthorizeRequest
 {
@@ -157,7 +157,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: super::FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            super::Fiservemea<T>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
