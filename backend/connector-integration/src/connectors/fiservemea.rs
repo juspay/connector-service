@@ -97,10 +97,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         "https://prod.emea.api.fiservapps.com/sandbox"
     }
 
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
@@ -136,14 +132,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_advice_code: None,
             network_error_message: None,
         })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
     }
 }
 
