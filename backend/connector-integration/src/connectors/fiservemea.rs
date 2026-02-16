@@ -18,6 +18,40 @@ use transformers as fiservemea;
 
 use crate::with_error_response_body;
 
+super::macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: FiservemeaAuthorizeRequest,
+            response_body: FiservemeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        )
+    ],
+    amount_converters: [],
+    member_functions: {
+        pub fn build_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = fiservemea::FiservemeaAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            
+            Ok(vec![
+                (headers::CONTENT_TYPE.to_string(), self.common_get_content_type().to_string().into()),
+                ("Api-Key".to_string(), auth.api_key.expose().to_string().into()),
+                ("Client-Request-Id".to_string(), req.resource_common_data.connector_request_reference_id.clone().into()),
+                ("Timestamp".to_string(), {
+                    use common_utils::date_time;
+                    date_time::now().timestamp_millis().to_string().into()
+                }),
+                ("Message-Signature".to_string(), "placeholder_signature".to_string().into()),
+            ])
+        }
+    }
+);
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
