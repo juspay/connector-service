@@ -103,8 +103,9 @@ mod napi_bindings {
         authorize_res_flow(request, response)
             .map_err(|e| napi::Error::from_reason(format!("{:?}", e)))
             .and_then(|response| {
-                serde_json::to_string(&response)
-                    .map_err(|e| napi::Error::from_reason(format!("Failed to serialize response: {}", e)))
+                serde_json::to_string(&response).map_err(|e| {
+                    napi::Error::from_reason(format!("Failed to serialize response: {}", e))
+                })
             })
     }
 }
