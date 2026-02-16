@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
-    connector_flow::{Accept, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, RSync, SdkSessionToken, SetupMandate, SubmitEvidence, ValidationTrait, VerifyRedirectResponse, Void, VoidPC},
+    connector_flow::{Accept, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, RSync, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC},
     connector_types::*,
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -17,7 +17,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types::{self, ValidationTrait, VerifyRedirectResponse},
 };
 use serde::Serialize;
 use transformers as fiservemea;
