@@ -46,16 +46,7 @@ pub struct FiservemeaErrorResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest {
-    pub request_type: String,
-    pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod,
-    pub order: Option<FiservemeaOrder>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequestGeneric<T: PaymentMethodDataTypes> {
+pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes> {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
     pub payment_method: FiservemeaPaymentMethod,
