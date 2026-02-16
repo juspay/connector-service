@@ -48,7 +48,7 @@ pub struct FiservemeaAuthorizeRequest {
     pub order: Option<FiservemeaOrder>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaTransactionAmount {
     pub total: String,
