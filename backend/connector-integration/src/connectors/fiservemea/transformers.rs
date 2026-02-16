@@ -37,17 +37,107 @@ pub struct FiservemeaErrorResponse {
     pub message: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionResult {
+    Approved,
+    Declined,
+    Failed,
+    Waiting,
+    Partial,
+    Fraud,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionState {
+    Authorized,
+    Captured,
+    Declined,
+    Checked,
+    CompletedGet,
+    Initialized,
+    Pending,
+    Ready,
+    Template,
+    Settled,
+    Voided,
+    Waiting,
+}
+
 #[derive(Debug, Serialize)]
-pub struct FiservemeaPaymentsRequest {
-    pub amount: i64,
+#[serde(untagged)]
+pub enum FiservemeaPaymentMethod {
+    Card(FiservemeaCardData),
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaCardData {
+    pub payment_card: FiservemeaPaymentCard,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaPaymentCard {
+    pub number: Secret<String>,
+    pub security_code: Secret<String>,
+    pub expiry_date: FiservemeaExpiryDate,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaExpiryDate {
+    pub month: String,
+    pub year: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaTransactionAmount {
+    pub total: String,
     pub currency: String,
-    pub reference: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaAuthorizeRequest {
+    pub request_type: String,
+    pub transaction_amount: FiservemeaTransactionAmount,
+    pub payment_method: FiservemeaPaymentMethod,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FiservemeaAuthorizeResponse {
+    pub ipg_transaction_id: String,
+    pub transaction_result: FiservemeaTransactionResult,
+    pub transaction_state: FiservemeaTransactionState,
+    pub approval_code: Option<String>,
+    pub scheme_response_code: Option<String>,
+    pub error_message: Option<String>,
+}
+
+pub fn map_fiservemea_status_to_attempt_status(
+    result: &FiservemeaTransactionResult,
+    state: &FiservemeaTransactionState,
+) -> AttemptStatus {
+    match (result, state) {
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Authorized) => {
+            AttemptStatus::Authorized
+        }
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Captured) => {
+            AttemptStatus::Charged
+        }
+        (FiservemeaTransactionResult::Declined, _) |
+        (FiservemeaTransactionResult::Failed, _) => AttemptStatus::Failure,
+        (FiservemeaTransactionResult::Waiting, _) |
+        (FiservemeaTransactionResult::Partial, _) => AttemptStatus::Pending,
+        (FiservemeaTransactionResult::Fraud, _) => AttemptStatus::Failure,
+        (_, FiservemeaTransactionState::Voided) => AttemptStatus::Voided,
+        (_, FiservemeaTransactionState::Pending) => AttemptStatus::Pending,
+        _ => AttemptStatus::Pending,
+    }
 }
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaPaymentsRequest
+    > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -59,29 +149,47 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
+        let payment_method = match &item.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
+                FiservemeaPaymentMethod::Card(FiservemeaCardData {
+                    payment_card: FiservemeaPaymentCard {
+                        number: Secret::new(card_data.card_number.peek().to_string()),
+                        security_code: card_data.card_cvc.clone(),
+                        expiry_date: FiservemeaExpiryDate {
+                            month: card_data.card_exp_month.expose().to_string(),
+                            year: card_data.get_expiry_year_2_digit(),
+                        },
+                    },
+                })
+            }
+            _ => {
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Payment Method".to_string(),
+                    connector: "fiservemea",
+                }
+                .into())
+            }
+        };
+
+        let amount = item.request.minor_amount.get_amount_as_i64();
+        let currency = item.request.currency.to_string();
+        let total = format!("{:.2}", amount as f64 / 100.0);
+
         Ok(Self {
-            amount: item.request.minor_amount.get_amount_as_i64(),
-            currency: item.request.currency.to_string(),
-            reference: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            request_type: "PaymentCardPreAuthTransaction".to_string(),
+            transaction_amount: FiservemeaTransactionAmount {
+                total,
+                currency,
+            },
+            payment_method,
         })
     }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FiservemeaPaymentsResponse {
-    pub id: String,
-    pub status: String,
-    pub amount: i64,
-    pub currency: String,
 }
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
-            FiservemeaPaymentsResponse,
+            FiservemeaAuthorizeResponse,
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -95,7 +203,7 @@ impl<T: PaymentMethodDataTypes>
 
     fn try_from(
         item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
+            FiservemeaAuthorizeResponse,
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -104,21 +212,18 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.status.as_str() {
-            "succeeded" | "completed" => AttemptStatus::Charged,
-            "pending" | "processing" => AttemptStatus::Pending,
-            "failed" | "error" => AttemptStatus::Failure,
-            "cancelled" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
-        };
+        let status = map_fiservemea_status_to_attempt_status(
+            &item.response.transaction_result,
+            &item.response.transaction_state,
+        );
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.id),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: None,
+                network_txn_id: item.response.approval_code,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
