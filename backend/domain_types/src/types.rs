@@ -1343,7 +1343,7 @@ impl<
                         payment_method_data::IndomaretVoucherData {},
                     ))))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::OxxoVoucher(_) => {
+                grpc_api_types::payments::payment_method::PaymentMethod::Oxxo(_) => {
                     Ok(Self::Voucher(payment_method_data::VoucherData::Oxxo))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::SevenEleven(_) => {
@@ -1666,7 +1666,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Indomaret(_) => {
                     Ok(Some(PaymentMethodType::Indomaret))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::OxxoVoucher(_) => {
+                grpc_api_types::payments::payment_method::PaymentMethod::Oxxo(_) => {
                     Ok(Some(PaymentMethodType::Oxxo))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::SevenEleven(_) => {
@@ -4208,7 +4208,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OxxoVoucher(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Oxxo(_)),
             } => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:

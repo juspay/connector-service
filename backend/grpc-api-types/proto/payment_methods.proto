@@ -143,8 +143,8 @@ message PaymentMethod {
     RedCompra red_compra = 143;                               // RedCompra - Chilean debit card network
     RedPagos red_pagos = 144;                                  // RedPagos - Uruguayan payment network
     Alfamart alfamart = 145;                                   // Alfamart - Indonesian convenience store payment
-    Indomaret indomaret = 146;                                // Indomaret - Indonesian convenience store payment
-    OXXOVoucher oxxo_voucher = 147;                            // OXXO - Mexican convenience store payment
+    Indomaret indomaret = 146;
+    Oxxo oxxo = 147;                                // Indomaret - Indonesian convenience store payment
     SevenEleven seven_eleven = 148;                            // 7-Eleven - Convenience store payment
     Lawson lawson = 149;                                      // Lawson - Japanese convenience store payment
     MiniStop mini_stop = 150;                                  // Ministop - Japanese convenience store payment
@@ -1028,7 +1028,10 @@ message Efecty {
   // Fields will be added as needed for Efecty integration
 }
 
-
+// E-Voucher - Generic electronic voucher payment
+message EVoucher {
+  // Fields will be added as needed for E-Voucher integration
+}
 
 // Indomaret - Indonesian convenience store payment
 message Indomaret {
@@ -1036,7 +1039,7 @@ message Indomaret {
 }
 
 // OXXO - Mexican convenience store payment
-message OXXOVoucher {
+message Oxxo {
   // Fields will be added as needed for OXXO integration
 }
 
