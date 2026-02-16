@@ -151,8 +151,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             PaymentMethodData::Card(card_data) => Some(FiservemeaPaymentCard {
                 number: Secret::new(card_data.card_number.peek().to_string()),
                 expiry_date: FiservemeaExpiryDate {
-                    month: card_data.card_exp_month.expose().to_string(),
-                    year: card_data.get_expiry_year_4_digit().expose().to_string(),
+                    month: card_data.card_exp_month.clone().expose().to_string(),
+                    year: card_data.get_expiry_year_4_digit().clone().expose().to_string(),
                 },
                 security_code: card_data.card_cvc.clone(),
             }),
