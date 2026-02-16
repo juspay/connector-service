@@ -43,7 +43,7 @@ macros::create_all_prerequisites!(
             let client_request_id = uuid::Uuid::new_v4().to_string();
             let timestamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .map_err(|_| errors::ConnectorError::InternalServerErrorReceived)?
+                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?
                 .as_millis() as u64;
 
             let request_body = serde_json::to_string(&req.request)
