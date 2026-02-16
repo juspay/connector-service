@@ -29,7 +29,7 @@ macros::create_all_prerequisites!(
             request_body: FiservemeaAuthorizeRequest,
             response_body: FiservemeaAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
+        )
     ],
     amount_converters: [],
     member_functions: {
