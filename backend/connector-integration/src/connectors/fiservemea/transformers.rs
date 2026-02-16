@@ -1,5 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
+use common_utils::types::StringMajorUnit;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -38,10 +39,44 @@ pub struct FiservemeaErrorResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct FiservemeaPaymentsRequest {
-    pub amount: i64,
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaAuthorizeRequest {
+    pub request_type: String,
+    pub transaction_amount: FiservemeaTransactionAmount,
+    pub payment_method: FiservemeaPaymentMethod,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order: Option<FiservemeaOrder>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaTransactionAmount {
+    pub total: String,
     pub currency: String,
-    pub reference: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaPaymentMethod {
+    pub payment_card: FiservemeaPaymentCard,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaPaymentCard {
+    pub number: Secret<String>,
+    pub security_code: Secret<String>,
+    pub expiry_date: FiservemeaExpiryDate,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaExpiryDate {
+    pub month: String,
+    pub year: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaOrder {
+    pub order_id: String,
 }
 
 impl<T: PaymentMethodDataTypes>
