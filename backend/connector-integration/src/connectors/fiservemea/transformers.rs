@@ -1,6 +1,6 @@
 use crate::{connectors::fiservemea::FiservemeaRouterData, types::ResponseRouterData};
 use common_enums::AttemptStatus;
-use common_utils::types::{AmountConvertor, StringMajorUnitForConnector};
+use common_utils::types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
