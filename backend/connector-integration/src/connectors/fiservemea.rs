@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
-    connector_flow::Authorize,
+    connector_flow,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
     errors,
     payment_method_data::PaymentMethodDataTypes,
