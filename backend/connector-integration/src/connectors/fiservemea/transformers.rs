@@ -130,18 +130,18 @@ pub struct FiservemeaPaymentsRequest {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
-        FiservemeaRouterData<
+        super::FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            Fiservemea<T>,
+            super::Fiservemea<T>,
         >,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: FiservemeaRouterData<
+        item: super::FisevemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            Fiservemea<T>,
+            super::Fiservemea<T>,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -167,7 +167,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             Some(common_enums::CaptureMethod::Automatic) => "PaymentCardSaleTransaction".to_string(),
             Some(common_enums::CaptureMethod::Manual)
             | Some(common_enums::CaptureMethod::ManualMultiple)
-            | Some(common_enums::CaptureMethod::Scheduled)
+            | Some(common_enums::CaptureMethod::CaptureMethod::Scheduled)
             | Some(common_enums::CaptureMethod::SequentialAutomatic)
             | None => "PaymentCardPreAuthTransaction".to_string(),
         };
