@@ -78,7 +78,7 @@ pub struct FiservemeaExpiryDate {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FisemveaOrder {
+pub struct FiservemeaOrder {
     pub order_id: String,
 }
 
@@ -132,7 +132,7 @@ fn map_fiservemea_status_to_attempt_status(
         (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Authorized) => {
             AttemptStatus::Authorized
         }
-        (FiservemeaTransactionResult::Declined, _) | (FisemveaTransactionResult::Failed, _) => {
+        (FiservemeaTransactionResult::Declined, _) | (FiservemeaTransactionResult::Failed, _) => {
             AttemptStatus::Failure
         }
         (FiservemeaTransactionResult::Waiting, FiservemeaTransactionState::Pending) => {
@@ -188,7 +188,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             | None => "PaymentCardPreAuthTransaction".to_string(),
         };
 
-        let order = Some(FisemveaOrder {
+        let order = Some(FiservemeaOrder {
             order_id: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -214,7 +214,7 @@ impl<T: PaymentMethodDataTypes>
     TryFrom<ResponseRouterData<
         FiservemeaAuthorizeResponse,
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    >>
+    >
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
