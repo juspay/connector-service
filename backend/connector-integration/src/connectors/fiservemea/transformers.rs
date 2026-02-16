@@ -61,6 +61,48 @@ pub struct FiservemeaErrorResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaAuthorizeRequest<T> {
+    pub request_type: String,
+    pub transaction_amount: FiservemeaTransactionAmount,
+    pub payment_method: FiservemeaPaymentMethod<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order: Option<FiservemeaOrder>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaTransactionAmount {
+    pub total: String,
+    pub currency: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaPaymentMethod<T> {
+    pub payment_card: FiservemeaCard<T>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaCard<T> {
+    pub number: Secret<String>,
+    pub security_code: Secret<String>,
+    pub expiry_date: FiservemeaExpiryDate,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FiservemeaExpiryDate {
+    pub month: String,
+    pub year: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaOrder {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct FiservemeaPaymentsRequest {
     pub amount: i64,
     pub currency: String,
