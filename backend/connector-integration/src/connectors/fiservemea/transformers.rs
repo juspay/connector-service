@@ -105,12 +105,44 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FiservemeaPaymentsResponse {
-    pub id: String,
-    pub status: String,
-    pub amount: i64,
-    pub currency: String,
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaAuthorizeResponse {
+    pub ipg_transaction_id: String,
+    pub transaction_result: FiservemeaTransactionResult,
+    pub transaction_state: FiservemeaTransactionState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approval_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_amount: Option<FiservemeaTransactionAmount>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionResult {
+    Approved,
+    Declined,
+    Failed,
+    Waiting,
+    Partial,
+    Fraud,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionState {
+    Authorized,
+    Captured,
+    Declined,
+    Checked,
+    CompletedGet,
+    Initialized,
+    Pending,
+    Ready,
+    Template,
+    Settled,
+    Voided,
+    Waiting,
 }
 
 impl<T: PaymentMethodDataTypes>
