@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.16.0
+
+### Bug Fixes
+
+- Wellsfargo-diff-fix ([#461](https://github.com/juspay/connector-service/pull/461)) ([`3846d08`](https://github.com/juspay/connector-service/commit/3846d081720d02b179ccd5009bbf64e96f220bcf))
+
+**Full Changelog:** [`2026.02.13.1...2026.02.16.0`](https://github.com/juspay/connector-service/compare/2026.02.13.1...2026.02.16.0)
+
+- - -
+
 ## 2026.02.13.1
 
 ### Bug Fixes
