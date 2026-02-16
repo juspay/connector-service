@@ -999,12 +999,10 @@ fn get_device_os(browser_info: &Option<BrowserInformation>) -> String {
     browser_info
         .as_ref()
         .and_then(|info| info.os_type.as_ref())
-        .map(|os| {
-            match os.to_uppercase().as_str() {
-                "IOS" | "IPHONE" | "IPAD" | "MACOS" | "DARWIN" => "IOS".to_string(),
-                "ANDROID" => "ANDROID".to_string(),
-                _ => "ANDROID".to_string(), 
-            }
+        .map(|os| match os.to_uppercase().as_str() {
+            "IOS" | "IPHONE" | "IPAD" | "MACOS" | "DARWIN" => "IOS".to_string(),
+            "ANDROID" => "ANDROID".to_string(),
+            _ => "ANDROID".to_string(),
         })
         .unwrap_or_else(|| "ANDROID".to_string())
 }
