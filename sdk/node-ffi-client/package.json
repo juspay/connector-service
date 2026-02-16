@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Node.js FFI bindings for connector-service using Rust native library",
   "main": "index.js",
-  "types": "index.d.ts",
   "engines": {
     "node": ">= 10"
   },

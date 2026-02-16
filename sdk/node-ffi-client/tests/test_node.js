@@ -65,28 +65,16 @@ async function testHighLevelAPI() {
     try {
         // Create client instance
         const client = new ConnectorClient(METADATA);
-        console.log('✓ ConnectorClient created successfully');
-        console.log(`  Connector: ${client.metadata.connector}`);
-        console.log(`  Auth Type: ${client.metadata.connector_auth_type.auth_type}\n`);
-
-        // Execute authorization
-        console.log('Authorizing payment...');
-        console.log(`  Amount: ${PAYLOAD.amount} ${PAYLOAD.currency}`);
-        console.log(`  Card: **** **** **** ${PAYLOAD.payment_method.payment_method.Card.card_number.slice(-4)}`);
-        console.log(`  Customer: ${PAYLOAD.customer_name}\n`);
-
         const result = await client.authorize(PAYLOAD);
-
-        console.log('✓ Authorization completed successfully\n');
         console.log('Response:');
         console.log(JSON.stringify(result, null, 2));
 
         return result;
 
     } catch (error) {
-        console.error('✗ High-level API test failed:', error.message);
+        console.error('High-level API test failed:', error.message);
         if (error.cause) {
-            console.error('  Caused by:', error.cause.message);
+            console.error('Caused by:', error.cause.message);
         }
         throw error;
     }
@@ -103,26 +91,18 @@ async function testLowLevelAPI() {
 
     try {
         // Step 1: Build request
-        console.log('Building HTTP request with authorizeReq()...');
         const requestJson = authorizeReq(PAYLOAD, METADATA);
         const { body, headers, method, url } = JSON.parse(requestJson);
-
-        console.log('✓ Request built successfully');
-        console.log(`  Method: ${method}`);
-        console.log(`  URL: ${url}`);
-        console.log(`  Headers: ${Object.keys(headers).length} header(s)\n`);
-
         // Step 2: Execute HTTP request
-        console.log('Executing HTTP request...');
         const response = await fetch(url, {
             method,
             headers,
             body: body || undefined,
         });
 
-        console.log('✓ HTTP request completed');
-        console.log(`  Status: ${response.status}`);
-        console.log(`  Status Text: ${response.statusText}\n`);
+        console.log('HTTP request completed');
+        console.log(`Status: ${response.status}`);
+        console.log(`Status Text: ${response.statusText}\n`);
 
         // Step 3: Format response
         const responseText = await response.text();
@@ -138,18 +118,15 @@ async function testLowLevelAPI() {
         };
 
         // Step 4: Parse response
-        console.log('Parsing response with authorizeRes()...');
         const resultJson = authorizeRes(PAYLOAD, METADATA, formattedResponse);
         const result = JSON.parse(resultJson);
-
-        console.log('✓ Response parsed successfully\n');
         console.log('Response:');
         console.log(JSON.stringify(result, null, 2));
 
         return result;
 
     } catch (error) {
-        console.error('✗ Low-level API test failed:', error.message);
+        console.error('Low-level API test failed:', error.message);
         throw error;
     }
 }
@@ -158,32 +135,17 @@ async function testLowLevelAPI() {
  * Main test runner
  */
 async function main() {
-    console.log('\n');
-    console.log('╔' + '═'.repeat(58) + '╗');
-    console.log('║' + ' '.repeat(10) + 'Connector Service FFI - Test Suite' + ' '.repeat(13) + '║');
-    console.log('╚' + '═'.repeat(58) + '╝');
-    console.log('\n');
 
     try {
         // Run high-level API test
         await testHighLevelAPI();
-
         // Run low-level API test
         await testLowLevelAPI();
-
-        // Success summary
-        console.log('\n' + '='.repeat(60));
-        console.log('✓ All tests passed successfully!');
-        console.log('='.repeat(60));
-        console.log('\nBoth APIs are working correctly:');
-        console.log('  • High-level: ConnectorClient');
-        console.log('  • Low-level: authorizeReq/authorizeRes');
-        console.log();
 
     } catch (error) {
         // Failure summary
         console.log('\n' + '='.repeat(60));
-        console.log('✗ Test suite failed');
+        console.log('Test suite failed');
         console.log('='.repeat(60));
         console.log();
         process.exit(1);
