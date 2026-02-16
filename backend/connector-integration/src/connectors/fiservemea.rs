@@ -176,7 +176,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::API_KEY.to_string(),
-            auth.api_key.clone().into_masked(),
+            auth.api_key.clone().into(),
         )])
     }
 
