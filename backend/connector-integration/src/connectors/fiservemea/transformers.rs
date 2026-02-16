@@ -1,6 +1,5 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::ext_traits::ByteSliceExt;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -10,6 +9,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use ring::hmac;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -32,8 +32,9 @@ impl FiservemeaAuthType {
             timestamp,
             request_body
         );
-        let hmac_bytes = common_utils::crypto::hmac_sha256(self.api_secret.expose().as_bytes(), signature_string.as_bytes());
-        base64::engine::general_purpose::STANDARD.encode(hmac_bytes)
+        let key = hmac::Key::new(hmac::HMAC_SHA256, self.api_secret.expose().as_bytes());
+        let tag = hmac::sign(&key, signature_string.as_bytes());
+        base64::engine::general_purpose::STANDARD.encode(tag.as_ref())
     }
 }
 
