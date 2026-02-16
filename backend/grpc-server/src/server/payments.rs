@@ -4711,7 +4711,6 @@ pub fn generate_create_order_response(
             response_ref_id: None,
             raw_connector_request,
             raw_connector_response,
-            connector_metadata: None,
             session_token: None,
         },
     };

@@ -1188,7 +1188,6 @@ impl TryFrom<ResponseRouterData<PaymeGenerateSaleResponse, Self>>
             let order_response = PaymentCreateOrderResponse {
                 order_id: response.payme_sale_id.clone(),
                 session_token: None,
-                connector_metadata: None,
             };
 
             Ok(Self {
