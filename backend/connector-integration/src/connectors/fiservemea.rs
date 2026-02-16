@@ -232,7 +232,7 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    {
+    other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
