@@ -176,8 +176,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.code.unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-            message: response.message.unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+            code: response
+                .code
+                .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
+            message: response
+                .message
+                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
             reason: None,
             attempt_status: None,
             connector_transaction_id: response.ipg_transaction_id,
