@@ -865,6 +865,8 @@ pub enum ConnectorError {
     FailedToObtainCertificateKey,
     #[error("Failed to verify source of the response")]
     SourceVerificationFailed,
+    #[error("Failed to decode message")]
+    DecodingFailed,
     #[error("This step has not been implemented for: {0}")]
     NotImplemented(String),
     #[error("{message} is not supported by {connector}")]

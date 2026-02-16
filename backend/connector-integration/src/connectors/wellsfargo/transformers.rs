@@ -11,7 +11,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ErrorResponse,
+    router_data::{AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils::CardIssuer,
 };
@@ -123,7 +123,7 @@ pub struct ClientReferenceInformation {
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoCaptureRequest {
     processing_information: Option<ProcessingInformation>,
-    order_information: OrderInformationAmount,
+    order_information: OrderInformationWithBill,
     client_reference_information: ClientReferenceInformation,
     merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
 }
@@ -132,6 +132,7 @@ pub struct WellsfargoCaptureRequest {
 #[serde(rename_all = "camelCase")]
 pub struct OrderInformationAmount {
     amount_details: Amount,
+    #[serde(skip_serializing_if = "Option::is_none")]
     bill_to: Option<BillTo>,
 }
 
@@ -323,6 +324,7 @@ pub enum WellsfargoPaymentStatus {
 pub struct ClientProcessorInformation {
     pub network_transaction_id: Option<String>,
     pub avs: Option<Avs>,
+    pub card_verification: Option<CardVerification>,
     pub response_code: Option<String>,
 }
 
@@ -331,6 +333,13 @@ pub struct ClientProcessorInformation {
 pub struct Avs {
     pub code: Option<String>,
     pub code_raw: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardVerification {
+    pub result_code: Option<String>,
+    pub result_code_raw: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -771,7 +780,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 })
         });
 
-        let order_information = OrderInformationAmount {
+        let order_information = OrderInformationWithBill {
             amount_details,
             bill_to,
         };
@@ -1141,7 +1150,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
             })
         } else {
@@ -1154,10 +1163,18 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
             ))
         };
 
+        // Build connector response with additional payment method data
+        let connector_response = response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             response: response_data,
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1206,7 +1223,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
             })
         } else {
@@ -1259,7 +1276,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
             })
         } else {
@@ -1312,7 +1329,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .client_reference_information
                     .as_ref()
                     .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
             })
         } else {
@@ -1353,7 +1370,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         // For SetupMandate flow, capture=false (zero-dollar auth)
-        let status = map_attempt_status(&response.status, false, &response.error_information);
+        let mut status = map_attempt_status(&response.status, false, &response.error_information);
 
         // Check if the mandate setup was successful
         let response_data = if is_payment_successful(&response.status, &response.status_information)
@@ -1373,6 +1390,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                     }
                 });
 
+            // In case of zero auth mandates we want to make the payment reach the terminal status
+            // so we are converting the authorized status to charged as well.
+            if status == AttemptStatus::Authorized {
+                status = AttemptStatus::Charged;
+            }
+
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
@@ -1385,8 +1408,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                 connector_response_reference_id: response
                     .client_reference_information
                     .as_ref()
-                    .and_then(|info| info.code.clone()),
-                incremental_authorization_allowed: None,
+                    .and_then(|info| info.code.clone())
+                    .or_else(|| Some(response.id.clone())),
+                incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
+
                 status_code: item.http_code,
             })
         } else {
@@ -1399,10 +1424,18 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
             ))
         };
 
+        // Build connector response with additional payment method data
+        let connector_response = response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             response: response_data,
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1567,7 +1600,22 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
     }
 }
 
-// HELPER FUNCTIONS
+impl From<&ClientProcessorInformation> for AdditionalPaymentMethodConnectorResponse {
+    fn from(processor_information: &ClientProcessorInformation) -> Self {
+        let payment_checks = Some(serde_json::json!({
+            "avs_response": processor_information.avs,
+            "card_verification": processor_information.card_verification,
+        }));
+
+        Self::Card {
+            authentication_data: None,
+            payment_checks,
+            card_network: None,
+            domestic_network: None,
+            auth_code: None,
+        }
+    }
+}
 
 fn is_payment_successful(
     status: &Option<WellsfargoPaymentStatus>,

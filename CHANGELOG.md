@@ -4,6 +4,103 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.16.0
+
+### Bug Fixes
+
+- Wellsfargo-diff-fix ([#461](https://github.com/juspay/connector-service/pull/461)) ([`3846d08`](https://github.com/juspay/connector-service/commit/3846d081720d02b179ccd5009bbf64e96f220bcf))
+
+**Full Changelog:** [`2026.02.13.1...2026.02.16.0`](https://github.com/juspay/connector-service/compare/2026.02.13.1...2026.02.16.0)
+
+- - -
+
+## 2026.02.13.1
+
+### Bug Fixes
+
+- **connector:** Noon RSync Url & Default Status ([#511](https://github.com/juspay/connector-service/pull/511)) ([`92950a7`](https://github.com/juspay/connector-service/commit/92950a78ac3a7eacc4455fb3044fc251ffe6315e))
+- Incremental_authorization_allowed and cybersource repeatpayment diff fix ([#510](https://github.com/juspay/connector-service/pull/510)) ([`e26ad9e`](https://github.com/juspay/connector-service/commit/e26ad9e26b30cc990e5b8c5b41d58ba6786cff19))
+
+**Full Changelog:** [`2026.02.13.0...2026.02.13.1`](https://github.com/juspay/connector-service/compare/2026.02.13.0...2026.02.13.1)
+
+- - -
+
+## 2026.02.13.0
+
+### Bug Fixes
+
+- **connector:** Fixed Volt Default Response and PSync Response Handling ([#508](https://github.com/juspay/connector-service/pull/508)) ([`c10f357`](https://github.com/juspay/connector-service/commit/c10f357d26db23c34d777305c682ed743e5d411c))
+
+**Full Changelog:** [`2026.02.12.0...2026.02.13.0`](https://github.com/juspay/connector-service/compare/2026.02.12.0...2026.02.13.0)
+
+- - -
+
+## 2026.02.12.0
+
+### Features
+
+- **connector:** Added Adyen paylater paymentmethod ([#496](https://github.com/juspay/connector-service/pull/496)) ([`f9e1283`](https://github.com/juspay/connector-service/commit/f9e1283687a9ae7d40b8eb10956aa98233b6f4f9))
+- **framework:** Introduce BodyDecoding trait ([#502](https://github.com/juspay/connector-service/pull/502)) ([`8e7eede`](https://github.com/juspay/connector-service/commit/8e7eede8f60ee8be4ad62788411aceddbad715de))
+
+### Bug Fixes
+
+- **connector:** Mifinity 5xx Error Handling ([#505](https://github.com/juspay/connector-service/pull/505)) ([`1045fd3`](https://github.com/juspay/connector-service/commit/1045fd37ab767cecf0ef64ca068160e650f3dcd2))
+
+**Full Changelog:** [`2026.02.11.1...2026.02.12.0`](https://github.com/juspay/connector-service/compare/2026.02.11.1...2026.02.12.0)
+
+- - -
+
+## 2026.02.11.1
+
+### Bug Fixes
+
+- Populate connector response for Repeat Everything Flow's Err response ([#504](https://github.com/juspay/connector-service/pull/504)) ([`1921e9d`](https://github.com/juspay/connector-service/commit/1921e9da5cab8c8edae0c62bf7961fbbecbfabb7))
+
+**Full Changelog:** [`2026.02.11.0...2026.02.11.1`](https://github.com/juspay/connector-service/compare/2026.02.11.0...2026.02.11.1)
+
+- - -
+
+## 2026.02.11.0
+
+### Features
+
+- **connector:** Gigadat Macro Implementation ([#501](https://github.com/juspay/connector-service/pull/501)) ([`1ba0591`](https://github.com/juspay/connector-service/commit/1ba05915c289966a6ba9cdc15b2a83b9a3363afb))
+- **payment_method_data:** [adyen] Auth code in payment response ([#498](https://github.com/juspay/connector-service/pull/498)) ([`d4b923c`](https://github.com/juspay/connector-service/commit/d4b923ce29c4c48cd9eb87682010ca7f5dee0ddc))
+
+### Bug Fixes
+
+- **connector:** Paypal Router Data Fix in Authorize and RepeatPayment Flow ([#499](https://github.com/juspay/connector-service/pull/499)) ([`cf8b523`](https://github.com/juspay/connector-service/commit/cf8b523d9019c98b70d3210fa96a5c4fcc6a7492))
+
+### Miscellaneous Tasks
+
+- Adding failure status to customer create response ([#497](https://github.com/juspay/connector-service/pull/497)) ([`558bac9`](https://github.com/juspay/connector-service/commit/558bac914e6e1453831460f8c6566cdec01aa40d))
+
+**Full Changelog:** [`2026.02.10.0...2026.02.11.0`](https://github.com/juspay/connector-service/compare/2026.02.10.0...2026.02.11.0)
+
+- - -
+
+## 2026.02.10.0
+
+### Features
+
+- **connector:** Zift Connector Integration ([#480](https://github.com/juspay/connector-service/pull/480)) ([`21eb98b`](https://github.com/juspay/connector-service/commit/21eb98bf89c4597abb41d092b056a61c0222ed4a))
+
+### Bug Fixes
+
+- **payment_method:** Blik and sofort bank redirect payment method type defaulting to card ([#493](https://github.com/juspay/connector-service/pull/493)) ([`0c04185`](https://github.com/juspay/connector-service/commit/0c0418526daa56bcdd588d010229793834db57cd))
+
+### Refactors
+
+- Event publisher to log processed event even when publisher is disabled ([#491](https://github.com/juspay/connector-service/pull/491)) ([`9f83fd6`](https://github.com/juspay/connector-service/commit/9f83fd6eb1f938e8b02c0c09d0e3540d2b9ca025))
+
+### Miscellaneous Tasks
+
+- Added Resource ID, Service Name, and Service Type for UCS Events ([#460](https://github.com/juspay/connector-service/pull/460)) ([`430946c`](https://github.com/juspay/connector-service/commit/430946cc565cfe933b3fcf524c4bff2738ee4966))
+
+**Full Changelog:** [`2026.02.06.1...2026.02.10.0`](https://github.com/juspay/connector-service/compare/2026.02.06.1...2026.02.10.0)
+
+- - -
+
 ## 2026.02.06.1
 
 ### Features

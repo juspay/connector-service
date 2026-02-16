@@ -55,7 +55,7 @@ use domain_types::errors;
 use domain_types::router_response_types::Response;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    verification::SourceVerification,
+    decode::BodyDecoding, verification::SourceVerification,
 };
 
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
@@ -209,6 +209,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Cryptopay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
     for Cryptopay<T>
 {
 }
@@ -401,7 +405,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let custom_id = req.resource_common_data.get_reference_id()?;
+            let custom_id = req.resource_common_data.connector_request_reference_id.clone();
 
             Ok(format!(
                 "{}/api/invoices/custom_id/{custom_id}",

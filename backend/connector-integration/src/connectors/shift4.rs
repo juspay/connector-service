@@ -38,6 +38,7 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{self},
+    decode::BodyDecoding,
     verification::SourceVerification,
 };
 use serde::Serialize;
@@ -561,6 +562,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Shift4<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
     for Shift4<T>
 {
 }
