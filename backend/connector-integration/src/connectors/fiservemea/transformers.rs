@@ -65,13 +65,13 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
-    pub payment_card: FiservemeaCard<T>,
+pub struct FiservemeaPaymentMethod {
+    pub payment_card: FiservemeaCard,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaCard<T: PaymentMethodDataTypes> {
+pub struct FiservemeaCard {
     pub number: Secret<String>,
     pub security_code: Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
