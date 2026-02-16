@@ -54,10 +54,10 @@ pub struct FiservemeaErrorDetail {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes> {
+pub struct FiservemeaAuthorizeRequest {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod<T>,
+    pub payment_method: FiservemeaPaymentMethod,
     pub order: Option<FiservemeaOrder>,
 }
 
@@ -70,12 +70,12 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "paymentMethodType", rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
-    PaymentCard(FiservemeaCard<T>),
+pub enum FiservemeaPaymentMethod {
+    PaymentCard(FiservemeaCard),
 }
 
 #[derive(Debug, Serialize)]
-pub struct FiservemeaCard<T: PaymentMethodDataTypes> {
+pub struct FiservemeaCard {
     pub number: Secret<String>,
     pub security_code: Option<Secret<String>>,
     pub expiry_date: FiservemeaExpiryDate,
@@ -174,7 +174,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
-    > for FiservemeaAuthorizeRequest<T>
+    > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
