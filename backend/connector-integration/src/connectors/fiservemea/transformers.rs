@@ -82,7 +82,7 @@ pub struct FiservemeaOrder {
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaPaymentsRequest
+    > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -94,13 +94,60 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
+        let payment_method_data = item
+            .request
+            .payment_method_data
+            .get_payment_method()
+            .change_context(errors::ConnectorError::MissingRequiredField {
+                field_name: "payment_method_data",
+            })?;
+
+        let (card_number, card_expiry_month, card_expiry_year, card_cvv) = match payment_method_data
+        {
+            domain_types::payment_method_data::PaymentMethod::Card(card) => (
+                card.card_number.clone(),
+                card.card_exp_month.clone(),
+                card.card_exp_year.clone(),
+                card.card_cvc.clone(),
+            ),
+            _ => {
+                return Err(error_stack::report!(
+                    errors::ConnectorError::NotImplemented {
+                        message: "Only card payments are supported".to_string(),
+                    }
+                ))
+            }
+        };
+
+        let amount = StringMajorUnit::convert_to_major_unit(
+            item.request.minor_amount.get_amount_as_i64(),
+            item.request.currency,
+        )
+        .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
+        let order = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone()
+            .map(|ref_id| FiservemeaOrder { order_id: ref_id });
+
         Ok(Self {
-            amount: item.request.minor_amount.get_amount_as_i64(),
-            currency: item.request.currency.to_string(),
-            reference: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            request_type: "PaymentCardPreAuthTransaction".to_string(),
+            transaction_amount: FiservemeaTransactionAmount {
+                total: amount,
+                currency: item.request.currency.to_string(),
+            },
+            payment_method: FiservemeaPaymentMethod {
+                payment_card: FiservemeaPaymentCard {
+                    number: card_number,
+                    security_code: card_cvv,
+                    expiry_date: FiservemeaExpiryDate {
+                        month: card_expiry_month,
+                        year: card_expiry_year,
+                    },
+                },
+            },
+            order,
         })
     }
 }
