@@ -8,7 +8,7 @@ use domain_types::{
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -193,7 +193,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     security_code: Some(card_data.card_cvc.clone()),
                     expiry_date: FiservemeaExpiryDate {
                         month: card_data.card_exp_month.expose().to_string(),
-                        year: card_data.get_expiry_year_2_digit()?,
+                        year: card_data.get_expiry_year_4_digit()?,
                     },
                 })
             }
@@ -204,11 +204,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        let order = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone()
-            .map(|order_id| FiservemeaOrder { order_id });
+        let order = Some(FiservemeaOrder {
+            order_id: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        });
 
         let amount = item
             .connector
