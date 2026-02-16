@@ -20,6 +20,9 @@
     "build": "sh build.sh",
     "test": "node tests/test_node.js"
   },
+  "dependencies": {
+    "node-fetch": "^2.6.1"
+  },
   "devDependencies": {
     "typescript": "^5.0.0"
   }

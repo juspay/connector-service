@@ -67,7 +67,14 @@ function authorizeRes(payload, extractedMetadata, response) {
   return typeof res === "string" ? res : JSON.stringify(res);
 }
 
+// Import high-level client
+const { ConnectorClient } = require('./src/client');
+
 module.exports = {
+  // High-level API (recommended)
+  ConnectorClient,
+  
+  // Low-level FFI bindings (advanced usage)
   authorizeReq,
   authorizeRes,
   _native: native,

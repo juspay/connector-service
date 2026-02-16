@@ -1,187 +1,184 @@
-# connector-service-node-ffi
+# Connector Service - Node.js FFI Client
 
-Node.js FFI bindings for connector-service using Rust native library.
-
-This SDK provides native bindings to the Rust FFI library, allowing Node.js applications to directly call Rust functions for payment processing.
-
-## Features
-
-- Direct native bindings to Rust FFI functions
-- TypeScript support with full type definitions
-- Native binary optimized for performance (release build)
-- Cross-platform support (macOS, Linux, Windows)
-
-## Prerequisites
-
-- [Rust](https://www.rust-lang.org/) (latest stable)
-- [Cargo](https://doc.rust-lang.org/cargo/) (comes with Rust)
-- [Node.js](https://nodejs.org/) >= 10
-- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+Node.js bindings for the connector-service FFI, providing high-level and low-level APIs for payment operations.
 
 ## Installation
 
-1. Clone the repository:
 ```bash
-git clone <repository_url>
-cd connector-service
+npm install connector-service-node-ffi
 ```
 
-2. Install dependencies:
+## Prerequisites
+
+- Node.js >= 10
+- Built native addon at `artifacts/connector_service_ffi.node`
+
+Build the native addon:
 ```bash
-cd sdk/node-ffi-client
-npm install
+cd backend/ffi && cargo build --release --features napi
 ```
 
-3. Build the native binary:
-```bash
-npm run build
-```
+## API Levels
 
-This will:
-- Build the Rust FFI library in release mode
-- Copy the native binary to `artifacts/connector_service_ffi.node`
+This SDK provides two API levels:
 
-## Usage
+### 1. High-Level API (ConnectorClient) - Recommended
 
-### JavaScript
+Simplified interface that handles the complete request/response flow.
 
 ```javascript
-const ffi = require('connector-service-node-ffi');
+const { ConnectorClient } = require('connector-service-node-ffi');
 
-const payload = {
-  request_ref_id: { id: "payment_123" },
-  amount: 1000,
-  currency: "USD",
-  payment_method: {
-    payment_method: {
-      Card: {
-        card_number: "4111111111111111",
-        card_exp_month: "12",
-        card_exp_year: "2025",
-        card_cvc: "123",
-        card_holder_name: "Test User",
-        card_network: 1
-      }
-    }
-  },
-  capture_method: "AUTOMATIC",
-  email: "customer@example.com",
-  customer_name: "Test Customer",
-  auth_type: "NO_THREE_DS",
-  enrolled_for_3ds: false,
-  return_url: "https://example.com/return",
-  webhook_url: "https://example.com/webhook",
-  description: "Test payment",
-  test_mode: true,
-  order_details: [],
-  address: {
-    shipping_address: null,
-    billing_address: null
-  }
-};
-
+// Create client with metadata
 const metadata = {
-  connector: "Stripe",
-  connector_auth_type: {
-    auth_type: "HeaderKey",
-    api_key: "sk_test_..."
-  }
+    connector: 'Stripe',
+    connector_auth_type: {
+        auth_type: "HeaderKey",
+        api_key: "sk_test_xxx"
+    }
 };
 
-const result = ffi.authorize(payload, metadata);
+const client = new ConnectorClient(metadata);
+
+// Authorize payment
+const payload = {
+    request_ref_id: { id: "payment_123" },
+    amount: 1000,
+    minor_amount: 1000,
+    currency: "USD",
+    payment_method: {
+        payment_method: {
+            Card: {
+                card_number: "4111111111111111",
+                card_exp_month: "12",
+                card_exp_year: "2025",
+                card_cvc: "123",
+                card_holder_name: "John Doe",
+                card_network: 1
+            }
+        }
+    },
+    capture_method: "AUTOMATIC",
+    email: "customer@example.com",
+    customer_name: "John Doe",
+    auth_type: "NO_THREE_DS",
+    enrolled_for_3ds: false,
+    test_mode: true,
+    order_details: [],
+    address: {
+        shipping_address: null,
+        billing_address: null
+    }
+};
+
+const result = await client.authorize(payload);
 console.log(result);
 ```
 
-### TypeScript
+### 2. Low-Level API (FFI Bindings) - Advanced
 
-```typescript
-import { authorize, PaymentServiceAuthorizeRequest, MetadataPayload } from 'connector-service-node-ffi';
+Direct access to FFI functions for maximum control.
 
-const payload: PaymentServiceAuthorizeRequest = {
-  request_ref_id: { id: "payment_123" },
-  amount: 1000,
-  // ... rest of the payload
+```javascript
+const { authorizeReq, authorizeRes } = require('connector-service-node-ffi');
+const fetch = require('node-fetch');
+
+const metadata = {
+    connector: 'Stripe',
+    connector_auth_type: {
+        auth_type: "HeaderKey",
+        api_key: "sk_test_xxx"
+    }
 };
 
-const metadata: MetadataPayload = {
-  connector: "Stripe",
-  connector_auth_type: {
-    auth_type: "HeaderKey",
-    api_key: "sk_test_..."
-  }
+const payload = { /* payment payload */ };
+
+// Step 1: Build HTTP request
+const requestJson = authorizeReq(payload, metadata);
+const { body, headers, method, url } = JSON.parse(requestJson);
+
+// Step 2: Execute HTTP request
+const response = await fetch(url, {
+    method,
+    headers,
+    body: body || undefined,
+});
+
+// Step 3: Collect response
+const responseText = await response.text();
+const responseHeaders = {};
+response.headers.forEach((value, key) => {
+    responseHeaders[key] = value;
+});
+
+const formattedResponse = {
+    status: response.status,
+    headers: responseHeaders,
+    body: responseText
 };
 
-const result = authorize(payload, metadata);
+// Step 4: Parse response
+const resultJson = authorizeRes(payload, metadata, formattedResponse);
+const result = JSON.parse(resultJson);
 console.log(result);
 ```
 
 ## API Reference
 
-### authorize(payload, extractedMetadata)
+### ConnectorClient
 
-Authorizes a payment with the provided payload and extracted metadata.
+#### Constructor
+
+```javascript
+new ConnectorClient(metadata)
+```
 
 **Parameters:**
-- `payload` (PaymentServiceAuthorizeRequest): Payment authorization request
-- `extractedMetadata` (MetadataPayload): Metadata containing connector and auth info
+- `metadata` (object): Metadata containing connector and authentication info
+  - `connector` (string): Connector name (e.g., 'Stripe', 'Adyen')
+  - `connector_auth_type` (object): Authentication configuration
+    - `auth_type` (string): Authentication type (e.g., 'HeaderKey')
+    - `api_key` (string): API key for HeaderKey auth
 
-**Returns:** `string` - JSON string containing the response
+#### Methods
 
-**Throws:** Error if payload or extractedMetadata is empty or invalid
+##### authorize(payload)
 
-### _native
+Authorize a payment.
 
-Access to the underlying native module for advanced use cases.
+**Parameters:**
+- `payload` (object): Complete payment payload matching PaymentServiceAuthorizeRequest structure
 
-## Scripts
+**Returns:**
+- `Promise<object>`: Payment response
 
-- `npm run build` - Build Rust FFI library and copy to artifacts
-- `npm test` - Run the test suite
+**Throws:**
+- `Error`: If authorization fails
 
-## Project Structure
+### Low-Level Functions
 
-```
-sdk/node-ffi-client/
-├── artifacts/              # Native binary (.node file)
-├── src/
-│   ├── index.ts           # TypeScript entry point
-│   └── payment.ts         # Type definitions and authorize function
-├── tests/
-│   └── test_node.js       # Test suite
-├── index.js               # JavaScript entry point (loads native module)
-├── index.d.ts             # TypeScript definitions for native module
-├── package.json           # NPM package configuration
-├── tsconfig.json          # TypeScript configuration
-└── build.sh               # Build script (Rust + copy binary)
-```
+#### authorizeReq(payload, metadata)
 
-## Building from Source
+Build HTTP request for payment authorization.
 
-### Manual Build
+**Parameters:**
+- `payload` (object): Payment payload
+- `metadata` (object): Connector metadata
 
-```bash
-# Build Rust library
-cd backend/ffi
-cargo build --release
+**Returns:**
+- `string`: JSON string containing `{ body, headers, method, url }`
 
-# Copy binary to artifacts
-cp target/release/libconnector_service_ffi.dylib ../sdk/node-ffi-client/artifacts/connector_service_ffi.node
-```
+#### authorizeRes(payload, metadata, response)
 
-### Using npm script
+Parse payment authorization response.
 
-```bash
-cd sdk/node-ffi-client
-npm run build
-```
+**Parameters:**
+- `payload` (object): Original payment payload
+- `metadata` (object): Connector metadata
+- `response` (object): HTTP response object with `{ status, headers, body }`
 
-## Platform-Specific Binaries
-
-The build script automatically detects your platform and copies the appropriate binary:
-
-- **macOS**: `libconnector_service_ffi.dylib` → `connector_service_ffi.node`
-- **Linux**: `libconnector_service_ffi.so` → `connector_service_ffi.node`
-- **Windows**: `connector_service_ffi.dll` → `connector_service_ffi.node`
+**Returns:**
+- `string`: JSON string containing parsed payment response
 
 ## Testing
 
@@ -191,7 +188,26 @@ Run the test suite:
 npm test
 ```
 
-**Note:** Tests require the native binary to be built first. Run `npm run build` before testing.
+Or manually:
+
+```bash
+node tests/test_node.js
+```
+
+## Error Handling
+
+The SDK provides enhanced error messages with context:
+
+```javascript
+try {
+    const result = await client.authorize(payload);
+} catch (error) {
+    console.error('Authorization failed:', error.message);
+    if (error.cause) {
+        console.error('Caused by:', error.cause);
+    }
+}
+```
 
 ## License
 
