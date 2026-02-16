@@ -66,7 +66,7 @@ macros::create_all_prerequisites!(
                 client_request_id.into(),
             ));
 
-            let timestamp = chrono::Utc::now().timestamp_millis();
+            let timestamp = OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000;
             header.push((
                 "Timestamp".to_string(),
                 timestamp.to_string().into(),
