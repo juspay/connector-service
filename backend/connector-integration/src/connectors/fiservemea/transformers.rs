@@ -78,7 +78,7 @@ pub struct FiservemeaExpiryDate {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaOrder {
+pub struct FisemveaOrder {
     pub order_id: String,
 }
 
@@ -121,11 +121,27 @@ pub enum FiservemeaTransactionState {
     Waiting,
 }
 
-#[derive(Debug, Serialize)]
-pub struct FiservemeaPaymentsRequest {
-    pub amount: i64,
-    pub currency: String,
-    pub reference: String,
+fn map_fiservemea_status_to_attempt_status(
+    transaction_result: FiservemeaTransactionResult,
+    transaction_state: FiservemeaTransactionState,
+) -> AttemptStatus {
+    match (transaction_result, transaction_state) {
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Captured) => {
+            AttemptStatus::Charged
+        }
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Authorized) => {
+            AttemptStatus::Authorized
+        }
+        (FiservemeaTransactionResult::Declined, _) | (FisemveaTransactionResult::Failed, _) => {
+            AttemptStatus::Failure
+        }
+        (FiservemeaTransactionResult::Waiting, FiservemeaTransactionState::Pending) => {
+            AttemptStatus::Pending
+        }
+        (_, FiservemeaTransactionState::Voided) => AttemptStatus::Voided,
+        (FiservemeaTransactionResult::Fraud, _) => AttemptStatus::Failure,
+        _ => AttemptStatus::Pending,
+    }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
@@ -139,7 +155,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::FisevemeaRouterData<
+        item: super::FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             super::Fiservemea<T>,
         >,
@@ -167,12 +183,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             Some(common_enums::CaptureMethod::Automatic) => "PaymentCardSaleTransaction".to_string(),
             Some(common_enums::CaptureMethod::Manual)
             | Some(common_enums::CaptureMethod::ManualMultiple)
-            | Some(common_enums::CaptureMethod::CaptureMethod::Scheduled)
+            | Some(common_enums::CaptureMethod::Scheduled)
             | Some(common_enums::CaptureMethod::SequentialAutomatic)
             | None => "PaymentCardPreAuthTransaction".to_string(),
         };
 
-        let order = Some(FiservemeaOrder {
+        let order = Some(FisemveaOrder {
             order_id: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -194,53 +210,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-fn map_fiservemea_status_to_attempt_status(
-    transaction_result: FiservemeaTransactionResult,
-    transaction_state: FiservemeaTransactionState,
-) -> AttemptStatus {
-    match (transaction_result, transaction_state) {
-        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Captured) => {
-            AttemptStatus::Charged
-        }
-        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Authorized) => {
-            AttemptStatus::Authorized
-        }
-        (FiservemeaTransactionResult::Declined, _) | (FiservemeaTransactionResult::Failed, _) => {
-            AttemptStatus::Failure
-        }
-        (FiservemeaTransactionResult::Waiting, FiservemeaTransactionState::Pending) => {
-            AttemptStatus::Pending
-        }
-        (_, FiservemeaTransactionState::Voided) => AttemptStatus::Voided,
-        (FiservemeaTransactionResult::Fraud, _) => AttemptStatus::Failure,
-        _ => AttemptStatus::Pending,
-    }
-}
-
 impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            FiservemeaAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    TryFrom<ResponseRouterData<
+        FiservemeaAuthorizeResponse,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    >>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<
             FiservemeaAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let status = map_fiservemea_status_to_attempt_status(
