@@ -8,6 +8,7 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    utils,
 };
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
@@ -112,24 +113,24 @@ impl<T: PaymentMethodDataTypes>
             ),
             _ => {
                 return Err(error_stack::report!(
-                    errors::ConnectorError::NotImplemented {
-                        message: "Only card payments are supported".to_string(),
-                    }
+                    errors::ConnectorError::NotImplemented("Only card payments are supported".to_string())
                 ))
             }
         };
 
-        let amount = StringMajorUnit::convert_to_major_unit(
-            item.request.minor_amount.get_amount_as_i64(),
+        let amount = utils::convert_amount(
+            &StringMajorUnitForConnector,
+            common_utils::types::MinorUnit::new(item.request.minor_amount.get_amount_as_i64()),
             item.request.currency,
         )
-        .change_context(errors::ConnectorError::AmountConversionFailed)?;
+        .change_context(errors::ConnectorError::AmountConversionFailed)?
+        .to_string();
 
         let order = item
             .resource_common_data
             .connector_request_reference_id
-            .clone()
-            .map(|ref_id| FiservemeaOrder { order_id: ref_id });
+            .as_ref()
+            .map(|ref_id| FiservemeaOrder { order_id: ref_id.clone() });
 
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
