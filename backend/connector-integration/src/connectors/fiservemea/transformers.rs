@@ -215,14 +215,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let expiry_month = card_data
             .card_exp_month
-            .peek()
+            .expose()
             .chars()
             .skip_while(|c| c.is_whitespace())
             .collect::<String>();
 
         let expiry_year = card_data
             .card_exp_year
-            .peek()
+            .expose()
             .chars()
             .skip_while(|c| c.is_whitespace())
             .collect::<String>();
@@ -243,6 +243,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount_total = StringMajorUnitForConnector::convert(
             item.request.minor_amount,
             item.request.currency,
+            item.request.currency.get_minor_unit(),
         )
         .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
