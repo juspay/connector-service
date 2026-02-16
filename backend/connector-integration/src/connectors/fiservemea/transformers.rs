@@ -53,6 +53,16 @@ pub struct FiservemeaAuthorizeRequest {
     pub order: Option<FiservemeaOrder>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaAuthorizeRequestGeneric<T: PaymentMethodDataTypes> {
+    pub request_type: String,
+    pub transaction_amount: FiservemeaTransactionAmount,
+    pub payment_method: FiservemeaPaymentMethod,
+    pub order: Option<FiservemeaOrder>,
+    pub _phantom: std::marker::PhantomData<T>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaTransactionAmount {
