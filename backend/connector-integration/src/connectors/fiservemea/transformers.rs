@@ -215,6 +215,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let expiry_month = card_data
             .card_exp_month
+            .clone()
             .expose()
             .chars()
             .skip_while(|c| c.is_whitespace())
@@ -222,6 +223,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let expiry_year = card_data
             .card_exp_year
+            .clone()
             .expose()
             .chars()
             .skip_while(|c| c.is_whitespace())
