@@ -79,24 +79,6 @@ pub struct FiservemeaExpiryDate {
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaOrder {
     pub order_id: String,
-    pub billing: Option<FiservemeaBilling>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FiservemeaBilling {
-    pub name: String,
-    pub address: FiservemeaAddress,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FiservemeaAddress {
-    pub street: String,
-    pub city: String,
-    pub state_province: String,
-    pub postal_code: String,
-    pub country: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -183,37 +165,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             Some(common_enums::CaptureMethod::Manual) | None => "PaymentCardPreAuthTransaction".to_string(),
         };
 
-        let billing = item
-            .resource_common_data
-            .address
-            .get_payment_billing()
-            .and_then(|addr| {
-                Some(FiservemeaBilling {
-                    name: item
-                        .resource_common_data
-                        .get_billing_full_name()
-                        .ok()
-                        .unwrap_or_default(),
-                    address: FiservemeaAddress {
-                        street: addr.line1.clone().unwrap_or_default(),
-                        city: addr.city.clone().unwrap_or_default(),
-                        state_province: addr.state.clone().unwrap_or_default(),
-                        postal_code: addr.zip.clone().unwrap_or_default(),
-                        country: addr
-                            .country
-                            .as_ref()
-                            .and_then(|c| c.convert_country_alpha2_to_alpha3())
-                            .unwrap_or_default(),
-                    },
-                })
-            });
-
         let order = Some(FiservemeaOrder {
             order_id: item
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            billing,
         });
 
         Ok(Self {
