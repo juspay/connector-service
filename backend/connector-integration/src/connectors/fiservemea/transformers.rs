@@ -43,7 +43,7 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, api_secret } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, api_secret, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
@@ -192,22 +192,20 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let payment_method = item
-            .request
-            .payment_method_data
-            .get_payment_method()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "payment_method_data",
-            })?;
-
-        let card = payment_method
-            .get_card()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "card",
-            })?;
+        let card = match &item.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Card(card) => card,
+            _ => {
+                return Err(error_stack::report!(
+                    errors::ConnectorError::NotSupported {
+                        message: "Only card payment method is supported".to_string(),
+                    }
+                ))
+            }
+        };
 
         let expiry_month = card
             .card_exp_month
+            .peek()
             .to_string()
             .chars()
             .skip_while(|&c| c == '0')
@@ -218,7 +216,7 @@ impl<T: PaymentMethodDataTypes>
             expiry_month
         };
 
-        let expiry_year = card.card_exp_year.to_string();
+        let expiry_year = card.card_exp_year.peek().to_string();
 
         let amount_total = item
             .request
@@ -244,10 +242,12 @@ impl<T: PaymentMethodDataTypes>
                 },
             },
             order: Some(FiservemeaOrder {
-                order_id: item
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
+                order_id: Some(
+                    item
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
             }),
         })
     }
