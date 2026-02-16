@@ -21,20 +21,48 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const API_KEY: &str = "Api-Key";
+    pub(crate) const CLIENT_REQUEST_ID: &str = "Client-Request-Id";
+    pub(crate) const TIMESTAMP: &str = "Timestamp";
+    pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
 }
 
-#[derive(Debug, Clone)]
-pub struct Fiservemea<T: PaymentMethodDataTypes> {
-    payment_method_type: std::marker::PhantomData<T>,
-}
+macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: fiservemea::FiservemeaAuthorizeRequest<T>,
+            response_body: fiservemea::FiservemeaAuthorizeResponse,
+            router_data: domain_types::router_data_v2::RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+    ],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &domain_types::router_data_v2::RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            )];
+            let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut auth_header);
+            Ok(header)
+        }
 
-impl<T: PaymentMethodDataTypes> Fiservemea<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            payment_method_type: std::marker::PhantomData,
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a domain_types::router_data_v2::RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.fiservemea.base_url
         }
     }
-}
+);
 
 // =============================================================================
 // MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
