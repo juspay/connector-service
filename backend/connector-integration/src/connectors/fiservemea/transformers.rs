@@ -1,11 +1,11 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::types::StringMajorUnit;
+use common_utils::types::{StringMajorUnit, StringMajorUnitForConnector};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethod, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     utils,
@@ -120,7 +120,7 @@ impl<T: PaymentMethodDataTypes>
 
         let (card_number, card_expiry_month, card_expiry_year, card_cvv) = match payment_method_data
         {
-            domain_types::payment_method_data::PaymentMethod::Card(card) => (
+            PaymentMethod::Card(card) => (
                 card.card_number.clone(),
                 card.card_exp_month.clone(),
                 card.card_exp_year.clone(),
