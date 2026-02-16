@@ -90,6 +90,12 @@ service PaymentService {
   rpc VerifyRedirectResponse(PaymentServiceVerifyRedirectResponseRequest) returns (PaymentServiceVerifyRedirectResponseResponse);
 }
 
+// Service for composite payment operations.
+service CompositePaymentService {
+  // Runs composite authorize flow.
+  rpc CompositeAuthorize(CompositeAuthorizeRequest) returns (CompositeAuthorizeResponse);
+}
+
 // Service for refund-specific operations.
 service RefundService {
   // Synchronizes the status of a refund.

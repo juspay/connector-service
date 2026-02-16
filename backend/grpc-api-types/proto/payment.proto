@@ -1780,6 +1780,105 @@ message PaymentServiceAuthorizeResponse {
   optional ConnectorResponseData connector_response = 19; // Various data regarding the response from connector
 }
 
+// Request message for composite authorize flow.
+message CompositeAuthorizeRequest {
+  // Payment Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+
+  // Account-Specific Configuration
+  optional SecretString merchant_account_metadata = 2; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Metadata
+  optional SecretString metadata = 3; // Additional metadata for the connector
+  optional SecretString connector_metadata = 4; // Connector-specific metadata for the transaction
+
+  // Environment Configuration
+  optional bool test_mode = 5; // A boolean value to indicate if the connector is in Test mode
+
+  // Connector Selection
+  Connector connector = 6; // The connector to create the access token for
+
+  // Customer Information
+  optional string customer_name = 7; // Name of the customer
+  optional SecretString email = 8; // Email address of the customer
+  optional string customer_id = 9; // Merchant's customer ID
+  optional string phone_number = 10; // Phone number of the customer
+
+  // Address Information
+  optional PaymentAddress address = 11; // Billing and shipping address details
+
+  // Amount Information
+  int64 amount = 12; // The amount for the payment in major currency units
+  Currency currency = 13; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 14; // The minor amount for the payment (e.g., cents)
+  optional int64 order_tax_amount = 15; // Tax amount for the order
+  optional int64 shipping_cost = 16; // Cost of shipping for the order
+
+  // Payment Method and Capture Settings
+  PaymentMethod payment_method = 17; // Payment method to be used
+  optional CaptureMethod capture_method = 18; // Method for capturing the payment
+  optional string connector_customer_id = 19; // Customer ID as recognized by the connector
+
+  // Authentication Details
+  AuthenticationType auth_type = 20; // Type of authentication to be used
+  optional bool enrolled_for_3ds = 21; // Indicates if the customer is enrolled for 3D Secure
+  optional AuthenticationData authentication_data = 22; // Additional authentication data
+
+  // URLs for Redirection and Webhooks
+  optional string return_url = 23; // URL to redirect after payment
+  optional string webhook_url = 24; // URL for webhook notifications
+  optional string complete_authorize_url = 25; // URL to complete authorization
+
+  // Session and Token Information
+  optional string session_token = 26; // Session token, if applicable
+
+  // Order Details
+  optional string order_category = 27; // Category of the order
+  optional string merchant_order_reference_id = 28; // Merchant's internal reference ID
+  optional string connector_order_reference_id = 29; // Connector's reference id for order
+
+  // Behavioral Flags and Preferences
+  optional FutureUsage setup_future_usage = 30; // Indicates future usage intention
+  optional bool off_session = 31; // Indicates if off-session transaction
+  optional bool request_incremental_authorization = 32; // Indicates if incremental authorization is requested
+  optional bool request_extended_authorization = 33; // Indicates if extended authorization is requested
+  optional bool enable_partial_authorization = 34; // Indicates if partial authorization is enabled
+
+  // Contextual Information
+  optional CustomerAcceptance customer_acceptance = 35; // Details of customer acceptance
+  optional BrowserInformation browser_info = 36; // Information about the customer's browser
+  optional PaymentExperience payment_experience = 37; // Preferred payment experience
+  optional string description = 38; // Additional description for the payment
+  optional PaymentChannel payment_channel = 39; // Describes the channel through which the payment was initiated
+
+  // Mandate Setup Details
+  optional SetupMandateDetails setup_mandate_details = 40; // Setup mandate details for the authorization
+
+  // Statement Descriptor
+  optional string statement_descriptor_name = 41; // Complete description that appears on customers' statements
+  optional string statement_descriptor_suffix = 42; // Provides information about a card payment that customers see on their statements
+  optional BillingDescriptor billing_descriptor = 43; // Billing Descriptor information to be sent to the payment gateway
+
+  // State Information
+  optional ConnectorState state = 44; // State data for access token storage and other connector-specific state
+
+  // Order Line Items
+  repeated OrderDetailsWithAmount order_details = 45; // Details about the different products for which the payment is being made
+
+  // Locale Information
+  optional string locale = 46; // Locale/language preference for the shopper (e.g., "en-US")
+
+  // Tokenization Configuration
+  optional Tokenization tokenization_strategy = 47; // Tokenization strategy for payment processing
+}
+
+// Response message for composite authorize flow.
+message CompositeAuthorizeResponse {
+  optional PaymentServiceCreateAccessTokenResponse access_token_response = 1; // Access token flow response
+  optional PaymentServiceCreateConnectorCustomerResponse create_customer_response = 2; // Create customer flow response
+  optional PaymentServiceAuthorizeResponse authorize_response = 3; // Authorize flow response
+}
+
 // Request message for synchronizing payment status.
 message PaymentServiceGetRequest {
   // Identification
