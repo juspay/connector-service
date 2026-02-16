@@ -1,15 +1,15 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::types::StringMajorUnit;
+use common_utils::types::MinorUnit;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::Maskable;
+use hyperswitch_masking::{ExposeInterface, Maskable};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -42,10 +42,10 @@ pub struct FiservemeaErrorResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes + Serialize> {
+pub struct FiservemeaAuthorizeRequest {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod<T>,
+    pub payment_method: FiservemeaPaymentMethod,
     pub order: Option<FiservemeaOrder>,
 }
 
@@ -58,7 +58,7 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "paymentCard", rename_all = "camelCase")]
-pub struct FiservemeaCard<T: PaymentMethodDataTypes> {
+pub struct FiservemeaCard {
     pub number: hyperswitch_masking::Secret<String>,
     pub security_code: hyperswitch_masking::Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
@@ -99,9 +99,9 @@ pub struct FiservemeaAddress {
 }
 
 #[derive(Debug, Serialize)]
-pub enum FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
+pub enum FiservemeaPaymentMethod {
     #[serde(rename = "paymentCard")]
-    Card(FiservemeaCard<T>),
+    Card(FiservemeaCard),
 }
 
 #[derive(Debug, Deserialize)]
@@ -164,17 +164,10 @@ pub fn map_fiservemea_status_to_attempt_status(
     }
 }
 
-struct FiservemeaRouterData<T: PaymentMethodDataTypes> {
-    amount: i64,
-    currency: String,
-    payment_method: T,
-    connector_request_reference_id: String,
-}
-
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaRouterData<T>
+    > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -186,47 +179,25 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            amount: item.request.minor_amount.get_amount_as_i64(),
-            currency: item.request.currency.to_string(),
-            payment_method: item.request.payment_method.clone(),
-            connector_request_reference_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-        })
-    }
-}
+        let amount = item.request.minor_amount.get_amount_as_i64();
+        let currency = item.request.currency.to_string();
+        let amount_str = format!("{:.2}", amount as f64 / 100.0);
 
-impl<T: PaymentMethodDataTypes + Serialize>
-    TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let router_data = FiservemeaRouterData::try_from(item)?;
-        let amount_str = StringMajorUnit::from(router_data.amount).to_string();
-
-        let payment_method = match &router_data.payment_method {
-            PaymentMethodDataTypes::Card(card) => {
-                let expiry_month = card.card_exp_month.to_string();
-                let expiry_year = card.card_exp_year.to_string();
+        let payment_method = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card) => {
+                let expiry_month = card.card_exp_month.peek();
+                let expiry_year = card.card_exp_year.peek();
                 let expiry_date = FiservemeaExpiryDate {
-                    month: format!("{:02}", expiry_month.parse::<u32>().unwrap_or(0)),
-                    year: format!("{:04}", expiry_year.parse::<u32>().unwrap_or(0)),
+                    month: expiry_month.clone(),
+                    year: if expiry_year.len() == 2 {
+                        format!("20{}", expiry_year)
+                    } else {
+                        expiry_year.to_string()
+                    },
                 };
 
                 FiservemeaPaymentMethod::Card(FiservemeaCard {
-                    number: card.card_number.clone(),
+                    number: card.card_number.0.clone(),
                     security_code: card.card_cvc.clone(),
                     expiry_date,
                 })
@@ -239,7 +210,10 @@ impl<T: PaymentMethodDataTypes + Serialize>
         };
 
         let order = Some(FiservemeaOrder {
-            order_id: router_data.connector_request_reference_id,
+            order_id: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             billing: None,
         });
 
@@ -247,7 +221,7 @@ impl<T: PaymentMethodDataTypes + Serialize>
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
                 total: amount_str,
-                currency: router_data.currency,
+                currency,
             },
             payment_method,
             order,
