@@ -9,7 +9,7 @@ use domain_types::{
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -233,7 +233,7 @@ impl<T: PaymentMethodDataTypes>
             },
             payment_method: FiservemeaPaymentMethod {
                 payment_card: FiservemeaCard {
-                    number: card.card_number.clone(),
+                    number: Secret::new(card.card_number.peek().to_string()),
                     security_code: card.card_cvc.clone(),
                     expiry_date: FiservemeaExpiryDate {
                         month: expiry_month,
