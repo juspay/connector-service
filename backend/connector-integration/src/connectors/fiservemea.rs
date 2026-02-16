@@ -134,7 +134,7 @@ macros::create_all_prerequisites!(
                 (headers::API_KEY.to_string(), auth_type_for_sig.api_key.clone().into_masked()),
                 (headers::CLIENT_REQUEST_ID.to_string(), client_request_id.into()),
                 (headers::TIMESTAMP.to_string(), timestamp_ms.to_string().into()),
-                (headers::MESSAGE_SIGNATURE.to_string(), signature.into_masked()),
+                (headers::MESSAGE_SIGNATURE.to_string(), signature.into()),
             ];
 
             Ok(http_headers)
