@@ -9264,24 +9264,7 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
-        // Create redirect response from metadata if present
-        // This is used to pass connector-specific data (e.g., collectionReference for Worldpay)
-        let redirect_response = if value.metadata.is_some() {
-            let params_string = serde_urlencoded::to_string(&value.metadata).change_context(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_METADATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to serialize metadata".to_owned(),
-                    error_object: None,
-                }),
-            )?;
-            Some(ContinueRedirectionResponse {
-                params: Some(Secret::new(params_string)),
-                payload: None,
-            })
-        } else {
-            None
-        };
+        let redirect_response = None;
 
         Ok(Self {
             payment_method_data: value
