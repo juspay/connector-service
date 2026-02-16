@@ -119,7 +119,7 @@ pub struct FiservemeaAuthorizeResponse {
     pub processor: Option<FiservemeaProcessor>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservemeaTransactionResult {
     Approved,
@@ -130,7 +130,7 @@ pub enum FiservemeaTransactionResult {
     Fraud,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservemeaTransactionState {
     Authorized,
@@ -147,7 +147,7 @@ pub enum FiservemeaTransactionState {
     Waiting,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
