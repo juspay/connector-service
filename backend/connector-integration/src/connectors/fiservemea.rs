@@ -131,7 +131,7 @@ macros::create_all_prerequisites!(
 
             let mut http_headers = vec![
                 (headers::CONTENT_TYPE.to_string(), self.common_get_content_type().into()),
-                (headers::API_KEY.to_string(), auth_type_for_sig.api_key.clone().into_masked()),
+                (headers::API_KEY.to_string(), auth_type_for_sig.api_key.clone().into()),
                 (headers::CLIENT_REQUEST_ID.to_string(), client_request_id.into()),
                 (headers::TIMESTAMP.to_string(), timestamp_ms.to_string().into()),
                 (headers::MESSAGE_SIGNATURE.to_string(), signature.into()),
