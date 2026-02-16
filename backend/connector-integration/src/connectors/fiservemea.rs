@@ -3,10 +3,11 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorAuthType, router_response_types::Response, types::Connectors,
+    router_data::ConnectorAuthType, router_response_types::Response, router_data_v2::RouterDataV2,
+    types::Connectors,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
@@ -16,7 +17,7 @@ use interfaces::{
 use serde::Serialize;
 use transformers as fiservemea;
 
-use crate::with_error_response_body;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -37,14 +38,67 @@ impl<T: PaymentMethodDataTypes> Fiservemea<T> {
 }
 
 // =============================================================================
-// MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
+// MACRO SETUP
 // =============================================================================
-// Primary authorize implementation - customize as needed
-// =============================================================================
-// MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
-// =============================================================================
-// Primary authorize implementation - customize as needed
-// ... Authorize implementation is now valid generated code ...
+
+// Helper struct for router data transformation
+pub struct FiservemeaRouterData<T, U> {
+    pub amount: StringMajorUnit,
+    pub router_data: T,
+    pub connector: U,
+}
+
+impl<T, U> TryFrom<(StringMajorUnit, T, U)> for FiservemeaRouterData<T, U> {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        (amount, router_data, connector): (StringMajorUnit, T, U),
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            amount,
+            router_data,
+            connector,
+        })
+    }
+}
+
+// Set up connector using macros with all framework integrations
+macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: fiservemea::FiservemeaAuthorizeRequest<T>,
+            response_body: fiservemea::FiservemeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+    ],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            )];
+            let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut auth_header);
+            Ok(header)
+        }
+
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.fiservemea.base_url
+        }
+    }
+);
 
 // =============================================================================
 // CONNECTOR COMMON IMPLEMENTATION
@@ -66,6 +120,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
         "https://prod.emea.api.fiservapps.com/sandbox"
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        "application/json"
     }
 
     fn get_auth_header(
@@ -104,7 +162,50 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_error_message: None,
         })
     }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
+
+// =============================================================================
+// AUTHORIZE FLOW IMPLEMENTATION
+// =============================================================================
+
+// Implement Authorize flow using macro framework
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiservemea,
+    curl_request: Json(fiservemea::FiservemeaAuthorizeRequest),
+    curl_response: fiservemea::FiservemeaAuthorizeResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{base_url}/ipp/payments-gateway/v2/payments"))
+        }
+    }
+);
 // =============================================================================
 // DYNAMICALLY GENERATED IMPLEMENTATIONS
 // =============================================================================
