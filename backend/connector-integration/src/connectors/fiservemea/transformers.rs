@@ -228,7 +228,6 @@ impl<T: PaymentMethodDataTypes>
             },
             payment_method,
             order,
-            _phantom: std::marker::PhantomData,
         })
     }
 }
