@@ -233,7 +233,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let card = FiservemeaCard {
-            number: Secret::new(card_data.card_number.expose().to_string()),
+            number: Secret::new(card_data.card_number.peek().to_string()),
             security_code: card_data.card_cvc.clone(),
             expiry_date,
         };
