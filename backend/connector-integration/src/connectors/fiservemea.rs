@@ -3,7 +3,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType, router_response_types::Response, types::Connectors,
@@ -16,6 +16,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers as fiservemea;
 
+use super::macros;
+use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
 
 pub(crate) mod headers {
@@ -37,14 +39,75 @@ impl<T: PaymentMethodDataTypes> Fiservemea<T> {
 }
 
 // =============================================================================
-// MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
+// MACRO-BASED IMPLEMENTATION
 // =============================================================================
-// Primary authorize implementation - customize as needed
-// =============================================================================
-// MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
-// =============================================================================
-// Primary authorize implementation - customize as needed
-// ... Authorize implementation is now valid generated code ...
+
+macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: FiservemeaAuthorizeRequest,
+            response_body: FiservemeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+    ],
+    member_functions: {
+        /// Build headers with Fiserv signature-based authentication
+        pub fn build_headers(
+            &self,
+            api_key: &str,
+        ) -> Vec<(String, Maskable<String>)> {
+            vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    self.common_get_content_type().to_string().into(),
+                ),
+                (
+                    headers::AUTHORIZATION.to_string(),
+                    format!("Bearer {api_key}").into(),
+                ),
+            ]
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiservemea,
+    curl_request: Json(FiservemeaAuthorizeRequest),
+    curl_response: FiservemeaAuthorizeResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = fiservemea::FiservemeaAuthType::try_from(&req.auth)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            Ok(self.build_headers(&auth.api_key.expose()))
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}/ipp/payments-gateway/v2/payments",
+                &req.resource_common_data.connectors.fiservemea.base_url
+            ))
+        }
+    }
+);
 
 // =============================================================================
 // CONNECTOR COMMON IMPLEMENTATION
