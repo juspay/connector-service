@@ -28,12 +28,12 @@ impl FiservemeaAuthType {
     ) -> String {
         let signature_string = format!(
             "{}{}{}{}",
-            self.api_key.expose(),
+            self.api_key.clone().expose(),
             client_request_id,
             timestamp,
             request_body
         );
-        let key = hmac::Key::new(hmac::HMAC_SHA256, self.api_secret.expose().as_bytes());
+        let key = hmac::Key::new(hmac::HMAC_SHA256, self.api_secret.clone().expose().as_bytes());
         let tag = hmac::sign(&key, signature_string.as_bytes());
         base64::engine::general_purpose::STANDARD.encode(tag.as_ref())
     }
