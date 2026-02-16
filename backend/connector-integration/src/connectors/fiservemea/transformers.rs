@@ -179,15 +179,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 .clone(),
         });
 
-        let amount = item.connector.amount_converter.convert(
-            router_data.request.minor_amount,
-            router_data.request.currency,
-        ).change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
         Ok(Self {
             request_type,
             transaction_amount: FiservemeaTransactionAmount {
-                total: amount,
+                total: item.connector.amount_converter.convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                ).change_context(errors::ConnectorError::RequestEncodingFailed)?,
                 currency: router_data.request.currency.to_string(),
             },
             payment_method: FiservemeaPaymentMethod { payment_card },
