@@ -16,6 +16,7 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as fiservemea, FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
+    FiservemeaAuthType, FiservemeaErrorResponse,
 };
 
 use super::macros;
