@@ -59,7 +59,7 @@ pub struct FiservemeaAuthorizeRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaTransactionAmount {
-    pub total: String,
+    pub total: StringMajorUnit,
     pub currency: String,
 }
 
