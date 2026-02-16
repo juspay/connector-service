@@ -210,10 +210,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .map(|order_id| FiservemeaOrder { order_id });
 
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                router_data.request.minor_amount,
+                router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: item.amount.to_string(),
+                total: amount.to_string(),
                 currency: router_data.request.currency.to_string(),
             },
             payment_method,
@@ -265,7 +274,7 @@ impl<T: PaymentMethodDataTypes>
                 },
                 response: Err(domain_types::router_data::ErrorResponse {
                     status_code: item.http_code,
-                    code: response.transaction_result.as_ref().to_string(),
+                    code: format!("{:?}", response.transaction_result),
                     message: error_message.clone(),
                     reason: Some(error_message),
                     attempt_status: Some(status),
