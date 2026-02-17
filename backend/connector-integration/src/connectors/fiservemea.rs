@@ -7,7 +7,7 @@ use common_utils::{
     errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
 };
 use domain_types::{
-    connector_flow, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
+    connector_flow::{self, Authorize}, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType, router_data_v2::RouterDataV2, router_response_types::Response,
     types::Connectors,
 };
