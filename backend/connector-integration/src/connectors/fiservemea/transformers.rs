@@ -167,10 +167,10 @@ impl<T: PaymentMethodDataTypes>
         let payment_card = match &item.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 FiservemeaPaymentCard {
-                    card_number: card_data.card_number.clone(),
-                    expiration_month: card_data.card_exp_month.clone(),
-                    expiration_year: card_data.card_exp_year.clone(),
-                    cvv: card_data.card_cvc.clone(),
+                    card_number: card_data.card_number.peek().to_string(),
+                    expiration_month: card_data.card_exp_month.peek().to_string(),
+                    expiration_year: card_data.card_exp_year.peek().to_string(),
+                    cvv: Some(card_data.card_cvc.peek().to_string()),
                 }
             }
             _ => {
