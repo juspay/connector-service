@@ -261,7 +261,7 @@ impl<T: PaymentMethodDataTypes>
         let status = if let Some(error) = &response.error {
             AttemptStatus::Failure
         } else {
-            let fiservemea_status = FiservemeaStatus::try_from(&response.transaction_state)
+            let fiservemea_status = FiservemeaStatus::try_from(response.transaction_state.as_str())
                 .unwrap_or(FiservemeaStatus::Failed);
             map_fiservemea_status_to_attempt_status(&fiservemea_status)
         };
