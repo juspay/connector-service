@@ -167,7 +167,7 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.request.amount.get_amount_as_i64() as f64;
+        let amount = item.request.amount.to_major_unit_as_f64(item.request.currency)?;
         let currency = item.request.currency;
         
         let payment_method_data = match &item.request.payment_method_data {
