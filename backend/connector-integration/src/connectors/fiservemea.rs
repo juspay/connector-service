@@ -37,6 +37,103 @@ use transformers as fiservemea;
 use crate::{types::ResponseRouterData, with_error_response_body};
 use super::macros;
 
+// ===== MACRO-BASED IMPLEMENTATIONS =====
+
+macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: FiservemeaAuthorizeRequest<T>,
+            response_body: FiservemeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
+        {
+            let mut headers = vec![
+                (headers::CONTENT_TYPE.to_string(), "application/json".to_string().into()),
+            ];
+
+            let auth_type = req.resource_common_data.connectors.fiservemea.auth_type.clone();
+            let auth = FiservemeaAuthType::try_from(&auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+
+            let client_request_id = FiservemeaAuthType::generate_client_request_id();
+            let timestamp = FiservemeaAuthType::generate_timestamp();
+
+            headers.push((headers::CLIENT_REQUEST_ID.to_string(), client_request_id.clone().into()));
+            headers.push((headers::TIMESTAMP.to_string(), timestamp.clone().into()));
+
+            // Generate HMAC signature
+            let request_body = serde_json::to_string(&req.request)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            let signature = auth
+                .generate_hmac_signature(
+                    auth.api_key.expose().as_str(),
+                    client_request_id.as_str(),
+                    timestamp.as_str(),
+                    &request_body,
+                )
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            headers.push((headers::MESSAGE_SIGNATURE.to_string(), signature.into()));
+
+            Ok(headers)
+        }
+
+        pub fn get_url<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<String, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
+        {
+            Ok(format!(
+                "{}/payments-gateway/v2/payments",
+                self.base_url(&req.resource_common_data.connectors.fiservemea.base_url)
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiservemea,
+    curl_request: Json(FiservemeaAuthorizeRequest),
+    curl_response: FiservemeaAuthorizeResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            self.get_url(req)
+        }
+    }
+);
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const API_KEY: &str = "Api-Key";
