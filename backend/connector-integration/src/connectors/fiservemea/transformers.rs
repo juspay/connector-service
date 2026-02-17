@@ -256,12 +256,7 @@ impl<T: PaymentMethodDataTypes>
     fn try_from(
         item: ResponseRouterData<
             FiservemeaAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let status = map_fiservemea_status_to_attempt_status(
