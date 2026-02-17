@@ -9,7 +9,7 @@ use domain_types::{
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -158,7 +158,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<FiservemeaRouterData<T>> for FiservemeaA
         };
 
         let expiry_month = card_data.card_exp_month.peek().to_string();
-        let expiry_year = card_data.get_expiry_year_4_digit();
+        let expiry_year = card_data.card_exp_year.peek().to_string();
 
         let payment_card = PaymentCard {
             number: Secret::new(card_data.card_number.peek().to_string()),
