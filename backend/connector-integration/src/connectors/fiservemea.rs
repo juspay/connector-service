@@ -170,7 +170,7 @@ macros::create_all_prerequisites!(
         ),
     ],
     amount_converters: [
-        amount_converter: StringMinorUnit
+        amount_converter: MinorUnit
     ],
     member_functions: {
         fn build_headers_with_signature(
