@@ -127,26 +127,20 @@ pub enum FiservemeaTransactionState {
 }
 
 impl<T: PaymentMethodDataTypes>
-    TryFrom<(
-        &super::Fiservemea<T>,
+    TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    )> for FiservemeaAuthorizeRequest
+    > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: (
-            &super::Fiservemea<T>,
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        ),
+        req: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
     ) -> Result<Self, Self::Error> {
-        let (_connector, req) = item;
-
         let payment_method = match &req.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 FiservemeaPaymentMethod {
@@ -174,7 +168,10 @@ impl<T: PaymentMethodDataTypes>
             Some(common_enums::CaptureMethod::Automatic) | None => "PaymentCardSaleTransaction",
         };
 
-        let amount = _connector
+        let amount = req
+            .resource_common_data
+            .connectors
+            .fiservemea
             .amount_converter
             .convert(req.request.minor_amount, req.request.currency)
             .map_err(|e| {
