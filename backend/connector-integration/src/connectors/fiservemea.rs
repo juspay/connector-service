@@ -573,3 +573,38 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification for Fiservemea<T>
 {
 }
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiservemea,
+    curl_request: Json(FiservemeaAuthorizeRequest),
+    curl_response: FiservemeaAuthorizeResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = fiservemea::FiservemeaAuthType::try_from(&req.resource_common_data.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            
+            let request_body = serde_json::to_string(&req)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            
+            self.build_headers_with_signature(&auth, &request_body)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}payments", self.connector_base_url_payments(req)))
+        }
+    }
+);
