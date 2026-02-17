@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::{crypto::SignMessage, types::{FloatMajorUnitForConnector, AmountConvertor}};
+use common_utils::{crypto::SignMessage, types::{FloatMajorUnitForConnector, AmountConvertor, FloatMajorUnit}};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -152,7 +152,7 @@ pub struct PaymentMethod {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentCard {
-    pub number: RawCardNumber,
+    pub number: RawCardNumber<T>,
     pub expiry_date: ExpiryDate,
     pub security_code: Option<Secret<String>>,
     pub holder: Option<Secret<String>>,
@@ -349,5 +349,3 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaAuthorizeRe
 }
 
 // ===== TYPE ALIASES FOR MACRO COMPATIBILITY =====
-
-pub type FiservemeaAuthorizeResponse = FiservemeaAuthorizeResponse;
