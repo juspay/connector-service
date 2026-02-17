@@ -1141,17 +1141,6 @@ pub struct PaymentRequestNetworkToken {
 }
 
 #[derive(Debug, Serialize, PartialEq)]
-pub struct PaymentRequestWallet {
-    pub amount: StringMajorUnit,
-    pub currency: String,
-    #[serde(rename = "walletToken")]
-    pub wallet_token: Secret<String>,
-    pub reference: String,
-    #[serde(rename = "redirectUrl")]
-    pub redirect_url: String,
-}
-
-#[derive(Debug, Serialize, PartialEq)]
 #[serde(untagged)]
 pub enum TrustpayPaymentsRequest<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
@@ -1160,7 +1149,6 @@ pub enum TrustpayPaymentsRequest<
     BankRedirectPaymentRequest(Box<PaymentRequestBankRedirect>),
     BankTransferPaymentRequest(Box<PaymentRequestBankTransfer>),
     NetworkTokenPaymentRequest(Box<PaymentRequestNetworkToken>),
-    WalletPaymentRequest(Box<PaymentRequestWallet>),
 }
 
 // CreateOrder flow structs for wallet initialization
