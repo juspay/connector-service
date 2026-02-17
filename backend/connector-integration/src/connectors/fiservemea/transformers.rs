@@ -105,7 +105,7 @@ pub struct PaymentMethod {
 
 #[derive(Debug, Serialize)]
 pub struct PaymentCard {
-    pub number: RawCardNumber<T>,
+    pub number: RawCardNumber,
     pub expiry_date: ExpiryDate,
     pub security_code: Secret<String>,
 }
