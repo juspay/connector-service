@@ -185,13 +185,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 // 3. The script will not regenerate moved implementations
 // =============================================================================
 
-// ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
-// Main service trait - aggregates all other traits
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Fiservemea<T>
-{
-}
-
 // ===== FLOW TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::AcceptDispute for Fiservemea<T>
