@@ -18,7 +18,6 @@ hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "20
 injector = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0" }
 tracing-kafka = { path = "../tracing-kafka", optional = true }
 common_crate = { path = "../common_crate", package = "common_crate" }
-ffi = {path="../ffi",package="ffi"}
 
 # Third-party dependencies
 config = "0.14.0"
