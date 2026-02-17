@@ -1004,7 +1004,7 @@ fn get_mobile_os(browser_info: &Option<BrowserInformation>) -> String {
             "ANDROID" => "ANDROID".to_string(),
             _ => "ANDROID".to_string(),
         })
-        .unwrap_or_else(|| "ANDROID".to_string())
+        .unwrap_or("ANDROID".to_string())
 }
 
 /// Maps iOS payment source to PhonePe's expected target app names
