@@ -146,27 +146,31 @@ impl<T: PaymentMethodDataTypes> TryFrom<FiservemeaRouterData<T>> for FiservemeaA
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(item: FiservemeaRouterData<T>) -> Result<Self, Self::Error> {
-        let payment_method_data = item.router_data.request.payment_method_data;
-        let card = payment_method_data
-            .get_card()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "payment_method_data.card",
-            })?;
+        let card_data = match item.router_data.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Card(card_data) => card_data,
+            _ => {
+                return Err(error_stack::report!(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "payment_method_data.card",
+                    }
+                ))
+            }
+        };
 
-        let expiry_month = card.card_exp_month.to_string();
-        let expiry_year = card.card_exp_year.to_string();
+        let expiry_month = card_data.card_exp_month.to_string();
+        let expiry_year = card_data.card_exp_year.to_string();
 
         let payment_card = PaymentCard {
-            number: card.card_number.clone(),
-            security_code: card.card_cvc.clone(),
+            number: card_data.card_number.clone(),
+            security_code: card_data.card_cvc.clone(),
             expiry_date: ExpiryDate {
                 month: expiry_month,
                 year: expiry_year,
             },
         };
 
-        let order = item.router_data.resource_common_data.connector_request_reference_id.clone().map(|id| Order {
-            order_id: id,
+        let order = Some(Order {
+            order_id: item.router_data.resource_common_data.connector_request_reference_id.clone(),
         });
 
         Ok(Self {
