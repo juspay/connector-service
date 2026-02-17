@@ -208,7 +208,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
-        let response: fiservemea::FiservemeaErrorResponse = res
+        let response: FiservemeaErrorResponse = res
             .response
             .parse_struct("FiservemeaErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
