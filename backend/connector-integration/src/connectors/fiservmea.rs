@@ -117,7 +117,6 @@ macros::create_all_prerequisites!(
 );
 
 pub(crate) mod headers {
-    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const API_KEY: &str = "Api-Key";
     pub(crate) const CLIENT_REQUEST_ID: &str = "Client-Request-Id";
