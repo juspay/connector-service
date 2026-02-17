@@ -598,6 +598,7 @@ enum Connector {
   LOONIO = 105;
   GIGADAT = 106;
   HYPERPG = 107;
+  FISERVEMEA = 108;
 }
 
 // Payment method types.
