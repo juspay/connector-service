@@ -128,22 +128,19 @@ pub enum FiservemeaTransactionState {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
     TryFrom<
-        super::FiservemeaRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            T,
-        >,
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::FiservemeaRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            T,
+        req: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let req = &item.router_data;
-
         let payment_method = match &req.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 let year_4digit = card_data.get_expiry_year_4_digit().expose();
@@ -176,10 +173,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
         let request_type = match req.request.capture_method {
             Some(common_enums::CaptureMethod::Manual) => "PaymentCardPreAuthTransaction",
             Some(common_enums::CaptureMethod::Automatic) | None => "PaymentCardSaleTransaction",
+            _ => "PaymentCardSaleTransaction",
         };
 
-        let amount = item
-            .connector
+        let amount = req
+            .resource_common_data
+            .connectors
+            .fiservemea
             .amount_converter
             .convert(req.request.minor_amount, req.request.currency)
             .map_err(|e| {

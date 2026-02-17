@@ -151,11 +151,7 @@ macros::macro_connector_implementation!(
                 .div_euclid(1_000_000)
                 .to_string();
 
-            let router_data = FiservemeaRouterData {
-                connector: self,
-                router_data: req,
-            };
-            let request_body = serde_json::to_string(&FiservemeaAuthorizeRequest::try_from(router_data)?)
+            let request_body = serde_json::to_string(&FiservemeaAuthorizeRequest::try_from(req)?)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
             let message_signature = self.generate_message_signature(
@@ -167,7 +163,7 @@ macros::macro_connector_implementation!(
             );
 
             Ok(self.build_headers(
-                auth.api_key.expose(),
+                auth.api_key.expose().as_str(),
                 &client_request_id,
                 &timestamp,
                 &message_signature,
