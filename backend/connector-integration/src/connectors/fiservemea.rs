@@ -2,12 +2,11 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use chrono::Utc;
 use common_enums::CurrencyUnit;
-use uuid::Uuid;
 use common_utils::{
-    errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
+    date_time, errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
 };
+use uuid::Uuid;
 use domain_types::{
     connector_flow::{self, Authorize}, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2, router_response_types::Response,
@@ -142,7 +141,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         let client_request_id = Uuid::new_v4().to_string();
-        let timestamp = Utc::now().timestamp_millis().to_string();
+        let timestamp = date_time::now_unix_timestamp().to_string();
         Ok(vec![
             ("Api-Key".to_string(), auth.api_key.expose().to_string().into()),
             ("Client-Request-Id".to_string(), client_request_id.into()),
