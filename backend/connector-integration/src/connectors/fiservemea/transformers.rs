@@ -157,11 +157,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<FiservemeaRouterData<T>> for FiservemeaA
             }
         };
 
-        let expiry_month = card_data.card_exp_month.to_string();
-        let expiry_year = card_data.card_exp_year.to_string();
+        let expiry_month = card_data.card_exp_month.peek().to_string();
+        let expiry_year = card_data.get_expiry_year_4_digit();
 
         let payment_card = PaymentCard {
-            number: card_data.card_number.clone(),
+            number: Secret::new(card_data.card_number.peek().to_string()),
             security_code: card_data.card_cvc.clone(),
             expiry_date: ExpiryDate {
                 month: expiry_month,
