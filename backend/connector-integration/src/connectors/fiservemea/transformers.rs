@@ -160,8 +160,8 @@ impl<T: PaymentMethodDataTypes>
 
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => {
-                let expiry_month = card.card_exp_month.expose();
-                let expiry_year = card.card_exp_year.expose();
+                let expiry_month = card.card_exp_month.clone().expose();
+                let expiry_year = card.card_exp_year.clone().expose();
                 let month = if expiry_month.len() == 1 {
                     format!("0{}", expiry_month)
                 } else {
