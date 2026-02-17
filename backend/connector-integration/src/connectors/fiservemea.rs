@@ -151,11 +151,8 @@ macros::macro_connector_implementation!(
                 .div_euclid(1_000_000)
                 .to_string();
 
-            let request_body = serde_json::to_string(&FiservemeaAuthorizeRequest::try_from((
-                self,
-                req,
-            ))?)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            let request_body = serde_json::to_string(&FiservemeaAuthorizeRequest::try_from(req)?)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
             let message_signature = self.generate_message_signature(
                 auth.api_key.expose(),
