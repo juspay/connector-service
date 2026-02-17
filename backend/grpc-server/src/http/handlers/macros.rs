@@ -9,13 +9,12 @@ use axum::{
 use tonic;
 
 #[allow(unused_imports)]
-// use crate::configs::Config;
-use common_crate::configs::Config;
-#[allow(unused_imports)]
 use crate::http::{
     error::HttpError, http_headers_to_grpc_metadata, state::AppState,
     transfer_config_to_grpc_request, utils::ValidatedJson,
 };
+#[allow(unused_imports)]
+use common_crate::configs::Config;
 #[allow(unused_imports)]
 use std::sync::Arc;
 

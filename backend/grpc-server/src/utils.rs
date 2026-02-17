@@ -1,4 +1,3 @@
-// use crate::configs::ConfigPatch;
 use base64::{engine::general_purpose, Engine as _};
 use common_crate::configs::ConfigPatch;
 use common_crate::{configs, error::ResultExtGrpc};
@@ -29,11 +28,7 @@ use serde_json::Value;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tonic::metadata;
 
-use crate::{
-    // configs,
-    // error::ResultExtGrpc,
-    request::RequestData,
-};
+use crate::request::RequestData;
 
 pub fn service_type_str(service_type: &configs::ServiceType) -> &'static str {
     match service_type {

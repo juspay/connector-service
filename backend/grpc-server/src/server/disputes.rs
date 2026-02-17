@@ -1,6 +1,5 @@
 use crate::utils::{self, get_config_from_request};
 use crate::{
-    // error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
     request::RequestData,
     utils::{grpc_logging_wrapper, MetadataPayload},

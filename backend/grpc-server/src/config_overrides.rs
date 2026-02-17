@@ -1,7 +1,4 @@
-use crate::{
-    // configs::Config,
-    utils::merge_config_with_override,
-};
+use crate::utils::merge_config_with_override;
 use common_crate::configs::Config;
 use http::{Request, Response};
 use std::{

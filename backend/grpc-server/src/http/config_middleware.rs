@@ -1,7 +1,4 @@
-use crate::{
-    // configs::Config,
-    utils::merge_config_with_override,
-};
+use crate::utils::merge_config_with_override;
 use axum::{body::Body, extract::Request, http::StatusCode, response::Response};
 use common_crate::configs::Config;
 use std::{

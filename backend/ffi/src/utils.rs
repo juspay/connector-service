@@ -157,7 +157,7 @@ where
     let payment_flow_data =
         PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone(), metadata))
             .map_err(|err| {
-            println!("{:?}", err);
+            eprintln!("{:?}", err);
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(err.to_string()),
@@ -168,7 +168,7 @@ where
 
     // Create flow-specific request data
     let payment_request_data = RequestData::foreign_try_from(payload.clone()).map_err(|err| {
-        println!("{:?}", err);
+        eprintln!("{:?}", err);
         PaymentAuthorizationError::new(
             grpc_api_types::payments::PaymentStatus::Pending,
             Some(err.to_string()),

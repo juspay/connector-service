@@ -25,7 +25,6 @@ use grpc_api_types::payments::{
 };
 use std::sync::Arc;
 
-// use crate::configs::Config;
 use crate::http::handlers::macros::http_handler;
 use crate::http::{
     error::HttpError, http_headers_to_grpc_metadata, state::AppState,

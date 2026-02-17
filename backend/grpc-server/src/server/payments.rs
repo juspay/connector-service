@@ -1,10 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use crate::{
-    // configs::Config,
-    // error::{
-    //     ErrorSwitch, IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc,
-    // },
     implement_connector_operation,
     request::RequestData,
     utils::{self, get_config_from_request, grpc_logging_wrapper},

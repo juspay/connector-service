@@ -43,7 +43,6 @@ fn default_request_headers() -> [(String, Maskable<String>); 1] {
 #[derive(Debug)]
 pub struct Request {
     pub url: String,
-    // #[serde(skip)]
     pub headers: Headers,
     pub method: Method,
     pub certificate: Option<Secret<String>>,

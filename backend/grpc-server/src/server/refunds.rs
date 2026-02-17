@@ -19,12 +19,7 @@ use grpc_api_types::payments::{
 
 use common_crate::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
 
-use crate::{
-    // error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    implement_connector_operation,
-    request::RequestData,
-    utils,
-};
+use crate::{implement_connector_operation, request::RequestData, utils};
 // Helper trait for refund operations
 trait RefundOperationsInternal {
     async fn internal_get(
