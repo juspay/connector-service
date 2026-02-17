@@ -169,7 +169,7 @@ pub fn map_fiservemea_status_to_attempt_status(
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
-        crate::connectors::macros::FiservemeaRouterData<
+        FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
@@ -178,7 +178,7 @@ impl<T: PaymentMethodDataTypes>
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::macros::FiservemeaRouterData<
+        item: FiservemeaRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
