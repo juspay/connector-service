@@ -1,11 +1,11 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::types::StringMajorUnit;
+use common_utils::types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -64,7 +64,7 @@ pub enum FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaPaymentCard<T: PaymentMethodDataTypes> {
-    pub number: Secret<String>,
+    pub number: RawCardNumber<T>,
     pub security_code: Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
 }
@@ -152,11 +152,10 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount_in_major_units = StringMajorUnit::convert(
-            item.request.amount,
-            item.request.currency,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let amount_converter = StringMajorUnitForConnector;
+        let amount_in_major_units = amount_converter
+            .convert(item.request.amount, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => {
@@ -174,7 +173,7 @@ impl<T: PaymentMethodDataTypes>
                 };
 
                 FiservemeaPaymentMethod::PaymentCard(FiservemeaPaymentCard {
-                    number: card.card_number.get_inner().clone(),
+                    number: card.card_number.clone(),
                     security_code: card.card_cvc.clone(),
                     expiry_date: FiservemeaExpiryDate { month, year },
                 })
