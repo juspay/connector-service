@@ -197,7 +197,7 @@ impl<T: PaymentMethodDataTypes>
                 city: addr_details.city.as_ref().map(|s| s.expose().clone()),
                 state: addr_details.state.as_ref().map(|s| s.expose().clone()),
                 postal_code: addr_details.zip.as_ref().map(|s| s.expose().clone()),
-                country: addr_details.country.map(|c| c.to_alpha2().to_string()),
+                country: addr_details.country.map(|c| c.to_string()),
             });
 
         let order = Some(FiservemeaOrder {
