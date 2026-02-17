@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, IncrementalAuthorization, CreateConnectorCustomer, DefendDispute, MandateRevoke, CreateAccessToken, Authenticate, VoidPC, RepeatPayment, CreateOrder, PostAuthenticate, PreAuthenticate, CreateSessionToken, PaymentMethodToken, SdkSessionToken, SetupMandate, SubmitEvidence},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, IncrementalAuthorization, CreateConnectorCustomer, DefendDispute, MandateRevoke, CreateAccessToken, Authenticate, VoidPC, CreateOrder, PostAuthenticate, PreAuthenticate, CreateSessionToken, PaymentMethodToken, SdkSessionToken, SetupMandate, SubmitEvidence},
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
@@ -65,7 +65,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== FLOW TRAIT IMPLEMENTATIONS =====
-
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Fiservemea<T>
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::CreateConnectorCustomer for Fiservemea<T>
