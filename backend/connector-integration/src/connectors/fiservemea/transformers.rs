@@ -206,15 +206,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     TryFrom<
         ResponseRouterData<
             FiservemeaAuthorizeResponse,
-            crate::connectors::fiservemea::FiservemeaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -223,18 +215,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: ResponseRouterData<
             FiservemeaAuthorizeResponse,
-            crate::connectors::fiservemea::FiservemeaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let router_data = item.router_data.router_data;
+        let router_data = item.router_data;
         let status =
             map_fiservemea_status_to_attempt_status(&item.response.transaction_state, item.response.transaction_result.as_ref());
 
