@@ -126,34 +126,6 @@ pub enum FiservemeaTransactionState {
     Waiting,
 }
 
-#[derive(Debug, Clone)]
-pub struct FiservemeaRouterData<T: PaymentMethodDataTypes> {
-    pub amount: StringMajorUnit,
-    pub router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<(StringMajorUnit, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>)>
-    for super::FiservemeaRouterData<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        T,
-    >
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        (amount, router_data): (
-            StringMajorUnit,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            connector: super::Fiservemea::new(),
-            router_data,
-        })
-    }
-}
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::FiservemeaRouterData<
