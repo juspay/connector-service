@@ -16,6 +16,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers as fiservemea;
 
+use super::macros;
+use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
 
 pub(crate) mod headers {
@@ -23,18 +25,60 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-#[derive(Debug, Clone)]
-pub struct Fiservemea<T: PaymentMethodDataTypes> {
-    payment_method_type: std::marker::PhantomData<T>,
-}
-
-impl<T: PaymentMethodDataTypes> Fiservemea<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            payment_method_type: std::marker::PhantomData,
+// ===== MACRO-BASED STRUCT AND BRIDGE SETUP =====
+macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: FiservemeaAuthorizeRequest<T>,
+            response_body: FiservemeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+    ],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = fiservemea::FiservemeaAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            
+            let client_request_id = uuid::Uuid::new_v4().to_string();
+            let timestamp = chrono::Utc::now().timestamp_millis().to_string();
+            
+            let mut headers = vec![
+                (headers::CONTENT_TYPE.to_string(), "application/json".to_string().into()),
+                ("Api-Key".to_string(), auth.api_key.expose().into()),
+                ("Client-Request-Id".to_string(), client_request_id.into()),
+                ("Timestamp".to_string(), timestamp.into()),
+            ];
+            
+            if let Some(api_secret) = auth.api_secret {
+                let signature = fiservemea::generate_message_signature(
+                    auth.api_key.expose(),
+                    &client_request_id,
+                    &timestamp,
+                    api_secret.expose(),
+                )?;
+                headers.push(("Message-Signature".to_string(), signature.into()));
+            }
+            
+            Ok(headers)
+        }
+        
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.fiservemea.base_url
         }
     }
-}
+);
 
 // =============================================================================
 // MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
@@ -64,8 +108,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         "application/json"
     }
 
-    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
-        "https://prod.emea.api.fiservapps.com/sandbox"
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        &connectors.fiservemea.base_url
     }
 
     fn get_auth_header(
