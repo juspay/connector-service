@@ -433,7 +433,7 @@ impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
 pub struct LoonioWebhookBody {
     pub amount: FloatMajorUnit,
     pub api_transaction_id: String,
-    pub signature: Option<String>,
+    pub signature: Option<Secret<String>>,
     pub event_code: LoonioWebhookEventCode,
     #[serde(rename = "type")]
     pub transaction_type: LoonioWebhookTransactionType,
