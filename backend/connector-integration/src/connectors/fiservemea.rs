@@ -41,10 +41,6 @@ impl<T: PaymentMethodDataTypes> Fiservemea<T> {
 // =============================================================================
 // Primary authorize implementation - customize as needed
 // =============================================================================
-// MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
-// =============================================================================
-// Primary authorize implementation - customize as needed
-// ... Authorize implementation is now valid generated code ...
 
 // =============================================================================
 // CONNECTOR COMMON IMPLEMENTATION
@@ -74,10 +70,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
+        Ok(vec![
             headers::AUTHORIZATION.to_string(),
             format!("Bearer {}", auth.api_key.expose()).into(),
-        )])
+        ])
     }
 
     fn build_error_response(
