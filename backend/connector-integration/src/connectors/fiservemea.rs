@@ -5,7 +5,9 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
-    connector_flow, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
+    connector_flow::{Authorize, PaymentFlowData},
+    connector_types::{PaymentsAuthorizeData, PaymentsResponseData},
+    errors, payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType, router_data_v2::RouterDataV2, router_response_types::Response, types::Connectors,
 };
 use error_stack::ResultExt;
