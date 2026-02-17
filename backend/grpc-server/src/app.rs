@@ -3,7 +3,10 @@ use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
-    payments::{dispute_service_server, payment_service_server, refund_service_server},
+    payments::{
+        composite_payment_service_server, dispute_service_server, payment_service_server,
+        refund_service_server,
+    },
 };
 use std::{future::Future, net, sync::Arc};
 use tokio::{
@@ -92,6 +95,8 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
 
 pub struct Service {
     pub health_check_service: crate::server::health_check::HealthCheck,
+    pub composite_payments_service:
+        composite_service::payments::Payments<crate::server::payments::Payments>,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
@@ -113,9 +118,14 @@ impl Service {
             logger::info!("EventPublisher disabled in configuration");
         }
 
+        let payments_service = crate::server::payments::Payments;
+        let composite_payments_service =
+            composite_service::payments::Payments::new(payments_service.clone());
+
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
-            payments_service: crate::server::payments::Payments,
+            composite_payments_service,
+            payments_service,
             refunds_service: crate::server::refunds::Refunds,
             disputes_service: crate::server::disputes::Disputes,
         }
@@ -152,6 +162,7 @@ impl Service {
 
         let config_override_layer = HttpRequestExtensionsLayer::new(base_config.clone());
         let app_state = crate::http::AppState::new(
+            self.composite_payments_service.clone(),
             self.payments_service,
             self.refunds_service,
             self.disputes_service,
@@ -219,6 +230,11 @@ impl Service {
             .add_service(payment_service_server::PaymentServiceServer::new(
                 self.payments_service.clone(),
             ))
+            .add_service(
+                composite_payment_service_server::CompositePaymentServiceServer::new(
+                    self.composite_payments_service,
+                ),
+            )
             .add_service(refund_service_server::RefundServiceServer::new(
                 self.refunds_service,
             ))
