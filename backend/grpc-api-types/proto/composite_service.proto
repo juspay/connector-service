@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ucs.v2;
 
-import "compositepayment.proto";
+import "composite_payment.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
