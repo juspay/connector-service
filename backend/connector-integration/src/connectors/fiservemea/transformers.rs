@@ -143,13 +143,20 @@ impl<T: PaymentMethodDataTypes>
     ) -> Result<Self, Self::Error> {
         let payment_method = match &req.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
+                let year_4digit = card_data.get_expiry_year_4_digit().expose();
+                let year_2digit = if year_4digit.len() >= 2 {
+                    year_4digit[year_4digit.len() - 2..].to_string()
+                } else {
+                    year_4digit.clone()
+                };
+
                 FiservemeaPaymentMethod {
                     payment_card: FiservemeaPaymentCard {
                         number: Secret::new(card_data.card_number.peek().to_string()),
                         security_code: card_data.card_cvc.clone(),
                         expiry_date: FiservemeaExpiryDate {
                             month: card_data.card_exp_month.expose().to_string(),
-                            year: card_data.get_expiry_year_2_digit(),
+                            year: year_2digit,
                         },
                     },
                 }
@@ -168,17 +175,15 @@ impl<T: PaymentMethodDataTypes>
             Some(common_enums::CaptureMethod::Automatic) | None => "PaymentCardSaleTransaction",
         };
 
-        let amount = req
-            .resource_common_data
-            .connectors
-            .fiservemea
-            .amount_converter
-            .convert(req.request.minor_amount, req.request.currency)
-            .map_err(|e| {
-                errors::ConnectorError::RequestEncodingFailedWithReason(format!(
-                    "Amount conversion failed: {e}"
-                ))
-            })?;
+        let amount = common_utils::types::StringMajorUnit::convert(
+            req.request.minor_amount,
+            req.request.currency,
+        )
+        .map_err(|e| {
+            errors::ConnectorError::RequestEncodingFailedWithReason(format!(
+                "Amount conversion failed: {e}"
+            ))
+        })?;
 
         let order = req
             .resource_common_data
