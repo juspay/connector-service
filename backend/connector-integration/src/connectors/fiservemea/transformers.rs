@@ -188,11 +188,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
                 ))
             })?;
 
-        let order = req
-            .resource_common_data
-            .connector_request_reference_id
-            .clone()
-            .map(|order_id| FiservemeaOrder { order_id });
+        let order = Some(FiservemeaOrder {
+            order_id: req.resource_common_data.connector_request_reference_id.clone(),
+        });
 
         Ok(Self {
             request_type: request_type.to_string(),
