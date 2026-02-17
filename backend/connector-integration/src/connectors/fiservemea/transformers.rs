@@ -59,6 +59,8 @@ pub struct FiservemeaAuthorizeRequest<
     pub transaction_amount: FiservemeaTransactionAmount,
     pub payment_method: FiservemeaPaymentMethod,
     pub order: Option<FiservemeaOrder>,
+    #[serde(skip)]
+    pub _phantom: PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
