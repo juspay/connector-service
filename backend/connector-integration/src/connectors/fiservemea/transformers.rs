@@ -212,43 +212,55 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     TryFrom<
         ResponseRouterData<
             FiservemeaAuthorizeResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            crate::connectors::fiservemea::FiservemeaRouterData<
+                RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+                T,
+            >,
         >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    > for crate::connectors::fiservemea::FiservemeaRouterData<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        T,
+    >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<
             FiservemeaAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
+            crate::connectors::fiservemea::FiservemeaRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let router_data = item.router_data;
+        let router_data = item.router_data.router_data;
         let status =
             map_fiservemea_status_to_attempt_status(&item.response.transaction_state, item.response.transaction_result.as_ref());
 
-        Ok(RouterDataV2 {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: item.response.approval_code,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
+        Ok(Self {
+            connector: item.router_data.connector,
+            router_data: RouterDataV2 {
+                response: Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: None,
+                    network_txn_id: item.response.approval_code,
+                    connector_response_reference_id: None,
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                }),
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..router_data.resource_common_data
+                },
+                ..router_data
             },
-            ..router_data
         })
     }
 }
