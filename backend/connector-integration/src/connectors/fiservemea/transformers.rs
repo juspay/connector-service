@@ -156,7 +156,7 @@ impl<T: PaymentMethodDataTypes>
         let amount_converter = StringMajorUnitForConnector;
         let amount_in_major_units = amount_converter
             .convert(item.request.amount, item.request.currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
 
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => {
