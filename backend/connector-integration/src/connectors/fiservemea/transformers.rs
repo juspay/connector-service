@@ -66,7 +66,7 @@ pub struct FiservemeaPaymentCard<T: PaymentMethodDataTypes> {
     pub expiry_date: FiservemeaExpiryDate,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FiservemeaExpiryDate {
     pub month: String,
     pub year: String,
