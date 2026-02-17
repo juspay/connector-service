@@ -143,26 +143,20 @@ fn map_fiservemea_status_to_attempt_status(
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
-        crate::connectors::fiservemea::FiservemeaRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            T,
-        >,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::fiservemea::FiservemeaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        item: RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let item = &item.router_data;
+        let item = &item;
         let amount_str = item
             .request
             .minor_amount
