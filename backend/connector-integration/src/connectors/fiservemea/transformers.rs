@@ -234,32 +234,25 @@ impl<T: PaymentMethodDataTypes>
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
-        crate::connectors::macros::FiservemeaRouterData<
-            ResponseRouterData<
-                FiservemeaAuthorizeResponse,
-                RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            >,
-            T,
+        ResponseRouterData<
+            FiservemeaAuthorizeResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::macros::FiservemeaRouterData<
-            ResponseRouterData<
-                FiservemeaAuthorizeResponse,
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
+        item: ResponseRouterData<
+            FiservemeaAuthorizeResponse,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
             >,
-            T,
         >,
     ) -> Result<Self, Self::Error> {
-        let item = &item.router_data;
         let status = map_fiservemea_status_to_attempt_status(
             &item.response.transaction_result,
             &item.response.transaction_state,
