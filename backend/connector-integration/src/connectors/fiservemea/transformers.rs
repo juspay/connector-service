@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::{crypto::SignMessage, types::FloatMajorUnitForConnector};
+use common_utils::{crypto::SignMessage, types::{FloatMajorUnitForConnector, AmountConvertor}};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -334,7 +334,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaAuthorizeRe
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: network_txn_id.or(item.response.client_request_id.clone()),
+                network_txn_id: network_txn_id.or_else(|| item.response.client_request_id.clone()),
                 connector_response_reference_id: item.response.client_request_id.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
