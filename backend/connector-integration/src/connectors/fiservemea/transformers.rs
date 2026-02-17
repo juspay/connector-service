@@ -4,7 +4,7 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -189,10 +189,17 @@ impl<T: PaymentMethodDataTypes>
 
         let request_type = "PaymentCardPreAuthTransaction".to_string();
 
-        let payment_card = PaymentCard {
-            number: item.request.payment_method_data.card_number.clone(),
-            security_code: item.request.payment_method_data.card_cvv.clone(),
-            expiry_date: item.request.payment_method_data.card_expiry.clone(),
+        let payment_card = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => PaymentCard {
+                number: card_data.card_number.peek().to_string(),
+                security_code: card_data.card_cvc.clone().expose().to_string(),
+                expiry_date: format!(
+                    "{}{}",
+                    card_data.card_exp_month.clone().expose(),
+                    card_data.get_expiry_year_4_digit().clone().expose()
+                ),
+            },
+            _ => return Err(error_stack::report!(errors::ConnectorError::RequestEncodingFailed)),
         };
 
         let payment_method = PaymentMethod { payment_card };
