@@ -157,6 +157,12 @@ impl<T: PaymentMethodDataTypes> Card<T> {
         ))
     }
 
+    pub fn get_expiry_date_as_mmyy(&self) -> Result<Secret<String>, ConnectorError> {
+        let year = self.get_card_expiry_year_2_digit()?;
+        let month = self.get_card_expiry_month_2_digit()?;
+        Ok(Secret::new(format!("{}{}", month.peek(), year.peek())))
+    }
+
     pub fn get_card_expiry_year_month_2_digit_with_delimiter(
         &self,
         delimiter: String,
