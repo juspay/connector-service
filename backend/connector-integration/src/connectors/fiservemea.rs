@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
-    connector_flow::{
+    {
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
@@ -346,7 +346,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // ===== CONNECTOR INTEGRATION V2 IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::Accept,
+        Accept,
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
@@ -356,7 +356,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::CreateConnectorCustomer,
+        CreateConnectorCustomer,
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
@@ -366,7 +366,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::DefendDispute,
+        DefendDispute,
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
@@ -376,7 +376,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::MandateRevoke,
+        MandateRevoke,
         PaymentFlowData,
         MandateRevokeRequestData,
         MandateRevokeResponseData,
@@ -386,7 +386,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::CreateAccessToken,
+        CreateAccessToken,
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
@@ -396,7 +396,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::Authenticate,
+        Authenticate,
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
@@ -406,7 +406,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::Authorize,
+        Authorize,
         PaymentFlowData,
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
@@ -416,7 +416,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::Capture,
+        Capture,
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
@@ -426,7 +426,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::IncrementalAuthorization,
+        IncrementalAuthorization,
         PaymentFlowData,
         PaymentsIncrementalAuthorizationData,
         PaymentsResponseData,
@@ -436,7 +436,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::CreateOrder,
+        CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
@@ -446,7 +446,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::PostAuthenticate,
+        PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
@@ -456,7 +456,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::PreAuthenticate,
+        PreAuthenticate,
         PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
@@ -466,7 +466,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::CreateSessionToken,
+        CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
@@ -476,7 +476,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::PSync,
+        PSync,
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
@@ -486,7 +486,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::PaymentMethodToken,
+        PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
@@ -496,7 +496,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::VoidPC,
+        VoidPC,
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
         PaymentsResponseData,
@@ -506,7 +506,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::Void,
+        Void,
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
@@ -516,7 +516,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::RSync,
+        RSync,
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
@@ -525,14 +525,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
     for Fiservemea<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::RepeatPayment,
+        RepeatPayment,
         PaymentFlowData,
         RepeatPaymentData<T>,
         PaymentsResponseData,
@@ -542,7 +542,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::SdkSessionToken,
+        SdkSessionToken,
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
@@ -552,7 +552,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::SetupMandate,
+        SetupMandate,
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
@@ -562,7 +562,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::SubmitEvidence,
+        SubmitEvidence,
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
