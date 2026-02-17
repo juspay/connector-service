@@ -126,21 +126,24 @@ pub enum FiservemeaTransactionState {
     Waiting,
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        super::FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: super::FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
+        let req = &item.router_data;
+
         let payment_method = match &req.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 let year_4digit = card_data.get_expiry_year_4_digit().expose();
@@ -175,15 +178,15 @@ impl<T: PaymentMethodDataTypes>
             Some(common_enums::CaptureMethod::Automatic) | None => "PaymentCardSaleTransaction",
         };
 
-        let amount = common_utils::types::StringMajorUnit::convert(
-            req.request.minor_amount,
-            req.request.currency,
-        )
-        .map_err(|e| {
-            errors::ConnectorError::RequestEncodingFailedWithReason(format!(
-                "Amount conversion failed: {e}"
-            ))
-        })?;
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(req.request.minor_amount, req.request.currency)
+            .map_err(|e| {
+                errors::ConnectorError::RequestEncodingFailedWithReason(format!(
+                    "Amount conversion failed: {e}"
+                ))
+            })?;
 
         let order = req
             .resource_common_data
