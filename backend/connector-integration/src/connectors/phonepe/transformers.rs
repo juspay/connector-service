@@ -1032,14 +1032,11 @@ pub fn get_android_version_from_ua(user_agent: &str) -> String {
 }
 
 pub fn get_source_channel(user_agent: Option<&String>) -> String {
-    if let Some(ua) = user_agent {
-        if ua.contains("Android") {
-            return "ANDROID".to_string();
-        } else if ua.contains("iPhone") || ua.contains("Darwin") {
-            return "IOS".to_string();
-        }
+    match user_agent.map(|s| s.to_lowercase()) {
+        Some(ua) if ua.contains("android") => "ANDROID".to_string(),
+        Some(ua) if ua.contains("iphone") || ua.contains("darwin") => "IOS".to_string(),
+        _ => "WEB".to_string(),
     }
-    "WEB".to_string()
 }
 
 /// Creates metadata for sync response with BIN from masked account number
