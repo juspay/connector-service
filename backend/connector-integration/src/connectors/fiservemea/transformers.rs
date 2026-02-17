@@ -141,7 +141,7 @@ fn map_fiservemea_status_to_attempt_status(
     }
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
         crate::connectors::fiservemea::FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -208,7 +208,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
         ResponseRouterData<
             FiservemeaAuthorizeResponse,
