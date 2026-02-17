@@ -169,26 +169,19 @@ pub fn map_fiservemea_status_to_attempt_status(
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
-        FiservemeaRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            T,
-        >,
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: FiservemeaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let item = &item.router_data;
         let amount = item.request.minor_amount.get_amount_as_i64();
         let currency = item.request.currency.to_string();
         let amount_str = format!("{:.2}", amount as f64 / 100.0);
