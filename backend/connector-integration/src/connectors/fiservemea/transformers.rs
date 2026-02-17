@@ -169,24 +169,25 @@ pub fn map_fiservemea_status_to_attempt_status(
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: FiservemeaRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.request.minor_amount.get_amount_as_i64();
-        let currency = item.request.currency.to_string();
+        let amount = item.router_data.request.minor_amount.get_amount_as_i64();
+        let currency = item.router_data.request.currency.to_string();
         let amount_str = format!("{:.2}", amount as f64 / 100.0);
 
-        let payment_method = match &item.request.payment_method_data {
+        let payment_method = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => {
                 let expiry_month = card.card_exp_month.peek();
                 let expiry_year = card.card_exp_year.peek();
@@ -214,6 +215,7 @@ impl<T: PaymentMethodDataTypes>
 
         let order = Some(FiservemeaOrder {
             order_id: item
+                .router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
