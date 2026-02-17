@@ -193,10 +193,10 @@ impl<T: PaymentMethodDataTypes>
             .and_then(|addr| addr.address.as_ref())
             .map(|addr_details| FiservemeaBillingAddress {
                 name: item.request.customer_name.clone(),
-                address1: addr_details.line1.as_ref().map(|s| s.expose().clone()),
-                city: addr_details.city.as_ref().map(|s| s.expose().clone()),
-                state: addr_details.state.as_ref().map(|s| s.expose().clone()),
-                postal_code: addr_details.zip.as_ref().map(|s| s.expose().clone()),
+                address1: addr_details.line1.as_ref().map(|s| s.clone().expose()),
+                city: addr_details.city.as_ref().map(|s| s.clone().expose()),
+                state: addr_details.state.as_ref().map(|s| s.clone().expose()),
+                postal_code: addr_details.zip.as_ref().map(|s| s.clone().expose()),
                 country: addr_details.country.map(|c| c.to_string()),
             });
 
