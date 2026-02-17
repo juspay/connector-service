@@ -11,7 +11,6 @@ use crate::{
     error::ConfigurationError,
     logger::config::{Log, LogPatch},
 };
-
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize, Clone, config_patch_derive::Patch)]
 pub struct Config {

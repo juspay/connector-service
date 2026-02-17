@@ -41,8 +41,8 @@ macro_rules! napi_wrapper {
                             extracted_metadata: napi::JsString,
                         ) -> napi::Result<String> {
 
-                            use crate::types::{FFIMetadataPayload, FFIRequestData};
-                            use crate::utils::create_hardcoded_masked_metadata;
+                            use $crate::types::{FFIMetadataPayload, FFIRequestData};
+                            use $crate::utils::create_hardcoded_masked_metadata;
 
                             // Convert inputs to Rust strings
                             let payload_str = payload.into_utf8()?.as_str()?.to_string();
@@ -176,6 +176,7 @@ macro_rules! payment_flow {
                 let connector_request = connector_integration
                     .build_request_v2(&router_data.clone())
                     .map_err(|err| {
+                        tracing::error!(error = ?err, "Connector response handling failed");
                         common_crate::error::PaymentAuthorizationError::new(
                             grpc_api_types::payments::PaymentStatus::Pending,
                             Some(err.to_string()),
