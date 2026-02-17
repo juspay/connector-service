@@ -168,14 +168,14 @@ pub fn map_fiservemea_status_to_attempt_status(
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        &RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for FiservemeaAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<
-            Authorize,
+            domain_types::connector_flow::Authorize,
             PaymentFlowData,
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
