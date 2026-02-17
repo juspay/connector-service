@@ -135,7 +135,6 @@ pub fn authorize_res<
     )
     .map_err(
         |e: error_stack::Report<domain_types::errors::ConnectorError>| {
-            tracing::error!(error = ?e, "Connector response handling failed");
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(e.to_string()),

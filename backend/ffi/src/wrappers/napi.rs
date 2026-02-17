@@ -126,13 +126,20 @@ mod napi_bindings {
             masked_metadata,
         };
 
-        authorize_res_handler(request, response)
-            .map_err(|e| napi::Error::from_reason(format!("{:?}", e)))
-            .and_then(|response| {
-                serde_json::to_string(&response).map_err(|e| {
+        match authorize_res_handler(request, response) {
+            Ok(response) => {
+                let json = serde_json::to_string(&response).map_err(|e| {
                     napi::Error::from_reason(format!("Failed to serialize response: {}", e))
-                })
-            })
+                })?;
+                Ok(json)
+            }
+            Err(error_response) => {
+                let json = serde_json::to_string(&error_response).map_err(|e| {
+                    napi::Error::from_reason(format!("Failed to serialize error response: {}", e))
+                })?;
+                Err(napi::Error::from_reason(json))
+            }
+        }
     }
 
     napi_wrapper!(

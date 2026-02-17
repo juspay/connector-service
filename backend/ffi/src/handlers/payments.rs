@@ -41,7 +41,7 @@ pub fn authorize_req_handler(
 pub fn authorize_res_handler(
     request: FFIRequestData<PaymentServiceAuthorizeRequest>,
     response: domain_types::router_response_types::Response,
-) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
+) -> Result<PaymentServiceAuthorizeResponse, PaymentServiceAuthorizeResponse> {
     let metadata_payload = request.extracted_metadata;
     let metadata = &request.masked_metadata;
     let payload = request.payload;
@@ -55,6 +55,7 @@ pub fn authorize_res_handler(
         metadata,
         response,
     )
+    .map_err(|e| e.into())
 }
 
 // Generate capture_req_flow handler using payment_flow_handler! macro
