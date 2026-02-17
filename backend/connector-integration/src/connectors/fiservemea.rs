@@ -2,6 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
+use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
@@ -21,7 +22,9 @@ use hyperswitch_masking::{ExposeInterface, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
+use ring::hmac;
 use serde::Serialize;
+use time::OffsetDateTime;
 use transformers::{
     self as fiservemea, FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
     FiservemeaAuthType, FiservemeaErrorResponse,
@@ -38,6 +41,9 @@ pub(crate) mod headers {
     pub(crate) const TIMESTAMP: &str = "Timestamp";
     pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
 }
+
+pub const BASE64_ENGINE: base64::engine::GeneralPurpose =
+    base64::engine::general_purpose::STANDARD;
 
 macros::create_all_prerequisites!(
     connector_name: Fiservemea,
@@ -93,14 +99,10 @@ macros::create_all_prerequisites!(
             request_body: &str,
             api_secret: &str,
         ) -> String {
-            use hmac::{Hmac, Mac};
-            use sha2::Sha256;
-
             let signature_data = format!("{}{}{}{}", api_key, client_request_id, timestamp, request_body);
-            let mut mac = Hmac::<Sha256>::new_from_slice(api_secret.as_bytes())
-                .expect("HMAC can take key of any size");
-            mac.update(signature_data.as_bytes());
-            hex::encode(mac.finalize().into_bytes())
+            let key = hmac::Key::new(hmac::HMAC_SHA256, api_secret.as_bytes());
+            let signature = hmac::sign(&key, signature_data.as_bytes());
+            BASE64_ENGINE.encode(signature.as_ref())
         }
     }
 );
