@@ -3,10 +3,10 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorAuthType, router_response_types::Response, types::Connectors,
+    router_data::ConnectorAuthType, router_data_v2::RouterData, types::Connectors,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
@@ -20,7 +20,10 @@ use crate::with_error_response_body;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const API_KEY: &str = "X-API-Key";
+    pub(crate) const CLIENT_REQUEST_ID: &str = "X-Client-Request-Id";
+    pub(crate) const TIMESTAMP: &str = "X-Timestamp";
+    pub(crate) const MESSAGE_SIGNATURE: &str = "X-Message-Signature";
 }
 
 #[derive(Debug, Clone)]
@@ -39,12 +42,95 @@ impl<T: PaymentMethodDataTypes> Fiservemea<T> {
 // =============================================================================
 // MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
 // =============================================================================
-// Primary authorize implementation - customize as needed
-// =============================================================================
-// MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
-// =============================================================================
-// Primary authorize implementation - customize as needed
-// ... Authorize implementation is now valid generated code ...
+
+macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: FiservemeaAuthorizeRequest<T>,
+            response_body: FiservemeaAuthorizeResponse,
+            router_data: RouterData<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [],
+    member_functions: {
+        fn build_headers_with_signature(
+            &self,
+            auth: &fiservemea::FiservemeaAuthType,
+            request_body_str: &str,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let client_request_id = fiservemea::FiservemeaAuthType::generate_client_request_id();
+            let timestamp = fiservemea::FiservemeaAuthType::generate_timestamp();
+
+            let api_key_value = auth.api_key.clone().expose();
+            let message_signature = auth.generate_hmac_signature(
+                &api_key_value,
+                &client_request_id,
+                &timestamp,
+                request_body_str,
+            )?;
+
+            Ok(vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/json".to_string().into(),
+                ),
+                (
+                    headers::API_KEY.to_string(),
+                    Secret::new(api_key_value).into_masked(),
+                ),
+                (
+                    headers::CLIENT_REQUEST_ID.to_string(),
+                    client_request_id.into(),
+                ),
+                (headers::TIMESTAMP.to_string(), timestamp.into()),
+                (
+                    headers::MESSAGE_SIGNATURE.to_string(),
+                    message_signature.into(),
+                ),
+            ])
+        }
+
+        fn generate_hmac_signature(
+            &self,
+            api_key: &str,
+            client_request_id: &str,
+            timestamp: &str,
+            request_body: &str,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let raw_signature = format!("{}{}{}{}", api_key, client_request_id, timestamp, request_body);
+            
+            let signature = hmac_sha256::HmacSha256::sign_message(
+                self.api_secret.clone().expose().as_bytes(),
+                raw_signature.as_bytes(),
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            Ok(base64::engine::general_purpose::STANDARD.encode(signature))
+        }
+
+        fn generate_client_request_id(&self) -> String {
+            uuid::Uuid::new_v4().to_string()
+        }
+
+        fn generate_timestamp(&self) -> String {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+                .to_string()
+        }
+
+        fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterData<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.fiservemea.base_url
+        }
+    }
+);
 
 // =============================================================================
 // CONNECTOR COMMON IMPLEMENTATION
@@ -74,10 +160,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
-            headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.expose()).into(),
-        )])
+        Ok(vec![
+            (headers::AUTHORIZATION.to_string(), format!("Bearer {}", auth.api_key.expose()).into()),
+        ])
     }
 
     fn build_error_response(
@@ -105,9 +190,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         })
     }
 }
+
 // =============================================================================
 // DYNAMICALLY GENERATED IMPLEMENTATIONS
 // =============================================================================
+
 // The following implementations were auto-generated by add_connector.sh
 // based on the flows detected in ConnectorServiceTrait.
 //
@@ -118,7 +205,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 // =============================================================================
 
 // ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
-// Main service trait - aggregates all other traits
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Fiservemea<T>
 {
@@ -483,7 +569,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== SOURCE VERIFICATION IMPLEMENTATION =====
-// Simple non-generic trait for webhook signature verification
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification for Fiservemea<T>
 {
