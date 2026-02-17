@@ -127,7 +127,7 @@ pub enum FiservemeaTransactionState {
 }
 
 #[derive(Debug, Clone)]
-pub struct FiservemeaRouterData<T> {
+pub struct FiservemeaRouterData<T: PaymentMethodDataTypes> {
     pub amount: StringMajorUnit,
     pub router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 }
