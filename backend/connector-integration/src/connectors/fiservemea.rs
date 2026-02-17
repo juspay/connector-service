@@ -39,19 +39,6 @@ pub(crate) mod headers {
     pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
 }
 
-#[derive(Debug, Clone)]
-pub struct Fiservemea<T: PaymentMethodDataTypes> {
-    payment_method_type: std::marker::PhantomData<T>,
-}
-
-impl<T: PaymentMethodDataTypes> Fiservemea<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            payment_method_type: std::marker::PhantomData,
-        }
-    }
-}
-
 macros::create_all_prerequisites!(
     connector_name: Fiservemea,
     generic_type: T,
