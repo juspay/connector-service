@@ -93,8 +93,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         "application/json"
     }
 
-    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
-        "https://prod.emea.api.fiservapps.com/sandbox"
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        connectors.fiservemea.base_url.as_ref()
     }
 
     fn get_auth_header(
