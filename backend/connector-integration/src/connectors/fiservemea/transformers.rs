@@ -61,7 +61,7 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "paymentCard", rename_all = "camelCase")]
-pub struct FiservemeaCard<T: PaymentMethodDataTypes> {
+pub struct FiservemeaCard {
     pub number: hyperswitch_masking::Secret<String>,
     pub security_code: hyperswitch_masking::Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
