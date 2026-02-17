@@ -211,7 +211,7 @@ impl<T: PaymentMethodDataTypes>
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: amount_in_major_units.to_string(),
+                total: amount_in_major_units,
                 currency: item.request.currency.to_string(),
             },
             payment_method,
