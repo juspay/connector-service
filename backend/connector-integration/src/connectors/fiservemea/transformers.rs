@@ -1,6 +1,5 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::types::StringMajorUnit;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -9,7 +8,7 @@ use domain_types::{
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::PeekInterface;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
