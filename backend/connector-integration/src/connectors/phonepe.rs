@@ -32,7 +32,7 @@ use domain_types::{
     types::{ConnectorInfo, Connectors},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, PeekInterface};
+use hyperswitch_masking::{Maskable, PeekInterface, ExposeInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -278,13 +278,21 @@ macros::macro_connector_implementation!(
 
             let browser_info = req.request.browser_info.as_ref();
             let source_channel = phonepe::get_source_channel(browser_info.and_then(|bi| bi.user_agent.as_ref()));
+            let source_platform = req
+                .request
+                .metadata
+                .as_ref()
+                .and_then(|metadata| metadata.clone().expose().get("SOURCE_PLATFORM").and_then(|v| v.as_str().map(String::from)));
 
             // Add common headers
             headers.extend([
                 (headers::X_SOURCE.to_string(), "API".to_string().into()),
                 (headers::X_SOURCE_CHANNEL.to_string(), source_channel.clone().into()),
-                (headers::X_SOURCE_PLATFORM.to_string(), "JUSPAY".to_string().into()),
             ]);
+
+            if let Some(platform) = source_platform {
+                headers.push((headers::X_SOURCE_PLATFORM.to_string(), platform.into()));
+            }
 
             if let Some(ip_address) = browser_info.and_then(|bi| bi.ip_address) {
                 headers.push((headers::X_MERCHANT_IP.to_string(), ip_address.to_string().into()));
@@ -306,7 +314,7 @@ macros::macro_connector_implementation!(
 
                     browser_info.and_then(|bi| bi.user_agent.as_ref()).map(|user_agent| {
                         let version = match is_android {
-                            true => phonepe::split_ua(user_agent),
+                            true => phonepe::get_android_version_from_ua(user_agent),
                             false => user_agent.clone(),
                         };
                         headers.push((headers::X_SOURCE_CHANNEL_VERSION.to_string(), version.into()));

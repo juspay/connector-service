@@ -988,14 +988,14 @@ fn get_target_app_for_phonepe(
     intent_data: &domain_types::payment_method_data::UpiIntentData,
     browser_info: &Option<BrowserInformation>,
 ) -> Option<String> {
-    match get_device_os(browser_info).as_str() {
+    match get_mobile_os(browser_info).as_str() {
         "ANDROID" => intent_data.app_name.clone(),
         _ => map_ios_payment_source_to_target_app(intent_data.app_name.as_deref()),
     }
 }
 
 /// Detects the device OS from browser_info
-fn get_device_os(browser_info: &Option<BrowserInformation>) -> String {
+fn get_mobile_os(browser_info: &Option<BrowserInformation>) -> String {
     browser_info
         .as_ref()
         .and_then(|info| info.os_type.as_ref())
@@ -1021,7 +1021,7 @@ pub fn map_ios_payment_source_to_target_app(payment_source: Option<&str>) -> Opt
 }
 
 /// Extract Android version from user agent string
-pub fn split_ua(user_agent: &str) -> String {
+pub fn get_android_version_from_ua(user_agent: &str) -> String {
     user_agent
         .split_whitespace()
         .skip_while(|&part| part != "Android")
