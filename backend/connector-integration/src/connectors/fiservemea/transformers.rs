@@ -168,27 +168,29 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.request.amount.get_amount_as_i64();
+        let amount = item.request.amount.get_amount_as_float();
         let currency = item.request.currency;
         
         let payment_method_data = match &item.request.payment_method_data {
             domain_types::connector_types::PaymentMethodData::Card(card) => card,
-            _ => return Err(error_stack::report!(errors::ConnectorError::InvalidPaymentMethod)),
+            _ => return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                message: "Only card payment method is supported".to_string()
+            })),
         };
 
         let payment_card = FiservemeaPaymentCard {
             number: payment_method_data.card_number.clone(),
             security_code: payment_method_data.card_cvc.clone(),
             expiry_date: FiservemeaExpiryDate {
-                month: payment_method_data.card_exp_month.clone(),
-                year: payment_method_data.card_exp_year.clone(),
+                month: payment_method_data.card_exp_month.expose().clone(),
+                year: payment_method_data.card_exp_year.expose().clone(),
             },
         };
 
         Ok(FiservemeaPreAuthRequest {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaAmount {
-                total: amount,
+                total: FloatMajorUnit(amount),
                 currency,
             },
             payment_method: FiservemeaPaymentMethod { payment_card },
