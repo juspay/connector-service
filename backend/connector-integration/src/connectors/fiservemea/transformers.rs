@@ -82,12 +82,7 @@ impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
             FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -96,12 +91,7 @@ impl<T: PaymentMethodDataTypes>
     fn try_from(
         item: ResponseRouterData<
             FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let status = match item.response.status.as_str() {
