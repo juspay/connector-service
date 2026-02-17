@@ -326,7 +326,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         RepeatPayment, RepeatPaymentData,
         PaymentFlowData,
-        RepeatPaymentData<T>,
+        RepeatPaymentData,
         PaymentsResponseData,
     > for Fiservemea<T>
 {
