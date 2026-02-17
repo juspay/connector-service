@@ -136,30 +136,36 @@ pub enum FiservemeaTransactionState {
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
-        &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        FiservemeaRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     > for FiservemeaAuthorizeRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: FiservemeaRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let amount_converter = StringMajorUnitForConnector;
         let amount_in_major_units = amount_converter
-            .convert(item.request.amount, item.request.currency)
+            .convert(item.router_data.request.amount, item.router_data.request.currency)
             .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
 
-        let payment_method = match &item.request.payment_method_data {
+        let payment_method = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => {
                 let expiry_month = card.card_exp_month.clone().expose();
                 let expiry_year = card.card_exp_year.clone().expose();
@@ -188,12 +194,13 @@ impl<T: PaymentMethodDataTypes>
         };
 
         let billing_address = item
+            .router_data
             .resource_common_data
             .address
             .get_payment_billing()
             .and_then(|addr| addr.address.as_ref())
             .map(|addr_details| FiservemeaBillingAddress {
-                name: item.request.customer_name.clone(),
+                name: item.router_data.request.customer_name.clone(),
                 address1: addr_details.line1.as_ref().map(|s| s.clone().expose()),
                 city: addr_details.city.as_ref().map(|s| s.clone().expose()),
                 state: addr_details.state.as_ref().map(|s| s.clone().expose()),
@@ -203,6 +210,7 @@ impl<T: PaymentMethodDataTypes>
 
         let order = Some(FiservemeaOrder {
             order_id: item
+                .router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
@@ -213,7 +221,7 @@ impl<T: PaymentMethodDataTypes>
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
                 total: amount_in_major_units,
-                currency: item.request.currency.to_string(),
+                currency: item.router_data.request.currency.to_string(),
             },
             payment_method,
             order,
