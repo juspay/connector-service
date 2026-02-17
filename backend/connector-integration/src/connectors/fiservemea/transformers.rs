@@ -1,7 +1,7 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
 use domain_types::{
-    connector_flow::Authorize,
+    connector_flow::{Authorize},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -169,14 +169,14 @@ pub fn map_fiservemea_status_to_attempt_status(
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
-        &RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaAuthorizeRequest
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    > for FiservemeaAuthorizeRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<
-            domain_types::connector_flow::Authorize,
+            Authorize,
             PaymentFlowData,
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
