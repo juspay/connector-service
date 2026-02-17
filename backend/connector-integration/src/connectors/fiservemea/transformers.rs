@@ -170,14 +170,12 @@ impl<T: PaymentMethodDataTypes>
                     card_number: card_data.card_number.clone(),
                     expiration_month: card_data.card_exp_month.clone(),
                     expiration_year: card_data.card_exp_year.clone(),
-                    cvv: card_data.card_cvv.clone(),
+                    cvv: card_data.card_cvc.clone(),
                 }
             }
             _ => {
                 return Err(error_stack::report!(
-                    errors::ConnectorError::NotImplemented {
-                        message: "Only card payments are supported".to_string()
-                    }
+                    errors::ConnectorError::NotImplemented("Only card payments are supported".to_string())
                 ))
             }
         };
@@ -192,10 +190,12 @@ impl<T: PaymentMethodDataTypes>
                 payment_card,
             },
             order: Some(FiservemeaOrder {
-                order_id: item
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
+                order_id: Some(
+                    item
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
             }),
         })
     }
