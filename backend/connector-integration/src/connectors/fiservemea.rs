@@ -135,16 +135,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?
             .as_millis()
             .to_string();
+        let api_key = auth.api_key.expose();
         let signature = format!(
             "{}{}{}",
-            auth.api_key.expose(),
+            api_key,
             client_request_id,
             timestamp
         );
         Ok(vec![
             (
                 headers::API_KEY.to_string(),
-                auth.api_key.expose().to_string().into(),
+                api_key.to_string().into(),
             ),
             (
                 headers::CLIENT_REQUEST_ID.to_string(),
