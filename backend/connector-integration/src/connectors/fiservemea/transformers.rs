@@ -247,12 +247,7 @@ impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
             FiservemeaAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
