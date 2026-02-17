@@ -142,7 +142,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let client_request_id = uuid::Uuid::new_v4().to_string();
         let timestamp = chrono::Utc::now().timestamp_millis().to_string();
         Ok(vec![
-            ("Api-Key".to_string(), auth.api_key.clone().into()),
+            ("Api-Key".to_string(), auth.api_key.expose().to_string().into()),
             ("Client-Request-Id".to_string(), client_request_id.into()),
             ("Timestamp".to_string(), timestamp.into()),
         ])
