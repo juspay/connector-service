@@ -121,8 +121,8 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Fiservemea,
-    curl_request: Json(fiservemea::FiservemeaAuthorizeRequest),
-    curl_response: fiservemea::FiservemeaAuthorizeResponse,
+    curl_request: Json(FiservemeaAuthorizeRequest),
+    curl_response: FiservemeaAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -135,13 +135,13 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = fiservemea::FiservemeaAuthType::try_from(&req.connector_auth_type)
+            let auth = FiservemeaAuthType::try_from(&req.connector_auth_type)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             let client_request_id = uuid::Uuid::new_v4().to_string();
             let timestamp = chrono::Utc::now().timestamp_millis().to_string();
 
-            let request_body = serde_json::to_string(&fiservemea::FiservemeaAuthorizeRequest::try_from((
+            let request_body = serde_json::to_string(&FiservemeaAuthorizeRequest::try_from((
                 self,
                 req,
             ))?)
