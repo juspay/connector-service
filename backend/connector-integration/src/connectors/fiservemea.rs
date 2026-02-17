@@ -19,7 +19,7 @@ use transformers as fiservemea;
 
 use super::macros;
 
-use crate::with_error_response_body;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
