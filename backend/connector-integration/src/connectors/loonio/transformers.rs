@@ -9,7 +9,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankRedirectData, InteracCustomerInfoDetails, PaymentMethodData, PaymentMethodDataTypes,
+        BankRedirectData, CustomerInfoDetails, PaymentMethodData, PaymentMethodDataTypes,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
@@ -365,7 +365,7 @@ impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
                             ConnectorResponseData::with_additional_payment_method_data(
                                 AdditionalPaymentMethodConnectorResponse::BankRedirect {
                                     interac: Some(InteracCustomerInfo {
-                                        customer_info: Some(InteracCustomerInfoDetails::from(
+                                        customer_info: Some(CustomerInfoDetails::from(
                                             customer_info,
                                         )),
                                     }),
@@ -399,9 +399,7 @@ impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
                     ConnectorResponseData::with_additional_payment_method_data(
                         AdditionalPaymentMethodConnectorResponse::BankRedirect {
                             interac: Some(InteracCustomerInfo {
-                                customer_info: Some(InteracCustomerInfoDetails::from(
-                                    customer_info,
-                                )),
+                                customer_info: Some(CustomerInfoDetails::from(customer_info)),
                             }),
                         },
                     )
@@ -495,7 +493,7 @@ impl From<&LoonioWebhookEventCode> for AttemptStatus {
     }
 }
 
-impl From<&LoonioCustomerInfo> for InteracCustomerInfoDetails {
+impl From<&LoonioCustomerInfo> for CustomerInfoDetails {
     fn from(value: &LoonioCustomerInfo) -> Self {
         Self {
             customer_name: value.customer_name.clone(),

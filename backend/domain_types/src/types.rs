@@ -3616,17 +3616,18 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                                 payment_method_data: Some(
                                     grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::BankRedirect(
                                         grpc_api_types::payments::BankRedirectConnectorResponse {
-                                            interac: interac.as_ref().map(|interac_info| {
-                                                let customer_info = interac_info.customer_info.as_ref();
-                                                grpc_payment_types::InteracCustomerInfo {
-                                                    customer_name: customer_info.and_then(|d| d.customer_name.clone()),
-                                                    customer_email: customer_info.and_then(|d| d.customer_email.as_ref()
-                                                        .map(|email| Secret::new(email.clone().expose().expose()))),
-                                                    customer_phone_number: customer_info.and_then(|d| d.customer_phone_number.clone()),
-                                                    customer_bank_id: customer_info.and_then(|d| d.customer_bank_id.clone()),
-                                                    customer_bank_name: customer_info.and_then(|d| d.customer_bank_name.clone()),
-                                                }
-                                            })
+                                            interac: interac.clone().map(|interac_info| grpc_api_types::payments::InteracCustomerInfo {
+                                                customer_info: interac_info.customer_info.map(|customer_info_details| {
+                                                    grpc_api_types::payments::CustomerInfo {
+                                                        customer_name: customer_info_details.customer_name,
+                                                        customer_email: customer_info_details.customer_email
+                                                        .map(|email| Secret::new(email.clone().expose().expose())),
+                                                        customer_phone_number: customer_info_details.customer_phone_number,
+                                                        customer_bank_id: customer_info_details.customer_bank_id,
+                                                        customer_bank_name: customer_info_details.customer_bank_name,
+                                                    }
+                                                }),
+                                            }),
                                         }
                                     )
                                 ),

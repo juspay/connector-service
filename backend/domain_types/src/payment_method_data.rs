@@ -1286,9 +1286,9 @@ pub struct ReceiverDetails {
     amount_remaining: Option<i64>,
 }
 
-/// Interac Customer Information Details
+/// Customer Information Details
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize, ToSchema)]
-pub struct InteracCustomerInfoDetails {
+pub struct CustomerInfoDetails {
     /// Customer Name
     #[schema(value_type = Option<String>)]
     pub customer_name: Option<Secret<String>>,

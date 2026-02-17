@@ -467,5 +467,5 @@ pub struct ExtendedAuthorizationResponseData {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct InteracCustomerInfo {
-    pub customer_info: Option<payment_method_data::InteracCustomerInfoDetails>,
+    pub customer_info: Option<payment_method_data::CustomerInfoDetails>,
 }
