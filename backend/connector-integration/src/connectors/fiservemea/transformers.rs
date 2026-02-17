@@ -167,13 +167,14 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.request.amount.get_amount_as_float();
+        let amount = item.request.amount.get_amount_as_i64() as f64;
         let currency = item.request.currency;
         
         let payment_method_data = match &item.request.payment_method_data {
             domain_types::connector_types::PaymentMethodData::Card(card) => card,
             _ => return Err(error_stack::report!(errors::ConnectorError::NotSupported {
-                message: "Only card payment method is supported".to_string()
+                message: "Only card payment method is supported".to_string(),
+                connector: "fiservemea".to_string()
             })),
         };
 
