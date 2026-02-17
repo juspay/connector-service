@@ -204,7 +204,7 @@ impl<T: PaymentMethodDataTypes>
 fn map_fiservemea_status_to_attempt_status(
     transaction_result: &FiservemeaTransactionResult,
     transaction_state: &FiservemeaTransactionState,
-    capture_method: Option<common_enums::CaptureMethod>,
+    _capture_method: Option<common_enums::CaptureMethod>,
 ) -> AttemptStatus {
     match (transaction_result, transaction_state) {
         (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Authorized) => {
@@ -213,6 +213,14 @@ fn map_fiservemea_status_to_attempt_status(
         (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Captured)
         | (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Settled) => {
             AttemptStatus::Charged
+        }
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Declined)
+        | (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Pending)
+        | (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Waiting) => {
+            AttemptStatus::Pending
+        }
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Voided) => {
+            AttemptStatus::Voided
         }
         (FiservemeaTransactionResult::Declined, _)
         | (FiservemeaTransactionResult::Failed, _) => AttemptStatus::Failure,
