@@ -203,6 +203,7 @@ macros::create_all_prerequisites!(
             ])
         }
 );
+);
 
 // ===== AUTHORIZE FLOW IMPLEMENTATION =====
 macros::macro_connector_implementation!(
