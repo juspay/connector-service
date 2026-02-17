@@ -174,12 +174,8 @@ impl<T: PaymentMethodDataTypes>
                 };
 
                 FiservemeaPaymentMethod::PaymentCard(FiservemeaPaymentCard {
-                    number: card.card_number.clone(),
-                    security_code: card.card_cvc.clone().ok_or_else(|| {
-                        errors::ConnectorError::MissingRequiredField {
-                            field_name: "card_cvc",
-                        }
-                    })?,
+                    number: card.card_number.get_inner().clone(),
+                    security_code: card.card_cvc.clone(),
                     expiry_date: FiservemeaExpiryDate { month, year },
                 })
             }
@@ -194,13 +190,14 @@ impl<T: PaymentMethodDataTypes>
             .resource_common_data
             .address
             .get_payment_billing()
-            .map(|addr| FiservemeaBillingAddress {
+            .and_then(|addr| addr.address.as_ref())
+            .map(|addr_details| FiservemeaBillingAddress {
                 name: item.request.customer_name.clone(),
-                address1: addr.line1.clone(),
-                city: addr.city.clone(),
-                state: addr.state.clone(),
-                postal_code: addr.zip.clone(),
-                country: addr.country.map(|c| c.to_alpha2()),
+                address1: addr_details.line1.as_ref().map(|s| s.expose().clone()),
+                city: addr_details.city.as_ref().map(|s| s.expose().clone()),
+                state: addr_details.state.as_ref().map(|s| s.expose().clone()),
+                postal_code: addr_details.zip.as_ref().map(|s| s.expose().clone()),
+                country: addr_details.country.map(|c| c.to_alpha2().to_string()),
             });
 
         let order = Some(FiservemeaOrder {
@@ -258,7 +255,7 @@ impl<T: PaymentMethodDataTypes>
             status,
             AttemptStatus::Failure | AttemptStatus::AutoRefunded
         ) {
-            Some(errors::ConnectorError::ErrorResponse {
+            Some(errors::router_data::ErrorResponse {
                 status_code: item.http_code,
                 code: item
                     .response
