@@ -51,7 +51,9 @@ pub struct FiservemeaErrorResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest {
+pub struct FiservemeaAuthorizeRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
     pub payment_method: FiservemeaPaymentMethod,
