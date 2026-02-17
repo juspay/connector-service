@@ -11,33 +11,6 @@ use domain_types::{
 use hyperswitch_masking::PeekInterface;
 use serde::{Deserialize, Serialize};
 
-pub struct FiservemeaRouterData<RD, T: PaymentMethodDataTypes> {
-    pub connector: (),
-    pub router_data: RD,
-    pub _phantom: std::marker::PhantomData<T>,
-}
-
-impl<RD: FlowTypes, T: PaymentMethodDataTypes> FlowTypes for FiservemeaRouterData<RD, T> {
-    type Flow = RD::Flow;
-    type FlowCommonData = RD::FlowCommonData;
-    type Request = RD::Request;
-    type Response = RD::Response;
-}
-
-trait FlowTypes {
-    type Flow;
-    type FlowCommonData;
-    type Request;
-    type Response;
-}
-
-impl<F, FCD, Req, Resp> FlowTypes for RouterDataV2<F, FCD, Req, Resp> {
-    type Flow = F;
-    type FlowCommonData = FCD;
-    type Request = Req;
-    type Response = Resp;
-}
-
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
     pub api_key: hyperswitch_masking::Secret<String>,
