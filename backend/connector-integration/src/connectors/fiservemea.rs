@@ -16,7 +16,7 @@ use domain_types::{
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self},
