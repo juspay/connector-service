@@ -26,8 +26,8 @@ use ring::hmac;
 use serde::Serialize;
 use time::OffsetDateTime;
 use transformers::{
-    self as fiservemea, FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
-    FiservemeaAuthType, FiservemeaErrorResponse,
+    FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse, FiservemeaAuthType,
+    FiservemeaErrorResponse,
 };
 
 use super::macros;
