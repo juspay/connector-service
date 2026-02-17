@@ -1397,7 +1397,7 @@ impl TryFrom<ResponseRouterData<AirwallexAccessTokenResponse, Self>>
         let expires = (item.response.expires_at - common_utils::date_time::now()).whole_seconds();
 
         router_data.response = Ok(domain_types::connector_types::AccessTokenResponseData {
-            access_token: item.response.token.expose(),
+            access_token: item.response.token,
             token_type: Some("Bearer".to_string()),
             expires_in: Some(expires),
         });

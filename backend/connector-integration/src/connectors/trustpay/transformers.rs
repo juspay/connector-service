@@ -35,7 +35,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -1021,7 +1021,7 @@ impl TryFrom<ResponseRouterData<TrustpayAuthUpdateResponse, Self>>
         match (item.response.access_token, item.response.expires_in) {
             (Some(access_token), Some(expires_in)) => Ok(Self {
                 response: Ok(AccessTokenResponseData {
-                    access_token: access_token.expose(),
+                    access_token,
                     expires_in: Some(expires_in),
                     token_type: Some(item.router_data.request.grant_type.clone()),
                 }),
