@@ -6,7 +6,8 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorAuthType, router_response_types::Response, types::Connectors,
+    router_data::ConnectorAuthType, router_data_v2::RouterDataV2,
+    router_response_types::Response, types::Connectors,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
@@ -15,6 +16,8 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers as fiservemea;
+
+use super::macros;
 
 use crate::with_error_response_body;
 
@@ -36,15 +39,6 @@ impl<T: PaymentMethodDataTypes> Fiservemea<T> {
     }
 }
 
-// =============================================================================
-// MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
-// =============================================================================
-// Primary authorize implementation - customize as needed
-// =============================================================================
-// MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS
-// =============================================================================
-// Primary authorize implementation - customize as needed
-// ... Authorize implementation is now valid generated code ...
 
 // =============================================================================
 // CONNECTOR COMMON IMPLEMENTATION
