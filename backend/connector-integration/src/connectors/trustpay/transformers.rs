@@ -1216,8 +1216,8 @@ pub struct TrustpayGooglePayResponse {
 #[derive(Clone, Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GooglePayMerchantInfo {
-    pub merchant_name: Secret<String>,
-    pub merchant_id: Secret<String>,
+    pub merchant_name: String,
+    pub merchant_id: String,
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize)]
@@ -1258,7 +1258,7 @@ pub struct GpayTokenizationSpecification {
 #[serde(rename_all = "camelCase")]
 pub struct GpayTokenParameters {
     pub gateway: String,
-    pub gateway_merchant_id: Secret<String>,
+    pub gateway_merchant_id: String,
 }
 
 #[derive(Debug, Serialize, Eq, PartialEq)]
@@ -2266,8 +2266,8 @@ impl From<GooglePayTransactionInfo> for domain_types::connector_types::GpayTrans
 impl From<GooglePayMerchantInfo> for GpayMerchantInfo {
     fn from(value: GooglePayMerchantInfo) -> Self {
         Self {
-            merchant_id: Some(value.merchant_id.expose()),
-            merchant_name: value.merchant_name.expose(),
+            merchant_id: Some(value.merchant_id),
+            merchant_name: value.merchant_name,
         }
     }
 }
@@ -2294,8 +2294,7 @@ impl From<GooglePayAllowedPaymentMethods> for GpayAllowedPaymentMethods {
                             value
                                 .tokenization_specification
                                 .parameters
-                                .gateway_merchant_id
-                                .expose(),
+                                .gateway_merchant_id,
                         ),
                         public_key: None,
                         protocol_version: None,
