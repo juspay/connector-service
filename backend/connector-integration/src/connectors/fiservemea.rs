@@ -15,6 +15,7 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
+use transformers::{FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse};
 use transformers as fiservemea;
 
 use crate::types::ResponseRouterData;
