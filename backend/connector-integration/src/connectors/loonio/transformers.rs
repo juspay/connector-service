@@ -1,23 +1,28 @@
+use super::LoonioRouterData;
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::{pii::Email, types::FloatMajorUnit, Method};
+use common_utils::{id_type::CustomerId, pii::Email, types::FloatMajorUnit, Method};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
     errors,
-    payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    payment_method_data::{
+        BankRedirectData, CustomerInfoDetails, PaymentMethodData, PaymentMethodDataTypes,
+    },
+    router_data::{
+        AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
+        InteracCustomerInfo,
+    },
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
+    utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::HashMap;
-
 // ===== AUTH TYPE =====
 
 #[derive(Debug, Clone)]
@@ -89,142 +94,151 @@ pub struct LoonioAuthorizeRequest {
     pub currency_code: common_enums::Currency,
     pub customer_profile: LoonioCustomerProfile,
     pub amount: FloatMajorUnit,
-    pub customer_id: String,
+    pub customer_id: CustomerId,
     pub transaction_id: String,
     pub payment_method_type: InteracPaymentMethodType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locale: Option<String>,
-    pub redirect_url: LoonioRedirectUrls,
+    pub redirect_url: Option<LoonioRedirectUrls>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook_url: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        LoonioRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for LoonioAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: LoonioRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Validate payment method is BankRedirect
-        match &item.request.payment_method_data {
+        match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::BankRedirect(BankRedirectData::Interac { .. }) => {
-                // Interac is supported
-            }
-            _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Payment method not supported by Loonio".to_string(),
-                ))?;
-            }
-        }
+                let transaction_id = item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone();
 
-        // Get billing details
-        let billing = item
-            .resource_common_data
-            .get_billing()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "billing",
-            })
-            .attach_printable("Failed to get billing details")?;
+                // Get billing details
+                let billing = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing()
+                    .change_context(errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing",
+                    })
+                    .attach_printable("Failed to get billing details")?;
 
-        let billing_address =
-            billing
-                .address
-                .as_ref()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "billing.address",
-                })?;
+                let billing_address = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_address()?;
 
-        let first_name = billing_address.get_first_name()?.to_owned();
-        let last_name = billing_address.get_last_name()?.to_owned();
+                // Extract optional address fields with proper Secret wrapping
+                let phone = billing
+                    .phone
+                    .as_ref()
+                    .and_then(|p| p.number.as_ref())
+                    .map(|n| Secret::new(n.peek().clone()));
+                let address_a = billing_address
+                    .line1
+                    .as_ref()
+                    .map(|l| Secret::new(l.peek().clone()));
+                let city = billing_address.city.as_ref().map(|c| c.peek().clone());
+                let province = billing_address
+                    .state
+                    .as_ref()
+                    .map(|s| Secret::new(s.peek().clone()));
+                let postal_code = billing_address
+                    .zip
+                    .as_ref()
+                    .map(|z| Secret::new(z.peek().clone()));
+                let country = billing_address.country.as_ref().map(|c| c.to_string());
 
-        // Get email from billing address (not from request.email)
-        let email = item
-            .resource_common_data
-            .get_billing_email()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "billing.email",
-            })
-            .attach_printable("Failed to get billing email")?;
+                let customer_profile = LoonioCustomerProfile {
+                    first_name: item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_first_name()?,
+                    last_name: item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_last_name()?,
+                    email: item.router_data.resource_common_data.get_billing_email()?,
+                    phone,
+                    address_a,
+                    city,
+                    province,
+                    postal_code,
+                    country,
+                };
 
-        let return_url = item.request.router_return_url.clone().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "return_url",
-            },
-        )?;
-
-        // Convert amount using utility
-        let amount = domain_types::utils::convert_amount(
-            &common_utils::types::FloatMajorUnitForConnector,
-            item.request.minor_amount,
-            item.request.currency,
-        )
-        .attach_printable("Failed to convert amount to FloatMajorUnit")?;
-
-        // Extract optional address fields with proper Secret wrapping
-        let phone = billing
-            .phone
-            .as_ref()
-            .and_then(|p| p.number.as_ref())
-            .map(|n| Secret::new(n.peek().clone()));
-        let address_a = billing_address
-            .line1
-            .as_ref()
-            .map(|l| Secret::new(l.peek().clone()));
-        let city = billing_address.city.as_ref().map(|c| c.peek().clone());
-        let province = billing_address
-            .state
-            .as_ref()
-            .map(|s| Secret::new(s.peek().clone()));
-        let postal_code = billing_address
-            .zip
-            .as_ref()
-            .map(|z| Secret::new(z.peek().clone()));
-        let country = billing_address.country.as_ref().map(|c| c.to_string());
-
-        Ok(Self {
-            currency_code: item.request.currency,
-            customer_profile: LoonioCustomerProfile {
-                first_name,
-                last_name,
-                email,
-                phone,
-                address_a,
-                city,
-                province,
-                postal_code,
-                country,
-            },
-            amount,
-            customer_id: item
-                .resource_common_data
-                .get_customer_id()
-                .change_context(errors::ConnectorError::MissingRequiredField {
-                    field_name: "customer_id",
+                let redirect_url = LoonioRedirectUrls {
+                    success_url: item.router_data.request.get_router_return_url()?,
+                    failed_url: item.router_data.request.get_router_return_url()?,
+                };
+                let amount = item
+                    .connector
+                    .amount_converter
+                    .convert(
+                        item.router_data.request.minor_amount,
+                        item.router_data.request.currency,
+                    )
+                    .change_context(errors::ConnectorError::AmountConversionFailed)?;
+                Ok(Self {
+                    currency_code: item.router_data.request.currency,
+                    customer_profile,
+                    amount,
+                    customer_id: item.router_data.resource_common_data.get_customer_id()?,
+                    transaction_id,
+                    payment_method_type: InteracPaymentMethodType::InteracEtransfer,
+                    locale: Some("EN".to_string()),
+                    redirect_url: Some(redirect_url),
+                    webhook_url: Some(item.router_data.request.get_webhook_url()?),
                 })
-                .attach_printable("Failed to get customer_id")?
-                .get_string_repr()
-                .to_string(),
-            transaction_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            payment_method_type: InteracPaymentMethodType::InteracEtransfer,
-            locale: Some("EN".to_string()),
-            redirect_url: LoonioRedirectUrls {
-                success_url: return_url.clone(),
-                failed_url: return_url,
-            },
-            webhook_url: item.request.webhook_url.clone(),
-        })
+            }
+            PaymentMethodData::BankRedirect(_) => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Loonio"),
+            ))?,
+            PaymentMethodData::Card(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::MobilePayment(_) => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Loonio"),
+            ))?,
+        }
     }
 }
 
@@ -278,7 +292,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<LoonioAuthorizeRespon
 
 // ===== PSYNC FLOW =====
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum LoonioTransactionStatus {
     Created,
@@ -289,69 +303,204 @@ pub enum LoonioTransactionStatus {
     Abandoned,
     Rejected,
     Failed,
-    Returned,
-    #[serde(rename = "NSF")]
-    Nsf,
     Rollback,
+    Returned,
+    Nsf,
 }
 
-fn map_loonio_status_to_attempt_status(status: &LoonioTransactionStatus) -> AttemptStatus {
-    match status {
-        LoonioTransactionStatus::Created => AttemptStatus::AuthenticationPending,
-        LoonioTransactionStatus::Prepared | LoonioTransactionStatus::Pending => {
-            AttemptStatus::Pending
+impl From<LoonioTransactionStatus> for AttemptStatus {
+    fn from(item: LoonioTransactionStatus) -> Self {
+        match item {
+            LoonioTransactionStatus::Created => Self::AuthenticationPending,
+            LoonioTransactionStatus::Prepared | LoonioTransactionStatus::Pending => Self::Pending,
+            LoonioTransactionStatus::Settled | LoonioTransactionStatus::Available => Self::Charged,
+            LoonioTransactionStatus::Abandoned
+            | LoonioTransactionStatus::Rejected
+            | LoonioTransactionStatus::Failed
+            | LoonioTransactionStatus::Returned
+            | LoonioTransactionStatus::Nsf => Self::Failure,
+            LoonioTransactionStatus::Rollback => Self::Voided,
         }
-        LoonioTransactionStatus::Settled | LoonioTransactionStatus::Available => {
-            AttemptStatus::Charged
-        }
-        LoonioTransactionStatus::Abandoned
-        | LoonioTransactionStatus::Rejected
-        | LoonioTransactionStatus::Failed
-        | LoonioTransactionStatus::Returned
-        | LoonioTransactionStatus::Nsf => AttemptStatus::Failure,
-        LoonioTransactionStatus::Rollback => AttemptStatus::Voided,
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct LoonioPSyncResponse {
-    pub transaction_id: String,
-    pub state: LoonioTransactionStatus,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub customer_bank_info: Option<Secret<Value>>,
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct LoonioCustomerInfo {
+    pub customer_name: Option<Secret<String>>,
+    pub customer_email: Option<Email>,
+    pub customer_phone_number: Option<Secret<String>>,
+    pub customer_bank_id: Option<Secret<String>>,
+    pub customer_bank_name: Option<Secret<String>>,
 }
 
-impl TryFrom<ResponseRouterData<LoonioPSyncResponse, Self>>
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum LoonioPaymentResponseData {
+    Sync(LoonioTransactionSyncResponse),
+    Webhook(LoonioWebhookBody),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoonioTransactionSyncResponse {
+    pub transaction_id: String,
+    pub state: LoonioTransactionStatus,
+    pub customer_bank_info: Option<LoonioCustomerInfo>,
+}
+
+impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<LoonioPSyncResponse, Self>) -> Result<Self, Self::Error> {
-        let status = map_loonio_status_to_attempt_status(&item.response.state);
+    fn try_from(
+        item: ResponseRouterData<LoonioPaymentResponseData, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            LoonioPaymentResponseData::Sync(sync_response) => {
+                let connector_response =
+                    sync_response
+                        .customer_bank_info
+                        .as_ref()
+                        .map(|customer_info| {
+                            ConnectorResponseData::with_additional_payment_method_data(
+                                AdditionalPaymentMethodConnectorResponse::BankRedirect {
+                                    interac: Some(InteracCustomerInfo {
+                                        customer_info: Some(CustomerInfoDetails::from(
+                                            customer_info,
+                                        )),
+                                    }),
+                                },
+                            )
+                        });
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: AttemptStatus::from(sync_response.state),
+                        connector_response,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            sync_response.transaction_id,
+                        ),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    }),
+                    ..item.router_data
+                })
+            }
+            LoonioPaymentResponseData::Webhook(webhook_body) => {
+                let payment_status = AttemptStatus::from(&webhook_body.event_code);
+                let connector_response = webhook_body.customer_info.as_ref().map(|customer_info| {
+                    ConnectorResponseData::with_additional_payment_method_data(
+                        AdditionalPaymentMethodConnectorResponse::BankRedirect {
+                            interac: Some(InteracCustomerInfo {
+                                customer_info: Some(CustomerInfoDetails::from(customer_info)),
+                            }),
+                        },
+                    )
+                });
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: payment_status,
+                        connector_response,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            webhook_body.api_transaction_id,
+                        ),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    }),
+                    ..item.router_data
+                })
+            }
+        }
+    }
+}
 
-        // Include customer_bank_info in connector_metadata if present
-        let connector_metadata = item
-            .response
-            .customer_bank_info
-            .as_ref()
-            .map(|info| serde_json::json!({ "customer_bank_info": info.clone().expose() }));
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoonioWebhookBody {
+    pub amount: FloatMajorUnit,
+    pub api_transaction_id: String,
+    pub signature: Option<Secret<String>>,
+    pub event_code: LoonioWebhookEventCode,
+    #[serde(rename = "type")]
+    pub transaction_type: LoonioWebhookTransactionType,
+    pub customer_info: Option<LoonioCustomerInfo>,
+}
 
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.transaction_id),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata,
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum LoonioWebhookEventCode {
+    TransactionPrepared,
+    TransactionPending,
+    TransactionAvailable,
+    TransactionSettled,
+    TransactionFailed,
+    TransactionRejected,
+    #[serde(rename = "TRANSACTION_WAITING_STATUS_FILE")]
+    TransactionWaitingStatusFile,
+    #[serde(rename = "TRANSACTION_STATUS_FILE_RECEIVED")]
+    TransactionStatusFileReceived,
+    #[serde(rename = "TRANSACTION_STATUS_FILE_FAILED")]
+    TransactionStatusFileFailed,
+    #[serde(rename = "TRANSACTION_RETURNED")]
+    TransactionReturned,
+    #[serde(rename = "TRANSACTION_WRONG_DESTINATION")]
+    TransactionWrongDestination,
+    #[serde(rename = "TRANSACTION_NSF")]
+    TransactionNsf,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum LoonioWebhookTransactionType {
+    Incoming,
+    OutgoingVerified,
+    OutgoingNotVerified,
+    OutgoingCustomerDefined,
+}
+
+impl From<&LoonioWebhookEventCode> for AttemptStatus {
+    fn from(event_code: &LoonioWebhookEventCode) -> Self {
+        match event_code {
+            LoonioWebhookEventCode::TransactionSettled
+            | LoonioWebhookEventCode::TransactionAvailable => Self::Charged,
+
+            LoonioWebhookEventCode::TransactionPending
+            | LoonioWebhookEventCode::TransactionPrepared => Self::Pending,
+
+            LoonioWebhookEventCode::TransactionFailed
+            | LoonioWebhookEventCode::TransactionRejected
+            | LoonioWebhookEventCode::TransactionStatusFileFailed
+            | LoonioWebhookEventCode::TransactionReturned
+            | LoonioWebhookEventCode::TransactionWrongDestination
+            | LoonioWebhookEventCode::TransactionNsf => Self::Failure,
+
+            _ => Self::Pending,
+        }
+    }
+}
+
+impl From<&LoonioCustomerInfo> for CustomerInfoDetails {
+    fn from(value: &LoonioCustomerInfo) -> Self {
+        Self {
+            customer_name: value.customer_name.clone(),
+            customer_email: value.customer_email.clone(),
+            customer_phone_number: value.customer_phone_number.clone(),
+            customer_bank_id: value.customer_bank_id.clone(),
+            customer_bank_name: value.customer_bank_name.clone(),
+        }
     }
 }
