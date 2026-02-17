@@ -45,10 +45,10 @@ pub struct FiservemeaErrorResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest {
+pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes> {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod,
+    pub payment_method: FiservemeaPaymentMethod<T>,
     pub order: Option<FiservemeaOrder>,
 }
 
@@ -61,7 +61,7 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "paymentCard", rename_all = "camelCase")]
-pub struct FiservemeaCard {
+pub struct FiservemeaCard<T: PaymentMethodDataTypes> {
     pub number: hyperswitch_masking::Secret<String>,
     pub security_code: hyperswitch_masking::Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
@@ -102,9 +102,9 @@ pub struct FiservemeaAddress {
 }
 
 #[derive(Debug, Serialize)]
-pub enum FiservemeaPaymentMethod {
+pub enum FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
     #[serde(rename = "paymentCard")]
-    Card(FiservemeaCard),
+    Card(FiservemeaCard<T>),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
