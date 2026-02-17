@@ -94,7 +94,7 @@ pub struct FiservemeaBillingAddress {
     pub country: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaAuthorizeResponse {
     pub ipg_transaction_id: String,
