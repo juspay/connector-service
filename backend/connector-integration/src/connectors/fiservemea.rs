@@ -68,8 +68,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![
-            headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.expose()).into(),
+            (headers::AUTHORIZATION.to_string(), format!("Bearer {}", auth.api_key.expose()).into()),
         ])
     }
 
@@ -117,9 +116,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         Ok(domain_types::router_data::ErrorResponse {
             status_code: res.status_code,
-            code: response.code,
-            message: response.message,
-            reason: None,
+            code: response.code.unwrap_or_default(),
+            message: response.message.unwrap_or_default(),
+            reason: response.api_trace_id,
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
