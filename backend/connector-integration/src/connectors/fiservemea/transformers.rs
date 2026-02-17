@@ -167,7 +167,7 @@ pub fn map_fiservemea_status_to_attempt_status(
     }
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
