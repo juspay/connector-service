@@ -158,16 +158,18 @@ macros::macro_connector_implementation!(
             let request_body = serde_json::to_string(&FiservemeaAuthorizeRequest::try_from(router_data)?)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
+            let api_key = auth.api_key.expose().clone();
+            let api_secret = auth.api_secret.expose().clone();
             let message_signature = self.generate_message_signature(
-                auth.api_key.expose(),
+                api_key.clone(),
                 &client_request_id,
                 &timestamp,
                 &request_body,
-                auth.api_secret.expose(),
+                api_secret,
             );
 
             Ok(self.build_headers(
-                auth.api_key.expose().as_str(),
+                &api_key,
                 &client_request_id,
                 &timestamp,
                 &message_signature,
