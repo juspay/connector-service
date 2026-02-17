@@ -141,8 +141,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        let client_request_id = uuid::Uuid::new_v4().to_string();
-        let timestamp = chrono::Utc::now().timestamp_millis().to_string();
+        let client_request_id = Uuid::new_v4().to_string();
+        let timestamp = Utc::now().timestamp_millis().to_string();
         Ok(vec![
             ("Api-Key".to_string(), auth.api_key.expose().to_string().into()),
             ("Client-Request-Id".to_string(), client_request_id.into()),
