@@ -143,7 +143,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: fiservemea::FiservemeaErrorResponse = res
             .response
             .parse_struct("FiservemeaErrorResponse")
@@ -151,7 +151,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
-        Ok(domain_types::router_data::ErrorResponse {
+        Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.code,
             message: response.message,
