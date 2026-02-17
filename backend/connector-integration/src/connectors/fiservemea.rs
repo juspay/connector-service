@@ -609,5 +609,5 @@ fn hmac_sha256(key: &str, message: String) -> String {
     let mut mac = HmacSha256::new_from_slice(key.as_bytes()).unwrap();
     mac.update(message.as_bytes());
     let result = mac.finalize();
-    base64::encode(result.into_bytes())
+    general_purpose::STANDARD.encode(result.into_bytes())
 }
