@@ -158,7 +158,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
                         number: Secret::new(card_data.card_number.peek().to_string()),
                         security_code: card_data.card_cvc.clone(),
                         expiry_date: FiservemeaExpiryDate {
-                            month: card_data.card_exp_month.expose().to_string(),
+                            month: card_data.card_exp_month.expose().clone(),
                             year: year_2digit,
                         },
                     },
