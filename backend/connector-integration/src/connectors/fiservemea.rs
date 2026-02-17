@@ -4,6 +4,7 @@ use std::fmt::Debug;
 
 use chrono::Utc;
 use common_enums::CurrencyUnit;
+use uuid::Uuid;
 use common_utils::{
     errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
 };
