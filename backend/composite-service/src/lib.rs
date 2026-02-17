@@ -1,1 +1,1 @@
-pub mod compositpayments;
+pub mod compositepayments;
