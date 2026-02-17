@@ -490,6 +490,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // MACRO-BASED CONNECTOR IMPLEMENTATION
 // =============================================================================
 
+use super::macros;
+
 macros::create_all_prerequisites!(
     connector_name: Fiservemea,
     generic_type: T,
