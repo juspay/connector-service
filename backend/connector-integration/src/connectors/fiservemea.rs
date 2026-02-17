@@ -111,11 +111,11 @@ macros::create_all_prerequisites!(
 
         pub fn generate_message_signature(
             &self,
-            api_key: &str,
+            api_key: String,
             client_request_id: &str,
             timestamp: &str,
             request_body: &str,
-            api_secret: &str,
+            api_secret: String,
         ) -> String {
             let signature_data = format!("{}{}{}{}", api_key, client_request_id, timestamp, request_body);
             let key = hmac::Key::new(hmac::HMAC_SHA256, api_secret.as_bytes());
