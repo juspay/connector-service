@@ -128,7 +128,10 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             let client_request_id = uuid::Uuid::new_v4().to_string();
-            let timestamp = chrono::Utc::now().timestamp_millis().to_string();
+            let timestamp = OffsetDateTime::now_utc()
+                .unix_timestamp_nanos()
+                .div_euclid(1_000_000)
+                .to_string();
 
             let request_body = serde_json::to_string(&FiservemeaAuthorizeRequest::try_from((
                 self,
