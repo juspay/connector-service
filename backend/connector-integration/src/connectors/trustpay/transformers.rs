@@ -2170,17 +2170,15 @@ pub(crate) fn get_apple_pay_session(
     }));
 
     Ok(RouterDataV2 {
-        flow: std::marker::PhantomData,
         resource_common_data: PaymentFlowData {
             status: enums::AttemptStatus::AuthenticationPending,
-            ..item.router_data.resource_common_data
+            ..item.router_data.resource_common_data.clone()
         },
-        connector_auth_type: item.router_data.connector_auth_type.clone(),
-        request: item.router_data.request.clone(),
         response: Ok(PaymentCreateOrderResponse {
             order_id: instance_id,
             session_token: Some(session_token),
         }),
+        ..item.router_data.clone()
     })
 }
 
@@ -2227,17 +2225,15 @@ pub(crate) fn get_google_pay_session(
     ));
 
     Ok(RouterDataV2 {
-        flow: std::marker::PhantomData,
         resource_common_data: PaymentFlowData {
             status: enums::AttemptStatus::AuthenticationPending,
-            ..item.router_data.resource_common_data
+            ..item.router_data.resource_common_data.clone()
         },
-        connector_auth_type: item.router_data.connector_auth_type.clone(),
-        request: item.router_data.request.clone(),
         response: Ok(PaymentCreateOrderResponse {
             order_id: instance_id,
             session_token: Some(session_token),
         }),
+        ..item.router_data.clone()
     })
 }
 
