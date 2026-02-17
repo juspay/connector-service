@@ -7,7 +7,7 @@ use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::Authorize, connector_types::*, errors,
     payment_method_data::PaymentMethodDataTypes, router_data::ConnectorAuthType,
-    router_response_types::Response, types::Connectors,
+    router_data_v2::RouterDataV2, router_response_types::Response, types::Connectors,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
