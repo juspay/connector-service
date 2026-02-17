@@ -234,3 +234,35 @@ fn map_fiservemea_status_to_attempt_status(status: &str) -> AttemptStatus {
         _ => AttemptStatus::Pending,
     }
 }
+
+impl FiservemeaAuthType {
+    pub fn generate_hmac_signature(
+        &self,
+        api_key: &str,
+        client_request_id: &str,
+        timestamp: &str,
+        request_body: &str,
+    ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
+        let raw_signature = format!("{}{}{}{}", api_key, client_request_id, timestamp, request_body);
+        
+        let signature = crypto::HmacSha256::sign_message(
+            self.api_secret.clone().expose().as_bytes(),
+            raw_signature.as_bytes(),
+        )
+        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        Ok(base64::engine::general_purpose::STANDARD.encode(signature))
+    }
+
+    pub fn generate_client_request_id() -> String {
+        uuid::Uuid::new_v4().to_string()
+    }
+
+    pub fn generate_timestamp() -> String {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+            .to_string()
+    }
+}
