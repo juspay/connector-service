@@ -11,6 +11,7 @@ use domain_types::{
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
