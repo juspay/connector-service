@@ -41,8 +41,6 @@ nanoid = "0.4.0"
 regex = "1.11.1"
 semver = { version = "1.0.26", features = ["serde"] }
 openssl = { version = "0.10", features = ["vendored"] }
-napi = { version = "=2.16.0", features = ["napi4"], optional = true }
-napi-derive = { version = "=2.16.0", optional = true }
 
 # Optional features
 [features]
