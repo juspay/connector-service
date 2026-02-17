@@ -132,20 +132,54 @@ pub struct FiservemeaRouterData<T: PaymentMethodDataTypes> {
     pub router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<(StringMajorUnit, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>)> for FiservemeaRouterData<T> {
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(StringMajorUnit, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>)>
+    for super::FiservemeaRouterData<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        T,
+    >
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        (amount, router_data): (StringMajorUnit, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>),
+        (amount, router_data): (
+            StringMajorUnit,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
     ) -> Result<Self, Self::Error> {
-        Ok(Self { amount, router_data })
+        Ok(Self {
+            connector: super::Fiservemea::new(),
+            router_data,
+        })
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<FiservemeaRouterData<T>> for FiservemeaAuthorizeRequest<T> {
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::FiservemeaRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for FiservemeaAuthorizeRequest<T>
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: FiservemeaRouterData<T>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: super::FiservemeaRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
         let card_data = match item.router_data.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => card_data,
             _ => {
@@ -213,7 +247,7 @@ fn map_fiservemea_status_to_attempt_status(
     }
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ResponseRouterData<
             FiservemeaAuthorizeResponse,
