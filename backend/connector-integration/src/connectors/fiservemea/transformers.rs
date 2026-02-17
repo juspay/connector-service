@@ -102,9 +102,9 @@ pub struct FiservemeaAddress {
 }
 
 #[derive(Debug, Serialize)]
-pub enum FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
+pub enum FiservemeaPaymentMethod {
     #[serde(rename = "paymentCard")]
-    Card(FiservemeaCard<T>),
+    Card(FiservemeaCard),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
