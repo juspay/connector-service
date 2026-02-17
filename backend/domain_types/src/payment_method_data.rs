@@ -9,7 +9,7 @@ use common_utils::{
 use error_stack::{self, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use time::Date;
+use time::{Date, PrimitiveDateTime};
 use utoipa::ToSchema;
 
 use crate::{
@@ -345,6 +345,29 @@ pub struct IndomaretVoucherData {}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct JCSVoucherData {}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct VoucherNextStepData {
+    /// Voucher entry date
+    pub entry_date: Option<String>,
+    /// Voucher expiry date and time
+    pub expires_at: Option<i64>,
+    /// Voucher expiry date and time
+    pub expiry_date: Option<PrimitiveDateTime>,
+    /// Reference number required for the transaction
+    pub reference: String,
+    /// Url to download the payment instruction
+    pub download_url: Option<String>,
+    /// Url to payment instruction page
+    pub instructions_url: Option<String>,
+    /// Human-readable numeric version of the barcode.
+    pub digitable_line: Option<Secret<String>>,
+    /// Machine-readable numeric code used to generate the barcode representation.
+    pub barcode: Option<Secret<String>>,
+    /// The url for Pix Qr code given by the connector associated with the voucher
+    pub qr_code_url: Option<String>,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]

@@ -25,7 +25,7 @@ use domain_types::{
     payment_method_data::{
         BankDebitData, BankRedirectData, BankTransferData, Card, CardRedirectData,
         DefaultPCIHolder, GiftCardData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, VoucherData, WalletData,
+        RawCardNumber, VoucherData, VoucherNextStepData, WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -34,6 +34,7 @@ use domain_types::{
     router_request_types::SyncRequestType,
     router_response_types::RedirectForm,
     utils as domain_utils,
+    utils::get_timestamp_in_milliseconds,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
@@ -3016,8 +3017,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_optional_billing_phone_number();
         let (recurring_processing_model, store_payment_method, shopper_reference) =
             get_recurring_processing_model(&item.router_data)?;
-        let country_code =
-            get_country_code(item.router_data.resource_common_data.get_optional_billing());
         let (store, splits) = get_adyen_split_request(
             &item.router_data.request.metadata,
             &adyen_metadata.store,
@@ -3046,7 +3045,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             social_security_number,
             billing_address,
             delivery_address,
-            country_code,
+            country_code: None,
             line_items: None,
             shopper_reference,
             store_payment_method,
@@ -3270,9 +3269,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[serde(untagged)]
 pub enum AdyenPaymentResponse {
     Response(Box<AdyenResponse>),
+    PresentToShopper(Box<PresentToShopperResponse>),
     QrCodeResponse(Box<QrCodeResponseResponse>),
     RedirectionResponse(Box<RedirectionResponse>),
-    PresentToShopper(Box<PresentToShopperResponse>),
     RedirectionErrorResponse(Box<RedirectionErrorResponse>),
     WebhookResponse(Box<AdyenWebhookResponse>),
 }
@@ -6518,13 +6517,104 @@ fn get_line_items<
 }
 
 pub fn get_present_to_shopper_metadata(
-    _response: &PresentToShopperResponse,
+    response: &PresentToShopperResponse,
 ) -> CustomResult<Option<serde_json::Value>, errors::ConnectorError> {
-    // UCS currently only supports Card
-    // For card payments via PresentToShopper flow, no special metadata is needed
-    // For now, UCS doesn't support voucher or bank transfer methods
-    // that would require special metadata, so return None for all cases
-    Ok(None)
+    let reference = response.action.reference.clone();
+    let expires_at = response
+        .action
+        .expires_at
+        .map(|time| get_timestamp_in_milliseconds(&time));
+    println!("Present to shopper response action: {:?}", response.action);
+    match response.action.payment_method_type {
+        // Supported voucher payment methods
+        PaymentType::Alfamart
+        | PaymentType::Indomaret
+        | PaymentType::BoletoBancario
+        | PaymentType::Oxxo => {
+            let voucher_data = VoucherNextStepData {
+                expires_at,
+                reference,
+                download_url: response.action.download_url.clone().map(|u| u.to_string()),
+                instructions_url: response
+                    .action
+                    .instructions_url
+                    .clone()
+                    .map(|u| u.to_string()),
+                entry_date: None,
+                digitable_line: None,
+                qr_code_url: None,
+                barcode: None,
+                expiry_date: None,
+            };
+
+            Some(voucher_data.encode_to_value())
+                .transpose()
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+        }
+        // NOTE: Support for other payment methods will be added in future iterations
+        // - Bank transfer methods (PermataBankTransfer, BcaBankTransfer, BniVa, BriVa, CimbVa, DanamonVa, MandiriVa)
+        // - Pay later methods (Affirm, Afterpaytouch, ClearPay, Klarna, Atome, Alma, PayBright, Walley)
+        // - Wallet methods (Alipay, AlipayHk, Applepay, Bizum, Gcash, Googlepay, GoPay, KakaoPay, Mbway, MobilePay, Momo, MomoAtm, PayPal, Samsungpay, TouchNGo, Twint, Vipps, Swish, WeChatPayWeb)
+        // - Other methods (Blik, Dana, Eps, Ideal, Knet, Benefit, Pix, Trustly, SepaDirectDebit, BacsDirectDebit, AchDirectDebit, etc.)
+        PaymentType::PermataBankTransfer
+        | PaymentType::BcaBankTransfer
+        | PaymentType::BniVa
+        | PaymentType::BriVa
+        | PaymentType::CimbVa
+        | PaymentType::DanamonVa
+        | PaymentType::Giftcard
+        | PaymentType::MandiriVa
+        | PaymentType::Affirm
+        | PaymentType::Afterpaytouch
+        | PaymentType::Alipay
+        | PaymentType::AlipayHk
+        | PaymentType::Alma
+        | PaymentType::Applepay
+        | PaymentType::Bizum
+        | PaymentType::Atome
+        | PaymentType::Blik
+        | PaymentType::ClearPay
+        | PaymentType::Dana
+        | PaymentType::Eps
+        | PaymentType::Gcash
+        | PaymentType::Googlepay
+        | PaymentType::GoPay
+        | PaymentType::Ideal
+        | PaymentType::Klarna
+        | PaymentType::Kakaopay
+        | PaymentType::Mbway
+        | PaymentType::Knet
+        | PaymentType::Benefit
+        | PaymentType::MobilePay
+        | PaymentType::Momo
+        | PaymentType::MomoAtm
+        | PaymentType::OnlineBankingCzechRepublic
+        | PaymentType::OnlineBankingFinland
+        | PaymentType::OnlineBankingPoland
+        | PaymentType::OnlineBankingSlovakia
+        | PaymentType::OnlineBankingFpx
+        | PaymentType::OnlineBankingThailand
+        | PaymentType::OpenBankingUK
+        | PaymentType::PayBright
+        | PaymentType::Paypal
+        | PaymentType::Scheme
+        | PaymentType::NetworkToken
+        | PaymentType::Trustly
+        | PaymentType::TouchNGo
+        | PaymentType::Walley
+        | PaymentType::WeChatPayWeb
+        | PaymentType::AchDirectDebit
+        | PaymentType::SepaDirectDebit
+        | PaymentType::BacsDirectDebit
+        | PaymentType::Samsungpay
+        | PaymentType::Twint
+        | PaymentType::Vipps
+        | PaymentType::Swish
+        | PaymentType::PaySafeCard
+        | PaymentType::SevenEleven
+        | PaymentType::Lawson
+        | PaymentType::Pix => Ok(None),
+    }
 }
 
 impl AdditionalData {
