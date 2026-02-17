@@ -3,11 +3,11 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
     connector_flow::{Authorize, PaymentFlowData},
     connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorAuthType, router_data_v2::RouterDataV2, router_response_types::Response, types::Connectors,
+    router_data::{ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2, router_response_types::Response, types::Connectors,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
