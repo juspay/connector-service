@@ -206,6 +206,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             payment_method,
             order,
+            _phantom: PhantomData,
         })
     }
 }
