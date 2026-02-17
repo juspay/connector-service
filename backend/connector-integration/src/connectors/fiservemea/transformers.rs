@@ -192,7 +192,7 @@ impl<T: PaymentMethodDataTypes>
         let payment_card = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => PaymentCard {
                 number: card_data.card_number.peek().to_string(),
-                security_code: card_data.card_cvc.clone().expose().to_string(),
+                security_code: card_data.card_cvc.clone().into_inner(),
                 expiry_date: format!(
                     "{}{}",
                     card_data.card_exp_month.clone().expose(),
