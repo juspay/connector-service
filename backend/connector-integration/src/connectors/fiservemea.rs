@@ -19,6 +19,10 @@ use transformers as fiservemea;
 use crate::with_error_response_body;
 
 pub(crate) mod headers {
+    pub(crate) const API_KEY: &str = "Api-Key";
+    pub(crate) const CLIENT_REQUEST_ID: &str = "Client-Request-Id";
+    pub(crate) const TIMESTAMP: &str = "Timestamp";
+    pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
