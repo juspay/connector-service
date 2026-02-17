@@ -144,7 +144,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
     ) -> Result<Self, Self::Error> {
         let req = &item.router_data;
 
-        let payment_method = match &req.request.payment_method_data {
+        let payment_method = match req.request.payment_method_data.clone() {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 let year_4digit = card_data.get_expiry_year_4_digit().expose();
                 let year_2digit = if year_4digit.len() >= 2 {
@@ -156,9 +156,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
                 FiservemeaPaymentMethod {
                     payment_card: FiservemeaPaymentCard {
                         number: Secret::new(card_data.card_number.peek().to_string()),
-                        security_code: card_data.card_cvc.clone(),
+                        security_code: card_data.card_cvc,
                         expiry_date: FiservemeaExpiryDate {
-                            month: card_data.card_exp_month.expose().clone(),
+                            month: card_data.card_exp_month.expose(),
                             year: year_2digit,
                         },
                     },
