@@ -1,5 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
+use common_utils::types::StringMajorUnit;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -14,6 +15,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
     pub api_key: Secret<String>,
+    pub api_secret: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
@@ -21,8 +23,9 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, api_secret } => Ok(Self {
                 api_key: api_key.to_owned(),
+                api_secret: api_secret.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
@@ -37,57 +40,180 @@ pub struct FiservemeaErrorResponse {
     pub message: String,
 }
 
-#[derive(Debug, Serialize)]
-pub struct FiservemeaPaymentsRequest {
-    pub amount: i64,
-    pub currency: String,
-    pub reference: String,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaAuthorizeRequest<T> {
+    pub request_type: String,
+    pub transaction_amount: TransactionAmount,
+    pub payment_method: PaymentMethod,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order: Option<Order>,
+    #[serde(skip)]
+    pub _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for FiservemeaPaymentsRequest
-{
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransactionAmount {
+    pub total: String,
+    pub currency: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentMethod {
+    pub payment_card: PaymentCard,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentCard {
+    pub number: Secret<String>,
+    pub security_code: Secret<String>,
+    pub expiry_date: ExpiryDate,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExpiryDate {
+    pub month: String,
+    pub year: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Order {
+    pub order_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaAuthorizeResponse {
+    pub ipg_transaction_id: String,
+    pub transaction_result: FiservemeaTransactionResult,
+    pub transaction_state: FiservemeaTransactionState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approval_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approved_amount: Option<TransactionAmount>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionResult {
+    Approved,
+    Declined,
+    Failed,
+    Waiting,
+    Partial,
+    Fraud,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaTransactionState {
+    Authorized,
+    Captured,
+    Declined,
+    Checked,
+    CompletedGet,
+    Initialized,
+    Pending,
+    Ready,
+    Template,
+    Settled,
+    Voided,
+    Waiting,
+}
+
+#[derive(Debug, Clone)]
+pub struct FiservemeaRouterData<T> {
+    pub amount: StringMajorUnit,
+    pub router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+}
+
+impl<T: PaymentMethodDataTypes> TryFrom<(StringMajorUnit, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>)> for FiservemeaRouterData<T> {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
+        (amount, router_data): (StringMajorUnit, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>),
     ) -> Result<Self, Self::Error> {
+        Ok(Self { amount, router_data })
+    }
+}
+
+impl<T: PaymentMethodDataTypes> TryFrom<FiservemeaRouterData<T>> for FiservemeaAuthorizeRequest<T> {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: FiservemeaRouterData<T>) -> Result<Self, Self::Error> {
+        let payment_method_data = item.router_data.request.payment_method_data;
+        let card = payment_method_data
+            .get_card()
+            .change_context(errors::ConnectorError::MissingRequiredField {
+                field_name: "payment_method_data.card",
+            })?;
+
+        let expiry_month = card.card_exp_month.to_string();
+        let expiry_year = card.card_exp_year.to_string();
+
+        let payment_card = PaymentCard {
+            number: card.card_number.clone(),
+            security_code: card.card_cvc.clone(),
+            expiry_date: ExpiryDate {
+                month: expiry_month,
+                year: expiry_year,
+            },
+        };
+
+        let order = item.router_data.resource_common_data.connector_request_reference_id.clone().map(|id| Order {
+            order_id: id,
+        });
+
         Ok(Self {
-            amount: item.request.minor_amount.get_amount_as_i64(),
-            currency: item.request.currency.to_string(),
-            reference: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            request_type: "PaymentCardPreAuthTransaction".to_string(),
+            transaction_amount: TransactionAmount {
+                total: item.amount.get_amount_as_string(),
+                currency: item.router_data.request.currency.to_string(),
+            },
+            payment_method: PaymentMethod {
+                payment_card,
+            },
+            order,
+            _phantom: std::marker::PhantomData,
         })
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FiservemeaPaymentsResponse {
-    pub id: String,
-    pub status: String,
-    pub amount: i64,
-    pub currency: String,
+fn map_fiservemea_status_to_attempt_status(
+    result: &FiservemeaTransactionResult,
+    state: &FiservemeaTransactionState,
+) -> AttemptStatus {
+    match (result, state) {
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Authorized) => {
+            AttemptStatus::Authorized
+        }
+        (FiservemeaTransactionResult::Approved, FiservemeaTransactionState::Captured) => {
+            AttemptStatus::Charged
+        }
+        (FiservemeaTransactionResult::Declined, _) |
+        (_, FiservemeaTransactionState::Declined) => {
+            AttemptStatus::Failure
+        }
+        (FiservemeaTransactionResult::Waiting, _) |
+        (_, FiservemeaTransactionState::Pending) |
+        (_, FiservemeaTransactionState::Waiting) => {
+            AttemptStatus::Pending
+        }
+        (_, FiservemeaTransactionState::Voided) => AttemptStatus::Voided,
+        _ => AttemptStatus::Pending,
+    }
 }
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            FiservemeaAuthorizeResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -95,31 +221,23 @@ impl<T: PaymentMethodDataTypes>
 
     fn try_from(
         item: ResponseRouterData<
-            FiservemeaPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            FiservemeaAuthorizeResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.status.as_str() {
-            "succeeded" | "completed" => AttemptStatus::Charged,
-            "pending" | "processing" => AttemptStatus::Pending,
-            "failed" | "error" => AttemptStatus::Failure,
-            "cancelled" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
-        };
+        let status = map_fiservemea_status_to_attempt_status(
+            &item.response.transaction_result,
+            &item.response.transaction_state,
+        );
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.id),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: None,
+                connector_response_reference_id: item.response.approval_code,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
