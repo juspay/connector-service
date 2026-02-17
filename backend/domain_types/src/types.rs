@@ -2032,7 +2032,9 @@ impl<
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
+
         let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
         // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
         // For now, set to None as Hyperswitch needs to be updated to send this data properly
@@ -2242,7 +2244,9 @@ impl<
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
+
         let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
         // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
         // For now, set to None as Hyperswitch needs to be updated to send this data properly
@@ -3087,7 +3091,9 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -3189,7 +3195,8 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -3265,7 +3272,8 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -3331,7 +3339,9 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
+
         let connector_meta_data = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
@@ -3781,7 +3791,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 .access_token
                 .as_ref()
                 .map(|token_data| grpc_api_types::payments::AccessToken {
-                    token: token_data.access_token.clone(),
+                    token: Some(token_data.access_token.clone()),
                     expires_in_seconds: token_data.expires_in,
                     token_type: token_data.token_type.clone(),
                 }),
@@ -4300,7 +4310,7 @@ pub fn generate_payment_void_response(
                 .access_token
                 .as_ref()
                 .map(|token_data| grpc_api_types::payments::AccessToken {
-                    token: token_data.access_token.clone(),
+                    token: Some(token_data.access_token.clone()),
                     expires_in_seconds: token_data.expires_in,
                     token_type: token_data.token_type.clone(),
                 }),
@@ -4432,7 +4442,7 @@ pub fn generate_payment_void_post_capture_response(
         .as_ref()
         .map(|token_data| ConnectorState {
             access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
+                token: Some(token_data.access_token.clone()),
                 expires_in_seconds: token_data.expires_in,
                 token_type: token_data.token_type.clone(),
             }),
@@ -4564,7 +4574,7 @@ pub fn generate_payment_sync_response(
                 .access_token
                 .as_ref()
                 .map(|token_data| grpc_api_types::payments::AccessToken {
-                    token: token_data.access_token.clone(),
+                    token: Some(token_data.access_token.clone()),
                     expires_in_seconds: token_data.expires_in,
                     token_type: token_data.token_type.clone(),
                 }),
@@ -4797,7 +4807,8 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
 
         let connector_meta_data = value
             .merchant_account_metadata
@@ -4859,7 +4870,8 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
 
         let connector_meta_data = value
             .merchant_account_metadata
@@ -6282,7 +6294,8 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
         let connector_meta_data = value
             .merchant_account_metadata
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
@@ -6420,7 +6433,7 @@ pub fn generate_payment_incremental_authorization_response(
                 .access_token
                 .as_ref()
                 .map(|token_data| grpc_api_types::payments::AccessToken {
-                    token: token_data.access_token.clone(),
+                    token: Some(token_data.access_token.clone()),
                     expires_in_seconds: token_data.expires_in,
                     token_type: token_data.token_type.clone(),
                 }),
@@ -6503,7 +6516,7 @@ pub fn generate_payment_capture_response(
                 .access_token
                 .as_ref()
                 .map(|token_data| grpc_api_types::payments::AccessToken {
-                    token: token_data.access_token.clone(),
+                    token: Some(token_data.access_token.clone()),
                     expires_in_seconds: token_data.expires_in,
                     token_type: token_data.token_type.clone(),
                 }),
@@ -6664,7 +6677,8 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
         let metadata = value
             .metadata
             .map(|m| SecretSerdeValue::foreign_try_from((m, "metadata")))
@@ -7135,7 +7149,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 .access_token
                 .as_ref()
                 .map(|token_data| grpc_api_types::payments::AccessToken {
-                    token: token_data.access_token.clone(),
+                    token: Some(token_data.access_token.clone()),
                     expires_in_seconds: token_data.expires_in,
                     token_type: token_data.token_type.clone(),
                 }),
@@ -7497,7 +7511,8 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -8558,7 +8573,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                 .access_token
                 .as_ref()
                 .map(|token_data| grpc_api_types::payments::AccessToken {
-                    token: token_data.access_token.clone(),
+                    token: Some(token_data.access_token.clone()),
                     expires_in_seconds: token_data.expires_in,
                     token_type: token_data.token_type.clone(),
                 }),
@@ -8704,13 +8719,25 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
     }
 }
 
-impl From<&grpc_api_types::payments::AccessToken> for AccessTokenResponseData {
-    fn from(token: &grpc_api_types::payments::AccessToken) -> Self {
-        Self {
-            access_token: token.token.clone(),
+impl ForeignTryFrom<&grpc_api_types::payments::AccessToken> for AccessTokenResponseData {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        token: &grpc_api_types::payments::AccessToken,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let access_token = token
+            .token
+            .clone()
+            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_ACCESS_TOKEN".to_owned(),
+                error_identifier: 400,
+                error_message: "Access Token is missing".to_owned(),
+                error_object: None,
+            }))?;
+        Ok(Self {
+            access_token,
             token_type: token.token_type.clone(),
             expires_in: token.expires_in_seconds,
-        }
+        })
     }
 }
 
@@ -9768,7 +9795,8 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .map(AccessTokenResponseData::foreign_try_from)
+            .transpose()?;
 
         let metadata = value
             .metadata

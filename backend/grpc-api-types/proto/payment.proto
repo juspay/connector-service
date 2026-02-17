@@ -806,7 +806,7 @@ message OrderDetailsWithAmount {
 // Access token details.
 message AccessToken {
   // The token string.
-  string token = 1;
+  SecretString token = 1;
 
   // Expiration timestamp of the token (seconds since epoch).
   optional int64 expires_in_seconds = 2;
@@ -1527,7 +1527,7 @@ message PaymentServiceCreateAccessTokenRequest {
 // Response message for creating an access token.
 message PaymentServiceCreateAccessTokenResponse {
   // Core token information
-  string access_token = 1; // The access token string
+  SecretString access_token = 1; // The access token string
   optional string token_type = 2; // Token type (e.g., "Bearer", "Basic")
   optional int64 expires_in_seconds = 3; // Expiration timestamp of the token (seconds since epoch)
 
