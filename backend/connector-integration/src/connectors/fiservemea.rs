@@ -11,7 +11,7 @@ use domain_types::{
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorAuthType,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
