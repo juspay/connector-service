@@ -324,23 +324,29 @@ macros::create_all_prerequisites!(
             let mut header = JwsHeader::new();
             header.set_algorithm("ES512");
             header.set_key_id(kid);
-            header.set_claim("tl_version", Some("2".into())).ok().unwrap();
-            header.set_claim("tl_headers", Some(tl_headers.into())).ok().unwrap();
+            header.set_claim("tl_version", Some("2".into())).change_context(errors::ConnectorError::RequestEncodingFailedWithReason (
+                    "Failed to generate Tl-Signature".to_string(),
+                ))?;
+            header.set_claim("tl_headers", Some(tl_headers.into())).change_context(errors::ConnectorError::RequestEncodingFailedWithReason (
+                    "Failed to generate Tl-Signature".to_string(),
+                ))?;
 
             let jws = josekit::jws::serialize_compact(
                 payload.as_bytes(),
                 &header,
                 &signer,
-            ).ok().unwrap();
+            ).change_context(errors::ConnectorError::RequestEncodingFailedWithReason (
+                    "Failed to generate Tl-Signature".to_string(),
+                ))?;
 
             let parts: Vec<&str> = jws.split('.').collect();
-            if parts.len() != 3 {
-                return Err(errors::ConnectorError::RequestEncodingFailedWithReason (
-                    "Failed to generate Tl-Signature".to_string(),
-                ).into());
-            }
 
-            Ok(format!("{}..{}", parts[0], parts[2]))
+            match (parts.first(), parts.get(2)) {
+                (Some(first), Some(third)) => Ok(format!("{}..{}", first, third)),
+                _ => Err(errors::ConnectorError::RequestEncodingFailedWithReason (
+                    "Failed to generate Tl-Signature".to_string(),
+                ).into())
+            }
         }
 
         pub fn build_headers<F, FlowData, Req, Res>(
@@ -356,7 +362,7 @@ macros::create_all_prerequisites!(
             Self: ConnectorIntegrationV2<F, FlowData, Req, Res>,
         {
             let idempotency_key = uuid::Uuid::new_v4().to_string();
-            let truelayer_req = self.get_request_body(req)?.and_then(|req| Some(req.get_inner_value().expose().clone()));
+            let truelayer_req = self.get_request_body(req)?.map(|req| req.get_inner_value().expose().clone());
             let http_method = self.get_http_method();
 
             let mut headers = BTreeMap::new();
@@ -434,7 +440,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             message: response.title,
             reason: Some(response.detail),
             attempt_status: None,
-            connector_transaction_id: Some(response.trace_id.into()),
+            connector_transaction_id: Some(response.trace_id),
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,

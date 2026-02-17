@@ -316,7 +316,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .router_data
                     .resource_common_data
                     .get_optional_billing()
-                    .and_then(|billing| get_address(&billing));
+                    .and_then(get_address);
 
                 let user = User {
                     id: item
@@ -695,13 +695,13 @@ fn get_address(billing: &domain_types::payment_address::Address) -> Option<Addre
             address.state.as_ref(),
             address.country.as_ref(),
         ) {
-            (Some(line1), Some(city), Some(state), Some(country)) => Some(Address {
+            (Some(line1), Some(city), Some(state), Some(&country)) => Some(Address {
                 address_line1: line1.clone(),
                 address_line2: address.line2.clone(),
                 city: city.clone(),
                 state: state.clone(),
                 zip: address.zip.clone(),
-                country_code: country.clone(),
+                country_code: country,
             }),
             _ => None,
         }
