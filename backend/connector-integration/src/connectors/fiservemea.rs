@@ -5,7 +5,12 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
-    connector_flow::Authorize,
+    connector_flow::{
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+    },
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
     connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2, router_response_types::Response, types::Connectors,
