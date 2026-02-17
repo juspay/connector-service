@@ -510,3 +510,102 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification for Fiservemea<T>
 {
 }
+
+// ===== MACRO-BASED IMPLEMENTATION =====
+
+macros::create_all_prerequisites!(
+    connector_name: Fiservemea,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: FiservemeaAuthorizeRequest,
+            response_body: FiservemeaAuthorizeResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [
+        amount_converter: StringMinorUnit
+    ],
+    member_functions: {
+        /// Build headers with Message Signature Authentication
+        pub fn build_headers(
+            &self,
+            api_key: &str,
+            client_request_id: &str,
+            timestamp: &str,
+            request_body: &str,
+        ) -> Vec<(String, Maskable<String>)> {
+            let signature = hmac_sha256(api_key, format!("{}{}{}", api_key, client_request_id, timestamp));
+            vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    self.common_get_content_type().to_string().into(),
+                ),
+                (
+                    headers::API_KEY.to_string(),
+                    api_key.to_string().into(),
+                ),
+                (
+                    headers::CLIENT_REQUEST_ID.to_string(),
+                    client_request_id.to_string().into(),
+                ),
+                (
+                    headers::TIMESTAMP.to_string(),
+                    timestamp.to_string().into(),
+                ),
+                (
+                    headers::MESSAGE_SIGNATURE.to_string(),
+                    signature.into(),
+                ),
+            ]
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiservemea,
+    curl_request: Json(FiservemeaAuthorizeRequest),
+    curl_response: FiservemeaAuthorizeResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = fiservemea::FiservemeaAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            let client_request_id = req
+                .resource_common_data
+                .connector_request_reference_id
+                .clone();
+            let timestamp = chrono::Utc::now().to_rfc3339();
+            let request_body = serde_json::to_string(&req.request)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            Ok(self.build_headers(&auth.api_key.expose(), &client_request_id, &timestamp, &request_body))
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/payments-gateway/v2/payments", &req.resource_common_data.connectors.fiservemea.base_url))
+        }
+    }
+);
+
+fn hmac_sha256(key: &str, message: String) -> String {
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    type HmacSha256 = Hmac<Sha256>;
+    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).unwrap();
+    mac.update(message.as_bytes());
+    let result = mac.finalize();
+    base64::encode(result.into_bytes())
+}
