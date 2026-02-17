@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, IncrementalAuthorization, CreateConnectorCustomer, DefendDispute, MandateRevoke, CreateAccessToken, Authenticate, VoidPC, RepeatPayment, CreateOrder, PostAuthenticate, PreAuthenticate, CreateSessionToken, PaymentMethodToken, SdkSessionToken, SetupMandate, SubmitEvidence, connector_flow},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, IncrementalAuthorization, CreateConnectorCustomer, DefendDispute, MandateRevoke, CreateAccessToken, Authenticate, VoidPC, RepeatPayment, RepeatPaymentData, CreateOrder, PostAuthenticate, PreAuthenticate, CreateSessionToken, PaymentMethodToken, SdkSessionToken, SetupMandate, SubmitEvidence, connector_flow},
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
@@ -324,7 +324,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        RepeatPayment,
+        RepeatPayment, RepeatPaymentData,
         PaymentFlowData,
         RepeatPaymentData<T>,
         PaymentsResponseData,
