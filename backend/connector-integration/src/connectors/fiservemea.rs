@@ -53,28 +53,7 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [
         amount_converter: StringMajorUnit
-    ],
-    member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
-            )];
-            let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut auth_header);
-            Ok(header)
-        }
-
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.fiservemea.base_url
-        }
-    }
+    ]
 );
 
 macros::macro_connector_implementation!(
