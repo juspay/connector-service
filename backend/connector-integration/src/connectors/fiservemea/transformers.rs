@@ -15,6 +15,19 @@ use std::marker::PhantomData;
 
 use crate::connectors::macros::{Bridge, BridgeRequestResponse, FlowTypes};
 
+#[derive(Debug, Clone)]
+pub struct Fiservemea<T: PaymentMethodDataTypes> {
+    payment_method_type: PhantomData<T>,
+}
+
+impl<T: PaymentMethodDataTypes> Fiservemea<T> {
+    pub const fn new() -> &'static Self {
+        &Self {
+            payment_method_type: PhantomData,
+        }
+    }
+}
+
 paste::paste! {
     pub struct FiservemeaRouterData<RD: FlowTypes, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> {
         pub connector: Fiservemea<T>,
