@@ -299,7 +299,7 @@ pub struct ApprovedAmount {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeResponse {
+pub struct FiservemeaPaymentsResponse {
     pub ipg_transaction_id: String,
     pub transaction_type: FiservemeaTransactionType,
     pub transaction_result: FiservemeaTransactionResult,
