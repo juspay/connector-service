@@ -2,6 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
+use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{crypto, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
@@ -166,9 +167,12 @@ macros::create_all_prerequisites!(
             api_secret: &str,
         ) -> CustomResult<String, errors::ConnectorError> {
             let message = format!("{}{}{}", api_key, client_request_id, timestamp);
-            let signature = crypto::HmacSha256
-                .sign(api_secret.as_bytes(), message.as_bytes())
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            let signature = crypto::HmacSha256::sign_message(
+                &crypto::HmacSha256,
+                api_secret.as_bytes(),
+                message.as_bytes(),
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
             Ok(base64::engine::general_purpose::STANDARD.encode(signature))
         }
     }
