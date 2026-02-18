@@ -287,6 +287,35 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        ResponseRouterData<
+            FiservemeaAuthorizeResponse,
+            FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        >,
+    >
+    for FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            FiservemeaAuthorizeResponse,
+            FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = RouterDataV2::try_from(ResponseRouterData {
+            response: item.response,
+            http_code: item.http_code,
+            router_data: item.router_data.router_data,
+        })?;
+        Ok(Self {
+            connector: item.router_data.connector,
+            router_data,
+        })
+    }
+}
+
 pub fn map_fiservemea_status_to_attempt_status(
     transaction_result: &FiservemeaTransactionResult,
     transaction_state: &FiservemeaTransactionState,
