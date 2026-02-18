@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package ucs.v2;
 
+import "validate/validate.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
@@ -1020,7 +1021,7 @@ message Alfamart {
 // Boleto - Brazilian payment method
 message Boleto {
   // The shopper's social security number
-  optional string social_security_number = 1;
+  optional string social_security_number = 1 [(validate.rules).string = {min_len: 11, max_len: 11, pattern: "^[0-9]{11}$"}];
 }
 
 // Efecty - Colombian cash payment network
