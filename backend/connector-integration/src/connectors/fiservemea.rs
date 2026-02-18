@@ -486,10 +486,9 @@ macros::create_all_prerequisites!(
 
             if let Some(ref api_secret) = auth.api_secret {
                 let message = format!("{}{}{}", auth.api_key.expose(), client_request_id, timestamp);
-                let secret_str: &str = api_secret.peek();
                 let signature = crypto::HmacSha256::sign_message(
                     &crypto::HmacSha256,
-                    secret_str.as_bytes(),
+                    api_secret.peek().as_bytes(),
                     message.as_bytes(),
                 )
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
