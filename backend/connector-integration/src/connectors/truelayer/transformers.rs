@@ -19,6 +19,8 @@ use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::truelayer::TruelayerRouterData, types::ResponseRouterData, utils};
+const GRANT_TYPE: &str = "client_credentials";
+const SCOPE: &str = "payments";
 
 pub struct TruelayerAuthType {
     pub(super) client_id: Secret<String>,
@@ -95,10 +97,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let auth = TruelayerAuthType::try_from(&item.router_data.connector_auth_type)?;
         Ok(Self {
-            grant_type: "client_credentials".to_string(),
+            grant_type: GRANT_TYPE.to_string(),
             client_id: auth.client_id,
             client_secret: auth.client_secret,
-            scope: "payments".to_string(),
+            scope: SCOPE.to_string(),
         })
     }
 }
@@ -382,7 +384,7 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPaymentsResponseData, Self>>
                     .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
                 reason: item.response.failure_reason.clone(),
                 status_code: item.http_code,
-                attempt_status: None,
+                attempt_status: Some(status),
                 connector_transaction_id: Some(item.response.id),
                 network_advice_code: None,
                 network_decline_code: None,
@@ -489,7 +491,7 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPSyncResponseData, Self>>
                     .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
                 reason: item.response.failure_reason.clone(),
                 status_code: item.http_code,
-                attempt_status: None,
+                attempt_status: Some(status),
                 connector_transaction_id: Some(item.response.id),
                 network_advice_code: None,
                 network_decline_code: None,
