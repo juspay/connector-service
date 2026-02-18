@@ -1,5 +1,8 @@
 use connector_integration::types::ConnectorData;
-use domain_types::{connector_types::ConnectorEnum, utils::ForeignTryFrom as _};
+use domain_types::{
+    connector_types::{AccessTokenResponseData, ConnectorEnum},
+    utils::ForeignTryFrom as _,
+};
 use grpc_api_types::payments::{
     composite_payment_service_server::CompositePaymentService,
     payment_service_server::PaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
@@ -49,13 +52,15 @@ where
             }
             None => false,
         };
-        let has_access_token_in_state = payload
+        let access_token_result = payload
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|access_token| !access_token.token.is_empty())
-            .unwrap_or(false);
-        let should_call_create_access_token = should_do_access_token && !has_access_token_in_state;
+            .and_then(|token| AccessTokenResponseData::foreign_try_from(token).ok());
+        let should_call_create_access_token = match (should_do_access_token, access_token_result) {
+            (true, None) => true,
+            (true, Some(_)) | (false, _) => false,
+        };
 
         let access_token_response = match should_call_create_access_token {
             true => {

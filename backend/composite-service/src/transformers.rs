@@ -63,15 +63,11 @@ impl
         });
 
         let access_token_from_response = access_token_response.and_then(|response| {
-            if response.access_token.is_empty() {
-                None
-            } else {
-                Some(AccessToken {
-                    token: response.access_token.clone(),
-                    token_type: response.token_type.clone(),
-                    expires_in_seconds: response.expires_in_seconds,
-                })
-            }
+            response.access_token.clone().map(|token| AccessToken {
+                token: Some(token),
+                token_type: response.token_type.clone(),
+                expires_in_seconds: response.expires_in_seconds,
+            })
         });
         let resolved_state = Some(ConnectorState {
             access_token: access_token_from_response,
