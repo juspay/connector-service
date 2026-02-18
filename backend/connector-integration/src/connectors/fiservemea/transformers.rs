@@ -383,6 +383,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaAuthorizeRe
     }
 }
 
+// ===== TYPE ALIASES FOR MACRO COMPATIBILITY =====
+pub type FiservemeaAuthorizeResponse = FiservemeaPaymentsResponse;
+
 // ===== TRYFROM IMPLEMENTATIONS FOR MACRO COMPATIBILITY =====
 
 use crate::connectors::fiservemea::FiservemeaRouterData;
