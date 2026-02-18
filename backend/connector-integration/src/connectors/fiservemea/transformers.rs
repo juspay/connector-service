@@ -138,8 +138,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
     ) -> Result<Self, Self::Error> {
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => {
-                let expiry_month = card.card_exp_month.to_string();
-                let expiry_year = card.card_exp_year.to_string();
+                let expiry_month = card.card_exp_month.expose().to_string();
+                let expiry_year = card.card_exp_year.expose().to_string();
                 FiservemeaPaymentMethod::Card {
                     payment_card: FiservemeaPaymentCard {
                         number: card.card_number.clone(),
