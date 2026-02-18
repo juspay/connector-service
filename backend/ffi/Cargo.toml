@@ -32,6 +32,9 @@ tracing = "0.1"
 uniffi = { version = "0.28", optional = true }
 napi = { version = "=2.16.0", features = ["napi4"], optional = true }
 napi-derive = { version = "=2.16.0", optional = true }
+prost = "0.13"
+bytes = "1"
+thiserror = "1"
 
 [build-dependencies]
 napi-build = "=2.2.0"
