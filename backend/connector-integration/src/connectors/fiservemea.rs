@@ -484,7 +484,7 @@ macros::create_all_prerequisites!(
                 ),
             ];
 
-            if let Some(api_secret) = auth.api_secret.as_ref() {
+            if let Some(ref api_secret) = auth.api_secret {
                 let message = format!("{}{}{}", auth.api_key.expose(), client_request_id, timestamp);
                 let signature = crypto::HmacSha256::sign_message(
                     &crypto::HmacSha256,
