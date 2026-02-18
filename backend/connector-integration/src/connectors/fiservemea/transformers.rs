@@ -11,8 +11,9 @@ use domain_types::{
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 
-use crate::connectors::macros::BridgeRequestResponse;
+use crate::connectors::macros::{Bridge, BridgeRequestResponse, FlowTypes};
 
 paste::paste! {
     pub struct FiservemeaRouterData<RD: FlowTypes, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> {
