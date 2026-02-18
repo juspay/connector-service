@@ -194,7 +194,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                total: amount.0,
+                total: amount,
                 currency: item.request.currency.to_string(),
             },
             payment_method,
