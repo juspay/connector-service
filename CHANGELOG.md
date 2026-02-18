@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.18.1
+
+### Refactors
+
+- **connector:** [PHONEPE] add Phonepe specific headers and target_app for upi request ([#507](https://github.com/juspay/connector-service/pull/507)) ([`0cf90e9`](https://github.com/juspay/connector-service/commit/0cf90e92e945fe4d7a641ca3029eba76955ca611))
+
+**Full Changelog:** [`2026.02.18.0...2026.02.18.1`](https://github.com/juspay/connector-service/compare/2026.02.18.0...2026.02.18.1)
+
+- - -
+
 ## 2026.02.18.0
 
 ### Features
