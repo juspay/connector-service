@@ -149,11 +149,12 @@ macros::create_all_prerequisites!(
             ];
 
             if let Some(ref api_secret) = auth.api_secret {
+                let secret_str: &str = api_secret.expose();
                 let signature = self.generate_message_signature(
                     &auth.api_key.expose(),
                     &client_request_id,
                     &timestamp,
-                    &api_secret.expose(),
+                    secret_str,
                 )?;
                 header.push((
                     headers::MESSAGE_SIGNATURE.to_string(),
