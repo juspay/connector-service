@@ -12,6 +12,8 @@ use domain_types::{
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
+use crate::connectors::macros::BridgeRequestResponse;
+
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
     pub api_key: Secret<String>,
