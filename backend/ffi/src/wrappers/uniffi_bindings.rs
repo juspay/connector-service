@@ -3,7 +3,11 @@ mod uniffi_bindings_inner {
     use crate::handlers::payments::{authorize_req_handler, authorize_res_handler};
     use crate::types::{FFIMetadataPayload, FFIRequestData};
     use crate::utils::ffi_headers_to_masked_metadata;
+    use bytes::Bytes;
+    use domain_types::router_response_types::Response;
+    use external_services::service::extract_raw_connector_request;
     use grpc_api_types::payments::PaymentServiceAuthorizeRequest;
+    use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
     use std::collections::HashMap;
 
@@ -40,14 +44,18 @@ mod uniffi_bindings_inner {
                 key: "connector_auth_type".to_string(),
             })?;
 
-        // connector is a plain string — wrap in quotes to make valid JSON
-        let json = format!(
-            r#"{{"connector": "{connector_val}", "connector_auth_type": {auth_val}}}"#
-        );
-        serde_json::from_str::<FFIMetadataPayload>(&json).map_err(|e| {
-            UniffiError::MetadataParseError {
-                msg: e.to_string(),
-            }
+        let auth_json: serde_json::Value =
+            serde_json::from_str(auth_val).map_err(|e| UniffiError::MetadataParseError {
+                msg: format!("connector_auth_type is not valid JSON: {e}"),
+            })?;
+
+        let obj = serde_json::json!({
+            "connector": connector_val,
+            "connector_auth_type": auth_json,
+        });
+
+        serde_json::from_value(obj).map_err(|e| UniffiError::MetadataParseError {
+            msg: e.to_string(),
         })
     }
 
@@ -64,7 +72,7 @@ mod uniffi_bindings_inner {
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
     ) -> Result<String, UniffiError> {
-        let payload = PaymentServiceAuthorizeRequest::decode(bytes::Bytes::from(request_bytes))
+        let payload = PaymentServiceAuthorizeRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
@@ -81,7 +89,7 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        Ok(external_services::service::extract_raw_connector_request(&connector_request))
+        Ok(extract_raw_connector_request(&connector_request))
     }
 
     /// Process the connector HTTP response and produce a structured response.
@@ -103,23 +111,23 @@ mod uniffi_bindings_inner {
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
     ) -> Result<Vec<u8>, UniffiError> {
-        let mut header_map = http::HeaderMap::new();
+        let mut header_map = HeaderMap::new();
         for (key, value) in &response_headers {
             if let (Ok(name), Ok(val)) = (
-                http::header::HeaderName::from_bytes(key.as_bytes()),
-                http::header::HeaderValue::from_str(value),
+                HeaderName::from_bytes(key.as_bytes()),
+                HeaderValue::from_str(value),
             ) {
                 header_map.insert(name, val);
             }
         }
 
-        let response = domain_types::router_response_types::Response {
+        let response = Response {
             headers: if header_map.is_empty() { None } else { Some(header_map) },
-            response: bytes::Bytes::from(response_body),
+            response: Bytes::from(response_body),
             status_code,
         };
 
-        let payload = PaymentServiceAuthorizeRequest::decode(bytes::Bytes::from(request_bytes))
+        let payload = PaymentServiceAuthorizeRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
