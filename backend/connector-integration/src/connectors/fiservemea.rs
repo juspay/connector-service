@@ -489,7 +489,7 @@ macros::create_all_prerequisites!(
                     &auth.api_key.expose(),
                     &client_request_id,
                     &timestamp,
-                    api_secret.peek(),
+                    api_secret.peek().as_bytes(),
                 )?;
                 header.push((
                     headers::MESSAGE_SIGNATURE.to_string(),
