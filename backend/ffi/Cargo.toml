@@ -40,10 +40,15 @@ thiserror = "1"
 napi-build = "=2.2.0"
 uniffi = { version = "0.28", features = ["build"], optional = true }
 
+[[bin]]
+name = "uniffi-bindgen"
+required-features = ["uniffi-cli"]
+
 [features]
 default = ["napi"]
 napi = ["dep:napi", "dep:napi-derive"]
 uniffi = ["dep:uniffi"]
+uniffi-cli = ["dep:uniffi", "uniffi/cli"]
 c-ffi = []
 
 [lints]
