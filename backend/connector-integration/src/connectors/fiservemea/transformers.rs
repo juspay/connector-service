@@ -5,11 +5,11 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::{PaymentMethodData, RawCardNumber},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
