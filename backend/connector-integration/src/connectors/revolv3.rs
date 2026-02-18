@@ -498,10 +498,16 @@ macros::macro_connector_implementation!(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = self.connector_base_url(req);
+        if req.request.is_auto_capture()? {
+            Ok(format!(
+                "{base_url}/api/payments/sale"
+            ))
+        } else {
         Ok(format!(
-            "{}/api/payments/sale",
-            self.connector_base_url(req)
+            "{base_url}/api/payments/authorization"
         ))
+    }
     }
     }
 );

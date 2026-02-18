@@ -48,7 +48,6 @@ pub enum Revolv3PaymentsRequest<T: PaymentMethodDataTypes> {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Revolv3AuthorizeRequest<T: PaymentMethodDataTypes> {
-    #[serde(flatten)]
     pub payment_method: Revolv3PaymentMethodData<T>,
     pub amount: Revolv3AmountData,
 }
@@ -56,7 +55,6 @@ pub struct Revolv3AuthorizeRequest<T: PaymentMethodDataTypes> {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Revolv3SaleRequest<T: PaymentMethodDataTypes> {
-    #[serde(flatten)]
     pub payment_method: Revolv3PaymentMethodData<T>,
     pub invoice: Revolv3InvoiceData,
 }
@@ -147,7 +145,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let payment_method = match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref card_data) => {
-                if !item.router_data.resource_common_data.is_three_ds() {
+                if item.router_data.resource_common_data.is_three_ds() {
                     Err(errors::ConnectorError::NotSupported {
                         message: "Cards No3DS".to_string(),
                         connector: "revolv3",
@@ -175,12 +173,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency: item.router_data.request.currency,
         };
 
-        if item.router_data.request.capture_method == Some(common_enums::CaptureMethod::Manual) {
-            Ok(Self::Authorize(Revolv3AuthorizeRequest {
-                payment_method,
-                amount,
-            }))
-        } else {
+        if item.router_data.request.is_auto_capture()? {
             let invoice = Revolv3InvoiceData {
                 merchant_invoice_ref_id: item
                     .router_data
@@ -193,6 +186,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Ok(Self::Sale(Revolv3SaleRequest {
                 payment_method,
                 invoice,
+            }))
+        } else {
+            Ok(Self::Authorize(Revolv3AuthorizeRequest {
+                payment_method,
+                amount,
             }))
         }
     }
@@ -210,7 +208,7 @@ pub enum Revolv3PaymentsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct Revolv3AuthorizeResponse {
     pub network_transaction_id: Option<String>,
-    pub payment_method_authorization_id: Option<String>,
+    pub payment_method_authorization_id: Option<i64>,
     pub payment_method: Option<Revolv3PaymentMethodResponse>,
     pub payment_processor: Option<String>,
     pub response_message: Option<String>,
@@ -291,7 +289,7 @@ impl Revolv3AuthorizeResponse {
                 status: AttemptStatus::Authorized,
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(
-                        payment_method_authorization_id.clone(),
+                        payment_method_authorization_id.to_string(),
                     ),
                     redirection_data: None,
                     mandate_reference: None,
@@ -552,7 +550,7 @@ impl TryFrom<ResponseRouterData<Revolv3RefundResponse, Self>>
     fn try_from(
         item: ResponseRouterData<Revolv3RefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let refund_status = RefundStatus::from(&item.response.invoice.invoice_status);
+        let refund_status = RefundStatus::Pending; //from(&item.response.invoice.invoice_status);
         let response = if is_refund_failure(refund_status) {
             let latest_attempt = get_latest_attempt(&item.response.refunds);
             let error_message = latest_attempt
