@@ -57,13 +57,13 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "paymentMethodType", rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum FiservemeaPaymentMethod<T> {
+pub enum FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
     Card { payment_card: FiservemeaPaymentCard<T> },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentCard<T> {
+pub struct FiservemeaPaymentCard<T: PaymentMethodDataTypes> {
     pub number: RawCardNumber<T>,
     pub security_code: Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
