@@ -501,23 +501,6 @@ macros::create_all_prerequisites!(
 
             Ok(header)
         }
-
-        fn generate_message_signature(
-            &self,
-            api_key: &str,
-            client_request_id: &str,
-            timestamp: &str,
-            api_secret: &str,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let message = format!("{}{}{}", api_key, client_request_id, timestamp);
-            let signature = crypto::HmacSha256::sign_message(
-                &crypto::HmacSha256,
-                api_secret.as_bytes(),
-                message.as_bytes(),
-            )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-            Ok(base64::engine::general_purpose::STANDARD.encode(signature))
-        }
     }
 );
 
