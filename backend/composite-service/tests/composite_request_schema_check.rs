@@ -1,3 +1,5 @@
+#![allow(clippy::expect_used, clippy::panic, clippy::as_conversions)]
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use prost::Message as _;

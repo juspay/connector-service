@@ -58,8 +58,7 @@ impl
         ),
     ) -> Self {
         let resolved_connector_customer_id = item.connector_customer_id.clone().or_else(|| {
-            create_customer_response
-                .and_then(|response| Some(response.connector_customer_id.clone()))
+            create_customer_response.map(|response| response.connector_customer_id.clone())
         });
 
         let access_token_from_response = access_token_response.and_then(|response| {
@@ -122,7 +121,7 @@ impl
             continue_redirection_url: item.continue_redirection_url.clone(),
             threeds_completion_indicator: item.threeds_completion_indicator,
             redirection_response: item.redirection_response.clone(),
-            tokenization_strategy: item.tokenization_strategy.clone(),
+            tokenization_strategy: item.tokenization_strategy,
         }
     }
 }

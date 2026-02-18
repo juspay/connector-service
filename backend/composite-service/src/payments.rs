@@ -156,7 +156,8 @@ where
     ) -> Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let connector = connector_from_composite_authorize_metadata(&metadata)?;
+        let connector =
+            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
             .call_create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
