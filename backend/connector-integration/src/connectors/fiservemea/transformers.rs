@@ -78,7 +78,7 @@ pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaTransactionAmount {
-    pub total: String,
+    pub total: StringMajorUnit,
     pub currency: String,
 }
 
