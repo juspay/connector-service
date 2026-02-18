@@ -24,7 +24,7 @@ sys.path.insert(0, "./generated")
 # UniFFI-generated Python module
 from connector_service_ffi import authorize_req, UniffiError
 
-# Protobuf-generated stubs (same protos as the gRPC example)
+# Protobuf-generated stubs
 from payment_pb2 import PaymentServiceAuthorizeRequest
 
 
@@ -35,13 +35,19 @@ def build_authorize_request() -> bytes:
     req.minor_amount = 1000
     req.currency = 3  # USD - see Currency enum in payment.proto
 
-    # Minimal card payment method
+    # Card payment method — CardDetails fields are message types:
+    #   card_number: CardNumberType { value: string }
+    #   card_exp_month/year/cvc: SecretString { value: string }
     card = req.payment_method.card
-    card.card_exp_month = "03"
-    card.card_exp_year = "2030"
-    card.card_cvc = "737"
+    card.card_number.value = "4111111111111111"
+    card.card_exp_month.value = "03"
+    card.card_exp_year.value = "2030"
+    card.card_cvc.value = "737"
 
     req.auth_type = 1  # THREE_DS
+
+    # Required identifiers
+    req.request_ref_id.id = "test-ref-001"
 
     return req.SerializeToString()
 
@@ -54,13 +60,23 @@ def build_metadata() -> dict:
       connector           - connector name (matches ConnectorEnum variant, snake_case)
       connector_auth_type - JSON-encoded ConnectorAuthType variant
     """
+    api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
     return {
-        "connector": "stripe",
+        # Connector routing (used by parse_metadata to build FFIMetadataPayload)
+        "connector": "Stripe",
+        # ConnectorAuthType uses serde internally-tagged enum: #[serde(tag = "auth_type")]
         "connector_auth_type": json.dumps({
-            "HeaderKey": {
-                "api_key": os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
-            }
+            "auth_type": "HeaderKey",
+            "api_key": api_key,
         }),
+        # Required metadata headers (used by ffi_headers_to_masked_metadata)
+        "x-connector": "Stripe",
+        "x-merchant-id": "test_merchant_123",
+        "x-request-id": "test-request-001",
+        "x-tenant-id": "public",
+        "x-auth": "body-key",
+        # Optional headers
+        "x-api-key": api_key,
     }
 
 
@@ -82,6 +98,15 @@ def main():
         print(f"  Method: {connector_request.get('method', 'N/A')}")
         print(f"  Headers: {list(connector_request.get('headers', {}).keys())}")
         print(f"\nFull request JSON:\n{json.dumps(connector_request, indent=2)}")
+
+    except UniffiError.HandlerError as e:
+        # Handler errors are expected with placeholder credentials or minimal
+        # request data — the FFI boundary is working, the connector's domain
+        # logic is rejecting the request (e.g., missing fields for Stripe).
+        print(f"Handler returned an error (FFI boundary is working):")
+        print(f"  {e}")
+        print("\nThis is expected with placeholder data. To get a full request,")
+        print("provide valid STRIPE_API_KEY and complete payment fields.")
 
     except UniffiError as e:
         print(f"FFI error: {e}", file=sys.stderr)
