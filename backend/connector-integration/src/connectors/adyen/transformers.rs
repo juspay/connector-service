@@ -6553,7 +6553,6 @@ pub fn get_present_to_shopper_metadata(
         .action
         .expires_at
         .map(|time| get_timestamp_in_milliseconds(&time));
-    println!("Present to shopper response action: {:?}", response.action);
     match response.action.payment_method_type {
         // Supported voucher payment methods
         PaymentType::Alfamart
