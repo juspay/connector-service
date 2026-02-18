@@ -1,5 +1,5 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::{consts, pii::Email, types::FloatMajorUnit};
+use common_utils::{consts, pii::Email, types::FloatMajorUnit, CustomResult};
 use domain_types::{
     connector_flow::{
         Authorize, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment, SetupMandate,
@@ -13,7 +13,7 @@ use domain_types::{
     errors::ConnectorError,
     payment_method_data::{
         DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        VaultTokenHolder,
+        VaultTokenHolder, WalletData,
     },
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -60,6 +60,12 @@ fn get_address_line(
         }
     }
     address_line1.clone()
+}
+
+pub const SELECTED_PAYMENT_METHOD: &str = "Selected payment method";
+
+pub(crate) fn get_unimplemented_payment_method_error_message(connector: &str) -> String {
+    format!("{SELECTED_PAYMENT_METHOD} through {connector}")
 }
 
 // Extract credit card payment details from refund metadata
@@ -324,6 +330,30 @@ pub struct CreditCardDetails<T: PaymentMethodDataTypes> {
 #[serde(rename_all = "camelCase")]
 pub enum PaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
+    OpaqueData(WalletDetails),
+    PayPal(PayPalDetails),
+}
+
+#[derive(Serialize, Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WalletDetails {
+    pub data_descriptor: WalletMethod,
+    pub data_value: Secret<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PayPalDetails {
+    pub success_url: Option<String>,
+    pub cancel_url: Option<String>,
+}
+
+#[derive(Serialize, Debug, Deserialize, Clone)]
+pub enum WalletMethod {
+    #[serde(rename = "COMMON.GOOGLE.INAPP.PAYMENT")]
+    Googlepay,
+    #[serde(rename = "COMMON.APPLE.INAPP.PAYMENT")]
+    Applepay,
 }
 
 #[skip_serializing_none]
@@ -561,27 +591,29 @@ fn create_regular_transaction_request<
     >,
     currency: api_enums::Currency,
 ) -> Result<AuthorizedotnetTransactionRequest<T>, Error> {
-    let card_data = match &item.router_data.request.payment_method_data {
-        PaymentMethodData::Card(card) => Ok(card),
-        _ => Err(ConnectorError::RequestEncodingFailed),
-    }?;
+    let payment_details = match &item.router_data.request.payment_method_data {
+        PaymentMethodData::Card(card_data) => {
+            let expiry_month = card_data.card_exp_month.peek().clone();
+            let year = card_data.card_exp_year.peek().clone();
+            let expiry_year = if year.len() == 2 {
+                format!("20{year}")
+            } else {
+                year
+            };
+            let expiration_date = format!("{expiry_year}-{expiry_month}");
 
-    let expiry_month = card_data.card_exp_month.peek().clone();
-    let year = card_data.card_exp_year.peek().clone();
-    let expiry_year = if year.len() == 2 {
-        format!("20{year}")
-    } else {
-        year
+            let credit_card_details = CreditCardDetails {
+                card_number: card_data.card_number.clone(),
+                expiration_date: Secret::new(expiration_date),
+                card_code: Some(card_data.card_cvc.clone()),
+            };
+            PaymentDetails::CreditCard(credit_card_details)
+        }
+        PaymentMethodData::Wallet(wallet_data) => PaymentDetails::try_from((item, wallet_data))?,
+        _ => Err(ConnectorError::NotImplemented(
+            get_unimplemented_payment_method_error_message("authorizedotnet"),
+        ))?,
     };
-    let expiration_date = format!("{expiry_year}-{expiry_month}");
-
-    let credit_card_details = CreditCardDetails {
-        card_number: card_data.card_number.clone(),
-        expiration_date: Secret::new(expiration_date),
-        card_code: Some(card_data.card_cvc.clone()),
-    };
-
-    let payment_details = PaymentDetails::CreditCard(credit_card_details);
 
     let transaction_type = match item.router_data.request.capture_method {
         Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
@@ -959,6 +991,105 @@ pub struct CreateCaptureTransactionRequest {
 pub struct AuthorizedotnetCaptureRequest {
     // Top-level wrapper for Capture Flow
     create_transaction_request: CreateCaptureTransactionRequest,
+}
+
+fn get_wallet_data<T: PaymentMethodDataTypes>(
+    wallet_data: &WalletData,
+    return_url: &Option<String>,
+) -> CustomResult<PaymentDetails<T>, ConnectorError> {
+    match wallet_data {
+        WalletData::GooglePay(_) => Ok(PaymentDetails::OpaqueData(WalletDetails {
+            data_descriptor: WalletMethod::Googlepay,
+            data_value: Secret::new(wallet_data.get_encoded_wallet_token()?),
+        })),
+        WalletData::ApplePay(applepay_token) => {
+            let apple_pay_encrypted_data = applepay_token
+                .payment_data
+                .get_encrypted_apple_pay_payment_data_mandatory()
+                .change_context(ConnectorError::MissingRequiredField {
+                    field_name: "Apple pay encrypted data",
+                })?;
+            Ok(PaymentDetails::OpaqueData(WalletDetails {
+                data_descriptor: WalletMethod::Applepay,
+                data_value: Secret::new(apple_pay_encrypted_data.clone()),
+            }))
+        }
+        WalletData::PaypalRedirect(_) => Ok(PaymentDetails::PayPal(PayPalDetails {
+            success_url: return_url.to_owned(),
+            cancel_url: return_url.to_owned(),
+        })),
+        WalletData::AliPayQr(_)
+        | WalletData::AliPayRedirect(_)
+        | WalletData::AliPayHkRedirect(_)
+        | WalletData::AmazonPayRedirect(_)
+        | WalletData::BluecodeRedirect {}
+        | WalletData::MomoRedirect(_)
+        | WalletData::KakaoPayRedirect(_)
+        | WalletData::GoPayRedirect(_)
+        | WalletData::GcashRedirect(_)
+        | WalletData::ApplePayRedirect(_)
+        | WalletData::ApplePayThirdPartySdk(_)
+        | WalletData::DanaRedirect {}
+        | WalletData::GooglePayRedirect(_)
+        | WalletData::GooglePayThirdPartySdk(_)
+        | WalletData::MbWayRedirect(_)
+        | WalletData::MobilePayRedirect(_)
+        | WalletData::PaypalSdk(_)
+        | WalletData::Paze(_)
+        | WalletData::SamsungPay(_)
+        | WalletData::TwintRedirect {}
+        | WalletData::VippsRedirect {}
+        | WalletData::TouchNGoRedirect(_)
+        | WalletData::WeChatPayRedirect(_)
+        | WalletData::WeChatPayQr(_)
+        | WalletData::CashappQr(_)
+        | WalletData::SwishQr(_)
+        | WalletData::Mifinity(_)
+        | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
+            get_unimplemented_payment_method_error_message("authorizedotnet"),
+        ))?,
+    }
+}
+
+impl<T>
+    TryFrom<(
+        &AuthorizedotnetRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &WalletData,
+    )> for PaymentDetails<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+{
+    type Error = Error;
+
+    fn try_from(
+        (item, wallet_data): (
+            &AuthorizedotnetRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &WalletData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        // This helper function 'get_wallet_data' should be migrated
+        // or accessible in your connector utils
+        Ok(get_wallet_data(
+            wallet_data,
+            &item.router_data.request.complete_authorize_url,
+        )?)
+    }
 }
 
 // New direct implementation for capture without relying on the reference version
