@@ -210,15 +210,18 @@ pub struct ApplePayCryptogramData {
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApplePayPredecryptData {
     pub application_primary_account_number: cards::CardNumber,
     pub application_expiration_month: Secret<String>,
     pub application_expiration_year: Secret<String>,
-    pub currency_code: String,
-    pub transaction_amount: MinorUnit,
-    pub device_manufacturer_identifier: Secret<String>,
-    pub payment_data_type: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub currency_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_amount: Option<MinorUnit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_manufacturer_identifier: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_data_type: Option<Secret<String>>,
     pub payment_data: ApplePayCryptogramData,
 }
 
