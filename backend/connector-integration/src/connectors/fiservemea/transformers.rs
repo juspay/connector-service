@@ -15,6 +15,19 @@ use serde::{Deserialize, Serialize};
 use crate::connectors::macros::{Bridge, BridgeRequestResponse, FlowTypes};
 
 paste::paste! {
+    pub struct FiservemeaRouterData<RD: FlowTypes, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> {
+        pub connector: Fiservemea<T>,
+        pub router_data: RD,
+    }
+    impl<RD: FlowTypes, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> FlowTypes for FiservemeaRouterData<RD, T> {
+        type Flow = RD::Flow;
+        type FlowCommonData = RD::FlowCommonData;
+        type Request = RD::Request;
+        type Response = RD::Response;
+    }
+}
+
+paste::paste! {
     pub struct FiservemeaAuthorizeRequestTemplating;
     pub struct FiservemeaAuthorizeResponseTemplating;
 
