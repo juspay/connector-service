@@ -15,7 +15,7 @@ use domain_types::{
     utils::is_payment_failure,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::truelayer::TruelayerRouterData, types::ResponseRouterData, utils};
@@ -119,7 +119,7 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerAccessTokenResponseData, Self>>
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
-                access_token: item.response.access_token.expose(),
+                access_token: item.response.access_token,
                 expires_in: Some(item.response.expires_in),
                 token_type: item.response.token_type,
             }),

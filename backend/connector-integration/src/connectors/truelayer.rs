@@ -378,7 +378,7 @@ macros::create_all_prerequisites!(
             let header = vec![
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into(),
+                    format!("Bearer {}", access_token).into_masked(),
                 ),
                 (TL_SIGNATURE.to_string(), tl_signature.into_masked()),
                 (
@@ -473,7 +473,7 @@ macros::macro_connector_implementation!(
             let private_key = metadata.private_key.expose().clone();
             let kid = metadata.kid.expose().clone();
             let path = "/v3/payments".to_string();
-            self.build_headers(req, access_token.access_token, private_key, kid, path)
+            self.build_headers(req, access_token.access_token.expose(), private_key, kid, path)
         }
 
         fn get_url(
@@ -579,7 +579,7 @@ macros::macro_connector_implementation!(
             ),
             (
                 headers::AUTHORIZATION.to_string(),
-                format!("Bearer {}", access_token.access_token).into_masked(),
+                format!("Bearer {}", access_token.access_token.expose()).into_masked(),
             )])
         }
         fn get_url(
@@ -631,7 +631,7 @@ macros::macro_connector_implementation!(
             let kid = metadata.kid.expose().clone();
             let connector_payment_id = req.request.connector_transaction_id.clone();
             let path = format!("/v3/payments/{connector_payment_id}/refunds");
-            self.build_headers(req, access_token.access_token, private_key, kid, path)
+            self.build_headers(req, access_token.access_token.expose(), private_key, kid, path)
         }
 
         fn get_url(
@@ -683,7 +683,7 @@ macros::macro_connector_implementation!(
             ),
             (
                 headers::AUTHORIZATION.to_string(),
-                format!("Bearer {}", access_token.access_token).into_masked(),
+                format!("Bearer {}", access_token.access_token.expose()).into_masked(),
             )])
         }
 
