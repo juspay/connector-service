@@ -3,7 +3,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use base64::Engine;
-use chrono;
+use chrono::Utc;
 use common_enums::CurrencyUnit;
 use common_utils::{crypto, crypto::SignMessage, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
@@ -467,7 +467,7 @@ macros::create_all_prerequisites!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             let client_request_id = uuid::Uuid::new_v4().to_string();
-            let timestamp = chrono::Utc::now().timestamp_millis().to_string();
+            let timestamp = Utc::now().timestamp_millis().to_string();
 
             let mut header = vec![
                 (
