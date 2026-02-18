@@ -53,7 +53,8 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [
         amount_converter: StringMajorUnit
-    ]
+    ],
+    member_functions: {}
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Fiservemea<T> {
