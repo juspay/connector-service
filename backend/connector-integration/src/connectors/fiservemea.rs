@@ -436,6 +436,64 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+// Payment Sync (PSync)
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Fiservemea<T>
+{
+}
+
+// Payment Void
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Fiservemea<T>
+{
+}
+
+// Payment Void Post Capture
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Fiservemea<T>
+{
+}
+
+// Payment Capture
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Fiservemea<T>
+{
+}
+
+// Refund
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Fiservemea<T>
+{
+}
+
+// Refund Sync (RSync)
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Fiservemea<T>
+{
+}
+
 // ===== AUTHENTICATION FLOW CONNECTOR INTEGRATIONS =====
 // Pre Authentication
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
