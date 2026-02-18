@@ -40,7 +40,7 @@ pub struct FiservemeaErrorResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct FiservemeaAuthorizeRequest<T: PaymentMethodDataTypes> {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
     pub payment_method: FiservemeaPaymentMethod<T>,
