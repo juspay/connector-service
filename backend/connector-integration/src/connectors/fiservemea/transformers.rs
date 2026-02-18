@@ -25,20 +25,15 @@ paste::paste! {
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T: PaymentMethodDataTypes> TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for FiservemeaAuthorizeRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
+        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let payment_method = match &item.request.payment_method_data {
+        let payment_method = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => {
                 let expiry_month = card.card_exp_month.clone().expose().to_string();
                 let expiry_year = card.card_exp_year.clone().expose().to_string();
@@ -62,90 +57,25 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
 
         let amount = domain_types::utils::convert_amount(
             &common_utils::types::StringMajorUnitForConnector,
-            MinorUnit(item.request.minor_amount.get_amount_as_i64()),
-            item.request.currency,
+            MinorUnit(item.router_data.request.minor_amount.get_amount_as_i64()),
+            item.router_data.request.currency,
         )?;
 
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
                 total: amount,
-                currency: item.request.currency.to_string(),
+                currency: item.router_data.request.currency.to_string(),
             },
             payment_method,
             order: Some(FiservemeaOrder {
                 order_id: item
+                    .router_data
                     .resource_common_data
                     .connector_request_reference_id
                     .clone(),
             }),
         })
-    }
-}
-
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            FiservemeaAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<
-            FiservemeaAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let status = map_fiservemea_status_to_attempt_status(
-            &item.response.transaction_result,
-            &item.response.transaction_state,
-        );
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.ipg_transaction_id,
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: item.response.approval_code,
-                connector_response_reference_id: item.response.scheme_response_code,
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
-    }
-}
-
-impl<T: PaymentMethodDataTypes> TryFrom<FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for FiservemeaAuthorizeRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.router_data)
     }
 }
 
@@ -166,14 +96,32 @@ impl<T: PaymentMethodDataTypes>
             FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
         >,
     ) -> Result<Self, Self::Error> {
-        let router_data = RouterDataV2::try_from(ResponseRouterData {
-            response: item.response,
-            http_code: item.http_code,
-            router_data: item.router_data.router_data,
-        })?;
+        let status = map_fiservemea_status_to_attempt_status(
+            &item.response.transaction_result,
+            &item.response.transaction_state,
+        );
+
         Ok(Self {
             connector: item.router_data.connector,
-            router_data,
+            router_data: RouterDataV2 {
+                response: Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        item.response.ipg_transaction_id,
+                    ),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: None,
+                    network_txn_id: item.response.approval_code,
+                    connector_response_reference_id: item.response.scheme_response_code,
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                }),
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..item.router_data.router_data.resource_common_data
+                },
+                ..item.router_data.router_data
+            },
         })
     }
 }
