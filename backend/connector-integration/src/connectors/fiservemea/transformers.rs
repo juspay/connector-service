@@ -11,7 +11,7 @@ use domain_types::{
 };
 
 use crate::types::ResponseRouterData;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
