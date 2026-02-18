@@ -1542,8 +1542,8 @@ pub fn construct_sync_request(
         requests::Message {
             content: requests::MessageContent::Transaction(requests::RedsysTransactionRequest {
                 ds_merchant_code: auth.merchant_id,
-                ds_order: order_id.clone(),
                 ds_terminal: auth.terminal_id,
+                ds_order: order_id.clone(),
                 ds_transaction_type: transaction_type.ok_or(
                     errors::ConnectorError::MissingRequiredField {
                         field_name: "transaction_type",
@@ -1555,8 +1555,8 @@ pub fn construct_sync_request(
         requests::Message {
             content: requests::MessageContent::Monitor(requests::RedsysMonitorRequest {
                 ds_merchant_code: auth.merchant_id,
-                ds_order: order_id.clone(),
                 ds_terminal: auth.terminal_id,
+                ds_order: order_id.clone(),
             }),
         }
     };
@@ -1572,9 +1572,9 @@ pub fn construct_sync_request(
     let signature = get_signature(&order_id, &version_data, auth.sha256_pwd.peek())?;
 
     let messages = requests::Messages {
+        version,
         signature,
         signature_version: SIGNATURE_VERSION.to_owned(),
-        version,
     };
 
     let cdata = quick_xml::se::to_string(&messages)

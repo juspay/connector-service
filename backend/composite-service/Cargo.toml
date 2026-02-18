@@ -1,0 +1,14 @@
+[package]
+name = "composite-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+grpc-api-types = { path = "../grpc-api-types" }
+tonic = "0.13.0"
+connector-integration = { path = "../connector-integration" }
+domain_types = { path = "../domain_types" }
+common_enums = { path = "../common_enums", package = "ucs_common_enums" }
+
+[lints]
+workspace = true

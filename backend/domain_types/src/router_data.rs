@@ -12,7 +12,7 @@ use common_utils::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 
-use crate::utils::missing_field_err;
+use crate::{payment_method_data, utils::missing_field_err};
 
 pub type Error = error_stack::Report<crate::errors::ConnectorError>;
 
@@ -445,13 +445,16 @@ pub enum AdditionalPaymentMethodConnectorResponse {
     },
     Upi {
         /// UPI source detected from the connector response
-        upi_mode: Option<crate::payment_method_data::UpiSource>,
+        upi_mode: Option<payment_method_data::UpiSource>,
     },
     GooglePay {
         auth_code: Option<String>,
     },
     ApplePay {
         auth_code: Option<String>,
+    },
+    BankRedirect {
+        interac: Option<InteracCustomerInfo>,
     },
 }
 
@@ -460,4 +463,9 @@ pub struct ExtendedAuthorizationResponseData {
     pub extended_authentication_applied: Option<bool>,
     pub extended_authorization_last_applied_at: Option<time::PrimitiveDateTime>,
     pub capture_before: Option<time::PrimitiveDateTime>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct InteracCustomerInfo {
+    pub customer_info: Option<payment_method_data::CustomerInfoDetails>,
 }

@@ -4,6 +4,25 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.18.0
+
+### Features
+
+- **connector:** Added ConnectorResponse for Connector Loonio ([#513](https://github.com/juspay/connector-service/pull/513)) ([`931f76b`](https://github.com/juspay/connector-service/commit/931f76bab2353ef69d2d5a90946ae6bffaa72385))
+- **framework:** Changed access_token type from String to SecretString in proto and connector_types ([#490](https://github.com/juspay/connector-service/pull/490)) ([`425566c`](https://github.com/juspay/connector-service/commit/425566c6060cff496b7fcf03d6d4ba36ed3bdf64))
+
+### Bug Fixes
+
+- **redsys:** Correct XML element ordering in SOAP sync requests to comply with DTD validation ([#516](https://github.com/juspay/connector-service/pull/516)) ([`c1d5ae7`](https://github.com/juspay/connector-service/commit/c1d5ae7cf45e82684a43e55d13f1d060b4b7738b))
+
+### Miscellaneous Tasks
+
+- Added Crate for Composite Flows ([#512](https://github.com/juspay/connector-service/pull/512)) ([`8401920`](https://github.com/juspay/connector-service/commit/84019200ffa5f85dc849783583a378a5b6ae3a42))
+
+**Full Changelog:** [`2026.02.16.0...2026.02.18.0`](https://github.com/juspay/connector-service/compare/2026.02.16.0...2026.02.18.0)
+
+- - -
+
 ## 2026.02.16.0
 
 ### Bug Fixes

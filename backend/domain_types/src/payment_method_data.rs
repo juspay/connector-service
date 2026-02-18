@@ -1308,3 +1308,23 @@ pub struct ReceiverDetails {
     /// The amount remaining to be sent via ACH
     amount_remaining: Option<i64>,
 }
+
+/// Customer Information Details
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct CustomerInfoDetails {
+    /// Customer Name
+    #[schema(value_type = Option<String>)]
+    pub customer_name: Option<Secret<String>>,
+    /// Customer Email
+    #[schema(value_type = Option<String>)]
+    pub customer_email: Option<Email>,
+    /// Customer Phone Number
+    #[schema(value_type = Option<String>)]
+    pub customer_phone_number: Option<Secret<String>>,
+    /// Customer Bank Id
+    #[schema(value_type = Option<String>)]
+    pub customer_bank_id: Option<Secret<String>>,
+    /// Customer Bank Name
+    #[schema(value_type = Option<String>)]
+    pub customer_bank_name: Option<Secret<String>>,
+}
