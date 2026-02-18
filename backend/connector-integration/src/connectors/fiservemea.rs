@@ -485,15 +485,17 @@ macros::create_all_prerequisites!(
             ];
 
             if let Some(api_secret) = &auth.api_secret {
-                let signature = self.generate_message_signature(
-                    &auth.api_key.expose(),
-                    &client_request_id,
-                    &timestamp,
-                    api_secret,
-                )?;
+                let message = format!("{}{}{}", auth.api_key.expose(), client_request_id, timestamp);
+                let signature = crypto::HmacSha256::sign_message(
+                    &crypto::HmacSha256,
+                    api_secret.peek().as_bytes(),
+                    message.as_bytes(),
+                )
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                let signature_b64 = base64::engine::general_purpose::STANDARD.encode(signature);
                 header.push((
                     headers::MESSAGE_SIGNATURE.to_string(),
-                    signature.into(),
+                    signature_b64.into(),
                 ));
             }
 
