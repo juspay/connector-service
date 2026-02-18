@@ -484,7 +484,7 @@ macros::create_all_prerequisites!(
                 ),
             ];
 
-            if let Some(api_secret) = &auth.api_secret {
+            if let Some(api_secret) = auth.api_secret.as_ref() {
                 let signature = self.generate_message_signature(
                     &auth.api_key.expose(),
                     &client_request_id,
