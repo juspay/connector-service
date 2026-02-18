@@ -3068,9 +3068,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+/// Validates CPF (Brazilian social security number) for Boleto
+/// Rules: exactly 11 digits (0-9)
+fn is_valid_cpf(cpf: &str) -> bool {
+    if cpf.len() != 11 {
+        tracing::warn!("Invalid CPF: must be exactly 11 digits, got {}", cpf.len());
+        return false;
+    }
+
+    if !cpf.chars().all(|c| c.is_ascii_digit()) {
+        tracing::warn!("Invalid CPF: must contain only digits (0-9)");
+        return false;
+    }
+
+    true
+}
+
 fn get_social_security_number(voucher_data: &VoucherData) -> Option<Secret<String>> {
     match voucher_data {
-        VoucherData::Boleto(boleto_data) => boleto_data.social_security_number.clone(),
+        VoucherData::Boleto(boleto_data) => {
+            if let Some(ref cpf) = boleto_data.social_security_number {
+                if !is_valid_cpf(cpf.peek()) {
+                    return None;
+                }
+            }
+            boleto_data.social_security_number.clone()
+        }
         VoucherData::Alfamart { .. }
         | VoucherData::Indomaret { .. }
         | VoucherData::Efecty
