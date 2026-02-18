@@ -487,7 +487,7 @@ macros::create_all_prerequisites!(
             match &auth.api_secret {
                 Some(api_secret) => {
                     let message = format!("{}{}{}", auth.api_key.expose(), client_request_id, timestamp);
-                    let secret_str: &str = api_secret.peek();
+                    let secret_str = api_secret.peek();
                     let signature = crypto::HmacSha256::sign_message(
                         &crypto::HmacSha256,
                         secret_str.as_bytes(),
