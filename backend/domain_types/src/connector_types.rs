@@ -601,7 +601,7 @@ impl PaymentFlowData {
     pub fn get_access_token(&self) -> Result<String, Error> {
         self.access_token
             .as_ref()
-            .map(|token_data| token_data.access_token.clone())
+            .map(|token_data| token_data.access_token.clone().expose())
             .ok_or_else(missing_field_err("access_token"))
     }
 
@@ -899,7 +899,7 @@ impl PaymentFlowData {
     pub fn set_access_token_id(mut self, access_token_id: Option<String>) -> Self {
         if let (Some(token_id), None) = (access_token_id, &self.access_token) {
             self.access_token = Some(AccessTokenResponseData {
-                access_token: token_id,
+                access_token: token_id.into(),
                 token_type: None,
                 expires_in: None,
             });
@@ -1298,17 +1298,17 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
 
     pub fn set_access_token(mut self, access_token: Option<String>) -> Self {
         self.access_token = access_token.map(|token| AccessTokenResponseData {
-            access_token: token,
+            access_token: token.into(),
             token_type: None,
             expires_in: None,
         });
         self
     }
 
-    pub fn get_access_token_optional(&self) -> Option<&String> {
+    pub fn get_access_token_optional(&self) -> Option<String> {
         self.access_token
             .as_ref()
-            .map(|token_data| &token_data.access_token)
+            .map(|token_data| token_data.access_token.clone().expose())
     }
 
     pub fn get_connector_testing_data(&self) -> Option<SecretSerdeValue> {
@@ -1601,7 +1601,7 @@ pub struct AccessTokenRequestData {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AccessTokenResponseData {
-    pub access_token: String,
+    pub access_token: Secret<String>,
     pub token_type: Option<String>,
     pub expires_in: Option<i64>,
 }
@@ -1713,7 +1713,7 @@ impl RefundFlowData {
     pub fn get_access_token(&self) -> Result<String, Error> {
         self.access_token
             .as_ref()
-            .map(|token_data| token_data.access_token.clone())
+            .map(|token_data| token_data.access_token.clone().expose())
             .ok_or_else(missing_field_err("access_token"))
     }
 

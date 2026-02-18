@@ -240,7 +240,7 @@ impl<F, T> TryFrom<ResponseRouterData<GlobalpayAccessTokenResponse, Self>>
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
-                access_token: item.response.token,
+                access_token: item.response.token.into(),
                 token_type: Some(item.response.type_),
                 expires_in: Some(item.response.seconds_to_expire),
             }),
