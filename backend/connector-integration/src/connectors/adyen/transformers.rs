@@ -6584,6 +6584,8 @@ pub fn get_present_to_shopper_metadata(
         // - Pay later methods (Affirm, Afterpaytouch, ClearPay, Klarna, Atome, Alma, PayBright, Walley)
         // - Wallet methods (Alipay, AlipayHk, Applepay, Bizum, Gcash, Googlepay, GoPay, KakaoPay, Mbway, MobilePay, Momo, MomoAtm, PayPal, Samsungpay, TouchNGo, Twint, Vipps, Swish, WeChatPayWeb)
         // - Other methods (Blik, Dana, Eps, Ideal, Knet, Benefit, Pix, Trustly, SepaDirectDebit, BacsDirectDebit, AchDirectDebit, etc.)
+        // - voucher or bank transfer methods would require special metadata, so return None for all cases
+        // - for vouchers metadata support is added as it needs download url
         PaymentType::PermataBankTransfer
         | PaymentType::BcaBankTransfer
         | PaymentType::BniVa
