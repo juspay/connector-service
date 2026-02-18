@@ -28,6 +28,7 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
         match auth_type {
             ConnectorAuthType::SignatureKey {
                 api_key,
+                key1: _,
                 api_secret,
             } => Ok(Self {
                 api_key: api_key.to_owned(),
@@ -210,7 +211,7 @@ impl<T: PaymentMethodDataTypes>
         Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
-                value: amount,
+                value: amount.get_amount_as_string(),
                 currency: item.request.currency.to_string(),
             },
             payment_method,
