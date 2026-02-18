@@ -4,13 +4,13 @@ use std::fmt::Debug;
 
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{crypto, errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{crypto, crypto::SignMessage, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow, connector_types::*, errors, payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType, router_response_types::Response, types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
+use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
