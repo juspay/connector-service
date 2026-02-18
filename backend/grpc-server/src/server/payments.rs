@@ -15,14 +15,15 @@ use domain_types::{
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorResponseHeaders, MandateRevokeRequestData,
-        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
-        RefundsData, RefundsResponseData, RepeatPaymentData, SessionToken, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData,
+        MandateRevokeResponseData, OrderCreateResult, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -397,7 +398,7 @@ impl Payments {
                 shadow_mode: metadata_payload.shadow_mode,
             };
 
-            let (order_id, session_token) = Box::pin(self.handle_order_creation(
+            let order_create_result = Box::pin(self.handle_order_creation(
                 config,
                 connector_data.clone(),
                 &payment_flow_data,
@@ -409,15 +410,12 @@ impl Payments {
             ))
             .await?;
 
-            tracing::info!("Order created successfully with order_id: {}", order_id);
+            tracing::info!(
+                "Order created successfully with order_id: {}",
+                order_create_result.order_id
+            );
 
-            // Serialize session token to JSON string if present
-            let session_token_str =
-                session_token.map(|token| serde_json::to_string(&token).unwrap_or_default());
-
-            payment_flow_data
-                .set_order_reference_id(Some(order_id))
-                .set_session_token(session_token_str)
+            payment_flow_data.set_order_reference_id(Some(order_create_result.order_id))
         } else {
             payment_flow_data
         };
@@ -896,7 +894,7 @@ impl Payments {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-    ) -> Result<(String, Option<SessionToken>), PaymentAuthorizationError> {
+    ) -> Result<OrderCreateResult, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -916,17 +914,27 @@ impl Payments {
                 )
             })?;
 
-        // Extract payment_method_type from PaymentsAuthorizeData
-        let payment_authorize_data: PaymentsAuthorizeData<DefaultPCIHolder> =
-            PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(|err| {
-                tracing::error!("Failed to process payment authorize data: {:?}", err);
+        let payment_method: grpc_api_types::payments::PaymentMethod =
+            payload.payment_method.clone().ok_or_else(|| {
                 PaymentAuthorizationError::new(
                     grpc_api_types::payments::PaymentStatus::Pending,
-                    Some("Failed to process payment authorize data".to_string()),
-                    Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                    Some("Payment method is required".to_string()),
+                    Some("PAYMENT_METHOD_REQUIRED".to_string()),
                     None,
                 )
             })?;
+
+        let payment_method_type: Option<common_enums::PaymentMethodType> =
+            <Option<common_enums::PaymentMethodType>>::foreign_try_from(payment_method).map_err(
+                |e| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(format!("Payment method type conversion failed: {e}")),
+                        Some("PAYMENT_METHOD_TYPE_ERROR".to_string()),
+                        None,
+                    )
+                },
+            )?;
 
         let order_create_data = PaymentCreateOrderData {
             amount: common_utils::types::MinorUnit::new(payload.minor_amount),
@@ -939,7 +947,7 @@ impl Payments {
                 Secret::new(value)
             }),
             webhook_url: payload.webhook_url.clone(),
-            payment_method_type: payment_authorize_data.payment_method_type,
+            payment_method_type,
         };
 
         let order_router_data = RouterDataV2::<
@@ -1015,7 +1023,10 @@ impl Payments {
             Ok(PaymentCreateOrderResponse {
                 order_id,
                 session_token,
-            }) => Ok((order_id, session_token)),
+            }) => Ok(OrderCreateResult {
+                order_id,
+                session_token,
+            }),
             Err(e) => Err(PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(e.message.clone()),

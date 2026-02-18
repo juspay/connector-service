@@ -882,10 +882,6 @@ impl PaymentFlowData {
         }
         self
     }
-    pub fn set_session_token(mut self, session_token: Option<String>) -> Self {
-        self.session_token = session_token;
-        self
-    }
     pub fn set_payment_method_token(mut self, payment_method_token: Option<String>) -> Self {
         if payment_method_token.is_some() && self.payment_method_token.is_none() {
             self.payment_method_token =
@@ -1418,6 +1414,12 @@ pub struct PaymentCreateOrderData {
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderCreateResult {
+    pub order_id: String,
+    pub session_token: Option<SessionToken>,
 }
 
 #[derive(Debug, Clone)]
