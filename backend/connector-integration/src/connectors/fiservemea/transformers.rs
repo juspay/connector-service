@@ -74,7 +74,7 @@ pub struct FiservemeaExpiryDate {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "paymentMethodType", rename_all = "camelCase")]
-pub enum FiservemeaPaymentMethod<T> {
+pub enum FiservemeaPaymentMethod {
     Card(FiservemeaCard),
 }
 
@@ -86,10 +86,10 @@ pub struct FiservemeaOrder {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest<T> {
+pub struct FiservemeaAuthorizeRequest {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod<T>,
+    pub payment_method: FiservemeaPaymentMethod,
     pub order: Option<FiservemeaOrder>,
 }
 
