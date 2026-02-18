@@ -183,7 +183,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
     }
 }
 
-impl<T: PaymentMethodData>
+impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
             FiservemeaAuthorizeResponse,
