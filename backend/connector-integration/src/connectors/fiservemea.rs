@@ -22,7 +22,7 @@ use serde::Serialize;
 use transformers as fiservemea;
 use transformers::{
     FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse, FiservemeaAuthType,
-    FiservemeaErrorResponse,
+    FiservemeaErrorResponse, FiservemeaRouterData,
 };
 
 use super::macros;
