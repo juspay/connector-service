@@ -12,6 +12,19 @@ use domain_types::{
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
+use crate::connectors::macros::BridgeRequestResponse;
+
+paste::paste! {
+    pub struct FiservemeaAuthorizeRequestTemplating;
+    pub struct FiservemeaAuthorizeResponseTemplating;
+
+    impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> BridgeRequestResponse for Bridge<FiservemeaAuthorizeRequestTemplating, FiservemeaAuthorizeResponseTemplating, T>{
+        type RequestBody = FiservemeaAuthorizeRequest<T>;
+        type ResponseBody = FiservemeaAuthorizeResponse;
+        type ConnectorInputData = FiservemeaRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>;
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
     pub api_key: Secret<String>,
