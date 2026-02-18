@@ -13,6 +13,7 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::connectors::macros::{Bridge, BridgeRequestResponse, FlowTypes};
+use super::FiservemeaRouterData;
 
 paste::paste! {
     pub struct FiservemeaAuthorizeRequestTemplating;
