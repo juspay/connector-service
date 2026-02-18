@@ -160,8 +160,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
             }
         };
 
-        let amount_converter = StringMajorUnit;
-        let amount = amount_converter.convert_to_major_unit(
+        let amount = domain_types::utils::convert_amount(
+            &common_utils::types::StringMajorUnitForConnector,
             item.request.minor_amount.get_amount_as_i64(),
             item.request.currency,
         )?;
