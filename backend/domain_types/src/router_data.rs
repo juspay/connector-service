@@ -251,21 +251,12 @@ impl ApplePayPredecryptData {
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GooglePayDecryptedData {
-    pub message_expiration: String,
-    pub message_id: String,
-    #[serde(rename = "paymentMethod")]
-    pub payment_method_type: String,
-    pub payment_method_details: GooglePayPaymentMethodDetails,
-}
-
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GooglePayPaymentMethodDetails {
-    pub auth_method: common_enums::enums::GooglePayAuthMethod,
-    pub expiration_month: CardExpirationMonth,
-    pub expiration_year: CardExpirationYear,
+    #[serde(alias = "card_exp_month")]
+    pub expiration_month: Secret<String>,
+    #[serde(alias = "card_exp_year")]
+    pub expiration_year: Secret<String>,
+    #[serde(alias = "application_primary_account_number")]
     pub pan: cards::CardNumber,
     pub cryptogram: Option<Secret<String>>,
     pub eci_indicator: Option<String>,

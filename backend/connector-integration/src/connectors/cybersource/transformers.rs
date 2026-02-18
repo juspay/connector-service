@@ -1916,25 +1916,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_information =
             PaymentInformation::GooglePay(Box::new(GooglePayPaymentInformation {
                 tokenized_card: TokenizedCard {
-                    number: google_pay_decrypted_data.payment_method_details.pan.clone(),
+                    number: google_pay_decrypted_data.pan.clone(),
                     cryptogram: google_pay_decrypted_data
-                        .payment_method_details
                         .cryptogram
                         .clone(),
                     transaction_type,
-                    expiration_year: Secret::new(
-                        google_pay_decrypted_data
-                            .payment_method_details
-                            .expiration_year
-                            .get_year()
-                            .to_string(),
-                    ),
-                    expiration_month: Secret::new(
-                        google_pay_decrypted_data
-                            .payment_method_details
-                            .expiration_month
-                            .two_digits(),
-                    ),
+                    expiration_year: google_pay_decrypted_data.expiration_year.clone(),
+                    expiration_month: google_pay_decrypted_data.expiration_month.clone(),
                 },
             }));
         let processing_information = ProcessingInformation::try_from((

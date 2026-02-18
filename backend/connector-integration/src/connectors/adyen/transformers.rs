@@ -1363,11 +1363,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Some(domain_types::router_data::PaymentMethodToken::GooglePayDecrypt(
                         decrypt_data,
                     )) => {
-                        let exp_month = Secret::new(decrypt_data.payment_method_details.expiration_month.two_digits());
-                        let exp_year = Secret::new(format!("{:04}", decrypt_data.payment_method_details.expiration_year.get_year()));
+                        debug!("executing decrypt flow");
+
+                        let exp_month = decrypt_data.expiration_month.clone();
+                        let exp_year_str = decrypt_data.expiration_year.peek();
+                        let exp_year = if exp_year_str.len() == 2 {
+                            Secret::new(format!("20{}", exp_year_str))
+                        } else {
+                            decrypt_data.expiration_year.clone()
+                        };
 
                         let google_pay_decrypt_data = AdyenGooglePayDecryptData {
-                            number: decrypt_data.payment_method_details.pan.clone(),
+                            number: decrypt_data.pan.clone(),
                             expiry_month: exp_month,
                             expiry_year: exp_year,
                             brand: "googlepay".to_string(),
@@ -2125,7 +2132,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })
                 }
                 Some(domain_types::router_data::PaymentMethodToken::GooglePayDecrypt(google_pay)) => {
-                    match (google_pay.payment_method_details.cryptogram.clone(), google_pay.payment_method_details.eci_indicator.clone()) {
+                    match (google_pay.cryptogram.clone(), google_pay.eci_indicator.clone()) {
                         (Some(cryptogram), Some(eci_indicator)) => {
                             Some(AdyenMpiData {
                                 directory_response: common_enums::TransactionStatus::Success,

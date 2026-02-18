@@ -1575,24 +1575,22 @@ where
                                 determine_google_pay_card_type(&google_pay_data.info.card_network)?;
                             // Extract expiry date from Google Pay decrypted data
                             let expiry_month = google_pay_decrypted_data
-                                .payment_method_details
                                 .expiration_month
-                                .two_digits();
-                            // Since CardExpirationYear doesn't have a public accessor, we need to deserialize it
-                            // This follows the pattern where year is extracted from the validated data
-                            let expiry_year_bytes = serde_json::to_vec(
-                                &google_pay_decrypted_data
-                                    .payment_method_details
-                                    .expiration_year,
-                            )
-                            .change_context(ConnectorError::RequestEncodingFailed)?;
-                            let expiry_year: u16 = serde_json::from_slice(&expiry_year_bytes)
-                                .change_context(ConnectorError::RequestEncodingFailed)?;
-                            let formatted_year = format!("{:02}", expiry_year % 100); // Convert to 2-digit year
-                            let exp_date = format!("{expiry_month}{formatted_year}");
+                                .peek()
+                                .to_string();
+                            // Format year as 2 digits
+                            let expiry_year = google_pay_decrypted_data
+                                .expiration_year
+                                .peek();
+                            // Take last 2 characters of year string for 2-digit format
+                            let formatted_year = if expiry_year.len() >= 2 {
+                                &expiry_year[expiry_year.len() - 2..]
+                            } else {
+                                expiry_year
+                            };
+                            let exp_date = format!("{}{}", expiry_month, formatted_year);
 
                             let card_number_string = google_pay_decrypted_data
-                                .payment_method_details
                                 .pan
                                 .peek()
                                 .to_string();
