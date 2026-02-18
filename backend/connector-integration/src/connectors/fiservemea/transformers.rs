@@ -184,7 +184,7 @@ impl<T: PaymentMethodDataTypes>
 
                 FiservemeaPaymentMethod::Card(FiservemeaCard {
                     number: card.card_number.peek().to_string().into(),
-                    security_code: card.card_cvc.peek().to_string().into(),
+                    security_code: card.card_cvc.clone(),
                     expiry_date: FiservemeaExpiryDate {
                         month: expiry_month.to_string(),
                         year: expiry_year_4digit,
