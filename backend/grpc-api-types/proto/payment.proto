@@ -824,6 +824,89 @@ message ConnectorState {
   optional string connector_customer_id = 2;
 }
 
+// Google Pay decrypted payload details for payment method token flows.
+enum GooglePayAuthMethod {
+  GOOGLE_PAY_AUTH_METHOD_UNSPECIFIED = 0;
+  PAN_ONLY = 1;
+  CRYPTOGRAM_3DS = 2;
+}
+
+message GooglePayPaymentMethodDetails {
+  GooglePayAuthMethod auth_method = 1;
+  SecretString expiration_month = 2;
+  SecretString expiration_year = 3;
+  CardNumberType pan = 4;
+  optional SecretString cryptogram = 5;
+  optional string eci_indicator = 6;
+}
+
+message GooglePayDecryptedData {
+  string message_expiration = 1;
+  string message_id = 2;
+  string payment_method_type = 3;
+  GooglePayPaymentMethodDetails payment_method_details = 4;
+}
+
+message PazeToken {
+  NetworkTokenType payment_token = 1;
+  SecretString token_expiration_month = 2;
+  SecretString token_expiration_year = 3;
+  SecretString payment_account_reference = 4;
+}
+
+message PazeDynamicData {
+  optional SecretString dynamic_data_value = 1;
+  optional string dynamic_data_type = 2;
+  optional string dynamic_data_expiration = 3;
+}
+
+message PazePhoneNumber {
+  SecretString country_code = 1;
+  SecretString phone_number = 2;
+}
+
+message PazeConsumer {
+  optional SecretString first_name = 1;
+  optional SecretString last_name = 2;
+  SecretString full_name = 3;
+  SecretString email_address = 4;
+  optional PazePhoneNumber mobile_number = 5;
+  optional CountryAlpha2 country_code = 6;
+  optional string language_code = 7;
+}
+
+message PazeAddress {
+  optional SecretString name = 1;
+  optional SecretString line1 = 2;
+  optional SecretString line2 = 3;
+  optional SecretString line3 = 4;
+  optional SecretString city = 5;
+  optional SecretString state = 6;
+  optional SecretString zip = 7;
+  optional CountryAlpha2 country_code = 8;
+}
+
+message PazeDecryptedData {
+  SecretString client_id = 1;
+  string profile_id = 2;
+  PazeToken token = 3;
+  CardNetwork payment_card_network = 4;
+  repeated PazeDynamicData dynamic_data = 5;
+  PazeAddress billing_address = 6;
+  PazeConsumer consumer = 7;
+  optional string eci = 8;
+}
+
+// Protobuf equivalent of a tagged enum for payment method token input.
+message PaymentMethodToken {
+  oneof token_type {
+    SecretString token = 1;
+    ApplePayPredecryptData apple_pay_decrypt = 2;
+    GooglePayDecryptedData google_pay_decrypt = 3;
+    PazeDecryptedData paze_decrypt = 4;
+  }
+}
+
 message BillingDescriptor {
   // Customer's billing name
   optional SecretString name = 1;
@@ -1725,7 +1808,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
 
   // Payment Method Token
-  optional string payment_method_token = 40;
+  optional PaymentMethodToken payment_method_token = 40;
 
   // Send the connector order identifier here if an order was created before authorize
   optional string connector_order_reference_id = 41; // Connector's reference id for order
@@ -2377,7 +2460,7 @@ message PaymentServiceRegisterRequest {
   optional ConnectorState state = 31; // State data for access token storage and other connector-specific state
 
   // Payment Method Token
-  optional string payment_method_token = 32;
+  optional PaymentMethodToken payment_method_token = 32;
   // Send the connector order identifier here if an order was created before authorize
   optional string order_id = 33;
 

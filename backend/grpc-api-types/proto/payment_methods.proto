@@ -344,6 +344,18 @@ message ApplePayPredecryptData {
   
   // Cryptogram data for Apple Pay transactions
   ApplePayCryptogramData payment_data = 4;
+
+  // Transaction currency code (ISO-4217 alpha code, e.g., "USD")
+  string currency_code = 5;
+
+  // Transaction amount in minor units
+  int64 transaction_amount = 6;
+
+  // Identifier of the device manufacturer
+  SecretString device_manufacturer_identifier = 7;
+
+  // Payment data type
+  SecretString payment_data_type = 8;
 }
 
 // Apple Pay cryptogram data structure
