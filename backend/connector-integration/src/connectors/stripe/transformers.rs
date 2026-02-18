@@ -93,19 +93,26 @@ impl<T: PaymentMethodDataTypes> GetRequestIncrementalAuthorization for RepeatPay
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StripeAuthType {
-    pub(super) api_key: Secret<String>,
+    pub api_key: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for StripeAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::HeaderKey { api_key } = item {
-            Ok(Self {
+        match item {
+            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
-            })
-        } else {
-            Err(ConnectorError::FailedToObtainAuthType.into())
+            }),
+            ConnectorAuthType::ExternalJsonAuth { value } => {
+                let auth_type: Self = serde_json::from_value::<Self>(value.peek().clone())
+                    .map_err(|_| ConnectorError::FailedToObtainAuthType)?;
+                Ok(Self {
+                    api_key: auth_type.api_key,
+                })
+            }
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
