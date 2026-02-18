@@ -807,7 +807,7 @@ message OrderDetailsWithAmount {
 // Access token details.
 message AccessToken {
   // The token string.
-  string token = 1;
+  SecretString token = 1;
 
   // Expiration timestamp of the token (seconds since epoch).
   optional int64 expires_in_seconds = 2;
@@ -1252,6 +1252,25 @@ message ApplePayConnectorResponse {
   optional string auth_code = 1; // Unique authorisation code generated for the payment
 }
 
+// Customer information for payments  
+message CustomerInfo {  
+  optional SecretString customer_name = 1; // Full name of the customer
+  optional SecretString customer_email = 2; // Email address of the customer for notifications and receipts  
+  optional SecretString customer_phone_number = 3; // Phone number for SMS verification and customer contact  
+  optional SecretString customer_bank_id = 4; // Bank identifier or institution number for the customer's bank  
+  optional SecretString customer_bank_name = 5; // Name of the customer's bank for display purposes  
+}
+
+// Interac-specific customer information wrapper  
+message InteracCustomerInfo {  
+  optional CustomerInfo customer_info = 1; // Base customer information for Interac payments  
+} 
+
+// Additional payment method data for Bank Redirect
+message BankRedirectConnectorResponse {
+  optional InteracCustomerInfo interac = 1; // Interac-specific customer information when using bank redirect  
+}
+
 // Additional payment method connector response
 message AdditionalPaymentMethodConnectorResponse {
   oneof payment_method_data {
@@ -1259,6 +1278,7 @@ message AdditionalPaymentMethodConnectorResponse {
     UpiConnectorResponse upi = 2;  // UPI-specific response data
     GooglePayConnectorResponse google_pay = 3; // Google Pay-specific response data
     ApplePayConnectorResponse apple_pay = 4; // Apple Pay-specific response data
+    BankRedirectConnectorResponse bank_redirect = 5; // Bank Redirect-specific response data
   }
 }
 
@@ -1528,7 +1548,7 @@ message PaymentServiceCreateAccessTokenRequest {
 // Response message for creating an access token.
 message PaymentServiceCreateAccessTokenResponse {
   // Core token information
-  string access_token = 1; // The access token string
+  SecretString access_token = 1; // The access token string
   optional string token_type = 2; // Token type (e.g., "Bearer", "Basic")
   optional int64 expires_in_seconds = 3; // Expiration timestamp of the token (seconds since epoch)
 
@@ -1818,6 +1838,8 @@ message PaymentServiceGetRequest {
 
   // Environment Configuration
   optional bool test_mode = 16; // A boolean value to indicate if the connector is in Test mode
+
+  optional PaymentExperience payment_experience = 7; // Preferred payment experience
 }
 
 // Response message for a payment status synchronization.
@@ -1884,6 +1906,9 @@ message PaymentServiceGetResponse {
 
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 35; // Data for redirecting the customer's browser
+
+  // Capability Flags
+  optional bool incremental_authorization_allowed = 36; // Whether incremental auth is allowed
 }
 
 // Request message for voiding a payment.

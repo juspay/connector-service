@@ -135,6 +135,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::MissingConnectorMandateMetadata
             | Self::IntegrityCheckFailed { .. }
             | Self::SourceVerificationFailed
+            | Self::DecodingFailed
             | Self::InvalidConnectorConfig { .. } => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "BAD_REQUEST".to_string(),

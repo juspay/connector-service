@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use common_enums::{AttemptStatus, CaptureMethod, PaymentMethod, PaymentMethodType};
-use common_utils::{crypto, CustomResult, SecretSerdeValue};
+use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
@@ -28,6 +28,7 @@ use error_stack::ResultExt;
 use crate::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
+    decode::BodyDecoding,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 
@@ -402,48 +403,14 @@ pub trait IncomingWebhook {
     }
 }
 
-pub trait VerifyRedirectResponse: SourceVerification {
-    /// fn get_redirect_response_body_decoding_algorithm
-    fn get_redirect_response_body_decoding_algorithm(
-        &self,
-        _request: &RequestDetails,
-    ) -> CustomResult<Box<dyn crypto::DecodeMessage + Send>, domain_types::errors::ConnectorError>
-    {
-        Ok(Box::new(crypto::NoAlgorithm))
-    }
-
-    /// fn get_redirect_response_body_decoding_message
-    fn get_redirect_response_body_decoding_message(
-        &self,
-        request: &RequestDetails,
-    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
-        Ok(request.body.to_vec())
-    }
-
+pub trait VerifyRedirectResponse: SourceVerification + BodyDecoding {
     /// fn decode_redirect_response_body
     fn decode_redirect_response_body(
         &self,
         request: &RequestDetails,
         secrets: Option<ConnectorSourceVerificationSecrets>,
     ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
-        let connector_source_verification_secrets =
-            secrets.ok_or(domain_types::errors::ConnectorError::MissingRequiredField {
-                field_name: "redirect response secrets",
-            })?;
-
-        let algorithm = self.get_redirect_response_body_decoding_algorithm(request)?;
-
-        let message = self
-            .get_redirect_response_body_decoding_message(request)
-            .change_context(domain_types::errors::ConnectorError::WebhookBodyDecodingFailed)?;
-
-        let secret = self
-            .get_secrets(connector_source_verification_secrets)
-            .change_context(domain_types::errors::ConnectorError::WebhookBodyDecodingFailed)?;
-
-        algorithm
-            .decode_message(&secret, message.into())
-            .change_context(domain_types::errors::ConnectorError::WebhookBodyDecodingFailed)
+        self.decode(secrets, &request.body)
     }
 
     fn verify_redirect_response_source(

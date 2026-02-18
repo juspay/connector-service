@@ -36,7 +36,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    verification::SourceVerification,
+    decode::BodyDecoding, verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers::{
@@ -200,6 +200,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Sour
     for Iatapay<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for Iatapay<T>
+{
+}
 
 // ===== VALIDATION TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -270,7 +274,7 @@ macros::create_all_prerequisites!(
 
             let auth_header = (
                 headers::AUTHORIZATION.to_string(),
-                format!("Bearer {}", access_token.access_token).into_masked(),
+                format!("Bearer {}", access_token.access_token.peek()).into_masked(),
             );
             header.push(auth_header);
             Ok(header)
@@ -301,7 +305,7 @@ macros::create_all_prerequisites!(
 
             let auth_header = (
                 headers::AUTHORIZATION.to_string(),
-                format!("Bearer {}", access_token.access_token).into_masked(),
+                format!("Bearer {}", access_token.access_token.peek()).into_masked(),
             );
             header.push(auth_header);
             Ok(header)

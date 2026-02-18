@@ -3,7 +3,10 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit};
+use common_utils::{
+    consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::ByteSliceExt,
+    types::FloatMajorUnit,
+};
 use domain_types::{
     connector_flow::*,
     connector_types::*,
@@ -18,11 +21,11 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    verification::SourceVerification,
+    decode::BodyDecoding, verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers::{
-    LoonioAuthorizeRequest, LoonioAuthorizeResponse, LoonioErrorResponse, LoonioPSyncResponse,
+    LoonioAuthorizeRequest, LoonioAuthorizeResponse, LoonioErrorResponse, LoonioPaymentResponseData,
 };
 
 use super::macros;
@@ -49,7 +52,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            response_body: LoonioPSyncResponse,
+            response_body: LoonioPaymentResponseData,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
@@ -225,7 +228,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Sour
     for Loonio<T>
 {
 }
-
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for Loonio<T>
+{
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Loonio<T>
 {
@@ -272,7 +278,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Loonio,
-    curl_response: LoonioPSyncResponse,
+    curl_response: LoonioPaymentResponseData,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -301,36 +307,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        LoonioRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for LoonioAuthorizeRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: LoonioRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.router_data)
-    }
-}
 
 // ===== EMPTY IMPLEMENTATIONS FOR OTHER FLOWS =====
 
@@ -559,9 +535,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             status_code: res.status_code,
             code: response
                 .error_code
-                .unwrap_or_else(|| "NO_ERROR_CODE".to_string()),
-            message: response.message,
-            reason: None,
+                .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+            message: response.message.clone(),
+            reason: Some(response.message.clone()),
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,

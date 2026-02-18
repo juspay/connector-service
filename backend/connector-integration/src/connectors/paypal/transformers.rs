@@ -1,5 +1,8 @@
 use super::PaypalRouterData;
-use crate::{types::ResponseRouterData, utils::to_connector_meta};
+use crate::{
+    types::ResponseRouterData,
+    utils::{to_connector_meta, ErrorCodeAndMessage},
+};
 use base64::Engine;
 use cards;
 use common_enums;
@@ -9,7 +12,7 @@ use common_utils::{
     CustomResult, Method,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PostAuthenticate, RepeatPayment},
+    connector_flow::{Authorize, Capture, PSync, PostAuthenticate, RepeatPayment},
     connector_types::{
         AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
@@ -56,7 +59,7 @@ impl<
     > GetRequestIncrementalAuthorization for RepeatPaymentData<T>
 {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
-        None
+        Some(false)
     }
 }
 
@@ -1315,7 +1318,7 @@ impl<F, T> TryFrom<ResponseRouterData<PaypalAuthUpdateResponse, Self>>
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
-                access_token: item.response.access_token.expose(),
+                access_token: item.response.access_token,
                 expires_in: Some(item.response.expires_in),
                 token_type: None,
             }),
@@ -1910,17 +1913,19 @@ fn get_redirect_url(link_vec: Vec<PaypalLinks>) -> CustomResult<Option<Url>, Con
 }
 
 impl TryFrom<ResponseRouterData<PaypalSyncResponse, Self>>
-    for RouterDataV2<
-        domain_types::connector_flow::PSync,
-        PaymentFlowData,
-        PaymentsSyncData,
-        PaymentsResponseData,
-    >
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<PaypalSyncResponse, Self>) -> Result<Self, Self::Error> {
         match item.response {
             PaypalSyncResponse::PaypalOrdersSyncResponse(response) => {
+                Self::try_from(ResponseRouterData {
+                    response,
+                    router_data: item.router_data,
+                    http_code: item.http_code,
+                })
+            }
+            PaypalSyncResponse::PaypalRedirectSyncResponse(response) => {
                 Self::try_from(ResponseRouterData {
                     response,
                     router_data: item.router_data,
@@ -1934,73 +1939,95 @@ impl TryFrom<ResponseRouterData<PaypalSyncResponse, Self>>
                     http_code: item.http_code,
                 })
             }
-            PaypalSyncResponse::PaypalRedirectSyncResponse(response) => {
-                // Handle bank redirect sync responses (iDEAL, Giropay, EPS, Sofort)
-                let status = get_order_status(response.status.clone(), response.intent.clone());
-                let purchase_units = response.purchase_units.first();
-
-                // For bank redirects, check if there's still a payer-action link (redirect pending)
-                let redirection_data =
-                    if matches!(response.status, PaypalOrderStatus::PayerActionRequired) {
-                        get_redirect_url(response.links.clone())?
-                            .map(|url| Box::new(RedirectForm::from((url, Method::Get))))
-                    } else {
-                        None
-                    };
-
-                let connector_meta = serde_json::json!(PaypalMeta {
-                    authorize_id: None,
-                    capture_id: None,
-                    incremental_authorization_id: None,
-                    psync_flow: response.intent.clone(),
-                    next_action: None,
-                    order_id: Some(response.id.clone()),
-                });
-
-                Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    response: Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                        redirection_data,
-                        mandate_reference: None,
-                        connector_metadata: Some(connector_meta),
-                        network_txn_id: None,
-                        connector_response_reference_id: Some(
-                            purchase_units.map_or(response.id, |item| item.invoice_id.clone()),
-                        ),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    }),
-                    ..item.router_data
-                })
-            }
             PaypalSyncResponse::PaypalThreeDsSyncResponse(response) => {
-                // Handle 3DS sync responses
-                let status =
-                    get_order_status(response.status.clone(), PaypalPaymentIntent::Authenticate);
-
-                Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    response: Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: Some(response.id),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    }),
-                    ..item.router_data
+                Self::try_from(ResponseRouterData {
+                    response,
+                    router_data: item.router_data,
+                    http_code: item.http_code,
                 })
             }
         }
+    }
+}
+
+impl TryFrom<ResponseRouterData<PaypalRedirectResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PaypalRedirectResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let payment_experience = item.router_data.request.payment_experience;
+        let status = get_order_status(item.response.clone().status, item.response.intent.clone());
+        let link = get_redirect_url(item.response.links.clone())?;
+
+        // For Paypal SDK flow, we need to trigger SDK client and then complete authorize
+        let next_action =
+            if let Some(common_enums::PaymentExperience::InvokeSdkClient) = payment_experience {
+                Some(NextActionCall::CompleteAuthorize)
+            } else {
+                None
+            };
+        let connector_meta = serde_json::json!(PaypalMeta {
+            authorize_id: None,
+            capture_id: None,
+            incremental_authorization_id: None,
+            psync_flow: item.response.intent,
+            next_action,
+            order_id: None,
+        });
+        let purchase_units = item.response.purchase_units.first();
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+                redirection_data: Some(Box::new(RedirectForm::from((
+                    link.ok_or(ConnectorError::ResponseDeserializationFailed)?,
+                    Method::Get,
+                )))),
+                mandate_reference: None,
+                connector_metadata: Some(connector_meta),
+                network_txn_id: None,
+                connector_response_reference_id: Some(
+                    purchase_units.map_or(item.response.id, |item| item.invoice_id.clone()),
+                ),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+impl<F, T> TryFrom<ResponseRouterData<PaypalThreeDsSyncResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PaypalThreeDsSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            // status is hardcoded because this try_from will only be reached in card 3ds before the completion of complete authorize flow.
+            // also force sync won't be hit in terminal status thus leaving us with only one status to get here.
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::AuthenticationPending,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
     }
 }
 
@@ -2900,6 +2927,32 @@ pub struct PaypalPaymentErrorResponse {
     pub details: Option<Vec<ErrorDetails>>,
 }
 
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct PaypalOrderErrorResponse {
+    pub name: Option<String>,
+    pub message: String,
+    pub debug_id: Option<String>,
+    pub details: Option<Vec<OrderErrorDetails>>,
+}
+
+impl From<OrderErrorDetails> for ErrorCodeAndMessage {
+    fn from(error: OrderErrorDetails) -> Self {
+        Self {
+            error_code: error.issue.to_string(),
+            error_message: error.issue,
+        }
+    }
+}
+
+impl From<ErrorDetails> for ErrorCodeAndMessage {
+    fn from(error: ErrorDetails) -> Self {
+        Self {
+            error_code: error.issue.to_string(),
+            error_message: error.issue.to_string(),
+        }
+    }
+}
+
 fn get_paypal_error_message(error_code: &str) -> Option<&str> {
     match error_code {
         "00N7" | "RESPONSE_00N7" => Some("CVV2_FAILURE_POSSIBLE_RETRY_WITH_CVV."),
@@ -3066,4 +3119,10 @@ fn get_paypal_error_message(error_code: &str) -> Option<&str> {
         "PPVT" | "RESPONSE_PPVT" => Some("VIRTUAL_TERMINAL_UNSUPPORTED."),
         _ => None,
     }
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+pub struct PaypalAccessTokenErrorResponse {
+    pub error: String,
+    pub error_description: String,
 }

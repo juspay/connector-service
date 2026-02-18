@@ -37,7 +37,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    verification::SourceVerification,
+    decode::BodyDecoding, verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers as jpmorgan;
@@ -282,7 +282,7 @@ macros::create_all_prerequisites!(
                     &req.resource_common_data
                         .access_token()
                         .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
-                        .access_token
+                        .access_token.peek()
                 )
                 .into_masked(),
             );
@@ -734,6 +734,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Jpmorgan<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
     for Jpmorgan<T>
 {
 }
