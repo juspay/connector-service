@@ -1,0 +1,17 @@
+{
+  "name": "example-uniffi-js",
+  "version": "0.1.0",
+  "description": "Node.js UniFFI FFI example — calls the same shared library as Python/Kotlin via koffi",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "test": "node main.js"
+  },
+  "dependencies": {
+    "koffi": "^2.9.0",
+    "protobufjs": "^7.4.0"
+  },
+  "devDependencies": {
+    "protobufjs-cli": "^1.1.3"
+  }
+}
