@@ -7,7 +7,10 @@ use grpc_api_types::payments::{
 
 use domain_types::{
     connector_flow::{Authorize, Capture},
-    connector_types::{PaymentsAuthorizeData, PaymentsCaptureData},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData},
+    router_data::ErrorResponse,
+    router_data_v2::RouterDataV2,
+    utils::ForeignTryFrom,
 };
 // Generate authorize function using the payment_flow_generic! macro
 // payment_flow!(
@@ -44,24 +47,44 @@ pub fn authorize_req<
     let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
         '_,
         Authorize,
-        domain_types::connector_types::PaymentFlowData,
+        PaymentFlowData,
         PaymentsAuthorizeData<T>,
         domain_types::connector_types::PaymentsResponseData,
     > = connector_data.connector.get_connector_integration_v2();
 
-    // construct router data
-    let router_data = crate::utils::create_router_data::<
-        Authorize,
-        T,
-        PaymentServiceAuthorizeRequest,
-        PaymentsAuthorizeData<T>,
-    >(
-        connector_auth_details,
-        payload.clone(),
-        config,
-        metadata,
-        "PAYMENT_AUTHORIZE_ERROR",
-    )?;
+    // Create PaymentFlowData from the payload
+    let payment_flow_data =
+        PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone(), metadata))
+            .map_err(|err| {
+                tracing::error!(error = ?err, "Failed to create PaymentFlowData");
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(err.to_string()),
+                    Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
+    // Create flow-specific request data
+    let payment_request_data: PaymentsAuthorizeData<T> =
+        PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(|err| {
+            tracing::error!(error = ?err, "Failed to create payment request data");
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(err.to_string()),
+                Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
+                None,
+            )
+        })?;
+
+    // Construct RouterDataV2 directly
+    let router_data = RouterDataV2 {
+        flow: std::marker::PhantomData,
+        resource_common_data: payment_flow_data,
+        connector_auth_type: connector_auth_details,
+        request: payment_request_data,
+        response: Err(ErrorResponse::default()),
+    };
 
     // transform common request type to connector specific request type
     let connector_request = connector_integration
@@ -103,24 +126,43 @@ pub fn authorize_res<
     let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
         '_,
         Authorize,
-        domain_types::connector_types::PaymentFlowData,
+        PaymentFlowData,
         PaymentsAuthorizeData<T>,
         domain_types::connector_types::PaymentsResponseData,
     > = connector_data.connector.get_connector_integration_v2();
 
+    let payment_flow_data =
+        PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone(), metadata))
+            .map_err(|err| {
+            tracing::error!("Failed to process payment flow data: {:?}", err);
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some("Failed to process payment flow data".to_string()),
+                Some("PAYMENT_FLOW_ERROR".to_string()),
+                None,
+            )
+        })?;
+
+    // Create flow-specific request data
+    let payment_request_data: PaymentsAuthorizeData<T> =
+        PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(|err| {
+            tracing::error!(error = ?err, "Failed to create payment request data");
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(err.to_string()),
+                Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
+                None,
+            )
+        })?;
+
     // construct router data
-    let router_data = crate::utils::create_router_data::<
-        Authorize,
-        T,
-        PaymentServiceAuthorizeRequest,
-        PaymentsAuthorizeData<T>,
-    >(
-        connector_auth_details,
-        payload.clone(),
-        config,
-        metadata,
-        "PAYMENT_CAPTURE_ERROR",
-    )?;
+    let router_data = RouterDataV2 {
+        flow: std::marker::PhantomData,
+        resource_common_data: payment_flow_data,
+        connector_auth_type: connector_auth_details,
+        request: payment_request_data,
+        response: Err(ErrorResponse::default()),
+    };
 
     // transform connector response type to common response type
     let response = external_services::service::handle_connector_response(

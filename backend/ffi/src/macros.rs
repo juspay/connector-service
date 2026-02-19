@@ -2,102 +2,6 @@
 // Generates FFI handlers for payment flows similar to http_handler!
 // Supports napi bindings for Node.js FFI
 
-/// Macro to generate FFI handlers for payment operations.
-///
-/// This macro generates a napi-compatible function that:
-/// 1. Validates input payloads are not empty
-/// 2. Parses the request payload from JSON
-/// 3. Parses headers into MaskedMetadata
-/// 4. Parses extracted_metadata
-/// 5. Calls the flow function
-/// 6. Extracts the connector request and returns it as JSON
-///
-/// # Example
-///
-/// ```rust
-/// napi_handler!(
-///     authorize,
-///     PaymentServiceAuthorizeRequest,
-///     JsRequest,
-///     authorize_flow
-/// );
-/// ```
-///
-/// This generates:
-/// ```rust
-/// #[napi]
-/// pub fn authorize(payload: String, headers: String, extracted_metadata: String) -> napi::Result<String> {
-///     // ... implementation
-/// }
-/// ```
-#[macro_export]
-macro_rules! napi_wrapper {
-    ($fn_name:ident, $req_type:ty, $resp_type:ty, $flow_fn:ident) => {
-        paste::paste! {
-                        #[cfg(feature = "napi")]
-                        #[::napi_derive::napi]
-                        pub fn [<$fn_name>] (
-                            payload: napi::JsString,
-                            extracted_metadata: napi::JsString,
-                        ) -> napi::Result<String> {
-
-                            use $crate::types::{FFIMetadataPayload, FFIRequestData};
-                            use $crate::utils::create_hardcoded_masked_metadata;
-
-                            // Convert inputs to Rust strings
-                            let payload_str = payload.into_utf8()?.as_str()?.to_string();
-                            let extracted_metadata_str =
-                                extracted_metadata.into_utf8()?.as_str()?.to_string();
-
-                            if payload_str.trim().is_empty() {
-                                return Err(napi::Error::from_reason("Payload cannot be empty"));
-                            }
-
-                            if extracted_metadata_str.trim().is_empty() {
-                                return Err(napi::Error::from_reason(
-                                    "Extracted metadata cannot be empty",
-                                ));
-                            }
-
-                            // Parse payload
-                            let payload_data: $req_type = serde_json::from_str(&payload_str)
-                                .map_err(|e| napi::Error::from_reason(format!(
-                                    "Invalid payload JSON: {e}"
-                                )))?;
-
-                            let masked_metadata = create_hardcoded_masked_metadata();
-
-                            // Parse metadata
-                            let extracted_metadata_data: FFIMetadataPayload =
-                                serde_json::from_str(&extracted_metadata_str)
-                                    .map_err(|e| napi::Error::from_reason(format!(
-                                        "Invalid metadata JSON: {e}"
-                                    )))?;
-
-                            let request_data = FFIRequestData {
-                                payload: payload_data,
-                                extracted_metadata: extracted_metadata_data,
-                                masked_metadata,
-                            };
-
-                            // Call flow
-                            let result = $flow_fn(request_data)
-                                .map_err(|e| napi::Error::from_reason(format!("{:?}", e)))?;
-
-                            let request = result.ok_or_else(|| {
-                                napi::Error::from_reason("No connector request generated")
-                            })?;
-
-                            // Extract raw connector request
-           let extracted_request =
-        external_services::service::extract_raw_connector_request(&request);
-
-         Ok(extracted_request)
-                        }
-                    }
-    };
-}
-
 /// Macro to generate payment flow functions (for non-generic flows like capture)
 ///
 /// # Example
@@ -160,18 +64,41 @@ macro_rules! payment_flow {
                     domain_types::connector_types::PaymentsResponseData,
                 > = connector_data.connector.get_connector_integration_v2();
 
-                let router_data = $crate::utils::create_router_data::<
-                    $flow_type,
-                    T,
-                    $req_type,
-                    $req_data_type,
-                >(
-                    connector_auth_details,
-                    payload.clone(),
-                    config,
-                    metadata,
-                    $error_code,
-                )?;
+                // Create PaymentFlowData from the payload
+                let payment_flow_data =
+                    domain_types::connector_types::PaymentFlowData::foreign_try_from(
+                        (payload.clone(), config.connectors.clone(), metadata),
+                    )
+                    .map_err(|err| {
+                        tracing::error!(error = ?err, "Failed to create PaymentFlowData");
+                        common_crate::error::PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Pending,
+                            Some(err.to_string()),
+                            Some($error_code.to_string()),
+                            None,
+                        )
+                    })?;
+
+                // Create flow-specific request data
+                let payment_request_data = <$req_data_type as domain_types::utils::ForeignTryFrom<$req_type>>::foreign_try_from(payload.clone())
+                    .map_err(|err| {
+                        tracing::error!(error = ?err, "Failed to create payment request data");
+                        common_crate::error::PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Pending,
+                            Some(err.to_string()),
+                            Some($error_code.to_string()),
+                            None,
+                        )
+                    })?;
+
+                // Construct RouterDataV2 directly
+                let router_data = domain_types::router_data_v2::RouterDataV2 {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: payment_flow_data,
+                    connector_auth_type: connector_auth_details,
+                    request: payment_request_data,
+                    response: Err(domain_types::router_data::ErrorResponse::default()),
+                };
 
                 let connector_request = connector_integration
                     .build_request_v2(&router_data.clone())
@@ -241,6 +168,5 @@ macro_rules! payment_flow_handler {
     };
 }
 
-pub(crate) use napi_wrapper;
 pub(crate) use payment_flow;
 pub(crate) use payment_flow_handler;

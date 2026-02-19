@@ -6,4 +6,4 @@ pub mod handlers;
 pub mod macros;
 pub mod types;
 pub mod utils;
-pub mod wrappers;
+pub mod bindings;
