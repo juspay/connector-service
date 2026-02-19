@@ -569,6 +569,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let invoice_id = req.request.connector_transaction_id.clone();
+            if invoice_id.is_empty() {Err(errors::ConnectorError::MissingConnectorTransactionID)?};
             let base_url = req.resource_common_data.connectors.revolv3.base_url.to_string();
             Ok(format!("{base_url}/api/Invoices/{invoice_id}/refund"))
         }
