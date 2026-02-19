@@ -1417,12 +1417,6 @@ pub struct PaymentCreateOrderData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrderCreateResult {
-    pub order_id: String,
-    pub session_token: Option<SessionToken>,
-}
-
-#[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
     /// Optional session token for wallet flows (Apple Pay, Google Pay)
