@@ -410,6 +410,7 @@ pub struct UpiCollectData {
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct UpiIntentData {
     pub upi_source: Option<UpiSource>,
+    pub app_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -1284,4 +1285,24 @@ pub struct ReceiverDetails {
     amount_charged: Option<i64>,
     /// The amount remaining to be sent via ACH
     amount_remaining: Option<i64>,
+}
+
+/// Customer Information Details
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct CustomerInfoDetails {
+    /// Customer Name
+    #[schema(value_type = Option<String>)]
+    pub customer_name: Option<Secret<String>>,
+    /// Customer Email
+    #[schema(value_type = Option<String>)]
+    pub customer_email: Option<Email>,
+    /// Customer Phone Number
+    #[schema(value_type = Option<String>)]
+    pub customer_phone_number: Option<Secret<String>>,
+    /// Customer Bank Id
+    #[schema(value_type = Option<String>)]
+    pub customer_bank_id: Option<Secret<String>>,
+    /// Customer Bank Name
+    #[schema(value_type = Option<String>)]
+    pub customer_bank_name: Option<Secret<String>>,
 }
