@@ -248,11 +248,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .get_payment_method_token()?
         {
-            PaymentMethodTokenFlow::Token(pm_token) => Ok(pm_token),
-            _ => Err(ConnectorError::MissingRequiredField {
-                field_name: "payment_method_token",
-            }),
-        }?;
+            PaymentMethodTokenFlow::Token(pm_token) => pm_token,
+        };
         Ok(Self {
             handle: item
                 .router_data

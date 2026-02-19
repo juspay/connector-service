@@ -1487,7 +1487,7 @@ where
 #[allow(dead_code)]
 fn get_payment_info<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
-    payment_method_token: Option<PaymentMethodToken>,
+    _payment_method_token: Option<PaymentMethodToken>,
 ) -> Result<PaymentInfo<T>, error_stack::Report<ConnectorError>>
 where
     T::Inner: From<String> + Clone,
@@ -1528,19 +1528,17 @@ where
         PaymentMethodData::Wallet(wallet_data) => {
             match wallet_data {
                 WalletData::ApplePay(apple_pay_data) => {
-                    match payment_method_token {
-                        Some(PaymentMethodToken::ApplePayDecrypt(apple_pay_decrypted_data)) => {
+                    match apple_pay_data
+                        .payment_data
+                        .get_decrypted_apple_pay_payment_data_optional()
+                    {
+                        Some(apple_pay_decrypted_data) => {
                             let card_type = determine_apple_pay_card_type(
                                 &apple_pay_data.payment_method.network,
                             )?;
-                            // Extract expiry date from Apple Pay decrypted data
-                            let expiry_month: Secret<String> = apple_pay_decrypted_data
-                                .get_expiry_month()
-                                .change_context(ConnectorError::InvalidDataFormat {
-                                    field_name: "expiration_month",
-                                })?;
+                            let expiry_month = apple_pay_decrypted_data.get_expiry_month();
                             let expiry_year = apple_pay_decrypted_data.get_four_digit_expiry_year();
-                            let formatted_year = &expiry_year.expose()[2..]; // Convert to 2-digit year
+                            let formatted_year = &expiry_year.expose()[2..];
                             let exp_date = format!("{}{}", expiry_month.expose(), formatted_year);
 
                             let card_number_string = apple_pay_decrypted_data
@@ -1553,7 +1551,7 @@ where
                                 card_type,
                                 number: raw_card_number,
                                 exp_date: exp_date.into(),
-                                card_validation_num: None, // Apple Pay doesn't provide CVV
+                                card_validation_num: None,
                             };
 
                             Ok(PaymentInfo::Card(CardData {
@@ -1562,40 +1560,36 @@ where
                                 network_transaction_id: None,
                             }))
                         }
-                        _ => Err(ConnectorError::MissingRequiredField {
+                        None => Err(ConnectorError::MissingRequiredField {
                             field_name: "apple_pay_decrypted_data",
                         }
                         .into()),
                     }
                 }
                 WalletData::GooglePay(google_pay_data) => {
-                    match payment_method_token {
-                        Some(PaymentMethodToken::GooglePayDecrypt(google_pay_decrypted_data)) => {
+                    match &google_pay_data.tokenization_data {
+                        domain_types::payment_method_data::GpayTokenizationData::Decrypted(
+                            google_pay_decrypted_data,
+                        ) => {
                             let card_type =
                                 determine_google_pay_card_type(&google_pay_data.info.card_network)?;
-                            // Extract expiry date from Google Pay decrypted data
-                            let expiry_month = google_pay_decrypted_data
-                                .payment_method_details
-                                .expiration_month
-                                .two_digits();
-                            // Since CardExpirationYear doesn't have a public accessor, we need to deserialize it
-                            // This follows the pattern where year is extracted from the validated data
-                            let expiry_year_bytes = serde_json::to_vec(
-                                &google_pay_decrypted_data
+                            let exp_date = format!(
+                                "{}{:02}",
+                                google_pay_decrypted_data
                                     .payment_method_details
-                                    .expiration_year,
-                            )
-                            .change_context(ConnectorError::RequestEncodingFailed)?;
-                            let expiry_year: u16 = serde_json::from_slice(&expiry_year_bytes)
-                                .change_context(ConnectorError::RequestEncodingFailed)?;
-                            let formatted_year = format!("{:02}", expiry_year % 100); // Convert to 2-digit year
-                            let exp_date = format!("{expiry_month}{formatted_year}");
+                                    .expiration_month
+                                    .two_digits(),
+                                google_pay_decrypted_data
+                                    .payment_method_details
+                                    .expiration_year
+                                    .get_year()
+                                    % 100
+                            );
 
                             let card_number_string = google_pay_decrypted_data
                                 .payment_method_details
                                 .pan
-                                .peek()
-                                .to_string();
+                                .get_card_no();
                             let raw_card_number =
                                 create_raw_card_number_from_string::<T>(card_number_string)?;
 
@@ -1612,10 +1606,12 @@ where
                                 network_transaction_id: None,
                             }))
                         }
-                        _ => Err(ConnectorError::MissingRequiredField {
-                            field_name: "google_pay_decrypted_data",
+                        domain_types::payment_method_data::GpayTokenizationData::Encrypted(_) => {
+                            Err(ConnectorError::MissingRequiredField {
+                                field_name: "google_pay_decrypted_data",
+                            }
+                            .into())
                         }
-                        .into()),
                     }
                 }
                 _ => Err(ConnectorError::NotSupported {
