@@ -412,3 +412,7 @@ $RECYCLE.BIN/
 # DrawIO files
 **/*.drawio.bkp
 gen/**
+
+sdk/**/generated
+sdk/**/node_modules
+sdk/**/.gradle

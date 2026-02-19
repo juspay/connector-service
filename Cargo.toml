@@ -12,7 +12,8 @@ members = [
   "backend/interfaces",
   "backend/domain_types",
   "backend/tracing-kafka",
-  "backend/cards"
+  "backend/cards",
+  "sdk/rust"
 ]
 exclude = [
   "examples/example-rs",
