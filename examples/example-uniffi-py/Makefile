@@ -20,16 +20,18 @@ build-lib:
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi --release
 	@echo "Build complete."
 
-# Generate UniFFI Python bindings from the compiled library
+# Generate UniFFI Python bindings and symlink the shared library
 generate-bindings: build-lib
 	@echo "Generating UniFFI Python bindings..."
 	@mkdir -p $(PYTHON_OUT)
+	$(eval TARGET_DIR := $(shell cd $(FFI_CRATE) && cargo metadata --format-version 1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['target_directory'])"))
 	@cd $(FFI_CRATE) && cargo run --no-default-features --features uniffi-cli \
 		--bin uniffi-bindgen -- \
 		generate \
-		--library $$(cargo metadata --format-version 1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['target_directory'])")/release/libconnector_service_ffi.$(LIB_EXT) \
+		--library $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) \
 		--language python \
 		--out-dir $(CURDIR)/$(PYTHON_OUT)
+	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(PYTHON_OUT)/
 	@echo "UniFFI bindings generated in $(PYTHON_OUT)/"
 
 # Generate Python protobuf stubs (same as example-py)
@@ -47,7 +49,7 @@ generate-proto:
 # Install Python dependencies
 install-deps:
 	@echo "Installing Python dependencies..."
-	@pip install grpcio grpcio-tools
+	@pip install grpcio grpcio-tools requests
 	@echo "Done."
 
 # Full setup: build lib, generate both bindings and proto stubs

@@ -1,14 +1,9 @@
 """
-UniFFI FFI example: authorize_req
+UniFFI FFI example: authorize_req + full round-trip
 
-Demonstrates calling the connector FFI directly from Python using
-protobuf-encoded bytes at the boundary, without going through gRPC.
-
-Flow:
-  1. Build PaymentServiceAuthorizeRequest as a Python protobuf object
-  2. Serialize it to bytes
-  3. Pass bytes + metadata to authorize_req via UniFFI
-  4. Receive back the connector HTTP request JSON
+Demonstrates two usage patterns:
+  1. Low-level: call authorize_req directly to get the connector HTTP request JSON
+  2. High-level: use ConnectorClient for a full round-trip (build -> HTTP -> parse)
 
 Prerequisites (run `make setup` first):
   - generated/connector_service_ffi.py  (UniFFI bindings)
@@ -27,9 +22,12 @@ from connector_service_ffi import authorize_req, UniffiError
 # Protobuf-generated stubs
 from payment_pb2 import PaymentServiceAuthorizeRequest, PaymentAddress
 
+# High-level client
+from connector_client import ConnectorClient
 
-def build_authorize_request() -> bytes:
-    """Build a PaymentServiceAuthorizeRequest and serialize to protobuf bytes.
+
+def build_authorize_request_msg() -> PaymentServiceAuthorizeRequest:
+    """Build a PaymentServiceAuthorizeRequest protobuf message.
 
     Field structure mirrors sdk/node-ffi-client/tests/test_node.js PAYLOAD.
     Proto message fields that are themselves messages (SecretString, CardNumberType)
@@ -46,12 +44,7 @@ def build_authorize_request() -> bytes:
     req.currency = 146           # USD (payment.proto enum)
     req.capture_method = 1       # AUTOMATIC
 
-    # Card payment method — CardDetails fields:
-    #   card_number:    CardNumberType { value: string }
-    #   card_exp_month: SecretString   { value: string }
-    #   card_exp_year:  SecretString   { value: string }
-    #   card_cvc:       SecretString   { value: string }
-    #   card_holder_name: SecretString { value: string }  (optional)
+    # Card payment method
     card = req.payment_method.card
     card.card_number.value = "4111111111111111"
     card.card_exp_month.value = "12"
@@ -71,14 +64,14 @@ def build_authorize_request() -> bytes:
     req.return_url = "https://example.com/return"
     req.webhook_url = "https://example.com/webhook"
 
-    # Address (required — mirrors test_node.js: {shipping_address: null, billing_address: null})
+    # Address (required)
     req.address.CopyFrom(PaymentAddress())
 
     # Misc
     req.description = "Test payment"
     req.test_mode = True
 
-    return req.SerializeToString()
+    return req
 
 
 def build_metadata() -> dict:
@@ -111,10 +104,12 @@ def build_metadata() -> dict:
     }
 
 
-def main():
-    print("=== UniFFI FFI authorize_req example ===\n")
+def demo_low_level_ffi():
+    """Demo 1: Low-level FFI — build the connector HTTP request only."""
+    print("=== Demo 1: Low-level FFI (authorize_req) ===\n")
 
-    request_bytes = build_authorize_request()
+    request_msg = build_authorize_request_msg()
+    request_bytes = request_msg.SerializeToString()
     metadata = build_metadata()
 
     print(f"Request proto bytes: {len(request_bytes)} bytes")
@@ -131,10 +126,6 @@ def main():
         print(f"\nFull request JSON:\n{json.dumps(connector_request, indent=2)}")
 
     except UniffiError.HandlerError as e:
-        # Handler errors may occur with placeholder credentials or if the
-        # connector's domain logic rejects the request. The FFI boundary
-        # itself is working — the proto was decoded, metadata was parsed,
-        # and the handler was invoked.
         print(f"Handler returned an error (FFI boundary is working):")
         print(f"  {e}")
         print("\nThis is expected with placeholder data. To get a full request,")
@@ -143,6 +134,41 @@ def main():
     except UniffiError as e:
         print(f"FFI error: {e}", file=sys.stderr)
         sys.exit(1)
+
+
+def demo_full_round_trip():
+    """Demo 2: Full round-trip using ConnectorClient."""
+    print("\n=== Demo 2: Full round-trip (ConnectorClient) ===\n")
+
+    api_key = os.getenv("STRIPE_API_KEY", "")
+    if not api_key or api_key == "sk_test_placeholder":
+        print("Skipping full round-trip: STRIPE_API_KEY not set.")
+        print("Run with: STRIPE_API_KEY=sk_test_xxx python3 main.py")
+        return
+
+    client = ConnectorClient()
+    request_msg = build_authorize_request_msg()
+    metadata = build_metadata()
+
+    print(f"Connector: {metadata['connector']}")
+    print(f"Sending authorize request...\n")
+
+    try:
+        response = client.authorize(request_msg, metadata)
+        print("Authorize response received:")
+        print(f"  Status: {response.status}")
+        print(f"  Response: {response}")
+
+    except UniffiError as e:
+        print(f"FFI error: {e}", file=sys.stderr)
+
+    except Exception as e:
+        print(f"Error during round-trip: {e}", file=sys.stderr)
+
+
+def main():
+    demo_low_level_ffi()
+    demo_full_round_trip()
 
 
 if __name__ == "__main__":
