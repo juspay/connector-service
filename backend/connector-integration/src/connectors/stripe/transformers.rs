@@ -1957,11 +1957,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             wallet_name: "Apple Pay".to_string(),
                         })?;
 
-                    let payment_method_token = match payment_method_token {
-                        domain_types::router_data::PaymentMethodToken::Token(
-                            payment_method_token,
-                        ) => payment_method_token,
-                    };
+                    let domain_types::router_data::PaymentMethodToken::Token(payment_method_token) =
+                        payment_method_token;
                     Some(StripePaymentMethodData::Wallet(
                         StripeWallet::ApplepayPayment(ApplepayPayment {
                             token: payment_method_token,

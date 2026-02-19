@@ -243,13 +243,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .into());
         };
-        let source = match item
+        let PaymentMethodTokenFlow::Token(source) = item
             .router_data
             .resource_common_data
-            .get_payment_method_token()?
-        {
-            PaymentMethodTokenFlow::Token(pm_token) => pm_token,
-        };
+            .get_payment_method_token()?;
         Ok(Self {
             handle: item
                 .router_data
