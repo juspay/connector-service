@@ -3071,35 +3071,39 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 /// Validates social_security_number (Brazilian social security number) for Boleto
 /// Rules: exactly 11 digits (0-9)
 fn is_valid_social_security_number(social_security_number: &str) -> bool {
-    if social_security_number.len() != 11 {
-        tracing::warn!(
-            "Invalid social_security_number: must be exactly 11 digits, got {}",
-            social_security_number.len()
-        );
-        return false;
+    match (
+        social_security_number.len() == 11,
+        social_security_number.chars().all(|c| c.is_ascii_digit()),
+    ) {
+        (false, _) => {
+            tracing::warn!(
+                "Invalid social_security_number: must be exactly 11
+  digits, got {}",
+                social_security_number.len()
+            );
+            false
+        }
+        (_, false) => {
+            tracing::warn!(
+                "Invalid social_security_number: must contain
+   only digits (0-9)"
+            );
+            false
+        }
+        (true, true) => true,
     }
-
-    if !social_security_number
-        .chars()
-        .all(|character| character.is_ascii_digit())
-    {
-        tracing::warn!("Invalid social_security_number: must contain only digits (0-9)");
-        return false;
-    }
-
-    true
 }
 
 fn get_social_security_number(voucher_data: &VoucherData) -> Option<Secret<String>> {
     match voucher_data {
-        VoucherData::Boleto(boleto_data) => {
-            if let Some(ref social_security_number) = boleto_data.social_security_number {
-                if !is_valid_social_security_number(social_security_number.peek()) {
-                    return None;
-                }
+        VoucherData::Boleto(boleto_data) => match &boleto_data.social_security_number {
+            Some(social_security_number)
+                if is_valid_social_security_number(social_security_number.peek()) =>
+            {
+                Some(social_security_number.clone())
             }
-            boleto_data.social_security_number.clone()
-        }
+            _ => None,
+        },
         VoucherData::Alfamart { .. }
         | VoucherData::Indomaret { .. }
         | VoucherData::Efecty
