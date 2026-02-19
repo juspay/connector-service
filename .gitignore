@@ -412,3 +412,6 @@ $RECYCLE.BIN/
 # DrawIO files
 **/*.drawio.bkp
 gen/**
+
+examples/**/generated
+examples/**/node_modules
