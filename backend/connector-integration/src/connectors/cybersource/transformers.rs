@@ -1767,28 +1767,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )?;
         let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
+        let expiration_month = google_pay_decrypted_data
+            .get_expiry_month()
+            .change_context(ConnectorError::InvalidDataFormat {
+                field_name: "google_pay_decrypted_data.card_exp_month",
+            })?;
+        let expiration_year = google_pay_decrypted_data
+            .get_four_digit_expiry_year()
+            .change_context(ConnectorError::InvalidDataFormat {
+                field_name: "google_pay_decrypted_data.card_exp_year",
+            })?;
         let payment_information =
             PaymentInformation::GooglePay(Box::new(GooglePayPaymentInformation {
                 tokenized_card: TokenizedCard {
-                    number: google_pay_decrypted_data.payment_method_details.pan.clone(),
-                    cryptogram: google_pay_decrypted_data
-                        .payment_method_details
-                        .cryptogram
+                    number: google_pay_decrypted_data
+                        .application_primary_account_number
                         .clone(),
+                    cryptogram: google_pay_decrypted_data.cryptogram.clone(),
                     transaction_type,
-                    expiration_year: Secret::new(
-                        google_pay_decrypted_data
-                            .payment_method_details
-                            .expiration_year
-                            .get_year()
-                            .to_string(),
-                    ),
-                    expiration_month: Secret::new(
-                        google_pay_decrypted_data
-                            .payment_method_details
-                            .expiration_month
-                            .two_digits(),
-                    ),
+                    expiration_year,
+                    expiration_month,
                 },
             }));
         let processing_information = ProcessingInformation::try_from((

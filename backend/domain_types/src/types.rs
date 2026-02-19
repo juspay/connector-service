@@ -700,45 +700,19 @@ impl<
                     // Handle the new oneof tokenization_data structure
                     let gpay_tokenization_data = match tokenization_data.tokenization_data {
                                 Some(grpc_api_types::payments::google_wallet::tokenization_data::TokenizationData::DecryptedData(decrypt_data)) => {
-                                    let payment_method_details = decrypt_data.payment_method_details.ok_or(
-                                        ApplicationErrorResponse::BadRequest(ApiError {
-                                            sub_code: "MISSING_GOOGLE_PAY_PAYMENT_METHOD_DETAILS".to_owned(),
-                                            error_identifier: 400,
-                                            error_message: "Google Pay payment method details are required".to_owned(),
-                                            error_object: None,
-                                        })
-                                    )?;
-
-                                    let expiration_month = payment_method_data::GooglePayWalletData::validate_decrypted_expiration_month(
-                                        payment_method_details.expiration_month,
-                                    )?;
-
-                                    let expiration_year = payment_method_data::GooglePayWalletData::validate_decrypted_expiration_year(
-                                        payment_method_details.expiration_year,
-                                    )?;
-
                                     Ok(payment_method_data::GpayTokenizationData::Decrypted(
                                         payment_method_data::GooglePayDecryptedData {
-                                            message_expiration: decrypt_data.message_expiration,
-                                            message_id: decrypt_data.message_id,
-                                            payment_method_type: decrypt_data.payment_method_type,
-                                            payment_method_details: router_data::GooglePayPaymentMethodDetails {
-                                                auth_method: payment_method_data::GooglePayWalletData::map_decrypted_auth_method(
-                                                    payment_method_details.auth_method,
-                                                ),
-                                                expiration_month,
-                                                expiration_year,
-                                                pan: payment_method_details.pan.ok_or(
-                                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                                        sub_code: "MISSING_GOOGLE_PAY_PAN".to_owned(),
-                                                        error_identifier: 400,
-                                                        error_message: "Google Pay PAN is required in payment method details".to_owned(),
-                                                        error_object: None,
-                                                    })
-                                                )?,
-                                                cryptogram: payment_method_details.cryptogram,
-                                                eci_indicator: payment_method_details.eci_indicator,
-                                            },
+                                            card_exp_month: payment_method_data::GooglePayWalletData::validate_decrypted_card_exp_month(
+                                                decrypt_data.card_exp_month,
+                                            )?,
+                                            card_exp_year: payment_method_data::GooglePayWalletData::validate_decrypted_card_exp_year(
+                                                decrypt_data.card_exp_year,
+                                            )?,
+                                            application_primary_account_number: payment_method_data::GooglePayWalletData::validate_decrypted_primary_account_number(
+                                                decrypt_data.application_primary_account_number,
+                                            )?,
+                                            cryptogram: decrypt_data.cryptogram,
+                                            eci_indicator: decrypt_data.eci_indicator,
                                         }
                                     ))
                                 },

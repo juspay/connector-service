@@ -1,15 +1,13 @@
 use std::collections::HashMap;
 
-use cards::{
-    validate::{CardExpirationMonth, CardExpirationYear},
-    NetworkToken,
-};
+use cards::NetworkToken;
 use common_utils::{
+    errors::ValidationError,
     ext_traits::{OptionExt, ValueExt},
     MinorUnit,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use utoipa::ToSchema;
 
 use crate::{payment_method_data, utils::missing_field_err};
@@ -212,23 +210,50 @@ pub struct ApplePayCryptogramData {
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GooglePayDecryptedData {
-    pub message_expiration: Option<String>,
-    pub message_id: Option<String>,
-    #[serde(rename = "paymentMethod")]
-    pub payment_method_type: Option<String>,
-    pub payment_method_details: GooglePayPaymentMethodDetails,
+    pub card_exp_month: Secret<String>,
+    pub card_exp_year: Secret<String>,
+    pub application_primary_account_number: cards::CardNumber,
+    pub cryptogram: Option<Secret<String>>,
+    pub eci_indicator: Option<String>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct GooglePayPaymentMethodDetails {
-    pub auth_method: common_enums::enums::GooglePayAuthMethod,
-    pub expiration_month: CardExpirationMonth,
-    pub expiration_year: CardExpirationYear,
-    pub pan: cards::CardNumber,
-    pub cryptogram: Option<Secret<String>>,
-    /// Electronic Commerce Indicator
-    pub eci_indicator: Option<String>,
+impl GooglePayDecryptedData {
+    pub fn get_four_digit_expiry_year(
+        &self,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
+        let mut year = self.card_exp_year.peek().clone();
+
+        if year.len() == 2 {
+            year = format!("20{year}");
+        } else if year.len() != 4 {
+            return Err(ValidationError::InvalidValue {
+                message: format!(
+                    "Invalid expiry year length: {}. Must be 2 or 4 digits",
+                    year.len()
+                ),
+            }
+            .into());
+        }
+        Ok(Secret::new(year))
+    }
+
+    pub fn get_expiry_month(&self) -> error_stack::Result<Secret<String>, ValidationError> {
+        let month_str = self.card_exp_month.peek();
+        let month = month_str
+            .parse::<u8>()
+            .map_err(|_| ValidationError::InvalidValue {
+                message: format!("Failed to parse expiry month: {month_str}"),
+            })?;
+
+        if !(1..=12).contains(&month) {
+            return Err(ValidationError::InvalidValue {
+                message: format!("Invalid expiry month: {month}. Must be between 1 and 12"),
+            }
+            .into());
+        }
+
+        Ok(self.card_exp_month.clone())
+    }
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

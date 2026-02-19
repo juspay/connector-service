@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 
 use base64::Engine;
-use cards::validate::{CardExpirationMonth, CardExpirationYear};
 use common_enums::{CardNetwork, CountryAlpha2, RegulatedName, SamsungPayCardBrand};
 use common_utils::{
     ext_traits::OptionExt, new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email,
@@ -761,82 +760,45 @@ impl GooglePayWalletData {
         Ok(Secret::new(encrypted_data.token.clone()))
     }
 
-    pub fn validate_decrypted_expiration_month(
+    pub fn validate_decrypted_card_exp_month(
         value: Option<Secret<String>>,
-    ) -> Result<CardExpirationMonth, error_stack::Report<ApplicationErrorResponse>> {
-        let exp_month_secret = value.ok_or_else(|| {
+    ) -> Result<Secret<String>, error_stack::Report<ApplicationErrorResponse>> {
+        value.ok_or_else(|| {
             error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_CARD_EXP_MONTH".to_owned(),
                 error_identifier: 400,
                 error_message: "Google Pay tokenization data card exp month is required".to_owned(),
                 error_object: None,
             }))
-        })?;
-
-        let exp_month = exp_month_secret.peek().parse::<u8>().map_err(|_| {
-            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CARD_EXP_MONTH".to_owned(),
-                error_identifier: 400,
-                error_message: "Google Pay tokenization data card exp month is invalid".to_owned(),
-                error_object: None,
-            }))
-        })?;
-
-        CardExpirationMonth::try_from(exp_month).map_err(|_| {
-            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CARD_EXP_MONTH".to_owned(),
-                error_identifier: 400,
-                error_message: "Google Pay tokenization data card exp month is invalid".to_owned(),
-                error_object: None,
-            }))
         })
     }
 
-    pub fn validate_decrypted_expiration_year(
+    pub fn validate_decrypted_card_exp_year(
         value: Option<Secret<String>>,
-    ) -> Result<CardExpirationYear, error_stack::Report<ApplicationErrorResponse>> {
-        let exp_year_secret = value.ok_or_else(|| {
+    ) -> Result<Secret<String>, error_stack::Report<ApplicationErrorResponse>> {
+        value.ok_or_else(|| {
             error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_CARD_EXP_YEAR".to_owned(),
                 error_identifier: 400,
                 error_message: "Google Pay tokenization data card exp year is required".to_owned(),
                 error_object: None,
             }))
-        })?;
-
-        let exp_year_raw = exp_year_secret.peek().to_owned();
-        let parsed_year = exp_year_raw.parse::<u16>().map_err(|_| {
-            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CARD_EXP_YEAR".to_owned(),
-                error_identifier: 400,
-                error_message: "Google Pay tokenization data card exp year is invalid".to_owned(),
-                error_object: None,
-            }))
-        })?;
-
-        let normalized_year = if exp_year_raw.len() == 2 {
-            2000_u16.saturating_add(parsed_year)
-        } else {
-            parsed_year
-        };
-
-        CardExpirationYear::try_from(normalized_year).map_err(|_| {
-            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CARD_EXP_YEAR".to_owned(),
-                error_identifier: 400,
-                error_message: "Google Pay tokenization data card exp year is invalid".to_owned(),
-                error_object: None,
-            }))
         })
     }
 
-    pub fn map_decrypted_auth_method(value: i32) -> common_enums::enums::GooglePayAuthMethod {
-        match grpc_api_types::payments::GooglePayAuthMethod::try_from(value) {
-            Ok(grpc_api_types::payments::GooglePayAuthMethod::Cryptogram3ds) => {
-                common_enums::enums::GooglePayAuthMethod::Cryptogram
-            }
-            _ => common_enums::enums::GooglePayAuthMethod::PanOnly,
-        }
+    pub fn validate_decrypted_primary_account_number(
+        value: Option<cards::CardNumber>,
+    ) -> Result<cards::CardNumber, error_stack::Report<ApplicationErrorResponse>> {
+        value.ok_or_else(|| {
+            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_APPLICATION_PRIMARY_ACCOUNT_NUMBER".to_owned(),
+                error_identifier: 400,
+                error_message:
+                    "Google Pay tokenization data application primary account number is required"
+                        .to_owned(),
+                error_object: None,
+            }))
+        })
     }
 }
 

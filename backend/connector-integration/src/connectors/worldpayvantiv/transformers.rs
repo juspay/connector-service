@@ -1573,22 +1573,21 @@ where
                         ) => {
                             let card_type =
                                 determine_google_pay_card_type(&google_pay_data.info.card_network)?;
-                            let exp_date = format!(
-                                "{}{:02}",
-                                google_pay_decrypted_data
-                                    .payment_method_details
-                                    .expiration_month
-                                    .two_digits(),
-                                google_pay_decrypted_data
-                                    .payment_method_details
-                                    .expiration_year
-                                    .get_year()
-                                    % 100
-                            );
+                            let expiry_month = google_pay_decrypted_data
+                                .get_expiry_month()
+                                .change_context(ConnectorError::InvalidDataFormat {
+                                    field_name: "google_pay_decrypted_data.card_exp_month",
+                                })?;
+                            let expiry_year = google_pay_decrypted_data
+                                .get_four_digit_expiry_year()
+                                .change_context(ConnectorError::InvalidDataFormat {
+                                    field_name: "google_pay_decrypted_data.card_exp_year",
+                                })?;
+                            let formatted_year = &expiry_year.expose()[2..];
+                            let exp_date = format!("{}{}", expiry_month.expose(), formatted_year);
 
                             let card_number_string = google_pay_decrypted_data
-                                .payment_method_details
-                                .pan
+                                .application_primary_account_number
                                 .get_card_no();
                             let raw_card_number =
                                 create_raw_card_number_from_string::<T>(card_number_string)?;
