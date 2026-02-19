@@ -25,14 +25,14 @@ use domain_types::{
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{ConnectorInfo, Connectors},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, PeekInterface};
+use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -262,6 +262,10 @@ macros::macro_connector_implementation!(
                     headers::CONTENT_TYPE.to_string(),
                     "application/json".to_string().into(),
                 ),
+                (
+                    headers::ACCEPT.to_string(),
+                    "application/json".to_string().into(),
+                ),
             ];
 
             // Build the request to get the checksum for X-VERIFY header
@@ -271,6 +275,85 @@ macros::macro_connector_implementation!(
             };
             let connector_req = PhonepePaymentsRequest::try_from(&connector_router_data)?;
             headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
+
+            let browser_info = req.request.browser_info.as_ref();
+            let source_channel = phonepe::get_source_channel(browser_info.and_then(|bi| bi.user_agent.as_ref()));
+            let source_platform = req
+                .request
+                .metadata
+                .as_ref()
+                .and_then(|metadata| metadata.clone().expose().get("SOURCE_PLATFORM").and_then(|v| v.as_str().map(String::from)));
+
+            // Add common headers
+            headers.extend([
+                (headers::X_SOURCE.to_string(), "API".to_string().into()),
+                (headers::X_SOURCE_CHANNEL.to_string(), source_channel.clone().into()),
+            ]);
+
+            if let Some(platform) = source_platform {
+                headers.push((headers::X_SOURCE_PLATFORM.to_string(), platform.into()));
+            }
+
+            if let Some(ip_address) = browser_info.and_then(|bi| bi.ip_address) {
+                headers.push((headers::X_MERCHANT_IP.to_string(), ip_address.to_string().into()));
+            }
+
+            match source_channel.as_str() {
+                "WEB" => {
+                    browser_info.map(|bi| {
+                        if let Some(user_agent) = &bi.user_agent {
+                            headers.push((headers::USER_AGENT.to_string(), user_agent.clone().into()));
+                        }
+                        if let Some(referer) = &bi.referer {
+                            headers.push((headers::X_MERCHANT_DOMAIN.to_string(), referer.clone().into()));
+                        }
+                    });
+                }
+                "ANDROID" | "IOS" => {
+                    let is_android = source_channel == "ANDROID";
+
+                    browser_info.and_then(|bi| bi.user_agent.as_ref()).map(|user_agent| {
+                        let version = match is_android {
+                            true => phonepe::get_android_version_from_ua(user_agent),
+                            false => user_agent.clone(),
+                        };
+                        headers.push((headers::X_SOURCE_CHANNEL_VERSION.to_string(), version.into()));
+                    });
+
+                    if let PaymentMethodData::Upi(upi_data) = &req.request.payment_method_data {
+                        let app_id_opt = match upi_data {
+                            UpiData::UpiCollect(collect_data) => {
+                                collect_data.vpa_id.as_ref().map(|vpa_id| {
+                                    match is_android {
+                                        true => vpa_id.peek().to_string(),
+                                        false => phonepe::map_ios_payment_source_to_target_app(Some(vpa_id.peek()))
+                                            .unwrap_or_else(|| vpa_id.peek().to_string()),
+                                    }
+                                })
+                            }
+                            UpiData::UpiIntent(intent_data) => {
+                                intent_data.app_name.as_ref().map(|app_name| {
+                                    match is_android {
+                                        true => app_name.clone(),
+                                        false => phonepe::map_ios_payment_source_to_target_app(Some(app_name))
+                                            .unwrap_or_else(|| app_name.clone()),
+                                    }
+                                })
+                            }
+                            _ => None,
+                        };
+
+                        if let Some(app_id) = app_id_opt {
+                            headers.push((headers::X_MERCHANT_APP_ID.to_string(), app_id.into()));
+                        }
+                    }
+
+                    if is_android {
+                        headers.push((headers::X_MERCHANT_APP_SIGNATURE.to_string(), "".to_string().into()));
+                    }
+                }
+                _ => {}
+            }
 
             Ok(headers)
         }
