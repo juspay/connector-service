@@ -152,8 +152,6 @@ pub struct Connectors {
     pub trustpay: ConnectorParamsWithMoreUrls,
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
-    pub worldpay: ConnectorParams,
-    pub worldpayvantiv: ConnectorParams,
     pub multisafepay: ConnectorParams,
     pub payload: ConnectorParams,
     pub paysafe: ConnectorParams,
@@ -167,7 +165,6 @@ pub struct Connectors {
     pub stax: ConnectorParams,
     pub billwerk: ConnectorParams,
     pub hipay: ConnectorParams,
-    pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
     pub nuvei: ConnectorParams,
     pub iatapay: ConnectorParams,
@@ -180,7 +177,6 @@ pub struct Connectors {
     pub nexixpay: ConnectorParams,
     pub mollie: ConnectorParams,
     pub airwallex: ConnectorParams,
-    pub worldpayxml: ConnectorParams,
     pub tsys: ConnectorParams,
     pub bankofamerica: ConnectorParams,
     pub powertranz: ConnectorParams,
@@ -5047,8 +5043,7 @@ impl ForeignTryFrom<router_response_types::RedirectForm>
             | router_response_types::RedirectForm::CybersourceConsumerAuth { .. }
             | router_response_types::RedirectForm::DeutschebankThreeDSChallengeFlow { .. }
             | router_response_types::RedirectForm::Payme
-            | router_response_types::RedirectForm::Nmi { .. }
-            | router_response_types::RedirectForm::WorldpayDDCForm { .. } => {
+            | router_response_types::RedirectForm::Nmi { .. } => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_REDIRECT_FORM_TYPE".to_owned(),
                     error_identifier: 400,
@@ -9382,7 +9377,7 @@ impl<
         let payment_method_clone = value.payment_method.clone();
 
         // Create redirect response from metadata if present
-        // This is used to pass connector-specific data (e.g., collectionReference for Worldpay)
+        // This is used to pass connector-specific data
         let redirect_response = if value.metadata.is_some() {
             let params_string = serde_urlencoded::to_string(&value.metadata).change_context(
                 ApplicationErrorResponse::BadRequest(ApiError {

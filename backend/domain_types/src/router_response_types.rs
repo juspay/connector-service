@@ -45,12 +45,6 @@ pub enum RedirectForm {
     Mifinity {
         initialization_token: String,
     },
-    WorldpayDDCForm {
-        endpoint: url::Url,
-        method: Method,
-        form_fields: HashMap<String, String>,
-        collection_id: Option<String>,
-    },
     Uri {
         uri: String,
     },

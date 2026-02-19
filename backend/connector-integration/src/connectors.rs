@@ -86,12 +86,6 @@ pub use self::stripe::Stripe;
 pub mod cybersource;
 pub use self::cybersource::Cybersource;
 
-pub mod worldpay;
-pub use self::worldpay::Worldpay;
-
-pub mod worldpayvantiv;
-pub use self::worldpayvantiv::Worldpayvantiv;
-
 pub mod multisafepay;
 pub use self::multisafepay::Multisafepay;
 
@@ -131,9 +125,6 @@ pub use self::stax::Stax;
 pub mod hipay;
 pub use self::hipay::Hipay;
 
-pub mod trustpayments;
-pub use self::trustpayments::Trustpayments;
-
 pub mod globalpay;
 pub use self::globalpay::Globalpay;
 
@@ -172,9 +163,6 @@ pub use self::airwallex::Airwallex;
 
 pub mod redsys;
 pub use self::redsys::Redsys;
-
-pub mod worldpayxml;
-pub use self::worldpayxml::Worldpayxml;
 
 pub mod tsys;
 pub use self::tsys::Tsys;
