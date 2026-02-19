@@ -3226,6 +3226,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyperswitch-payments-client"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "common_crate",
+ "domain_types",
+ "external-services",
+ "ffi",
+ "grpc-api-types",
+ "http 0.2.12",
+ "masking",
+ "reqwest 0.11.27",
+ "serde_json",
+ "tokio",
+ "ucs_cards",
+ "ucs_common_utils",
+]
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -36,6 +36,8 @@ generate-proto: install-deps
 		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto \
 		-o $(GENERATED_OUT)/proto.js
 	@echo "Proto JS generated in $(GENERATED_OUT)/proto.js"
+	@./node_modules/.bin/pbts -o $(GENERATED_OUT)/proto.d.ts $(GENERATED_OUT)/proto.js
+	@echo "Proto TS generated in $(GENERATED_OUT)/proto.d.ts"
 
 # Install Node.js dependencies
 install-deps:

@@ -1,0 +1,22 @@
+[package]
+name = "hyperswitch-payments-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Internal crates (path deps)
+ffi = { path = "../../backend/ffi", default-features = false }
+grpc-api-types = { path = "../../backend/grpc-api-types" }
+external-services = { path = "../../backend/external-services" }
+common_crate = { path = "../../backend/common_crate", package = "common_crate" }
+common_utils = { path = "../../backend/common_utils", package = "ucs_common_utils" }
+domain_types = { path = "../../backend/domain_types" }
+cards = { path = "../../backend/cards", package = "ucs_cards" }
+
+# Third-party
+bytes = "1"
+http = "0.2.12"
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking" }
