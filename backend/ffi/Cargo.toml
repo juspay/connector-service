@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "connector_service_ffi"
 crate-type = ["cdylib", "rlib", "staticlib"]
 
 [dependencies]
 # First-party dependencies
 grpc-api-types = { path = "../grpc-api-types" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking" }
 connector-integration = { path = "../connector-integration" }
 external-services = { path = "../external-services" }
 interfaces = { path = "../interfaces" }
@@ -38,6 +38,8 @@ thiserror = "1"
 
 [build-dependencies]
 napi-build = "=2.2.0"
+prost-build = "0.13"
+g2h = { git = "https://github.com/juspay/g2h", rev = "ebe5d2c38716abd7b1def43a6a0123a5e4193489" }
 uniffi = { version = "0.28", features = ["build"], optional = true }
 
 [[bin]]

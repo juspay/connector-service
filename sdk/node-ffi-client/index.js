@@ -11,7 +11,7 @@ const path = require("path");
 
 function loadNative() {
   const candidates = [
-    path.join(__dirname, "artifacts", "connector_service_ffi.node"),
+    path.join(__dirname, "artifacts", "libffi.node"),
   ];
 
   let lastErr;
@@ -73,7 +73,7 @@ const { ConnectorClient } = require('./src/client');
 module.exports = {
   // High-level API (recommended)
   ConnectorClient,
-  
+
   // Low-level FFI bindings (advanced usage)
   authorizeReq,
   authorizeRes,

@@ -1,0 +1,24 @@
+{
+    "name": "ffi-addon",
+    "cargo": {
+        "package": "ffi"
+    },
+    "version": "0.1.0",
+    "private": true,
+    "main": "index.js",
+    "files": [
+        "index.js",
+        "connector_service_ffi.node",
+        "dist"
+    ],
+    "napi": {
+        "name": "connector_service_ffi"
+    },
+    "scripts": {
+        "build": "npx napi build --release",
+        "build:debug": "npx napi build"
+    },
+    "devDependencies": {
+        "@napi-rs/cli": "^2.18.3"
+    }
+}
