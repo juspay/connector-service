@@ -1416,7 +1416,7 @@ pub struct PaymentCreateOrderData {
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
     /// Optional session token for wallet flows (Apple Pay, Google Pay)
