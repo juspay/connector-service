@@ -22,12 +22,12 @@ serde_urlencoded = "0.7"
 error-stack = "0.4.1"
 base64 = "0.21"
 rand = "0.8.5"
-bytes = "1.6.0"
+bytes = "1.11.1"
 regex = "1.11.1"
 
 
 utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }
-time = { version = "0.3.41", features = ["serde", "serde-well-known", "std"] }
+time = { version = "0.3.47", features = ["serde", "serde-well-known", "std"] }
 url = { version = "2.5.4", features = ["serde"] }
 http = "0.2.12"
 actix-web = { version = "4.11.0", optional = true }
