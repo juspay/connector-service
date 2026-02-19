@@ -346,7 +346,16 @@ pub struct IndomaretVoucherData {}
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct JCSVoucherData {}
 
-#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+/// Data required for the next step in a voucher-based payment flow.
+///
+/// Voucher payments (like Boleto in Brazil) require the customer to complete payment offline
+/// by visiting a physical location or using banking apps. This structure contains all the
+/// information needed to display payment instructions to the customer, including:
+/// - Reference number to identify the payment
+/// - Barcode/digitable line for scanning or manual entry
+/// - URLs to download or view payment instructions
+/// - QR code URL for mobile wallet payments (Pix)
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct VoucherNextStepData {
     /// Voucher entry date
