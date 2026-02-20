@@ -62,6 +62,7 @@ message PaymentMethod {
     RevolutPayWallet revolut_pay = 20;                  // Revolut Pay
     MifinityWallet mifinity = 21;                       // Mifinity
     Bluecode bluecode = 22;                             // Bluecode
+    PazeWallet paze = 23;                               // Paze
     
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -489,8 +490,62 @@ message AmazonPayRedirectWallet {
 
 // Paze - Digital wallet payment service
 message PazeWallet {
-  // Complete response from Paze
-  string complete_response = 1;
+  oneof paze_data {
+    // Backward-compatible raw payload.
+    string complete_response = 1;
+    // Structured decrypted Paze payload.
+    PazeDecryptedData decrypted_data = 2;
+  }
+}
+
+message PazeToken {
+  NetworkTokenType payment_token = 1;
+  SecretString token_expiration_month = 2;
+  SecretString token_expiration_year = 3;
+  SecretString payment_account_reference = 4;
+}
+
+message PazeDynamicData {
+  optional SecretString dynamic_data_value = 1;
+  optional string dynamic_data_type = 2;
+  optional string dynamic_data_expiration = 3;
+}
+
+message PazePhoneNumber {
+  SecretString country_code = 1;
+  SecretString phone_number = 2;
+}
+
+message PazeConsumer {
+  optional SecretString first_name = 1;
+  optional SecretString last_name = 2;
+  SecretString full_name = 3;
+  SecretString email_address = 4;
+  optional PazePhoneNumber mobile_number = 5;
+  optional CountryAlpha2 country_code = 6;
+  optional string language_code = 7;
+}
+
+message PazeAddress {
+  optional SecretString name = 1;
+  optional SecretString line1 = 2;
+  optional SecretString line2 = 3;
+  optional SecretString line3 = 4;
+  optional SecretString city = 5;
+  optional SecretString state = 6;
+  optional SecretString zip = 7;
+  optional CountryAlpha2 country_code = 8;
+}
+
+message PazeDecryptedData {
+  SecretString client_id = 1;
+  string profile_id = 2;
+  PazeToken token = 3;
+  CardNetwork payment_card_network = 4;
+  repeated PazeDynamicData dynamic_data = 5;
+  PazeAddress billing_address = 6;
+  PazeConsumer consumer = 7;
+  optional string eci = 8;
 }
 // Mifinity - Online payment service by Mifinity
 message MifinityWallet {
