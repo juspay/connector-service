@@ -3505,8 +3505,7 @@ impl PaymentService for Payments {
                     // Create response
                     let session_token_response = PaymentServiceCreateSessionTokenResponse {
                         session_token: session_token_data.session_token,
-                        error_message: None,
-                        error_code: None,
+                        error: None,
                         status_code: 200u16.into(),
                     };
 
@@ -4280,8 +4279,7 @@ impl PaymentService for Payments {
                         token_type: access_token_data.token_type,
                         expires_in_seconds: access_token_data.expires_in,
                         status: i32::from(grpc_api_types::payments::OperationStatus::Success),
-                        error_code: None,
-                        error_message: None,
+                        error: None,
                         status_code: 200,
                         response_ref_id: None,
                     };
@@ -4546,23 +4544,18 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                         }))?,
                     })
                     .transpose()?,
-                connector_metadata: None,
+                metadata: None,
                 response_ref_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
                 }),
                 status: grpc_status.into(),
-                error_message: None,
-                error_code: None,
-                error_reason: None,
+                error: None,
                 raw_connector_response,
                 status_code: status_code.into(),
                 response_headers,
                 network_txn_id: None,
-                network_decline_code: None,
-                network_advice_code: None,
-                network_error_message: None,
                 state: None,
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
             },
@@ -4591,16 +4584,20 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 network_txn_id: None,
                 response_ref_id: None,
                 status: status.into(),
-                error_message: Some(err.message),
-                error_code: Some(err.code),
-                error_reason: err.reason,
-                network_decline_code: err.network_decline_code,
-                network_advice_code: err.network_advice_code,
-                network_error_message: err.network_error_message,
+                error: Some(grpc_api_types::payments::ErrorInfo {
+                    message: Some(err.message),
+                    code: Some(err.code),
+                    reason: err.reason,
+                    network_error: Some(grpc_api_types::payments::NetworkErrorInfo {
+                        advice_code: err.network_advice_code,
+                        decline_code: err.network_decline_code,
+                        error_message: err.network_error_message,
+                    })
+                }),
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
-                connector_metadata: None,
+                metadata: None,
                 state: None,
                 authentication_data: None,
             }
@@ -4636,8 +4633,7 @@ pub fn generate_create_order_response(
                 id_type: Some(grpc_api_types::payments::identifier::IdType::Id(order_id)),
             }),
             status: grpc_status.into(),
-            error_code: None,
-            error_message: None,
+            error: None,
             status_code: 200,
             response_headers,
             response_ref_id: None,
@@ -4653,8 +4649,12 @@ pub fn generate_create_order_response(
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
                 .unwrap_or_default()
                 .into(),
-            error_code: Some(err.code),
-            error_message: Some(err.message),
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                    message: Some(err.message),
+                    code: Some(err.code),
+                    reason: None,
+                    network_error: None,
+                }),
             status_code: err.status_code.into(),
             response_headers,
             response_ref_id: None,
@@ -4784,16 +4784,11 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 connector_metadata: None,
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
                 status: grpc_status.into(),
-                error_message: None,
-                error_code: None,
-                error_reason: None,
+                error: None,
                 raw_connector_response,
                 status_code: status_code.into(),
                 response_headers,
                 network_txn_id: None,
-                network_decline_code: None,
-                network_advice_code: None,
-                network_error_message: None,
                 state: None,
             },
             _ => {
@@ -4822,12 +4817,16 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 response_ref_id: None,
                 authentication_data: None,
                 status: status.into(),
-                error_message: Some(err.message),
-                error_code: Some(err.code),
-                error_reason: err.reason,
-                network_decline_code: err.network_decline_code,
-                network_advice_code: err.network_advice_code,
-                network_error_message: err.network_error_message,
+                error: Some(grpc_api_types::payments::ErrorInfo {
+                    message: Some(err.message),
+                    code: Some(err.code),
+                    reason: err.reason,
+                    network_error: Some(grpc_api_types::payments::NetworkErrorInfo {
+                        advice_code: err.network_advice_code,
+                        decline_code: err.network_decline_code,
+                        error_message: err.network_error_message,
+                    })
+                }),
                 status_code: err.status_code.into(),
                 raw_connector_response,
                 response_headers,
@@ -4876,15 +4875,10 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
                 incremental_authorization_allowed: None,
                 status: grpc_status.into(),
-                error_message: None,
-                error_code: None,
-                error_reason: None,
+                error: None,
                 raw_connector_response,
                 status_code: status_code.into(),
                 response_headers,
-                network_decline_code: None,
-                network_advice_code: None,
-                network_error_message: None,
                 state: None,
             },
             _ => {
@@ -4914,12 +4908,16 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 authentication_data: None,
                 incremental_authorization_allowed: None,
                 status: status.into(),
-                error_message: Some(err.message),
-                error_code: Some(err.code),
-                error_reason: err.reason,
-                network_decline_code: err.network_decline_code,
-                network_advice_code: err.network_advice_code,
-                network_error_message: err.network_error_message,
+                error: Some(grpc_api_types::payments::ErrorInfo {
+                    message: Some(err.message),
+                    code: Some(err.code),
+                    reason: err.reason,
+                    network_error: Some(grpc_api_types::payments::NetworkErrorInfo {
+                        advice_code: err.network_advice_code,
+                        decline_code: err.network_decline_code,
+                        error_message: err.network_error_message,
+                    })
+                }),
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
@@ -4966,9 +4964,7 @@ pub fn generate_mandate_revoke_response(
                 }
             }
             .into(),
-            error_code: None,
-            error_message: None,
-            error_reason: None,
+            error: None,
             status_code: response.status_code.into(),
             response_headers,
             network_txn_id: None,
@@ -4978,9 +4974,12 @@ pub fn generate_mandate_revoke_response(
         }),
         Err(e) => Ok(PaymentServiceRevokeMandateResponse {
             status: grpc_api_types::payments::MandateStatus::MandateRevokeFailed.into(), // Default status for failed revoke
-            error_code: Some(e.code),
-            error_message: Some(e.message),
-            error_reason: e.reason,
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                    message: Some(e.message),
+                    code: Some(e.code),
+                    reason: e.reason,
+                    network_error: None,
+                }),
             status_code: e.status_code.into(),
             response_headers,
             network_txn_id: None,

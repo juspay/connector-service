@@ -8,7 +8,7 @@ use common_utils::{
     errors,
     ext_traits::{OptionExt, ValueExt},
     pii::IpAddress,
-    types::{MinorUnit, StringMajorUnit, StringMinorUnit},
+    types::{MinorUnit, Money, StringMajorUnit, StringMinorUnit},
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
@@ -1444,9 +1444,8 @@ pub struct PaymentMethodTokenResponse {
 #[derive(Debug, Clone)]
 pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
-    pub amount: MinorUnit,
+    pub amount: Option<Money>,
     pub email: Option<Email>,
-    pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
@@ -1475,9 +1474,8 @@ impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
 #[derive(Debug, Clone)]
 pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
-    pub amount: MinorUnit,
+    pub amount: Option<Money>,
     pub email: Option<Email>,
-    pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
@@ -1557,9 +1555,8 @@ pub enum ThreeDsCompletionIndicator {
 #[derive(Debug, Clone)]
 pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
-    pub amount: MinorUnit,
+    pub amount: Option<Money>,
     pub email: Option<Email>,
-    pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
@@ -1733,8 +1730,7 @@ impl RefundFlowData {
 pub struct RedirectDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: Option<AttemptStatus>,
-    pub response_minor_amount: Option<MinorUnit>,
-    pub response_currency: Option<Currency>,
+    pub response_amount: Option<Money>,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,

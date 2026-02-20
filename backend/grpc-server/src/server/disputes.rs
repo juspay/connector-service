@@ -19,8 +19,8 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, AcceptDisputeRequest, AcceptDisputeResponse,
-    DisputeDefendRequest, DisputeDefendResponse, DisputeResponse, DisputeServiceGetRequest,
+    dispute_service_server::DisputeService, DisputeServiceAcceptRequest, DisputeServiceAcceptResponse,
+    DisputeServiceDefendRequest, DisputeServiceDefendResponse, DisputeResponse, DisputeServiceGetRequest,
     DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,
     DisputeServiceTransformRequest, DisputeServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
@@ -39,8 +39,8 @@ use crate::{
 trait DisputeOperationsInternal {
     async fn internal_defend(
         &self,
-        request: RequestData<DisputeDefendRequest>,
-    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
+        request: RequestData<DisputeServiceDefendRequest>,
+    ) -> Result<tonic::Response<DisputeServiceDefendResponse>, tonic::Status>;
 }
 
 #[derive(Clone)]
@@ -50,8 +50,8 @@ impl DisputeOperationsInternal for Disputes {
     implement_connector_operation!(
         fn_name: internal_defend,
         log_prefix: "DEFEND_DISPUTE",
-        request_type: DisputeDefendRequest,
-        response_type: DisputeDefendResponse,
+        request_type: DisputeServiceDefendRequest,
+        response_type: DisputeServiceDefendResponse,
         flow_marker: DefendDispute,
         resource_common_data_type: DisputeFlowData,
         request_data_type: DisputeDefendData,
@@ -260,8 +260,8 @@ impl DisputeService for Disputes {
     )]
     async fn defend(
         &self,
-        request: tonic::Request<DisputeDefendRequest>,
-    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
+        request: tonic::Request<DisputeServiceDefendRequest>,
+    ) -> Result<tonic::Response<DisputeServiceDefendResponse>, tonic::Status> {
         let service_name = request
             .extensions()
             .get::<String>()
@@ -301,8 +301,8 @@ impl DisputeService for Disputes {
     )]
     async fn accept(
         &self,
-        request: tonic::Request<AcceptDisputeRequest>,
-    ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
+        request: tonic::Request<DisputeServiceAcceptRequest>,
+    ) -> Result<tonic::Response<DisputeServiceAcceptResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
         let config = get_config_from_request(&request)?;
         let service_name = request
