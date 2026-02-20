@@ -626,6 +626,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
