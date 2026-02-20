@@ -1292,8 +1292,7 @@ message PaymentServiceAuthorizeRequest {
 
   // Order Details
   optional string order_category = 18;
-  optional string merchant_order_reference_id = 19;
-  optional string connector_order_reference_id = 20;
+  optional string order_id = 19;
 
   // Behavioral Flags and Preferences
   optional FutureUsage setup_future_usage = 21;
@@ -1369,7 +1368,7 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Order Details
   optional string order_category = 18;
-  optional string merchant_order_reference_id = 19;
+  optional string order_id = 19;
   // Behavioral Flags and Preferences
   optional FutureUsage setup_future_usage = 20;
   optional bool off_session = 21;
@@ -1775,7 +1774,6 @@ message PaymentServiceCreateOrderResponse {
 message PaymentServiceRefundRequest {
   // Identification
   Identifier request_ref_id = 1;
-  string refund_id = 2;
   Identifier transaction_id = 3;// Renamed from connector_transaction_id
 
   // Amount Information
@@ -1838,13 +1836,14 @@ message RefundResponse {
   optional string merchant_order_reference_id = 16;
   optional SecretString metadata = 17;
   optional SecretString refund_metadata = 18; // Refund-specific metadata from the connector
+  optional SecretString acquirer_reference_number = 19; // Acquirer reference number for the refund, if provided by the connector
 
   // State Information
-  optional ConnectorState state = 19;
+  optional ConnectorState state = 20;
 
   // Raw Response/Request for debugging
-  optional SecretString raw_connector_response = 20;
-  optional SecretString raw_connector_request = 21;
+  optional SecretString raw_connector_response = 21;
+  optional SecretString raw_connector_request = 22;
 }
 
 // Request message for creating a dispute
@@ -1852,7 +1851,6 @@ message PaymentServiceDisputeRequest {
   // Identification
   Identifier request_ref_id = 1;
   Identifier transaction_id = 2; // Transaction ID to raise the dispute for
-  string dispute_id = 3;  // Connector's unique identifier
 
   // State Information
   optional ConnectorState state = 4;  // State data for access token storage and other connector-specific state
