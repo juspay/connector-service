@@ -317,17 +317,17 @@ pub fn auth_from_metadata(
             let decoded_bytes = BASE64_ENGINE
                 .decode(auth_json_base64.as_bytes())
                 .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_AUTH_JSON_BASE64".to_string(),
+                    sub_code: "INVALID_EXTERNAL_AUTH_BASE64".to_string(),
                     error_identifier: 400,
-                    error_message: "Invalid base64 encoded auth json".to_string(),
+                    error_message: "Invalid base64 encoded external auth".to_string(),
                     error_object: None,
                 }))?;
 
             let auth_json: Value = serde_json::from_slice(&decoded_bytes).change_context(
                 ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_AUTH_JSON".to_string(),
+                    sub_code: "INVALID_EXTERNAL_AUTH_JSON".to_string(),
                     error_identifier: 400,
-                    error_message: "Invalid JSON format in auth json".to_string(),
+                    error_message: "Invalid JSON format in external auth".to_string(),
                     error_object: None,
                 }),
             )?;
