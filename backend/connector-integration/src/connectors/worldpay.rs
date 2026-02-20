@@ -277,10 +277,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_transaction_id = match &req.request.connector_transaction_id {
-                ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
-            };
+            let connector_transaction_id = req.request.get_connector_transaction_id()?;
             Ok(format!("{}/api/payments/{}", self.connector_base_url_payments(req), connector_transaction_id))
         }
     }
@@ -311,10 +308,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_transaction_id = match &req.request.connector_transaction_id {
-                ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
-            };
+            let connector_transaction_id = &req.request.connector_transaction_id;
             Ok(format!("{}/api/payments/{}/settlements", self.connector_base_url_payments(req), connector_transaction_id))
         }
     }
@@ -375,10 +369,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_transaction_id = match &req.request.connector_transaction_id {
-                ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
-            };
+            let connector_transaction_id = &req.request.connector_transaction_id;
             Ok(format!("{}/api/payments/{}/refunds", self.connector_base_url_refunds(req), connector_transaction_id))
         }
     }
