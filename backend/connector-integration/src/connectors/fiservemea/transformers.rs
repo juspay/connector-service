@@ -43,18 +43,12 @@ impl FiservemeaAuthType {
             request_body
         );
 
-        use hmac::{Hmac, Mac};
-        use sha2::Sha256;
+        use ring::hmac;
 
-        type HmacSha256 = Hmac<Sha256>;
+        let key = hmac::Key::new(hmac::HMAC_SHA256, self.api_secret.peek().as_bytes());
+        let tag = hmac::sign(&key, signature_payload.as_bytes());
 
-        let mut mac = HmacSha256::new_from_slice(self.api_secret.peek().as_bytes())
-            .expect("HMAC can take key of any size");
-        mac.update(signature_payload.as_bytes());
-        let result = mac.finalize();
-        let signature = result.into_bytes();
-
-        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, signature)
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, tag.as_ref())
     }
 }
 
