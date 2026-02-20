@@ -1,19 +1,28 @@
 use crate::utils::{self, ErrorCodeAndMessage};
-use crate::{connectors, connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
+use crate::{
+    connectors,
+    connectors::trustpay::{TrustpayAmountConvertor, TrustpayRouterData},
+    types::ResponseRouterData,
+};
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
     pii,
     request::Method,
-    types::{FloatMajorUnit, StringMajorUnit},
+    types::{FloatMajorUnit, MinorUnit, StringMajorUnit},
     Email,
 };
 use domain_types::{
-    connector_flow::{Authorize, CreateAccessToken, Refund},
+    connector_flow::{Authorize, CreateAccessToken, CreateOrder, Refund},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, AmountInfo, ApplePayPaymentRequest,
+        ApplePaySessionResponse, ApplepaySessionTokenResponse, GooglePaySessionResponse,
+        GpayAllowedPaymentMethods, GpayMerchantInfo, GpaySessionTokenResponse,
+        GpayShippingAddressParameters, NextActionCall, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        RefundFlowData, RefundsData, RefundsResponseData, ResponseId, SdkNextAction,
+        SecretInfoToInitiateSdk, SessionToken, ThirdPartySdkSessionResponse,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -25,7 +34,7 @@ use domain_types::{
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
 };
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -1142,6 +1151,116 @@ pub enum TrustpayPaymentsRequest<
     NetworkTokenPaymentRequest(Box<PaymentRequestNetworkToken>),
 }
 
+// CreateOrder flow structs for wallet initialization
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrustpayCreateIntentRequest {
+    pub amount: StringMajorUnit,
+    pub currency: String,
+    pub init_apple_pay: Option<bool>,
+    pub init_google_pay: Option<bool>,
+    pub reference: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrustpayCreateIntentResponse {
+    // TrustPay's authorization secrets used by client
+    pub secrets: SdkSecretInfo,
+    // 	Data object to be used for Apple Pay or Google Pay
+    #[serde(flatten)]
+    pub init_result_data: InitResultData,
+    // Unique operation/transaction identifier
+    pub instance_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum InitResultData {
+    AppleInitResultData(TrustpayApplePayResponse),
+    GoogleInitResultData(TrustpayGooglePayResponse),
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SdkSecretInfo {
+    pub display: Secret<String>,
+    pub payment: Secret<String>,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrustpayApplePayResponse {
+    pub country_code: common_enums::CountryAlpha2,
+    pub currency_code: common_enums::Currency,
+    pub supported_networks: Vec<String>,
+    pub merchant_capabilities: Vec<String>,
+    pub total: ApplePayTotalInfo,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplePayTotalInfo {
+    pub label: String,
+    pub amount: StringMajorUnit,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrustpayGooglePayResponse {
+    pub merchant_info: GooglePayMerchantInfo,
+    pub allowed_payment_methods: Vec<GooglePayAllowedPaymentMethods>,
+    pub transaction_info: GooglePayTransactionInfo,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePayMerchantInfo {
+    pub merchant_name: String,
+    pub merchant_id: String,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePayTransactionInfo {
+    pub country_code: common_enums::CountryAlpha2,
+    pub currency_code: common_enums::Currency,
+    pub total_price_status: String,
+    pub total_price: StringMajorUnit,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePayAllowedPaymentMethods {
+    #[serde(rename = "type")]
+    pub payment_method_type: String,
+    pub parameters: GpayAllowedMethodsParameters,
+    pub tokenization_specification: GpayTokenizationSpecification,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GpayAllowedMethodsParameters {
+    pub allowed_auth_methods: Vec<String>,
+    pub allowed_card_networks: Vec<String>,
+    pub assurance_details_required: Option<bool>,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GpayTokenizationSpecification {
+    #[serde(rename = "type")]
+    pub token_specification_type: String,
+    pub parameters: GpayTokenParameters,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GpayTokenParameters {
+    pub gateway: String,
+    pub gateway_merchant_id: String,
+}
+
 #[derive(Debug, Serialize, Eq, PartialEq)]
 pub struct TrustpayMandatoryParams {
     pub billing_city: String,
@@ -1888,5 +2007,299 @@ fn get_refund_status_from_result_info(
         1133004 => (enums::RefundStatus::Failure, Some("MissingExternalId")),
         1152000 => (enums::RefundStatus::Failure, Some("RiskDecline")),
         _ => (enums::RefundStatus::Pending, None),
+    }
+}
+
+// CreateOrder flow implementations for wallet initialization
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        TrustpayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for TrustpayCreateIntentRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: TrustpayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
+
+        let is_apple_pay = item
+            .router_data
+            .request
+            .payment_method_type
+            .as_ref()
+            .map(|pmt| matches!(pmt, enums::PaymentMethodType::ApplePay));
+
+        let is_google_pay = item
+            .router_data
+            .request
+            .payment_method_type
+            .as_ref()
+            .map(|pmt| matches!(pmt, enums::PaymentMethodType::GooglePay));
+
+        Ok(Self {
+            amount,
+            currency: item.router_data.request.currency.to_string(),
+            init_apple_pay: is_apple_pay,
+            init_google_pay: is_google_pay,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TrustpayCreateIntentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let instance_id = item.response.instance_id.clone();
+        let create_intent_response = item.response.init_result_data.clone();
+        let secrets = item.response.secrets.clone();
+
+        // Get payment_method_type from the request
+        let payment_method_type = item
+            .router_data
+            .request
+            .payment_method_type
+            .as_ref()
+            .ok_or_else(|| ConnectorError::MissingRequiredField {
+                field_name: "payment_method_type",
+            })?;
+
+        match (payment_method_type, create_intent_response) {
+            (
+                enums::PaymentMethodType::ApplePay,
+                InitResultData::AppleInitResultData(apple_pay_response),
+            ) => get_apple_pay_session(instance_id, &secrets, apple_pay_response, item),
+            (
+                enums::PaymentMethodType::GooglePay,
+                InitResultData::GoogleInitResultData(google_pay_response),
+            ) => get_google_pay_session(instance_id, &secrets, google_pay_response, item),
+            _ => Err(report!(ConnectorError::InvalidWallet)),
+        }
+    }
+}
+
+pub(crate) fn get_apple_pay_session(
+    instance_id: String,
+    secrets: &SdkSecretInfo,
+    apple_pay_init_result: TrustpayApplePayResponse,
+    item: ResponseRouterData<
+        TrustpayCreateIntentResponse,
+        RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+    >,
+) -> Result<
+    RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+    Error,
+> {
+    let session_token = SessionToken::ApplePay(Box::new(ApplepaySessionTokenResponse {
+        session_token_data: Some(ApplePaySessionResponse::ThirdPartySdk(
+            ThirdPartySdkSessionResponse {
+                secrets: secrets.to_owned().into(),
+            },
+        )),
+        payment_request_data: Some(ApplePayPaymentRequest {
+            country_code: apple_pay_init_result.country_code,
+            currency_code: apple_pay_init_result.currency_code,
+            supported_networks: Some(apple_pay_init_result.supported_networks.clone()),
+            merchant_capabilities: Some(apple_pay_init_result.merchant_capabilities.clone()),
+            total: AmountInfo {
+                label: apple_pay_init_result.total.label.clone(),
+                amount: TrustpayAmountConvertor::convert_back(
+                    apple_pay_init_result.total.amount.clone(),
+                    apple_pay_init_result.currency_code,
+                )
+                .change_context(ConnectorError::ResponseDeserializationFailed)?,
+                total_type: None,
+            },
+            merchant_identifier: None,
+            required_billing_contact_fields: None,
+            required_shipping_contact_fields: None,
+            recurring_payment_request: None,
+        }),
+        connector: "trustpay".to_string(),
+        delayed_session_token: true,
+        sdk_next_action: {
+            SdkNextAction {
+                next_action: NextActionCall::Confirm,
+            }
+        },
+        connector_reference_id: None,
+        connector_sdk_public_key: None,
+        connector_merchant_id: None,
+    }));
+
+    Ok(RouterDataV2 {
+        resource_common_data: PaymentFlowData {
+            status: enums::AttemptStatus::AuthenticationPending,
+            ..item.router_data.resource_common_data.clone()
+        },
+        response: Ok(PaymentCreateOrderResponse {
+            order_id: instance_id,
+            session_token: Some(session_token),
+        }),
+        ..item.router_data.clone()
+    })
+}
+
+pub(crate) fn get_google_pay_session(
+    instance_id: String,
+    secrets: &SdkSecretInfo,
+    google_pay_init_result: TrustpayGooglePayResponse,
+    item: ResponseRouterData<
+        TrustpayCreateIntentResponse,
+        RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+    >,
+) -> Result<
+    RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+    Error,
+> {
+    let session_token = SessionToken::GooglePay(Box::new(
+        GpaySessionTokenResponse::GooglePaySession(GooglePaySessionResponse {
+            connector: "trustpay".to_string(),
+            delayed_session_token: true,
+            sdk_next_action: {
+                SdkNextAction {
+                    next_action: NextActionCall::Confirm,
+                }
+            },
+            merchant_info: google_pay_init_result.merchant_info.into(),
+            allowed_payment_methods: google_pay_init_result
+                .allowed_payment_methods
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            transaction_info: google_pay_init_result.transaction_info.into(),
+            secrets: Some((*secrets).clone().into()),
+            shipping_address_required: false,
+            email_required: false,
+            shipping_address_parameters: GpayShippingAddressParameters {
+                phone_number_required: false,
+            },
+        }),
+    ));
+
+    Ok(RouterDataV2 {
+        resource_common_data: PaymentFlowData {
+            status: enums::AttemptStatus::AuthenticationPending,
+            ..item.router_data.resource_common_data.clone()
+        },
+        response: Ok(PaymentCreateOrderResponse {
+            order_id: instance_id,
+            session_token: Some(session_token),
+        }),
+        ..item.router_data.clone()
+    })
+}
+
+// Helper structs for serializing wallet session data
+impl From<SdkSecretInfo> for SecretInfoToInitiateSdk {
+    fn from(secrets: SdkSecretInfo) -> Self {
+        Self {
+            display: secrets.display,
+            payment: Some(secrets.payment),
+        }
+    }
+}
+
+// From implementations for GooglePay types
+impl From<GooglePayTransactionInfo> for domain_types::connector_types::GpayTransactionInfo {
+    fn from(value: GooglePayTransactionInfo) -> Self {
+        let total_price =
+            TrustpayAmountConvertor::convert_back(value.total_price, value.currency_code)
+                .unwrap_or_else(|_| MinorUnit::new(0));
+
+        Self {
+            country_code: value.country_code,
+            currency_code: value.currency_code,
+            total_price_status: value.total_price_status,
+            total_price,
+        }
+    }
+}
+
+impl From<GooglePayMerchantInfo> for GpayMerchantInfo {
+    fn from(value: GooglePayMerchantInfo) -> Self {
+        Self {
+            merchant_id: Some(value.merchant_id),
+            merchant_name: value.merchant_name,
+        }
+    }
+}
+
+impl From<GooglePayAllowedPaymentMethods> for GpayAllowedPaymentMethods {
+    fn from(value: GooglePayAllowedPaymentMethods) -> Self {
+        Self {
+            payment_method_type: value.payment_method_type,
+            parameters: domain_types::connector_types::GpayAllowedMethodsParameters {
+                allowed_auth_methods: value.parameters.allowed_auth_methods,
+                allowed_card_networks: value.parameters.allowed_card_networks,
+                billing_address_required: None,
+                billing_address_parameters: None,
+                assurance_details_required: value.parameters.assurance_details_required,
+            },
+            tokenization_specification:
+                domain_types::connector_types::GpayTokenizationSpecification {
+                    token_specification_type: value
+                        .tokenization_specification
+                        .token_specification_type,
+                    parameters: domain_types::connector_types::GpayTokenParameters {
+                        gateway: Some(value.tokenization_specification.parameters.gateway),
+                        gateway_merchant_id: Some(
+                            value
+                                .tokenization_specification
+                                .parameters
+                                .gateway_merchant_id,
+                        ),
+                        public_key: None,
+                        protocol_version: None,
+                    },
+                },
+        }
     }
 }

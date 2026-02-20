@@ -7484,6 +7484,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
         value: grpc_api_types::payments::PaymentServiceCreateOrderRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let currency = common_enums::Currency::foreign_try_from(value.currency())?;
+        let webhook_url = value.webhook_url.clone();
+        let payment_method_type = <Option<common_enums::PaymentMethodType>>::foreign_try_from(
+            value.payment_method_type(),
+        )?;
 
         Ok(Self {
             amount: common_utils::types::MinorUnit::new(value.amount),
@@ -7493,7 +7497,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
                 .metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
                 .transpose()?,
-            webhook_url: value.webhook_url,
+            webhook_url,
+            payment_method_type,
         })
     }
 }
@@ -9057,6 +9062,77 @@ impl ForeignTryFrom<PaypalTransactionInfo> for grpc_api_types::payments::PaypalT
             currency_code: currency_code as i32,
             total_price: value.total_price.get_amount_as_i64(),
         })
+    }
+}
+
+impl ForeignTryFrom<SessionToken> for grpc_api_types::payments::SessionToken {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(value: SessionToken) -> Result<Self, error_stack::Report<Self::Error>> {
+        let session_token = match value {
+            SessionToken::GooglePay(gpay_token) => {
+                let gpay_response =
+                    grpc_api_types::payments::GpaySessionTokenResponse::foreign_try_from(
+                        *gpay_token,
+                    )?;
+                grpc_api_types::payments::SessionToken {
+                    wallet_name: Some(
+                        grpc_api_types::payments::session_token::WalletName::GooglePay(
+                            gpay_response,
+                        ),
+                    ),
+                }
+            }
+            SessionToken::Paypal(paypal_token) => {
+                let paypal_response = grpc_api_types::payments::PaypalSessionTokenResponse {
+                    connector: paypal_token.connector,
+                    session_token: paypal_token.session_token,
+                    sdk_next_action: grpc_api_types::payments::SdkNextAction::from(
+                        paypal_token.sdk_next_action.next_action,
+                    )
+                    .into(),
+                    client_token: paypal_token.client_token,
+                    transaction_info: paypal_token
+                        .transaction_info
+                        .map(grpc_api_types::payments::PaypalTransactionInfo::foreign_try_from)
+                        .transpose()?,
+                };
+                grpc_api_types::payments::SessionToken {
+                    wallet_name: Some(grpc_api_types::payments::session_token::WalletName::Paypal(
+                        paypal_response,
+                    )),
+                }
+            }
+            SessionToken::ApplePay(apple_pay_token) => {
+                let apple_pay_response = grpc_api_types::payments::ApplepaySessionTokenResponse {
+                    session_token_data: apple_pay_token
+                        .session_token_data
+                        .map(grpc_api_types::payments::ApplePaySessionResponse::foreign_try_from)
+                        .transpose()?,
+                    payment_request_data: apple_pay_token
+                        .payment_request_data
+                        .map(grpc_api_types::payments::ApplePayPaymentRequest::foreign_try_from)
+                        .transpose()?,
+                    connector: apple_pay_token.connector,
+                    delayed_session_token: apple_pay_token.delayed_session_token,
+                    sdk_next_action: grpc_api_types::payments::SdkNextAction::from(
+                        apple_pay_token.sdk_next_action.next_action,
+                    )
+                    .into(),
+                    connector_reference_id: apple_pay_token.connector_reference_id,
+                    connector_sdk_public_key: apple_pay_token.connector_sdk_public_key,
+                    connector_merchant_id: apple_pay_token.connector_merchant_id,
+                };
+                grpc_api_types::payments::SessionToken {
+                    wallet_name: Some(
+                        grpc_api_types::payments::session_token::WalletName::ApplePay(
+                            apple_pay_response,
+                        ),
+                    ),
+                }
+            }
+        };
+        Ok(session_token)
     }
 }
 
