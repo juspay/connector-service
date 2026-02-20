@@ -5,7 +5,7 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -73,8 +73,8 @@ pub struct FiservemeaPaymentMethod<T> {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentCard<T> {
-    pub number: Secret<String>,
+pub struct FiservemeaPaymentCard<T: PaymentMethodDataTypes> {
+    pub number: RawCardNumber<T>,
     pub security_code: Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
 }
@@ -155,7 +155,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 FiservemeaPaymentMethod {
                     payment_card: FiservemeaPaymentCard {
-                        number: Secret::new(card_data.card_number.peek().to_string()),
+                        number: card_data.card_number,
                         security_code: card_data.card_cvc,
                         expiry_date: FiservemeaExpiryDate {
                             month: card_data.card_exp_month.expose(),
