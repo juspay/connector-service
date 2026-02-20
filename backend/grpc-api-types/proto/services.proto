@@ -11,18 +11,16 @@
 //   payment.proto, which this file imports.
 //
 // Services:
-//   - PaymentService  — Full payment lifecycle: authorize, capture, void, refund,
-//                       mandates, 3DS authentication, session tokens, webhooks,
-//                       and more.
-//   - RefundService   — Refund status sync and webhook transformation.
-//   - DisputeService  — Dispute management: evidence submission, defence,
-//                       acceptance, status sync, and webhook transformation.
-//
-// Authentication:
-//   Connector credentials are not passed in individual RPC requests. They are
-//   resolved server-side based on the calling context. For connectors that
-//   require short-lived access tokens, use PaymentService.CreateAccessToken
-//   and pass the result back via the ConnectorState field in subsequent calls.
+//   - PaymentService   — Full payment lifecycle: authorize, capture, void, refund,
+//                        mandates, customer creation, payment method tokenization,
+//                        incremental authorization, redirect verification, and webhooks.
+//   - ClientAuthService — Authentication and session token management: access tokens,
+//                        session tokens, and SDK session tokens for wallet integrations.
+//   - ThreeDSAuthService — 3D Secure authentication workflow: pre-authentication,
+//                          authentication/challenge handling, and post-authentication validation.
+//   - RefundService    — Refund status synchronization and webhook transformation.
+//   - DisputeService   — Dispute management: evidence submission, defense, acceptance,
+//                        status sync, and webhook transformation.
 //
 // Webhook Flows:
 //   Each service exposes a Transform RPC for processing inbound connector
