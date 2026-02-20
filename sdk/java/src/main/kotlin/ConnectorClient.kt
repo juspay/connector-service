@@ -10,8 +10,8 @@
  * and the Python client at examples/example-uniffi-py/connector_client.py.
  */
 
-import uniffi.connector_service_ffi.authorizeReq
-import uniffi.connector_service_ffi.authorizeRes
+import uniffi.connector_service_ffi.authorizeReqTransformer
+import uniffi.connector_service_ffi.authorizeResTransformer
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -40,7 +40,7 @@ class ConnectorClient {
         val requestBytes = request.toByteArray()
 
         // Step 2: Build the connector HTTP request via FFI
-        val connectorRequestJson = authorizeReq(requestBytes, metadata)
+        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata)
         val connectorRequest = JSONObject(connectorRequestJson)
 
         val url = connectorRequest.getString("url")
@@ -74,7 +74,7 @@ class ConnectorClient {
             responseHeaders[name] = response.header(name) ?: ""
         }
 
-        val resultBytes = authorizeRes(
+        val resultBytes = authorizeResTransformer(
             responseBody.toByteArray(Charsets.UTF_8),
             response.code.toUShort(),
             responseHeaders,
