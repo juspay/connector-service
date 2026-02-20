@@ -13,6 +13,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Workflow-level permissions
+permissions:
+  contents: write      # Required for creating releases and pushing tags
+  actions: read        # Required for downloading artifacts
+  pull-requests: read  # Required for reading PR information
+
 env:
   CARGO_TERM_COLOR: always
 

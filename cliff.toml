@@ -38,6 +38,8 @@ trim = true
 conventional_commits = true
 # filter out the commits that are not conventional
 filter_unconventional = true
+# require all commits to be conventional (fails if any unconventional commits found)
+require_conventional = true
 # process each line of a commit as an individual commit
 split_commits = false
 # regex for preprocessing the commit messages
