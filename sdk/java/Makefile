@@ -34,6 +34,26 @@ generate-bindings: build-lib
 	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(GENERATED_OUT)/
 	@echo "UniFFI Kotlin bindings generated in $(GENERATED_OUT)/"
 
+# Check if Java/Gradle dependencies are available
+CHECK_PROTOC := $(shell which protoc 2>/dev/null && echo "yes" || echo "no")
+CHECK_GRADLE := $(shell ./gradlew --version 2>/dev/null && echo "yes" || echo "no")
+
+# Install/setup dependencies (noop for nix, helpful for manual setup)
+install-deps:
+	@echo "Checking Java/Gradle dependencies..."
+ifeq ($(CHECK_PROTOC),yes)
+	@echo "  ✓ protoc already available"
+else
+	@echo "  ✗ protoc not found - please install protoc or use nix develop"
+	@exit 1
+endif
+ifeq ($(CHECK_GRADLE),yes)
+	@echo "  ✓ Gradle wrapper available"
+else
+	@echo "  ✗ Gradle wrapper not found"
+	@exit 1
+endif
+
 # Generate Java protobuf stubs (usable from Kotlin)
 generate-proto:
 	@echo "Generating Java protobuf stubs..."
@@ -55,3 +75,19 @@ run:
 clean:
 	@rm -rf $(GENERATED_OUT)
 	@./gradlew clean 2>/dev/null || true
+
+# Packaging targets for release workflow
+package: ## Package SDK for distribution
+	@echo "Packaging Java SDK..."
+	@mkdir -p artifacts/java
+	@cp -rf $(GENERATED_OUT) artifacts/java/
+	@cp build.gradle* artifacts/java/ 2>/dev/null || true
+	@cp settings.gradle* artifacts/java/ 2>/dev/null || true
+	@cp gradlew* artifacts/java/ 2>/dev/null || true
+	@cp -rf gradle artifacts/java/ 2>/dev/null || true
+	@echo "Package created in artifacts/java/"
+
+dist: ## Create distribution archive
+	@$(MAKE) package
+	@cd artifacts && zip -r connector-service-java-sdk.zip java/
+	@echo "Distribution archive: artifacts/connector-service-java-sdk.zip"

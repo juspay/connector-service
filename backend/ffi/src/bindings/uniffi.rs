@@ -153,8 +153,8 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response = authorize_res_handler(request, response)
-            .unwrap_or_else(grpc_api_types::payments::PaymentServiceAuthorizeResponse::from);
+        let proto_response =
+            authorize_res_handler(request, response).unwrap_or_else(grpc_api_types::payments::PaymentServiceAuthorizeResponse::from);
 
         Ok(proto_response.encode_to_vec())
     }
