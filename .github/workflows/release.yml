@@ -121,11 +121,15 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: stable
+          components: clippy
           targets: ${{ matrix.target }}
 
       - name: Install cross-compilation tools (Linux)
         if: matrix.os == 'linux'
         run: |
+          curl -L https://github.com/ziglang/zig/releases/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
+          sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/zig
           cargo install cargo-zigbuild
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
@@ -194,7 +198,10 @@ jobs:
           node-version: '20'
 
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy
 
       - name: Download all binaries
         uses: actions/download-artifact@v4
