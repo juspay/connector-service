@@ -311,7 +311,7 @@ pub fn auth_from_metadata(
             Ok(ConnectorAuthType::CurrencyAuthKey { auth_key_map })
         }
         "external-auth" => {
-            let auth_json_base64 = parse_metadata(metadata, consts::X_EXTERNAL_AUTH_JSON)?;
+            let auth_json_base64 = parse_metadata(metadata, consts::X_EXTERNAL_AUTH)?;
 
             // Decode base64
             let decoded_bytes = BASE64_ENGINE
