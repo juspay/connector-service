@@ -182,8 +182,8 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpay,
-    curl_request: Json(worldpay::WorldpayPaymentRequest),
-    curl_response: worldpay::WorldpayPaymentResponse,
+    curl_request: Json(WorldpayPaymentRequest),
+    curl_response: WorldpayPaymentResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -211,7 +211,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpay,
-    curl_response: worldpay::WorldpayPSyncResponse,
+    curl_response: WorldpayPSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -244,8 +244,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpay,
-    curl_request: Json(worldpay::WorldpayCaptureRequest),
-    curl_response: worldpay::WorldpayCaptureResponse,
+    curl_request: Json(WorldpayCaptureRequest),
+    curl_response: WorldpayCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsCaptureData,
@@ -277,8 +277,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpay,
-    curl_request: Json(worldpay::WorldpayVoidRequest),
-    curl_response: worldpay::WorldpayVoidResponse,
+    curl_request: Json(WorldpayVoidRequest),
+    curl_response: WorldpayVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
@@ -307,8 +307,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpay,
-    curl_request: Json(worldpay::WorldpayRefundRequest),
-    curl_response: worldpay::WorldpayRefundResponse,
+    curl_request: Json(WorldpayRefundRequest),
+    curl_response: WorldpayRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
@@ -337,7 +337,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpay,
-    curl_response: worldpay::WorldpayRSyncResponse,
+    curl_response: WorldpayRSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
