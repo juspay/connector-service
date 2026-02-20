@@ -615,11 +615,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_tx_id = req
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            let connector_tx_id = &req.request.connector_transaction_id;
             Ok(format!("{}/payments/{}/refunds", self.connector_base_url_refunds(req), connector_tx_id))
         }
     }
@@ -649,11 +645,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_tx_id = req
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            let connector_tx_id = req.request.connector_transaction_id.clone();
             Ok(format!("{}/payments/{}/cancellations", self.connector_base_url_payments(req), connector_tx_id))
         }
     }
