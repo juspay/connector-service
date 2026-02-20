@@ -6,7 +6,7 @@
 ///
 /// # Example
 ///
-/// ```rust
+/// ```ignore
 /// payment_flow!(
 ///     capture,
 ///     Capture,
@@ -48,11 +48,11 @@ macro_rules! payment_flow {
                     + 'static,
             >(
                 payload: $req_type,
-                config: &std::sync::Arc<common_crate::configs::Config>,
+                config: &std::sync::Arc<ucs_env::configs::Config>,
                 connector: domain_types::connector_types::ConnectorEnum,
                 connector_auth_details: domain_types::router_data::ConnectorAuthType,
                 metadata: &common_utils::metadata::MaskedMetadata,
-            ) -> Result<Option<common_utils::request::Request>, common_crate::error::PaymentAuthorizationError> {
+            ) -> Result<Option<common_utils::request::Request>, ucs_env::error::PaymentAuthorizationError> {
                 let connector_data: connector_integration::types::ConnectorData<T> =
                     connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
@@ -71,8 +71,8 @@ macro_rules! payment_flow {
                     )
                     .map_err(|err| {
                         tracing::error!(error = ?err, "Failed to create PaymentFlowData");
-                        common_crate::error::PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
+                        ucs_env::error::PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Failure,
                             Some(err.to_string()),
                             Some($error_code.to_string()),
                             None,
@@ -83,8 +83,8 @@ macro_rules! payment_flow {
                 let payment_request_data = <$req_data_type as domain_types::utils::ForeignTryFrom<$req_type>>::foreign_try_from(payload.clone())
                     .map_err(|err| {
                         tracing::error!(error = ?err, "Failed to create payment request data");
-                        common_crate::error::PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
+                        ucs_env::error::PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Failure,
                             Some(err.to_string()),
                             Some($error_code.to_string()),
                             None,
@@ -104,8 +104,8 @@ macro_rules! payment_flow {
                     .build_request_v2(&router_data.clone())
                     .map_err(|err| {
                         tracing::error!(error = ?err, "Connector response handling failed");
-                        common_crate::error::PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
+                        ucs_env::error::PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Failure,
                             Some(err.to_string()),
                             Some($error_code.to_string()),
                             None,
@@ -127,16 +127,16 @@ macro_rules! payment_flow {
 ///
 /// # Example
 ///
-/// ```rust
-/// payment_flow_wrapper!(
-///     authorize_flow,
-///     authorize,
+/// ```ignore
+/// payment_flow_handler!(
+///     authorize_req_handler,
+///     authorize_req,
 ///     PaymentServiceAuthorizeRequest,
 ///     DefaultPCIHolder
 /// );
 /// ```
 ///
-/// This generates the `authorize_flow` function that wraps the `authorize` function.
+/// This generates the `authorize_req_handler` function that wraps the `authorize_req` function.
 #[macro_export]
 macro_rules! payment_flow_handler {
     (
@@ -147,10 +147,11 @@ macro_rules! payment_flow_handler {
     ) => {
         paste::paste! {
             pub fn $fn_name(
-                request: $crate::types::FFIRequestData<$req_type>,
-            ) -> Result<Option<common_utils::request::Request>, common_crate::error::PaymentAuthorizationError> {
+                request: $crate::types::FfiRequestData<$req_type>,
+            ) -> Result<Option<common_utils::request::Request>, ucs_env::error::PaymentAuthorizationError> {
                 let metadata_payload = request.extracted_metadata;
-                let metadata = &request.masked_metadata;
+                let metadata_owned = request.masked_metadata.unwrap_or_default();
+                let metadata = &metadata_owned;
                 let payload = request.payload;
 
                 // Load embedded development config (baked into binary at build time)

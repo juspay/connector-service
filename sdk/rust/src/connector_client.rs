@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
-use connector_service_ffi::types::{FFIMetadataPayload, FFIRequestData};
+use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
 use domain_types::router_response_types::Response;
 use grpc_api_types::payments::{PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse};
@@ -106,7 +106,7 @@ impl ConnectorClient {
     }
 }
 
-/// Build an FFIRequestData from a request and metadata HashMap.
+/// Build an FfiRequestData from a request and metadata HashMap.
 ///
 /// The metadata map must contain:
 /// - `"connector"`: connector name (e.g. `"Stripe"`)
@@ -116,7 +116,7 @@ impl ConnectorClient {
 pub fn build_ffi_request(
     payload: PaymentServiceAuthorizeRequest,
     metadata: &HashMap<String, String>,
-) -> Result<FFIRequestData<PaymentServiceAuthorizeRequest>, Box<dyn Error>> {
+) -> Result<FfiRequestData<PaymentServiceAuthorizeRequest>, Box<dyn Error>> {
     // Parse connector + auth type from metadata using serde (same approach as uniffi bindings)
     let connector_val = metadata
         .get("connector")
@@ -134,14 +134,15 @@ pub fn build_ffi_request(
         "connector_auth_type": auth_json,
     });
 
-    let extracted_metadata: FFIMetadataPayload =
+    let extracted_metadata: FfiMetadataPayload =
         serde_json::from_value(obj).map_err(|e| format!("Failed to parse metadata: {}", e))?;
 
-    let masked_metadata = ffi_headers_to_masked_metadata(metadata);
+    let masked_metadata = ffi_headers_to_masked_metadata(metadata)
+        .map_err(|e| format!("Failed to build masked metadata: {}", e))?;
 
-    Ok(FFIRequestData {
+    Ok(FfiRequestData {
         payload,
         extracted_metadata,
-        masked_metadata,
+        masked_metadata: Some(masked_metadata),
     })
 }
