@@ -146,7 +146,7 @@ pub struct WorldpayValue {
     pub amount: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpayAuthorizeResponse {
     pub outcome: String,
     pub payment_id: String,
@@ -159,13 +159,13 @@ pub struct WorldpayAuthorizeResponse {
     pub payment_instrument: Option<WorldpayPaymentInstrumentResponse>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpayIssuer {
     #[serde(rename = "authorizationCode")]
     pub authorization_code: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpayPaymentInstrumentResponse {
     #[serde(rename = "type")]
     pub instrument_type: String,
@@ -186,7 +186,7 @@ pub struct WorldpayPaymentInstrumentResponse {
     pub issuer_name: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpayExpiryDateResponse {
     pub month: u8,
     pub year: u16,
@@ -371,7 +371,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // =============================================================================
 // PAYMENT SYNC (PSync) FLOW
 // =============================================================================
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpaySyncResponse {
     #[serde(rename = "lastEvent")]
     pub last_event: String,
@@ -457,7 +457,7 @@ pub struct WorldpayCaptureRequest {
     pub reference: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpayCaptureResponse {
     pub outcome: String,
     #[serde(rename = "paymentId")]
@@ -537,7 +537,7 @@ impl TryFrom<
 // =============================================================================
 // VOID FLOW
 // =============================================================================
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpayVoidResponse {
     pub outcome: String,
     #[serde(rename = "paymentId")]
@@ -602,7 +602,7 @@ pub struct WorldpayRefundRequest {
     pub reference: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpayRefundResponse {
     pub outcome: String,
     #[serde(rename = "paymentId")]
@@ -690,7 +690,7 @@ impl TryFrom<
 // =============================================================================
 // REFUND SYNC (RSync) FLOW
 // =============================================================================
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpayRefundSyncResponse {
     #[serde(rename = "lastEvent")]
     pub last_event: String,
