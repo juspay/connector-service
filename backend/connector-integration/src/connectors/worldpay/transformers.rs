@@ -267,11 +267,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     expiry_date: WorldpayExpiryDate {
                         month: card_data
                             .card_exp_month
+                            .clone()
                             .expose()
                             .parse()
                             .unwrap_or(1),
                         year: card_data
                             .card_exp_year
+                            .clone()
                             .expose()
                             .parse()
                             .unwrap_or(2030),
