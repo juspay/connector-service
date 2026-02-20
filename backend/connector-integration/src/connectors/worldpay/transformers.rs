@@ -206,7 +206,7 @@ fn map_worldpay_outcome_to_attempt_status(outcome: &str) -> AttemptStatus {
 // Request transformer for Authorize flow
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        crate::connectors::WorldpayRouterData<
+        super::WorldpayRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -220,7 +220,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::WorldpayRouterData<
+        item: super::WorldpayRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
