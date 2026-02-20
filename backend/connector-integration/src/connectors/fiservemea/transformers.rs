@@ -67,7 +67,7 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentMethod<T> {
+pub struct FiservemeaPaymentMethod<T: PaymentMethodDataTypes> {
     pub payment_card: FiservemeaPaymentCard<T>,
 }
 
