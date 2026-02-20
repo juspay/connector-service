@@ -238,9 +238,9 @@ macros::macro_connector_implementation!(
 
         fn get_url(
             &self,
-            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/api/payments", self.base_url(&Connectors::default())))
+            Ok(format!("{}/api/payments", self.connector_base_url_payments(req)))
         }
     }
 );
