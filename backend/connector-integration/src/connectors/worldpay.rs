@@ -519,7 +519,7 @@ macros::macro_connector_implementation!(
 // STUB IMPLEMENTATIONS FOR UNSUPPORTED FLOWS
 // =============================================================================
 use domain_types::connector_flow::{
-    Accept, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
+    Accept, Authenticate, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
     DefendDispute, IncrementalAuthorization, MandateRevoke, PaymentMethodToken, PostAuthenticate,
     PreAuthenticate, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, VoidPC,
 };
@@ -528,7 +528,7 @@ use domain_types::connector_types::{
     ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
     MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
     PaymentCreateOrderResponse, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-    PaymentsCancelPostCaptureData, PaymentsIncrementalAuthorizationData,
+    PaymentsAuthenticateData, PaymentsCancelPostCaptureData, PaymentsIncrementalAuthorizationData,
     PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData,
     RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
     SetupMandateRequestData, SubmitEvidenceData,
