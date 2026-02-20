@@ -1339,7 +1339,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<(
         &WalletData,
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        Option<domain_types::router_data::PaymentMethodToken>,
     )> for AdyenPaymentMethod<T>
 {
     type Error = Error;
@@ -2066,7 +2065,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = get_amount_data(&item);
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-            AdyenPaymentMethod::try_from((wallet_data, &item.router_data)),
+            AdyenPaymentMethod::try_from((wallet_data, &item.router_data))?,
         ));
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let (recurring_processing_model, store_payment_method, shopper_reference) =
