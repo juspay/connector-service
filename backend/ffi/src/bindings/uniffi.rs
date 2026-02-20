@@ -77,7 +77,7 @@ mod uniffi_bindings_inner {
     /// # Returns
     /// JSON string: `{"url":"...","method":"POST","headers":{...},"body":{...}}`
     #[uniffi::export]
-    pub fn authorize_req(
+    pub fn authorize_req_transformer(
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
     ) -> Result<String, UniffiError> {
@@ -109,12 +109,12 @@ mod uniffi_bindings_inner {
     /// - `status_code`: HTTP status code from the connector response
     /// - `response_headers`: HTTP response headers from the connector
     /// - `request_bytes`: the original protobuf-encoded `PaymentServiceAuthorizeRequest`
-    /// - `metadata`: the original metadata map passed to `authorize_req`
+    /// - `metadata`: the original metadata map passed to `authorize_req_transformer`
     ///
     /// # Returns
     /// protobuf-encoded `PaymentServiceAuthorizeResponse` bytes
     #[uniffi::export]
-    pub fn authorize_res(
+    pub fn authorize_res_transformer(
         response_body: Vec<u8>,
         status_code: u16,
         response_headers: HashMap<String, String>,

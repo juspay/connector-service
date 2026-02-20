@@ -130,13 +130,13 @@ macro_rules! payment_flow {
 /// ```ignore
 /// payment_flow_handler!(
 ///     authorize_req_handler,
-///     authorize_req,
+///     authorize_req_transformer,
 ///     PaymentServiceAuthorizeRequest,
 ///     DefaultPCIHolder
 /// );
 /// ```
 ///
-/// This generates the `authorize_req_handler` function that wraps the `authorize_req` function.
+/// This generates the `authorize_req_handler` function that wraps the `authorize_req_transformer` function.
 #[macro_export]
 macro_rules! payment_flow_handler {
     (
