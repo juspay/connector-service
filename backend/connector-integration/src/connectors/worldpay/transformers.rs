@@ -290,7 +290,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let narrative_line1 = router_data
             .request
-            .description
+            .merchant_order_reference_id
             .clone()
             .unwrap_or_else(|| "Payment".to_string());
 
@@ -641,12 +641,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // For partial refunds, include the value
-        let value = if router_data.request.minor_amount.get_amount_as_i64()
-            < router_data.request.total_amount.get_amount_as_i64()
+        let value = if router_data.request.minor_refund_amount.get_amount_as_i64()
+            < router_data.request.minor_payment_amount.get_amount_as_i64()
         {
             Some(WorldpayValue {
                 currency: router_data.request.currency.to_string(),
-                amount: router_data.request.minor_amount.get_amount_as_i64(),
+                amount: router_data.request.minor_refund_amount.get_amount_as_i64(),
             })
         } else {
             None
