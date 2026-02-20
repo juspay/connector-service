@@ -75,41 +75,47 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // =============================================================================
 // CREATE ALL PREREQUISITES MACRO
 // =============================================================================
+use transformers::{
+    WorldpayAuthorizeRequest, WorldpayAuthorizeResponse, WorldpayCaptureRequest,
+    WorldpayCaptureResponse, WorldpayRefundRequest, WorldpayRefundResponse,
+    WorldpayRefundSyncResponse, WorldpaySyncResponse, WorldpayVoidResponse,
+};
+
 macros::create_all_prerequisites!(
     connector_name: Worldpay,
     generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: worldpay::WorldpayAuthorizeRequest,
-            response_body: worldpay::WorldpayAuthorizeResponse,
+            request_body: WorldpayAuthorizeRequest,
+            response_body: WorldpayAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            response_body: worldpay::WorldpaySyncResponse,
+            response_body: WorldpaySyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: worldpay::WorldpayCaptureRequest,
-            response_body: worldpay::WorldpayCaptureResponse,
+            request_body: WorldpayCaptureRequest,
+            response_body: WorldpayCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Void,
-            response_body: worldpay::WorldpayVoidResponse,
+            response_body: WorldpayVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
-            request_body: worldpay::WorldpayRefundRequest,
-            response_body: worldpay::WorldpayRefundResponse,
+            request_body: WorldpayRefundRequest,
+            response_body: WorldpayRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
-            response_body: worldpay::WorldpayRefundSyncResponse,
+            response_body: WorldpayRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
     ],
