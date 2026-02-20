@@ -2,11 +2,11 @@ use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
 use common_utils::types::StringMajorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, Refund, RSync, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData,
-        PaymentVoidData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -243,7 +243,12 @@ pub struct Order {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         FiservemeaRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for FiservemeaAuthorizeRequest<T>
@@ -292,7 +297,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let order = Some(Order {
-            order_id: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
+            order_id: Some(
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
         });
 
         Ok(Self {
@@ -387,10 +397,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or_else(|| response.transaction_state.clone().map(AttemptStatus::from))
             .unwrap_or(AttemptStatus::Pending);
 
-        let connector_transaction_id = response
-            .ipg_transaction_id
-            .clone()
-            .unwrap_or_default();
+        let connector_transaction_id = response.ipg_transaction_id.clone().unwrap_or_default();
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
@@ -420,12 +427,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[derive(Debug, Clone, Serialize)]
 pub struct FiservemeaSyncRequest;
 
-impl TryFrom<
-    FiservemeaRouterData<
-        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        (), // No payment method data needed for sync
-    >,
-> for FiservemeaSyncRequest
+impl
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            (), // No payment method data needed for sync
+        >,
+    > for FiservemeaSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -442,12 +450,13 @@ impl TryFrom<
 
 pub type FiservemeaSyncResponse = FiservemeaAuthorizeResponse;
 
-impl TryFrom<
-    ResponseRouterData<
-        FiservemeaSyncResponse,
-        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    >,
-> for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl
+    TryFrom<
+        ResponseRouterData<
+            FiservemeaSyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -490,10 +499,7 @@ impl TryFrom<
             .or_else(|| response.transaction_state.clone().map(AttemptStatus::from))
             .unwrap_or(AttemptStatus::Pending);
 
-        let connector_transaction_id = response
-            .ipg_transaction_id
-            .clone()
-            .unwrap_or_default();
+        let connector_transaction_id = response.ipg_transaction_id.clone().unwrap_or_default();
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
@@ -529,12 +535,13 @@ pub struct FiservemeaCaptureRequest {
     pub order: Option<Order>,
 }
 
-impl TryFrom<
-    FiservemeaRouterData<
-        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        (),
-    >,
-> for FiservemeaCaptureRequest
+impl
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            (),
+        >,
+    > for FiservemeaCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -553,7 +560,12 @@ impl TryFrom<
                 currency: router_data.request.currency.to_string(),
             },
             order: Some(Order {
-                order_id: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
+                order_id: Some(
+                    router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
             }),
         })
     }
@@ -561,12 +573,13 @@ impl TryFrom<
 
 pub type FiservemeaCaptureResponse = FiservemeaAuthorizeResponse;
 
-impl TryFrom<
-    ResponseRouterData<
-        FiservemeaCaptureResponse,
-        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    >,
-> for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl
+    TryFrom<
+        ResponseRouterData<
+            FiservemeaCaptureResponse,
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -609,10 +622,7 @@ impl TryFrom<
             .or_else(|| response.transaction_state.clone().map(AttemptStatus::from))
             .unwrap_or(AttemptStatus::Pending);
 
-        let connector_transaction_id = response
-            .ipg_transaction_id
-            .clone()
-            .unwrap_or_default();
+        let connector_transaction_id = response.ipg_transaction_id.clone().unwrap_or_default();
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
@@ -648,9 +658,13 @@ pub struct FiservemeaRefundRequest {
     pub comments: Option<String>,
 }
 
-impl TryFrom<
-    FiservemeaRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, ()>,
-> for FiservemeaRefundRequest
+impl
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            (),
+        >,
+    > for FiservemeaRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -675,12 +689,13 @@ impl TryFrom<
 
 pub type FiservemeaRefundResponse = FiservemeaAuthorizeResponse;
 
-impl TryFrom<
-    ResponseRouterData<
-        FiservemeaRefundResponse,
-        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    >,
-> for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl
+    TryFrom<
+        ResponseRouterData<
+            FiservemeaRefundResponse,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        >,
+    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -726,10 +741,7 @@ impl TryFrom<
             None => common_enums::RefundStatus::Pending,
         };
 
-        let connector_refund_id = response
-            .ipg_transaction_id
-            .clone()
-            .unwrap_or_default();
+        let connector_refund_id = response.ipg_transaction_id.clone().unwrap_or_default();
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id,
@@ -754,12 +766,13 @@ impl TryFrom<
 pub type FiservemeaRSyncRequest = FiservemeaSyncRequest;
 pub type FiservemeaRSyncResponse = FiservemeaAuthorizeResponse;
 
-impl TryFrom<
-    ResponseRouterData<
-        FiservemeaRSyncResponse,
-        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    >,
-> for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl
+    TryFrom<
+        ResponseRouterData<
+            FiservemeaRSyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -805,10 +818,7 @@ impl TryFrom<
             None => common_enums::RefundStatus::Pending,
         };
 
-        let connector_refund_id = response
-            .ipg_transaction_id
-            .clone()
-            .unwrap_or_default();
+        let connector_refund_id = response.ipg_transaction_id.clone().unwrap_or_default();
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id,
@@ -838,12 +848,13 @@ pub struct FiservemeaVoidRequest {
     pub comments: Option<String>,
 }
 
-impl TryFrom<
-    FiservemeaRouterData<
-        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        (),
-    >,
-> for FiservemeaVoidRequest
+impl
+    TryFrom<
+        FiservemeaRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            (),
+        >,
+    > for FiservemeaVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -864,12 +875,13 @@ impl TryFrom<
 
 pub type FiservemeaVoidResponse = FiservemeaAuthorizeResponse;
 
-impl TryFrom<
-    ResponseRouterData<
-        FiservemeaVoidResponse,
-        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    >,
-> for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl
+    TryFrom<
+        ResponseRouterData<
+            FiservemeaVoidResponse,
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -924,10 +936,7 @@ impl TryFrom<
             })
             .unwrap_or(AttemptStatus::Pending);
 
-        let connector_transaction_id = response
-            .ipg_transaction_id
-            .clone()
-            .unwrap_or_default();
+        let connector_transaction_id = response.ipg_transaction_id.clone().unwrap_or_default();
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),

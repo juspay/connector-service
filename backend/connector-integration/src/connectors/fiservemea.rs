@@ -3,7 +3,9 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit};
+use common_utils::{
+    errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -40,8 +42,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse, FiservemeaCaptureRequest,
-    FiservemeaCaptureResponse, FiservemeaErrorResponse, FiservemeaRefundRequest,
-    FiservemeaRefundResponse, FiservemeaRSyncRequest, FiservemeaRSyncResponse,
+    FiservemeaCaptureResponse, FiservemeaErrorResponse, FiservemeaRSyncRequest,
+    FiservemeaRSyncResponse, FiservemeaRefundRequest, FiservemeaRefundResponse,
     FiservemeaSyncRequest, FiservemeaSyncResponse, FiservemeaVoidRequest, FiservemeaVoidResponse,
 };
 
@@ -672,14 +674,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Fiservemea<T>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Fiservemea<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
-    for Fiservemea<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Fiservemea<T>
 {
 }
 
