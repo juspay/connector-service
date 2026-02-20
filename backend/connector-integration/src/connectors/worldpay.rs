@@ -22,7 +22,15 @@ use serde::Serialize;
 use transformers as worldpay;
 
 use super::macros;
-use crate::with_error_response_body;
+use crate::{
+    types::ResponseRouterData,
+    with_error_response_body,
+};
+use transformers::{
+    WorldpayCaptureRequest, WorldpayCaptureResponse, WorldpayErrorResponse,
+    WorldpayPaymentsRequest, WorldpayPaymentsResponse, WorldpayPSyncResponse,
+    WorldpayRefundRequest, WorldpayRefundResponse, WorldpayVoidRequest, WorldpayVoidResponse,
+};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
