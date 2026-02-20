@@ -283,7 +283,7 @@ pub struct WorldpayRefundResponse {
     pub reference: Option<String>,
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<F>
     TryFrom<
         ResponseRouterData<
             WorldpayRefundResponse,
@@ -358,7 +358,7 @@ pub struct WorldpayVoidResponse {
     pub reference: Option<String>,
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<F>
     TryFrom<
         ResponseRouterData<
             WorldpayVoidResponse,
@@ -405,7 +405,7 @@ pub struct WorldpayPSyncResponse {
     pub reference: Option<String>,
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<F>
     TryFrom<
         ResponseRouterData<
             WorldpayPSyncResponse,
