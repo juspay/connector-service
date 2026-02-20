@@ -14,7 +14,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 // =============================================================================
@@ -270,7 +270,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Determine transaction type based on capture method
-        let request_type = if router_data.request.is_auto_capture {
+        let request_type = if router_data.request.is_auto_capture() {
             FiservemeaTransactionType::PaymentCardSaleTransaction
         } else {
             FiservemeaTransactionType::PaymentCardPreAuthTransaction
@@ -740,6 +740,7 @@ impl TryFrom<
         let refunds_response_data = RefundsResponseData {
             connector_refund_id,
             refund_status,
+            status_code: item.http_code,
         };
 
         Ok(Self {
@@ -818,6 +819,7 @@ impl TryFrom<
         let refunds_response_data = RefundsResponseData {
             connector_refund_id,
             refund_status,
+            status_code: item.http_code,
         };
 
         Ok(Self {
