@@ -600,6 +600,7 @@ enum Connector {
   GIGADAT = 106;
   HYPERPG = 107;
   ZIFT = 108;
+  REVOLV3 = 109;
 }
 
 // Payment method types.
