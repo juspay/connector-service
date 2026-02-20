@@ -12,7 +12,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use time::Date;
 use utoipa::ToSchema;
 
-pub use crate::router_data::GooglePayDecryptedData;
+pub use crate::router_data::{GooglePayDecryptedData, PazeDecryptedData};
 use crate::{
     errors::{self, ApiError, ApplicationErrorResponse, ConnectorError},
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
@@ -608,7 +608,7 @@ pub enum WalletData {
     MobilePayRedirect(Box<MobilePayRedirection>),
     PaypalRedirect(PaypalRedirection),
     PaypalSdk(PayPalWalletData),
-    Paze(PazeWalletData),
+    Paze(Box<PazeWalletData>),
     SamsungPay(Box<SamsungPayWalletData>),
     TwintRedirect {},
     VippsRedirect {},
@@ -712,8 +712,10 @@ pub struct SamsungPayWalletData {
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct PazeWalletData {
-    #[schema(value_type = String)]
-    pub complete_response: Secret<String>,
+    #[schema(value_type = Option<String>)]
+    pub complete_response: Option<Secret<String>>,
+    #[schema(value_type = Option<String>)]
+    pub decrypted_data: Option<PazeDecryptedData>,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
