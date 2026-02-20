@@ -3,9 +3,7 @@ mod connector_client;
 use std::collections::HashMap;
 
 use connector_client::ConnectorClient;
-use grpc_api_types::payments::{
-    self, PaymentServiceAuthorizeRequest,
-};
+use grpc_api_types::payments::{self, PaymentServiceAuthorizeRequest};
 
 #[tokio::main]
 async fn main() {
@@ -41,17 +39,15 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
         payment_method: Some(payments::PaymentMethod {
             payment_method: Some(payments::payment_method::PaymentMethod::Card(
                 payments::CardDetails {
-                    card_number: Some("4111111111111111".to_string().try_into()
-                        .expect("valid card number")),
-                    card_exp_month: Some(hyperswitch_masking::Secret::new(
-                        "12".to_string(),
-                    )),
-                    card_exp_year: Some(hyperswitch_masking::Secret::new(
-                        "2050".to_string(),
-                    )),
-                    card_cvc: Some(hyperswitch_masking::Secret::new(
-                        "123".to_string(),
-                    )),
+                    card_number: Some(
+                        "4111111111111111"
+                            .to_string()
+                            .try_into()
+                            .expect("valid card number"),
+                    ),
+                    card_exp_month: Some(hyperswitch_masking::Secret::new("12".to_string())),
+                    card_exp_year: Some(hyperswitch_masking::Secret::new("2050".to_string())),
+                    card_cvc: Some(hyperswitch_masking::Secret::new("123".to_string())),
                     card_holder_name: Some(hyperswitch_masking::Secret::new(
                         "Test User".to_string(),
                     )),
@@ -142,14 +138,8 @@ fn demo_low_level(request: &PaymentServiceAuthorizeRequest, metadata: &HashMap<S
 
             if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_json) {
                 eprintln!("Connector HTTP request generated successfully:");
-                eprintln!(
-                    "  URL:    {}",
-                    parsed["url"].as_str().unwrap_or("N/A")
-                );
-                eprintln!(
-                    "  Method: {}",
-                    parsed["method"].as_str().unwrap_or("N/A")
-                );
+                eprintln!("  URL:    {}", parsed["url"].as_str().unwrap_or("N/A"));
+                eprintln!("  Method: {}", parsed["method"].as_str().unwrap_or("N/A"));
                 if let Some(headers) = parsed["headers"].as_object() {
                     let keys: Vec<&String> = headers.keys().collect();
                     eprintln!("  Headers: {:?}", keys);
@@ -163,9 +153,7 @@ fn demo_low_level(request: &PaymentServiceAuthorizeRequest, metadata: &HashMap<S
             }
         }
         Ok(None) => {
-            eprintln!(
-                "No connector request generated (connector may not require an HTTP call)\n"
-            );
+            eprintln!("No connector request generated (connector may not require an HTTP call)\n");
         }
         Err(e) => {
             eprintln!("Handler returned an error (FFI boundary is working):");
@@ -202,10 +190,8 @@ async fn demo_full_round_trip(
             eprintln!("Authorize response received:");
             eprintln!(
                 "{}",
-                serde_json::to_string_pretty(&response).unwrap_or_else(|_| format!(
-                    "{:?}",
-                    response
-                ))
+                serde_json::to_string_pretty(&response)
+                    .unwrap_or_else(|_| format!("{:?}", response))
             );
         }
         Err(e) => {
