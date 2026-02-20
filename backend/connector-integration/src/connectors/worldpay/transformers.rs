@@ -234,8 +234,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                let card_number_str = card_data.card_number.clone().0.expose().to_string();
-                let card_number = Secret::new(card_number_str);
+                let card_number = Secret::new(card_data.card_number.clone().0.expose().to_string());
 
                 let card_holder_name = card_data
                     .card_holder_name
@@ -254,7 +253,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         postal_code: details.zip.clone(),
                         city: details.city.clone(),
                         state: details.state.clone(),
-                        country_code: details.country.map(|c: common_enums::CountryAlpha2| c.to_string()),
+                        country_code: details.country.as_ref().map(|c| c.to_string()),
                     });
 
                 WorldpayPaymentInstrument::Plain(WorldpayCard {
