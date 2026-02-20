@@ -1,6 +1,5 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::types::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, Refund, Void},
     connector_types::{
@@ -9,7 +8,7 @@ use domain_types::{
         ResponseId,
     },
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -69,7 +68,7 @@ pub struct WorldpayNarrative {
     pub line1: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayValue {
     pub currency: String,
@@ -109,7 +108,7 @@ impl<T: PaymentMethodDataTypes>
         >,
     ) -> Result<Self, Self::Error> {
         let card = match &item.request.payment_method_data {
-            domain_types::payment_method_data::PaymentMethodData::Card(card) => Ok(card),
+            PaymentMethodData::Card(card) => Ok(card),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::NotImplemented("Payment method not supported".to_string())
             )),
@@ -136,7 +135,7 @@ impl<T: PaymentMethodDataTypes>
             payment_method: WorldpayPaymentMethod {
                 payment_method_type: "card".to_string(),
                 card: Some(WorldpayCard {
-                    number: card.card_number.clone(),
+                    number: card.card_number.clone().into(),
                     expiry_month: card.card_exp_month.clone(),
                     expiry_year: card.card_exp_year.clone(),
                     cvv: card.card_cvc.clone(),
@@ -383,6 +382,7 @@ impl TryFrom<ResponseRouterData<WorldpayRefundResponse, Self>>
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.refund_id,
                 refund_status: status,
+                status_code: item.http_code,
             }),
             ..item.router_data
         })
