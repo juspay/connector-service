@@ -46,14 +46,30 @@ generate-proto:
 	@touch $(PYTHON_OUT)/__init__.py
 	@echo "Proto stubs generated."
 
-# Install Python dependencies
+# Check if Python dependencies are available
+CHECK_GRPCIO := $(shell python3 -c "import grpc" 2>/dev/null && echo "yes" || echo "no")
+CHECK_PROTOC := $(shell python3 -m grpc_tools.protoc --version 2>/dev/null && echo "yes" || echo "no")
+
+# Install Python dependencies (only if not already available, e.g., via nix)
 install-deps:
-	@echo "Installing Python dependencies..."
-	@pip install grpcio grpcio-tools requests
+	@echo "Checking Python dependencies..."
+ifeq ($(CHECK_GRPCIO),yes)
+	@echo "  ✓ grpcio already available"
+else
+	@echo "  → Installing grpcio..."
+	@pip install grpcio
+endif
+ifeq ($(CHECK_PROTOC),yes)
+	@echo "  ✓ grpcio-tools already available"
+else
+	@echo "  → Installing grpcio-tools..."
+	@pip install grpcio-tools
+endif
 	@echo "Done."
 
 # Full setup: build lib, generate both bindings and proto stubs
 setup: install-deps generate-proto generate-bindings
+	@echo "Setup complete. Run 'make run' to execute."
 
 # Run the example
 run:
@@ -61,3 +77,17 @@ run:
 
 clean:
 	@rm -rf $(PYTHON_OUT)
+
+# Packaging targets for release workflow
+package: ## Package SDK for distribution
+	@echo "Packaging Python SDK..."
+	@mkdir -p artifacts/python
+	@cp -rf $(PYTHON_OUT) artifacts/python/
+	@cp main.py artifacts/python/example.py 2>/dev/null || true
+	@cp requirements*.txt artifacts/python/ 2>/dev/null || true
+	@echo "Package created in artifacts/python/"
+
+dist: ## Create distribution archive
+	@$(MAKE) package
+	@cd artifacts && zip -r connector-service-python-sdk.zip python/
+	@echo "Distribution archive: artifacts/connector-service-python-sdk.zip"

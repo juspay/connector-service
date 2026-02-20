@@ -39,15 +39,30 @@ generate-proto: install-deps
 	@./node_modules/.bin/pbts -o $(GENERATED_OUT)/proto.d.ts $(GENERATED_OUT)/proto.js
 	@echo "Proto TS generated in $(GENERATED_OUT)/proto.d.ts"
 
-# Install Node.js dependencies
+# Check if Node.js dependencies are available
+CHECK_NODE_MODULES := $(shell test -d node_modules && echo "yes" || echo "no")
+CHECK_PBJS := $(shell test -f node_modules/.bin/pbjs && echo "yes" || echo "no")
+
+# Install Node.js dependencies (only if not already available)
 install-deps:
-	@echo "Installing Node.js dependencies..."
+	@echo "Checking Node.js dependencies..."
+ifeq ($(CHECK_NODE_MODULES),yes)
+	@echo "  ✓ node_modules already exists"
+else
+	@echo "  → Installing npm dependencies..."
 	@npm install
+endif
+ifeq ($(CHECK_PBJS),yes)
+	@echo "  ✓ protobufjs tools already available"
+else
+	@echo "  → Installing protobufjs..."
+	@npm install protobufjs
+endif
 	@echo "Done."
 
 # Full setup
 setup: install-deps generate-bindings generate-proto
-	@echo "Setup complete. Run 'make run' or 'node main.js'."
+	@echo "Setup complete. Run 'make run' to execute."
 
 # Run the example
 run:
@@ -55,3 +70,17 @@ run:
 
 clean:
 	@rm -rf $(GENERATED_OUT) node_modules
+
+# Packaging targets for release workflow
+package: ## Package SDK for distribution
+	@echo "Packaging JavaScript SDK..."
+	@mkdir -p artifacts/javascript
+	@cp -rf $(GENERATED_OUT) artifacts/javascript/
+	@cp main.js artifacts/javascript/example.js 2>/dev/null || true
+	@cp package*.json artifacts/javascript/ 2>/dev/null || true
+	@echo "Package created in artifacts/javascript/"
+
+dist: ## Create distribution archive
+	@$(MAKE) package
+	@cd artifacts && zip -r connector-service-javascript-sdk.zip javascript/
+	@echo "Distribution archive: artifacts/connector-service-javascript-sdk.zip"
