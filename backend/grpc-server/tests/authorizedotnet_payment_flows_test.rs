@@ -26,7 +26,7 @@ use grpc_api_types::{
         Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReferenceId, PaymentAddress,
         PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
+        PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest,
         PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
         PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
@@ -548,8 +548,8 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
 
 // Helper function to create a register (setup mandate) request (matching your JSON format)
 #[allow(clippy::field_reassign_with_default)]
-fn create_register_request() -> PaymentServiceRegisterRequest {
-    let mut request = PaymentServiceRegisterRequest::default();
+fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
+    let mut request = PaymentServiceRegisterAutoDebitRequest::default();
 
     // Set amounts matching your JSON (3000 minor units)
     request.minor_amount = Some(TEST_AMOUNT);
