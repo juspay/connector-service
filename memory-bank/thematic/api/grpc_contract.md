@@ -18,7 +18,7 @@ service PaymentService {
   rpc Refund(RefundsRequest) returns (RefundsResponse);
   rpc PaymentCapture(PaymentsCaptureRequest) returns (PaymentsCaptureResponse);
   rpc SetupMandate(SetupMandateRequest) returns (SetupMandateResponse);
-  rpc AcceptDispute(AcceptDisputeRequest) returns (AcceptDisputeResponse);
+  rpc AcceptDispute(DisputeServiceAcceptRequest) returns (DisputeServiceAcceptResponse);
 }
 ```
 
@@ -432,17 +432,17 @@ let response = client.setup_mandate(request).await?;
 
 **Purpose**: Accept a dispute raised by a customer.
 
-**Request**: `AcceptDisputeRequest`
+**Request**: `DisputeServiceAcceptRequest`
 ```protobuf
-message AcceptDisputeRequest {
+message DisputeServiceAcceptRequest {
   optional string dispute_id = 1;
   string connector_dispute_id = 3;
 }
 ```
 
-**Response**: `AcceptDisputeResponse`
+**Response**: `DisputeServiceAcceptResponse`
 ```protobuf
-message AcceptDisputeResponse {
+message DisputeServiceAcceptResponse {
   optional string connector_dispute_id = 1;
   DisputeStatus dispute_status = 2;
   optional string connector_dispute_status = 3;
@@ -453,7 +453,7 @@ message AcceptDisputeResponse {
 
 **Usage Example**:
 ```rust
-let request = AcceptDisputeRequest {
+let request = DisputeServiceAcceptRequest {
     connector_dispute_id: "dispute_123456789".to_string(),
     ..Default::default()
 };

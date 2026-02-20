@@ -7,7 +7,7 @@ use cards::{
 use common_utils::{
     errors::ValidationError,
     ext_traits::{OptionExt, ValueExt},
-    MinorUnit,
+    MinorUnit, Money,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -347,8 +347,7 @@ pub enum PaymentMethodToken {
 #[derive(Debug, Default, Clone)]
 pub struct RecurringMandatePaymentData {
     pub payment_method_type: Option<common_enums::enums::PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
-    pub original_payment_authorized_amount: Option<MinorUnit>,
-    pub original_payment_authorized_currency: Option<common_enums::enums::Currency>,
+    pub original_payment_authorized_amount: Option<Money>,
     pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 

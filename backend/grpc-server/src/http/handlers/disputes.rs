@@ -10,8 +10,8 @@ use axum::{
 };
 use common_crate::configs::Config;
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, AcceptDisputeRequest, AcceptDisputeResponse,
-    DisputeDefendRequest, DisputeDefendResponse, DisputeResponse, DisputeServiceGetRequest,
+    dispute_service_server::DisputeService, DisputeServiceAcceptRequest, DisputeServiceAcceptResponse,
+    DisputeServiceDefendRequest, DisputeServiceDefendResponse, DisputeResponse, DisputeServiceGetRequest,
     DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,
     DisputeServiceTransformRequest, DisputeServiceTransformResponse,
 };
@@ -35,16 +35,16 @@ http_handler!(
 
 http_handler!(
     defend_dispute,
-    DisputeDefendRequest,
-    DisputeDefendResponse,
+    DisputeServiceDefendRequest,
+    DisputeServiceDefendResponse,
     defend,
     disputes_service
 );
 
 http_handler!(
     accept_dispute,
-    AcceptDisputeRequest,
-    AcceptDisputeResponse,
+    DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse,
     accept,
     disputes_service
 );
