@@ -98,7 +98,7 @@ impl<T: PaymentMethodDataTypes>
                 WorldpayCardPaymentMethod {
                     payment_method_type: "card".to_string(),
                     name: card_holder_name,
-                    number: card.card_number.clone().expose(),
+                    number: card.card_number.peek().to_string(),
                     expiry_month: card.card_exp_month.clone().expose(),
                     expiry_year: card.card_exp_year.clone().expose(),
                     cvv: card.card_cvc.clone().expose(),
