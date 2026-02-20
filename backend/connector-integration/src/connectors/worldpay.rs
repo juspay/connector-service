@@ -308,7 +308,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_transaction_id = &req.request.connector_transaction_id;
+            let connector_transaction_id = req.request.get_connector_transaction_id()?;
             Ok(format!("{}/api/payments/{}/settlements", self.connector_base_url_payments(req), connector_transaction_id))
         }
     }
