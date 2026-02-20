@@ -41,7 +41,7 @@ pub enum ConnectorAuthType {
     CurrencyAuthKey {
         auth_key_map: HashMap<common_enums::enums::Currency, common_utils::pii::SecretSerdeValue>,
     },
-    ExternalJsonAuth {
+    ExternalAuth {
         value: common_utils::pii::SecretSerdeValue,
     },
     CertificateAuth {
