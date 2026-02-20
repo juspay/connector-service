@@ -13,16 +13,16 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 
-// Generate authorize_req function using the payment_flow! macro
+// Generate authorize_req_transformer function using the payment_flow! macro
 payment_flow!(
-    authorize_req,
+    authorize_req_transformer,
     Authorize,
     PaymentServiceAuthorizeRequest,
     PaymentsAuthorizeData<T>,
     "PAYMENT_AUTHORIZE_ERROR"
 );
 
-pub fn authorize_res<
+pub fn authorize_res_transformer<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
         + Default
         + Eq
@@ -118,9 +118,9 @@ pub fn authorize_res<
     })
 }
 
-// Generate capture_req function using the payment_flow! macro
+// Generate capture_req_transformer function using the payment_flow! macro
 payment_flow!(
-    capture_req,
+    capture_req_transformer,
     Capture,
     PaymentServiceCaptureRequest,
     PaymentsCaptureData,

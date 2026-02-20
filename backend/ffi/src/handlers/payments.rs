@@ -5,7 +5,9 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
 };
 
-use crate::services::payments::{authorize_req, authorize_res, capture_req};
+use crate::services::payments::{
+    authorize_req_transformer, authorize_res_transformer, capture_req_transformer,
+};
 
 use crate::types::FfiRequestData;
 use domain_types::payment_method_data::DefaultPCIHolder;
@@ -13,7 +15,7 @@ use domain_types::payment_method_data::DefaultPCIHolder;
 // Generate authorize_req_handler using payment_flow_handler! macro
 payment_flow_handler!(
     authorize_req_handler,
-    authorize_req,
+    authorize_req_transformer,
     PaymentServiceAuthorizeRequest,
     DefaultPCIHolder
 );
@@ -29,7 +31,7 @@ pub fn authorize_res_handler(
     let payload = request.payload;
     let config = crate::utils::load_config(EMBEDDED_DEVELOPMENT_CONFIG)?;
 
-    authorize_res::<DefaultPCIHolder>(
+    authorize_res_transformer::<DefaultPCIHolder>(
         payload,
         &config,
         metadata_payload.connector,
@@ -42,7 +44,7 @@ pub fn authorize_res_handler(
 // Generate capture_req_handler using payment_flow_handler! macro
 payment_flow_handler!(
     capture_req_handler,
-    capture_req,
+    capture_req_transformer,
     PaymentServiceCaptureRequest,
     DefaultPCIHolder
 );
