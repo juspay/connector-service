@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    branches:
+      - ffi-implementation
   workflow_dispatch:
     inputs:
       branch:
