@@ -72,10 +72,10 @@ pub struct WorldpayErrorResponse {
 // AUTHORIZE FLOW
 // =============================================================================
 #[derive(Debug, Serialize)]
-pub struct WorldpayAuthorizeRequest<T: PaymentMethodDataTypes> {
+pub struct WorldpayAuthorizeRequest {
     pub transaction_reference: String,
     pub merchant: WorldpayMerchant,
-    pub instruction: WorldpayInstruction<T>,
+    pub instruction: WorldpayInstruction,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub channel: Option<String>,
 }
@@ -86,22 +86,22 @@ pub struct WorldpayMerchant {
 }
 
 #[derive(Debug, Serialize)]
-pub struct WorldpayInstruction<T: PaymentMethodDataTypes> {
+pub struct WorldpayInstruction {
     pub method: String,
-    pub payment_instrument: WorldpayPaymentInstrument<T>,
+    pub payment_instrument: WorldpayPaymentInstrument,
     pub narrative: WorldpayNarrative,
     pub value: WorldpayValue,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
-pub enum WorldpayPaymentInstrument<T: PaymentMethodDataTypes> {
+pub enum WorldpayPaymentInstrument {
     #[serde(rename = "plain")]
-    Plain(WorldpayCard<T>),
+    Plain(WorldpayCard),
 }
 
 #[derive(Debug, Serialize)]
-pub struct WorldpayCard<T: PaymentMethodDataTypes> {
+pub struct WorldpayCard {
     pub card_holder_name: Secret<String>,
     pub card_number: Secret<String>,
     pub expiry_date: WorldpayExpiryDate,
@@ -215,7 +215,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for WorldpayAuthorizeRequest<T>
+    > for WorldpayAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -234,14 +234,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                let card_number = Secret::new(
-                    card_data
-                        .card_number
-                        .clone()
-                        .0
-                        .expose()
-                        .to_string()
-                );
+                let card_number_str = card_data.card_number.clone().0.expose().to_string();
+                let card_number = Secret::new(card_number_str);
 
                 let card_holder_name = card_data
                     .card_holder_name
@@ -260,7 +254,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         postal_code: details.zip.clone(),
                         city: details.city.clone(),
                         state: details.state.clone(),
-                        country_code: details.country.map(|c| c.to_string()),
+                        country_code: details.country.map(|c: common_enums::CountryAlpha2| c.to_string()),
                     });
 
                 WorldpayPaymentInstrument::Plain(WorldpayCard {
@@ -694,6 +688,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.payment_id.clone(),
                 refund_status,
+                status_code: item.http_code,
             }),
             ..router_data.clone()
         })
@@ -744,12 +739,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let connector_refund_id = response
             .payment_id
             .clone()
-            .or_else(|| router_data.request.connector_refund_id.clone());
+            .or_else(|| Some(router_data.request.connector_refund_id.clone()));
 
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: connector_refund_id.unwrap_or_default(),
                 refund_status,
+                status_code: item.http_code,
             }),
             ..router_data.clone()
         })
