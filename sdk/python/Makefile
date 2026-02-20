@@ -41,7 +41,7 @@ generate-proto:
 	@python3 -m grpc_tools.protoc \
 		-I $(PROTO_DIR) \
 		--python_out=$(PYTHON_OUT) \
-		--pyi_out=$(PYTHON_OUT) \
+		--mypy_out=$(PYTHON_OUT) \
 		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto
 	@touch $(PYTHON_OUT)/__init__.py
 	@echo "Proto stubs generated."

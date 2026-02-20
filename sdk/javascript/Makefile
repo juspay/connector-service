@@ -31,7 +31,7 @@ generate-bindings: build-lib
 generate-proto: install-deps
 	@echo "Generating static protobuf JS module..."
 	@mkdir -p $(GENERATED_OUT)
-	@./node_modules/.bin/pbjs -t static-module -w commonjs --no-delimited --no-convert \
+	@./node_modules/.bin/pbjs -t static-module -w commonjs --no-delimited --no-convert --alt-comment \
 		-p $(PROTO_DIR) \
 		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto \
 		-o $(GENERATED_OUT)/proto.js
