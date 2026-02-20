@@ -1,0 +1,86 @@
+name: Commit Convention Check
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commit-lint:
+    name: Lint Commits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install git-cliff
+        run: |
+          cargo install git-cliff
+
+      - name: Check commit messages
+        run: |
+          # Get the commit range
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            # For push events, check the last commit
+            BASE_SHA="HEAD~1"
+            HEAD_SHA="HEAD"
+          fi
+
+          echo "Checking commits from $BASE_SHA to $HEAD_SHA"
+
+          # Get all commits in the range
+          commits=$(git log --format='%H' "$BASE_SHA..$HEAD_SHA" 2>/dev/null || git log --format='%H' -1)
+
+          has_error=0
+
+          for commit in $commits; do
+            message=$(git log --format='%s' -n 1 "$commit")
+            echo "Checking: $message"
+
+            # Check if commit message follows conventional commits pattern
+            if ! echo "$message" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'; then
+              echo "  ❌ Invalid commit message format"
+              echo "     Expected format: <type>[(scope)]: <description>"
+              echo "     Valid types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+              has_error=1
+            else
+              echo "  ✓ Valid commit message format"
+            fi
+          done
+
+          if [ $has_error -eq 1 ]; then
+            echo ""
+            echo "Commit message convention is not followed. Please use conventional commits."
+            echo ""
+            echo "Examples of valid commit messages:"
+            echo "  feat: add new payment method"
+            echo "  fix(api): resolve timeout issue"
+            echo "  docs: update README"
+            echo "  refactor(core): simplify error handling"
+            echo "  chore: update dependencies"
+            echo ""
+            exit 1
+          fi
+
+          echo ""
+          echo "✓ All commit messages follow the conventional commit format"
+
+      - name: Preview changelog impact
+        if: github.event_name == 'pull_request'
+        run: |
+          echo ""
+          echo "=== Changelog Impact Preview ==="
+          echo ""
+          git-cliff --unreleased --strip header || echo "Could not generate changelog preview"
