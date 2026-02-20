@@ -3,6 +3,11 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch to release from'
+        required: true
+        default: 'main'
+        type: string
       dry_run:
         description: 'Dry run (do not create release)'
         required: false
@@ -36,6 +41,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.inputs.branch }}
 
       - name: Install git-cliff
         run: |
