@@ -246,6 +246,9 @@ docs/_build/
 .pybuilder/
 target/
 
+# ignore target symlink at the top
+/target
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
