@@ -60,6 +60,8 @@
             # Python runtime and tools
             python3           # Python 3 runtime
             python3Packages.pip  # pip for installing Python deps
+            python3Packages.grpcio  # gRPC support
+            python3Packages.grpcio-tools  # protoc compiler for Python
 
             # Java/Gradle runtime and tools
             jdk17             # Java Development Kit (matches protobuf-java 4.x needs)
