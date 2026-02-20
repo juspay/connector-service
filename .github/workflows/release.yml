@@ -93,11 +93,11 @@ jobs:
     strategy:
       matrix:
         include:
-          # macOS Intel
-          - os: macos
-            arch: x86_64
-            target: x86_64-apple-darwin
-            runner: macos-latest
+          # macOS Intel (temporarily disabled)
+          # - os: macos
+          #   arch: x86_64
+          #   target: x86_64-apple-darwin
+          #   runner: macos-latest
           # macOS ARM
           - os: macos
             arch: aarch64
@@ -108,11 +108,11 @@ jobs:
             arch: x86_64
             target: x86_64-unknown-linux-gnu
             runner: ubuntu-latest
-          # Linux ARM
-          - os: linux
-            arch: aarch64
-            target: aarch64-unknown-linux-gnu
-            runner: ubuntu-latest
+          # Linux ARM (temporarily disabled)
+          # - os: linux
+          #   arch: aarch64
+          #   target: aarch64-unknown-linux-gnu
+          #   runner: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -125,14 +125,15 @@ jobs:
           components: clippy
           targets: ${{ matrix.target }}
 
-      - name: Install cross-compilation tools (Linux)
-        if: matrix.os == 'linux'
-        run: |
-          curl -L https://github.com/ziglang/zig/releases/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
-          sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/zig
-          cargo install cargo-zigbuild
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+      # Cross-compilation tools disabled - building native platforms only
+      # - name: Install cross-compilation tools (Linux)
+      #   if: matrix.os == 'linux'
+      #   run: |
+      #     curl -L https://github.com/ziglang/zig/releases/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
+      #     sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/zig
+      #     cargo install cargo-zigbuild
+      #     sudo apt-get update
+      #     sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build binary (${{ matrix.target }})
         run: |
@@ -149,40 +150,40 @@ jobs:
           path: |
             target/${{ matrix.target }}/release/libconnector_service_ffi.*
 
-  # Job 3: Build universal macOS binary
-  build-macos-universal:
-    name: Build macOS Universal Binary
-    runs-on: macos-latest
-    needs: build-binaries
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download macOS binaries
-        uses: actions/download-artifact@v4
-        with:
-          path: target
-          pattern: binary-*-apple-darwin
-
-      - name: Create universal binary
-        run: |
-          mkdir -p target/universal/release
-          lipo -create \
-            target/binary-x86_64-apple-darwin/libconnector_service_ffi.dylib \
-            target/binary-aarch64-apple-darwin/libconnector_service_ffi.dylib \
-            -output target/universal/release/libconnector_service_ffi.dylib
-
-      - name: Upload universal binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: binary-universal-apple-darwin
-          path: target/universal/release/libconnector_service_ffi.dylib
+  # Job 3: Build universal macOS binary (temporarily disabled)
+  # build-macos-universal:
+  #   name: Build macOS Universal Binary
+  #   runs-on: macos-latest
+  #   needs: build-binaries
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Download macOS binaries
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         path: target
+  #         pattern: binary-*-apple-darwin
+  #
+  #     - name: Create universal binary
+  #       run: |
+  #         mkdir -p target/universal/release
+  #         lipo -create \
+  #           target/binary-x86_64-apple-darwin/libconnector_service_ffi.dylib \
+  #           target/binary-aarch64-apple-darwin/libconnector_service_ffi.dylib \
+  #           -output target/universal/release/libconnector_service_ffi.dylib
+  #
+  #     - name: Upload universal binary
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: binary-universal-apple-darwin
+  #         path: target/universal/release/libconnector_service_ffi.dylib
 
   # Job 4: Package all SDKs
   package-sdks:
     name: Package SDKs
     runs-on: macos-latest
-    needs: [build-binaries, build-macos-universal, version-and-changelog]
+    needs: [build-binaries, version-and-changelog]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
