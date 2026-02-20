@@ -203,6 +203,121 @@ fn map_worldpay_outcome_to_attempt_status(outcome: &str) -> AttemptStatus {
     }
 }
 
+// Request transformer for Authorize flow
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        crate::connectors::WorldpayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for WorldpayAuthorizeRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: crate::connectors::WorldpayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        let payment_instrument = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                let card_number = Secret::new(
+                    card_data
+                        .card_number
+                        .clone()
+                        .0
+                        .expose()
+                        .to_string()
+                );
+
+                let card_holder_name = card_data
+                    .card_holder_name
+                    .clone()
+                    .unwrap_or_else(|| Secret::new("".to_string()));
+
+                let billing_address = router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing()
+                    .and_then(|addr| addr.address.as_ref())
+                    .map(|details| WorldpayBillingAddress {
+                        address1: details.line1.clone(),
+                        address2: details.line2.clone(),
+                        address3: details.line3.clone(),
+                        postal_code: details.zip.clone(),
+                        city: details.city.clone(),
+                        state: details.state.clone(),
+                        country_code: details.country.map(|c| c.to_string()),
+                    });
+
+                WorldpayPaymentInstrument::Plain(WorldpayCard {
+                    card_holder_name,
+                    card_number,
+                    expiry_date: WorldpayExpiryDate {
+                        month: card_data
+                            .card_exp_month
+                            .expose()
+                            .parse()
+                            .unwrap_or(1),
+                        year: card_data
+                            .card_exp_year
+                            .expose()
+                            .parse()
+                            .unwrap_or(2030),
+                    },
+                    cvc: Some(card_data.card_cvc.clone()),
+                    billing_address,
+                })
+            }
+            _ => {
+                return Err(ConnectorError::NotImplemented(
+                    "Only card payments are supported for Worldpay".to_string(),
+                )
+                .into())
+            }
+        };
+
+        let narrative_line1 = router_data
+            .request
+            .description
+            .clone()
+            .unwrap_or_else(|| "Payment".to_string());
+
+        Ok(Self {
+            transaction_reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            merchant: WorldpayMerchant {
+                entity: "default".to_string(),
+            },
+            instruction: WorldpayInstruction {
+                method: "card".to_string(),
+                payment_instrument,
+                narrative: WorldpayNarrative { line1: narrative_line1 },
+                value: WorldpayValue {
+                    currency: router_data.request.currency.to_string(),
+                    amount: router_data.request.minor_amount.get_amount_as_i64(),
+                },
+            },
+            channel: Some("ecom".to_string()),
+        })
+    }
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ResponseRouterData<
