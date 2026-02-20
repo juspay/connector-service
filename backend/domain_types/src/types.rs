@@ -564,7 +564,10 @@ impl<
                     let upi_source = convert_upi_source(upi_intent.upi_source)?;
                     Ok(PaymentMethodData::Upi(
                         payment_method_data::UpiData::UpiIntent(
-                            payment_method_data::UpiIntentData { upi_source },
+                            payment_method_data::UpiIntentData {
+                                upi_source,
+                                app_name: upi_intent.app_name,
+                            },
                         ),
                     ))
                 }

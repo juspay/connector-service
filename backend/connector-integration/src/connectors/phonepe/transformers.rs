@@ -14,6 +14,7 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, UpiSource},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
@@ -252,11 +253,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(_) => PhonepePaymentInstrument {
-                    instrument_type: constants::UPI_INTENT.to_string(),
-                    target_app: None, // Could be extracted from payment method details if needed
-                    vpa: None,
-                },
+                UpiData::UpiIntent(intent_data) => {
+                    let target_app =
+                        get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
+                    PhonepePaymentInstrument {
+                        instrument_type: constants::UPI_INTENT.to_string(),
+                        target_app,
+                        vpa: None,
+                    }
+                }
                 UpiData::UpiQr(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
@@ -404,11 +409,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(_) => PhonepePaymentInstrument {
-                    instrument_type: constants::UPI_INTENT.to_string(),
-                    target_app: None, // Could be extracted from payment method details if needed
-                    vpa: None,
-                },
+                UpiData::UpiIntent(intent_data) => {
+                    let target_app =
+                        get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
+                    PhonepePaymentInstrument {
+                        instrument_type: constants::UPI_INTENT.to_string(),
+                        target_app,
+                        vpa: None,
+                    }
+                }
                 UpiData::UpiQr(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
@@ -970,6 +979,64 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
         e
     })
     .ok()
+}
+
+// ===== TARGET APP MAPPING FOR PHONEPE UPI INTENT =====
+
+/// Gets the target app for PhonePe UPI Intent based on OS and payment source
+fn get_target_app_for_phonepe(
+    intent_data: &domain_types::payment_method_data::UpiIntentData,
+    browser_info: &Option<BrowserInformation>,
+) -> Option<String> {
+    match get_mobile_os(browser_info).as_str() {
+        "ANDROID" => intent_data.app_name.clone(),
+        _ => map_ios_payment_source_to_target_app(intent_data.app_name.as_deref()),
+    }
+}
+
+/// Detects the device OS from browser_info
+fn get_mobile_os(browser_info: &Option<BrowserInformation>) -> String {
+    browser_info
+        .as_ref()
+        .and_then(|info| info.os_type.as_ref())
+        .map(|os| match os.to_uppercase().as_str() {
+            "IOS" | "IPHONE" | "IPAD" | "MACOS" | "DARWIN" => "IOS".to_string(),
+            "ANDROID" => "ANDROID".to_string(),
+            _ => "ANDROID".to_string(),
+        })
+        .unwrap_or("ANDROID".to_string())
+}
+
+/// Maps iOS payment source to PhonePe's expected target app names
+pub fn map_ios_payment_source_to_target_app(payment_source: Option<&str>) -> Option<String> {
+    payment_source.and_then(|source| {
+        let source_lower = source.to_lowercase();
+        match source_lower.as_str() {
+            s if s.contains("tez") => Some("GPAY".to_string()),
+            s if s.contains("phonepe") => Some("PHONEPE".to_string()),
+            s if s.contains("paytm") => Some("PAYTM".to_string()),
+            _ => None,
+        }
+    })
+}
+
+/// Extract Android version from user agent string
+pub fn get_android_version_from_ua(user_agent: &str) -> String {
+    user_agent
+        .split_whitespace()
+        .skip_while(|&part| part != "Android")
+        .nth(1)
+        .and_then(|version| version.strip_suffix(';'))
+        .unwrap_or("")
+        .to_string()
+}
+
+pub fn get_source_channel(user_agent: Option<&String>) -> String {
+    match user_agent.map(|s| s.to_lowercase()) {
+        Some(ua) if ua.contains("android") => "ANDROID".to_string(),
+        Some(ua) if ua.contains("iphone") || ua.contains("darwin") => "IOS".to_string(),
+        _ => "WEB".to_string(),
+    }
 }
 
 /// Creates metadata for sync response with BIN from masked account number
