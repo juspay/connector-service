@@ -39,6 +39,21 @@ pub(crate) mod headers {
 // TRAIT IMPLEMENTATIONS
 // =============================================================================
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Worldpay<T>
+{
+    fn should_create_connector_customer(&self) -> bool {
+        false
+    }
+    fn should_do_payment_method_token(
+        &self,
+        _payment_method: common_enums::PaymentMethod,
+        _payment_method_type: Option<common_enums::PaymentMethodType>,
+    ) -> bool {
+        false
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Worldpay<T>
 {
 }
