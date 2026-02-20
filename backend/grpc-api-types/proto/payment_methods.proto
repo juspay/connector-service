@@ -492,7 +492,7 @@ message AmazonPayRedirectWallet {
 message PazeWallet {
   oneof paze_data {
     // Backward-compatible raw payload.
-    string complete_response = 1;
+    SecretString complete_response = 1;
     // Structured decrypted Paze payload.
     PazeDecryptedData decrypted_data = 2;
   }
