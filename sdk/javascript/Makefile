@@ -47,7 +47,7 @@ install-deps:
 
 # Full setup
 setup: install-deps generate-bindings generate-proto
-	@echo "Setup complete. Run 'make run' or 'node main.js'."
+	@echo "Setup complete. Run 'make run' to execute."
 
 # Run the example
 run:

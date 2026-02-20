@@ -16,10 +16,10 @@ bypassing gRPC. Uses UniFFI-generated Kotlin bindings with JNA.
 make setup
 
 # 2. Run the example (low-level FFI demo only)
-./gradlew run
+make run
 
 # 3. Run with full round-trip (requires valid Stripe test key)
-STRIPE_API_KEY=sk_test_your_key ./gradlew run
+STRIPE_API_KEY=sk_test_your_key make run
 ```
 
 ## How it works

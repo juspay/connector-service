@@ -46,7 +46,7 @@ generate-proto:
 
 # Full setup: build lib, generate both bindings and proto stubs
 setup: generate-proto generate-bindings
-	@echo "Setup complete. Run './gradlew run' to execute."
+	@echo "Setup complete. Run 'make run' to execute."
 
 # Run the example via Gradle
 run:

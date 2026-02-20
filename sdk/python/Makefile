@@ -54,6 +54,7 @@ install-deps:
 
 # Full setup: build lib, generate both bindings and proto stubs
 setup: install-deps generate-proto generate-bindings
+	@echo "Setup complete. Run 'make run' to execute."
 
 # Run the example
 run:

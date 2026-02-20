@@ -3,7 +3,7 @@
 setup:
 	@echo "Building sdk/rust..."
 	@cargo build --release -p hyperswitch-payments-client
-	@echo "Build complete!"
+	@echo "Setup complete. Run 'make run' to execute."
 
 run:
 	STRIPE_API_KEY=$(STRIPE_API_KEY) cargo run --release -p hyperswitch-payments-client

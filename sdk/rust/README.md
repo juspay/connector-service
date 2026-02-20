@@ -33,7 +33,7 @@ make setup
 ### Run (low-level demo only)
 
 ```bash
-cargo run -p hyperswitch-payments-client
+make run
 ```
 
 This runs Demo 1 which shows the connector HTTP request JSON without making any external calls.
@@ -41,7 +41,7 @@ This runs Demo 1 which shows the connector HTTP request JSON without making any 
 ### Run with Stripe API key (full round-trip)
 
 ```bash
-STRIPE_API_KEY=sk_test_xxx cargo run -p hyperswitch-payments-client
+STRIPE_API_KEY=sk_test_xxx make run
 ```
 
 This runs both demos — Demo 1 shows the request, Demo 2 makes the actual HTTP call to Stripe.
