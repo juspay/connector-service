@@ -468,7 +468,7 @@ pub struct WorldpayCaptureResponse {
 
 // Request transformer for Capture flow
 impl TryFrom<
-        crate::connectors::WorldpayRouterData<
+        super::WorldpayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     > for WorldpayCaptureRequest
@@ -476,7 +476,7 @@ impl TryFrom<
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::WorldpayRouterData<
+        item: super::WorldpayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
@@ -620,7 +620,7 @@ fn map_worldpay_refund_outcome_to_refund_status(outcome: &str) -> RefundStatus {
 
 // Request transformer for Refund flow
 impl TryFrom<
-        crate::connectors::WorldpayRouterData<
+        super::WorldpayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     > for WorldpayRefundRequest
@@ -628,7 +628,7 @@ impl TryFrom<
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::WorldpayRouterData<
+        item: super::WorldpayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
