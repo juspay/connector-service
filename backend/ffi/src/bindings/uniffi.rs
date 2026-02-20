@@ -32,17 +32,21 @@ mod uniffi_bindings_inner {
     ///   "connector"           — connector name, e.g. "stripe"
     ///   "connector_auth_type" — JSON-encoded ConnectorAuthType, e.g.
     ///                           '{"HeaderKey":{"api_key":"sk_test_..."}}'
-    fn parse_metadata(metadata: &HashMap<String, String>) -> Result<FFIMetadataPayload, UniffiError> {
-        let connector_val = metadata
-            .get("connector")
-            .ok_or_else(|| UniffiError::MissingMetadata {
-                key: "connector".to_string(),
-            })?;
-        let auth_val = metadata
-            .get("connector_auth_type")
-            .ok_or_else(|| UniffiError::MissingMetadata {
-                key: "connector_auth_type".to_string(),
-            })?;
+    fn parse_metadata(
+        metadata: &HashMap<String, String>,
+    ) -> Result<FFIMetadataPayload, UniffiError> {
+        let connector_val =
+            metadata
+                .get("connector")
+                .ok_or_else(|| UniffiError::MissingMetadata {
+                    key: "connector".to_string(),
+                })?;
+        let auth_val =
+            metadata
+                .get("connector_auth_type")
+                .ok_or_else(|| UniffiError::MissingMetadata {
+                    key: "connector_auth_type".to_string(),
+                })?;
 
         let auth_json: serde_json::Value =
             serde_json::from_str(auth_val).map_err(|e| UniffiError::MetadataParseError {
@@ -54,9 +58,8 @@ mod uniffi_bindings_inner {
             "connector_auth_type": auth_json,
         });
 
-        serde_json::from_value(obj).map_err(|e| UniffiError::MetadataParseError {
-            msg: e.to_string(),
-        })
+        serde_json::from_value(obj)
+            .map_err(|e| UniffiError::MetadataParseError { msg: e.to_string() })
     }
 
     /// Build the connector HTTP request.
@@ -84,8 +87,9 @@ mod uniffi_bindings_inner {
             masked_metadata,
         };
 
-        let result = authorize_req_handler(request)
-            .map_err(|e| UniffiError::HandlerError { msg: format!("{e:?}") })?;
+        let result = authorize_req_handler(request).map_err(|e| UniffiError::HandlerError {
+            msg: format!("{e:?}"),
+        })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
@@ -122,7 +126,11 @@ mod uniffi_bindings_inner {
         }
 
         let response = Response {
-            headers: if header_map.is_empty() { None } else { Some(header_map) },
+            headers: if header_map.is_empty() {
+                None
+            } else {
+                Some(header_map)
+            },
             response: Bytes::from(response_body),
             status_code,
         };
@@ -139,8 +147,8 @@ mod uniffi_bindings_inner {
             masked_metadata,
         };
 
-        let proto_response = authorize_res_handler(request, response)
-            .unwrap_or_else(|err_response| err_response);
+        let proto_response =
+            authorize_res_handler(request, response).unwrap_or_else(|err_response| err_response);
 
         Ok(proto_response.encode_to_vec())
     }

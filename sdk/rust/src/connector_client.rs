@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use domain_types::router_response_types::Response;
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FFIMetadataPayload, FFIRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
+use domain_types::router_response_types::Response;
 use grpc_api_types::payments::{PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse};
 
 /// A Rust-native connector client that calls handler functions directly
@@ -134,8 +134,8 @@ pub fn build_ffi_request(
         "connector_auth_type": auth_json,
     });
 
-    let extracted_metadata: FFIMetadataPayload = serde_json::from_value(obj)
-        .map_err(|e| format!("Failed to parse metadata: {}", e))?;
+    let extracted_metadata: FFIMetadataPayload =
+        serde_json::from_value(obj).map_err(|e| format!("Failed to parse metadata: {}", e))?;
 
     let masked_metadata = ffi_headers_to_masked_metadata(metadata);
 
