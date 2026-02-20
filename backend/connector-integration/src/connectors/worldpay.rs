@@ -117,7 +117,7 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: WorldpayRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
