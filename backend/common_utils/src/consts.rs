@@ -97,7 +97,7 @@ pub const X_KEY2: &str = "x-key2";
 pub const X_API_SECRET: &str = "x-api-secret";
 /// Auth Key Map header
 pub const X_AUTH_KEY_MAP: &str = "x-auth-key-map";
-/// Stringified JSON header for external authentication details
+/// BASE64 encoded JSON header for external authentication details
 pub const X_EXTERNAL_AUTH: &str = "x-external-auth";
 /// Header key for external vault metadata
 pub const X_EXTERNAL_VAULT_METADATA: &str = "x-external-vault-metadata";
