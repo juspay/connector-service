@@ -12,7 +12,7 @@ use domain_types::{
         SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::*,
-    errors::{self, ConnectorError},
+    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -33,7 +33,7 @@ use crate::{
     with_error_response_body,
 };
 use transformers::{
-    WorldpayCaptureRequest, WorldpayCaptureResponse, WorldpayErrorResponse,
+    WorldpayCaptureRequest, WorldpayCaptureResponse,
     WorldpayPaymentsRequest, WorldpayPaymentsResponse, WorldpayPSyncResponse,
     WorldpayRefundRequest, WorldpayRefundResponse, WorldpayVoidRequest, WorldpayVoidResponse,
 };
@@ -90,7 +90,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
-        Ok(domain_types::router_data::ErrorResponse {
+        Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.code,
             message: response.message,
