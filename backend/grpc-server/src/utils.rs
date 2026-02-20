@@ -332,7 +332,7 @@ pub fn auth_from_metadata(
                 }),
             )?;
 
-            Ok(ConnectorAuthType::ExternalJsonAuth {
+            Ok(ConnectorAuthType::ExternalAuth {
                 value: auth_json.into(),
             })
         }

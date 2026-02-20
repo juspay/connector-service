@@ -131,7 +131,7 @@ impl ConnectorAuthType {
             Self::CurrencyAuthKey { auth_key_map } => Self::CurrencyAuthKey {
                 auth_key_map: auth_key_map.clone(),
             },
-            Self::ExternalJsonAuth { value } => Self::ExternalJsonAuth {
+            Self::ExternalAuth { value } => Self::ExternalAuth {
                 value: value.clone(),
             },
             Self::CertificateAuth {
