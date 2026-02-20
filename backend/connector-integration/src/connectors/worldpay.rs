@@ -172,6 +172,8 @@ macros::create_all_prerequisites!(
 // =============================================================================
 // EMPTY CONNECTOR INTEGRATION IMPLEMENTATIONS FOR ADDITIONAL FLOWS
 // =============================================================================
+// Note: Authorize, PSync, Capture, Refund, Void flows are implemented via macros
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         connector_flow::Accept,
