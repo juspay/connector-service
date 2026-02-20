@@ -38,6 +38,22 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
     }
 }
 
+pub struct FiservemeaRouterData<U, T> {
+    pub router_data: U,
+    pub connector: T,
+}
+
+impl<U, T> TryFrom<(U, T)> for FiservemeaRouterData<U, T> {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from((router_data, connector): (U, T)) -> Result<Self, Self::Error> {
+        Ok(Self {
+            router_data,
+            connector,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaErrorResponse {
