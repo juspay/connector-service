@@ -314,7 +314,7 @@ message AppleWallet {
   message PaymentData{
     oneof payment_data {
       string encrypted_data = 1;     // Encrypted Apple Pay payment data as string
-      ApplePayPredecryptData decrypted_data = 2;  // Decrypted Apple Pay payment data
+      ApplePayDecryptedData decrypted_data = 2;  // Decrypted Apple Pay payment data
     }
   }
   PaymentData payment_data = 1;
@@ -331,8 +331,8 @@ message AppleWallet {
   string transaction_identifier = 3;
 }
 
-// Apple Pay predecrypted data structure
-message ApplePayPredecryptData {
+// Apple Pay decrypted data structure
+message ApplePayDecryptedData {
   // The primary account number
   CardNumberType application_primary_account_number = 1;
   
@@ -381,20 +381,20 @@ message GoogleWallet {
     }
     optional AssuranceDetails assurance_details = 3;
   }
-  PaymentMethodInfo info = 3;
-  
-  // Tokenization data - can be either encrypted or predecrypted
+
+  // Tokenization data - can be either encrypted or decrypted
   message TokenizationData {
     oneof tokenization_data {
-      GPayPredecryptData decrypted_data = 1;     // Predecrypted Google Pay payment data
+      GooglePayDecryptedData decrypted_data = 1;     // Decrypted Google Pay payment data
       GpayEncryptedTokenizationData encrypted_data = 2;  // Encrypted Google Pay payment data
     }
   }
+
+  PaymentMethodInfo info = 3;
   TokenizationData tokenization_data = 4;
 }
 
-// Google Pay predecrypted data structure
-message GPayPredecryptData {
+message GooglePayDecryptedData {
   // The card's expiry month
   SecretString card_exp_month = 1;
   

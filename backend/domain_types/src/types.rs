@@ -654,52 +654,22 @@ impl<
                                     Ok(payment_method_data::ApplePayPaymentData::Encrypted(encrypted_data))
                                 },
                                 Some(grpc_api_types::payments::apple_wallet::payment_data::PaymentData::DecryptedData(decrypted_data)) => {
-                                    let decrypted_payment_data = decrypted_data.payment_data.ok_or(
-                                        ApplicationErrorResponse::BadRequest(ApiError {
-                                            sub_code: "MISSING_DECRYPTED_PAYMENT_DATA".to_owned(),
-                                            error_identifier: 400,
-                                            error_message: "Apple Pay decrypted payment data is required".to_owned(),
-                                            error_object: None,
-                                        })
+                                    let payment_data = payment_method_data::ApplePayWalletData::validate_decrypted_payment_data(
+                                        decrypted_data.payment_data,
                                     )?;
 
                                     Ok(payment_method_data::ApplePayPaymentData::Decrypted(
-                                        payment_method_data::ApplePayPredecryptData {
-                                            application_primary_account_number: decrypted_data.application_primary_account_number.ok_or(
-                                                ApplicationErrorResponse::BadRequest(ApiError {
-                                                    sub_code: "MISSING_APPLICATION_PRIMARY_ACCOUNT_NUMBER".to_owned(),
-                                                    error_identifier: 400,
-                                                    error_message: "Apple Pay payment data application primary account number is required".to_owned(),
-                                                    error_object: None,
-                                                })
+                                        payment_method_data::ApplePayDecryptedData {
+                                            application_primary_account_number: payment_method_data::ApplePayWalletData::validate_decrypted_primary_account_number(
+                                                decrypted_data.application_primary_account_number,
                                             )?,
-                                            application_expiration_month: decrypted_data.application_expiration_month.ok_or(
-                                                ApplicationErrorResponse::BadRequest(ApiError {
-                                                    sub_code: "MISSING_APPLICATION_EXPIRATION_MONTH".to_owned(),
-                                                    error_identifier: 400,
-                                                    error_message: "Apple Pay payment data application expiration month is required".to_owned(),
-                                                    error_object: None,
-                                                })
+                                            application_expiration_month: payment_method_data::ApplePayWalletData::validate_decrypted_expiration_month(
+                                                decrypted_data.application_expiration_month,
                                             )?,
-                                            application_expiration_year: decrypted_data.application_expiration_year.ok_or(
-                                                ApplicationErrorResponse::BadRequest(ApiError {
-                                                    sub_code: "MISSING_APPLICATION_EXPIRATION_YEAR".to_owned(),
-                                                    error_identifier: 400,
-                                                    error_message: "Apple Pay payment data application expiration year is required".to_owned(),
-                                                    error_object: None,
-                                                })
+                                            application_expiration_year: payment_method_data::ApplePayWalletData::validate_decrypted_expiration_year(
+                                                decrypted_data.application_expiration_year,
                                             )?,
-                                            payment_data: payment_method_data::ApplePayCryptogramData {
-                                                online_payment_cryptogram: decrypted_payment_data.online_payment_cryptogram.ok_or(
-                                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                                        sub_code: "MISSING_ONLINE_PAYMENT_CRYPTOGRAM".to_owned(),
-                                                        error_identifier: 400,
-                                                        error_message: "Apple Pay payment data online payment cryptogram is required".to_owned(),
-                                                        error_object: None,
-                                                    })
-                                                )?,
-                                                eci_indicator: decrypted_payment_data.eci_indicator,
-                                            },
+                                            payment_data,
                                         }
                                     ))
                                 },
@@ -756,41 +726,26 @@ impl<
 
                     // Handle the new oneof tokenization_data structure
                     let gpay_tokenization_data = match tokenization_data.tokenization_data {
-                                Some(grpc_api_types::payments::google_wallet::tokenization_data::TokenizationData::DecryptedData(predecrypt_data)) => {
+                                Some(grpc_api_types::payments::google_wallet::tokenization_data::TokenizationData::DecryptedData(decrypt_data)) => {
                                     Ok(payment_method_data::GpayTokenizationData::Decrypted(
-                                        payment_method_data::GPayPredecryptData {
-                                            card_exp_month: predecrypt_data.card_exp_month.ok_or(
-                                                ApplicationErrorResponse::BadRequest(ApiError {
-                                                    sub_code: "MISSING_CARD_EXP_MONTH".to_owned(),
-                                                    error_identifier: 400,
-                                                    error_message: "Google Pay tokenization data card exp month is required".to_owned(),
-                                                    error_object: None,
-                                                })
+                                        payment_method_data::GooglePayDecryptedData {
+                                            card_exp_month: payment_method_data::GooglePayWalletData::validate_decrypted_card_exp_month(
+                                                decrypt_data.card_exp_month,
                                             )?,
-                                            card_exp_year: predecrypt_data.card_exp_year.ok_or(
-                                                ApplicationErrorResponse::BadRequest(ApiError {
-                                                    sub_code: "MISSING_CARD_EXP_YEAR".to_owned(),
-                                                    error_identifier: 400,
-                                                    error_message: "Google Pay tokenization data card exp year is required".to_owned(),
-                                                    error_object: None,
-                                                })
+                                            card_exp_year: payment_method_data::GooglePayWalletData::validate_decrypted_card_exp_year(
+                                                decrypt_data.card_exp_year,
                                             )?,
-                                            application_primary_account_number: predecrypt_data.application_primary_account_number.ok_or(
-                                                ApplicationErrorResponse::BadRequest(ApiError {
-                                                    sub_code: "MISSING_APPLICATION_PRIMARY_ACCOUNT_NUMBER".to_owned(),
-                                                    error_identifier: 400,
-                                                    error_message: "Google Pay tokenization data application primary account number is required".to_owned(),
-                                                    error_object: None,
-                                                })
+                                            application_primary_account_number: payment_method_data::GooglePayWalletData::validate_decrypted_primary_account_number(
+                                                decrypt_data.application_primary_account_number,
                                             )?,
-                                            cryptogram: predecrypt_data.cryptogram,
-                                            eci_indicator: predecrypt_data.eci_indicator,
+                                            cryptogram: decrypt_data.cryptogram,
+                                            eci_indicator: decrypt_data.eci_indicator,
                                         }
                                     ))
                                 },
                                 Some(grpc_api_types::payments::google_wallet::tokenization_data::TokenizationData::EncryptedData(encrypted_data)) => {
                                     Ok(payment_method_data::GpayTokenizationData::Encrypted(
-                                        payment_method_data::GpayEcryptedTokenizationData {
+                                        payment_method_data::GpayEncryptedTokenizationData {
                                             token_type: encrypted_data.token_type,
                                             token: encrypted_data.token,
                                         }
@@ -3161,7 +3116,9 @@ impl
             access_token,
             session_token: value.session_token,
             reference_id: value.connector_order_reference_id.clone(),
-            payment_method_token: value.payment_method_token.and_then(parse_payment_method_token),
+            payment_method_token: value
+                .payment_method_token
+                .map(router_data::PaymentMethodToken::Token),
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -6777,7 +6734,9 @@ impl
             access_token,
             session_token: value.session_token,
             reference_id: None,
-            payment_method_token: value.payment_method_token.and_then(parse_payment_method_token),
+            payment_method_token: value
+                .payment_method_token
+                .map(router_data::PaymentMethodToken::Token),
             preprocessing_id: None,
             connector_api_version: None,
             test_mode,
