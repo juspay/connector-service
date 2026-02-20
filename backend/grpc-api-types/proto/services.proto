@@ -87,15 +87,15 @@ service PaymentService {
 
   // Sets up a mandate for future recurring payments. Stores customer consent
   // for automatic charges without re-entering payment details each time.
-  rpc Register(PaymentServiceRegisterRequest) returns (PaymentServiceRegisterResponse);
+  rpc RegisterAutoDebit(PaymentServiceRegisterAutoDebitRequest) returns (PaymentServiceRegisterAutoDebitResponse);
 
   // Charges using an existing stored mandate. Processes repeat payments for
   // subscriptions or recurring billing without collecting payment details.
-  rpc ChargeAgain(PaymentServiceChargeAgainRequest) returns (PaymentServiceChargeAgainResponse);
+  rpc AutoDebit(PaymentServiceAutoDebitRequest) returns (PaymentServiceAutoDebitResponse);
 
   // Cancels an existing recurring payment mandate. Stops future automatic
   // charges on customer's stored consent for subscription cancellations.
-  rpc RevokeMandate(PaymentServiceRevokeMandateRequest) returns (PaymentServiceRevokeMandateResponse);
+  rpc RevokeAutoDebit(PaymentServiceRevokeAutoDebitRequest) returns (PaymentServiceRevokeAutoDebitResponse);
 
   // Processes webhook notifications from connectors. Translates connector events
   // into standardized responses for asynchronous payment state updates.

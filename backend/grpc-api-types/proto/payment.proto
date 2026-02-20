@@ -1883,7 +1883,7 @@ message DisputeResponse {
 }
 
 // Request message for setting up a mandate
-message PaymentServiceRegisterRequest {
+message PaymentServiceRegisterAutoDebitRequest {
   // Identification
   Identifier request_ref_id = 1;
 
@@ -1949,7 +1949,7 @@ message PaymentServiceRegisterRequest {
 }
 
 // Response message for a mandate setup operation
-message PaymentServiceRegisterResponse {
+message PaymentServiceRegisterAutoDebitResponse {
   // Identification
   Identifier registration_id = 1; // Identifier for the mandate registration
 
@@ -1983,7 +1983,7 @@ message PaymentServiceRegisterResponse {
 }
 
 // Request message for repeat payment (MIT - Merchant Initiated Transaction)
-message PaymentServiceChargeAgainRequest {
+message PaymentServiceAutoDebitRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
 
@@ -2052,7 +2052,7 @@ message PaymentServiceChargeAgainRequest {
 }
 
 // Response message for repeat payment operation
-message PaymentServiceChargeAgainResponse {
+message PaymentServiceAutoDebitResponse {
   // Identification
   Identifier transaction_id = 1;
 
@@ -2086,7 +2086,7 @@ message PaymentServiceChargeAgainResponse {
 }
 
 // Request message for a mandate revoke operation
-message PaymentServiceRevokeMandateRequest {
+message PaymentServiceRevokeAutoDebitRequest {
   // Identification
   Identifier request_ref_id = 1;
 
@@ -2096,7 +2096,7 @@ message PaymentServiceRevokeMandateRequest {
 }
 
 // Response message for a mandate revoke operation
-message PaymentServiceRevokeMandateResponse {
+message PaymentServiceRevokeAutoDebitResponse {
   // Status Information
   MandateStatus status = 1;
   optional ErrorInfo error = 2;
