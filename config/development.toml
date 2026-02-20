@@ -43,6 +43,7 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+worldpay.base_url = "https://try.access.worldpay.com"
 gigadat.base_url = "https://interac.express-connect.com/"
 paybox.base_url = "https://preprod-ppps.paybox.com/PPPS.php"
 loonio.base_url = "https://integration.loonio.ca/"
