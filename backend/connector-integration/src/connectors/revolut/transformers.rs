@@ -16,13 +16,19 @@ use domain_types::{
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
 use common_utils::{custom_serde, types::MinorUnit};
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use time::PrimitiveDateTime;
 
+#[derive(Debug, Deserialize)]
 pub struct RevolutAuthType {
-    pub api_key: Secret<String>,
+    pub your_secret_api_key: Secret<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RevolutIncomingWebhookAuthType {
+    pub signing_secret: Secret<String>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -453,8 +459,32 @@ impl TryFrom<&ConnectorAuthType> for RevolutAuthType {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
-                api_key: api_key.to_owned(),
+                your_secret_api_key: api_key.to_owned(),
             }),
+            ConnectorAuthType::ExternalAuth { value } => {
+                let auth_type: Self = serde_json::from_value::<Self>(value.peek().clone())
+                    .map_err(|_| ConnectorError::FailedToObtainAuthType)?;
+                Ok(Self {
+                    your_secret_api_key: auth_type.your_secret_api_key,
+                })
+            }
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
+}
+
+impl TryFrom<&ConnectorAuthType> for RevolutIncomingWebhookAuthType {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorAuthType::ExternalAuth { value } => {
+                let auth_type: Self = serde_json::from_value::<Self>(value.peek().clone())
+                    .map_err(|_| ConnectorError::FailedToObtainAuthType)?;
+                Ok(Self {
+                    signing_secret: auth_type.signing_secret,
+                })
+            }
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }

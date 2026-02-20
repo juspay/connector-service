@@ -283,14 +283,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         // Revolut uses HMAC-SHA256
         let algorithm = crypto::HmacSha256;
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(errors::ConnectorError::WebhookSourceVerificationFailed)?,
+            None => {
+                // If webhook secrets are not provided, take them from External Auth details
+                let auth = revolut::RevolutIncomingWebhookAuthType::try_from(
+                    connector_account_details
+                        .as_ref()
+                        .ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
+                )
+                .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+                ConnectorWebhookSecrets {
+                    secret: auth.signing_secret.peek().as_bytes().to_vec(),
+                    additional_secret: None,
+                }
+            }
         };
 
         let signature =
@@ -547,7 +560,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.peek()).into(),
+            format!("Bearer {}", auth.your_secret_api_key.peek()).into(),
         )])
     }
 
