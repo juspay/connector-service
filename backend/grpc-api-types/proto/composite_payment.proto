@@ -98,7 +98,7 @@ message CompositeAuthorizeRequest {
 
 // Response message for composite authorize flow.
 message CompositeAuthorizeResponse {
-  optional PaymentServiceCreateAccessTokenResponse access_token_response = 1; // Access token flow response
+  optional ClientAuthServiceCreateAccessTokenResponse access_token_response = 1; // Access token flow response
   optional PaymentServiceCreateConnectorCustomerResponse create_customer_response = 2; // Create customer flow response
   optional PaymentServiceAuthorizeResponse authorize_response = 3; // Authorize flow response
 }

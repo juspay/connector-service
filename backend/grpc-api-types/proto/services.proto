@@ -84,7 +84,7 @@ service PaymentService {
 
   // Handles incoming webhooks from connectors.
   // This will delegate to the appropriate service transform based on the event type.
-  rpc HandleEvent(PaymentServiceEventRequest) returns (PaymentServiceEventResponse);
+  rpc HandleEvent(PaymentServiceHandleEventRequest) returns (PaymentServiceHandleEventResponse);
 
   // Creates a connector customer for future payment processing.
   rpc CreateConnectorCustomer(PaymentServiceCreateConnectorCustomerRequest) returns (PaymentServiceCreateConnectorCustomerResponse);

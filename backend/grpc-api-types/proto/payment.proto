@@ -57,8 +57,8 @@ message Money {
   Currency currency = 2;       // ISO 4217 currency code (e.g., "USD", "EUR")
 }
 
-// ErrorDetails provides structured error information for API responses
-message ErrorDetails {
+// ErrorInfo provides structured error information for API responses
+message ErrorInfo {
   optional UnifiedErrorDetails unified_details = 1;                    // Machine-readable error code
   optional IssuerErrorDetails issuer_details = 2;                 // Human-readable error message
   optional ConnectorErrorDetails connector_details = 3;                 // Detailed explanation
@@ -1247,7 +1247,7 @@ message ClientAuthServiceCreateAccessTokenResponse {
   optional string token_type = 2; // Token type (e.g., "Bearer", "Basic")
   optional int64 expires_in_seconds = 3;// Expiration timestamp of the token (seconds since epoch)
   OperationStatus status = 4;// Status of the access token creation attempt
-  optional ErrorDetails error = 5;
+  optional ErrorInfo error = 5;
   uint32 status_code = 6;// HTTP status code from the connector
   optional Identifier response_ref_id = 7;
 }
@@ -1421,7 +1421,7 @@ message PaymentServiceAuthorizeResponse {
 
   // Status Information
   PaymentStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -1497,7 +1497,7 @@ message PaymentServiceGetResponse {
 
   // Status Information
   PaymentStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -1574,7 +1574,7 @@ message PaymentServiceVoidResponse {
 
   // Status Information
   PaymentStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -1620,7 +1620,7 @@ message PaymentServiceReverseResponse {
 
   // Status Information
   PaymentStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -1653,7 +1653,7 @@ message ClientAuthServiceSdkSessionTokenRequest {
 // Response message for SDK session token
 message ClientAuthServiceSdkSessionTokenResponse {
   SessionToken session_token = 1;
-  optional ErrorDetails error = 2;
+  optional ErrorInfo error = 2;
   uint32 status_code = 3;
   optional SecretString raw_connector_response = 4;
   optional SecretString raw_connector_request = 5;
@@ -1697,7 +1697,7 @@ message PaymentServiceCaptureResponse {
 
   // Status Information
   PaymentStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -1751,7 +1751,7 @@ message PaymentServiceCreateOrderResponse {
 
   // Status Information
   PaymentStatus status = 2;// Status of the order creation attempt
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -1804,7 +1804,7 @@ message RefundResponse {
 
   // Status Information
   RefundStatus status = 3; // Current status of the refund
-  optional ErrorDetails error = 4;
+  optional ErrorInfo error = 4;
   uint32 status_code = 5; // HTTP status code from the connector
   map<string, string> response_headers = 6; // Optional HTTP response headers from the connector
 
@@ -1857,7 +1857,7 @@ message DisputeResponse {
   optional DisputeStatus dispute_status = 3;
   optional DisputeStage dispute_stage = 4;
   optional string connector_status_code = 5;
-  optional ErrorDetails error = 6;
+  optional ErrorInfo error = 6;
   uint32 status_code = 7;
   map<string, string> response_headers = 8;
 
@@ -1955,7 +1955,7 @@ message PaymentServiceRegisterResponse {
 
   // Status Information
   PaymentStatus status = 2; // Status of the mandate setup attempt (using PaymentStatus with mandate values)
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4; // HTTP status code from the connector
   map<string, string> response_headers = 5; // Optional HTTP response headers from the connector
 
@@ -2058,7 +2058,7 @@ message PaymentServiceChargeAgainResponse {
 
   // Status Information
   PaymentStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -2099,7 +2099,7 @@ message PaymentServiceRevokeMandateRequest {
 message PaymentServiceRevokeMandateResponse {
   // Status Information
   MandateStatus status = 1;
-  optional ErrorDetails error = 2;
+  optional ErrorInfo error = 2;
   uint32 status_code = 3;
   map<string, string> response_headers = 4;
 
@@ -2161,7 +2161,7 @@ message ThreeDSAuthServicePreAuthenticateResponse {
 
   // Status Information
   PaymentStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -2229,7 +2229,7 @@ message ThreeDSAuthServiceAuthenticateResponse {
 
   // Status Information
   PaymentStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -2293,7 +2293,7 @@ message ThreeDSAuthServicePostAuthenticateResponse {
 
   // Status Information
   PaymentStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -2344,7 +2344,7 @@ message PaymentServiceIncrementalAuthorizationResponse {
 
   // Status Information
   AuthorizationStatus status = 2;
-  optional ErrorDetails error = 3;
+  optional ErrorInfo error = 3;
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
@@ -2375,7 +2375,7 @@ message ClientAuthServiceCreateSessionTokenRequest {
 // Response message for creating a session token
 message ClientAuthServiceCreateSessionTokenResponse {
   // Error Information
-  optional ErrorDetails error = 1;
+  optional ErrorInfo error = 1;
   uint32 status_code = 2;
 
   // Session Token Details
@@ -2450,7 +2450,7 @@ message PaymentServiceVerifyRedirectResponseResponse {
 
   // Status Information
   optional PaymentStatus status = 5;
-  optional ErrorDetails error = 6;
+  optional ErrorInfo error = 6;
 
   // Raw Response
   optional SecretString raw_connector_response = 7;
@@ -2540,7 +2540,7 @@ message DisputeServiceSubmitEvidenceResponse {
   // Status Information
   DisputeStatus dispute_status = 3;
   string connector_status_code = 4;
-  optional ErrorDetails error = 5;
+  optional ErrorInfo error = 5;
   uint32 status_code = 6;
   map<string, string> response_headers = 7;
 
@@ -2605,7 +2605,7 @@ message DisputeServiceDefendResponse {
   // Status Information
   DisputeStatus dispute_status = 2;
   optional string connector_status_code = 3;
-  optional ErrorDetails error = 4;
+  optional ErrorInfo error = 4;
   uint32 status_code = 5;
   map<string, string> response_headers = 6;
 
@@ -2632,7 +2632,7 @@ message DisputeServiceAcceptResponse {
   // Status Information
   DisputeStatus dispute_status = 2;
   optional string connector_status_code = 3;
-  optional ErrorDetails error = 4;
+  optional ErrorInfo error = 4;
   uint32 status_code = 5;
   map<string, string> response_headers = 6;
 
@@ -2678,7 +2678,7 @@ message PaymentServiceCreatePaymentMethodTokenResponse {
   string payment_method_token = 1;
 
   // Error Information
-  optional ErrorDetails error = 2;
+  optional ErrorInfo error = 2;
   uint32 status_code = 3;
   map<string, string> response_headers = 4;
 
@@ -2713,7 +2713,7 @@ message PaymentServiceCreateConnectorCustomerResponse {
   string connector_customer_id = 1;
 
   // Error Information
-  optional ErrorDetails error = 2;
+  optional ErrorInfo error = 2;
   uint32 status_code = 3;
   map<string, string> response_headers = 4;
 
