@@ -1,25 +1,14 @@
-use crate::macros::payment_flow;
 use common_crate::error::PaymentAuthorizationError;
 use external_services;
-use grpc_api_types::payments::{
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-};
+use grpc_api_types::payments::{PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse};
 
 use domain_types::{
-    connector_flow::{Authorize, Capture},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData},
+    connector_flow::Authorize,
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData},
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     utils::ForeignTryFrom,
 };
-// Generate authorize function using the payment_flow_generic! macro
-// payment_flow!(
-//     authorize_req,
-//     Authorize,
-//     PaymentServiceAuthorizeRequest,
-//     PaymentsAuthorizeData<T>,
-//     "PAYMENT_AUTHORIZE_ERROR"
-// );
 
 pub fn authorize_req<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
@@ -56,14 +45,14 @@ pub fn authorize_req<
     let payment_flow_data =
         PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone(), metadata))
             .map_err(|err| {
-                tracing::error!(error = ?err, "Failed to create PaymentFlowData");
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(err.to_string()),
-                    Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
-                    None,
-                )
-            })?;
+            tracing::error!(error = ?err, "Failed to create PaymentFlowData");
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(err.to_string()),
+                Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
+                None,
+            )
+        })?;
 
     // Create flow-specific request data
     let payment_request_data: PaymentsAuthorizeData<T> =
@@ -195,12 +184,3 @@ pub fn authorize_res<
         )
     })
 }
-
-// Generate capture function using the payment_flow! macro
-payment_flow!(
-    capture_req,
-    Capture,
-    PaymentServiceCaptureRequest,
-    PaymentsCaptureData,
-    "PAYMENT_CAPTURE_ERROR"
-);

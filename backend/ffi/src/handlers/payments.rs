@@ -1,23 +1,13 @@
 pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/development.toml");
 // pub mod napi_handler;
-use crate::macros::payment_flow_handler;
-use common_crate::error::PaymentAuthorizationError;
-use grpc_api_types::payments::{
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-};
 
-use crate::services::payments::{authorize_req, authorize_res, capture_req};
+use common_crate::error::PaymentAuthorizationError;
+use grpc_api_types::payments::{PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse};
+
+use crate::services::payments::{authorize_req, authorize_res};
 
 use crate::types::FFIRequestData;
 use domain_types::payment_method_data::DefaultPCIHolder;
-
-// Generate authorize_req_flow handler using payment_flow_handler! macro
-// payment_flow_handler!(
-//     authorize_req_flow,
-//     authorize_req,
-//     PaymentServiceAuthorizeRequest,
-//     DefaultPCIHolder
-// );
 
 // Generate authorize_res_flow handler
 pub fn authorize_req_handler(
@@ -57,11 +47,3 @@ pub fn authorize_res_handler(
     )
     .map_err(|e| e.into())
 }
-
-// Generate capture_req_flow handler using payment_flow_handler! macro
-payment_flow_handler!(
-    capture_req_handler,
-    capture_req,
-    PaymentServiceCaptureRequest,
-    DefaultPCIHolder
-);
