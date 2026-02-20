@@ -1,6 +1,6 @@
-use common_crate::error::PaymentAuthorizationError;
 use external_services;
 use grpc_api_types::payments::{PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse};
+use ucs_env::error::PaymentAuthorizationError;
 
 use domain_types::{
     connector_flow::Authorize,
@@ -10,7 +10,7 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 
-pub fn authorize_req<
+pub fn authorize_req_transformer<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
         + Default
         + Eq
@@ -24,7 +24,7 @@ pub fn authorize_req<
         + 'static,
 >(
     payload: PaymentServiceAuthorizeRequest,
-    config: &std::sync::Arc<common_crate::configs::Config>,
+    config: &std::sync::Arc<ucs_env::configs::Config>,
     connector: domain_types::connector_types::ConnectorEnum,
     connector_auth_details: domain_types::router_data::ConnectorAuthType,
     metadata: &common_utils::metadata::MaskedMetadata,
@@ -47,7 +47,7 @@ pub fn authorize_req<
             .map_err(|err| {
             tracing::error!(error = ?err, "Failed to create PaymentFlowData");
             PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
+                grpc_api_types::payments::PaymentStatus::Failure,
                 Some(err.to_string()),
                 Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
                 None,
@@ -59,7 +59,7 @@ pub fn authorize_req<
         PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(|err| {
             tracing::error!(error = ?err, "Failed to create payment request data");
             PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
+                grpc_api_types::payments::PaymentStatus::Failure,
                 Some(err.to_string()),
                 Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
                 None,
@@ -80,7 +80,7 @@ pub fn authorize_req<
         .build_request_v2(&router_data.clone())
         .map_err(|err| {
             PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
+                grpc_api_types::payments::PaymentStatus::Failure,
                 Some(err.to_string()),
                 Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
                 None,
@@ -89,7 +89,7 @@ pub fn authorize_req<
     Ok(connector_request)
 }
 
-pub fn authorize_res<
+pub fn authorize_res_transformer<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
         + Default
         + Eq
@@ -103,7 +103,7 @@ pub fn authorize_res<
         + 'static,
 >(
     payload: PaymentServiceAuthorizeRequest,
-    config: &std::sync::Arc<common_crate::configs::Config>,
+    config: &std::sync::Arc<ucs_env::configs::Config>,
     connector: domain_types::connector_types::ConnectorEnum,
     connector_auth_details: domain_types::router_data::ConnectorAuthType,
     metadata: &common_utils::metadata::MaskedMetadata,
@@ -125,7 +125,7 @@ pub fn authorize_res<
             .map_err(|err| {
             tracing::error!("Failed to process payment flow data: {:?}", err);
             PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
+                grpc_api_types::payments::PaymentStatus::Failure,
                 Some("Failed to process payment flow data".to_string()),
                 Some("PAYMENT_FLOW_ERROR".to_string()),
                 None,
@@ -137,7 +137,7 @@ pub fn authorize_res<
         PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(|err| {
             tracing::error!(error = ?err, "Failed to create payment request data");
             PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
+                grpc_api_types::payments::PaymentStatus::Failure,
                 Some(err.to_string()),
                 Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
                 None,
@@ -167,7 +167,7 @@ pub fn authorize_res<
     .map_err(
         |e: error_stack::Report<domain_types::errors::ConnectorError>| {
             PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
+                grpc_api_types::payments::PaymentStatus::Failure,
                 Some(e.to_string()),
                 None,
                 Some(500),
@@ -177,7 +177,7 @@ pub fn authorize_res<
 
     domain_types::types::generate_payment_authorize_response(response).map_err(|e| {
         PaymentAuthorizationError::new(
-            grpc_api_types::payments::PaymentStatus::Pending,
+            grpc_api_types::payments::PaymentStatus::Failure,
             Some(e.to_string()),
             None,
             Some(500),

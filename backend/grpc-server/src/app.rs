@@ -13,7 +13,7 @@ use tokio::{
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
-use common_crate::{configs, error::ConfigurationError, logger};
+use ucs_env::{configs, error::ConfigurationError, logger};
 
 use crate::{
     config_overrides::RequestExtensionsLayer, http::config_middleware::HttpRequestExtensionsLayer,

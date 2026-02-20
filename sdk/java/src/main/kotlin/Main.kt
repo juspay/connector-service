@@ -11,7 +11,7 @@
  */
 
 import uniffi.connector_service_ffi.UniffiException
-import uniffi.connector_service_ffi.authorizeReq
+import uniffi.connector_service_ffi.authorizeReqTransformer
 import org.json.JSONObject
 import ucs.v2.Payment.PaymentServiceAuthorizeRequest
 import ucs.v2.Payment.PaymentAddress
@@ -80,7 +80,7 @@ fun buildMetadata(): Map<String, String> {
 }
 
 fun demoLowLevelFfi() {
-    println("=== Demo 1: Low-level FFI (authorizeReq) ===\n")
+    println("=== Demo 1: Low-level FFI (authorizeReqTransformer) ===\n")
 
     val requestMsg = buildAuthorizeRequestMsg()
     val requestBytes = requestMsg.toByteArray()
@@ -90,7 +90,7 @@ fun demoLowLevelFfi() {
     println("Connector: ${metadata["connector"]}\n")
 
     try {
-        val connectorRequestJson = authorizeReq(requestBytes, metadata)
+        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata)
         val connectorRequest = JSONObject(connectorRequestJson)
 
         println("Connector HTTP request generated successfully:")

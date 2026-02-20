@@ -84,7 +84,7 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
 /// Build metadata for Stripe with HeaderKey auth.
 ///
 /// Two purposes:
-///   1. `"connector"` and `"connector_auth_type"` are used to build FFIMetadataPayload
+///   1. `"connector"` and `"connector_auth_type"` are used to build FfiMetadataPayload
 ///   2. `x-*` headers are used by ffi_headers_to_masked_metadata for MaskedMetadata
 fn build_metadata() -> HashMap<String, String> {
     let api_key =
