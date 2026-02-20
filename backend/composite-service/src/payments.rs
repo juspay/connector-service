@@ -52,12 +52,13 @@ where
             }
             None => false,
         };
-        let payload_access_token= payload
+        let payload_access_token = payload
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .and_then(|token| AccessTokenResponseData::foreign_try_from(token).ok());
-        let should_call_create_access_token = should_do_access_token && payload_access_token.is_none();
+        let should_call_create_access_token =
+            should_do_access_token && payload_access_token.is_none();
 
         let access_token_response = match should_call_create_access_token {
             true => {
