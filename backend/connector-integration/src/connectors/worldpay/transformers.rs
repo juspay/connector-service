@@ -252,12 +252,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_payment_billing()
                     .and_then(|addr| addr.address.as_ref())
                     .map(|details| WorldpayBillingAddress {
-                        address1: details.line1.clone(),
-                        address2: details.line2.clone(),
-                        address3: details.line3.clone(),
-                        postal_code: details.zip.clone(),
-                        city: details.city.clone(),
-                        state: details.state.clone(),
+                        address1: details.line1.clone().map(|s| s.expose()),
+                        address2: details.line2.clone().map(|s| s.expose()),
+                        address3: details.line3.clone().map(|s| s.expose()),
+                        postal_code: details.zip.clone().map(|s| s.expose()),
+                        city: details.city.clone().map(|s| s.expose()),
+                        state: details.state.clone().map(|s| s.expose()),
                         country_code: details.country.as_ref().map(|c: &common_enums::CountryAlpha2| c.to_string()),
                     });
 
