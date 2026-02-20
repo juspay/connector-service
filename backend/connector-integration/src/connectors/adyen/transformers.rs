@@ -1363,7 +1363,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Some(domain_types::router_data::PaymentMethodToken::GooglePayDecrypt(
                         decrypt_data,
                     )) => {
-                        debug!("executing decrypt flow");
 
                         let exp_month = decrypt_data.expiration_month.clone();
                         let exp_year_str = decrypt_data.expiration_year.peek();
