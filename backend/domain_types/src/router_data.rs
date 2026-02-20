@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use cards::{
-    validate::{CardExpirationMonth, CardExpirationYear},
-    NetworkToken,
-};
+use cards::NetworkToken;
 use common_utils::{
     errors::ValidationError,
     ext_traits::{OptionExt, ValueExt},
@@ -11,6 +8,7 @@ use common_utils::{
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use utoipa::ToSchema;
 
 use crate::{payment_method_data, utils::missing_field_err};
 
@@ -203,38 +201,63 @@ impl ErrorResponse {
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApplePayCryptogramData {
     pub online_payment_cryptogram: Secret<String>,
     pub eci_indicator: Option<String>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct ApplePayPredecryptData {
+pub struct GooglePayDecryptedData {
+    pub card_exp_month: Secret<String>,
+    pub card_exp_year: Secret<String>,
     pub application_primary_account_number: cards::CardNumber,
-    pub application_expiration_month: Secret<String>,
-    pub application_expiration_year: Secret<String>,
-    pub currency_code: String,
-    pub transaction_amount: MinorUnit,
-    pub device_manufacturer_identifier: Secret<String>,
-    pub payment_data_type: Secret<String>,
-    pub payment_data: ApplePayCryptogramData,
+    pub cryptogram: Option<Secret<String>>,
+    pub eci_indicator: Option<String>,
 }
 
-impl ApplePayPredecryptData {
-    /// Get the four-digit expiration year from the Apple Pay pre-decrypt data
-    pub fn get_four_digit_expiry_year(&self) -> Secret<String> {
-        let mut year = self.application_expiration_year.peek().clone();
+impl GooglePayDecryptedData {
+    pub fn get_four_digit_expiry_year(
+        &self,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
+        let mut year = self.card_exp_year.peek().clone();
+
         if year.len() == 2 {
             year = format!("20{year}");
+        } else if year.len() != 4 {
+            return Err(ValidationError::InvalidValue {
+                message: format!(
+                    "Invalid expiry year length: {}. Must be 2 or 4 digits",
+                    year.len()
+                ),
+            }
+            .into());
         }
-        Secret::new(year)
+        Ok(Secret::new(year))
     }
 
-    /// Get the expiration month from the Apple Pay pre-decrypt data
-    pub fn get_expiry_month(&self) -> Result<Secret<String>, ValidationError> {
-        let month_str = self.application_expiration_month.peek();
+    pub fn get_two_digit_expiry_year(
+        &self,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
+        let binding = self.card_exp_year.clone();
+        let year = binding.peek();
+        Ok(Secret::new(
+            year.get(year.len() - 2..)
+                .ok_or(ValidationError::InvalidValue {
+                    message: "Invalid two-digit year".to_string(),
+                })?
+                .to_string(),
+        ))
+    }
+
+    pub fn get_expiry_date_as_mmyy(&self) -> error_stack::Result<Secret<String>, ValidationError> {
+        let year = self.get_two_digit_expiry_year()?.expose();
+        let month = self.get_expiry_month()?.clone().expose();
+        Ok(Secret::new(format!("{month}{year}")))
+    }
+
+    pub fn get_expiry_month(&self) -> error_stack::Result<Secret<String>, ValidationError> {
+        let month_str = self.card_exp_month.peek();
         let month = month_str
             .parse::<u8>()
             .map_err(|_| ValidationError::InvalidValue {
@@ -244,34 +267,15 @@ impl ApplePayPredecryptData {
         if !(1..=12).contains(&month) {
             return Err(ValidationError::InvalidValue {
                 message: format!("Invalid expiry month: {month}. Must be between 1 and 12"),
-            });
+            }
+            .into());
         }
-        Ok(self.application_expiration_month.clone())
+
+        Ok(self.card_exp_month.clone())
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GooglePayDecryptedData {
-    pub message_expiration: String,
-    pub message_id: String,
-    #[serde(rename = "paymentMethod")]
-    pub payment_method_type: String,
-    pub payment_method_details: GooglePayPaymentMethodDetails,
-}
-
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GooglePayPaymentMethodDetails {
-    pub auth_method: common_enums::enums::GooglePayAuthMethod,
-    pub expiration_month: CardExpirationMonth,
-    pub expiration_year: CardExpirationYear,
-    pub pan: cards::CardNumber,
-    pub cryptogram: Option<Secret<String>>,
-    pub eci_indicator: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeDecryptedData {
     pub client_id: Secret<String>,
@@ -284,7 +288,7 @@ pub struct PazeDecryptedData {
     pub eci: Option<String>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeToken {
     pub payment_token: cards::NetworkToken,
@@ -295,7 +299,7 @@ pub struct PazeToken {
 
 pub type NetworkTokenNumber = NetworkToken;
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeConsumer {
     // This is consumer data not customer data.
@@ -308,14 +312,14 @@ pub struct PazeConsumer {
     pub language_code: Option<String>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazePhoneNumber {
     pub country_code: Secret<String>,
     pub phone_number: Secret<String>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeAddress {
     pub name: Option<Secret<String>>,
@@ -328,7 +332,7 @@ pub struct PazeAddress {
     pub country_code: Option<common_enums::enums::CountryAlpha2>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeDynamicData {
     pub dynamic_data_value: Option<Secret<String>>,
@@ -339,9 +343,6 @@ pub struct PazeDynamicData {
 #[derive(Debug, Clone, serde::Deserialize)]
 pub enum PaymentMethodToken {
     Token(Secret<String>),
-    ApplePayDecrypt(Box<ApplePayPredecryptData>),
-    GooglePayDecrypt(Box<GooglePayDecryptedData>),
-    PazeDecrypt(Box<PazeDecryptedData>),
 }
 
 #[derive(Debug, Default, Clone)]

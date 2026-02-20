@@ -1725,7 +1725,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
 
   // Payment Method Token
-  optional string payment_method_token = 40;
+  optional SecretString payment_method_token = 40;
 
   // Send the connector order identifier here if an order was created before authorize
   optional string connector_order_reference_id = 41; // Connector's reference id for order
@@ -2382,7 +2382,7 @@ message PaymentServiceRegisterRequest {
   optional ConnectorState state = 31; // State data for access token storage and other connector-specific state
 
   // Payment Method Token
-  optional string payment_method_token = 32;
+  optional SecretString payment_method_token = 32;
   // Send the connector order identifier here if an order was created before authorize
   optional string order_id = 33;
 
