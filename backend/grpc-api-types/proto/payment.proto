@@ -93,8 +93,7 @@ message ConnectorErrorDetails {
 // Metadata consolidates all metadata types
 message Metadata {
   SecretString general = 1;      // General metadata
-  SecretString connector = 2;    // Connector-specific metadata
-  SecretString merchant_account = 3;     // Merchant account metadata
+  
 }
 
 // Represents an identifier, which can be one of several types.
@@ -1235,10 +1234,12 @@ message SecretInfoToInitiateSdk {
 message ClientAuthServiceCreateAccessTokenRequest {
   Identifier request_ref_id = 1;
   Connector connector = 2; // The connector to create the access token for
-  optional Metadata metadata = 3; // Additional metadata for the request
+  // Metadata
+  optional SecretString metadata = 4; // Additional metadata for the connector
+  optional SecretString connector_metadata = 5; // Connector-specific metadata for the transaction
   
   // Environment Configuration
-  optional bool test_mode = 4; // A boolean value to indicate if the connector is in Test mode
+  optional bool test_mode = 6; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for creating an access token
@@ -1277,54 +1278,56 @@ message PaymentServiceAuthorizeRequest {
   optional bool enrolled_for_3ds = 10;
   optional AuthenticationData authentication_data = 11;
 
-  // Metadata (consolidated)
-  optional Metadata metadata = 12;
+  // Metadata
+  optional SecretString metadata = 12; // Additional metadata for the connector
+  optional SecretString connector_metadata = 13; // Connector-specific metadata for the transaction
+
   // URLs for Redirection and Webhooks
-  optional string return_url = 13;
-  optional string webhook_url = 14;
-  optional string complete_authorize_url = 15;
+  optional string return_url = 14;
+  optional string webhook_url = 15;
+  optional string complete_authorize_url = 16;
 
   // Session and Token Information
-  optional string session_token = 16;
+  optional string session_token = 17;
 
   // Order Details
-  optional string order_category = 17;
-  optional string merchant_order_reference_id = 18;
-  optional string connector_order_reference_id = 19;
+  optional string order_category = 18;
+  optional string merchant_order_reference_id = 19;
+  optional string connector_order_reference_id = 20;
 
   // Behavioral Flags and Preferences
-  optional FutureUsage setup_future_usage = 20;
-  optional bool off_session = 21;
-  optional bool request_incremental_authorization = 22;
-  optional bool request_extended_authorization = 23;
-  optional bool enable_partial_authorization = 24;
+  optional FutureUsage setup_future_usage = 21;
+  optional bool off_session = 22;
+  optional bool request_incremental_authorization = 23;
+  optional bool request_extended_authorization = 24;
+  optional bool enable_partial_authorization = 25;
 
   // Contextual Information
-  optional CustomerAcceptance customer_acceptance = 25;
-  optional BrowserInformation browser_info = 26;
-  optional PaymentExperience payment_experience = 27;
-  optional string description = 28;
-  optional PaymentChannel payment_channel = 29;
+  optional CustomerAcceptance customer_acceptance = 26;
+  optional BrowserInformation browser_info = 27;
+  optional PaymentExperience payment_experience = 28;
+  optional string description = 29;
+  optional PaymentChannel payment_channel = 30;
 
   // Environment Configuration
-  optional bool test_mode = 30;
+  optional bool test_mode = 31;
 
   // Mandate Setup Details
-  optional SetupMandateDetails setup_mandate_details = 31;
+  optional SetupMandateDetails setup_mandate_details = 32;
 
   // Statement Descriptor
-  optional BillingDescriptor billing_descriptor = 32;
+  optional BillingDescriptor billing_descriptor = 33;
 
   // State Information
-  optional ConnectorState state = 33;
+  optional ConnectorState state = 34;
   // Order Details
-  repeated OrderDetailsWithAmount order_details = 34;
+  repeated OrderDetailsWithAmount order_details = 35;
 
   // Locale Information
-  optional string locale = 35;
+  optional string locale = 36;
 
   // Tokenization configuration
-  optional Tokenization tokenization_strategy = 36;
+  optional Tokenization tokenization_strategy = 37;
 }
 
 // Request message for authorizing a payment only (without setup flows)
@@ -1353,65 +1356,65 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional AuthenticationData authentication_data = 11;
 
   // Metadata
-  optional Metadata metadata = 12;
+  optional SecretString metadata = 12; // Additional metadata for the connector
+  optional SecretString connector_metadata = 13; // Connector-specific metadata for the transaction
 
   // URLs for Redirection and Webhooks
-  optional string return_url = 13;
-  optional string webhook_url = 14;
-  optional string complete_authorize_url = 15;
+  optional string return_url = 14;
+  optional string webhook_url = 15;
+  optional string complete_authorize_url = 16;
 
   // Session and Token Information
-  optional string session_token = 16;
+  optional string session_token = 17;
 
   // Order Details
-  optional string order_category = 17;
-  optional string merchant_order_reference_id = 18;
+  optional string order_category = 18;
+  optional string merchant_order_reference_id = 19;
   // Behavioral Flags and Preferences
-  optional FutureUsage setup_future_usage = 19;
-  optional bool off_session = 20;
-  optional bool request_incremental_authorization = 21;
-  optional bool request_extended_authorization = 22;
-  optional bool enable_partial_authorization = 23;
+  optional FutureUsage setup_future_usage = 20;
+  optional bool off_session = 21;
+  optional bool request_incremental_authorization = 22;
+  optional bool request_extended_authorization = 23;
+  optional bool enable_partial_authorization = 24;
 
   // Contextual Information
-  optional CustomerAcceptance customer_acceptance = 24;
-  optional BrowserInformation browser_info = 25;
-  optional PaymentExperience payment_experience = 26;
-  optional string description = 27;
-  optional PaymentChannel payment_channel = 28;
+  optional CustomerAcceptance customer_acceptance = 25;
+  optional BrowserInformation browser_info = 26;
+  optional PaymentExperience payment_experience = 27;
+  optional string description = 28;
+  optional PaymentChannel payment_channel = 29;
   // Environment Configuration
-  optional bool test_mode = 29;
+  optional bool test_mode = 30;
 
   // Mandate Setup Details
-  optional SetupMandateDetails setup_mandate_details = 30;
+  optional SetupMandateDetails setup_mandate_details = 31;
 
   // Statement Descriptor
-  optional BillingDescriptor billing_descriptor = 31;
-
+  optional BillingDescriptor billing_descriptor = 32;
   // State Information
-  optional ConnectorState state = 32;
+  optional ConnectorState state = 33;
 
   // Order Details
-  repeated OrderDetailsWithAmount order_details = 33;
+  repeated OrderDetailsWithAmount order_details = 34;
 
   // Payment Method Token
-  optional string payment_method_token = 34;
+  optional string payment_method_token = 35;
   // Connector Order Reference
-  optional string connector_order_reference_id = 35;
+  optional string connector_order_reference_id = 36;
 
   // Locale Information
-  optional string locale = 36;
+  optional string locale = 37;
 
   // URL for Redirection
-  optional string continue_redirection_url = 37;
+  optional string continue_redirection_url = 38;
 
   // 3DS Completion Indicator
-  optional ThreeDsCompletionIndicator threeds_completion_indicator = 38;
+  optional ThreeDsCompletionIndicator threeds_completion_indicator = 39;
   // Redirection Information after DDC step
-  optional RedirectionResponse redirection_response = 39;
+  optional RedirectionResponse redirection_response = 40;
 
   // Tokenization configuration
-  optional Tokenization tokenization_strategy = 40;
+  optional Tokenization tokenization_strategy = 41;
 }
 
 // Response message for a payment authorization
@@ -1474,20 +1477,21 @@ message PaymentServiceGetRequest {
   // State Information
   optional ConnectorState state = 8;
 
-  // Metadata
-  optional Metadata metadata = 9;
+    // Metadata
+  optional SecretString metadata = 9; // Additional metadata for the connector
+  optional SecretString connector_metadata = 10; // Connector-specific metadata for the transaction
 
   // Sync Type
-  optional SyncRequestType sync_type = 10;
+  optional SyncRequestType sync_type = 11;
 
   // Connector Reference Id
-  optional string connector_order_reference_id = 11;
+  optional string connector_order_reference_id = 12;
 
   // Environment Configuration
-  optional bool test_mode = 12;
+  optional bool test_mode = 13;
 
   // Payment Experience
-  optional PaymentExperience payment_experience = 13;
+  optional PaymentExperience payment_experience = 14;
 }
 
 // Response message for a payment status synchronization
@@ -1523,7 +1527,7 @@ message PaymentServiceGetResponse {
   optional string email = 19;
   optional string connector_customer_id = 20;
   optional string merchant_order_reference_id = 21;
-  optional Metadata metadata = 22;
+  optional SecretString metadata = 22; // Additional metadata from the connector
   optional ConnectorResponseData connector_response = 23;
 
   // State Information
@@ -1556,15 +1560,16 @@ message PaymentServiceVoidRequest {
   optional Money amount = 6;
 
   // Metadata
-  optional Metadata metadata = 7;
+  optional SecretString metadata = 7; // Additional metadata for the connector
+  optional SecretString connector_metadata = 8; // Additional metadata for the connector
 
   // State Information
-  optional ConnectorState state = 8;
+  optional ConnectorState state = 9;
 
   // Environment Configuration
-  optional bool test_mode = 9;
+  optional bool test_mode = 10;
   // Additional Context
-  optional string merchant_order_reference_id = 10;
+  optional string merchant_order_reference_id = 11;
 }
 
 // Response message for a payment void operation
@@ -1609,8 +1614,9 @@ message PaymentServiceReverseRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5;
 
-  // Metadata
-  optional Metadata metadata = 6;
+    // Metadata
+  optional SecretString metadata = 6; // Additional metadata for the connector
+  optional SecretString connector_metadata = 7; // Connector-specific metadata for the transaction
 }
 
 // Response message for reversing a captured payment if not yet settled (similar to void but for post-capture transactions)
@@ -1646,8 +1652,9 @@ message ClientAuthServiceSdkSessionTokenRequest {
   // Customer Information
   optional Customer customer = 7;
 
-  // Metadata
-  optional Metadata metadata = 8;
+    // Metadata
+  optional SecretString metadata = 8; // Additional metadata for the connector
+  optional SecretString connector_metadata = 9; // Connector-specific metadata for the transaction
 }
 
 // Response message for SDK session token
@@ -1669,25 +1676,25 @@ message PaymentServiceCaptureRequest {
   Money amount_to_capture = 3;
 
   // Metadata
-  optional Metadata metadata = 4;
+  optional SecretString metadata = 4; // Additional metadata for the connector
+  optional SecretString connector_metadata = 5; // Additional metadata for the connector
 
   // Multiple Capture Information
-  optional MultipleCaptureRequestData multiple_capture_data = 5;
-
+  optional MultipleCaptureRequestData multiple_capture_data = 6;
   // Browser Information
-  optional BrowserInformation browser_info = 6;
+  optional BrowserInformation browser_info = 7;
 
   // Capture Settings
-  optional CaptureMethod capture_method = 7;
+  optional CaptureMethod capture_method = 8;
 
   // State Information
-  optional ConnectorState state = 8;
+  optional ConnectorState state = 9;
 
   // Environment Configuration
-  optional bool test_mode = 9;
+  optional bool test_mode = 10;
 
   // Additional Context
-  optional string merchant_order_reference_id = 10;
+  optional string merchant_order_reference_id = 11;
 }
 
 // Response message for a payment capture operation
@@ -1735,13 +1742,14 @@ message PaymentServiceCreateOrderRequest {
   optional string webhook_url = 3;
 
   // Metadata
-  Metadata metadata = 4;
+  optional SecretString metadata = 4; // Additional metadata for the connector
+  optional SecretString connector_metadata = 5; // Connector-specific metadata for the transaction
 
   // State Information
-  optional ConnectorState state = 5;
+  optional ConnectorState state = 6;
 
   // Environment Configuration
-  optional bool test_mode = 6;
+  optional bool test_mode = 7;
 }
 
 // Response message for create order operation
@@ -1781,19 +1789,22 @@ message PaymentServiceRefundRequest {
   optional CaptureMethod capture_method = 9;// Capture method related to the original payment
 
   // Metadata
-  optional Metadata metadata = 10;// Metadata specific to the connector
+    // Metadata
+  optional SecretString metadata = 10; // Metadata specific to the connector
+  optional SecretString refund_metadata = 11; // Metadata specific to the refund
+  optional SecretString connector_metadata = 12; // Connector-specific metadata for the transaction
 
   // Browser Information
-  optional BrowserInformation browser_info = 11; // Browser information, if relevant  
+  optional BrowserInformation browser_info = 13; // Browser information, if relevant  
   // State Information
-  optional ConnectorState state = 12;// State data for access token storage and other connector-specific state
+  optional ConnectorState state = 14;// State data for access token storage and other connector-specific state
 
   // Environment Configuration
-  optional bool test_mode = 13;// A boolean value to indicate if the connector is in Test mode
+  optional bool test_mode = 15;// A boolean value to indicate if the connector is in Test mode
 
   // Payment Method Type
   optional PaymentMethodType payment_method_type = 14;// Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
-  optional string customer_id = 15;// Merchant's customer ID
+  optional string customer_id = 16;// Merchant's customer ID
 }
 
 // Response message for a refund operation (unified for both Create and Get)
@@ -1901,51 +1912,51 @@ message PaymentServiceRegisterRequest {
   optional AuthenticationData authentication_data = 8; // Additional authentication data
 
   // Metadata
-  optional Metadata metadata = 9;
+  optional SecretString metadata = 9; // Additional metadata for the connector
+  optional SecretString connector_metadata = 10; // Connector-specific metadata for the transaction
 
   // URLs for Redirection and Webhooks
-  optional string return_url = 10; // URL to redirect after setup
-  optional string webhook_url = 11; // URL for webhook notifications
-  optional string complete_authorize_url = 12; // URL to complete authorization
+  optional string return_url = 11; // URL to redirect after setup
+  optional string webhook_url = 12; // URL for webhook notifications
+  optional string complete_authorize_url = 13; // URL to complete authorization
 
   // Session and Token Information
-  optional string session_token = 13; // Session token, if applicable
+  optional string session_token = 14; // Session token, if applicable
 
   // Order Details
-  optional int64 order_tax_amount = 14; // Tax amount, if an initial payment is part of setup
-  optional string order_category = 15; // Category of the order/service related to the mandate
-  optional string merchant_order_reference_id = 16; // Merchant's internal reference ID
-  optional int64 shipping_cost = 17; // Shipping cost, if an initial payment is part of setup
+  optional int64 order_tax_amount = 15; // Tax amount, if an initial payment is part of setup
+  optional string order_category = 16; // Category of the order/service related to the mandate
+  optional string merchant_order_reference_id = 17; // Merchant's internal reference ID
+  optional int64 shipping_cost = 18; // Shipping cost, if an initial payment is part of setup
 
   // Behavioral Flags and Preferences
-  optional FutureUsage setup_future_usage = 18; // Indicates future usage intention
-  optional bool off_session = 19; // Indicates if off-session process
-  bool request_incremental_authorization = 20; // Indicates if incremental authorization is requested
-  optional bool request_extended_authorization = 21; // Indicates if extended authorization is requested
-  optional bool enable_partial_authorization = 22; // Indicates if partial authorization is enabled
+  optional FutureUsage setup_future_usage = 19; // Indicates future usage intention
+  optional bool off_session = 20; // Indicates if off-session process
+  bool request_incremental_authorization = 21; // Indicates if incremental authorization is requested
+  optional bool request_extended_authorization = 22; // Indicates if extended authorization is requested
+  optional bool enable_partial_authorization = 23; // Indicates if partial authorization is enabled
 
   // Contextual Information
-  optional CustomerAcceptance customer_acceptance = 23; // Details of customer acceptance
-  optional BrowserInformation browser_info = 24; // Information about the customer's browser
-  optional PaymentExperience payment_experience = 25; // Preferred payment experience
-  optional PaymentChannel payment_channel = 26; // Describes the channel through which the payment was initiated
+  optional CustomerAcceptance customer_acceptance = 24; // Details of customer acceptance
+  optional BrowserInformation browser_info = 25; // Information about the customer's browser
+  optional PaymentExperience payment_experience = 26; // Preferred payment experience
+  optional PaymentChannel payment_channel = 27; // Describes the channel through which the payment was initiated
 
   // Billing Descriptor
-  optional BillingDescriptor billing_descriptor = 27; // Billing Descriptor information to be sent to the payment gateway
-
+  optional BillingDescriptor billing_descriptor = 28; // Billing Descriptor information to be sent to the payment gateway
   // State Information
-  optional ConnectorState state = 28; // State data for access token storage and other connector-specific state
+  optional ConnectorState state = 29; // State data for access token storage and other connector-specific state
 
   // Payment Method Token
-  optional string payment_method_token = 29;
+  optional string payment_method_token = 30;
 
   // Send the connector order identifier here if an order was created before authorize
-  optional string order_id = 30;
+  optional string order_id = 31;
 
   // Locale Information
-  optional string locale = 31;  // Locale/language preference for the shopper (e.g., "en-US")
+  optional string locale = 32;  // Locale/language preference for the shopper (e.g., "en-US")
   // Testing Data
-  optional SecretString connector_testing_data = 32;  // Connector-specific testing data (JSON stringified)
+  optional SecretString connector_testing_data = 33;  // Connector-specific testing data (JSON stringified)
 }
 
 // Response message for a mandate setup operation
@@ -1998,57 +2009,58 @@ message PaymentServiceChargeAgainRequest {
 
   // Optional fields
   optional string merchant_order_reference_id = 5;
-  optional Metadata metadata = 6;
-  optional string webhook_url = 7;
-  optional string return_url = 8;
-  optional string description = 9;
+  optional SecretString metadata = 6; // Additional metadata for the connector
+  optional SecretString connector_metadata = 7; // Connector-specific metadata for the transaction
+  optional string webhook_url = 8;
+  optional string return_url = 9;
+  optional string description = 10;
 
   // Address Information
-  optional PaymentAddress address = 10;
+  optional PaymentAddress address = 11;
 
   // Capture Settings
-  optional CaptureMethod capture_method = 11;
+  optional CaptureMethod capture_method = 12;
 
   // Customer Information
-  optional SecretString email = 12;
-  optional string connector_customer_id = 13;
+  optional SecretString email = 13;
+  optional string connector_customer_id = 14;
 
   // Browser Information
-  optional BrowserInformation browser_info = 14;
+  optional BrowserInformation browser_info = 15;
 
-  optional bool test_mode = 15;
-  optional PaymentMethodType payment_method_type = 16;
+  optional bool test_mode = 16;
+  optional PaymentMethodType payment_method_type = 17;
 
   // Merchant Account Configuration
-  optional SecretString merchant_account_id = 17;
-  optional Currency merchant_configured_currency = 18;
+  optional SecretString merchant_account_id = 18;
+  optional Currency merchant_configured_currency = 19;
 
   // Behavioral Flags and Preferences
-  optional bool off_session = 19;
-  optional bool enable_partial_authorization = 20;
+  optional bool off_session = 20;
+  optional bool enable_partial_authorization = 21;
 
   // State Information
-  optional ConnectorState state = 21;
+  optional ConnectorState state = 22;
 
   // Original Payment Details (for reference and validation in MIT flows)
-  optional Money original_payment_authorized_amount = 22;
+  optional Money original_payment_authorized_amount = 23;
 
   // Shipping Cost
-  optional int64 shipping_cost = 23; // Shipping cost in minor units (e.g., cents)
+  optional int64 shipping_cost = 24; // Shipping cost in minor units (e.g., cents)
   // Billing Descriptor
-  optional BillingDescriptor billing_descriptor = 24;
+  optional BillingDescriptor billing_descriptor = 25;
 
   // MIT Category
-  optional MitCategory mit_category = 25;
+  optional MitCategory mit_category = 26;
 
   // Authentication Data
-  optional AuthenticationData authentication_data = 26;
+  optional AuthenticationData authentication_data = 27;
 
   // Locale Information
-  optional string locale = 27;
+  optional string locale = 28;
 
   // Testing Data
-  optional SecretString connector_testing_data = 28;
+  optional SecretString connector_testing_data = 29;
 }
 
 // Response message for repeat payment operation
@@ -2136,22 +2148,23 @@ message ThreeDSAuthServicePreAuthenticateRequest {
   bool enrolled_for_3ds = 6;
 
   // Metadata
-  optional Metadata metadata = 7;
+    // Metadata
+  optional SecretString metadata = 7; // Additional metadata for the connector
+  optional SecretString connector_metadata = 8; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
-  optional string return_url = 8;
-  optional string continue_redirection_url = 9;
-
+  optional string return_url = 9;
+  optional string continue_redirection_url = 10;
   // Contextual Information
-  optional BrowserInformation browser_info = 10;  
+  optional BrowserInformation browser_info = 11;  
   // State Information
-  optional ConnectorState state = 11;
+  optional ConnectorState state = 12;
 
   // Capture Settings
-  optional CaptureMethod capture_method = 12;
+  optional CaptureMethod capture_method = 13;
 
   // Description
-  optional string description = 13;
+  optional string description = 14;
 }
 
 // Response message for pre-authentication step
@@ -2171,7 +2184,7 @@ message ThreeDSAuthServicePreAuthenticateResponse {
   optional Identifier response_ref_id = 8;
 
   // Metadata
-  optional Metadata metadata = 9;
+  optional SecretString connector_metadata = 9; // Connector-specific metadata for the transaction
 
   // State Information
   optional ConnectorState state = 10;
@@ -2203,23 +2216,24 @@ message ThreeDSAuthServiceAuthenticateRequest {
   optional AuthenticationData authentication_data = 6;
 
   // Metadata
-  optional Metadata metadata = 7;
+  optional SecretString metadata = 7; // Additional metadata for the connector
+  optional SecretString connector_metadata = 8; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
-  optional string return_url = 8;
-  optional string continue_redirection_url = 9;
+  optional string return_url = 9;
+  optional string continue_redirection_url = 10;
 
   // Contextual Information
-  optional BrowserInformation browser_info = 10;
+  optional BrowserInformation browser_info = 11;
 
   // State Information
-  optional ConnectorState state = 11;
+  optional ConnectorState state = 12;
 
   // Redirection Information after DDC step
-  optional RedirectionResponse redirection_response = 12;
+  optional RedirectionResponse redirection_response = 13;
 
   // Capture Settings
-  optional CaptureMethod capture_method = 13;
+  optional CaptureMethod capture_method = 14;
 }
 
 // Response message for authentication step
@@ -2271,19 +2285,19 @@ message ThreeDSAuthServicePostAuthenticateRequest {
   optional AuthenticationData authentication_data = 6;
   optional string connector_order_reference_id = 7;
   // Metadata
-  optional Metadata metadata = 8;
+  optional SecretString metadata = 8;
+  optional SecretString connector_metadata = 9; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
-  optional string return_url = 9;
-  optional string continue_redirection_url = 10;
-
+  optional string return_url = 10;
+  optional string continue_redirection_url = 11;
   // Contextual Information
-  optional BrowserInformation browser_info = 11;
+  optional BrowserInformation browser_info = 12;
   // State Information
-  optional ConnectorState state = 12;
+  optional ConnectorState state = 13;
 
   // Redirection Information after DDC step
-  optional RedirectionResponse redirection_response = 13;
+  optional RedirectionResponse redirection_response = 14;
 }
 
 // Response message for post-authentication step
@@ -2360,16 +2374,17 @@ message ClientAuthServiceCreateSessionTokenRequest {
   // Amount Information
   Money amount = 2;
 
-  // Metadata
-  optional Metadata metadata = 3;
+  // Optional metadata for the connector
+  optional SecretString metadata = 3; // Additional metadata for the connector
+  optional SecretString connector_metadata = 4; // Connector-specific metadata for the transaction
 
   // State Information
-  optional ConnectorState state = 4;
+  optional ConnectorState state = 5;
 
   // Browser Information
-  optional BrowserInformation browser_info = 5;
+  optional BrowserInformation browser_info = 6;
 
-  optional bool test_mode = 6;
+  optional bool test_mode = 7;
 }
 
 // Response message for creating a session token
@@ -2474,7 +2489,7 @@ message RefundServiceGetRequest {
   optional BrowserInformation browser_info = 5;
 
   // Metadata
-  optional Metadata metadata = 6;
+  optional SecretString refund_metadata = 6; // Metadata specific to the refund sync
 
   // State Information
   optional ConnectorState state = 7;
@@ -2663,13 +2678,14 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
   optional PaymentAddress address = 5;
 
   // Metadata
-  optional Metadata metadata = 6;
+  optional SecretString metadata = 6;
+  optional SecretString connector_metadata = 7; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
-  optional string return_url = 7;
+  optional string return_url = 8;
 
   // Environment Configuration
-  optional bool test_mode = 8;
+  optional bool test_mode = 9;
 }
 
 // Response message for creating a payment method token
@@ -2695,16 +2711,20 @@ message PaymentServiceCreateConnectorCustomerRequest {
   Identifier request_ref_id = 1;
 
   // Customer Information
-  optional Customer customer = 2;
+  optional string customer_name = 2; // Name of the customer
+  optional SecretString email = 3; // Email address of the customer
+  optional string phone_number = 4; // Phone number of the customer
 
   // Address Information
-  optional PaymentAddress address = 3;
+  optional PaymentAddress address = 5;
 
   // Metadata
-  optional Metadata metadata = 4;
+  // Additional Metadata
+  optional SecretString metadata = 6; // Additional metadata for the connector
+  optional SecretString connector_metadata = 7; // Connector-specific metadata for the transaction
 
   // Environment Configuration
-  optional bool test_mode = 5;
+  optional bool test_mode = 8;
 }
 
 // Response message for creating a connector customer
