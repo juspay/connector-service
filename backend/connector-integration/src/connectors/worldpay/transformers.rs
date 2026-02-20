@@ -206,7 +206,7 @@ pub struct WorldpayCaptureResponse {
     pub reference: Option<String>,
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<F>
     TryFrom<
         ResponseRouterData<
             WorldpayCaptureResponse,
