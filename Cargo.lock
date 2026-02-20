@@ -962,6 +962,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "composite-service"
+version = "0.1.0"
+dependencies = [
+ "connector-integration",
+ "domain_types",
+ "grpc-api-types",
+ "tonic 0.13.1",
+ "ucs_common_enums",
+]
+
+[[package]]
 name = "compression-codecs"
 version = "0.4.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
