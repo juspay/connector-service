@@ -1,14 +1,14 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, Refund, Void},
+    connector_flow::{Authorize, Capture, Refund, Void},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, PaymentVoidData, RefundFlowData, RefundsData, RefundsResponseData,
         ResponseId,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -135,7 +135,7 @@ impl<T: PaymentMethodDataTypes>
             payment_method: WorldpayPaymentMethod {
                 payment_method_type: "card".to_string(),
                 card: Some(WorldpayCard {
-                    number: card.card_number.clone().into(),
+                    number: Secret::new(card.card_number.peek().to_string()),
                     expiry_month: card.card_exp_month.clone(),
                     expiry_year: card.card_exp_year.clone(),
                     cvv: card.card_cvc.clone(),
