@@ -14,6 +14,11 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers as worldpay;
+use transformers::{
+    WorldpayCaptureRequest, WorldpayCaptureResponse, WorldpayPaymentRequest,
+    WorldpayPaymentResponse, WorldpayPSyncResponse, WorldpayRefundRequest,
+    WorldpayRefundResponse, WorldpayRSyncResponse, WorldpayVoidRequest, WorldpayVoidResponse,
+};
 
 use crate::with_error_response_body;
 
