@@ -594,6 +594,7 @@ enum Connector {
   LOONIO = 105;
   GIGADAT = 106;
   HYPERPG = 107;
+  WORLDPAY = 108;
 }
 
 // Payment method types.
