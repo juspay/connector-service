@@ -408,10 +408,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_refund_id = match &req.request.connector_refund_id {
-                Some(id) => id,
-                None => return Err(errors::ConnectorError::MissingConnectorRefundID.into()),
-            };
+            let connector_refund_id = &req.request.connector_refund_id;
             Ok(format!("{}/api/payments/{}", self.connector_base_url_refunds(req), connector_refund_id))
         }
     }
