@@ -213,6 +213,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
+            T,
         >,
     > for WorldpayAuthorizeRequest
 {
@@ -226,6 +227,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -465,9 +467,11 @@ pub struct WorldpayCaptureResponse {
 }
 
 // Request transformer for Capture flow
-impl TryFrom<
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
         super::WorldpayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     > for WorldpayCaptureRequest
 {
@@ -476,6 +480,7 @@ impl TryFrom<
     fn try_from(
         item: super::WorldpayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -617,9 +622,11 @@ fn map_worldpay_refund_outcome_to_refund_status(outcome: &str) -> RefundStatus {
 }
 
 // Request transformer for Refund flow
-impl TryFrom<
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
         super::WorldpayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
         >,
     > for WorldpayRefundRequest
 {
@@ -628,6 +635,7 @@ impl TryFrom<
     fn try_from(
         item: super::WorldpayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
