@@ -22,7 +22,7 @@ use grpc_api_types::{
         CustomerAcceptance, FutureUsage, Identifier, MandateReferenceId, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
+        PaymentServiceRegisterAutoDebitRequest, PaymentServiceRepeatEverythingRequest,
         PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
@@ -287,11 +287,11 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
     }
 }
 
-fn create_register_request() -> PaymentServiceRegisterRequest {
+fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
     create_register_request_with_prefix("payload_mandate")
 }
 
-fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRequest {
+fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterAutoDebitRequest {
     let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
@@ -314,7 +314,7 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
     let unique_email = format!("customer{random_id}@example.com");
     let unique_first_name = format!("John{random_id}");
 
-    PaymentServiceRegisterRequest {
+    PaymentServiceRegisterAutoDebitRequest {
         minor_amount: Some(0), // Setup mandate with 0 amount
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {

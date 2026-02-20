@@ -23,7 +23,7 @@ use grpc_api_types::{
         Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
+        PaymentServiceRegisterAutoDebitRequest, PaymentServiceRepeatEverythingRequest,
         PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
@@ -292,7 +292,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
 }
 
 // Helper function to create a register (setup mandate) request
-fn create_register_request() -> PaymentServiceRegisterRequest {
+fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
     let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
@@ -307,7 +307,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
         nick_name: None,
     });
 
-    PaymentServiceRegisterRequest {
+    PaymentServiceRegisterAutoDebitRequest {
         minor_amount: Some(TEST_AMOUNT),
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {

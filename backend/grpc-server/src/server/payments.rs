@@ -53,9 +53,9 @@ use grpc_api_types::payments::{
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
     PaymentServicePostAuthenticateRequest, PaymentServicePostAuthenticateResponse,
     PaymentServicePreAuthenticateRequest, PaymentServicePreAuthenticateResponse,
-    PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest, PaymentServiceRegisterAutoDebitResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
-    PaymentServiceRevokeMandateRequest, PaymentServiceRevokeMandateResponse,
+    PaymentServiceRevokeAutoDebitRequest, PaymentServiceRevokeAutoDebitResponse,
     PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
@@ -174,8 +174,8 @@ trait PaymentOperationsInternal {
 
     async fn internal_mandate_revoke(
         &self,
-        request: RequestData<PaymentServiceRevokeMandateRequest>,
-    ) -> Result<tonic::Response<PaymentServiceRevokeMandateResponse>, tonic::Status>;
+        request: RequestData<PaymentServiceRevokeAutoDebitRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRevokeAutoDebitResponse>, tonic::Status>;
 
     async fn internal_pre_authenticate(
         &self,
@@ -1020,7 +1020,7 @@ impl Payments {
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
-        payload: &PaymentServiceRegisterRequest,
+        payload: &PaymentServiceRegisterAutoDebitRequest,
         connector_name: &str,
         service_name: &str,
     ) -> Result<String, tonic::Status> {
@@ -1535,7 +1535,7 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
-        payload: &PaymentServiceRegisterRequest,
+        payload: &PaymentServiceRegisterAutoDebitRequest,
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
@@ -1808,8 +1808,8 @@ impl PaymentOperationsInternal for Payments {
     implement_connector_operation!(
         fn_name: internal_mandate_revoke,
         log_prefix: "MANDATE_REVOKE",
-        request_type: PaymentServiceRevokeMandateRequest,
-        response_type: PaymentServiceRevokeMandateResponse,
+        request_type: PaymentServiceRevokeAutoDebitRequest,
+        response_type: PaymentServiceRevokeAutoDebitResponse,
         flow_marker: MandateRevoke,
         resource_common_data_type: PaymentFlowData,
         request_data_type: MandateRevokeRequestData,
@@ -3089,8 +3089,8 @@ impl PaymentService for Payments {
     )]
     async fn register(
         &self,
-        request: tonic::Request<PaymentServiceRegisterRequest>,
-    ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceRegisterAutoDebitRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRegisterAutoDebitResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
         let service_name = request
             .extensions()
@@ -3287,8 +3287,8 @@ impl PaymentService for Payments {
 
     async fn register_only(
         &self,
-        request: tonic::Request<PaymentServiceRegisterRequest>,
-    ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceRegisterAutoDebitRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRegisterAutoDebitResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
         let service_name = request
             .extensions()
@@ -3677,8 +3677,8 @@ impl PaymentService for Payments {
     )]
     async fn mandate_revoke(
         &self,
-        request: tonic::Request<PaymentServiceRevokeMandateRequest>,
-    ) -> Result<tonic::Response<PaymentServiceRevokeMandateResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceRevokeAutoDebitRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRevokeAutoDebitResponse>, tonic::Status> {
         let service_name = request
             .extensions()
             .get::<String>()
@@ -4936,7 +4936,7 @@ pub fn generate_mandate_revoke_response(
         MandateRevokeRequestData,
         MandateRevokeResponseData,
     >,
-) -> Result<PaymentServiceRevokeMandateResponse, error_stack::Report<ApplicationErrorResponse>> {
+) -> Result<PaymentServiceRevokeAutoDebitResponse, error_stack::Report<ApplicationErrorResponse>> {
     let mandate_revoke_response = router_data_v2.response;
     let raw_connector_response = router_data_v2
         .resource_common_data
@@ -4948,7 +4948,7 @@ pub fn generate_mandate_revoke_response(
         .resource_common_data
         .get_connector_response_headers_as_map();
     match mandate_revoke_response {
-        Ok(response) => Ok(PaymentServiceRevokeMandateResponse {
+        Ok(response) => Ok(PaymentServiceRevokeAutoDebitResponse {
             status: match response.mandate_status {
                 common_enums::MandateStatus::Active => {
                     grpc_api_types::payments::MandateStatus::Active
@@ -4972,7 +4972,7 @@ pub fn generate_mandate_revoke_response(
             raw_connector_response,
             raw_connector_request,
         }),
-        Err(e) => Ok(PaymentServiceRevokeMandateResponse {
+        Err(e) => Ok(PaymentServiceRevokeAutoDebitResponse {
             status: grpc_api_types::payments::MandateStatus::MandateRevokeFailed.into(), // Default status for failed revoke
             error: Some(grpc_api_types::payments::ErrorInfo {
                     message: Some(e.message),

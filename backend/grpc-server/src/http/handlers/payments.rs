@@ -16,7 +16,7 @@ use grpc_api_types::payments::{
     PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServicePostAuthenticateRequest,
     PaymentServicePostAuthenticateResponse, PaymentServicePreAuthenticateRequest,
     PaymentServicePreAuthenticateResponse, PaymentServiceRefundRequest,
-    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceRegisterAutoDebitRequest, PaymentServiceRegisterAutoDebitResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
@@ -104,15 +104,15 @@ http_handler!(
 );
 http_handler!(
     register,
-    PaymentServiceRegisterRequest,
-    PaymentServiceRegisterResponse,
+    PaymentServiceRegisterAutoDebitRequest,
+    PaymentServiceRegisterAutoDebitResponse,
     register,
     payments_service
 );
 http_handler!(
     register_only,
-    PaymentServiceRegisterRequest,
-    PaymentServiceRegisterResponse,
+    PaymentServiceRegisterAutoDebitRequest,
+    PaymentServiceRegisterAutoDebitResponse,
     register_only,
     payments_service
 );

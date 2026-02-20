@@ -18,8 +18,8 @@ use grpc_api_types::payments::{
     DisputeServiceDefendResponse, DisputeResponse, DisputeServiceSubmitEvidenceResponse,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse,
     PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
-    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRegisterRequest,
-    PaymentServiceRegisterResponse, PaymentServiceRevokeMandateRequest,
+    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRegisterAutoDebitRequest,
+    PaymentServiceRegisterAutoDebitResponse, PaymentServiceRevokeAutoDebitRequest,
     PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
     PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse,
@@ -6645,7 +6645,7 @@ pub fn generate_payment_capture_response(
 
 impl
     ForeignTryFrom<(
-        PaymentServiceRegisterRequest,
+        PaymentServiceRegisterAutoDebitRequest,
         Connectors,
         consts::Env,
         &MaskedMetadata,
@@ -6655,7 +6655,7 @@ impl
 
     fn foreign_try_from(
         (value, connectors, environment, metadata): (
-            PaymentServiceRegisterRequest,
+            PaymentServiceRegisterAutoDebitRequest,
             Connectors,
             consts::Env,
             &MaskedMetadata,
@@ -6754,11 +6754,11 @@ impl
     }
 }
 
-impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<DefaultPCIHolder> {
+impl ForeignTryFrom<PaymentServiceRegisterAutoDebitRequest> for SetupMandateRequestData<DefaultPCIHolder> {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: PaymentServiceRegisterRequest,
+        value: PaymentServiceRegisterAutoDebitRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email: Option<Email> = match value.email {
             Some(ref email_str) => {
@@ -7137,7 +7137,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         SetupMandateRequestData<T>,
         PaymentsResponseData,
     >,
-) -> Result<PaymentServiceRegisterResponse, error_stack::Report<ApplicationErrorResponse>> {
+) -> Result<PaymentServiceRegisterAutoDebitResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
@@ -7213,7 +7213,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                             .connector_mandate_request_reference_id,
                     });
 
-                PaymentServiceRegisterResponse {
+                PaymentServiceRegisterAutoDebitResponse {
                     registration_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
                     redirection_data: redirection_data.map(
                         |form| {
@@ -7290,7 +7290,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 }
                 None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
             };
-            PaymentServiceRegisterResponse {
+            PaymentServiceRegisterAutoDebitResponse {
                 registration_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(
                         grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(()),
@@ -8021,11 +8021,11 @@ impl
     }
 }
 
-impl ForeignTryFrom<PaymentServiceRegisterRequest> for ConnectorCustomerData {
+impl ForeignTryFrom<PaymentServiceRegisterAutoDebitRequest> for ConnectorCustomerData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: PaymentServiceRegisterRequest,
+        value: PaymentServiceRegisterAutoDebitRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email = value
             .email
@@ -9877,11 +9877,11 @@ impl
 }
 
 // Conversion implementations for MandateRevoke flow
-impl ForeignTryFrom<PaymentServiceRevokeMandateRequest> for MandateRevokeRequestData {
+impl ForeignTryFrom<PaymentServiceRevokeAutoDebitRequest> for MandateRevokeRequestData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: PaymentServiceRevokeMandateRequest,
+        value: PaymentServiceRevokeAutoDebitRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             mandate_id: Secret::new(value.mandate_id),
@@ -9893,7 +9893,7 @@ impl ForeignTryFrom<PaymentServiceRevokeMandateRequest> for MandateRevokeRequest
 
 impl
     ForeignTryFrom<(
-        PaymentServiceRevokeMandateRequest,
+        PaymentServiceRevokeAutoDebitRequest,
         Connectors,
         &MaskedMetadata,
     )> for PaymentFlowData
@@ -9902,7 +9902,7 @@ impl
 
     fn foreign_try_from(
         (value, connectors, metadata): (
-            PaymentServiceRevokeMandateRequest,
+            PaymentServiceRevokeAutoDebitRequest,
             Connectors,
             &MaskedMetadata,
         ),
