@@ -275,7 +275,7 @@ impl GooglePayDecryptedData {
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeDecryptedData {
     pub client_id: Secret<String>,
@@ -288,7 +288,7 @@ pub struct PazeDecryptedData {
     pub eci: Option<String>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeToken {
     pub payment_token: cards::NetworkToken,
@@ -299,7 +299,7 @@ pub struct PazeToken {
 
 pub type NetworkTokenNumber = NetworkToken;
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeConsumer {
     // This is consumer data not customer data.
@@ -312,14 +312,14 @@ pub struct PazeConsumer {
     pub language_code: Option<String>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazePhoneNumber {
     pub country_code: Secret<String>,
     pub phone_number: Secret<String>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeAddress {
     pub name: Option<Secret<String>>,
@@ -332,7 +332,7 @@ pub struct PazeAddress {
     pub country_code: Option<common_enums::enums::CountryAlpha2>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PazeDynamicData {
     pub dynamic_data_value: Option<Secret<String>>,

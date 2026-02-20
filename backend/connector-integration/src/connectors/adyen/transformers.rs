@@ -1351,12 +1351,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentFlowData,
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
-            >,
-            Option<domain_types::router_data::PaymentMethodToken>,
-
+            >
         ),
     ) -> Result<Self, Self::Error> {
-        let (wallet_data, _item, _payment_method_token) = value;
+        let (wallet_data, _item) = value;
         match wallet_data {
             WalletData::GooglePay(data) => {
                 let google_pay_wallet_data = match &data.tokenization_data {
@@ -2068,7 +2066,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = get_amount_data(&item);
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-            AdyenPaymentMethod::try_from((wallet_data, &item.router_data, item.router_data.resource_common_data.payment_method_token.clone() ))?,
+            AdyenPaymentMethod::try_from((wallet_data, &item.router_data)),
         ));
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let (recurring_processing_model, store_payment_method, shopper_reference) =
