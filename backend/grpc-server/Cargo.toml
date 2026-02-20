@@ -13,6 +13,7 @@ interfaces = { path = "../interfaces" }
 cards = { path = "../cards", package = "ucs_cards" }
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
+composite-service = { path = "../composite-service" }
 config_patch_derive = { path = "../config_patch_derive" }
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking" }
 injector = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0" }
