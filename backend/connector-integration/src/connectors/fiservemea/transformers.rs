@@ -51,10 +51,10 @@ pub struct FiservemeaErrorResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaAuthorizeRequest {
+pub struct FiservemeaAuthorizeRequest<T> {
     pub request_type: String,
     pub transaction_amount: FiservemeaTransactionAmount,
-    pub payment_method: FiservemeaPaymentMethod,
+    pub payment_method: FiservemeaPaymentMethod<T>,
     pub order: Option<FiservemeaOrder>,
 }
 
@@ -67,13 +67,13 @@ pub struct FiservemeaTransactionAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentMethod {
-    pub payment_card: FiservemeaPaymentCard,
+pub struct FiservemeaPaymentMethod<T> {
+    pub payment_card: FiservemeaPaymentCard<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservemeaPaymentCard {
+pub struct FiservemeaPaymentCard<T> {
     pub number: Secret<String>,
     pub security_code: Secret<String>,
     pub expiry_date: FiservemeaExpiryDate,
