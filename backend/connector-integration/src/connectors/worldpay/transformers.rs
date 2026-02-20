@@ -393,8 +393,7 @@ fn map_worldpay_last_event_to_attempt_status(last_event: &str) -> AttemptStatus 
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             WorldpaySyncResponse,
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -490,8 +489,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             WorldpayCaptureResponse,
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -548,8 +546,7 @@ pub struct WorldpayVoidResponse {
     pub transaction_reference: String,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             WorldpayVoidResponse,
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -662,8 +659,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             WorldpayRefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -714,8 +710,7 @@ fn map_worldpay_refund_event_to_refund_status(last_event: &str) -> RefundStatus 
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
+impl TryFrom<
         ResponseRouterData<
             WorldpayRefundSyncResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
