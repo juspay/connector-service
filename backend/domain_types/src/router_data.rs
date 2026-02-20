@@ -237,6 +237,26 @@ impl GooglePayDecryptedData {
         Ok(Secret::new(year))
     }
 
+    pub fn get_two_digit_expiry_year(
+        &self,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
+        let binding = self.card_exp_year.clone();
+        let year = binding.peek();
+        Ok(Secret::new(
+            year.get(year.len() - 2..)
+                .ok_or(ValidationError::InvalidValue {
+                    message: "Invalid two-digit year".to_string(),
+                })?
+                .to_string(),
+        ))
+    }
+
+    pub fn get_expiry_date_as_mmyy(&self) -> error_stack::Result<Secret<String>, ValidationError> {
+        let year = self.get_two_digit_expiry_year()?.expose();
+        let month = self.get_expiry_month()?.clone().expose();
+        Ok(Secret::new(format!("{month}{year}")))
+    }
+
     pub fn get_expiry_month(&self) -> error_stack::Result<Secret<String>, ValidationError> {
         let month_str = self.card_exp_month.peek();
         let month = month_str
