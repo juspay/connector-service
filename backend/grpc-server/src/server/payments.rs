@@ -5,12 +5,6 @@ use crate::{
     request::RequestData,
     utils::{self, get_config_from_request, grpc_logging_wrapper},
 };
-use common_crate::{
-    configs::Config,
-    error::{
-        ErrorSwitch, IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc,
-    },
-};
 use common_enums;
 use common_utils::{
     errors::CustomResult, events::FlowName, lineage, metadata::MaskedMetadata, SecretSerdeValue,
@@ -82,6 +76,12 @@ use interfaces::{
     verification::ConnectorSourceVerificationSecrets,
 };
 use tracing::info;
+use ucs_env::{
+    configs::Config,
+    error::{
+        ErrorSwitch, IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc,
+    },
+};
 
 #[derive(Debug, Clone)]
 struct EventParams<'a> {

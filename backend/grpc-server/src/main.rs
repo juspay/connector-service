@@ -1,5 +1,5 @@
-use common_crate::{configs, logger};
 use grpc_server::{self, app};
+use ucs_env::{configs, logger};
 
 #[allow(clippy::unwrap_in_result)]
 #[tokio::main]
@@ -10,8 +10,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = configs::Config::new().expect("Failed while parsing config");
     let _guard = logger::setup(
         &config.log,
-        common_crate::service_name!(),
-        [common_crate::service_name!(), "grpc_server", "tower_http"],
+        ucs_env::service_name!(),
+        [ucs_env::service_name!(), "grpc_server", "tower_http"],
     );
 
     let metrics_server = app::metrics_server_builder(config.clone());

@@ -14,7 +14,9 @@ members = [
   "backend/tracing-kafka",
   "backend/cards",
   "sdk/rust",
-  "backend/composite-service"
+  "backend/composite-service",
+  "backend/ucs_env",
+  "backend/ffi"
 ]
 exclude = [
   "examples/example-rs",

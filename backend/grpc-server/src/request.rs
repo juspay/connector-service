@@ -3,7 +3,7 @@ use std::sync::Arc;
 use common_utils::metadata::MaskedMetadata;
 
 use crate::utils::{get_metadata_payload, MetadataPayload};
-use common_crate::{configs, error::ResultExtGrpc};
+use ucs_env::{configs, error::ResultExtGrpc};
 
 /// Structured request data with secure metadata access.
 #[derive(Debug)]

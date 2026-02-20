@@ -66,7 +66,7 @@ impl std::fmt::Debug for RequestContent {
 pub enum RequestContent {
     Json(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     FormUrlEncoded(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
-    #[serde(skip)]
+    #[serde(skip)] // reqwest::multipart::Form does not implement Serialize; skipped intentionally
     FormData(reqwest::multipart::Form),
     Xml(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     RawBytes(Vec<u8>),

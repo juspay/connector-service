@@ -4,7 +4,6 @@ use crate::{
     request::RequestData,
     utils::{grpc_logging_wrapper, MetadataPayload},
 };
-use common_crate::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
@@ -33,6 +32,7 @@ use grpc_api_types::payments::{
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
+use ucs_env::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
 
 // Helper trait for dispute operations
 trait DisputeOperationsInternal {

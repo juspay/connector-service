@@ -13,7 +13,7 @@ import json
 
 import requests as http_requests
 
-from connector_service_ffi import authorize_req, authorize_res
+from connector_service_ffi import authorize_req_transformer, authorize_res_transformer
 from payment_pb2 import PaymentServiceAuthorizeResponse
 
 
@@ -37,7 +37,7 @@ class ConnectorClient:
         request_bytes = request.SerializeToString()
 
         # Step 2: Build the connector HTTP request via FFI
-        connector_request_json = authorize_req(request_bytes, metadata)
+        connector_request_json = authorize_req_transformer(request_bytes, metadata)
         connector_request = json.loads(connector_request_json)
 
         url = connector_request["url"]
@@ -55,7 +55,7 @@ class ConnectorClient:
         # Step 4: Parse the connector response via FFI
         response_body = response.text.encode("utf-8")
         response_headers = dict(response.headers)
-        result_bytes = authorize_res(
+        result_bytes = authorize_res_transformer(
             response_body,
             response.status_code,
             response_headers,
