@@ -8,7 +8,7 @@ edition = "2021"
 ffi = { path = "../../backend/ffi", default-features = false }
 grpc-api-types = { path = "../../backend/grpc-api-types" }
 external-services = { path = "../../backend/external-services" }
-common_crate = { path = "../../backend/common_crate", package = "common_crate" }
+ucs_env = { path = "../../backend/ucs_env" }
 common_utils = { path = "../../backend/common_utils", package = "ucs_common_utils" }
 domain_types = { path = "../../backend/domain_types" }
 cards = { path = "../../backend/cards", package = "ucs_cards" }

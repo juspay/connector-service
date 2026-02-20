@@ -14,9 +14,9 @@ use crate::http::{
     transfer_config_to_grpc_request, utils::ValidatedJson,
 };
 #[allow(unused_imports)]
-use common_crate::configs::Config;
-#[allow(unused_imports)]
 use std::sync::Arc;
+#[allow(unused_imports)]
+use ucs_env::configs::Config;
 
 macro_rules! http_handler {
     ($fn_name:ident, $req_type:ty, $resp_type:ty, $service_method:ident, $service_field:ident) => {

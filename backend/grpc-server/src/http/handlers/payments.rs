@@ -30,7 +30,7 @@ use crate::http::{
     error::HttpError, http_headers_to_grpc_metadata, state::AppState,
     transfer_config_to_grpc_request, utils::ValidatedJson,
 };
-use common_crate::configs::Config;
+use ucs_env::configs::Config;
 
 http_handler!(
     authorize,
