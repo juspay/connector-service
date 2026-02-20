@@ -23,9 +23,9 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankDebitData, BankRedirectData, BankTransferData, Card, CardRedirectData,
-        DefaultPCIHolder, GiftCardData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, WalletData,
+        ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
+        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, PayLaterData,
+        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -1356,42 +1356,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         ),
     ) -> Result<Self, Self::Error> {
-        let (wallet_data, _item, payment_method_token) = value;
+        let (wallet_data, _item, _payment_method_token) = value;
         match wallet_data {
             WalletData::GooglePay(data) => {
-                let google_pay_wallet_data = match payment_method_token {
-                    Some(domain_types::router_data::PaymentMethodToken::GooglePayDecrypt(
-                        decrypt_data,
-                    )) => {
-
-                        let exp_month = decrypt_data.expiration_month.clone();
-                        let exp_year_str = decrypt_data.expiration_year.peek();
-                        let exp_year = if exp_year_str.len() == 2 {
-                            Secret::new(format!("20{}", exp_year_str))
-                        } else {
-                            decrypt_data.expiration_year.clone()
-                        };
+                let google_pay_wallet_data = match &data.tokenization_data {
+                    GpayTokenizationData::Decrypted(decrypt_data) => {
+                        let expiry_year = decrypt_data
+                            .get_four_digit_expiry_year()
+                            .change_context(errors::ConnectorError::InvalidDataFormat {
+                                field_name: "expiry_year",
+                            })?;
 
                         let google_pay_decrypt_data = AdyenGooglePayDecryptData {
-                            number: decrypt_data.pan.clone(),
-                            expiry_month: exp_month,
-                            expiry_year: exp_year,
+                            number: decrypt_data.application_primary_account_number.clone(),
+                            expiry_month: decrypt_data.card_exp_month.clone(),
+                            expiry_year,
                             brand: "googlepay".to_string(),
                             payment_type: PaymentType::Scheme,
                         };
 
                         Self::GooglePayDecrypt(Box::new(google_pay_decrypt_data))
                     }
-                    _ => {
+                    GpayTokenizationData::Encrypted(encrypted_data) => {
                         let gpay_data = AdyenGPay {
-                            google_pay_token: Secret::new(
-                                data.tokenization_data
-                                    .get_encrypted_google_pay_token()
-                                    .change_context(errors::ConnectorError::MissingRequiredField {
-                                        field_name: "gpay wallet_token",
-                                    })?
-                                    .to_owned(),
-                            ),
+                            google_pay_token: Secret::new(encrypted_data.token.clone()),
                         };
 
                         Self::Gpay(Box::new(gpay_data))
@@ -1401,45 +1389,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Ok(google_pay_wallet_data)
             }
             WalletData::ApplePay(data) => {
-                let apple_pay_wallet_data = match payment_method_token{
-                    Some(domain_types::router_data::PaymentMethodToken::ApplePayDecrypt(
-                        decrypt_data,
-                    ))=>{
-                            let expiry_year_4_digit = decrypt_data.get_four_digit_expiry_year();
-                            let exp_month = decrypt_data.get_expiry_month().change_context(
-                                errors::ConnectorError::InvalidDataFormat {
-                                    field_name: "expiration_month",
-                                },
-                            )?;
+                let apple_pay_wallet_data = match &data.payment_data {
+                    ApplePayPaymentData::Decrypted(decrypt_data) => {
+                        let expiry_year_4_digit = decrypt_data.get_four_digit_expiry_year();
+                        let exp_month = decrypt_data.get_expiry_month();
 
-                            let apple_pay_decrypt_data = AdyenApplePayDecryptData{
-                                number: decrypt_data.application_primary_account_number,
-                                expiry_month: exp_month,
-                                expiry_year: expiry_year_4_digit,
-                                brand: data.payment_method.network.clone(),
-                                payment_type: PaymentType::Scheme,
-                            };
+                        let apple_pay_decrypt_data = AdyenApplePayDecryptData {
+                            number: decrypt_data.application_primary_account_number.clone(),
+                            expiry_month: exp_month,
+                            expiry_year: expiry_year_4_digit,
+                            brand: data.payment_method.network.clone(),
+                            payment_type: PaymentType::Scheme,
+                        };
 
-                            Self::ApplePayDecrypt(Box::new(
-                                apple_pay_decrypt_data
-                            ))
+                        Self::ApplePayDecrypt(Box::new(apple_pay_decrypt_data))
                     }
-                    _ => {
-                            let apple_pay_encrypted_data = data
-                                    .payment_data
-                                    .get_encrypted_apple_pay_payment_data_mandatory()
-                                    .change_context(errors::ConnectorError::MissingRequiredField {
-                                        field_name: "Apple pay encrypted data",
-                                    })?;
-                            let apple_pay_data = AdyenApplePay {                                          
-                                    apple_pay_token: Secret::new(apple_pay_encrypted_data.to_string()), 
-                            };
+                    ApplePayPaymentData::Encrypted(encrypted_str) => {
+                        let apple_pay_data = AdyenApplePay {
+                            apple_pay_token: Secret::new(encrypted_str.clone()),
+                        };
 
-                            Self::ApplePay(Box::new(apple_pay_data))   
-                        
+                        Self::ApplePay(Box::new(apple_pay_data))
                     }
                 };
-
 
                 Ok(apple_pay_wallet_data)
             }
@@ -2111,48 +2083,47 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let country_code =
             get_country_code(item.router_data.resource_common_data.get_optional_billing());
 
-        let mpi_data = if matches!(
-            wallet_data,
-            WalletData::ApplePay(_) | WalletData::GooglePay(_)
-        ) {
-            match &item.router_data.resource_common_data.payment_method_token {
-                Some(domain_types::router_data::PaymentMethodToken::ApplePayDecrypt(apple_data)) => {
+        let mpi_data = match wallet_data {
+            WalletData::ApplePay(apple_data) => {
+                if let ApplePayPaymentData::Decrypted(decrypt_data) = &apple_data.payment_data {
                     Some(AdyenMpiData {
                         directory_response: common_enums::TransactionStatus::Success,
                         authentication_response: common_enums::TransactionStatus::Success,
-                        cavv: Some(apple_data.payment_data.online_payment_cryptogram.clone()),
+                        cavv: Some(decrypt_data.payment_data.online_payment_cryptogram.clone()),
                         token_authentication_verification_value: None,
-                        eci: apple_data.payment_data.eci_indicator.clone(),
+                        eci: decrypt_data.payment_data.eci_indicator.clone(),
                         ds_trans_id: None,
                         three_ds_version: None,
                         challenge_cancel: None,
                         risk_score: None,
                         cavv_algorithm: None,
                     })
+                } else {
+                    None
                 }
-                Some(domain_types::router_data::PaymentMethodToken::GooglePayDecrypt(google_pay)) => {
-                    match (google_pay.cryptogram.clone(), google_pay.eci_indicator.clone()) {
-                        (Some(cryptogram), Some(eci_indicator)) => {
-                            Some(AdyenMpiData {
-                                directory_response: common_enums::TransactionStatus::Success,
-                                authentication_response: common_enums::TransactionStatus::Success,
-                                cavv: Some(cryptogram),
-                                token_authentication_verification_value: None,
-                                eci: Some(eci_indicator),
-                                ds_trans_id: None,
-                                three_ds_version: None,
-                                challenge_cancel: None,
-                                risk_score: None,
-                                cavv_algorithm: None,
-                            })
-                        }
+            }
+            WalletData::GooglePay(gpay_data) => {
+                if let GpayTokenizationData::Decrypted(decrypt_data) = &gpay_data.tokenization_data {
+                    match (decrypt_data.cryptogram.clone(), decrypt_data.eci_indicator.clone()) {
+                        (Some(cryptogram), Some(eci_indicator)) => Some(AdyenMpiData {
+                            directory_response: common_enums::TransactionStatus::Success,
+                            authentication_response: common_enums::TransactionStatus::Success,
+                            cavv: Some(cryptogram),
+                            token_authentication_verification_value: None,
+                            eci: Some(eci_indicator),
+                            ds_trans_id: None,
+                            three_ds_version: None,
+                            challenge_cancel: None,
+                            risk_score: None,
+                            cavv_algorithm: None,
+                        }),
                         _ => None,
                     }
+                } else {
+                    None
                 }
-                _ => None,
             }
-        } else {
-            None
+            _ => None,
         };
 
         Ok(Self {

@@ -1785,126 +1785,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .clone(),
                     cryptogram: google_pay_decrypted_data.cryptogram.clone(),
                     transaction_type,
-                    expiration_year: google_pay_decrypted_data
-                        .get_four_digit_expiry_year()
-                        .change_context(ConnectorError::InvalidDataFormat {
-                            field_name: "expiration_year",
-                        })?,
-                    expiration_month: google_pay_decrypted_data
-                        .get_expiry_month()
-                        .change_context(ConnectorError::InvalidDataFormat {
-                            field_name: "expiration_month",
-                        })?,
-                },
-            }));
-        let processing_information = ProcessingInformation::try_from((
-            item,
-            Some(PaymentSolution::GooglePay),
-            Some(google_pay_data.info.card_network.clone()),
-        ))?;
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
-            item.router_data
-                .request
-                .metadata
-                .clone()
-                .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
-        );
-
-        let ucaf_collection_indicator =
-            match google_pay_data.info.card_network.to_lowercase().as_str() {
-                "mastercard" => Some("2".to_string()),
-                _ => None,
-            };
-
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            consumer_authentication_information: Some(CybersourceConsumerAuthInformation {
-                pares_status: None,
-                ucaf_collection_indicator,
-                cavv: None,
-                ucaf_authentication_data: None,
-                xid: None,
-                directory_server_transaction_id: None,
-                specification_version: None,
-                pa_specification_version: None,
-                veres_enrolled: None,
-                eci_raw: None,
-                authentication_date: None,
-                effective_authentication_type: None,
-                challenge_code: None,
-                signed_pares_status_reason: None,
-                challenge_cancel_code: None,
-                network_score: None,
-                acs_transaction_id: None,
-                cavv_algorithm: None,
-            }),
-            merchant_defined_information,
-        })
-    }
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<(
-        &CybersourceRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        Box<GooglePayDecryptedData>,
-        GooglePayWalletData,
-    )> for CybersourcePaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        (item, google_pay_decrypted_data, google_pay_data): (
-            &CybersourceRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            Box<GooglePayDecryptedData>,
-            GooglePayWalletData,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let transaction_type = if item.router_data.request.off_session == Some(true) {
-            TransactionType::StoredCredentials
-        } else {
-            TransactionType::InApp
-        };
-        let email = item
-            .router_data
-            .resource_common_data
-            .get_billing_email()
-            .or(item.router_data.request.get_email())?;
-        let bill_to = build_bill_to(
-            item.router_data.resource_common_data.get_optional_billing(),
-            email,
-        )?;
-        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
-
-        let payment_information =
-            PaymentInformation::GooglePay(Box::new(GooglePayPaymentInformation {
-                tokenized_card: TokenizedCard {
-                    number: google_pay_decrypted_data.pan.clone(),
-                    cryptogram: google_pay_decrypted_data
-                        .cryptogram
-                        .clone(),
-                    transaction_type,
-                    expiration_year: google_pay_decrypted_data.expiration_year.clone(),
-                    expiration_month: google_pay_decrypted_data.expiration_month.clone(),
                     expiration_year,
                     expiration_month,
                 },
@@ -1959,6 +1839,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         })
     }
 }
+
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(

@@ -46,32 +46,6 @@ fn extract_headers_from_metadata(
     }
 }
 
-/// Parses payment_method_token JSON string into appropriate PaymentMethodToken variant.
-///
-/// Attempts to parse the token as known decrypted wallet data formats (Google Pay, Apple Pay).
-/// If parsing fails for all known formats, falls back to wrapping as a generic Token.
-fn parse_payment_method_token(token: String) -> Option<crate::router_data::PaymentMethodToken> {
-    // Try Google Pay decrypted data first
-    if let Ok(decrypted_data) =
-        serde_json::from_str::<crate::router_data::GooglePayDecryptedData>(&token)
-    {
-        return Some(crate::router_data::PaymentMethodToken::GooglePayDecrypt(
-            Box::new(decrypted_data),
-        ));
-    }
-
-    // Try Apple Pay decrypted data
-    if let Ok(decrypted_data) =
-        serde_json::from_str::<crate::router_data::ApplePayPredecryptData>(&token)
-    {
-        return Some(crate::router_data::PaymentMethodToken::ApplePayDecrypt(
-            Box::new(decrypted_data),
-        ));
-    }
-
-    // Fall back to generic Token
-    Some(crate::router_data::PaymentMethodToken::Token(Secret::new(token)))
-}
 
 impl ForeignTryFrom<(Secret<String>, &'static str)> for SecretSerdeValue {
     type Error = ApplicationErrorResponse;
