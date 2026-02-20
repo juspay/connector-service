@@ -462,11 +462,9 @@ pub struct WorldpayCaptureResponse {
 }
 
 // Request transformer for Capture flow
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
+impl TryFrom<
         crate::connectors::WorldpayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
         >,
     > for WorldpayCaptureRequest
 {
@@ -475,7 +473,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: crate::connectors::WorldpayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -617,11 +614,9 @@ fn map_worldpay_refund_outcome_to_refund_status(outcome: &str) -> RefundStatus {
 }
 
 // Request transformer for Refund flow
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
+impl TryFrom<
         crate::connectors::WorldpayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
         >,
     > for WorldpayRefundRequest
 {
@@ -630,7 +625,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: crate::connectors::WorldpayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
