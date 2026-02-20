@@ -1,6 +1,7 @@
 #![allow(clippy::expect_used, clippy::indexing_slicing)]
 #![allow(clippy::panic)]
-use grpc_server::{app, configs};
+use grpc_server::app;
+use ucs_env::configs;
 use hyperswitch_masking::ExposeInterface;
 mod common;
 mod utils;

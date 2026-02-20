@@ -1,6 +1,7 @@
 #![allow(clippy::expect_used)]
 
-use grpc_server::{app, configs};
+use grpc_server::app;
+use ucs_env::configs;
 mod common;
 use grpc_api_types::health_check::{health_client::HealthClient, HealthCheckRequest};
 use tonic::{transport::Channel, Request};

@@ -965,41 +965,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
-name = "common_crate"
-version = "0.1.0"
-dependencies = [
- "build_info",
- "config",
- "config_patch_derive",
- "connector-integration",
- "domain_types",
- "error-stack 0.4.1",
- "external-services",
- "grpc-api-types",
- "http 1.3.1",
- "injector",
- "interfaces",
- "log_utils",
- "masking",
- "serde",
- "serde_json",
- "serde_path_to_error",
- "thiserror 1.0.69",
- "time",
- "tokio",
- "tonic 0.13.1",
- "tonic-reflection",
- "tracing",
- "tracing-appender",
- "tracing-attributes",
- "tracing-kafka",
- "tracing-subscriber",
- "ucs_cards",
- "ucs_common_enums",
- "ucs_common_utils",
-]
-
-[[package]]
 name = "common_enums"
 version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
@@ -1058,6 +1023,17 @@ dependencies = [
  "urlencoding",
  "utoipa",
  "uuid",
+]
+
+[[package]]
+name = "composite-service"
+version = "0.1.0"
+dependencies = [
+ "connector-integration",
+ "domain_types",
+ "grpc-api-types",
+ "tonic 0.13.1",
+ "ucs_common_enums",
 ]
 
 [[package]]
@@ -1261,16 +1237,6 @@ checksum = "1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3"
 dependencies = [
  "generic-array",
  "typenum",
-]
-
-[[package]]
-name = "ctor"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32a2785755761f3ddc1492979ce1e48d2c00d09311c39e4466429188f3dd6501"
-dependencies = [
- "quote",
- "syn 2.0.106",
 ]
 
 [[package]]
@@ -1663,7 +1629,6 @@ name = "ffi"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "common_crate",
  "config",
  "connector-integration",
  "domain_types",
@@ -1672,11 +1637,10 @@ dependencies = [
  "grpc-api-types",
  "http 0.2.12",
  "interfaces",
- "napi",
- "napi-build",
- "napi-derive",
+ "masking",
  "paste",
  "prost",
+ "prost-build",
  "serde",
  "serde_json",
  "serde_path_to_error",
@@ -1686,6 +1650,7 @@ dependencies = [
  "tracing",
  "ucs_common_enums",
  "ucs_common_utils",
+ "ucs_env",
  "uniffi",
 ]
 
@@ -2826,7 +2791,6 @@ dependencies = [
  "base64 0.21.7",
  "build_info",
  "chrono",
- "common_crate",
  "config",
  "config_patch_derive",
  "connector-integration",
@@ -2870,6 +2834,7 @@ dependencies = [
  "ucs_cards",
  "ucs_common_enums",
  "ucs_common_utils",
+ "ucs_env",
  "uuid",
 ]
 
@@ -3230,7 +3195,6 @@ name = "hyperswitch-payments-client"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "common_crate",
  "domain_types",
  "external-services",
  "ffi",
@@ -3242,6 +3206,7 @@ dependencies = [
  "tokio",
  "ucs_cards",
  "ucs_common_utils",
+ "ucs_env",
 ]
 
 [[package]]
@@ -3662,16 +3627,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a82ae493e598baaea5209805c49bbf2ea7de956d50d7da0da1164f9c6d28543"
 
 [[package]]
-name = "libloading"
-version = "0.8.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
-dependencies = [
- "cfg-if",
- "windows-link 0.2.0",
-]
-
-[[package]]
 name = "libm"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3963,63 +3918,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ffa00dec017b5b1a8b7cf5e2c008bfda1aa7e0697ac1508b491fdf2622fb4d8"
 dependencies = [
  "rand 0.8.5",
-]
-
-[[package]]
-name = "napi"
-version = "2.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54a63d0570e4c3e0daf7a8d380563610e159f538e20448d6c911337246f40e84"
-dependencies = [
- "bitflags 2.9.4",
- "ctor",
- "napi-derive",
- "napi-sys",
- "once_cell",
-]
-
-[[package]]
-name = "napi-build"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03acbfa4f156a32188bfa09b86dc11a431b5725253fc1fc6f6df5bed273382c4"
-
-[[package]]
-name = "napi-derive"
-version = "2.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05bb7c37e3c1dda9312fdbe4a9fc7507fca72288ba154ec093e2d49114e727ce"
-dependencies = [
- "cfg-if",
- "convert_case",
- "napi-derive-backend",
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "napi-derive-backend"
-version = "1.0.75"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1639aaa9eeb76e91c6ae66da8ce3e89e921cd3885e99ec85f4abacae72fc91bf"
-dependencies = [
- "convert_case",
- "once_cell",
- "proc-macro2",
- "quote",
- "regex",
- "semver",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "napi-sys"
-version = "2.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "427802e8ec3a734331fec1035594a210ce1ff4dc5bc1950530920ab717964ea3"
-dependencies = [
- "libloading",
 ]
 
 [[package]]
@@ -6789,6 +6687,41 @@ dependencies = [
  "url",
  "utoipa",
  "uuid",
+]
+
+[[package]]
+name = "ucs_env"
+version = "0.1.0"
+dependencies = [
+ "build_info",
+ "config",
+ "config_patch_derive",
+ "connector-integration",
+ "domain_types",
+ "error-stack 0.4.1",
+ "external-services",
+ "grpc-api-types",
+ "http 1.3.1",
+ "injector",
+ "interfaces",
+ "log_utils",
+ "masking",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "thiserror 1.0.69",
+ "time",
+ "tokio",
+ "tonic 0.13.1",
+ "tonic-reflection",
+ "tracing",
+ "tracing-appender",
+ "tracing-attributes",
+ "tracing-kafka",
+ "tracing-subscriber",
+ "ucs_cards",
+ "ucs_common_enums",
+ "ucs_common_utils",
 ]
 
 [[package]]
