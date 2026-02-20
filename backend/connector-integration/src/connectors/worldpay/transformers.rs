@@ -626,6 +626,49 @@ fn map_worldpay_refund_outcome_to_refund_status(outcome: &str) -> RefundStatus {
     }
 }
 
+// Request transformer for Refund flow
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        crate::connectors::WorldpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for WorldpayRefundRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: crate::connectors::WorldpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // For partial refunds, include the value
+        let value = if router_data.request.minor_amount.get_amount_as_i64()
+            < router_data.request.total_amount.get_amount_as_i64()
+        {
+            Some(WorldpayValue {
+                currency: router_data.request.currency.to_string(),
+                amount: router_data.request.minor_amount.get_amount_as_i64(),
+            })
+        } else {
+            None
+        };
+
+        Ok(Self {
+            value,
+            reference: Some(
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+        })
+    }
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ResponseRouterData<
