@@ -2,7 +2,7 @@
  * UniFFI FFI example: authorizeReq + full round-trip (Node.js via koffi)
  *
  * Demonstrates two usage patterns:
- *   1. Low-level: call authorizeReq directly to get the connector HTTP request JSON
+ *   1. Low-level: call authorizeReqTransformer directly to get the connector HTTP request JSON
  *   2. High-level: use ConnectorClient for a full round-trip (build -> HTTP -> parse)
  *
  * Uses the same UniFFI shared library as the Python and Kotlin examples.
@@ -43,7 +43,7 @@ function buildMetadata() {
 }
 
 function demoLowLevelFfi(requestBytes) {
-  console.log("=== Demo 1: Low-level FFI (authorizeReq) ===\n");
+  console.log("=== Demo 1: Low-level FFI (authorizeReqTransformer) ===\n");
 
   const metadata = buildMetadata();
   const uniffi = new UniffiClient();
