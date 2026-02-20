@@ -1034,6 +1034,7 @@ impl ForeignTryFrom<(RazorpayOrderResponse, Self, u16, bool)>
     ) -> Result<Self, Self::Error> {
         let order_response = PaymentCreateOrderResponse {
             order_id: response.id,
+            session_token: None,
         };
 
         Ok(Self {
