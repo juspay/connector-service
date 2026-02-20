@@ -154,7 +154,7 @@ macros::create_all_prerequisites!(
             request_body: FiservemeaVoidRequest,
             response_body: FiservemeaVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
+        )
     ],
     amount_converters: [
         amount_converter: StringMajorUnit
