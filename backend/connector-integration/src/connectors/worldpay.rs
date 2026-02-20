@@ -24,6 +24,8 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers as worldpay;
+
+use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
