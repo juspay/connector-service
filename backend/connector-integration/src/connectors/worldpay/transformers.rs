@@ -213,7 +213,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
-            T,
         >,
     > for WorldpayAuthorizeRequest
 {
@@ -227,7 +226,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
-            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
