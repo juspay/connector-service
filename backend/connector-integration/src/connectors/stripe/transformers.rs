@@ -105,7 +105,7 @@ impl TryFrom<&ConnectorAuthType> for StripeAuthType {
             ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            ConnectorAuthType::ExternalJsonAuth { value } => {
+            ConnectorAuthType::ExternalAuth { value } => {
                 let auth_type: Self = serde_json::from_value::<Self>(value.peek().clone())
                     .map_err(|_| ConnectorError::FailedToObtainAuthType)?;
                 Ok(Self {
