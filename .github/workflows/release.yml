@@ -410,6 +410,12 @@ jobs:
     needs: [version-and-changelog, collect-sdks]
     if: ${{ github.event.inputs.dry_run != 'false' }}
     steps:
+      - name: Download SDK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sdks
+          path: artifacts/sdks
+
       - name: Print summary
         run: |
           echo "## Dry Run Summary"
@@ -417,9 +423,11 @@ jobs:
           echo "New version: ${{ needs.version-and-changelog.outputs.new_version }}"
           echo ""
           echo "### Changelog Preview"
-          echo "```"
-          echo "${{ needs.version-and-changelog.outputs.changelog }}"
-          echo "```"
+          echo "\`\`\`"
+          cat << 'CHANGELOG_EOF'
+          ${{ needs.version-and-changelog.outputs.changelog }}
+          CHANGELOG_EOF
+          echo "\`\`\`"
           echo ""
           echo "### SDK Artifacts"
           ls -la artifacts/sdks/*.zip 2>/dev/null || echo "No artifacts found"
