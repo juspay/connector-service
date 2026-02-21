@@ -26,12 +26,12 @@ use domain_types::{
     payment_address::Address,
     payment_method_data::{
         self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
-        GooglePayWalletData, NetworkTokenData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, SamsungPayWalletData, WalletData,
+        GooglePayDecryptedData, GooglePayWalletData, NetworkTokenData, PaymentMethodData,
+        PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ErrorResponse,
-        GooglePayDecryptedData, PazeDecryptedData,
+        PazeDecryptedData,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
@@ -2094,21 +2094,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Self::try_from((&item, samsung_pay_data))
                 }
                 WalletData::Paze(paze_wallet_data) => {
-                    let paze_decrypted_data = match (
-                        paze_wallet_data.decrypted_data,
-                        paze_wallet_data.complete_response,
-                    ) {
-                        (Some(paze_decrypted_data), _) => Ok(paze_decrypted_data),
-                        (None, Some(complete_response)) => {
+                    let paze_decrypted_data = match *paze_wallet_data {
+                        payment_method_data::PazeWalletData::Decrypted(paze_decrypted_data) => {
+                            Ok(*paze_decrypted_data)
+                        }
+                        payment_method_data::PazeWalletData::CompleteResponse(
+                            complete_response,
+                        ) => {
+                            // TODO: This needs to be tested.
                             serde_json::from_str::<PazeDecryptedData>(complete_response.peek())
                                 .change_context(ConnectorError::InvalidWalletToken {
                                     wallet_name: "Paze".to_string(),
                                 })
                         }
-                        (None, None) => Err(ConnectorError::MissingRequiredField {
-                            field_name: "wallet_data.paze.complete_response",
-                        }
-                        .into()),
                     }?;
                     Self::try_from((&item, Box::new(paze_decrypted_data)))
                 }

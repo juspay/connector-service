@@ -951,18 +951,14 @@ impl<
                     let paze_wallet_data = match paze_wallet.paze_data {
                         Some(grpc_api_types::payments::paze_wallet::PazeData::CompleteResponse(
                             complete_response,
-                        )) => payment_method_data::PazeWalletData {
-                            complete_response: Some(complete_response),
-                            decrypted_data: None,
-                        },
+                        )) => payment_method_data::PazeWalletData::CompleteResponse(
+                            complete_response,
+                        ),
                         Some(grpc_api_types::payments::paze_wallet::PazeData::DecryptedData(
                             decrypted_data,
-                        )) => payment_method_data::PazeWalletData {
-                            complete_response: None,
-                            decrypted_data: Some(foreign_try_from_paze_decrypted_data(
-                                decrypted_data,
-                            )?),
-                        },
+                        )) => payment_method_data::PazeWalletData::Decrypted(Box::new(
+                            foreign_try_from_paze_decrypted_data(decrypted_data)?,
+                        )),
                         None => {
                             return Err(report!(ApplicationErrorResponse::missing_required_field(
                                 "payment_method.paze.paze_data",

@@ -387,7 +387,7 @@ message GoogleWallet {
   message TokenizationData {
     oneof tokenization_data {
       GooglePayDecryptedData decrypted_data = 1;     // Decrypted Google Pay payment data
-      GpayEncryptedTokenizationData encrypted_data = 2;  // Encrypted Google Pay payment data
+      GooglePayEncryptedTokenizationData encrypted_data = 2;  // Encrypted Google Pay payment data
     }
   }
 
@@ -413,7 +413,7 @@ message GooglePayDecryptedData {
 }
 
 // Google Pay encrypted tokenization data structure
-message GpayEncryptedTokenizationData {
+message GooglePayEncryptedTokenizationData {
   // The type of the token
   string token_type = 1;
   
