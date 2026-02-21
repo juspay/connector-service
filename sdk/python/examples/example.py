@@ -13,8 +13,15 @@ Prerequisites (run `make setup` first):
 import json
 import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, "./generated")
+# Get the directory containing this script
+SCRIPT_DIR = Path(__file__).parent.absolute()
+SDK_ROOT = SCRIPT_DIR.parent
+
+# Add paths relative to this script
+sys.path.insert(0, str(SDK_ROOT / "generated"))
+sys.path.insert(0, str(SDK_ROOT))
 
 # UniFFI-generated Python module
 from connector_service_ffi import authorize_req_transformer, UniffiError

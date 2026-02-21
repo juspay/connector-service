@@ -1,8 +1,6 @@
-mod connector_client;
-
 use std::collections::HashMap;
 
-use connector_client::ConnectorClient;
+use hyperswitch_payments_client::ConnectorClient;
 use grpc_api_types::payments::{self, PaymentServiceAuthorizeRequest};
 
 #[tokio::main]
@@ -123,7 +121,7 @@ fn build_metadata() -> HashMap<String, String> {
 fn demo_low_level(request: &PaymentServiceAuthorizeRequest, metadata: &HashMap<String, String>) {
     eprintln!("=== Demo 1: Low-Level Handler Call ===\n");
 
-    let ffi_request = match connector_client::build_ffi_request(request.clone(), metadata) {
+    let ffi_request = match hyperswitch_payments_client::build_ffi_request(request.clone(), metadata) {
         Ok(req) => req,
         Err(e) => {
             eprintln!("Failed to build FFI request: {}", e);

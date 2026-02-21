@@ -16,9 +16,15 @@
 
 "use strict";
 
-const { UniffiClient } = require("./uniffi_client");
-const { ConnectorClient } = require("./connector_client");
-const { ucs } = require("./generated/proto");
+const path = require("path");
+
+// Get the directory containing this script
+const SCRIPT_DIR = __dirname;
+const SDK_ROOT = path.resolve(SCRIPT_DIR, "..");
+
+const { UniffiClient } = require(path.join(SDK_ROOT, "uniffi_client"));
+const { ConnectorClient } = require(path.join(SDK_ROOT, "connector_client"));
+const { ucs } = require(path.join(SDK_ROOT, "generated", "proto"));
 
 const PaymentServiceAuthorizeRequest = ucs.v2.PaymentServiceAuthorizeRequest;
 const Currency = ucs.v2.Currency;

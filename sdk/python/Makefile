@@ -1,9 +1,9 @@
-.PHONY: build-lib generate-bindings generate-proto install-deps setup run clean package package-native dist
+.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean package package-native dist
 
 # Auto-detect SDK root directory (works when run from sdk/python/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT := $(MAKEFILE_DIR)
-REPO_ROOT := $(MAKEFILE_DIR)../..
+REPO_ROOT := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
 
 # Paths relative to SDK root
 FFI_CRATE=$(REPO_ROOT)/backend/ffi
@@ -36,7 +36,7 @@ generate-bindings: build-lib
 		generate \
 		--library $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) \
 		--language python \
-		--out-dir $(CURDIR)/$(GENERATED_OUT)
+		--out-dir $(GENERATED_OUT)
 	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(GENERATED_OUT)/
 	@echo "UniFFI bindings generated in $(GENERATED_OUT)/"
 
@@ -53,11 +53,15 @@ generate-proto:
 
 # Full setup: build lib, generate both bindings and proto stubs
 setup: generate-proto generate-bindings
-	@echo "Setup complete. Run 'make run' to execute."
+	@if [ -z "$${IN_NIX_SHELL:-}" ] && [ -f $(SDK_ROOT)/requirements.txt ]; then \
+		echo "Installing Python dependencies (non-nix environment)..."; \
+		pip3 install -r $(SDK_ROOT)/requirements.txt --quiet 2>/dev/null || pip3 install -r $(SDK_ROOT)/requirements.txt --user --quiet; \
+	fi
+	@echo "Setup complete. Run 'make example-run' to execute."
 
 # Run the example
-run:
-	@python3 main.py
+example-run: setup
+	@python3 examples/example.py
 
 clean:
 	@rm -rf $(GENERATED_OUT)
@@ -65,20 +69,22 @@ clean:
 # Packaging targets for release workflow - PLATFORM SPECIFIC
 package-linux-x86_64: generate-proto
 	@echo "Packaging Python SDK for Linux x86_64..."
-	@mkdir -p $(PACKAGE_DIR)/linux-x86_64
-	@cp -f ../../target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || \
-		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C ../.. build-linux-x86_64" && exit 1)
+	@mkdir -p $(PACKAGE_DIR)/linux-x86_64/examples
+	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || \
+		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-linux-x86_64" && exit 1)
 	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@cp main.py $(PACKAGE_DIR)/linux-x86_64/example.py 2>/dev/null || true
+	@cp $(SDK_ROOT)/connector_client.py $(PACKAGE_DIR)/linux-x86_64/
+	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/linux-x86_64/examples/ 2>/dev/null || true
 	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
 
 package-macos-aarch64: generate-proto
 	@echo "Packaging Python SDK for macOS aarch64..."
-	@mkdir -p $(PACKAGE_DIR)/macos-aarch64
-	@cp -f ../../target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || \
-		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C ../.. build-macos-aarch64" && exit 1)
+	@mkdir -p $(PACKAGE_DIR)/macos-aarch64/examples
+	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || \
+		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-macos-aarch64" && exit 1)
 	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@cp main.py $(PACKAGE_DIR)/macos-aarch64/example.py 2>/dev/null || true
+	@cp $(SDK_ROOT)/connector_client.py $(PACKAGE_DIR)/macos-aarch64/
+	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/macos-aarch64/examples/ 2>/dev/null || true
 	@echo "macOS aarch64 package created: $(PACKAGE_DIR)/macos-aarch64/"
 
 package-native: package-linux-x86_64 package-macos-aarch64

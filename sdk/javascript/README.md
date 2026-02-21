@@ -17,10 +17,10 @@ library as the Python and Kotlin examples. Uses `koffi` to call the C ABI —
 make setup
 
 # 2. Run the example (low-level FFI demo only)
-make run
+make example-run
 
 # 3. Run with full round-trip (requires valid Stripe test key)
-STRIPE_API_KEY=sk_test_your_key make run
+STRIPE_API_KEY=sk_test_your_key make example-run
 ```
 
 ## How it works

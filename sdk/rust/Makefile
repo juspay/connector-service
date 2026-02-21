@@ -1,45 +1,45 @@
-# Check if Rust toolchain is available
-CHECK_CARGO := $(shell which cargo 2>/dev/null && echo "yes" || echo "no")
+# SDK Rust Makefile
+# Packages Rust SDK source code for distribution
 
-# Install/setup dependencies (noop for nix, helpful for manual setup)
-install-deps:
-	@echo "Checking Rust toolchain..."
-ifeq ($(CHECK_CARGO),yes)
-	@echo "  ✓ Cargo already available (version: $(shell cargo --version))"
-else
-	@echo "  ✗ Cargo not found - please install Rust or use nix develop"
-	@exit 1
-endif
+.PHONY: build package dist clean example-run
 
-.PHONY: setup run run-debug clean
+# Auto-detect SDK root directory
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+SDK_ROOT := $(MAKEFILE_DIR)
+REPO_ROOT := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
 
-setup: install-deps
-	@echo "Building sdk/rust..."
-	@cargo build --release -p hyperswitch-payments-client
-	@echo "Setup complete. Run 'make run' to execute."
+ARTIFACTS_DIR=$(REPO_ROOT)/artifacts
+PACKAGE_DIR=$(ARTIFACTS_DIR)/sdk-rust
 
-run:
-	STRIPE_API_KEY=$(STRIPE_API_KEY) cargo run --release -p hyperswitch-payments-client
+# Build the Rust SDK (for verification)
+build:
+	@echo "Building Rust SDK (verification)..."
+	@cd $(SDK_ROOT) && cargo build --release
+	@echo "✓ Rust SDK builds successfully"
 
-run-debug:
-	STRIPE_API_KEY=$(STRIPE_API_KEY) cargo run -p hyperswitch-payments-client
+# Package Rust SDK source (no binary)
+package:
+	@echo "Packaging Rust SDK source..."
+	@mkdir -p $(PACKAGE_DIR)
+	@echo "Copying source files..."
+	@cp -rf $(SDK_ROOT)/Cargo.toml $(PACKAGE_DIR)/
+	@cp -rf $(SDK_ROOT)/Cargo.lock $(PACKAGE_DIR)/ 2>/dev/null || true
+	@cp -rf $(SDK_ROOT)/src $(PACKAGE_DIR)/ 2>/dev/null || true
+	@cp -rf $(SDK_ROOT)/examples $(PACKAGE_DIR)/ 2>/dev/null || true
+	@echo "Rust SDK source package created: $(PACKAGE_DIR)/"
+
+# Create distribution archive
+dist: build package
+	@echo "Creating distribution archive..."
+	@cd $(ARTIFACTS_DIR) && zip -r "connector-service-rust-sdk.zip" sdk-rust/
+	@echo "Distribution archive created: $(ARTIFACTS_DIR)/connector-service-rust-sdk.zip"
+
+# Run the example
+example-run:
+	@cd $(SDK_ROOT) && STRIPE_API_KEY=$(STRIPE_API_KEY) cargo run --example basic --release
 
 clean:
-	@echo "Cleaning build artifacts..."
-	@cargo clean -p hyperswitch-payments-client
-	@echo "Clean complete!"
-
-# Packaging targets for release workflow
-package: ## Package SDK for distribution
-	@echo "Packaging Rust SDK..."
-	@mkdir -p artifacts/rust
-	@cargo build --release -p hyperswitch-payments-client
-	@cp -rf src artifacts/rust/ 2>/dev/null || true
-	@cp Cargo.toml artifacts/rust/
-	@cp -rf target/release artifacts/rust/target/ 2>/dev/null || true
-	@echo "Package created in artifacts/rust/"
-
-dist: ## Create distribution archive
-	@$(MAKE) package
-	@cd artifacts && zip -r connector-service-rust-sdk.zip rust/
-	@echo "Distribution archive: artifacts/connector-service-rust-sdk.zip"
+	@echo "Cleaning Rust SDK artifacts..."
+	@cd $(SDK_ROOT) && cargo clean
+	@rm -rf $(PACKAGE_DIR)
+	@echo "Clean complete."

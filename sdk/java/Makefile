@@ -1,9 +1,10 @@
-.PHONY: build-lib generate-bindings generate-proto setup run clean package package-native dist
+.PHONY: build-lib generate-bindings generate-proto setup example-run clean package package-native dist
 
 # Auto-detect SDK root directory (works when run from sdk/java/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT := $(MAKEFILE_DIR)
-REPO_ROOT := $(MAKEFILE_DIR)../..
+# REPO_ROOT is either parent of SDK_ROOT or current dir if running from repo root
+REPO_ROOT := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
 
 # Paths relative to SDK root
 FFI_CRATE=$(REPO_ROOT)/backend/ffi
@@ -36,7 +37,7 @@ generate-bindings: build-lib
 		generate \
 		--library $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) \
 		--language kotlin \
-		--out-dir $(CURDIR)/$(GENERATED_OUT)
+		--out-dir $(GENERATED_OUT)
 	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(GENERATED_OUT)/
 	@echo "UniFFI Kotlin bindings generated in $(GENERATED_OUT)/"
 
@@ -52,10 +53,10 @@ generate-proto:
 
 # Full setup: build lib, generate both bindings and proto stubs
 setup: generate-proto generate-bindings
-	@echo "Setup complete. Run 'make run' to execute."
+	@echo "Setup complete. Run 'make example-run' to execute."
 
 # Run the example via Gradle
-run:
+example-run: setup
 	@./gradlew run --quiet
 
 clean:
@@ -66,19 +67,29 @@ clean:
 package-linux-x86_64: generate-proto
 	@echo "Packaging Java SDK for Linux x86_64..."
 	@mkdir -p $(PACKAGE_DIR)/linux-x86_64/native
-	@cp -f ../../target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/native/ 2>/dev/null || \
-		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C ../.. build-linux-x86_64" && exit 1)
+	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/native/ 2>/dev/null || \
+		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-linux-x86_64" && exit 1)
 	@cp -rf $(GENERATED_OUT)/*.java $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
 	@cp -rf $(GENERATED_OUT)/*.kt $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
+	@cp -rf $(SDK_ROOT)/src $(PACKAGE_DIR)/linux-x86_64/
+	@cp $(SDK_ROOT)/build.gradle* $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
+	@cp $(SDK_ROOT)/settings.gradle* $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
+	@cp $(SDK_ROOT)/gradlew* $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
+	@cp -rf $(SDK_ROOT)/gradle $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
 	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
 
 package-macos-aarch64: generate-proto
 	@echo "Packaging Java SDK for macOS aarch64..."
 	@mkdir -p $(PACKAGE_DIR)/macos-aarch64/native
-	@cp -f ../../target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/native/ 2>/dev/null || \
-		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C ../.. build-macos-aarch64" && exit 1)
+	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/native/ 2>/dev/null || \
+		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-macos-aarch64" && exit 1)
 	@cp -rf $(GENERATED_OUT)/*.java $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
 	@cp -rf $(GENERATED_OUT)/*.kt $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
+	@cp -rf $(SDK_ROOT)/src $(PACKAGE_DIR)/macos-aarch64/
+	@cp $(SDK_ROOT)/build.gradle* $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
+	@cp $(SDK_ROOT)/settings.gradle* $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
+	@cp $(SDK_ROOT)/gradlew* $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
+	@cp -rf $(SDK_ROOT)/gradle $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
 	@echo "macOS aarch64 package created: $(PACKAGE_DIR)/macos-aarch64/"
 
 package-native: package-linux-x86_64 package-macos-aarch64
