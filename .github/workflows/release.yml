@@ -14,7 +14,7 @@ on:
       dry_run:
         description: 'Dry run (do not create release)'
         required: false
-        default: false
+        default: true
         type: boolean
 
 concurrency:
@@ -29,6 +29,9 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 1
+  CARGO_NET_RETRY: 10
+  RUSTFLAGS: "-C codegen-units=16"
 
 jobs:
   # Job 1: Generate version and changelog
@@ -125,6 +128,14 @@ jobs:
           components: clippy
           targets: ${{ matrix.target }}
 
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release-${{ matrix.target }}"
+          cache-directories: |
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
@@ -191,40 +202,27 @@ jobs:
   #         name: binary-universal-apple-darwin
   #         path: target/universal/release/libconnector_service_ffi.dylib
 
-  # Job 4: Package all SDKs
-  package-sdks:
-    name: Package SDKs
-    runs-on: macos-latest
+  # Job 4a: Package Java SDK
+  package-sdk-java:
+    name: Package Java SDK
+    runs-on: ubuntu-latest
     needs: [build-binaries, version-and-changelog]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
-          python-version: '3.11'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          java-version: '17'
+          distribution: 'temurin'
+      - uses: arduino/setup-protoc@v3
         with:
-          node-version: '20'
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          components: clippy
-
-      - name: Download all binaries
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download binaries
         uses: actions/download-artifact@v4
         with:
-          path: target
           pattern: binary-*
-
+          path: target
       - name: Organize binaries
         run: |
-          # Reorganize downloaded artifacts to proper locations
           for dir in target/binary-*; do
             if [ -d "$dir" ]; then
               target_name=$(basename "$dir" | sed 's/binary-//')
@@ -232,49 +230,149 @@ jobs:
               cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
             fi
           done
+      - name: Package Java SDK
+        run: make -f ci-makefiles/package/sdk-java/Makefile dist
+      - name: Upload Java SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-java
+          path: artifacts/sdk-java/*.zip
 
-      - name: Install dependencies for SDKs
+  # Job 4b: Package Python SDK
+  package-sdk-python:
+    name: Package Python SDK
+    runs-on: ubuntu-latest
+    needs: [build-binaries, version-and-changelog]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Python dependencies
+        run: pip install grpcio grpcio-tools requests
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: target
+      - name: Organize binaries
         run: |
-          # Install Python dependencies
-          pip install grpcio grpcio-tools requests
-          # Install Node.js dependencies for JavaScript SDK
-          cd sdk/javascript && npm install && cd ../..
+          for dir in target/binary-*; do
+            if [ -d "$dir" ]; then
+              target_name=$(basename "$dir" | sed 's/binary-//')
+              mkdir -p "target/$target_name/release"
+              cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
+            fi
+          done
+      - name: Package Python SDK
+        run: make -f ci-makefiles/package/sdk-python/Makefile dist
+      - name: Upload Python SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-python
+          path: artifacts/sdk-python/*.zip
 
-      - name: Generate bindings and package Java SDK
+  # Job 4c: Package JavaScript SDK
+  package-sdk-javascript:
+    name: Package JavaScript SDK
+    runs-on: ubuntu-latest
+    needs: [build-binaries, version-and-changelog]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: sdk/javascript/package-lock.json
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Node.js dependencies
+        run: cd sdk/javascript && npm ci && cd ../..
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: target
+      - name: Organize binaries
         run: |
-          make -f ci-makefiles/package/sdk-java/Makefile dist
+          for dir in target/binary-*; do
+            if [ -d "$dir" ]; then
+              target_name=$(basename "$dir" | sed 's/binary-//')
+              mkdir -p "target/$target_name/release"
+              cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
+            fi
+          done
+      - name: Package JavaScript SDK
+        run: make -f ci-makefiles/package/sdk-javascript/Makefile dist
+      - name: Upload JavaScript SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-javascript
+          path: artifacts/sdk-javascript/*.zip
 
-      - name: Generate bindings and package Python SDK
+  # Job 4d: Package Rust SDK
+  package-sdk-rust:
+    name: Package Rust SDK
+    runs-on: ubuntu-latest
+    needs: [build-binaries, version-and-changelog]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "sdk-rust"
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: target
+      - name: Organize binaries
         run: |
-          make -f ci-makefiles/package/sdk-python/Makefile dist
-
-      - name: Generate bindings and package JavaScript SDK
-        run: |
-          make -f ci-makefiles/package/sdk-javascript/Makefile dist
-
+          for dir in target/binary-*; do
+            if [ -d "$dir" ]; then
+              target_name=$(basename "$dir" | sed 's/binary-//')
+              mkdir -p "target/$target_name/release"
+              cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
+            fi
+          done
       - name: Package Rust SDK
-        run: |
-          make -f ci-makefiles/package/sdk-rust/Makefile dist
+        run: make -f ci-makefiles/package/sdk-rust/Makefile dist
+      - name: Upload Rust SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-rust
+          path: artifacts/sdk-rust/*.zip
 
-      - name: Collect all SDK artifacts
-        run: |
-          mkdir -p artifacts/sdks
-          cp artifacts/sdk-java/*.zip artifacts/sdks/ 2>/dev/null || true
-          cp artifacts/sdk-python/*.zip artifacts/sdks/ 2>/dev/null || true
-          cp artifacts/sdk-javascript/*.zip artifacts/sdks/ 2>/dev/null || true
-          cp artifacts/sdk-rust/*.zip artifacts/sdks/ 2>/dev/null || true
-
-      - name: Upload SDK artifacts
+  # Job 4e: Collect SDK Artifacts
+  collect-sdks:
+    name: Collect SDK Artifacts
+    runs-on: ubuntu-latest
+    needs: [package-sdk-java, package-sdk-python, package-sdk-javascript, package-sdk-rust]
+    steps:
+      - name: Download all SDK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/sdks
+          pattern: sdk-*
+      - name: Upload combined SDK artifact
         uses: actions/upload-artifact@v4
         with:
           name: sdks
-          path: artifacts/sdks/*.zip
+          path: artifacts/sdk-*/*.zip
 
   # Job 5: Create GitHub Release
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [version-and-changelog, package-sdks]
+    needs: [version-and-changelog, collect-sdks]
     if: ${{ !github.event.inputs.dry_run }}
     permissions:
       contents: write
@@ -320,7 +418,7 @@ jobs:
   dry-run-summary:
     name: Dry Run Summary
     runs-on: ubuntu-latest
-    needs: [version-and-changelog, package-sdks]
+    needs: [version-and-changelog, collect-sdks]
     if: ${{ github.event.inputs.dry_run }}
     steps:
       - name: Print summary
