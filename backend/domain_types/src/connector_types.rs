@@ -2860,6 +2860,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 Self::CardDetailsForNetworkTransactionId
             }
             PaymentMethodData::NetworkToken(_) => Self::NetworkToken,
+            PaymentMethodData::ProxyNetworkToken(_) => Self::ProxyNetworkToken,
             PaymentMethodData::MobilePayment(mobile_payment_data) => match mobile_payment_data {
                 payment_method_data::MobilePaymentData::DirectCarrierBilling { .. } => {
                     Self::DirectCarrierBilling

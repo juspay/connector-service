@@ -2688,6 +2688,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::OpenBanking(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::NetworkToken(_)
+                | PaymentMethodData::ProxyNetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
                 | PaymentMethodData::CardToken(_) => Err(errors::ConnectorError::NotImplemented(
                     "payment method".into(),
@@ -4905,6 +4906,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::OpenBanking(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::NetworkToken(_)
+                | PaymentMethodData::ProxyNetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
                 | PaymentMethodData::CardToken(_) => Err(errors::ConnectorError::NotImplemented(
                     "payment method".into(),

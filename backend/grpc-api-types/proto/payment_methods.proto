@@ -131,7 +131,8 @@ message PaymentMethod {
     // NETWORK TRANSACTION METHODS (120-129) - For recurring payments with network transaction IDs
     CardDetailsForNetworkTransactionId card_details_for_network_transaction_id = 120; // Card details with network transaction ID
     NetworkTokenData network_token = 121; // Network token data
-    
+    ProxyNetworkTokenData proxy_network_token = 122; // Proxy network token data
+
     // GIFT CARDS (130-139)
     Givex givex = 137;                                         // Givex gift card
     PaySafeCard pay_safe_card = 138;                           // Paysafecard - Prepaid payment method
@@ -1425,6 +1426,20 @@ message NetworkTokenData {
     optional string bank_code = 9;
     optional SecretString nick_name = 11;
     optional string eci = 12;
+}
+
+// Proxy network token data for wallet-based network token payments
+message ProxyNetworkTokenData {
+    SecretString network_token = 1;
+    SecretString network_token_exp_month = 2;
+    SecretString network_token_exp_year = 3;
+    optional SecretString cryptogram = 4;
+    optional string card_issuer = 5;
+    optional CardNetwork card_network = 6;
+    optional string card_type = 7;
+    optional CountryAlpha2 card_issuing_country = 8;
+    optional SecretString card_holder_name = 9;
+    optional SecretString nick_name = 10;
 }
 
 // Country Alpha-2 code enumeration.

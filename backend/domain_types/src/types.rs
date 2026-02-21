@@ -1173,6 +1173,49 @@ impl<
                         eci: network_token_data.eci,
                     }))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::ProxyNetworkToken(
+                    proxy_network_token_data,
+                ) => {
+                    let network_token = proxy_network_token_data.network_token
+                        .ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "MISSING_PROXY_NETWORK_TOKEN".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Missing proxy network token".to_owned(),
+                            error_object: None,
+                        }))?;
+
+                    Ok(Self::ProxyNetworkToken(payment_method_data::ProxyNetworkTokenData {
+                        network_token,
+                        network_token_exp_month: proxy_network_token_data.network_token_exp_month.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "MISSING_PROXY_TOKEN_EXP_MONTH".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Missing proxy network token expiration month".to_owned(),
+                            error_object: None,
+                        }))?,
+                        network_token_exp_year: proxy_network_token_data.network_token_exp_year.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "MISSING_PROXY_TOKEN_EXP_YEAR".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Missing proxy network token expiration year".to_owned(),
+                            error_object: None,
+                        }))?,
+                        cryptogram: proxy_network_token_data.cryptogram,
+                        card_issuer: proxy_network_token_data.card_issuer,
+                        card_network: proxy_network_token_data
+                            .card_network
+                            .and_then(|network_i32| grpc_payment_types::CardNetwork::try_from(network_i32).ok())
+                            .and_then(|network| CardNetwork::foreign_try_from(network).ok()),
+                        card_type: proxy_network_token_data.card_type,
+                        card_issuing_country: proxy_network_token_data
+                            .card_issuing_country
+                            .and_then(|country_i32| grpc_payment_types::CountryAlpha2::try_from(country_i32).ok())
+                            .and_then(|country| match country {
+                                grpc_payment_types::CountryAlpha2::Unspecified => None,
+                                _ => CountryAlpha2::foreign_try_from(country).ok(),
+                            }),
+                        card_holder_name: proxy_network_token_data.card_holder_name,
+                        nick_name: proxy_network_token_data.nick_name,
+                    }))
+                }
 
                 // ============================================================================
                 // BANK REDIRECT - Trustly
@@ -1531,6 +1574,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::CardDetailsForNetworkTransactionId(_) => Ok(Some(PaymentMethodType::Card)),
                 grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(_) => Ok(Some(PaymentMethodType::Card)),
+                grpc_api_types::payments::payment_method::PaymentMethod::ProxyNetworkToken(_) => Ok(Some(PaymentMethodType::Card)),
                 // ============================================================================
                 // GIFT CARDS
                 // ============================================================================
@@ -7687,6 +7731,7 @@ pub enum PaymentMethodDataType {
     VietQr,
     OpenBanking,
     NetworkToken,
+    ProxyNetworkToken,
     NetworkTransactionIdAndCardDetails,
     DirectCarrierBilling,
     InstantBankTransfer,
