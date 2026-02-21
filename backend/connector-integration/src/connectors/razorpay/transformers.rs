@@ -118,6 +118,22 @@ pub struct CardDetails<
     pub cvv: Option<Secret<String>>,
 }
 
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct RazorpayNetworkToken {
+    pub number: Secret<String>,
+    pub name: Option<Secret<String>>,
+    pub expiry_month: Secret<String>,
+    pub expiry_year: Secret<String>,
+    pub cvv: Option<Secret<String>>,
+    pub cryptogram_value: Option<Secret<String>>,
+    pub tokenised: Option<bool>,
+    pub token_provider: Option<String>,
+    pub last4: Option<String>,
+    pub provider_type: Option<String>,
+}
+
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthenticationChannel {
@@ -157,11 +173,12 @@ pub struct RazorpayPaymentRequest<
     pub order_id: String,
     pub method: PaymentMethodType,
     pub card: PaymentMethodSpecificData<T>,
-    pub authentication: Option<AuthenticationDetails>,
-    pub browser: Option<BrowserInfo>,
+    // pub authentication: Option<AuthenticationDetails>,
+    // pub browser: Option<BrowserInfo>,
     pub ip: Secret<String>,
     pub referer: String,
     pub user_agent: String,
+    pub callback_url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -170,6 +187,7 @@ pub enum PaymentMethodSpecificData<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardDetails<T>),
+    NetworkToken(RazorpayNetworkToken),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -288,6 +306,73 @@ fn extract_payment_method_and_data<
 
             Ok((PaymentMethodType::Card, card))
         }
+        PaymentMethodData::ProxyNetworkToken(proxy_token_data) => {
+            // For proxy network token, use the network token as the card number
+            let card_holder_name = proxy_token_data
+                .card_holder_name
+                .as_ref()
+                .cloned()
+                .or_else(|| customer_name.map(Secret::new));
+
+            // Extract metadata for token provider info
+            let card_network = proxy_token_data.card_network.as_ref();
+            let token_provider = card_network.and_then(|net| match net {
+                CardNetwork::Visa => Some("VISA".to_string()),
+                CardNetwork::Mastercard => Some("MASTERCARD".to_string()),
+                CardNetwork::AmericanExpress => Some("AMEX".to_string()),
+                CardNetwork::DinersClub => Some("DINERS".to_string()),
+                _ => None,
+            });
+
+            // Get cryptogram from proxy token data
+            let cryptogram_value = proxy_token_data.cryptogram.clone();
+
+            // Get last 4 digits from network token
+            let last4 = proxy_token_data.network_token.peek().chars().rev().take(4).collect::<String>()
+                .chars().rev().collect::<String>();
+
+            let card = PaymentMethodSpecificData::NetworkToken(RazorpayNetworkToken {
+                number: proxy_token_data.network_token.clone(),
+                name: card_holder_name,
+                expiry_month: proxy_token_data.network_token_exp_month.clone(),
+                expiry_year: proxy_token_data.network_token_exp_year.clone(),
+                cvv: None, // CVV typically not sent with network tokens
+                cryptogram_value,
+                tokenised: Some(true),
+                token_provider,
+                last4: Some(last4),
+                provider_type: Some("network".to_string()),
+            });
+
+            Ok((PaymentMethodType::Card, card))
+        }
+        PaymentMethodData::NetworkToken(network_token_data) => {
+            let card_holder_name = customer_name.map(Secret::new);
+            let card_network = network_token_data.card_network.as_ref();
+
+            let token_provider = card_network.and_then(|net| match net {
+                CardNetwork::Visa => Some("VISA".to_string()),
+                CardNetwork::Mastercard => Some("MASTERCARD".to_string()),
+                CardNetwork::AmericanExpress => Some("AMEX".to_string()),
+                CardNetwork::DinersClub => Some("DINERS".to_string()),
+                _ => None,
+            });
+
+            let card = PaymentMethodSpecificData::NetworkToken(RazorpayNetworkToken {
+                number: Secret::new(network_token_data.token_number.get_card_no()),
+                name: card_holder_name,
+                expiry_month: network_token_data.token_exp_month.clone(),
+                expiry_year: network_token_data.token_exp_year.clone(),
+                cvv: None,
+                cryptogram_value: network_token_data.token_cryptogram.clone(),
+                tokenised: Some(true),
+                token_provider,
+                last4: Some(network_token_data.token_number.get_last4()),
+                provider_type: Some("network".to_string()),
+            });
+
+            Ok((PaymentMethodType::Card, card))
+        }
         PaymentMethodData::CardRedirect(_)
         | PaymentMethodData::Wallet(_)
         | PaymentMethodData::PayLater(_)
@@ -303,7 +388,6 @@ fn extract_payment_method_and_data<
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
-        | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_)
         | PaymentMethodData::OpenBanking(_) => Err(errors::ConnectorError::NotImplemented(
             "Only Card payment method is supported for Razorpay".to_string(),
@@ -384,26 +468,119 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let browser_info_opt = item.router_data.request.browser_info.as_ref();
 
-        let authentication_channel = match browser_info_opt {
-            Some(_) => AuthenticationChannel::Browser,
-            None => AuthenticationChannel::App,
-        };
+        let ip = item
+            .router_data
+            .request
+            .get_ip_address_as_optional()
+            .map(|ip| Secret::new(ip.expose()))
+            .unwrap_or_else(|| Secret::new("127.0.0.1".to_string()));
 
-        let authentication = Some(AuthenticationDetails {
-            authentication_channel,
-        });
+        let user_agent = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_user_agent().ok())
+            .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
-        let browser = browser_info_opt.map(|info| BrowserInfo {
-            java_enabled: info.java_enabled,
-            javascript_enabled: info.java_script_enabled,
-            timezone_offset: info.time_zone,
-            color_depth: info.color_depth.map(i32::from),
-            #[allow(clippy::as_conversions)]
-            screen_width: info.screen_width.map(|v| v as i32),
-            #[allow(clippy::as_conversions)]
-            screen_height: info.screen_height.map(|v| v as i32),
-            language: info.language.clone(),
-        });
+        let referer = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_referer().ok())
+            .unwrap_or_else(|| "https://example.com".to_string());
+
+        Ok(Self {
+            amount,
+            currency,
+            contact,
+            email,
+            order_id,
+            method,
+            card,
+            ip,
+            referer,
+            user_agent,
+            callback_url: item.router_data.request.get_router_return_url()?,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        (
+            &RazorpayRouterData<
+                &RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+            >,
+            &domain_types::payment_method_data::ProxyNetworkTokenData,
+        ),
+    > for RazorpayPaymentRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        value: (
+            &RazorpayRouterData<
+                &RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+            >,
+            &domain_types::payment_method_data::ProxyNetworkTokenData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, _proxy_token_data) = value;
+        let amount = item.amount;
+        let currency = item.router_data.request.currency.to_string();
+
+        let billing = item
+            .router_data
+            .resource_common_data
+            .address
+            .get_payment_billing();
+
+        let contact = billing
+            .and_then(|billing| billing.phone.as_ref())
+            .and_then(|phone| phone.number.clone())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "contact",
+            })?;
+
+        let billing_email = item
+            .router_data
+            .resource_common_data
+            .get_billing_email()
+            .ok();
+
+        let email = billing_email
+            .or(item.router_data.request.email.clone())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "email",
+            })?;
+
+        let order_id = item
+            .router_data
+            .resource_common_data
+            .reference_id
+            .clone()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "order_id",
+            })?;
+
+        let (method, card) = extract_payment_method_and_data(
+            &item.router_data.request.payment_method_data,
+            item.router_data.request.customer_name.clone(),
+        )?;
+
+        let browser_info_opt = item.router_data.request.browser_info.as_ref();
 
         let ip = item
             .router_data
@@ -436,11 +613,124 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             order_id,
             method,
             card,
-            authentication,
-            browser,
             ip,
             referer,
             user_agent,
+            callback_url: item.router_data.request.get_router_return_url()?,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        (
+            &RazorpayRouterData<
+                &RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+            >,
+            &domain_types::payment_method_data::NetworkTokenData,
+        ),
+    > for RazorpayPaymentRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        value: (
+            &RazorpayRouterData<
+                &RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+            >,
+            &domain_types::payment_method_data::NetworkTokenData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, _network_token_data) = value;
+        let amount = item.amount;
+        let currency = item.router_data.request.currency.to_string();
+
+        let billing = item
+            .router_data
+            .resource_common_data
+            .address
+            .get_payment_billing();
+
+        let contact = billing
+            .and_then(|billing| billing.phone.as_ref())
+            .and_then(|phone| phone.number.clone())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "contact",
+            })?;
+
+        let billing_email = item
+            .router_data
+            .resource_common_data
+            .get_billing_email()
+            .ok();
+
+        let email = billing_email
+            .or(item.router_data.request.email.clone())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "email",
+            })?;
+
+        let order_id = item
+            .router_data
+            .resource_common_data
+            .reference_id
+            .clone()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "order_id",
+            })?;
+
+        let (method, card) = extract_payment_method_and_data(
+            &item.router_data.request.payment_method_data,
+            item.router_data.request.customer_name.clone(),
+        )?;
+
+        let browser_info_opt = item.router_data.request.browser_info.as_ref();
+
+        let ip = item
+            .router_data
+            .request
+            .get_ip_address_as_optional()
+            .map(|ip| Secret::new(ip.expose()))
+            .unwrap_or_else(|| Secret::new("127.0.0.1".to_string()));
+
+        let user_agent = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_user_agent().ok())
+            .unwrap_or_else(|| "Mozilla/5.0".to_string());
+
+        let referer = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_referer().ok())
+            .unwrap_or_else(|| "https://example.com".to_string());
+
+        Ok(Self {
+            amount,
+            currency,
+            contact,
+            email,
+            order_id,
+            method,
+            card,
+            ip,
+            referer,
+            user_agent,
+            callback_url: item.router_data.request.get_router_return_url()?,
         })
     }
 }
@@ -471,7 +761,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Self::try_from((item, card)),
-            _ => Err(errors::ConnectorError::NotImplemented(
+            PaymentMethodData::ProxyNetworkToken(proxy_token) => {
+                Self::try_from((item, proxy_token))
+            }
+            PaymentMethodData::NetworkToken(network_token) => {
+                Self::try_from((item, network_token))
+            }
+            PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+            | PaymentMethodData::MobilePayment(_)
+            | PaymentMethodData::OpenBanking(_) => Err(errors::ConnectorError::NotImplemented(
                 "Only card payments are supported".into(),
             )
             .into()),
