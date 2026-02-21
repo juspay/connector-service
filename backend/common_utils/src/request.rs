@@ -62,10 +62,11 @@ impl std::fmt::Debug for RequestContent {
         })
     }
 }
-
+#[derive(Serialize)]
 pub enum RequestContent {
     Json(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     FormUrlEncoded(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
+    #[serde(skip)]
     FormData(reqwest::multipart::Form),
     Xml(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     RawBytes(Vec<u8>),

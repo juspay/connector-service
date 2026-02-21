@@ -4,8 +4,9 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
-use grpc_server::{app, configs};
+use grpc_server::app;
 use hyperswitch_masking::{ExposeInterface, Secret};
+use ucs_env::configs;
 mod common;
 mod utils;
 

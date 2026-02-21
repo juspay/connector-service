@@ -3,7 +3,8 @@
 #![allow(clippy::panic)]
 
 use cards::CardNumber;
-use grpc_server::{app, configs};
+use grpc_server::app;
+use ucs_env::configs;
 use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
 mod utils;

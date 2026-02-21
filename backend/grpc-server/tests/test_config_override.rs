@@ -12,11 +12,12 @@ use grpc_api_types::payments::{
     AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, Currency, Identifier,
     PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
 };
-use grpc_server::{app, configs};
+use grpc_server::app;
 use hyperswitch_masking::Secret;
 use serde_json::json;
 use std::str::FromStr;
 use tonic::{transport::Channel, Request};
+use ucs_env::configs;
 mod common;
 
 #[tokio::test]
@@ -126,15 +127,15 @@ mod unit {
     use base64::{engine::general_purpose, Engine as _};
     use common_utils::{config_patch::Patch, consts, metadata::MaskedMetadata};
     use config_patch_derive::Patch as PatchDerive;
-    use grpc_server::configs;
-    use grpc_server::configs::Config;
-    use grpc_server::logger::config::{LogFormat, LogKafka};
     use grpc_server::utils::merge_config_with_override;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use std::fmt::Debug;
     use std::sync::Arc;
     use tonic::metadata::MetadataMap;
+    use ucs_env::configs;
+    use ucs_env::configs::Config;
+    use ucs_env::logger::config::{LogFormat, LogKafka};
 
     fn base_config() -> Config {
         Config::new().expect("default config should load")

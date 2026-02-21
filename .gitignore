@@ -246,6 +246,9 @@ docs/_build/
 .pybuilder/
 target/
 
+# ignore target symlink at the top
+/target
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
@@ -412,3 +415,7 @@ $RECYCLE.BIN/
 # DrawIO files
 **/*.drawio.bkp
 gen/**
+
+sdk/**/generated
+sdk/**/node_modules
+sdk/**/.gradle

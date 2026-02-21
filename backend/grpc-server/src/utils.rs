@@ -1,4 +1,3 @@
-use crate::configs::ConfigPatch;
 use base64::{engine::general_purpose, Engine as _};
 use common_utils::{
     config_patch::Patch,
@@ -26,8 +25,10 @@ use hyperswitch_masking;
 use serde_json::Value;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tonic::metadata;
+use ucs_env::configs::ConfigPatch;
+use ucs_env::{configs, error::ResultExtGrpc};
 
-use crate::{configs, error::ResultExtGrpc, request::RequestData};
+use crate::request::RequestData;
 
 pub fn service_type_str(service_type: &configs::ServiceType) -> &'static str {
     match service_type {
@@ -670,7 +671,8 @@ macro_rules! implement_connector_operation {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
             let config = request
                 .extensions
-                .get::<std::sync::Arc<$crate::configs::Config>>()
+                // .get::<std::sync::Arc<$crate::configs::Config>>()
+                .get::<std::sync::Arc<ucs_env::configs::Config>>()
                 .cloned()
                 .ok_or_else(|| tonic::Status::internal("Configuration not found in request extensions"))?;
             let service_name = request

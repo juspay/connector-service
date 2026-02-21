@@ -6,7 +6,6 @@ use grpc_api_types::{
         payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
     },
 };
-use grpc_server::configs::Config;
 use http::Uri;
 use hyper_util::rt::TokioIo; // Add this import
 use tempfile::NamedTempFile;
@@ -14,6 +13,7 @@ use tokio::net::UnixListener;
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::{Channel, Endpoint, Server};
 use tower::service_fn;
+use ucs_env::configs::Config;
 
 /// Interceptor that adds config to request extensions.
 ///
