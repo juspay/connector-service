@@ -315,7 +315,7 @@ jobs:
           name: sdk-javascript
           path: artifacts/sdk-javascript/*.zip
 
-  # Job 4d: Package Rust SDK
+  # Job 4d: Package Rust SDK (builds for verification, packages source only)
   package-sdk-rust:
     name: Package Rust SDK
     runs-on: ubuntu-latest
@@ -329,20 +329,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "sdk-rust"
-      - name: Download binaries
-        uses: actions/download-artifact@v4
+      - uses: arduino/setup-protoc@v3
         with:
-          pattern: binary-*
-          path: target
-      - name: Organize binaries
-        run: |
-          for dir in target/binary-*; do
-            if [ -d "$dir" ]; then
-              target_name=$(basename "$dir" | sed 's/binary-//')
-              mkdir -p "target/$target_name/release"
-              cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
-            fi
-          done
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Package Rust SDK
         run: make -f ci-makefiles/package/sdk-rust/Makefile dist
       - name: Upload Rust SDK artifact

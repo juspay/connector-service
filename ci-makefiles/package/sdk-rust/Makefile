@@ -1,7 +1,7 @@
 # SDK Rust Packaging Makefile
-# Packages Rust SDK (hyperswitch-payments-client) for distribution
+# Packages Rust SDK source code for distribution
 
-.PHONY: help package clean check-cargo
+.PHONY: help build package clean
 
 # Default target
 .DEFAULT_GOAL := help
@@ -17,22 +17,22 @@ help: ## Show this help message
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-check-cargo: ## Verify cargo is installed
-	@which cargo > /dev/null 2>&1 || (echo "Error: cargo is not installed" && exit 1)
-
-package: check-cargo ## Package Rust SDK
-	@echo "Packaging Rust SDK..."
-	@mkdir -p $(PACKAGE_DIR)
-	@echo "Building Rust SDK in release mode..."
+build: ## Build Rust SDK to verify it compiles
+	@echo "Building Rust SDK (verification)..."
 	@cd $(SDK_DIR) && cargo build --release
-	@echo "Copying build artifacts..."
+	@echo "✓ Rust SDK builds successfully"
+
+package: ## Package Rust SDK source (no binary)
+	@echo "Packaging Rust SDK source..."
+	@mkdir -p $(PACKAGE_DIR)
+	@echo "Copying source files..."
 	@cp -rf $(SDK_DIR)/Cargo.toml $(PACKAGE_DIR)/
+	@cp -rf $(SDK_DIR)/Cargo.lock $(PACKAGE_DIR)/ 2>/dev/null || true
 	@cp -rf $(SDK_DIR)/src $(PACKAGE_DIR)/ 2>/dev/null || true
-	@cp -rf $(SDK_DIR)/target/release $(PACKAGE_DIR)/target/ 2>/dev/null || true
-	@echo "Rust SDK package created: $(PACKAGE_DIR)/"
+	@echo "Rust SDK source package created: $(PACKAGE_DIR)/"
 
 # Create distribution archive
-dist: package ## Create distribution archive
+dist: build package ## Create distribution archive (builds for verification only)
 	@echo "Creating distribution archive..."
 	@cd $(ARTIFACTS_DIR) && zip -r "connector-service-rust-sdk.zip" sdk-rust/
 	@echo "Distribution archive created: $(ARTIFACTS_DIR)/connector-service-rust-sdk.zip"
