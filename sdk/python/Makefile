@@ -1,11 +1,15 @@
 .PHONY: build-lib generate-bindings generate-proto install-deps setup run clean package package-native dist
 
-# Path to the ffi crate
-FFI_CRATE=../../backend/ffi
-# Proto files
-PROTO_DIR=../../backend/grpc-api-types/proto
-PYTHON_OUT=./generated
-ARTIFACTS_DIR=../../artifacts
+# Auto-detect SDK root directory (works when run from sdk/python/ or repo root)
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+SDK_ROOT := $(MAKEFILE_DIR)
+REPO_ROOT := $(MAKEFILE_DIR)../..
+
+# Paths relative to SDK root
+FFI_CRATE=$(REPO_ROOT)/backend/ffi
+PROTO_DIR=$(REPO_ROOT)/backend/grpc-api-types/proto
+GENERATED_OUT=$(SDK_ROOT)/generated
+ARTIFACTS_DIR=$(REPO_ROOT)/artifacts
 PACKAGE_DIR=$(ARTIFACTS_DIR)/sdk-python
 
 # Detect OS for library extension
@@ -25,26 +29,26 @@ build-lib:
 # Generate UniFFI Python bindings and symlink the shared library
 generate-bindings: build-lib
 	@echo "Generating UniFFI Python bindings..."
-	@mkdir -p $(PYTHON_OUT)
+	@mkdir -p $(GENERATED_OUT)
 	$(eval TARGET_DIR := $(shell cd $(FFI_CRATE) && cargo metadata --format-version 1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['target_directory'])"))
 	@cd $(FFI_CRATE) && cargo run --no-default-features --features uniffi-cli \
 		--bin uniffi-bindgen -- \
 		generate \
 		--library $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) \
 		--language python \
-		--out-dir $(CURDIR)/$(PYTHON_OUT)
-	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(PYTHON_OUT)/
-	@echo "UniFFI bindings generated in $(PYTHON_OUT)/"
+		--out-dir $(CURDIR)/$(GENERATED_OUT)
+	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(GENERATED_OUT)/
+	@echo "UniFFI bindings generated in $(GENERATED_OUT)/"
 
 # Generate Python protobuf stubs
 generate-proto:
 	@echo "Generating Python protobuf stubs..."
-	@mkdir -p $(PYTHON_OUT)
+	@mkdir -p $(GENERATED_OUT)
 	@python3 -m grpc_tools.protoc \
 		-I $(PROTO_DIR) \
-		--python_out=$(PYTHON_OUT) \
+		--python_out=$(GENERATED_OUT) \
 		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto
-	@touch $(PYTHON_OUT)/__init__.py
+	@touch $(GENERATED_OUT)/__init__.py
 	@echo "Proto stubs generated."
 
 # Full setup: build lib, generate both bindings and proto stubs
@@ -56,7 +60,7 @@ run:
 	@python3 main.py
 
 clean:
-	@rm -rf $(PYTHON_OUT)
+	@rm -rf $(GENERATED_OUT)
 
 # Packaging targets for release workflow - PLATFORM SPECIFIC
 package-linux-x86_64: generate-proto
@@ -64,7 +68,7 @@ package-linux-x86_64: generate-proto
 	@mkdir -p $(PACKAGE_DIR)/linux-x86_64
 	@cp -f ../../target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || \
 		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C ../.. build-linux-x86_64" && exit 1)
-	@cp -rf $(PYTHON_OUT)/*.py $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
+	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
 	@cp main.py $(PACKAGE_DIR)/linux-x86_64/example.py 2>/dev/null || true
 	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
 
@@ -73,7 +77,7 @@ package-macos-aarch64: generate-proto
 	@mkdir -p $(PACKAGE_DIR)/macos-aarch64
 	@cp -f ../../target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || \
 		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C ../.. build-macos-aarch64" && exit 1)
-	@cp -rf $(PYTHON_OUT)/*.py $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
+	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
 	@cp main.py $(PACKAGE_DIR)/macos-aarch64/example.py 2>/dev/null || true
 	@echo "macOS aarch64 package created: $(PACKAGE_DIR)/macos-aarch64/"
 

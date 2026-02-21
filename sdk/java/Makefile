@@ -1,11 +1,15 @@
 .PHONY: build-lib generate-bindings generate-proto setup run clean package package-native dist
 
-# Path to the ffi crate
-FFI_CRATE=../../backend/ffi
-# Proto files
-PROTO_DIR=../../backend/grpc-api-types/proto
-GENERATED_OUT=./generated
-ARTIFACTS_DIR=../../artifacts
+# Auto-detect SDK root directory (works when run from sdk/java/ or repo root)
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+SDK_ROOT := $(MAKEFILE_DIR)
+REPO_ROOT := $(MAKEFILE_DIR)../..
+
+# Paths relative to SDK root
+FFI_CRATE=$(REPO_ROOT)/backend/ffi
+PROTO_DIR=$(REPO_ROOT)/backend/grpc-api-types/proto
+GENERATED_OUT=$(SDK_ROOT)/generated
+ARTIFACTS_DIR=$(REPO_ROOT)/artifacts
 PACKAGE_DIR=$(ARTIFACTS_DIR)/sdk-java
 
 # Detect OS for library extension
