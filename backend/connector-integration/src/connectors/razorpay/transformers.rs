@@ -328,8 +328,16 @@ fn extract_payment_method_and_data<
             let cryptogram_value = proxy_token_data.cryptogram.clone();
 
             // Get last 4 digits from network token
-            let last4 = proxy_token_data.network_token.peek().chars().rev().take(4).collect::<String>()
-                .chars().rev().collect::<String>();
+            let last4 = proxy_token_data
+                .network_token
+                .peek()
+                .chars()
+                .rev()
+                .take(4)
+                .collect::<String>()
+                .chars()
+                .rev()
+                .collect::<String>();
 
             let card = PaymentMethodSpecificData::NetworkToken(RazorpayNetworkToken {
                 number: proxy_token_data.network_token.clone(),
@@ -466,7 +474,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.router_data.request.customer_name.clone(),
         )?;
 
-        let browser_info_opt = item.router_data.request.browser_info.as_ref();
+        // let browser_info_opt = item.router_data.request.browser_info.as_ref();
 
         let ip = item
             .router_data
@@ -508,19 +516,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        (
-            &RazorpayRouterData<
-                &RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
+    TryFrom<(
+        &RazorpayRouterData<
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
             >,
-            &domain_types::payment_method_data::ProxyNetworkTokenData,
-        ),
-    > for RazorpayPaymentRequest<T>
+        >,
+        &domain_types::payment_method_data::ProxyNetworkTokenData,
+    )> for RazorpayPaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -580,7 +586,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.router_data.request.customer_name.clone(),
         )?;
 
-        let browser_info_opt = item.router_data.request.browser_info.as_ref();
+        // let browser_info_opt = item.router_data.request.browser_info.as_ref();
 
         let ip = item
             .router_data
@@ -622,19 +628,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        (
-            &RazorpayRouterData<
-                &RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
+    TryFrom<(
+        &RazorpayRouterData<
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
             >,
-            &domain_types::payment_method_data::NetworkTokenData,
-        ),
-    > for RazorpayPaymentRequest<T>
+        >,
+        &domain_types::payment_method_data::NetworkTokenData,
+    )> for RazorpayPaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -694,7 +698,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.router_data.request.customer_name.clone(),
         )?;
 
-        let browser_info_opt = item.router_data.request.browser_info.as_ref();
+        // let browser_info_opt = item.router_data.request.browser_info.as_ref();
 
         let ip = item
             .router_data
@@ -764,9 +768,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::ProxyNetworkToken(proxy_token) => {
                 Self::try_from((item, proxy_token))
             }
-            PaymentMethodData::NetworkToken(network_token) => {
-                Self::try_from((item, network_token))
-            }
+            PaymentMethodData::NetworkToken(network_token) => Self::try_from((item, network_token)),
             PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Wallet(_)
             | PaymentMethodData::PayLater(_)
