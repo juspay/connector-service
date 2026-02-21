@@ -150,9 +150,9 @@ jobs:
       - name: Build binary (${{ matrix.target }})
         run: |
           if [ "${{ matrix.os }}" = "linux" ]; then
-            make -f ci-makefiles/build/Makefile build-linux-${{ matrix.arch }}
+            make -f ci-makefiles/compile/Makefile build-linux-${{ matrix.arch }}
           else
-            make -f ci-makefiles/build/Makefile build-macos-${{ matrix.arch }}
+            make -f ci-makefiles/compile/Makefile build-macos-${{ matrix.arch }}
           fi
 
       - name: Upload binary artifact

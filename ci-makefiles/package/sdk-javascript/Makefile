@@ -28,59 +28,64 @@ generate-bindings: ## Generate JavaScript protobuf stubs
 	@$(MAKE) -C $(SDK_DIR) generate-proto
 
 # Package for specific platforms
-package-macos-x86: ## Package JavaScript SDK for macOS Intel
+package-macos-x86_64: ## Package JavaScript SDK for macOS Intel
 	@echo "Packaging JavaScript SDK for macOS Intel..."
 	@mkdir -p $(PACKAGE_DIR)/macos-x86_64
 	@cp -f target/x86_64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-x86_64/ 2>/dev/null || \
-		(echo "Warning: macOS x86_64 binary not found. Build it first with: make -f makefiles/build/makefile build-macos-x86" && exit 1)
+		(echo "Warning: macOS x86_64 binary not found. Build it first with: make -f ci-makefiles/compile/Makefile build-macos-x86_64" && exit 1)
 	@cp -rf $(GENERATED_DIR)/*.js $(PACKAGE_DIR)/macos-x86_64/ 2>/dev/null || true
 	@cp -rf $(GENERATED_DIR)/*.d.ts $(PACKAGE_DIR)/macos-x86_64/ 2>/dev/null || true
 	@cp -f $(SDK_DIR)/main.js $(PACKAGE_DIR)/macos-x86_64/example.js 2>/dev/null || true
 	@cp -f $(SDK_DIR)/package.json $(PACKAGE_DIR)/macos-x86_64/ 2>/dev/null || true
 	@echo "macOS Intel package created: $(PACKAGE_DIR)/macos-x86_64/"
 
-package-macos-arm: ## Package JavaScript SDK for macOS Apple Silicon
+package-macos-aarch64: ## Package JavaScript SDK for macOS Apple Silicon
 	@echo "Packaging JavaScript SDK for macOS Apple Silicon..."
 	@mkdir -p $(PACKAGE_DIR)/macos-aarch64
 	@cp -f target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || \
-		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -f makefiles/build/makefile build-macos-arm" && exit 1)
+		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -f ci-makefiles/compile/Makefile build-macos-aarch64" && exit 1)
 	@cp -rf $(GENERATED_DIR)/*.js $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
 	@cp -rf $(GENERATED_DIR)/*.d.ts $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
 	@cp -f $(SDK_DIR)/main.js $(PACKAGE_DIR)/macos-aarch64/example.js 2>/dev/null || true
 	@cp -f $(SDK_DIR)/package.json $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
 	@echo "macOS ARM package created: $(PACKAGE_DIR)/macos-aarch64/"
 
-package-linux-x86: ## Package JavaScript SDK for Linux x86_64
+package-linux-x86_64: ## Package JavaScript SDK for Linux x86_64
 	@echo "Packaging JavaScript SDK for Linux x86_64..."
 	@mkdir -p $(PACKAGE_DIR)/linux-x86_64
 	@cp -f target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || \
-		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -f makefiles/build/makefile build-linux-x86" && exit 1)
+		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -f ci-makefiles/compile/Makefile build-linux-x86_64" && exit 1)
 	@cp -rf $(GENERATED_DIR)/*.js $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
 	@cp -rf $(GENERATED_DIR)/*.d.ts $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
 	@cp -f $(SDK_DIR)/main.js $(PACKAGE_DIR)/linux-x86_64/example.js 2>/dev/null || true
 	@cp -f $(SDK_DIR)/package.json $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
 	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
 
-package-linux-arm: ## Package JavaScript SDK for Linux aarch64
+package-linux-aarch64: ## Package JavaScript SDK for Linux aarch64
 	@echo "Packaging JavaScript SDK for Linux aarch64..."
 	@mkdir -p $(PACKAGE_DIR)/linux-aarch64
 	@cp -f target/aarch64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-aarch64/ 2>/dev/null || \
-		(echo "Warning: Linux aarch64 binary not found. Build it first with: make -f makefiles/build/makefile build-linux-arm" && exit 1)
+		(echo "Warning: Linux aarch64 binary not found. Build it first with: make -f ci-makefiles/compile/Makefile build-linux-aarch64" && exit 1)
 	@cp -rf $(GENERATED_DIR)/*.js $(PACKAGE_DIR)/linux-aarch64/ 2>/dev/null || true
 	@cp -rf $(GENERATED_DIR)/*.d.ts $(PACKAGE_DIR)/linux-aarch64/ 2>/dev/null || true
 	@cp -f $(SDK_DIR)/main.js $(PACKAGE_DIR)/linux-aarch64/example.js 2>/dev/null || true
 	@cp -f $(SDK_DIR)/package.json $(PACKAGE_DIR)/linux-aarch64/ 2>/dev/null || true
 	@echo "Linux aarch64 package created: $(PACKAGE_DIR)/linux-aarch64/"
 
-package-macos: package-macos-x86 package-macos-arm ## Package JavaScript SDK for all macOS platforms
+# Native platforms only (active builds)
+package-native: package-macos-aarch64 package-linux-x86_64 ## Package JavaScript SDK for native platforms only
+	@echo "Native JavaScript SDK packages created in $(PACKAGE_DIR)/"
 
-package-linux: package-linux-x86 package-linux-arm ## Package JavaScript SDK for all Linux platforms
+# All platforms (includes cross-compile - temporarily limited)
+package-macos: package-macos-aarch64 ## Package JavaScript SDK for macOS (aarch64 only)
 
-package-all: package-macos package-linux ## Package JavaScript SDK for all platforms
+package-linux: package-linux-x86_64 ## Package JavaScript SDK for Linux (x86_64 only)
+
+package-all: package-native ## Package JavaScript SDK for all platforms (native only)
 	@echo "All JavaScript SDK packages created in $(PACKAGE_DIR)/"
 
 # Create distribution archive
-dist: package-all ## Create distribution archives for all platforms
+dist: package-native ## Create distribution archives for native platforms
 	@echo "Creating distribution archives..."
 	@cd $(PACKAGE_DIR) && for dir in */; do \
 		if [ -d "$$dir" ]; then \
