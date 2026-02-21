@@ -130,6 +130,13 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install PostgreSQL (macOS)
+        if: matrix.os == 'macos'
+        run: |
+          brew install libpq
+          echo "LIBRARY_PATH=$(brew --prefix libpq)/lib:$LIBRARY_PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$(brew --prefix libpq)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
       # Cross-compilation tools disabled - building native platforms only
       # - name: Install cross-compilation tools (Linux)
       #   if: matrix.os == 'linux'
