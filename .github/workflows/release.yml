@@ -362,7 +362,7 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [version-and-changelog, collect-sdks]
-    if: ${{ !github.event.inputs.dry_run }}
+    if: ${{ github.event.inputs.dry_run == 'false' }}
     permissions:
       contents: write
     steps:
@@ -408,7 +408,7 @@ jobs:
     name: Dry Run Summary
     runs-on: ubuntu-latest
     needs: [version-and-changelog, collect-sdks]
-    if: ${{ github.event.inputs.dry_run }}
+    if: ${{ github.event.inputs.dry_run != 'false' }}
     steps:
       - name: Print summary
         run: |
