@@ -211,7 +211,8 @@ fn fetch_payment_instrument<
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
-        | PaymentMethodData::NetworkToken(_) => Err(ConnectorError::NotImplemented(
+        | PaymentMethodData::NetworkToken(_)
+        | PaymentMethodData::ProxyNetworkToken(_) => Err(ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("worldpay"),
         )
         .into()),
