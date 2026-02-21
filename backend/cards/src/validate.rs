@@ -468,6 +468,14 @@ impl CardExpirationMonth {
     }
 }
 
+impl PartialEq for CardExpirationMonth {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.peek() == other.0.peek()
+    }
+}
+
+impl Eq for CardExpirationMonth {}
+
 impl TryFrom<u8> for CardExpirationMonth {
     type Error = error_stack::Report<ValidationError>;
     fn try_from(month: u8) -> Result<Self, Self::Error> {
@@ -499,6 +507,14 @@ impl CardExpirationYear {
         *self.0.peek()
     }
 }
+
+impl PartialEq for CardExpirationYear {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.peek() == other.0.peek()
+    }
+}
+
+impl Eq for CardExpirationYear {}
 
 impl TryFrom<u16> for CardExpirationYear {
     type Error = error_stack::Report<ValidationError>;

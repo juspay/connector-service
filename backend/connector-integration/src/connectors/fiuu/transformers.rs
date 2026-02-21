@@ -21,10 +21,11 @@ use domain_types::{
     },
     errors::{self, ConnectorError},
     payment_method_data::{
-        BankRedirectData, Card, CardDetailsForNetworkTransactionId, GooglePayWalletData,
-        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, RealTimePaymentData, WalletData,
+        ApplePayDecryptedData, BankRedirectData, Card, CardDetailsForNetworkTransactionId,
+        GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        RealTimePaymentData, WalletData,
     },
-    router_data::{ApplePayPredecryptData, ConnectorAuthType, ErrorResponse, PaymentMethodToken},
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -592,23 +593,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     FiuuPaymentMethodData::try_from(google_pay_data)
                 }
                 WalletData::ApplePay(_apple_pay_data) => {
-                    let payment_method_token = item
-                        .router_data
-                        .resource_common_data
-                        .get_payment_method_token()?;
-                    match payment_method_token {
-                        PaymentMethodToken::Token(_) => {
-                            Err(unimplemented_payment_method!("Apple Pay", "Manual", "Fiuu"))?
-                        }
-                        PaymentMethodToken::ApplePayDecrypt(decrypt_data) => {
-                            FiuuPaymentMethodData::try_from(decrypt_data)
-                        }
-                        PaymentMethodToken::PazeDecrypt(_) => {
-                            Err(unimplemented_payment_method!("Paze", "Fiuu"))?
-                        }
-                        PaymentMethodToken::GooglePayDecrypt(_) => {
-                            Err(unimplemented_payment_method!("Google Pay", "Fiuu"))?
-                        }
+                    match _apple_pay_data
+                        .payment_data
+                        .get_decrypted_apple_pay_payment_data_optional()
+                    {
+                        Some(decrypt_data) => FiuuPaymentMethodData::try_from(decrypt_data.clone()),
+                        None => Err(unimplemented_payment_method!("Apple Pay", "Manual", "Fiuu"))?,
                     }
                 }
                 WalletData::AliPayQr(_)
@@ -879,17 +869,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<Box<ApplePayPredecryptData>> for FiuuPaymentMethodData<T>
+    TryFrom<ApplePayDecryptedData> for FiuuPaymentMethodData<T>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(decrypt_data: Box<ApplePayPredecryptData>) -> Result<Self, Self::Error> {
+    fn try_from(decrypt_data: ApplePayDecryptedData) -> Result<Self, Self::Error> {
         Ok(Self::FiuuApplePayData(Box::new(FiuuApplePayData {
             txn_channel: TxnChannel::Creditan,
-            cc_month: decrypt_data.get_expiry_month().change_context(
-                ConnectorError::InvalidDataFormat {
-                    field_name: "expiration_month",
-                },
-            )?,
+            cc_month: decrypt_data.get_expiry_month(),
             cc_year: decrypt_data.get_four_digit_expiry_year(),
             cc_token: decrypt_data.application_primary_account_number,
             eci: decrypt_data.payment_data.eci_indicator,
