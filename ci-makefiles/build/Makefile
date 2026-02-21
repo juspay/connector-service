@@ -76,7 +76,7 @@ build-macos: ## Build for all macOS platforms
 	$(if $(filter Darwin,$(UNAME)),,$(error "macOS builds can only be done on macOS"))
 	@$(MAKE) build-macos-x86_64 build-macos-aarch64 build-macos-universal
 
-# Linux builds (using cross or zigbuild)
+# Linux builds (native - no zig/cross needed for native platforms)
 build-linux-x86_64: check-cargo ## Build for Linux x86_64
 	@echo "Building for Linux x86_64..."
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi --release --target $(TARGET_LINUX_x86_64)

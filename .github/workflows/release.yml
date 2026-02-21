@@ -125,6 +125,11 @@ jobs:
           components: clippy
           targets: ${{ matrix.target }}
 
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       # Cross-compilation tools disabled - building native platforms only
       # - name: Install cross-compilation tools (Linux)
       #   if: matrix.os == 'linux'
