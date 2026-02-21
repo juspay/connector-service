@@ -1,10 +1,12 @@
-.PHONY: build-lib generate-bindings generate-proto setup run clean
+.PHONY: build-lib generate-bindings generate-proto setup run clean package package-native dist
 
 # Path to the ffi crate
 FFI_CRATE=../../backend/ffi
 # Proto files
 PROTO_DIR=../../backend/grpc-api-types/proto
 GENERATED_OUT=./generated
+ARTIFACTS_DIR=../../artifacts
+PACKAGE_DIR=$(ARTIFACTS_DIR)/sdk-java
 
 # Detect OS for library extension
 UNAME := $(shell uname)
@@ -34,26 +36,6 @@ generate-bindings: build-lib
 	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(GENERATED_OUT)/
 	@echo "UniFFI Kotlin bindings generated in $(GENERATED_OUT)/"
 
-# Check if Java/Gradle dependencies are available
-CHECK_PROTOC := $(shell which protoc 2>/dev/null && echo "yes" || echo "no")
-CHECK_GRADLE := $(shell ./gradlew --version 2>/dev/null && echo "yes" || echo "no")
-
-# Install/setup dependencies (noop for nix, helpful for manual setup)
-install-deps:
-	@echo "Checking Java/Gradle dependencies..."
-ifeq ($(CHECK_PROTOC),yes)
-	@echo "  ✓ protoc already available"
-else
-	@echo "  ✗ protoc not found - please install protoc or use nix develop"
-	@exit 1
-endif
-ifeq ($(CHECK_GRADLE),yes)
-	@echo "  ✓ Gradle wrapper available"
-else
-	@echo "  ✗ Gradle wrapper not found"
-	@exit 1
-endif
-
 # Generate Java protobuf stubs (usable from Kotlin)
 generate-proto:
 	@echo "Generating Java protobuf stubs..."
@@ -76,18 +58,33 @@ clean:
 	@rm -rf $(GENERATED_OUT)
 	@./gradlew clean 2>/dev/null || true
 
-# Packaging targets for release workflow
-package: ## Package SDK for distribution
-	@echo "Packaging Java SDK..."
-	@mkdir -p artifacts/java
-	@cp -rf $(GENERATED_OUT) artifacts/java/
-	@cp build.gradle* artifacts/java/ 2>/dev/null || true
-	@cp settings.gradle* artifacts/java/ 2>/dev/null || true
-	@cp gradlew* artifacts/java/ 2>/dev/null || true
-	@cp -rf gradle artifacts/java/ 2>/dev/null || true
-	@echo "Package created in artifacts/java/"
+# Packaging targets for release workflow - PLATFORM SPECIFIC
+package-linux-x86_64: generate-proto
+	@echo "Packaging Java SDK for Linux x86_64..."
+	@mkdir -p $(PACKAGE_DIR)/linux-x86_64/native
+	@cp -f ../../target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/native/ 2>/dev/null || \
+		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C ../.. build-linux-x86_64" && exit 1)
+	@cp -rf $(GENERATED_OUT)/*.java $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
+	@cp -rf $(GENERATED_OUT)/*.kt $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
+	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
 
-dist: ## Create distribution archive
-	@$(MAKE) package
-	@cd artifacts && zip -r connector-service-java-sdk.zip java/
-	@echo "Distribution archive: artifacts/connector-service-java-sdk.zip"
+package-macos-aarch64: generate-proto
+	@echo "Packaging Java SDK for macOS aarch64..."
+	@mkdir -p $(PACKAGE_DIR)/macos-aarch64/native
+	@cp -f ../../target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/native/ 2>/dev/null || \
+		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C ../.. build-macos-aarch64" && exit 1)
+	@cp -rf $(GENERATED_OUT)/*.java $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
+	@cp -rf $(GENERATED_OUT)/*.kt $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
+	@echo "macOS aarch64 package created: $(PACKAGE_DIR)/macos-aarch64/"
+
+package-native: package-linux-x86_64 package-macos-aarch64
+
+# Create distribution archives for all platforms
+dist: package-native
+	@echo "Creating Java SDK distribution archives..."
+	@cd $(PACKAGE_DIR) && for dir in */; do \
+		if [ -d "$$dir" ]; then \
+			zip -r "connector-service-java-sdk-$${dir%/}.zip" "$$dir"; \
+		fi; \
+	done
+	@echo "Distribution archives created in $(PACKAGE_DIR)/"
