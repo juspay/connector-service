@@ -718,6 +718,7 @@ fn get_payment_details_and_product<
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::NetworkToken(_)
+        | PaymentMethodData::ProxyNetworkToken(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
             Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("nexinets"),

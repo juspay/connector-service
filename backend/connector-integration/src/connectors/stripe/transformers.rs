@@ -1490,6 +1490,7 @@ fn create_stripe_payment_method<
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::NetworkToken(_)
+        | PaymentMethodData::ProxyNetworkToken(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(
             ConnectorError::NotImplemented(get_unimplemented_payment_method_error_message(
                 "stripe",
@@ -4583,6 +4584,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::ProxyNetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
                 Err(ConnectorError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
@@ -4972,6 +4974,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         | PaymentMethodData::OpenBanking(_)
                         | PaymentMethodData::CardToken(_)
                         | PaymentMethodData::NetworkToken(_)
+                        | PaymentMethodData::ProxyNetworkToken(_)
                         | PaymentMethodData::Card(_) => Err(ConnectorError::NotSupported {
                             message: "Network tokenization for payment method".to_string(),
                             connector: "Stripe",

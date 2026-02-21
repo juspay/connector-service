@@ -574,6 +574,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::ProxyNetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
                 Err(error_stack::report!(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("fiserv"),

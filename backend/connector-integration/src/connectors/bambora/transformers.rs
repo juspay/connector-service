@@ -290,6 +290,7 @@ impl<T: PaymentMethodDataTypes>
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::ProxyNetworkToken(_)
             | PaymentMethodData::MobilePayment(_)
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {

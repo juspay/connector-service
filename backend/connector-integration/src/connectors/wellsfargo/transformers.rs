@@ -570,9 +570,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             // Connector supports these but not yet implemented
             PaymentMethodData::Wallet(_)
             | PaymentMethodData::CardToken(_)
-            | PaymentMethodData::NetworkToken(_) => Err(errors::ConnectorError::NotImplemented(
-                "Payment method supported by connector but not yet implemented".to_string(),
-            ))?,
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::ProxyNetworkToken(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    "Payment method supported by connector but not yet implemented".to_string(),
+                ))?
+            }
             // Connector does not support these payment methods
             PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardRedirect(_)
