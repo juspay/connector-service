@@ -140,7 +140,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + SerdeSerialize>
     TryFrom<
         FiservemeaRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -283,7 +283,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + SerdeSerialize>
     TryFrom<
         ResponseRouterData<
             FiservemeaAuthorizeResponse,
