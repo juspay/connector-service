@@ -1149,7 +1149,7 @@ macro_rules! expand_imports {
             };
             pub(super) use hyperswitch_masking::Maskable;
 
-            pub(super) use crate::types::*;
+            pub(super) use crate::types::{ResponseRouterData, *};
         }
     };
 }
