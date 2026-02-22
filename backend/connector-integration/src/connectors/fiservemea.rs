@@ -241,7 +241,7 @@ macros::create_all_prerequisites!(
 // =============================================================================
 // CONNECTOR COMMON IMPLEMENTATION
 // =============================================================================
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize> ConnectorCommon
     for Fiservemea<T>
 {
     fn id(&self) -> &'static str {
@@ -309,7 +309,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -331,7 +331,7 @@ macros::macro_connector_implementation!(
 // Stub Implementations for Unsupported Flows
 // ============================================================================
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         Accept,
         DisputeFlowData,
@@ -341,7 +341,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         CreateConnectorCustomer,
         PaymentFlowData,
@@ -351,7 +351,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         DefendDispute,
         DisputeFlowData,
@@ -361,7 +361,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         MandateRevoke,
         PaymentFlowData,
@@ -371,7 +371,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         CreateAccessToken,
         PaymentFlowData,
@@ -381,7 +381,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         Authenticate,
         PaymentFlowData,
@@ -391,7 +391,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         Capture,
         PaymentFlowData,
@@ -401,7 +401,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         IncrementalAuthorization,
         PaymentFlowData,
@@ -411,7 +411,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -421,7 +421,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         PostAuthenticate,
         PaymentFlowData,
@@ -431,7 +431,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,
         PaymentFlowData,
@@ -441,7 +441,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
@@ -451,7 +451,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         PSync,
         PaymentFlowData,
@@ -461,7 +461,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -471,7 +471,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         VoidPC,
         PaymentFlowData,
@@ -481,7 +481,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         Void,
         PaymentFlowData,
@@ -491,7 +491,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         RSync,
         RefundFlowData,
@@ -501,13 +501,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
     for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         RepeatPayment,
         PaymentFlowData,
@@ -517,7 +517,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         SdkSessionToken,
         PaymentFlowData,
@@ -527,7 +527,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
@@ -537,7 +537,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<
         SubmitEvidence,
         DisputeFlowData,
