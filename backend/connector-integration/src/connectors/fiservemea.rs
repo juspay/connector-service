@@ -299,9 +299,10 @@ macros::macro_connector_implementation!(
             let client_request_id = uuid::Uuid::new_v4().to_string();
             let timestamp = (date_time::now_unix_timestamp() * 1000).to_string();
 
+            let api_key_value = auth.api_key.clone().expose();
             let raw_signature = format!(
                 "{}{}{}{}",
-                auth.api_key.expose(),
+                api_key_value,
                 client_request_id,
                 timestamp,
                 request_body_str
@@ -319,7 +320,7 @@ macros::macro_connector_implementation!(
             Ok(vec![
                 (
                     headers::API_KEY.to_string(),
-                    auth.api_key.expose().into(),
+                    Secret::new(api_key_value).into_masked(),
                 ),
                 (
                     headers::CLIENT_REQUEST_ID.to_string(),
