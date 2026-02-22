@@ -110,7 +110,7 @@ trait ToTokenData {
 
 impl ToTokenData for grpc_api_types::payments::CardDetails {
     fn to_token_data(&self) -> TokenData {
-        self.to_token_data_with_vault(VaultConnectors::VGS)
+        self.to_token_data_with_vault(VaultConnectors::HyperswitchVault)
     }
 
     fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {
@@ -148,7 +148,7 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
 
 impl ToTokenData for grpc_api_types::payments::ProxyCardDetails {
     fn to_token_data(&self) -> TokenData {
-        self.to_token_data_with_vault(VaultConnectors::VGS) //?
+        self.to_token_data_with_vault(VaultConnectors::HyperswitchVault) //?
     }
 
     fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {

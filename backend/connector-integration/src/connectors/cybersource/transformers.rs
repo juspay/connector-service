@@ -181,7 +181,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         PaymentInformation::Cards(Box::new(CardPaymentInformation {
                             card: Card {
                                 number: ccard.card_number,
-                                expiration_month: ccard.card_exp_month,
+                                expiration_month: ccard.card_exp_month.peek().clone(),
                                 expiration_year: ccard.card_exp_year,
                                 security_code: Some(ccard.card_cvc),
                                 card_type,
@@ -825,7 +825,7 @@ pub struct CybersoucrePaymentInstrument {
 #[serde(rename_all = "camelCase")]
 pub struct Card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     number: RawCardNumber<T>,
-    expiration_month: Secret<String>,
+    expiration_month: String,
     expiration_year: Secret<String>,
     security_code: Option<Secret<String>>,
     #[serde(rename = "type")]
@@ -1307,13 +1307,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_information = PaymentInformation::Cards(Box::new(CardPaymentInformation {
             card: Card {
                 number: ccard.card_number,
-                expiration_month: ccard.card_exp_month,
+                expiration_month: ccard.card_exp_month.peek().clone(),
                 expiration_year: ccard.card_exp_year,
                 security_code: Some(ccard.card_cvc),
                 card_type: card_type.clone(),
                 type_selection_indicator: Some("1".to_owned()),
             },
         }));
+
+        println!("Carddd = {:?}", payment_information);
 
         let processing_information = ProcessingInformation::try_from((
             item,
@@ -2420,7 +2422,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     PaymentInformation::Cards(Box::new(CardPaymentInformation {
                         card: Card {
                             number: ccard.card_number,
-                            expiration_month: ccard.card_exp_month,
+                            expiration_month: ccard.card_exp_month.peek().clone(),
                             expiration_year: ccard.card_exp_year,
                             security_code: Some(ccard.card_cvc),
                             card_type,
@@ -3149,7 +3151,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     CardPaymentInformation {
                         card: Card {
                             number: ccard.card_number,
-                            expiration_month: ccard.card_exp_month,
+                            expiration_month: ccard.card_exp_month.peek().clone(),
                             expiration_year: ccard.card_exp_year,
                             security_code: Some(ccard.card_cvc),
                             card_type,
@@ -3415,7 +3417,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     CardPaymentInformation {
                         card: Card {
                             number: ccard.card_number,
-                            expiration_month: ccard.card_exp_month,
+                            expiration_month: ccard.card_exp_month.peek().clone(),
                             expiration_year: ccard.card_exp_year,
                             security_code: Some(ccard.card_cvc),
                             card_type,
