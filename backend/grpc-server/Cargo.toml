@@ -14,8 +14,8 @@ cards = { path = "../cards", package = "ucs_cards" }
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 config_patch_derive = { path = "../config_patch_derive" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "9b6f091c874fe3ad8a1be45a243f7aeb2199a6e8", package = "masking" }
-injector = { git = "https://github.com/juspay/hyperswitch", rev = "9b6f091c874fe3ad8a1be45a243f7aeb2199a6e8" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "0bd0c84eb955e2759f5fc09736dbc48b3dfa1acd", package = "masking" }
+injector = { git = "https://github.com/juspay/hyperswitch", rev = "0bd0c84eb955e2759f5fc09736dbc48b3dfa1acd" }
 tracing-kafka = { path = "../tracing-kafka", optional = true }
 
 # Third-party dependencies

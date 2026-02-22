@@ -15,7 +15,7 @@ error-stack = "0.5.0"
 
 # First-party dependencies
 cards = { path = "../cards", package = "ucs_cards" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "9b6f091c874fe3ad8a1be45a243f7aeb2199a6e8", package = "masking", features = ["proto_tonic"] }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "0bd0c84eb955e2759f5fc09736dbc48b3dfa1acd", package = "masking", features = ["proto_tonic"] }
 
 [build-dependencies]
 tonic-build = "0.13.0"
