@@ -277,3 +277,47 @@ impl<T: PaymentMethodDataTypes>
         })
     }
 }
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        ResponseRouterData<
+            FiservemeaAuthorizeResponse,
+            FiservemeaRouterData<
+                RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+                T,
+            >,
+        >,
+    > for FiservemeaRouterData<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        T,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            FiservemeaAuthorizeResponse,
+            FiservemeaRouterData<
+                RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+                T,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data: RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        > = ResponseRouterData {
+            response: item.response,
+            router_data: item.router_data.router_data,
+            http_code: item.http_code,
+        }
+        .try_into()?;
+
+        Ok(FiservemeaRouterData {
+            connector: item.router_data.connector,
+            router_data,
+        })
+    }
+}
