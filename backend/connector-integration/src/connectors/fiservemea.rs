@@ -341,9 +341,12 @@ macros::macro_connector_implementation!(
 
         fn get_url(
             &self,
-            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok("/ipp/payments-gateway/v2/payments".to_string())
+            Ok(format!(
+                "{}/ipp/payments-gateway/v2/payments",
+                &req.resource_common_data.connectors.fiservemea.base_url
+            ))
         }
     }
 );
