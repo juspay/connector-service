@@ -258,8 +258,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serializ
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.code,
-            message: response.message,
+            code: response.error.code,
+            message: response.error.description,
             reason: None,
             attempt_status: None,
             connector_transaction_id: None,
