@@ -278,7 +278,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes + serde::Serialize>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
         ResponseRouterData<
             FiservemeaAuthorizeResponse,
