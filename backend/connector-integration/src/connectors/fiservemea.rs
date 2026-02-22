@@ -298,10 +298,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serializ
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = FiservemeaAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
-            headers::API_KEY.to_string(),
-            auth.api_key.expose().into(),
-        )])
+        Ok(vec![
+            (
+                headers::API_KEY.to_string(),
+                auth.api_key.expose().into(),
+            ),
+        ])
     }
 
     fn build_error_response(
