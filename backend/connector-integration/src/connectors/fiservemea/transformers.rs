@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
     pub api_key: Secret<String>,
+    pub api_secret: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
@@ -24,8 +25,9 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
+            ConnectorAuthType::BodyKey { api_key, key1, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
+                api_secret: key1.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
