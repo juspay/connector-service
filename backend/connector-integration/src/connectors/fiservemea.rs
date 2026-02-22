@@ -214,7 +214,7 @@ macros::create_all_prerequisites!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
             
             let client_request_id = uuid::Uuid::new_v4().to_string();
-            let timestamp = date_time::now_unix_timestamp_millis().to_string();
+            let timestamp = (date_time::now_unix_timestamp() * 1000).to_string();
             
             Ok(vec![
                 (
