@@ -220,10 +220,30 @@ macros::create_all_prerequisites!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let auth = FiservemeaAuthType::try_from(&req.connector_auth_type)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-            
+
             let client_request_id = uuid::Uuid::new_v4().to_string();
             let timestamp = (date_time::now_unix_timestamp() * 1000).to_string();
-            
+
+            let request_body = serde_json::to_string(req)
+                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+
+            let raw_signature = format!(
+                "{}{}{}{}",
+                auth.api_key.expose(),
+                client_request_id,
+                timestamp,
+                request_body
+            );
+
+            let signature = common_utils::crypto::HmacSha256
+                .sign_message(
+                    auth.api_secret.clone().expose().as_bytes(),
+                    raw_signature.as_bytes(),
+                )
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            let encoded_signature = general_purpose::STANDARD.encode(signature);
+
             Ok(vec![
                 (
                     headers::API_KEY.to_string(),
@@ -236,6 +256,10 @@ macros::create_all_prerequisites!(
                 (
                     headers::TIMESTAMP.to_string(),
                     timestamp.into(),
+                ),
+                (
+                    headers::MESSAGE_SIGNATURE.to_string(),
+                    encoded_signature.into(),
                 ),
                 (
                     headers::CONTENT_TYPE.to_string(),
