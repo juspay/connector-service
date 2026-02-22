@@ -256,11 +256,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serializ
 
         with_error_response_body!(event_builder, response);
 
+        let error_code = response
+            .error
+            .code
+            .or_else(|| response.error.r#type.clone())
+            .unwrap_or_else(|| response.response_type.clone());
+
+        let error_message = response
+            .error
+            .description
+            .unwrap_or_else(|| response.error.message);
+
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.error.code,
-            message: response.error.description,
-            reason: None,
+            code: error_code,
+            message: error_message,
+            reason: response.error.r#type,
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
