@@ -8,7 +8,7 @@ use crate::{connectors::macros, with_error_response_body};
 use base64::engine::general_purpose;
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{date_time, errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{crypto::SignMessage, date_time, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
