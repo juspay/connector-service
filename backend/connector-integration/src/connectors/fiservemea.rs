@@ -2,8 +2,6 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use serde::Serialize;
-
 use crate::{connectors::macros, with_error_response_body};
 use base64::engine::general_purpose;
 use base64::Engine;
