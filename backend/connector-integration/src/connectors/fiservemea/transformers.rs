@@ -74,13 +74,6 @@ pub struct FiservemeaAuthorizeRequest {
     pub order_id: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct FiservemeaPaymentsRequest {
-    pub amount: i64,
-    pub currency: String,
-    pub reference: String,
-}
-
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
