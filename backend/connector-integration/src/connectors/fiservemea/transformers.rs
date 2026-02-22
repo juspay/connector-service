@@ -278,7 +278,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + serde::Serialize>
     TryFrom<
         ResponseRouterData<
             FiservemeaAuthorizeResponse,
