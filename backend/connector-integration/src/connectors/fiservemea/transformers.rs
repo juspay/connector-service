@@ -1,4 +1,7 @@
-use crate::types::ResponseRouterData;
+use crate::{
+    connectors::fiservemea::FiservemeaRouterData,
+    types::ResponseRouterData,
+};
 use common_enums::AttemptStatus;
 use domain_types::{
     connector_flow::Authorize,
