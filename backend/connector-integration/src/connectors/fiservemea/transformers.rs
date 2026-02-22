@@ -122,7 +122,7 @@ impl<T: PaymentMethodDataTypes>
                     security_code: card.card_cvc.clone(),
                     expiry_date: FiservemeaExpiryDate {
                         month: format!("{:02}", card.card_exp_month),
-                        year: format!("{}", card.card_exp_year),
+                        year: card.card_exp_year.expose().to_string(),
                     },
                 },
             },
