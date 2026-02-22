@@ -118,7 +118,7 @@ impl<T: PaymentMethodDataTypes>
             },
             payment_method: FiservemeaPaymentMethod {
                 payment_card: FiservemeaPaymentCard {
-                    number: card.card_number.clone(),
+                    number: card.card_number.peek().to_string().into(),
                     security_code: card.card_cvc.clone(),
                     expiry_date: FiservemeaExpiryDate {
                         month: format!("{:02}", card.card_exp_month.expose()),
