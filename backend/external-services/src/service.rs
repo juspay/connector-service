@@ -375,15 +375,18 @@ where
                             template,
                             token_data,
                             Some(headers),
-                            proxy
-                                .https_url
-                                .as_ref()
-                                .or(proxy.http_url.as_ref())
-                                .map(|url| Secret::new(url.clone())),
+                            // proxy
+                            //     .https_url
+                            //     .as_ref()
+                            //     .or(proxy.http_url.as_ref())
+                            //     .map(|url| Secret::new(url.clone())),
+                            Some(Secret::new("http://localhost:8082/proxy".to_string())), // For testing with local proxy, replace with actual proxy URLs in production
                             None,
                             None,
                             None,
                         );
+
+                        println!("Injector request createddddd: {:?}", injector_request);
 
                         // New injector handles HTTP request internally and returns enhanced response
                         let injector_response = injector_core(injector_request)

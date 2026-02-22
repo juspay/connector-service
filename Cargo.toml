@@ -56,3 +56,4 @@ use_self = "warn"
 
 # Lints to allow
 option_map_unit_fn = "allow"
+
