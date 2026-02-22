@@ -92,22 +92,14 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let payment_method = item
-            .request
-            .payment_method_data
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "payment_method_data",
-            })?;
-
-        let card = match payment_method {
+        let card = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             _ => {
                 return Err(errors::ConnectorError::NotImplemented("Only card payments are supported".to_string()).into());
             }
         };
 
-        let amount = item.request.minor_amount.get_amount_as_i64();
+        let amount = item.request.amount.get_amount_as_i64();
         let amount_str = format!("{}.{:02}", amount / 100, amount % 100);
 
         Ok(Self {
