@@ -349,7 +349,55 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            let auth = FiservemeaAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+
+            let connector_req = FiservemeaAuthorizeRequest::try_from(req)?;
+            let request_body_str = serde_json::to_string(&connector_req)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            let client_request_id = uuid::Uuid::new_v4().to_string();
+            let timestamp = (date_time::now_unix_timestamp() * 1000).to_string();
+
+            let raw_signature = format!(
+                "{}{}{}{}",
+                auth.api_key.expose(),
+                client_request_id,
+                timestamp,
+                request_body_str
+            );
+
+            let signature = common_utils::crypto::HmacSha256
+                .sign_message(
+                    auth.api_secret.clone().expose().as_bytes(),
+                    raw_signature.as_bytes(),
+                )
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            let encoded_signature = general_purpose::STANDARD.encode(signature);
+
+            Ok(vec![
+                (
+                    headers::API_KEY.to_string(),
+                    auth.api_key.expose().into(),
+                ),
+                (
+                    headers::CLIENT_REQUEST_ID.to_string(),
+                    client_request_id.into(),
+                ),
+                (
+                    headers::TIMESTAMP.to_string(),
+                    timestamp.into(),
+                ),
+                (
+                    headers::MESSAGE_SIGNATURE.to_string(),
+                    encoded_signature.into(),
+                ),
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/json".to_string().into(),
+                ),
+            ])
         }
 
         fn get_url(
