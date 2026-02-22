@@ -310,6 +310,7 @@ macro_rules! expand_fn_handle_response {
             macro_types::ConnectorError,
         > {
             use error_stack::ResultExt;
+            use crate::types::ResponseRouterData;
             paste::paste! {let bridge = self.[< $flow:snake >];}
 
             // Apply preprocessing if specified in the macro
@@ -340,6 +341,7 @@ macro_rules! expand_fn_handle_response {
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
             macro_types::ConnectorError,
         > {
+            use crate::types::ResponseRouterData;
             paste::paste! {let bridge = self.[< $flow:snake >];}
             let response_body = bridge.response(res.response)?;
             event_builder.map(|i| i.set_connector_response(&response_body));
