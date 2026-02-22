@@ -42,7 +42,7 @@ use interfaces::{
 };
 
 use transformers::{
-    fiservemea::FiservemeaAuthType, FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
+    FiservemeaAuthType, FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
     FiservemeaErrorResponse,
 };
 
