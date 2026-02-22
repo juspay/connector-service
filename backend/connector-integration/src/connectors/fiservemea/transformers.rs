@@ -37,9 +37,18 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FiservemeaErrorResponse {
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaErrorDetail {
     pub code: String,
-    pub message: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaErrorResponse {
+    pub client_request_id: String,
+    pub response_type: String,
+    pub error: FiservemeaErrorDetail,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
