@@ -206,7 +206,8 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         )
     ],
-    amount_converters: []
+    amount_converters: [],
+    member_functions: {}
 );
 
 // =============================================================================
