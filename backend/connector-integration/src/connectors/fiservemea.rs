@@ -2,9 +2,10 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
+use base64::Engine;
 use crate::{connectors::macros, with_error_response_body};
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{crypto::SignMessage, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
