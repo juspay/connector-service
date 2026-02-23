@@ -1,11 +1,13 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    AccessToken, CompositeAuthorizeRequest, ConnectorState, PaymentServiceAuthorizeOnlyRequest,
+    CompositeAuthorizeRequest, ConnectorState, PaymentServiceAuthorizeOnlyRequest,
     PaymentServiceCreateAccessTokenRequest, PaymentServiceCreateAccessTokenResponse,
     PaymentServiceCreateConnectorCustomerRequest, PaymentServiceCreateConnectorCustomerResponse,
 };
 
-use crate::utils::grpc_connector_from_connector_enum;
+use crate::utils::{
+    get_access_token, get_connector_customer_id, grpc_connector_from_connector_enum,
+};
 
 pub trait ForeignFrom<F>: Sized {
     fn foreign_from(item: F) -> Self;
@@ -57,20 +59,25 @@ impl
             Option<&PaymentServiceCreateConnectorCustomerResponse>,
         ),
     ) -> Self {
-        let resolved_connector_customer_id = item.connector_customer_id.clone().or_else(|| {
-            create_customer_response.map(|response| response.connector_customer_id.clone())
+        let connector_customer_id_from_req = item.connector_customer_id.clone().or_else(|| {
+            item.state
+                .as_ref()
+                .and_then(|state| state.connector_customer_id.clone())
         });
 
-        let access_token_from_response = access_token_response.and_then(|response| {
-            response.access_token.clone().map(|token| AccessToken {
-                token: Some(token),
-                token_type: response.token_type.clone(),
-                expires_in_seconds: response.expires_in_seconds,
-            })
-        });
+        let connector_customer_id =
+            get_connector_customer_id(connector_customer_id_from_req, create_customer_response);
+
+        let access_token_from_req = item
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.clone());
+
+        let access_token = get_access_token(access_token_from_req, access_token_response);
+
         let resolved_state = Some(ConnectorState {
-            access_token: access_token_from_response,
-            connector_customer_id: resolved_connector_customer_id.clone(),
+            access_token,
+            connector_customer_id: connector_customer_id.clone(),
         });
         Self {
             request_ref_id: item.request_ref_id.clone(),
@@ -84,7 +91,7 @@ impl
             email: item.email.clone(),
             customer_name: item.customer_name.clone(),
             customer_id: item.customer_id.clone(),
-            connector_customer_id: resolved_connector_customer_id,
+            connector_customer_id,
             address: item.address.clone(),
             auth_type: item.auth_type,
             enrolled_for_3ds: item.enrolled_for_3ds,
