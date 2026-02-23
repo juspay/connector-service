@@ -3,10 +3,8 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use crate::{connectors::macros, with_error_response_body};
-use base64::engine::general_purpose;
-use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{crypto::SignMessage, date_time, errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -35,7 +33,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, Secret};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     verification::SourceVerification,
