@@ -1584,32 +1584,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ),
     ) -> Result<Self, Self::Error> {
         match wallet_data {
-            WalletData::ApplePay(applepay_data) => {
-                if let Some(decrypt_data) = applepay_data
-                    .payment_data
-                    .get_decrypted_apple_pay_payment_data_optional()
-                {
-                    Ok(Self::Wallet(StripeWallet::ApplePayPredecryptToken(
-                        Box::new(StripeApplePayPredecrypt {
-                            number: decrypt_data.clone().application_primary_account_number,
-                            exp_year: decrypt_data.get_four_digit_expiry_year(),
-                            exp_month: decrypt_data.get_expiry_month(),
-                            eci: decrypt_data.payment_data.eci_indicator.clone(),
-                            cryptogram: decrypt_data.payment_data.online_payment_cryptogram.clone(),
-                            tokenization_method: "apple_pay".to_string(),
-                        }),
-                    )))
-                } else {
-                    Ok(Self::Wallet(StripeWallet::ApplepayToken(StripeApplePay {
-                        pk_token: applepay_data.get_applepay_decoded_payment_data()?,
-                        pk_token_instrument_name: applepay_data.payment_method.pm_type.to_owned(),
-                        pk_token_payment_network: applepay_data.payment_method.network.to_owned(),
-                        pk_token_transaction_id: Secret::new(
-                            applepay_data.transaction_identifier.to_owned(),
-                        ),
-                    })))
-                }
-            }
+            WalletData::ApplePay(applepay_data) => match applepay_data
+                .payment_data
+                .get_decrypted_apple_pay_payment_data_optional()
+            {
+                Some(decrypt_data) => Ok(Self::Wallet(StripeWallet::ApplePayPredecryptToken(
+                    Box::new(StripeApplePayPredecrypt {
+                        number: decrypt_data.clone().application_primary_account_number,
+                        exp_year: decrypt_data.get_four_digit_expiry_year(),
+                        exp_month: decrypt_data.get_expiry_month(),
+                        eci: decrypt_data.payment_data.eci_indicator.clone(),
+                        cryptogram: decrypt_data.payment_data.online_payment_cryptogram.clone(),
+                        tokenization_method: "apple_pay".to_string(),
+                    }),
+                ))),
+                None => Ok(Self::Wallet(StripeWallet::ApplepayToken(StripeApplePay {
+                    pk_token: applepay_data.get_applepay_decoded_payment_data()?,
+                    pk_token_instrument_name: applepay_data.payment_method.pm_type.to_owned(),
+                    pk_token_payment_network: applepay_data.payment_method.network.to_owned(),
+                    pk_token_transaction_id: Secret::new(
+                        applepay_data.transaction_identifier.to_owned(),
+                    ),
+                }))),
+            },
             WalletData::WeChatPayQr(_) => Ok(Self::Wallet(StripeWallet::WechatpayPayment(
                 WechatpayPayment {
                     client: WechatClient::Web,
