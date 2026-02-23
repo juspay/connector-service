@@ -43,7 +43,7 @@ use interfaces::{
 
 use transformers::{
     FiservemeaAuthType, FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
-    FiservemeaErrorResponse,
+    FiservemeaErrorResponse, FiservemeaSignatureMetadata,
 };
 
 pub(crate) mod headers {
@@ -106,6 +106,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serializ
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
     connector_types::PaymentPreAuthenticateV2<T> for Fiservemea<T>
 {
+
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + serde::Serialize>
@@ -302,46 +303,26 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             let connector_req = FiservemeaAuthorizeRequest::try_from(req)?;
-            let request_body_str = serde_json::to_string(&connector_req)
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-            let client_request_id = uuid::Uuid::new_v4().to_string();
-            let timestamp = (date_time::now_unix_timestamp() * 1000).to_string();
-
-            let api_key_value = auth.api_key.clone().expose();
-            let raw_signature = format!(
-                "{}{}{}{}",
-                api_key_value,
-                client_request_id,
-                timestamp,
-                request_body_str
-            );
-
-            let signature = common_utils::crypto::HmacSha256
-                .sign_message(
-                    auth.api_secret.clone().expose().as_bytes(),
-                    raw_signature.as_bytes(),
-                )
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-            let encoded_signature = general_purpose::STANDARD.encode(signature);
+            let signature_metadata = connector_req.signature_metadata
+                .as_ref()
+                .ok_or(errors::ConnectorError::RequestEncodingFailed)?;
 
             Ok(vec![
                 (
                     headers::API_KEY.to_string(),
-                    Secret::new(api_key_value).into_masked(),
+                    auth.api_key.clone().into_masked(),
                 ),
                 (
                     headers::CLIENT_REQUEST_ID.to_string(),
-                    client_request_id.into(),
+                    signature_metadata.client_request_id.clone().into(),
                 ),
                 (
                     headers::TIMESTAMP.to_string(),
-                    timestamp.into(),
+                    signature_metadata.timestamp.clone().into(),
                 ),
                 (
                     headers::MESSAGE_SIGNATURE.to_string(),
-                    encoded_signature.into(),
+                    signature_metadata.message_signature.clone().into(),
                 ),
                 (
                     headers::CONTENT_TYPE.to_string(),
