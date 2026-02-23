@@ -50,140 +50,169 @@ fn convert_optional_country_alpha2(
     value: Option<i32>,
 ) -> Result<Option<CountryAlpha2>, error_stack::Report<ApplicationErrorResponse>> {
     value
-        .map(|country_code| {
-            CountryAlpha2::foreign_try_from(
-                grpc_api_types::payments::CountryAlpha2::try_from(country_code).unwrap_or_default(),
-            )
-        })
-        .transpose()
-}
-
-fn foreign_try_from_paze_decrypted_data(
-    value: grpc_api_types::payments::PazeDecryptedData,
-) -> Result<router_data::PazeDecryptedData, error_stack::Report<ApplicationErrorResponse>> {
-    let token = value
-        .token
-        .ok_or(ApplicationErrorResponse::missing_required_field(
-            "payment_method.paze.decrypted_data.token",
-        ))?;
-    let billing_address =
-        value
-            .billing_address
-            .ok_or(ApplicationErrorResponse::missing_required_field(
-                "payment_method.paze.decrypted_data.billing_address",
-            ))?;
-    let consumer = value
-        .consumer
-        .ok_or(ApplicationErrorResponse::missing_required_field(
-            "payment_method.paze.decrypted_data.consumer",
-        ))?;
-
-    let email_address = Email::try_from(
-        consumer
-            .email_address
-            .ok_or(ApplicationErrorResponse::missing_required_field(
-                "payment_method.paze.decrypted_data.consumer.email_address",
-            ))?
-            .expose(),
-    )
-    .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-        sub_code: "INVALID_PAZE_CONSUMER_EMAIL".to_owned(),
-        error_identifier: 400,
-        error_message: "Invalid Paze consumer email in payment_method".to_owned(),
-        error_object: None,
-    }))?;
-
-    let mobile_number = consumer
-        .mobile_number
         .map(
-            |mobile_number| -> Result<_, error_stack::Report<ApplicationErrorResponse>> {
-                Ok(router_data::PazePhoneNumber {
-                    country_code: mobile_number
-                        .country_code
-                        .ok_or(ApplicationErrorResponse::missing_required_field(
-                        "payment_method.paze.decrypted_data.consumer.mobile_number.country_code",
-                    ))?,
-                    phone_number: mobile_number
-                        .phone_number
-                        .ok_or(ApplicationErrorResponse::missing_required_field(
-                        "payment_method.paze.decrypted_data.consumer.mobile_number.phone_number",
-                    ))?,
-                })
+            |country_code| -> Result<_, error_stack::Report<ApplicationErrorResponse>> {
+                let grpc_country_code =
+                    grpc_api_types::payments::CountryAlpha2::try_from(country_code)
+                        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_PAZE_COUNTRY_CODE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid Paze country code in payment_method".to_owned(),
+                            error_object: None,
+                        }))?;
+
+                if matches!(
+                    grpc_country_code,
+                    grpc_api_types::payments::CountryAlpha2::Unspecified
+                ) {
+                    Ok(None)
+                } else {
+                    CountryAlpha2::foreign_try_from(grpc_country_code).map(Some)
+                }
             },
         )
-        .transpose()?;
+        .transpose()
+        .map(Option::flatten)
+}
 
-    let payment_card_network = CardNetwork::foreign_try_from(
-        grpc_api_types::payments::CardNetwork::try_from(value.payment_card_network)
-            .unwrap_or_default(),
-    )?;
+impl ForeignTryFrom<grpc_api_types::payments::PazeDecryptedData>
+    for router_data::PazeDecryptedData
+{
+    type Error = ApplicationErrorResponse;
 
-    let dynamic_data = value
-        .dynamic_data
-        .into_iter()
-        .map(|dynamic_data| router_data::PazeDynamicData {
-            dynamic_data_value: dynamic_data.dynamic_data_value,
-            dynamic_data_type: dynamic_data.dynamic_data_type,
-            dynamic_data_expiration: dynamic_data.dynamic_data_expiration,
-        })
-        .collect();
-
-    Ok(router_data::PazeDecryptedData {
-        client_id: value
-            .client_id
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PazeDecryptedData,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let token = value
+            .token
             .ok_or(ApplicationErrorResponse::missing_required_field(
-                "payment_method.paze.decrypted_data.client_id",
-            ))?,
-        profile_id: value.profile_id,
-        token: router_data::PazeToken {
-            payment_token: token.payment_token.ok_or(
-                ApplicationErrorResponse::missing_required_field(
-                    "payment_method.paze.decrypted_data.token.payment_token",
-                ),
-            )?,
-            token_expiration_month: token.token_expiration_month.ok_or(
-                ApplicationErrorResponse::missing_required_field(
-                    "payment_method.paze.decrypted_data.token.token_expiration_month",
-                ),
-            )?,
-            token_expiration_year: token.token_expiration_year.ok_or(
-                ApplicationErrorResponse::missing_required_field(
-                    "payment_method.paze.decrypted_data.token.token_expiration_year",
-                ),
-            )?,
-            payment_account_reference: token.payment_account_reference.ok_or(
-                ApplicationErrorResponse::missing_required_field(
-                    "payment_method.paze.decrypted_data.token.payment_account_reference",
-                ),
-            )?,
-        },
-        payment_card_network,
-        dynamic_data,
-        billing_address: router_data::PazeAddress {
-            name: billing_address.name,
-            line1: billing_address.line1,
-            line2: billing_address.line2,
-            line3: billing_address.line3,
-            city: billing_address.city,
-            state: billing_address.state,
-            zip: billing_address.zip,
-            country_code: convert_optional_country_alpha2(billing_address.country_code)?,
-        },
-        consumer: router_data::PazeConsumer {
-            first_name: consumer.first_name,
-            last_name: consumer.last_name,
-            full_name: consumer.full_name.ok_or(
-                ApplicationErrorResponse::missing_required_field(
-                    "payment_method.paze.decrypted_data.consumer.full_name",
-                ),
-            )?,
-            email_address,
-            mobile_number,
-            country_code: convert_optional_country_alpha2(consumer.country_code)?,
-            language_code: consumer.language_code,
-        },
-        eci: value.eci,
-    })
+                "payment_method.paze.decrypted_data.token",
+            ))?;
+        let billing_address =
+            value
+                .billing_address
+                .ok_or(ApplicationErrorResponse::missing_required_field(
+                    "payment_method.paze.decrypted_data.billing_address",
+                ))?;
+        let consumer = value
+            .consumer
+            .ok_or(ApplicationErrorResponse::missing_required_field(
+                "payment_method.paze.decrypted_data.consumer",
+            ))?;
+
+        let email_address = Email::try_from(
+            consumer
+                .email_address
+                .ok_or(ApplicationErrorResponse::missing_required_field(
+                    "payment_method.paze.decrypted_data.consumer.email_address",
+                ))?
+                .expose(),
+        )
+        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "INVALID_PAZE_CONSUMER_EMAIL".to_owned(),
+            error_identifier: 400,
+            error_message: "Invalid Paze consumer email in payment_method".to_owned(),
+            error_object: None,
+        }))?;
+
+        let mobile_number = consumer
+            .mobile_number
+            .map(
+                |mobile_number| -> Result<_, error_stack::Report<ApplicationErrorResponse>> {
+                    Ok(router_data::PazePhoneNumber {
+                        country_code: mobile_number
+                            .country_code
+                            .ok_or(ApplicationErrorResponse::missing_required_field(
+                            "payment_method.paze.decrypted_data.consumer.mobile_number.country_code",
+                        ))?,
+                        phone_number: mobile_number
+                            .phone_number
+                            .ok_or(ApplicationErrorResponse::missing_required_field(
+                            "payment_method.paze.decrypted_data.consumer.mobile_number.phone_number",
+                        ))?,
+                    })
+                },
+            )
+            .transpose()?;
+
+        let grpc_payment_card_network =
+            grpc_api_types::payments::CardNetwork::try_from(value.payment_card_network)
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_PAZE_PAYMENT_CARD_NETWORK".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Invalid Paze payment card network in payment_method".to_owned(),
+                    error_object: None,
+                }))?;
+
+        let payment_card_network = CardNetwork::foreign_try_from(grpc_payment_card_network)?;
+
+        let dynamic_data = value
+            .dynamic_data
+            .into_iter()
+            .map(|dynamic_data| router_data::PazeDynamicData {
+                dynamic_data_value: dynamic_data.dynamic_data_value,
+                dynamic_data_type: dynamic_data.dynamic_data_type,
+                dynamic_data_expiration: dynamic_data.dynamic_data_expiration,
+            })
+            .collect();
+
+        Ok(Self {
+            client_id: value
+                .client_id
+                .ok_or(ApplicationErrorResponse::missing_required_field(
+                    "payment_method.paze.decrypted_data.client_id",
+                ))?,
+            profile_id: value.profile_id,
+            token: router_data::PazeToken {
+                payment_token: token.payment_token.ok_or(
+                    ApplicationErrorResponse::missing_required_field(
+                        "payment_method.paze.decrypted_data.token.payment_token",
+                    ),
+                )?,
+                token_expiration_month: token.token_expiration_month.ok_or(
+                    ApplicationErrorResponse::missing_required_field(
+                        "payment_method.paze.decrypted_data.token.token_expiration_month",
+                    ),
+                )?,
+                token_expiration_year: token.token_expiration_year.ok_or(
+                    ApplicationErrorResponse::missing_required_field(
+                        "payment_method.paze.decrypted_data.token.token_expiration_year",
+                    ),
+                )?,
+                payment_account_reference: token.payment_account_reference.ok_or(
+                    ApplicationErrorResponse::missing_required_field(
+                        "payment_method.paze.decrypted_data.token.payment_account_reference",
+                    ),
+                )?,
+            },
+            payment_card_network,
+            dynamic_data,
+            billing_address: router_data::PazeAddress {
+                name: billing_address.name,
+                line1: billing_address.line1,
+                line2: billing_address.line2,
+                line3: billing_address.line3,
+                city: billing_address.city,
+                state: billing_address.state,
+                zip: billing_address.zip,
+                country_code: convert_optional_country_alpha2(billing_address.country_code)?,
+            },
+            consumer: router_data::PazeConsumer {
+                first_name: consumer.first_name,
+                last_name: consumer.last_name,
+                full_name: consumer.full_name.ok_or(
+                    ApplicationErrorResponse::missing_required_field(
+                        "payment_method.paze.decrypted_data.consumer.full_name",
+                    ),
+                )?,
+                email_address,
+                mobile_number,
+                country_code: convert_optional_country_alpha2(consumer.country_code)?,
+                language_code: consumer.language_code,
+            },
+            eci: value.eci,
+        })
+    }
 }
 
 impl ForeignTryFrom<(Secret<String>, &'static str)> for SecretSerdeValue {
@@ -957,7 +986,7 @@ impl<
                         Some(grpc_api_types::payments::paze_wallet::PazeData::DecryptedData(
                             decrypted_data,
                         )) => payment_method_data::PazeWalletData::Decrypted(Box::new(
-                            foreign_try_from_paze_decrypted_data(decrypted_data)?,
+                            router_data::PazeDecryptedData::foreign_try_from(decrypted_data)?,
                         )),
                         None => {
                             return Err(report!(ApplicationErrorResponse::missing_required_field(
