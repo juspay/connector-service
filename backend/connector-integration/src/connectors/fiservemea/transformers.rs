@@ -185,7 +185,7 @@ impl<T: PaymentMethodDataTypes>
         };
 
         let request_body_str = serde_json::to_string(&request_without_metadata)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
 
         let message_signature = generate_fiservemea_signature(
             auth.api_key.expose().as_str(),
