@@ -119,12 +119,12 @@ fn generate_fiservemea_signature(
         api_key, client_request_id, timestamp, request_body
     );
 
-    let signature = common_utils::crypto::HmacSha256
-        .sign_message(
-            api_secret.as_bytes(),
-            raw_signature.as_bytes(),
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+    let signature = common_utils::crypto::HmacSha256::sign_message(
+        &common_utils::crypto::HmacSha256,
+        api_secret.as_bytes(),
+        raw_signature.as_bytes(),
+    )
+    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
     Ok(general_purpose::STANDARD.encode(signature))
 }
