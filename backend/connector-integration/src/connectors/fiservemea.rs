@@ -2,10 +2,9 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use base64::Engine;
 use crate::{connectors::macros, with_error_response_body};
 use common_enums::CurrencyUnit;
-use common_utils::{crypto::SignMessage, errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -33,13 +32,13 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     verification::SourceVerification,
 };
 
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, Secret};
 use transformers::{
     FiservemeaAuthType, FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
     FiservemeaErrorResponse,
@@ -303,35 +302,27 @@ macros::macro_connector_implementation!(
 
             let connector_req = FiservemeaAuthorizeRequest::try_from(req)?;
             let request_body_str = serde_json::to_string(&connector_req)
-                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-            let client_request_id = uuid::Uuid::new_v4().to_string();
-            let timestamp = (common_utils::date_time::now_unix_timestamp() * 1000).to_string();
+            let client_request_id = FiservemeaAuthType::generate_client_request_id();
+            let timestamp = FiservemeaAuthType::generate_timestamp();
 
-            let api_key_str = auth.api_key.clone().expose();
-            let api_secret_bytes = auth.api_secret.clone().expose();
-
-            let raw_signature = format!(
-                "{}{}{}{}",
-                api_key_str,
-                client_request_id,
-                timestamp,
-                request_body_str
-            );
-
-            let signature = common_utils::crypto::HmacSha256::sign_message(
-                &common_utils::crypto::HmacSha256,
-                api_secret_bytes.as_bytes(),
-                raw_signature.as_bytes(),
-            )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-            let message_signature = base64::engine::general_purpose::STANDARD.encode(signature);
+            let api_key_value = auth.api_key.clone().expose();
+            let message_signature = auth.generate_hmac_signature(
+                &api_key_value,
+                &client_request_id,
+                &timestamp,
+                &request_body_str,
+            )?;
 
             Ok(vec![
                 (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/json".to_string().into(),
+                ),
+                (
                     headers::API_KEY.to_string(),
-                    auth.api_key.clone().into_masked(),
+                    Secret::new(api_key_value).into_masked(),
                 ),
                 (
                     headers::CLIENT_REQUEST_ID.to_string(),
@@ -344,10 +335,6 @@ macros::macro_connector_implementation!(
                 (
                     headers::MESSAGE_SIGNATURE.to_string(),
                     message_signature.into(),
-                ),
-                (
-                    headers::CONTENT_TYPE.to_string(),
-                    "application/json".to_string().into(),
                 ),
             ])
         }
