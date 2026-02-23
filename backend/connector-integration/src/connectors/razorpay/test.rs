@@ -35,7 +35,9 @@ mod tests {
         };
         use domain_types::{
             connector_flow::Authorize,
-            connector_types::{ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
+            connector_types::{
+                ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+            },
             payment_address::{Address, PaymentAddress, PhoneDetails},
             payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},
             router_data::{ConnectorAuthType, ErrorResponse},
@@ -242,14 +244,8 @@ mod tests {
                 };
                 masked_request
             });
-            assert_eq!(
-                req_body.as_ref().unwrap()["amount"],
-                1000
-            );
-            assert_eq!(
-                req_body.as_ref().unwrap()["currency"],
-                "USD"
-            );
+            assert_eq!(req_body.as_ref().unwrap()["amount"], 1000);
+            assert_eq!(req_body.as_ref().unwrap()["currency"], "USD");
             assert_eq!(
                 req_body.as_ref().unwrap()["order_id"],
                 "order_QMSVrXxHS9sBmu"
