@@ -89,6 +89,8 @@ message PaymentMethod {
     Blik blik = 57;
     OpenBanking open_banking = 58;
     Interac interac = 59;                                     // Interac - Canadian bank redirect payment method
+    Bizum bizum = 141;
+    Eft eft = 142;
     
     // MOBILE PAYMENTS (60-69) - Direct variants
     DuitNow duit_now = 60;
@@ -116,12 +118,15 @@ message PaymentMethod {
     CIMBVaBankTransfer cimb_va_bank_transfer = 134;            // CIMB VA Bank transfer in Indonesia
     DanamonVaBankTransfer danamon_va_bank_transfer = 135;      // Danamon VA Bank transfer in Indonesia
     MandiriVaBankTransfer mandiri_va_bank_transfer = 136;      // Mandiri VA Bank transfer in Indonesia
+    LocalBankTransfer local_bank_transfer = 139;               // Generic local bank transfer
+    IndonesianBankTransfer indonesian_bank_transfer = 140;     // Indonesian bank transfer method
 
     // DIRECT DEBIT (100-109)
     Ach ach = 100;                                              // Ach - Automated Clearing House
     Sepa sepa = 101;                                            // Sepa - Single Euro Payments Area direct debit
     Bacs bacs = 102;                                            // Bacs - Bankers' Automated Clearing Services
     Becs becs = 103;                                            // Becs - Bulk Electronic Clearing System - Australian direct debit
+    SepaGuarenteedBankDebit sepa_guarenteed_bank_debit = 104;   // SEPA Guaranteed Direct Debit - bank debit with payment guarantee
 
     // BUY NOW, PAY LATER (110-119)
     Affirm affirm = 110;                                       // Affirm - US BNPL service
@@ -646,23 +651,31 @@ message MultibancoBankTransfer {
 
 }
 
-/*
-
-// EFT (Electronic Funds Transfer) - Generic electronic transfer of funds
-message EFT {
-  // Fields will be added as needed for EFT integration
+// Eft (Electronic Funds Transfer) - Generic electronic transfer of funds
+message Eft {
+  // Identifier for the specific Eft provider/service to be used  
+  // Examples: "ozow", "paystack", "instant_eft"
+  string provider = 1;
 }
 
+/*
 // FPS (Faster Payments Service) - UK real-time payments
 message FPS {
   // Fields will be added as needed for FPS integration
 }
+*/
 
 // Local Bank Transfer - Generic local bank transfer method
 message LocalBankTransfer {
-  // Fields will be added as needed for local bank transfers
+  // The bank code for local bank transfer
+  optional string bank_code = 1;
 }
-*/
+
+// Indonesian Bank Transfer - Indonesian bank transfer method
+message IndonesianBankTransfer {
+  // The bank name for bank transfer
+  optional BankNames bank_name = 1;
+}
 
 // Instant Bank Transfer - Generic instant bank transfer method
 message InstantBankTransfer {
@@ -724,17 +737,20 @@ message MandiriVaBankTransfer {
 
 // Thai online banking systems
 message OnlineBankingThailand {
-  // Fields will be added as needed for Thai online banking integration
+  // Bank issuer for Thailand Online Banking
+  BankNames issuer = 1;
 }
 
 // Czech Republic online banking systems
 message OnlineBankingCzechRepublic {
-  // Fields will be added as needed for Czech online banking integration
+  // Bank issuer for Czech Republic Online Banking
+  BankNames issuer = 1;
 }
 
 // Finnish online banking systems
 message OnlineBankingFinland {
-  // Fields will be added as needed for Finnish online banking integration
+  // Email address for finland's online banking
+  optional SecretString email = 1;
 }
 
 // FPX (Financial Process Exchange) - Malaysian online banking
@@ -744,12 +760,14 @@ message OnlineBankingFPX {
 
 // Polish online banking systems
 message OnlineBankingPoland {
-  // Fields will be added as needed for Polish online banking integration
+  // Bank issuer for Poland Online Banking
+  BankNames issuer = 1;
 }
 
 // Slovak online banking systems
 message OnlineBankingSlovakia {
-  // Fields will be added as needed for Slovak online banking integration
+  // Bank issuer for Slovakia Online Banking
+  BankNames issuer = 1;
 }
 
 // UK Open Banking - Open Banking implementation in the UK
@@ -903,13 +921,12 @@ message Walley {
 // MOBILE PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
 
-/*
-
 // Bizum - Spanish mobile payment solution
 message Bizum {
   // Fields will be added as needed for Bizum integration
 }
 
+/*
 // DANA - Indonesian digital wallet
 message Dana {
   // Fields will be added as needed for DANA integration
@@ -1124,6 +1141,15 @@ message  Bacs {
   
   // Holder name for bank debit
   optional SecretString bank_account_holder_name = 3;
+}
+
+// SEPA Guaranteed Direct Debit - bank debit with payment guarantee
+message SepaGuarenteedBankDebit {
+  // International bank account number (iban)
+  SecretString iban = 1;
+  
+  // Owner name for bank debit
+  optional SecretString bank_account_holder_name = 2;
 }
 
 /*
