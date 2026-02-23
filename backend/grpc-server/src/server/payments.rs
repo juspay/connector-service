@@ -53,15 +53,15 @@ use grpc_api_types::payments::{
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
     PaymentServicePostAuthenticateRequest, PaymentServicePostAuthenticateResponse,
     PaymentServicePreAuthenticateRequest, PaymentServicePreAuthenticateResponse,
-    PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest, PaymentServiceRegisterAutoDebitResponse,
-    PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
-    PaymentServiceRevokeAutoDebitRequest, PaymentServiceRevokeAutoDebitResponse,
-    PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
-    PaymentServiceTransformRequest, PaymentServiceTransformResponse,
-    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
-    PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
-    WebhookTransformationStatus,
+    PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest,
+    PaymentServiceRegisterAutoDebitResponse, PaymentServiceRepeatEverythingRequest,
+    PaymentServiceRepeatEverythingResponse, PaymentServiceRevokeAutoDebitRequest,
+    PaymentServiceRevokeAutoDebitResponse, PaymentServiceSdkSessionTokenRequest,
+    PaymentServiceSdkSessionTokenResponse, PaymentServiceTransformRequest,
+    PaymentServiceTransformResponse, PaymentServiceVerifyRedirectResponseRequest,
+    PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidPostCaptureRequest,
+    PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RefundResponse, WebhookTransformationStatus,
 };
 use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::Secret;
@@ -4592,7 +4592,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                         advice_code: err.network_advice_code,
                         decline_code: err.network_decline_code,
                         error_message: err.network_error_message,
-                    })
+                    }),
                 }),
                 status_code: err.status_code.into(),
                 response_headers,
@@ -4650,11 +4650,11 @@ pub fn generate_create_order_response(
                 .unwrap_or_default()
                 .into(),
             error: Some(grpc_api_types::payments::ErrorInfo {
-                    message: Some(err.message),
-                    code: Some(err.code),
-                    reason: None,
-                    network_error: None,
-                }),
+                message: Some(err.message),
+                code: Some(err.code),
+                reason: None,
+                network_error: None,
+            }),
             status_code: err.status_code.into(),
             response_headers,
             response_ref_id: None,
@@ -4825,7 +4825,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                         advice_code: err.network_advice_code,
                         decline_code: err.network_decline_code,
                         error_message: err.network_error_message,
-                    })
+                    }),
                 }),
                 status_code: err.status_code.into(),
                 raw_connector_response,
@@ -4916,7 +4916,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                         advice_code: err.network_advice_code,
                         decline_code: err.network_decline_code,
                         error_message: err.network_error_message,
-                    })
+                    }),
                 }),
                 status_code: err.status_code.into(),
                 response_headers,
@@ -4975,11 +4975,11 @@ pub fn generate_mandate_revoke_response(
         Err(e) => Ok(PaymentServiceRevokeAutoDebitResponse {
             status: grpc_api_types::payments::MandateStatus::MandateRevokeFailed.into(), // Default status for failed revoke
             error: Some(grpc_api_types::payments::ErrorInfo {
-                    message: Some(e.message),
-                    code: Some(e.code),
-                    reason: e.reason,
-                    network_error: None,
-                }),
+                message: Some(e.message),
+                code: Some(e.code),
+                reason: e.reason,
+                network_error: None,
+            }),
             status_code: e.status_code.into(),
             response_headers,
             network_txn_id: None,

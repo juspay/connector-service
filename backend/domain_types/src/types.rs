@@ -14,15 +14,15 @@ use common_utils::{
 };
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
-    self as grpc_payment_types, DisputeServiceAcceptResponse, ConnectorState, DisputeServiceDefendRequest,
-    DisputeServiceDefendResponse, DisputeResponse, DisputeServiceSubmitEvidenceResponse,
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse,
-    PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
-    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRegisterAutoDebitRequest,
-    PaymentServiceRegisterAutoDebitResponse, PaymentServiceRevokeAutoDebitRequest,
-    PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
-    PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RefundResponse,
+    self as grpc_payment_types, ConnectorState, DisputeResponse, DisputeServiceAcceptResponse,
+    DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
+    PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
+    PaymentServiceRegisterAutoDebitRequest, PaymentServiceRegisterAutoDebitResponse,
+    PaymentServiceRevokeAutoDebitRequest, PaymentServiceSdkSessionTokenRequest,
+    PaymentServiceSdkSessionTokenResponse, PaymentServiceVoidPostCaptureResponse,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -4567,7 +4567,8 @@ impl ForeignFrom<common_enums::DisputeStage> for grpc_api_types::payments::Dispu
 impl ForeignFrom<grpc_api_types::payments::ProductType> for common_enums::ProductType {
     fn foreign_from(value: grpc_api_types::payments::ProductType) -> Self {
         match value {
-            grpc_api_types::payments::ProductType::Unspecified | grpc_api_types::payments::ProductType::Physical => Self::Physical,
+            grpc_api_types::payments::ProductType::Unspecified
+            | grpc_api_types::payments::ProductType::Physical => Self::Physical,
             grpc_api_types::payments::ProductType::Digital => Self::Digital,
             grpc_api_types::payments::ProductType::Travel => Self::Travel,
             grpc_api_types::payments::ProductType::Ride => Self::Ride,
@@ -5156,13 +5157,19 @@ pub fn generate_accept_dispute_response(
     }
 }
 
-impl ForeignTryFrom<(grpc_api_types::payments::DisputeServiceAcceptRequest, Connectors)>
-    for DisputeFlowData
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::DisputeServiceAcceptRequest,
+        Connectors,
+    )> for DisputeFlowData
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors): (grpc_api_types::payments::DisputeServiceAcceptRequest, Connectors),
+        (value, connectors): (
+            grpc_api_types::payments::DisputeServiceAcceptRequest,
+            Connectors,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             dispute_id: None,
@@ -6754,7 +6761,9 @@ impl
     }
 }
 
-impl ForeignTryFrom<PaymentServiceRegisterAutoDebitRequest> for SetupMandateRequestData<DefaultPCIHolder> {
+impl ForeignTryFrom<PaymentServiceRegisterAutoDebitRequest>
+    for SetupMandateRequestData<DefaultPCIHolder>
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -7137,7 +7146,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         SetupMandateRequestData<T>,
         PaymentsResponseData,
     >,
-) -> Result<PaymentServiceRegisterAutoDebitResponse, error_stack::Report<ApplicationErrorResponse>> {
+) -> Result<PaymentServiceRegisterAutoDebitResponse, error_stack::Report<ApplicationErrorResponse>>
+{
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
@@ -7348,7 +7358,9 @@ impl ForeignTryFrom<(DisputeServiceDefendRequest, Connectors)> for DisputeFlowDa
     }
 }
 
-impl ForeignTryFrom<(DisputeServiceDefendRequest, Connectors, &MaskedMetadata)> for DisputeFlowData {
+impl ForeignTryFrom<(DisputeServiceDefendRequest, Connectors, &MaskedMetadata)>
+    for DisputeFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -8501,7 +8513,8 @@ impl<
             currency: common_enums::Currency::foreign_try_from(currency)?,
             merchant_order_reference_id,
             metadata: value
-                .metadata.and_then(|m| m.general)
+                .metadata
+                .and_then(|m| m.general)
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
                 .transpose()?,
             webhook_url,
@@ -8524,7 +8537,8 @@ impl<
                 RecurringMandatePaymentData {
                     payment_method_type: None,
                     original_payment_authorized_amount: v
-                        .original_payment_authorized_amount.and_then(|money| money.minor_amount)
+                        .original_payment_authorized_amount
+                        .and_then(|money| money.minor_amount)
                         .map(common_utils::types::MinorUnit::new),
                     original_payment_authorized_currency: Some(
                         common_enums::Currency::foreign_try_from(
