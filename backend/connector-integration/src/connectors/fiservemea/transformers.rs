@@ -5,7 +5,7 @@ use crate::{
 use base64::engine::general_purpose;
 use base64::Engine;
 use common_enums::AttemptStatus;
-use common_utils::{crypto::SignMessage, date_time, errors::CustomResult, ext_traits::ByteSliceExt};
+use common_utils::{crypto::SignMessage, date_time, errors::CustomResult};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
