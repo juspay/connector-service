@@ -308,9 +308,12 @@ macros::macro_connector_implementation!(
             let client_request_id = uuid::Uuid::new_v4().to_string();
             let timestamp = (common_utils::date_time::now_unix_timestamp() * 1000).to_string();
 
+            let api_key_str = auth.api_key.expose().as_str();
+            let api_secret_bytes = auth.api_secret.expose().as_bytes();
+
             let raw_signature = format!(
                 "{}{}{}{}",
-                auth.api_key.expose().as_str(),
+                api_key_str,
                 client_request_id,
                 timestamp,
                 request_body_str
@@ -318,7 +321,7 @@ macros::macro_connector_implementation!(
 
             let signature = common_utils::crypto::HmacSha256::sign_message(
                 &common_utils::crypto::HmacSha256,
-                auth.api_secret.expose().as_bytes(),
+                api_secret_bytes,
                 raw_signature.as_bytes(),
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
