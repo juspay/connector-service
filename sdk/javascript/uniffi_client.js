@@ -37,15 +37,18 @@ function loadLib(libPath) {
   const lib = koffi.load(libPath);
 
   return {
+    // authorize_req_transformer(request_bytes, connector_config_json, options_json_option, call_status)
     authorize_req: lib.func(
       "uniffi_connector_service_ffi_fn_func_authorize_req_transformer",
       RustBuffer,
-      [RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
+      [RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
     ),
+    // authorize_res_transformer(response_body, status_code, response_headers, request_bytes,
+    //   connector_config_json, options_json_option, call_status)
     authorize_res: lib.func(
       "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
       RustBuffer,
-      [RustBuffer, "uint16", RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
+      [RustBuffer, "uint16", RustBuffer, RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
     ),
     alloc: lib.func(
       "ffi_connector_service_ffi_rustbuffer_alloc",
@@ -96,13 +99,12 @@ function liftError(buf) {
 
   const variantNames = {
     1: "DecodeError",
-    2: "MissingMetadata",
-    3: "MetadataParseError",
-    4: "HandlerError",
-    5: "NoConnectorRequest",
+    2: "MetadataParseError",
+    3: "HandlerError",
+    4: "NoConnectorRequest",
   };
 
-  if (variant === 5) return "NoConnectorRequest";
+  if (variant === 4) return "NoConnectorRequest";
 
   // All other variants have a string field
   const strLen = raw.readInt32BE(offset);
@@ -184,6 +186,50 @@ function lowerMap(ffi, map) {
   return allocRustBuffer(ffi, buf);
 }
 
+// ── String / Option<String> serialization ───────────────────────────────────
+// UniFFI String  → RustBuffer: i32 big-endian byteLen + UTF-8 bytes
+// UniFFI Option<T>: tag byte 0x00 (None) | 0x01 (Some) + lowered T
+
+function lowerString(ffi, str) {
+  const bytes = Buffer.from(str, "utf-8");
+  const buf = Buffer.alloc(4 + bytes.length);
+  buf.writeInt32BE(bytes.length, 0);
+  bytes.copy(buf, 4);
+  return allocRustBuffer(ffi, buf);
+}
+
+function lowerOptionBytes(ffi, bytes) {
+  if (bytes === null || bytes === undefined) {
+    // None: single tag byte 0x00
+    const buf = Buffer.alloc(1);
+    buf.writeUInt8(0, 0);
+    return allocRustBuffer(ffi, buf);
+  }
+  // Some: tag byte 0x01 + i32 byteLen + raw bytes
+  const data = Buffer.from(bytes);
+  const buf = Buffer.alloc(1 + 4 + data.length);
+  buf.writeUInt8(1, 0);
+  buf.writeInt32BE(data.length, 1);
+  data.copy(buf, 5);
+  return allocRustBuffer(ffi, buf);
+}
+
+function lowerOptionString(ffi, str) {
+  if (str === null || str === undefined) {
+    // None: single tag byte 0x00
+    const buf = Buffer.alloc(1);
+    buf.writeUInt8(0, 0);
+    return allocRustBuffer(ffi, buf);
+  }
+  // Some: tag byte 0x01 + i32 byteLen + UTF-8 bytes
+  const bytes = Buffer.from(str, "utf-8");
+  const buf = Buffer.alloc(1 + 4 + bytes.length);
+  buf.writeUInt8(1, 0);
+  buf.writeInt32BE(bytes.length, 1);
+  bytes.copy(buf, 5);
+  return allocRustBuffer(ffi, buf);
+}
+
 // ── Public API ──────────────────────────────────────────────────────────────
 
 class UniffiClient {
@@ -193,21 +239,23 @@ class UniffiClient {
 
   /**
    * Build the connector HTTP request.
+   *
    * @param {Buffer|Uint8Array} requestBytes - protobuf-encoded PaymentServiceAuthorizeRequest
-   * @param {Object<string,string>} metadata - connector routing + auth metadata
+   * @param {Buffer|Uint8Array} connectorConfigBytes - protobuf-encoded ConnectorConfig
+   * @param {Buffer|null} [optionsBytes] - protobuf-encoded CallOptions (reserved, pass null)
    * @returns {string} JSON string: {url, method, headers, body}
    */
-  authorizeReq(requestBytes, metadata) {
+  authorizeReq(requestBytes, connectorConfigBytes, optionsBytes = null) {
     const status = makeCallStatus();
     const rbRequest = lowerBytes(this._ffi, requestBytes);
-    const rbMetadata = lowerMap(this._ffi, metadata);
+    const rbConfig = lowerBytes(this._ffi, connectorConfigBytes);
+    const rbOptions = lowerOptionBytes(this._ffi, optionsBytes);
 
-    const result = this._ffi.authorize_req(rbRequest, rbMetadata, status);
+    const result = this._ffi.authorize_req(rbRequest, rbConfig, rbOptions, status);
 
     try {
       checkCallStatus(this._ffi, status);
-      const str = liftString(result);
-      return str;
+      return liftString(result);
     } finally {
       freeRustBuffer(this._ffi, result);
     }
@@ -215,26 +263,30 @@ class UniffiClient {
 
   /**
    * Parse the connector HTTP response.
+   *
    * @param {Buffer|Uint8Array} responseBody - raw response body bytes
    * @param {number} statusCode - HTTP status code
    * @param {Object<string,string>} responseHeaders - HTTP response headers
    * @param {Buffer|Uint8Array} requestBytes - original protobuf request bytes
-   * @param {Object<string,string>} metadata - original metadata
+   * @param {Buffer|Uint8Array} connectorConfigBytes - protobuf-encoded ConnectorConfig
+   * @param {Buffer|null} [optionsBytes] - protobuf-encoded CallOptions (reserved, pass null)
    * @returns {Buffer} protobuf-encoded PaymentServiceAuthorizeResponse
    */
-  authorizeRes(responseBody, statusCode, responseHeaders, requestBytes, metadata) {
+  authorizeRes(responseBody, statusCode, responseHeaders, requestBytes, connectorConfigBytes, optionsBytes = null) {
     const status = makeCallStatus();
     const rbResponseBody = lowerBytes(this._ffi, responseBody);
     const rbResponseHeaders = lowerMap(this._ffi, responseHeaders);
     const rbRequestBytes = lowerBytes(this._ffi, requestBytes);
-    const rbMetadata = lowerMap(this._ffi, metadata);
+    const rbConfig = lowerBytes(this._ffi, connectorConfigBytes);
+    const rbOptions = lowerOptionBytes(this._ffi, optionsBytes);
 
     const result = this._ffi.authorize_res(
       rbResponseBody,
       statusCode,
       rbResponseHeaders,
       rbRequestBytes,
-      rbMetadata,
+      rbConfig,
+      rbOptions,
       status
     );
 

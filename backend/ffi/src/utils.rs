@@ -12,6 +12,10 @@ pub enum FfiError {
     MissingRequiredHeader { key: String },
     #[error("Invalid header value for '{key}': {reason}")]
     InvalidHeaderValue { key: String, reason: String },
+    #[error("Missing required field: {0}")]
+    MissingField(String),
+    #[error("Invalid field value: {0}")]
+    InvalidField(String),
 }
 
 /// Converts FFI headers (HashMap) to gRPC metadata with masking support.

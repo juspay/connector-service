@@ -2,11 +2,12 @@
 ConnectorClient — high-level wrapper around UniFFI FFI bindings.
 
 Handles the full round-trip:
-  1. Build connector HTTP request via authorize_req (FFI)
+  1. Build connector HTTP request via authorize_req_transformer (FFI)
   2. Execute the HTTP request via requests library
-  3. Parse the connector response via authorize_res (FFI)
+  3. Parse the connector response via authorize_res_transformer (FFI)
 
-Mirrors the Node.js client at sdk/node-ffi-client/src/client.js.
+All types (Connector, ConnectorAuth, ConnectorConfig) come from proto
+codegen — same pattern as Currency, CaptureMethod, etc.
 """
 
 import json
@@ -14,21 +15,57 @@ import json
 import requests as http_requests
 
 from connector_service_ffi import authorize_req_transformer, authorize_res_transformer
-from payment_pb2 import PaymentServiceAuthorizeResponse
+from payment_pb2 import (
+    Connector,
+    ConnectorAuth,
+    ConnectorConfig,
+    HeaderKeyAuth,
+    BodyKeyAuth,
+    SignatureKeyAuth,
+    MultiAuthKeyAuth,
+    CertificateAuth,
+    NoKeyAuth,
+    TemporaryAuth,
+    PaymentServiceAuthorizeResponse,
+)
+
+
+# ── ConnectorClient ────────────────────────────────────────────────────────────
 
 
 class ConnectorClient:
-    """High-level client for connector payment operations via UniFFI FFI."""
+    """High-level client for connector payment operations via UniFFI FFI.
 
-    def authorize(self, request, metadata: dict) -> PaymentServiceAuthorizeResponse:
+    All types come from proto codegen (payment.proto, package ucs.v2).
+    Same pattern as Currency, CaptureMethod, etc.
+
+    Example:
+        config = ConnectorConfig(
+            connector=Connector.STRIPE,
+            auth=ConnectorAuth(header_key=HeaderKeyAuth(api_key="sk_test_...")),
+        )
+        client = ConnectorClient(config)
+    """
+
+    def __init__(self, config: ConnectorConfig, default_options=None):
+        """Create a ConnectorClient configured for a single connector.
+
+        Args:
+            config: An ConnectorConfig proto message bundling connector + auth.
+            default_options: Reserved for future use.
+        """
+        # Pre-serialize config to proto bytes (same pattern as request)
+        self._config_bytes = config.SerializeToString()
+        self.default_options = default_options or {}
+
+    def authorize(
+        self, request, call_options=None
+    ) -> PaymentServiceAuthorizeResponse:
         """Execute a full authorize round-trip: FFI request build -> HTTP -> FFI response parse.
 
         Args:
             request: A PaymentServiceAuthorizeRequest protobuf message.
-            metadata: Dict with connector routing and auth info. Must include:
-                - "connector": connector name (e.g. "Stripe")
-                - "connector_auth_type": JSON string of auth config
-                - x-* headers for masked metadata
+            call_options: Per-call overrides (reserved for future use).
 
         Returns:
             PaymentServiceAuthorizeResponse protobuf message.
@@ -37,7 +74,9 @@ class ConnectorClient:
         request_bytes = request.SerializeToString()
 
         # Step 2: Build the connector HTTP request via FFI
-        connector_request_json = authorize_req_transformer(request_bytes, metadata)
+        connector_request_json = authorize_req_transformer(
+            request_bytes, self._config_bytes, None
+        )
         connector_request = json.loads(connector_request_json)
 
         url = connector_request["url"]
@@ -60,7 +99,8 @@ class ConnectorClient:
             response.status_code,
             response_headers,
             request_bytes,
-            metadata,
+            self._config_bytes,
+            None,
         )
 
         # Step 5: Deserialize the protobuf response

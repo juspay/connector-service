@@ -2,34 +2,33 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
-use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
+use connector_service_ffi::types::{FfiConnectorConfig, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
 use domain_types::router_response_types::Response;
-use grpc_api_types::payments::{PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse};
+use domain_types::utils::ForeignTryFrom;
+use grpc_api_types::payments::{
+    ConnectorConfig, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+};
 
-/// A Rust-native connector client that calls handler functions directly
-/// without going through FFI or gRPC serialization boundaries.
-pub struct ConnectorClient;
+pub struct ConnectorClient {
+    config: ConnectorConfig,
+}
 
 impl ConnectorClient {
-    /// Authorize a payment by:
-    /// 1. Building the connector HTTP request via `authorize_req_handler`
-    /// 2. Extracting the raw request JSON (url, method, headers, body)
-    /// 3. Making the HTTP call with reqwest
-    /// 4. Parsing the response via `authorize_res_handler`
+    pub fn new(config: ConnectorConfig) -> Self {
+        Self { config }
+    }
+
     pub async fn authorize(
         &self,
         request: PaymentServiceAuthorizeRequest,
-        metadata: &HashMap<String, String>,
     ) -> Result<PaymentServiceAuthorizeResponse, Box<dyn Error>> {
-        let ffi_request = build_ffi_request(request.clone(), metadata)?;
+        let ffi_request = self.build_ffi_request(request.clone())?;
 
-        // Step 1: Build the connector HTTP request
         let connector_request = authorize_req_handler(ffi_request)
             .map_err(|e| format!("authorize_req_handler failed: {:?}", e))?
             .ok_or("No connector request generated")?;
 
-        // Step 2: Extract raw request JSON for the HTTP call
         let raw_json =
             external_services::service::extract_raw_connector_request(&connector_request);
         let raw: serde_json::Value = serde_json::from_str(&raw_json)?;
@@ -41,7 +40,6 @@ impl ConnectorClient {
             .as_str()
             .ok_or("Missing method in connector request")?;
 
-        // Step 3: Make the HTTP call with reqwest
         let client = reqwest::Client::new();
         let mut req_builder = match method.to_uppercase().as_str() {
             "GET" => client.get(url),
@@ -52,7 +50,6 @@ impl ConnectorClient {
             other => return Err(format!("Unsupported HTTP method: {}", other).into()),
         };
 
-        // Add headers
         if let Some(headers) = raw["headers"].as_object() {
             for (key, value) in headers {
                 if let Some(val) = value.as_str() {
@@ -61,7 +58,6 @@ impl ConnectorClient {
             }
         }
 
-        // Add body
         if !raw["body"].is_null() {
             let body_str = if raw["body"].is_string() {
                 raw["body"].as_str().unwrap_or("").to_string()
@@ -73,7 +69,6 @@ impl ConnectorClient {
 
         let http_response = req_builder.send().await?;
 
-        // Step 4: Convert HTTP response to domain Response type
         let status_code = http_response.status().as_u16();
         let mut header_map = http::HeaderMap::new();
         for (key, value) in http_response.headers() {
@@ -95,8 +90,7 @@ impl ConnectorClient {
             status_code,
         };
 
-        // Step 5: Parse response via authorize_res_handler
-        let ffi_request_for_res = build_ffi_request(request, metadata)?;
+        let ffi_request_for_res = self.build_ffi_request(request)?;
         match authorize_res_handler(ffi_request_for_res, response) {
             Ok(auth_response) => Ok(auth_response),
             Err(error_response) => {
@@ -104,45 +98,43 @@ impl ConnectorClient {
             }
         }
     }
-}
 
-/// Build an FfiRequestData from a request and metadata HashMap.
-///
-/// The metadata map must contain:
-/// - `"connector"`: connector name (e.g. `"Stripe"`)
-/// - `"connector_auth_type"`: JSON string of the auth config
-///   (e.g. `{"auth_type":"HeaderKey","api_key":"sk_test_xxx"}`)
-/// - `x-*` headers for MaskedMetadata
-pub fn build_ffi_request(
-    payload: PaymentServiceAuthorizeRequest,
-    metadata: &HashMap<String, String>,
-) -> Result<FfiRequestData<PaymentServiceAuthorizeRequest>, Box<dyn Error>> {
-    // Parse connector + auth type from metadata using serde (same approach as uniffi bindings)
-    let connector_val = metadata
-        .get("connector")
-        .ok_or("Missing 'connector' in metadata")?;
+    fn build_ffi_request(
+        &self,
+        payload: PaymentServiceAuthorizeRequest,
+    ) -> Result<FfiRequestData<PaymentServiceAuthorizeRequest>, Box<dyn Error>> {
+        let metadata = FfiConnectorConfig::foreign_try_from(self.config.clone())
+            .map_err(|e| format!("config conversion failed: {e}"))?;
 
-    let auth_type_json = metadata
-        .get("connector_auth_type")
-        .ok_or("Missing 'connector_auth_type' in metadata")?;
+        let masked_metadata = {
+            let mut headers = HashMap::new();
+            headers.insert(
+                common_utils::consts::X_MERCHANT_ID.to_string(),
+                "dummy_merchant".to_string(),
+            );
+            headers.insert(
+                common_utils::consts::X_TENANT_ID.to_string(),
+                "dummy_tenant".to_string(),
+            );
+            headers.insert(
+                common_utils::consts::X_CONNECTOR_NAME.to_string(),
+                "stripe".to_string(),
+            );
+            headers.insert(
+                common_utils::consts::X_REQUEST_ID.to_string(),
+                "dummy_request_id".to_string(),
+            );
+            headers.insert(
+                common_utils::consts::X_AUTH.to_string(),
+                "dummy_auth".to_string(),
+            );
+            ffi_headers_to_masked_metadata(&headers).ok()
+        };
 
-    let auth_json: serde_json::Value = serde_json::from_str(auth_type_json)
-        .map_err(|e| format!("connector_auth_type is not valid JSON: {}", e))?;
-
-    let obj = serde_json::json!({
-        "connector": connector_val,
-        "connector_auth_type": auth_json,
-    });
-
-    let extracted_metadata: FfiMetadataPayload =
-        serde_json::from_value(obj).map_err(|e| format!("Failed to parse metadata: {}", e))?;
-
-    let masked_metadata = ffi_headers_to_masked_metadata(metadata)
-        .map_err(|e| format!("Failed to build masked metadata: {}", e))?;
-
-    Ok(FfiRequestData {
-        payload,
-        extracted_metadata,
-        masked_metadata: Some(masked_metadata),
-    })
+        Ok(FfiRequestData {
+            payload,
+            extracted_metadata: metadata,
+            masked_metadata,
+        })
+    }
 }

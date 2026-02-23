@@ -3452,3 +3452,41 @@ message DisputesSyncResponse {
   DisputeStatus status = 4;
   DisputeStage stage = 5;
 }
+
+// ============================================================================
+// CONNECTOR AUTH
+// ============================================================================
+
+// Canonical typed auth configuration.
+// Mirrors domain_types::router_data::ConnectorAuthType.
+message ConnectorAuth {
+  oneof auth_type {
+    HeaderKeyAuth    header_key       = 1;
+    BodyKeyAuth      body_key         = 2;
+    SignatureKeyAuth signature_key    = 3;
+    MultiAuthKeyAuth multi_auth_key   = 4;
+    NoKeyAuth        no_key           = 5;
+    TemporaryAuth    temporary_auth   = 6;
+    CertificateAuth  certificate_auth = 7;
+  }
+}
+
+message HeaderKeyAuth    { string api_key     = 1; }
+message BodyKeyAuth      { string api_key     = 1; string key1        = 2; }
+message SignatureKeyAuth { string api_key     = 1; string key1        = 2; string api_secret  = 3; }
+message MultiAuthKeyAuth { string api_key     = 1; string key1        = 2;
+                           string key2        = 3; string api_secret  = 4; }
+message CertificateAuth  { string certificate = 1; string private_key = 2; }
+message NoKeyAuth        {}
+message TemporaryAuth    {}
+
+// ============================================================================
+// FFI CONNECTOR CONFIG
+// ============================================================================
+
+// Bundled connector identity + auth for FFI calls.
+// Passed as protobuf bytes at the FFI boundary (same as request_bytes).
+message ConnectorConfig {
+  Connector     connector = 1;
+  ConnectorAuth auth      = 2;
+}

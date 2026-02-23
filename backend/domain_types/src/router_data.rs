@@ -12,6 +12,8 @@ use common_utils::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 
+use crate::errors::ApplicationErrorResponse;
+use crate::utils::ForeignTryFrom;
 use crate::{payment_method_data, utils::missing_field_err};
 
 pub type Error = error_stack::Report<crate::errors::ConnectorError>;
@@ -468,4 +470,51 @@ pub struct ExtendedAuthorizationResponseData {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct InteracCustomerInfo {
     pub customer_info: Option<payment_method_data::CustomerInfoDetails>,
+}
+
+// ── Proto → Domain conversion ──────────────────────────────────────────────
+
+impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorAuthType {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        proto_auth: grpc_api_types::payments::ConnectorAuth,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        use grpc_api_types::payments::connector_auth::AuthType;
+
+        match proto_auth.auth_type {
+            Some(AuthType::HeaderKey(a)) => Ok(Self::HeaderKey {
+                api_key: Secret::new(a.api_key),
+            }),
+            Some(AuthType::BodyKey(a)) => Ok(Self::BodyKey {
+                api_key: Secret::new(a.api_key),
+                key1: Secret::new(a.key1),
+            }),
+            Some(AuthType::SignatureKey(a)) => Ok(Self::SignatureKey {
+                api_key: Secret::new(a.api_key),
+                key1: Secret::new(a.key1),
+                api_secret: Secret::new(a.api_secret),
+            }),
+            Some(AuthType::MultiAuthKey(a)) => Ok(Self::MultiAuthKey {
+                api_key: Secret::new(a.api_key),
+                key1: Secret::new(a.key1),
+                key2: Secret::new(a.key2),
+                api_secret: Secret::new(a.api_secret),
+            }),
+            Some(AuthType::CertificateAuth(a)) => Ok(Self::CertificateAuth {
+                certificate: Secret::new(a.certificate),
+                private_key: Secret::new(a.private_key),
+            }),
+            Some(AuthType::NoKey(_)) => Ok(Self::NoKey),
+            Some(AuthType::TemporaryAuth(_)) => Ok(Self::TemporaryAuth),
+            None => Err(error_stack::report!(ApplicationErrorResponse::BadRequest(
+                crate::errors::ApiError {
+                    sub_code: "MISSING_AUTH_TYPE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing auth_type in ConnectorAuth".to_owned(),
+                    error_object: None,
+                }
+            ))),
+        }
+    }
 }

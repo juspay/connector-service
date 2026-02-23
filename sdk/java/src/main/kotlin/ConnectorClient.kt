@@ -2,12 +2,12 @@
  * ConnectorClient — high-level wrapper around UniFFI FFI bindings.
  *
  * Handles the full round-trip:
- *   1. Build connector HTTP request via authorize_req (FFI)
+ *   1. Build connector HTTP request via authorizeReqTransformer (FFI)
  *   2. Execute the HTTP request via OkHttp
- *   3. Parse the connector response via authorize_res (FFI)
+ *   3. Parse the connector response via authorizeResTransformer (FFI)
  *
- * Mirrors the Node.js client at sdk/node-ffi-client/src/client.js
- * and the Python client at examples/example-uniffi-py/connector_client.py.
+ * All types (Connector, ConnectorAuth, ConnectorConfig) come from proto
+ * codegen — same pattern as Currency, CaptureMethod, etc.
  */
 
 import uniffi.connector_service_ffi.authorizeReqTransformer
@@ -18,29 +18,52 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import ucs.v2.Payment.PaymentServiceAuthorizeRequest
-import ucs.v2.Payment.PaymentServiceAuthorizeResponse
+import ucs.v2.Payment.*
+import ucs.v2.PaymentMethods.*
 
-class ConnectorClient {
+// ── ConnectorClient ───────────────────────────────────────────────────────────
+
+/**
+ * High-level client for connector payment operations via UniFFI FFI.
+ *
+ * All types come from proto codegen (payment.proto, package ucs.v2).
+ * Same pattern as Currency, CaptureMethod, etc.
+ *
+ * Example:
+ * ```kotlin
+ * val config = ConnectorConfig.newBuilder()
+ *     .setConnector(Connector.STRIPE)
+ *     .setAuth(ConnectorAuth.newBuilder()
+ *         .setHeaderKey(HeaderKeyAuth.newBuilder().setApiKey("sk_test_...").build())
+ *         .build()
+ *     )
+ *     .build()
+ * val client = ConnectorClient(config)
+ * ```
+ */
+class ConnectorClient(
+    config: ConnectorConfig,
+) {
 
     private val httpClient = OkHttpClient()
+
+    /** Bundled connector config — proto bytes, built once, reused for every call. */
+    private val configBytes: ByteArray = config.toByteArray()
 
     /**
      * Execute a full authorize round-trip: FFI request build -> HTTP -> FFI response parse.
      *
      * @param request A PaymentServiceAuthorizeRequest protobuf message.
-     * @param metadata Map with connector routing and auth info.
      * @return PaymentServiceAuthorizeResponse protobuf message.
      */
     fun authorize(
         request: PaymentServiceAuthorizeRequest,
-        metadata: Map<String, String>,
     ): PaymentServiceAuthorizeResponse {
         // Step 1: Serialize the protobuf request to bytes
         val requestBytes = request.toByteArray()
 
         // Step 2: Build the connector HTTP request via FFI
-        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata)
+        val connectorRequestJson = authorizeReqTransformer(requestBytes, configBytes, null)
         val connectorRequest = JSONObject(connectorRequestJson)
 
         val url = connectorRequest.getString("url")
@@ -79,7 +102,8 @@ class ConnectorClient {
             response.code.toUShort(),
             responseHeaders,
             requestBytes,
-            metadata,
+            configBytes,
+            null,
         )
 
         // Step 5: Deserialize the protobuf response

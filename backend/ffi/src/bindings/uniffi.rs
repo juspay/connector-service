@@ -1,12 +1,13 @@
 #[cfg(feature = "uniffi")]
 mod uniffi_bindings_inner {
     use crate::handlers::payments::{authorize_req_handler, authorize_res_handler};
-    use crate::types::{FfiMetadataPayload, FfiRequestData};
-    use crate::utils::{ffi_headers_to_masked_metadata, FfiError};
+    use crate::types::{FfiConnectorConfig, FfiRequestData};
+    use crate::utils::FfiError;
     use bytes::Bytes;
     use domain_types::router_response_types::Response;
+    use domain_types::utils::ForeignTryFrom;
     use external_services::service::extract_raw_connector_request;
-    use grpc_api_types::payments::PaymentServiceAuthorizeRequest;
+    use grpc_api_types::payments::{ConnectorConfig, PaymentServiceAuthorizeRequest};
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
     use std::collections::HashMap;
@@ -14,10 +15,8 @@ mod uniffi_bindings_inner {
     /// Error type exposed over the UniFFI boundary.
     #[derive(Debug, thiserror::Error, uniffi::Error)]
     pub enum UniffiError {
-        #[error("Failed to decode protobuf request: {msg}")]
+        #[error("Failed to decode protobuf: {msg}")]
         DecodeError { msg: String },
-        #[error("Missing metadata key: {key}")]
-        MissingMetadata { key: String },
         #[error("Failed to parse metadata: {msg}")]
         MetadataParseError { msg: String },
         #[error("Handler error: {msg}")]
@@ -32,65 +31,67 @@ mod uniffi_bindings_inner {
         }
     }
 
-    /// Build FfiMetadataPayload from the caller's flat HashMap.
-    ///
-    /// Expected keys:
-    ///   "connector"           — connector name, e.g. "stripe"
-    ///   "connector_auth_type" — JSON-encoded ConnectorAuthType, e.g.
-    ///                           '{"HeaderKey":{"api_key":"sk_test_..."}}'
-    fn parse_metadata(
-        metadata: &HashMap<String, String>,
-    ) -> Result<FfiMetadataPayload, UniffiError> {
-        let connector_val =
-            metadata
-                .get("connector")
-                .ok_or_else(|| UniffiError::MissingMetadata {
-                    key: "connector".to_string(),
-                })?;
-        let auth_val =
-            metadata
-                .get("connector_auth_type")
-                .ok_or_else(|| UniffiError::MissingMetadata {
-                    key: "connector_auth_type".to_string(),
-                })?;
+    impl From<error_stack::Report<FfiError>> for UniffiError {
+        fn from(e: error_stack::Report<FfiError>) -> Self {
+            Self::MetadataParseError { msg: e.to_string() }
+        }
+    }
 
-        let auth_json: serde_json::Value =
-            serde_json::from_str(auth_val).map_err(|e| UniffiError::MetadataParseError {
-                msg: format!("connector_auth_type is not valid JSON: {e}"),
+    fn parse_metadata(connector_config_bytes: &[u8]) -> Result<FfiConnectorConfig, UniffiError> {
+        let config = ConnectorConfig::decode(Bytes::from(connector_config_bytes.to_vec()))
+            .map_err(|e| UniffiError::DecodeError {
+                msg: format!("connector_config: {e}"),
             })?;
-
-        let obj = serde_json::json!({
-            "connector": connector_val,
-            "connector_auth_type": auth_json,
-        });
-
-        serde_json::from_value(obj)
-            .map_err(|e| UniffiError::MetadataParseError { msg: e.to_string() })
+        FfiConnectorConfig::foreign_try_from(config).map_err(UniffiError::from)
     }
 
     /// Build the connector HTTP request.
     ///
     /// # Arguments
-    /// - `request_bytes`: protobuf-encoded `PaymentServiceAuthorizeRequest`
-    /// - `metadata`: flat map with keys `connector` and `connector_auth_type`
+    /// - `request_bytes`:           protobuf-encoded `PaymentServiceAuthorizeRequest`
+    /// - `connector_config_bytes`:  protobuf-encoded `ConnectorConfig`
+    /// - `_options_bytes`:          reserved for future `CallOptions` config
     ///
     /// # Returns
     /// JSON string: `{"url":"...","method":"POST","headers":{...},"body":{...}}`
     #[uniffi::export]
     pub fn authorize_req_transformer(
         request_bytes: Vec<u8>,
-        metadata: HashMap<String, String>,
+        connector_config_bytes: Vec<u8>,
+        _options_bytes: Option<Vec<u8>>,
     ) -> Result<String, UniffiError> {
         let payload = PaymentServiceAuthorizeRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
-        let ffi_metadata = parse_metadata(&metadata)?;
-        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+        let ffi_metadata = parse_metadata(&connector_config_bytes)?;
 
         let request = FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
-            masked_metadata: Some(masked_metadata),
+            masked_metadata: {
+                let mut headers = HashMap::new();
+                headers.insert(
+                    common_utils::consts::X_MERCHANT_ID.to_string(),
+                    "dummy_merchant".to_string(),
+                );
+                headers.insert(
+                    common_utils::consts::X_TENANT_ID.to_string(),
+                    "dummy_tenant".to_string(),
+                );
+                headers.insert(
+                    common_utils::consts::X_CONNECTOR_NAME.to_string(),
+                    "stripe".to_string(),
+                );
+                headers.insert(
+                    common_utils::consts::X_REQUEST_ID.to_string(),
+                    "dummy_request_id".to_string(),
+                );
+                headers.insert(
+                    common_utils::consts::X_AUTH.to_string(),
+                    "dummy_auth".to_string(),
+                );
+                crate::utils::ffi_headers_to_masked_metadata(&headers).ok()
+            },
         };
 
         let result = authorize_req_handler(request).map_err(|e| UniffiError::HandlerError {
@@ -98,18 +99,18 @@ mod uniffi_bindings_inner {
         })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
-
         Ok(extract_raw_connector_request(&connector_request))
     }
 
     /// Process the connector HTTP response and produce a structured response.
     ///
     /// # Arguments
-    /// - `response_body`: raw bytes from the connector's HTTP response body
-    /// - `status_code`: HTTP status code from the connector response
-    /// - `response_headers`: HTTP response headers from the connector
-    /// - `request_bytes`: the original protobuf-encoded `PaymentServiceAuthorizeRequest`
-    /// - `metadata`: the original metadata map passed to `authorize_req_transformer`
+    /// - `response_body`:           raw bytes from the connector's HTTP response body
+    /// - `status_code`:             HTTP status code from the connector response
+    /// - `response_headers`:        HTTP response headers from the connector
+    /// - `request_bytes`:           the original protobuf-encoded `PaymentServiceAuthorizeRequest`
+    /// - `connector_config_bytes`:  protobuf-encoded `ConnectorConfig`
+    /// - `_options_bytes`:          reserved for future `CallOptions` config
     ///
     /// # Returns
     /// protobuf-encoded `PaymentServiceAuthorizeResponse` bytes
@@ -119,7 +120,8 @@ mod uniffi_bindings_inner {
         status_code: u16,
         response_headers: HashMap<String, String>,
         request_bytes: Vec<u8>,
-        metadata: HashMap<String, String>,
+        connector_config_bytes: Vec<u8>,
+        _options_bytes: Option<Vec<u8>>,
     ) -> Result<Vec<u8>, UniffiError> {
         let mut header_map = HeaderMap::new();
         for (key, value) in &response_headers {
@@ -144,13 +146,35 @@ mod uniffi_bindings_inner {
         let payload = PaymentServiceAuthorizeRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
-        let ffi_metadata = parse_metadata(&metadata)?;
-        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+        let ffi_metadata = parse_metadata(&connector_config_bytes)?;
 
         let request = FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
-            masked_metadata: Some(masked_metadata),
+            masked_metadata: {
+                let mut headers = HashMap::new();
+                headers.insert(
+                    common_utils::consts::X_MERCHANT_ID.to_string(),
+                    "dummy_merchant".to_string(),
+                );
+                headers.insert(
+                    common_utils::consts::X_TENANT_ID.to_string(),
+                    "dummy_tenant".to_string(),
+                );
+                headers.insert(
+                    common_utils::consts::X_CONNECTOR_NAME.to_string(),
+                    "stripe".to_string(),
+                );
+                headers.insert(
+                    common_utils::consts::X_REQUEST_ID.to_string(),
+                    "dummy_request_id".to_string(),
+                );
+                headers.insert(
+                    common_utils::consts::X_AUTH.to_string(),
+                    "dummy_auth".to_string(),
+                );
+                crate::utils::ffi_headers_to_masked_metadata(&headers).ok()
+            },
         };
 
         let proto_response = authorize_res_handler(request, response)

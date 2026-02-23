@@ -2,8 +2,11 @@
  * UniFFI FFI example: authorize_req + full round-trip (Kotlin)
  *
  * Demonstrates two usage patterns:
- *   1. Low-level: call authorizeReq directly to get the connector HTTP request JSON
- *   2. High-level: use ConnectorClient for a full round-trip (build -> HTTP -> parse)
+ *   1. Low-level: call authorizeReqTransformer directly to get the connector HTTP request JSON
+ *   2. High-level: use ConnectorClient for a full round-trip (build → HTTP → parse)
+ *
+ * All types come from proto codegen — Connector, ConnectorAuth, ConnectorConfig
+ * follow the same pattern as Currency, CaptureMethod, etc.
  *
  * Prerequisites (run `make setup` first):
  *   - generated/connector_service_ffi.kt  (UniFFI bindings)
@@ -13,11 +16,8 @@
 import uniffi.connector_service_ffi.UniffiException
 import uniffi.connector_service_ffi.authorizeReqTransformer
 import org.json.JSONObject
-import ucs.v2.Payment.PaymentServiceAuthorizeRequest
-import ucs.v2.Payment.PaymentAddress
-import ucs.v2.Payment.Currency
-import ucs.v2.Payment.CaptureMethod
-import ucs.v2.Payment.AuthenticationType
+import ucs.v2.Payment.*
+import ucs.v2.PaymentMethods.*
 
 fun buildAuthorizeRequestMsg(): PaymentServiceAuthorizeRequest {
     return PaymentServiceAuthorizeRequest.newBuilder().apply {
@@ -60,23 +60,15 @@ fun buildAuthorizeRequestMsg(): PaymentServiceAuthorizeRequest {
     }.build()
 }
 
-fun buildMetadata(): Map<String, String> {
+fun buildConnectorConfig(): ConnectorConfig {
     val apiKey = System.getenv("STRIPE_API_KEY") ?: "sk_test_placeholder"
-    return mapOf(
-        // Connector routing
-        "connector" to "Stripe",
-        "connector_auth_type" to JSONObject(mapOf(
-            "auth_type" to "HeaderKey",
-            "api_key" to apiKey,
-        )).toString(),
-        // Required metadata headers
-        "x-connector" to "Stripe",
-        "x-merchant-id" to "test_merchant_123",
-        "x-request-id" to "test-request-001",
-        "x-tenant-id" to "public",
-        "x-auth" to "body-key",
-        "x-api-key" to apiKey,
-    )
+    return ConnectorConfig.newBuilder()
+        .setConnector(Connector.STRIPE)
+        .setAuth(ConnectorAuth.newBuilder()
+            .setHeaderKey(HeaderKeyAuth.newBuilder().setApiKey(apiKey).build())
+            .build()
+        )
+        .build()
 }
 
 fun demoLowLevelFfi() {
@@ -84,13 +76,16 @@ fun demoLowLevelFfi() {
 
     val requestMsg = buildAuthorizeRequestMsg()
     val requestBytes = requestMsg.toByteArray()
-    val metadata = buildMetadata()
+
+    val config = buildConnectorConfig()
+    val configBytes = config.toByteArray()
 
     println("Request proto bytes: ${requestBytes.size} bytes")
-    println("Connector: ${metadata["connector"]}\n")
+    println("Config proto bytes:  ${configBytes.size} bytes")
+    println("Connector: STRIPE\n")
 
     try {
-        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata)
+        val connectorRequestJson = authorizeReqTransformer(requestBytes, configBytes, null)
         val connectorRequest = JSONObject(connectorRequestJson)
 
         println("Connector HTTP request generated successfully:")
@@ -122,15 +117,22 @@ fun demoFullRoundTrip() {
         return
     }
 
-    val client = ConnectorClient()
-    val requestMsg = buildAuthorizeRequestMsg()
-    val metadata = buildMetadata()
+    val config = ConnectorConfig.newBuilder()
+        .setConnector(Connector.STRIPE)
+        .setAuth(ConnectorAuth.newBuilder()
+            .setHeaderKey(HeaderKeyAuth.newBuilder().setApiKey(apiKey).build())
+            .build()
+        )
+        .build()
 
-    println("Connector: ${metadata["connector"]}")
+    val client = ConnectorClient(config)
+    val requestMsg = buildAuthorizeRequestMsg()
+
+    println("Connector: STRIPE")
     println("Sending authorize request...\n")
 
     try {
-        val response = client.authorize(requestMsg, metadata)
+        val response = client.authorize(requestMsg)
         println("Authorize response received:")
         println("  Status: ${response.status}")
         println("  Response: $response")
