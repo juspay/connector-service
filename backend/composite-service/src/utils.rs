@@ -27,7 +27,7 @@ pub fn connector_from_composite_authorize_metadata(
         .and_then(|connector_from_metadata| {
             ConnectorEnum::from_str(connector_from_metadata).map_err(|err| {
                 Box::new(tonic::Status::invalid_argument(format!(
-                    "invalid connector in request metadata: {err}"
+                    "Connector not supported: {err}"
                 )))
             })
         })

@@ -162,7 +162,7 @@ impl Service {
 
         let config_override_layer = HttpRequestExtensionsLayer::new(base_config.clone());
         let app_state = crate::http::AppState::new(
-            self.composite_payments_service.clone(),
+            self.composite_payments_service,
             self.payments_service,
             self.refunds_service,
             self.disputes_service,
