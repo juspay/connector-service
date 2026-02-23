@@ -488,6 +488,7 @@ message AmazonPayRedirectWallet {
   // Fields will be added as needed for Amazon Pay integration
 }
 
+// TODO: Should we keep both Paze options, or just one?
 // Paze - Digital wallet payment service
 message PazeWallet {
   oneof paze_data {
