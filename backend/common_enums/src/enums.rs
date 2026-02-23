@@ -1049,7 +1049,7 @@ pub enum PaymentMethodType {
     InstantBankTransferFinland,
     InstantBankTransferPoland,
     RevolutPay,
-    SepaGuaranteedBankDebit,
+    SepaGuaranteedDebit,
     IndonesianBankTransfer,
 }
 

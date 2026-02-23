@@ -125,7 +125,7 @@ message PaymentMethod {
     Sepa sepa = 101;                                            // Sepa - Single Euro Payments Area direct debit
     Bacs bacs = 102;                                            // Bacs - Bankers' Automated Clearing Services
     Becs becs = 103;                                            // Becs - Bulk Electronic Clearing System - Australian direct debit
-    SepaGuaranteedBankDebit sepa_guaranteed_bank_debit = 104;   // SEPA Guaranteed Direct Debit - bank debit with payment guarantee
+    SepaGuaranteedDebit sepa_guaranteed_debit = 104;            // SEPA Guaranteed Direct Debit - bank debit with payment guarantee
 
     // BUY NOW, PAY LATER (110-119)
     Affirm affirm = 110;                                       // Affirm - US BNPL service
@@ -1168,7 +1168,7 @@ message  Bacs {
 }
 
 // SEPA Guaranteed Direct Debit - bank debit with payment guarantee
-message SepaGuaranteedBankDebit {
+message SepaGuaranteedDebit {
   // International bank account number (iban)
   SecretString iban = 1;
   

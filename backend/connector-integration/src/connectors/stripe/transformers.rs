@@ -838,7 +838,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::UpiQr
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
-            | common_enums::PaymentMethodType::SepaGuaranteedBankDebit
+            | common_enums::PaymentMethodType::SepaGuaranteedDebit
             | common_enums::PaymentMethodType::Oxxo => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )

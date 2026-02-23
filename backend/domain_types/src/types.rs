@@ -1174,7 +1174,7 @@ impl<
                         bank_account_holder_name: becs.bank_account_holder_name,
                     }),
                 ),
-                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedBankDebit(sepa_guaranteed_bank_debit) => Ok(
+                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(sepa_guaranteed_bank_debit) => Ok(
                     Self::BankDebit(payment_method_data::BankDebitData::SepaGuaranteedBankDebit {
                         iban: sepa_guaranteed_bank_debit
                             .iban
@@ -1721,7 +1721,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Sepa(_) => Ok(Some(PaymentMethodType::Sepa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Bacs(_) => Ok(Some(PaymentMethodType::Bacs)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Becs(_) => Ok(Some(PaymentMethodType::Becs)),
-                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedBankDebit(_) => Ok(Some(PaymentMethodType::SepaGuaranteedBankDebit)),
+                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(_) => Ok(Some(PaymentMethodType::SepaGuaranteedDebit)),
                 // ============================================================================
                 // NETWORK TRANSACTION METHODS - recurring payments
                 // ============================================================================
@@ -4430,7 +4430,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::BankDebit),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedBankDebit(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(_)),
             } => Ok(Self::BankDebit),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
