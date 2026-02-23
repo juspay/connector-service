@@ -2,10 +2,8 @@ use crate::{
     connectors::fiservemea::FiservemeaRouterData,
     types::ResponseRouterData,
 };
-use base64::engine::general_purpose;
-use base64::Engine;
 use common_enums::AttemptStatus;
-use common_utils::{crypto::SignMessage, date_time, errors::CustomResult};
+use common_utils::errors::CustomResult;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -97,37 +95,6 @@ pub struct FiservemeaAuthorizeRequest {
     pub transaction_amount: FiservemeaTransactionAmount,
     pub payment_method: FiservemeaPaymentMethod,
     pub order_id: Option<String>,
-    #[serde(skip)]
-    pub signature_metadata: Option<FiservemeaSignatureMetadata>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FiservemeaSignatureMetadata {
-    pub client_request_id: String,
-    pub timestamp: String,
-    pub message_signature: String,
-}
-
-fn generate_fiservemea_signature(
-    api_key: &str,
-    api_secret: &str,
-    client_request_id: &str,
-    timestamp: &str,
-    request_body: &str,
-) -> CustomResult<String, errors::ConnectorError> {
-    let raw_signature = format!(
-        "{}{}{}{}",
-        api_key, client_request_id, timestamp, request_body
-    );
-
-    let signature = common_utils::crypto::HmacSha256::sign_message(
-        &common_utils::crypto::HmacSha256,
-        api_secret.as_bytes(),
-        raw_signature.as_bytes(),
-    )
-    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-    Ok(general_purpose::STANDARD.encode(signature))
 }
 
 impl<T: PaymentMethodDataTypes>
@@ -155,13 +122,7 @@ impl<T: PaymentMethodDataTypes>
         let amount = item.request.amount.get_amount_as_i64();
         let amount_str = format!("{}.{:02}", amount / 100, amount % 100);
 
-        let auth = FiservemeaAuthType::try_from(&item.connector_auth_type)
-            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
-
-        let client_request_id = uuid::Uuid::new_v4().to_string();
-        let timestamp = (date_time::now_unix_timestamp() * 1000).to_string();
-
-        let request_without_metadata = Self {
+        Ok(Self {
             request_type: "PaymentCardPreAuthTransaction".to_string(),
             transaction_amount: FiservemeaTransactionAmount {
                 total: amount_str,
@@ -182,27 +143,6 @@ impl<T: PaymentMethodDataTypes>
                     .connector_request_reference_id
                     .clone(),
             ),
-            signature_metadata: None,
-        };
-
-        let request_body_str = serde_json::to_string(&request_without_metadata)
-            .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
-
-        let message_signature = generate_fiservemea_signature(
-            auth.api_key.expose().as_str(),
-            auth.api_secret.expose().as_str(),
-            &client_request_id,
-            &timestamp,
-            &request_body_str,
-        )?;
-
-        Ok(Self {
-            signature_metadata: Some(FiservemeaSignatureMetadata {
-                client_request_id,
-                timestamp,
-                message_signature,
-            }),
-            ..request_without_metadata
         })
     }
 }
