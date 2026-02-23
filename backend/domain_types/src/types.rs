@@ -47,32 +47,13 @@ fn extract_headers_from_metadata(
 }
 
 fn convert_optional_country_alpha2(
-    value: Option<i32>,
+    value: grpc_api_types::payments::CountryAlpha2,
 ) -> Result<Option<CountryAlpha2>, error_stack::Report<ApplicationErrorResponse>> {
-    value
-        .map(
-            |country_code| -> Result<_, error_stack::Report<ApplicationErrorResponse>> {
-                let grpc_country_code =
-                    grpc_api_types::payments::CountryAlpha2::try_from(country_code)
-                        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "INVALID_PAZE_COUNTRY_CODE".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid Paze country code in payment_method".to_owned(),
-                            error_object: None,
-                        }))?;
-
-                if matches!(
-                    grpc_country_code,
-                    grpc_api_types::payments::CountryAlpha2::Unspecified
-                ) {
-                    Ok(None)
-                } else {
-                    CountryAlpha2::foreign_try_from(grpc_country_code).map(Some)
-                }
-            },
-        )
-        .transpose()
-        .map(Option::flatten)
+    if matches!(value, grpc_api_types::payments::CountryAlpha2::Unspecified) {
+        Ok(None)
+    } else {
+        CountryAlpha2::foreign_try_from(value).map(Some)
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::PazeDecryptedData>
@@ -99,6 +80,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PazeDecryptedData>
             .ok_or(ApplicationErrorResponse::missing_required_field(
                 "payment_method.paze.decrypted_data.consumer",
             ))?;
+
+        let consumer_country_code = convert_optional_country_alpha2(consumer.country_code())?;
 
         let email_address = Email::try_from(
             consumer
@@ -156,6 +139,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PazeDecryptedData>
             })
             .collect();
 
+        let billing_country_code = convert_optional_country_alpha2(billing_address.country_code())?;
+
         Ok(Self {
             client_id: value
                 .client_id
@@ -195,7 +180,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PazeDecryptedData>
                 city: billing_address.city,
                 state: billing_address.state,
                 zip: billing_address.zip,
-                country_code: convert_optional_country_alpha2(billing_address.country_code)?,
+                country_code: billing_country_code,
             },
             consumer: router_data::PazeConsumer {
                 first_name: consumer.first_name,
@@ -207,7 +192,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PazeDecryptedData>
                 )?,
                 email_address,
                 mobile_number,
-                country_code: convert_optional_country_alpha2(consumer.country_code)?,
+                country_code: consumer_country_code,
                 language_code: consumer.language_code,
             },
             eci: value.eci,
