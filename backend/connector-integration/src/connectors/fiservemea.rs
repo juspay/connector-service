@@ -41,7 +41,7 @@ use interfaces::{
 
 use transformers::{
     FiservemeaAuthType, FiservemeaAuthorizeRequest, FiservemeaAuthorizeResponse,
-    FiservemeaErrorResponse, FiservemeaSignatureMetadata,
+    FiservemeaErrorResponse,
 };
 
 pub(crate) mod headers {
