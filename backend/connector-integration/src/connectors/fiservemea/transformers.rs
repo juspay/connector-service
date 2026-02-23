@@ -2,7 +2,9 @@ use crate::{
     connectors::fiservemea::FiservemeaRouterData,
     types::ResponseRouterData,
 };
+use base64::{engine::general_purpose, Engine};
 use common_enums::AttemptStatus;
+use common_utils::crypto::SignMessage;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -11,15 +13,51 @@ use domain_types::{
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::{ExposeInterface, Secret};
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde::Serialize as SerdeSerialize;
 use std::fmt::Debug;
+use std::time::{SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct FiservemeaAuthType {
     pub api_key: Secret<String>,
     pub api_secret: Secret<String>,
+}
+
+impl FiservemeaAuthType {
+    pub fn generate_hmac_signature(
+        &self,
+        api_key: &str,
+        client_request_id: &str,
+        timestamp: &str,
+        request_body: &str,
+    ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
+        let raw_signature = format!("{api_key}{client_request_id}{timestamp}{request_body}");
+
+        let signature = common_utils::crypto::HmacSha256
+            .sign_message(
+                self.api_secret.clone().expose().as_bytes(),
+                raw_signature.as_bytes(),
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        Ok(general_purpose::STANDARD.encode(signature))
+    }
+
+    pub fn generate_client_request_id() -> String {
+        Uuid::new_v4().to_string()
+    }
+
+    pub fn generate_timestamp() -> String {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+            .to_string()
+    }
 }
 
 impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
@@ -132,7 +170,7 @@ impl<T: PaymentMethodDataTypes>
                     security_code: card.card_cvc.clone(),
                     expiry_date: FiservemeaExpiryDate {
                         month: format!("{:02}", card.card_exp_month.clone().expose()),
-                        year: card.card_exp_year.clone().expose().to_string(),
+                        year: card.get_card_expiry_year_2_digit()?.peek().clone(),
                     },
                 },
             },
