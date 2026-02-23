@@ -1446,6 +1446,72 @@ impl<
                     )))
                 }
 
+                // ============================================================================
+                // VOUCHER PAYMENT METHODS
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Boleto(boleto) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::Boleto(Box::new(
+                        payment_method_data::BoletoVoucherData {
+                            social_security_number: boleto.social_security_number.map(Secret::new),
+                        },
+                    ))))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Efecty(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::Efecty))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PagoEfectivo(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::PagoEfectivo))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::RedCompra(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::RedCompra))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::RedPagos(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::RedPagos))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Alfamart(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::Alfamart(Box::new(
+                        payment_method_data::AlfamartVoucherData {},
+                    ))))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Indomaret(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::Indomaret(Box::new(
+                        payment_method_data::IndomaretVoucherData {},
+                    ))))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Oxxo(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::Oxxo))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::SevenEleven(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::SevenEleven(Box::new(
+                        payment_method_data::JCSVoucherData {},
+                    ))))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Lawson(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::Lawson(Box::new(
+                        payment_method_data::JCSVoucherData {},
+                    ))))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::MiniStop(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::MiniStop(Box::new(
+                        payment_method_data::JCSVoucherData {},
+                    ))))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::FamilyMart(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::FamilyMart(Box::new(
+                        payment_method_data::JCSVoucherData {},
+                    ))))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Seicomart(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::Seicomart(Box::new(
+                        payment_method_data::JCSVoucherData {},
+                    ))))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PayEasy(_) => {
+                    Ok(Self::Voucher(payment_method_data::VoucherData::PayEasy(Box::new(
+                        payment_method_data::JCSVoucherData {},
+                    ))))
+                }
+
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                     error_identifier: 400,
@@ -1712,6 +1778,51 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::PaySafeCard(_) => {
                     Ok(Some(PaymentMethodType::PaySafeCard))
+                }
+                // ============================================================================
+                // VOUCHER PAYMENT METHODS
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::Boleto(_) => {
+                    Ok(Some(PaymentMethodType::Boleto))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Efecty(_) => {
+                    Ok(Some(PaymentMethodType::Efecty))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PagoEfectivo(_) => {
+                    Ok(Some(PaymentMethodType::PagoEfectivo))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::RedCompra(_) => {
+                    Ok(Some(PaymentMethodType::RedCompra))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::RedPagos(_) => {
+                    Ok(Some(PaymentMethodType::RedPagos))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Alfamart(_) => {
+                    Ok(Some(PaymentMethodType::Alfamart))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Indomaret(_) => {
+                    Ok(Some(PaymentMethodType::Indomaret))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Oxxo(_) => {
+                    Ok(Some(PaymentMethodType::Oxxo))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::SevenEleven(_) => {
+                    Ok(Some(PaymentMethodType::SevenEleven))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Lawson(_) => {
+                    Ok(Some(PaymentMethodType::Lawson))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::MiniStop(_) => {
+                    Ok(Some(PaymentMethodType::MiniStop))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::FamilyMart(_) => {
+                    Ok(Some(PaymentMethodType::FamilyMart))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Seicomart(_) => {
+                    Ok(Some(PaymentMethodType::Seicomart))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PayEasy(_) => {
+                    Ok(Some(PaymentMethodType::PayEasy))
                 }
                 // ============================================================================
                 // UNSUPPORTED ONLINE BANKING - Direct error generation
@@ -4236,7 +4347,68 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Klarna(_)),
             } => Ok(Self::PayLater),
-            _ => Ok(Self::Card), // Default fallback
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Boleto(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Efecty(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::PagoEfectivo(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::RedCompra(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::RedPagos(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Alfamart(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Indomaret(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Oxxo(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SevenEleven(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Lawson(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::MiniStop(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::FamilyMart(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Seicomart(_)),
+            } => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::PayEasy(_)),
+            } => Ok(Self::Voucher),
+            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                error_identifier: 400,
+                error_message: "Unsupported payment method".to_owned(),
+                error_object: None,
+            }))),
         }
     }
 }
@@ -7618,6 +7790,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
         value: grpc_api_types::payments::PaymentServiceCreateOrderRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let currency = common_enums::Currency::foreign_try_from(value.currency())?;
+        let webhook_url = value.webhook_url.clone();
+        let payment_method_type = <Option<common_enums::PaymentMethodType>>::foreign_try_from(
+            value.payment_method_type(),
+        )?;
 
         Ok(Self {
             amount: common_utils::types::MinorUnit::new(value.amount),
@@ -7627,7 +7803,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
                 .metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
                 .transpose()?,
-            webhook_url: value.webhook_url,
+            webhook_url,
+            payment_method_type,
         })
     }
 }
@@ -9191,6 +9368,77 @@ impl ForeignTryFrom<PaypalTransactionInfo> for grpc_api_types::payments::PaypalT
             currency_code: currency_code as i32,
             total_price: value.total_price.get_amount_as_i64(),
         })
+    }
+}
+
+impl ForeignTryFrom<SessionToken> for grpc_api_types::payments::SessionToken {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(value: SessionToken) -> Result<Self, error_stack::Report<Self::Error>> {
+        let session_token = match value {
+            SessionToken::GooglePay(gpay_token) => {
+                let gpay_response =
+                    grpc_api_types::payments::GpaySessionTokenResponse::foreign_try_from(
+                        *gpay_token,
+                    )?;
+                grpc_api_types::payments::SessionToken {
+                    wallet_name: Some(
+                        grpc_api_types::payments::session_token::WalletName::GooglePay(
+                            gpay_response,
+                        ),
+                    ),
+                }
+            }
+            SessionToken::Paypal(paypal_token) => {
+                let paypal_response = grpc_api_types::payments::PaypalSessionTokenResponse {
+                    connector: paypal_token.connector,
+                    session_token: paypal_token.session_token,
+                    sdk_next_action: grpc_api_types::payments::SdkNextAction::from(
+                        paypal_token.sdk_next_action.next_action,
+                    )
+                    .into(),
+                    client_token: paypal_token.client_token,
+                    transaction_info: paypal_token
+                        .transaction_info
+                        .map(grpc_api_types::payments::PaypalTransactionInfo::foreign_try_from)
+                        .transpose()?,
+                };
+                grpc_api_types::payments::SessionToken {
+                    wallet_name: Some(grpc_api_types::payments::session_token::WalletName::Paypal(
+                        paypal_response,
+                    )),
+                }
+            }
+            SessionToken::ApplePay(apple_pay_token) => {
+                let apple_pay_response = grpc_api_types::payments::ApplepaySessionTokenResponse {
+                    session_token_data: apple_pay_token
+                        .session_token_data
+                        .map(grpc_api_types::payments::ApplePaySessionResponse::foreign_try_from)
+                        .transpose()?,
+                    payment_request_data: apple_pay_token
+                        .payment_request_data
+                        .map(grpc_api_types::payments::ApplePayPaymentRequest::foreign_try_from)
+                        .transpose()?,
+                    connector: apple_pay_token.connector,
+                    delayed_session_token: apple_pay_token.delayed_session_token,
+                    sdk_next_action: grpc_api_types::payments::SdkNextAction::from(
+                        apple_pay_token.sdk_next_action.next_action,
+                    )
+                    .into(),
+                    connector_reference_id: apple_pay_token.connector_reference_id,
+                    connector_sdk_public_key: apple_pay_token.connector_sdk_public_key,
+                    connector_merchant_id: apple_pay_token.connector_merchant_id,
+                };
+                grpc_api_types::payments::SessionToken {
+                    wallet_name: Some(
+                        grpc_api_types::payments::session_token::WalletName::ApplePay(
+                            apple_pay_response,
+                        ),
+                    ),
+                }
+            }
+        };
+        Ok(session_token)
     }
 }
 

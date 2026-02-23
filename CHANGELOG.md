@@ -4,6 +4,17 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.23.0
+
+### Features
+
+- **connector:** [trustpay] introduce wallet support - apple pay and google pay ([#503](https://github.com/juspay/connector-service/pull/503)) ([`5976300`](https://github.com/juspay/connector-service/commit/5976300a6eb3746990502970ca089b4eac4b4e24))
+
+**Full Changelog:** [`2026.02.20.0...2026.02.23.0`](https://github.com/juspay/connector-service/compare/2026.02.20.0...2026.02.23.0)
+
+- - -
+
+
 ## 2026.02.18.1
 
 ### Refactors

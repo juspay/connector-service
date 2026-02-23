@@ -2151,14 +2151,16 @@ message PaymentServiceCreateOrderRequest {
   // Environment Configuration
   optional bool test_mode = 9; // A boolean value to indicate if the connector is in Test mode
 
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 10; // The type of payment method (e.g., apple_pay, google_pay)
 }
 
 // Response message for create order operation.
 message PaymentServiceCreateOrderResponse {
-// Identification
+  // Identification
   Identifier order_id = 1; // Identifier for the create order response
 
-// Status Information
+  // Status Information
   PaymentStatus status = 2; // Status of the payment after the capture attempt
   optional string error_code = 3; // Error code if the capture failed
   optional string error_message = 4; // Error message if the capture failed
@@ -2173,6 +2175,9 @@ message PaymentServiceCreateOrderResponse {
 
   // Raw Response
   optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Wallet Session Token
+  optional SessionToken session_token = 10; // JSON serialized session token for wallet payments (Apple Pay, Google Pay)
 }
 
 // Request message for processing a refund.
