@@ -330,7 +330,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let mut header = vec![
             (
                 headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
+                "application/x-www-form-urlencoded".to_string().into(),
             ),
             (
                 headers::ACCEPT.to_string(),
@@ -356,7 +356,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // For UPI payments, use the specific UPI endpoint
         match &req.request.payment_method_data {
             PaymentMethodData::Upi(_) => Ok(format!("{base_url}v1/payments/create/upi")),
-            _ => Ok(format!("{base_url}v1/payments/create/redirect")),
+            _ => Ok(format!("{base_url}v1/payments/create/json")),
         }
     }
 
@@ -387,7 +387,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => {
                 let connector_req =
                     razorpay::RazorpayPaymentRequest::try_from(&connector_router_data)?;
-                Ok(Some(RequestContent::Json(Box::new(connector_req))))
+                Ok(Some(RequestContent::FormUrlEncoded(Box::new(
+                    connector_req,
+                ))))
             }
         }
     }

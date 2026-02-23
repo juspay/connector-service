@@ -107,30 +107,43 @@ pub enum PaymentMethod<
 
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub struct CardDetails<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
+    #[serde(rename = "card[number]")]
     pub number: RawCardNumber<T>,
+    #[serde(rename = "card[name]")]
     pub name: Option<Secret<String>>,
+    #[serde(rename = "card[expiry_month]")]
     pub expiry_month: Option<Secret<String>>,
+    #[serde(rename = "card[expiry_year]")]
     pub expiry_year: Secret<String>,
+    #[serde(rename = "card[cvv]")]
     pub cvv: Option<Secret<String>>,
 }
 
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub struct RazorpayNetworkToken {
+    #[serde(rename = "card[number]")]
     pub number: Secret<String>,
+    #[serde(rename = "card[name]")]
     pub name: Option<Secret<String>>,
+    #[serde(rename = "card[expiry_month]")]
     pub expiry_month: Secret<String>,
+    #[serde(rename = "card[expiry_year]")]
     pub expiry_year: Secret<String>,
+    #[serde(rename = "card[cvv]")]
     pub cvv: Option<Secret<String>>,
+    #[serde(rename = "card[cryptogram_value]")]
     pub cryptogram_value: Option<Secret<String>>,
-    pub tokenised: Option<bool>,
+    #[serde(rename = "card[tokenised]")]
+    pub tokenised: Option<i8>,
+    #[serde(rename = "card[token_provider]")]
     pub token_provider: Option<String>,
+    #[serde(rename = "card[last4]")]
     pub last4: Option<String>,
+    #[serde(rename = "card[provider_type]")]
     pub provider_type: Option<String>,
 }
 
@@ -172,6 +185,7 @@ pub struct RazorpayPaymentRequest<
     pub email: Email,
     pub order_id: String,
     pub method: PaymentMethodType,
+    #[serde(flatten)]
     pub card: PaymentMethodSpecificData<T>,
     // pub authentication: Option<AuthenticationDetails>,
     // pub browser: Option<BrowserInfo>,
@@ -346,7 +360,7 @@ fn extract_payment_method_and_data<
                 expiry_year: proxy_token_data.network_token_exp_year.clone(),
                 cvv: None, // CVV typically not sent with network tokens
                 cryptogram_value,
-                tokenised: Some(true),
+                tokenised: Some(1),
                 token_provider,
                 last4: Some(last4),
                 provider_type: Some("network".to_string()),
@@ -373,7 +387,7 @@ fn extract_payment_method_and_data<
                 expiry_year: network_token_data.token_exp_year.clone(),
                 cvv: None,
                 cryptogram_value: network_token_data.token_cryptogram.clone(),
-                tokenised: Some(true),
+                tokenised: Some(1),
                 token_provider,
                 last4: Some(network_token_data.token_number.get_last4()),
                 provider_type: Some("network".to_string()),
