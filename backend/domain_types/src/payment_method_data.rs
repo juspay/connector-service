@@ -529,7 +529,7 @@ pub enum BankDebitData {
         iban: Secret<String>,
         bank_account_holder_name: Option<Secret<String>>,
     },
-    SepaGuarenteedBankDebit {
+    SepaGuaranteedBankDebit {
         iban: Secret<String>,
         bank_account_holder_name: Option<Secret<String>>,
     },

@@ -2773,8 +2773,8 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::BankDebitData::SepaBankDebit { .. } => Self::SepaBankDebit,
                 payment_method_data::BankDebitData::BecsBankDebit { .. } => Self::BecsBankDebit,
                 payment_method_data::BankDebitData::BacsBankDebit { .. } => Self::BacsBankDebit,
-                payment_method_data::BankDebitData::SepaGuarenteedBankDebit { .. } => {
-                    Self::SepaGuarenteedBankDebit
+                payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                    Self::SepaGuaranteedBankDebit
                 }
             },
             PaymentMethodData::BankTransfer(bank_transfer_data) => match *bank_transfer_data {

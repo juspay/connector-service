@@ -1791,7 +1791,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .unwrap_or(item.resource_common_data.get_billing_full_name()?),
                 })))
             }
-            BankDebitData::BecsBankDebit { .. } | BankDebitData::SepaGuarenteedBankDebit { .. } => {
+            BankDebitData::BecsBankDebit { .. } | BankDebitData::SepaGuaranteedBankDebit { .. } => {
                 Err(errors::ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Adyen"),
                 )
@@ -2394,7 +2394,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }),
             BankDebitData::SepaBankDebit { .. }
             | BankDebitData::BacsBankDebit { .. }
-            | BankDebitData::SepaGuarenteedBankDebit { .. }
+            | BankDebitData::SepaGuaranteedBankDebit { .. }
             | BankDebitData::BecsBankDebit { .. } => billing_address,
         };
 

@@ -88,8 +88,8 @@ message PaymentMethod {
     Blik blik = 57;
     OpenBanking open_banking = 58;
     Interac interac = 59;                                     // Interac - Canadian bank redirect payment method
-    Bizum bizum = 141;
-    Eft eft = 142;
+    Bizum bizum = 156;
+    Eft eft = 157;
     
     // MOBILE PAYMENTS (60-69) - Direct variants
     DuitNow duit_now = 60;
@@ -117,15 +117,15 @@ message PaymentMethod {
     CIMBVaBankTransfer cimb_va_bank_transfer = 134;            // CIMB VA Bank transfer in Indonesia
     DanamonVaBankTransfer danamon_va_bank_transfer = 135;      // Danamon VA Bank transfer in Indonesia
     MandiriVaBankTransfer mandiri_va_bank_transfer = 136;      // Mandiri VA Bank transfer in Indonesia
-    LocalBankTransfer local_bank_transfer = 139;               // Generic local bank transfer
-    IndonesianBankTransfer indonesian_bank_transfer = 140;     // Indonesian bank transfer method
+    LocalBankTransfer local_bank_transfer = 154;               // Generic local bank transfer
+    IndonesianBankTransfer indonesian_bank_transfer = 155;     // Indonesian bank transfer method
 
     // DIRECT DEBIT (100-109)
     Ach ach = 100;                                              // Ach - Automated Clearing House
     Sepa sepa = 101;                                            // Sepa - Single Euro Payments Area direct debit
     Bacs bacs = 102;                                            // Bacs - Bankers' Automated Clearing Services
     Becs becs = 103;                                            // Becs - Bulk Electronic Clearing System - Australian direct debit
-    SepaGuarenteedBankDebit sepa_guarenteed_bank_debit = 104;   // SEPA Guaranteed Direct Debit - bank debit with payment guarantee
+    SepaGuaranteedBankDebit sepa_guaranteed_bank_debit = 104;   // SEPA Guaranteed Direct Debit - bank debit with payment guarantee
 
     // BUY NOW, PAY LATER (110-119)
     Affirm affirm = 110;                                       // Affirm - US BNPL service
@@ -1168,7 +1168,7 @@ message  Bacs {
 }
 
 // SEPA Guaranteed Direct Debit - bank debit with payment guarantee
-message SepaGuarenteedBankDebit {
+message SepaGuaranteedBankDebit {
   // International bank account number (iban)
   SecretString iban = 1;
   

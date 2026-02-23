@@ -838,7 +838,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::UpiQr
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
-            | common_enums::PaymentMethodType::SepaGuarenteedBankDebit
+            | common_enums::PaymentMethodType::SepaGuaranteedBankDebit
             | common_enums::PaymentMethodType::Oxxo => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
@@ -1211,7 +1211,7 @@ impl TryFrom<&payment_method_data::BankDebitData> for StripePaymentMethodType {
             payment_method_data::BankDebitData::SepaBankDebit { .. } => Ok(Self::Sepa),
             payment_method_data::BankDebitData::BecsBankDebit { .. } => Ok(Self::Becs),
             payment_method_data::BankDebitData::BacsBankDebit { .. } => Ok(Self::Bacs),
-            payment_method_data::BankDebitData::SepaGuarenteedBankDebit { .. } => {
+            payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
                 Err(ConnectorError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 ))
@@ -1264,7 +1264,7 @@ fn get_bank_debit_data(
             };
             (Some(StripePaymentMethodType::Bacs), Some(bacs_data))
         }
-        payment_method_data::BankDebitData::SepaGuarenteedBankDebit { .. } => (None, None),
+        payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => (None, None),
     }
 }
 

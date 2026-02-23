@@ -1174,17 +1174,17 @@ impl<
                         bank_account_holder_name: becs.bank_account_holder_name,
                     }),
                 ),
-                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuarenteedBankDebit(sepa_guarenteed_bank_debit) => Ok(
-                    Self::BankDebit(payment_method_data::BankDebitData::SepaGuarenteedBankDebit {
-                        iban: sepa_guarenteed_bank_debit
+                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedBankDebit(sepa_guaranteed_bank_debit) => Ok(
+                    Self::BankDebit(payment_method_data::BankDebitData::SepaGuaranteedBankDebit {
+                        iban: sepa_guaranteed_bank_debit
                             .iban
                             .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_SEPA_GUARENTEED_IBAN".to_owned(),
+                                sub_code: "MISSING_SEPA_guaranteed_IBAN".to_owned(),
                                 error_identifier: 400,
-                                error_message: "SEPA GUARENTEED IBAN is required".to_owned(),
+                                error_message: "SEPA guaranteed IBAN is required".to_owned(),
                                 error_object: None,
                             }))?,
-                        bank_account_holder_name: sepa_guarenteed_bank_debit.bank_account_holder_name,
+                        bank_account_holder_name: sepa_guaranteed_bank_debit.bank_account_holder_name,
                     }),
                 ),
                 // ============================================================================
@@ -1721,7 +1721,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Sepa(_) => Ok(Some(PaymentMethodType::Sepa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Bacs(_) => Ok(Some(PaymentMethodType::Bacs)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Becs(_) => Ok(Some(PaymentMethodType::Becs)),
-                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuarenteedBankDebit(_) => Ok(Some(PaymentMethodType::SepaGuarenteedBankDebit)),
+                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedBankDebit(_) => Ok(Some(PaymentMethodType::SepaGuaranteedBankDebit)),
                 // ============================================================================
                 // NETWORK TRANSACTION METHODS - recurring payments
                 // ============================================================================
@@ -4430,7 +4430,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::BankDebit),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaGuarenteedBankDebit(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedBankDebit(_)),
             } => Ok(Self::BankDebit),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
@@ -8186,7 +8186,7 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
-    SepaGuarenteedBankDebit,
+    SepaGuaranteedBankDebit,
     IndonesianBankTransfer,
 }
 

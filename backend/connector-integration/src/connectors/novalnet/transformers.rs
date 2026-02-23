@@ -488,7 +488,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         (iban.clone(), account_holder)
                     }
                     BankDebitData::AchBankDebit { .. }
-                    | BankDebitData::SepaGuarenteedBankDebit { .. }
+                    | BankDebitData::SepaGuaranteedBankDebit { .. }
                     | BankDebitData::BecsBankDebit { .. }
                     | BankDebitData::BacsBankDebit { .. } => {
                         return Err(ConnectorError::NotImplemented(
