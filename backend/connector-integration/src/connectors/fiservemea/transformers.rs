@@ -155,7 +155,7 @@ impl<T: PaymentMethodDataTypes>
         let amount_str = format!("{}.{:02}", amount / 100, amount % 100);
 
         let auth = FiservemeaAuthType::try_from(&item.connector_auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
 
         let client_request_id = uuid::Uuid::new_v4().to_string();
         let timestamp = (date_time::now_unix_timestamp() * 1000).to_string();
