@@ -3,7 +3,6 @@ use crate::{
     types::ResponseRouterData,
 };
 use common_enums::AttemptStatus;
-use common_utils::errors::CustomResult;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -12,7 +11,6 @@ use domain_types::{
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde::Serialize as SerdeSerialize;
