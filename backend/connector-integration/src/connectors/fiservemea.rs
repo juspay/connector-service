@@ -301,9 +301,28 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             let connector_req = FiservemeaAuthorizeRequest::try_from(req)?;
-            let signature_metadata = connector_req.signature_metadata
-                .as_ref()
-                .ok_or(errors::ConnectorError::RequestEncodingFailed)?;
+            let request_body_str = serde_json::to_string(&connector_req)
+                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+
+            let client_request_id = uuid::Uuid::new_v4().to_string();
+            let timestamp = (common_utils::date_time::now_unix_timestamp() * 1000).to_string();
+
+            let raw_signature = format!(
+                "{}{}{}{}",
+                auth.api_key.expose().as_str(),
+                client_request_id,
+                timestamp,
+                request_body_str
+            );
+
+            let signature = common_utils::crypto::HmacSha256::sign_message(
+                &common_utils::crypto::HmacSha256,
+                auth.api_secret.expose().as_bytes(),
+                raw_signature.as_bytes(),
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            let message_signature = base64::engine::general_purpose::STANDARD.encode(signature);
 
             Ok(vec![
                 (
@@ -312,15 +331,15 @@ macros::macro_connector_implementation!(
                 ),
                 (
                     headers::CLIENT_REQUEST_ID.to_string(),
-                    signature_metadata.client_request_id.clone().into(),
+                    client_request_id.into(),
                 ),
                 (
                     headers::TIMESTAMP.to_string(),
-                    signature_metadata.timestamp.clone().into(),
+                    timestamp.into(),
                 ),
                 (
                     headers::MESSAGE_SIGNATURE.to_string(),
-                    signature_metadata.message_signature.clone().into(),
+                    message_signature.into(),
                 ),
                 (
                     headers::CONTENT_TYPE.to_string(),
