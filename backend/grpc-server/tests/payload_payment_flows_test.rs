@@ -22,8 +22,8 @@ use grpc_api_types::{
         CustomerAcceptance, FutureUsage, Identifier, MandateReferenceId, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterAutoDebitRequest, PaymentServiceRepeatEverythingRequest,
-        PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
+        PaymentServiceRegisterAutoDebitRequest, PaymentServiceVoidRequest, PaymentStatus,
+        RecurringPaymentServiceChargeRequest, RefundStatus,
     },
 };
 use rand::Rng;
@@ -241,7 +241,7 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 }
 
 #[allow(clippy::field_reassign_with_default)]
-fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEverythingRequest {
+fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceChargeRequest {
     // Use random amount to avoid duplicates
     let mut rng = rand::thread_rng();
     let unique_amount = rng.gen_range(1000..10000); // Amount between $10.00 and $100.00
@@ -265,7 +265,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
 
     let metadata_json = serde_json::to_string(&metadata_map).unwrap();
 
-    PaymentServiceRepeatEverythingRequest {
+    RecurringPaymentServiceChargeRequest {
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("repeat"))),
         }),

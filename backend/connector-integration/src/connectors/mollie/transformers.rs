@@ -684,7 +684,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Extract browser info and get language - use default if not available
         // Note: When called via UCS gRPC from Hyperswitch, browser_info may not be passed
-        // in the PaymentServiceCreatePaymentMethodTokenRequest proto (it doesn't have that field)
+        // in the PaymentMethodServiceTokenizeRequest proto (it doesn't have that field)
         let locale = item
             .request
             .browser_info

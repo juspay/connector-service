@@ -19,11 +19,11 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, DisputeServiceAcceptRequest, DisputeServiceAcceptResponse,
-    DisputeServiceDefendRequest, DisputeServiceDefendResponse, DisputeResponse, DisputeServiceGetRequest,
-    DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,
-    DisputeServiceTransformRequest, DisputeServiceTransformResponse, WebhookEventType,
-    WebhookResponseContent,
+    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
+    DisputeServiceSubmitEvidenceResponse, DisputeServiceTransformRequest,
+    DisputeServiceTransformResponse, WebhookEventType, WebhookResponseContent,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;

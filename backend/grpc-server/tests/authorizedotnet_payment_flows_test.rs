@@ -27,8 +27,8 @@ use grpc_api_types::{
         PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
         PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest,
-        PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
-        PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
+        RecurringPaymentServiceChargeResponse, PaymentServiceVoidRequest, PaymentStatus,
+        RecurringPaymentServiceChargeRequest, RefundServiceGetRequest, RefundStatus,
     },
 };
 use rand::{distributions::Alphanumeric, Rng};
@@ -174,7 +174,7 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 
 // Helper function to create a repeat payment request (matching your JSON format)
 #[allow(clippy::field_reassign_with_default)]
-fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEverythingRequest {
+fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceChargeRequest {
     let request_ref_id = Identifier {
         id_type: Some(IdType::Id(generate_unique_request_ref_id("repeat_req"))),
     };
@@ -199,7 +199,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
 
     let metadata_json = serde_json::to_string(&metadata_map).unwrap();
 
-    PaymentServiceRepeatEverythingRequest {
+    RecurringPaymentServiceChargeRequest {
         request_ref_id: Some(request_ref_id),
         mandate_reference_id: Some(mandate_reference),
         amount: REPEAT_AMOUNT,

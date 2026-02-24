@@ -7,7 +7,8 @@ use cards::{
 use common_utils::{
     errors::ValidationError,
     ext_traits::{OptionExt, ValueExt},
-    MinorUnit, Money,
+    types::Money,
+    MinorUnit,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -352,13 +353,10 @@ pub struct RecurringMandatePaymentData {
 }
 
 impl RecurringMandatePaymentData {
-    pub fn get_original_payment_amount(&self) -> Result<MinorUnit, Error> {
+    pub fn get_original_payment_amount(&self) -> Result<Money, Error> {
         self.original_payment_authorized_amount
+            .clone()
             .ok_or_else(missing_field_err("original_payment_authorized_amount"))
-    }
-    pub fn get_original_payment_currency(&self) -> Result<common_enums::Currency, Error> {
-        self.original_payment_authorized_currency
-            .ok_or_else(missing_field_err("original_payment_authorized_currency"))
     }
 }
 

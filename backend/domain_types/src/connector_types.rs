@@ -1091,7 +1091,6 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub request_extended_authorization: Option<bool>,
     pub enable_overcapture: Option<bool>,
     pub setup_mandate_details: Option<MandateData>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub connector_testing_data: Option<SecretSerdeValue>,
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
@@ -1433,7 +1432,6 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub mandate_id: Option<MandateIds>,
     pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
     pub split_payments: Option<SplitPaymentsRequest>,
-    pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone)]
@@ -1529,8 +1527,6 @@ pub struct PaymentsSdkSessionTokenData {
     pub country: Option<common_enums::CountryAlpha2>,
     pub order_details: Option<Vec<OrderDetailsWithAmount>>,
     pub email: Option<Email>,
-    // Minor Unit amount for amount frame work
-    pub minor_amount: MinorUnit,
     pub customer_name: Option<Secret<String>>,
     pub order_tax_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
@@ -2078,7 +2074,7 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::RecoveryInvoiceCancel => {
                 Ok(Self::RecoveryInvoiceCancel)
             }
-            grpc_api_types::payments::WebhookEventType::IncomingWebhookEventUnspecified => {
+            grpc_api_types::payments::WebhookEventType::Unspecified => {
                 Ok(Self::IncomingWebhookEventUnspecified)
             }
         }
@@ -2134,7 +2130,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::RecoveryPaymentSuccess => Ok(Self::RecoveryPaymentSuccess),
             EventType::RecoveryPaymentPending => Ok(Self::RecoveryPaymentPending),
             EventType::RecoveryInvoiceCancel => Ok(Self::RecoveryInvoiceCancel),
-            EventType::IncomingWebhookEventUnspecified => Ok(Self::IncomingWebhookEventUnspecified),
+            EventType::IncomingWebhookEventUnspecified => Ok(Self::Unspecified),
 
             // Legacy broad categories (for backward compatibility)
             EventType::Payment => Ok(Self::PaymentIntentSuccess), // Map broad Payment to PaymentIntentSuccess
@@ -2228,7 +2224,6 @@ pub struct RefundsData {
     pub browser_info: Option<BrowserInformation>,
     /// Charges associated with the payment
     pub split_refunds: Option<SplitRefundsRequest>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
 }
 
 impl RefundsData {
@@ -2350,7 +2345,6 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<CustomerId>,
     pub integrity_object: Option<SetupMandateIntegrityObject>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
     pub locale: Option<String>,
@@ -2405,9 +2399,7 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
 #[derive(Debug, Clone)]
 pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub mandate_reference: MandateReferenceId,
-    pub amount: i64,
-    pub minor_amount: MinorUnit,
-    pub currency: Currency,
+    pub amount: Money,
     pub merchant_order_reference_id: Option<String>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
@@ -2416,7 +2408,6 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub email: Option<Email>,
     pub payment_method_type: Option<PaymentMethodType>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub off_session: Option<bool>,
     pub router_return_url: Option<String>,
     pub split_payments: Option<SplitPaymentsRequest>,

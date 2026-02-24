@@ -23,7 +23,7 @@ use grpc_api_types::{
         Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterAutoDebitRequest, PaymentServiceRepeatEverythingRequest,
+        PaymentServiceRegisterAutoDebitRequest, RecurringPaymentServiceChargeRequest,
         PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
@@ -352,7 +352,7 @@ card_details),
 
 // Helper function to create a repeat payment request (matching your JSON format)
 #[allow(clippy::field_reassign_with_default)]
-fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEverythingRequest {
+fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceChargeRequest {
     let mandate_reference = MandateReference {
         mandate_id: Some(mandate_id.to_string()),
         payment_method_id: None,
@@ -366,7 +366,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         "Monthly subscription payment".to_string(),
     );
 
-    PaymentServiceRepeatEverythingRequest {
+    RecurringPaymentServiceChargeRequest {
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("mandate_{}", get_timestamp()))),
         }),
