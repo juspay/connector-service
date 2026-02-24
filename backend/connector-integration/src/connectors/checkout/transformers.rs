@@ -14,7 +14,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,WalletData
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
@@ -581,9 +581,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ..
                 }) => {
                     // Get account holder name from bank_account_holder_name, card_holder_name, or billing details
-                    let holder_name = bank_account_holder_name
-                        .or(card_holder_name)
-                        .or_else(|| item.router_data.resource_common_data.get_billing_full_name().ok());
+                    let holder_name = bank_account_holder_name.or(card_holder_name).or_else(|| {
+                        item.router_data
+                            .resource_common_data
+                            .get_billing_full_name()
+                            .ok()
+                    });
 
                     let (first_name, last_name) = split_account_holder_name(holder_name);
 
@@ -1024,9 +1027,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 ..
             }) => {
                 // Get account holder name from bank_account_holder_name, card_holder_name, or billing details
-                let holder_name = bank_account_holder_name
-                    .or(card_holder_name)
-                    .or_else(|| item.router_data.resource_common_data.get_billing_full_name().ok());
+                let holder_name = bank_account_holder_name.or(card_holder_name).or_else(|| {
+                    item.router_data
+                        .resource_common_data
+                        .get_billing_full_name()
+                        .ok()
+                });
 
                 let (first_name, last_name) = split_account_holder_name(holder_name);
 
