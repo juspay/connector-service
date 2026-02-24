@@ -13,7 +13,9 @@ use domain_types::{
         ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
         ErrorResponse,
@@ -76,6 +78,48 @@ pub struct WalletSource {
     pub billing_address: Option<CheckoutAddress>,
 }
 
+/// Constants for ACH payment type
+const ACH_PAYMENT_TYPE: &str = "ach";
+const ACH_COUNTRY_US: &str = "US";
+
+/// Checkout.com ACH account holder type (mapped from common_enums::BankHolderType)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CheckoutAchHolderType {
+    Individual,
+    Corporate,
+}
+
+impl From<common_enums::BankHolderType> for CheckoutAchHolderType {
+    fn from(holder_type: common_enums::BankHolderType) -> Self {
+        match holder_type {
+            common_enums::BankHolderType::Business => Self::Corporate,
+            common_enums::BankHolderType::Personal => Self::Individual,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct AchBankDebitSource {
+    #[serde(rename = "type")]
+    pub source_type: String,
+    #[serde(rename = "account_type")]
+    pub account_type: common_enums::BankType,
+    pub country: String,
+    pub account_number: Secret<String>,
+    #[serde(rename = "bank_code")]
+    pub routing_number: Secret<String>,
+    pub account_holder: Option<AchAccountHolder>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AchAccountHolder {
+    #[serde(rename = "type")]
+    pub holder_type: CheckoutAchHolderType,
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct MandateSource {
     #[serde(rename = "type")]
@@ -95,6 +139,7 @@ pub enum PaymentSource<
     ApplePayPredecrypt(Box<ApplePayPredecrypt>),
     MandatePayment(MandateSource),
     GooglePayPredecrypt(Box<GooglePayPredecrypt>),
+    AchBankDebit(AchBankDebitSource),
 }
 
 #[derive(Debug, Serialize)]
@@ -430,6 +475,50 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }),
                     });
                     Ok((payment_source, None, Some(false), store_for_future_use))
+                }
+                PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                    account_number,
+                    routing_number,
+                    bank_account_holder_name,
+                    card_holder_name,
+                    bank_holder_type,
+                    bank_type,
+                    ..
+                }) => {
+                    // Get account holder name from bank_account_holder_name, card_holder_name, or billing details
+                    let holder_name = bank_account_holder_name
+                        .or(card_holder_name)
+                        .or_else(|| item.router_data.resource_common_data.get_billing_full_name().ok());
+
+                    let (first_name, last_name) = split_account_holder_name(holder_name);
+
+                    // Map bank_holder_type to Checkout's expected format
+                    let holder_type: CheckoutAchHolderType = bank_holder_type
+                        .map(Into::into)
+                        .unwrap_or(CheckoutAchHolderType::Individual);
+
+                    // Use bank_type from input or default to Savings
+                    let account_type = bank_type.unwrap_or(common_enums::BankType::Savings);
+
+                    let payment_source = PaymentSource::AchBankDebit(AchBankDebitSource {
+                        source_type: ACH_PAYMENT_TYPE.to_string(),
+                        account_type,
+                        country: ACH_COUNTRY_US.to_string(),
+                        account_number: account_number.clone(),
+                        routing_number: routing_number.clone(),
+                        account_holder: Some(AchAccountHolder {
+                            holder_type,
+                            first_name,
+                            last_name,
+                        }),
+                    });
+                    // For ACH bank debit, we typically want to store for future use if it's a mandate payment
+                    let store_for_future = if item.router_data.request.is_mandate_payment() {
+                        Some(true)
+                    } else {
+                        store_for_future_use
+                    };
+                    Ok((payment_source, None, Some(false), store_for_future))
                 }
                 _ => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("checkout"),
@@ -777,6 +866,44 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     cvv: Some(ccard.card_cvc),
                     billing_address: billing_details,
                     account_holder: Some(CheckoutAccountHolderDetails {
+                        first_name,
+                        last_name,
+                    }),
+                });
+                Ok((payment_source, None, Some(false), payment_type, Some(true)))
+            }
+            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_account_holder_name,
+                card_holder_name,
+                bank_holder_type,
+                bank_type,
+                ..
+            }) => {
+                // Get account holder name from bank_account_holder_name, card_holder_name, or billing details
+                let holder_name = bank_account_holder_name
+                    .or(card_holder_name)
+                    .or_else(|| item.router_data.resource_common_data.get_billing_full_name().ok());
+
+                let (first_name, last_name) = split_account_holder_name(holder_name);
+
+                // Map bank_holder_type to Checkout's expected format
+                let holder_type: CheckoutAchHolderType = bank_holder_type
+                    .map(Into::into)
+                    .unwrap_or(CheckoutAchHolderType::Individual);
+
+                // Use bank_type from input or default to Savings
+                let account_type = bank_type.unwrap_or(common_enums::BankType::Savings);
+
+                let payment_source = PaymentSource::AchBankDebit(AchBankDebitSource {
+                    source_type: ACH_PAYMENT_TYPE.to_string(),
+                    account_type,
+                    country: ACH_COUNTRY_US.to_string(),
+                    account_number: account_number.clone(),
+                    routing_number: routing_number.clone(),
+                    account_holder: Some(AchAccountHolder {
+                        holder_type,
                         first_name,
                         last_name,
                     }),
