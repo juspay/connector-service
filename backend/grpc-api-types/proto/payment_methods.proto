@@ -1437,7 +1437,7 @@ message ProxyNetworkTokenData {
     optional string card_issuer = 5;
     optional CardNetwork card_network = 6;
     optional string card_type = 7;
-    optional CountryAlpha2 card_issuing_country = 8;
+    optional string card_issuing_country = 8;
     optional SecretString card_holder_name = 9;
     optional SecretString nick_name = 10;
 }
