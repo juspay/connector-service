@@ -506,7 +506,7 @@ where
         let masked_json_string = get_masked_string_from_json_object(value.peek());
 
         error_stack::report!(errors::ConnectorError::FailedToObtainAuthType).attach_printable(
-            format!("Invalid external auth payload: {}", masked_json_string),
+            format!("Invalid external auth value: {}", masked_json_string),
         )
     })
 }
