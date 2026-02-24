@@ -638,6 +638,38 @@ pub enum PaymentSourceItem<
     Eps(RedirectRequest),
     Giropay(RedirectRequest),
     Sofort(RedirectRequest),
+    Bank(BankPaymentSource),
+}
+
+// Bank Payment Source for ACH Debit
+#[derive(Debug, Serialize)]
+pub struct BankPaymentSource {
+    #[serde(rename = "ach_debit")]
+    pub ach_debit: AchDebitRequest,
+}
+
+// ACH Debit Request Structure for PayPal
+#[derive(Debug, Serialize)]
+pub struct AchDebitRequest {
+    pub account_number: Secret<String>,
+    pub routing_number: Secret<String>,
+    pub account_holder_name: Secret<String>,
+    pub account_type: AchAccountType,
+    pub ownership_type: AchOwnershipType,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum AchAccountType {
+    Checking,
+    Savings,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum AchOwnershipType {
+    Personal,
+    Business,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CardVaultResponse {
@@ -1105,7 +1137,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Self::try_from(card_redirect_data)
             }
             PaymentMethodData::PayLater(ref paylater_data) => Self::try_from(paylater_data),
-            PaymentMethodData::BankDebit(ref bank_debit_data) => Self::try_from(bank_debit_data),
+            PaymentMethodData::BankDebit(ref bank_debit_data) => {
+                let bank_payment_source = create_ach_debit_request(
+                    bank_debit_data,
+                    &item.router_data,
+                )?;
+
+                // ACH requires CAPTURE intent per PayPal API
+                let bank_debit_intent = if item.router_data.request.is_auto_capture()? {
+                    PaypalPaymentIntent::Capture
+                } else {
+                    Err(ConnectorError::FlowNotSupported {
+                        flow: "Manual capture method for Bank Debit".to_string(),
+                        connector: "Paypal".to_string(),
+                    })?
+                };
+
+                Ok(Self {
+                    intent: bank_debit_intent,
+                    purchase_units,
+                    payment_source: Some(PaymentSourceItem::Bank(bank_payment_source)),
+                })
+            }
             PaymentMethodData::BankTransfer(ref bank_transfer_data) => {
                 Self::try_from(bank_transfer_data.as_ref())
             }
@@ -1176,14 +1229,75 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(value: &BankDebitData) -> Result<Self, Self::Error> {
         match value {
-            BankDebitData::AchBankDebit { .. }
-            | BankDebitData::SepaBankDebit { .. }
+            // ACH Bank Debit is handled separately in the main TryFrom to access router data
+            BankDebitData::AchBankDebit { .. } => Err(ConnectorError::NotImplemented(
+                "ACH Bank Debit must be handled in the main request transformation".to_string(),
+            )
+            .into()),
+            BankDebitData::SepaBankDebit { .. }
             | BankDebitData::BecsBankDebit { .. }
             | BankDebitData::BacsBankDebit { .. } => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Paypal"),
             )
             .into()),
         }
+    }
+}
+
+/// Helper function to create ACH debit request data
+/// Handles account holder name extraction with fallback to billing name
+fn create_ach_debit_request<T: PaymentMethodDataTypes>(
+    bank_debit_data: &BankDebitData,
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<BankPaymentSource, error_stack::Report<ConnectorError>> {
+    match bank_debit_data {
+        BankDebitData::AchBankDebit {
+            account_number,
+            routing_number,
+            bank_account_holder_name,
+            bank_type,
+            bank_holder_type,
+            ..
+        } => {
+            // Get account holder name with fallback to billing name
+            let account_holder_name = bank_account_holder_name
+                .clone()
+                .or_else(|| router_data.resource_common_data.get_billing_full_name().ok())
+                .ok_or_else(|| ConnectorError::MissingRequiredField {
+                    field_name: "bank_account_holder_name",
+                })?;
+
+            // Map bank_type to account_type
+            let account_type = match bank_type {
+                Some(common_enums::BankType::Savings) => AchAccountType::Savings,
+                _ => AchAccountType::Checking,
+            };
+
+            // Map bank_holder_type to ownership_type
+            let ownership_type = match bank_holder_type {
+                Some(common_enums::BankHolderType::Business) => AchOwnershipType::Business,
+                _ => AchOwnershipType::Personal,
+            };
+
+            Ok(BankPaymentSource {
+                ach_debit: AchDebitRequest {
+                    account_number: account_number.clone(),
+                    routing_number: routing_number.clone(),
+                    account_holder_name,
+                    account_type,
+                    ownership_type,
+                },
+            })
+        }
+        _ => Err(ConnectorError::NotImplemented(
+            "Only ACH Bank Debit is supported for PayPal".to_string(),
+        )
+        .into()),
     }
 }
 
