@@ -28,7 +28,7 @@ impl<S> Payments<S>
 where
     S: PaymentService + Clone + Send + Sync + 'static,
 {
-    async fn call_create_access_token(
+    async fn create_access_token(
         &self,
         connector: &ConnectorEnum,
         payload: &CompositeAuthorizeRequest,
@@ -57,10 +57,10 @@ where
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .and_then(|token| AccessTokenResponseData::foreign_try_from(token).ok());
-        let should_call_create_access_token =
+        let should_create_access_token =
             should_do_access_token && payload_access_token.is_none();
 
-        let access_token_response = match should_call_create_access_token {
+        let access_token_response = match should_create_access_token {
             true => {
                 let access_token_payload =
                     grpc_api_types::payments::PaymentServiceCreateAccessTokenRequest::foreign_from(
@@ -84,7 +84,7 @@ where
         Ok(access_token_response)
     }
 
-    async fn call_create_connector_customer(
+    async fn create_connector_customer(
         &self,
         connector: &ConnectorEnum,
         payload: &CompositeAuthorizeRequest,
@@ -120,7 +120,7 @@ where
         Ok(create_customer_response)
     }
 
-    async fn call_authorize_only(
+    async fn authorize_only(
         &self,
         payload: &CompositeAuthorizeRequest,
         access_token_response: Option<&PaymentServiceCreateAccessTokenResponse>,
@@ -157,13 +157,13 @@ where
         let connector =
             connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
-            .call_create_access_token(&connector, &payload, &metadata, &extensions)
+            .create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
         let create_customer_response = self
-            .call_create_connector_customer(&connector, &payload, &metadata, &extensions)
+            .create_connector_customer(&connector, &payload, &metadata, &extensions)
             .await?;
         let authorize_response = self
-            .call_authorize_only(
+            .authorize_only(
                 &payload,
                 access_token_response.as_ref(),
                 create_customer_response.as_ref(),
