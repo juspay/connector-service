@@ -17,7 +17,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("MainKt")
+    mainClass.set("ExampleKt")
 }
 
 // Add generated UniFFI + protobuf sources

@@ -2,7 +2,7 @@
  * UniFFI FFI example: authorizeReq + full round-trip (Node.js via koffi)
  *
  * Demonstrates two usage patterns:
- *   1. Low-level: call authorizeReq directly to get the connector HTTP request JSON
+ *   1. Low-level: call authorizeReqTransformer directly to get the connector HTTP request JSON
  *   2. High-level: use ConnectorClient for a full round-trip (build -> HTTP -> parse)
  *
  * Uses the same UniFFI shared library as the Python and Kotlin examples.
@@ -16,9 +16,15 @@
 
 "use strict";
 
-const { UniffiClient } = require("./uniffi_client");
-const { ConnectorClient } = require("./connector_client");
-const { ucs } = require("./generated/proto");
+const path = require("path");
+
+// Get the directory containing this script
+const SCRIPT_DIR = __dirname;
+const SDK_ROOT = path.resolve(SCRIPT_DIR, "..");
+
+const { UniffiClient } = require(path.join(SDK_ROOT, "uniffi_client"));
+const { ConnectorClient } = require(path.join(SDK_ROOT, "connector_client"));
+const { ucs } = require(path.join(SDK_ROOT, "generated", "proto"));
 
 const PaymentServiceAuthorizeRequest = ucs.v2.PaymentServiceAuthorizeRequest;
 const Currency = ucs.v2.Currency;
@@ -43,7 +49,7 @@ function buildMetadata() {
 }
 
 function demoLowLevelFfi(requestBytes) {
-  console.log("=== Demo 1: Low-level FFI (authorizeReq) ===\n");
+  console.log("=== Demo 1: Low-level FFI (authorizeReqTransformer) ===\n");
 
   const metadata = buildMetadata();
   const uniffi = new UniffiClient();

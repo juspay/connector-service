@@ -1,8 +1,8 @@
 #[cfg(feature = "uniffi")]
 mod uniffi_bindings_inner {
     use crate::handlers::payments::{authorize_req_handler, authorize_res_handler};
-    use crate::types::{FFIMetadataPayload, FFIRequestData};
-    use crate::utils::ffi_headers_to_masked_metadata;
+    use crate::types::{FfiMetadataPayload, FfiRequestData};
+    use crate::utils::{ffi_headers_to_masked_metadata, FfiError};
     use bytes::Bytes;
     use domain_types::router_response_types::Response;
     use external_services::service::extract_raw_connector_request;
@@ -26,7 +26,13 @@ mod uniffi_bindings_inner {
         NoConnectorRequest,
     }
 
-    /// Build FFIMetadataPayload from the caller's flat HashMap.
+    impl From<FfiError> for UniffiError {
+        fn from(e: FfiError) -> Self {
+            Self::MetadataParseError { msg: e.to_string() }
+        }
+    }
+
+    /// Build FfiMetadataPayload from the caller's flat HashMap.
     ///
     /// Expected keys:
     ///   "connector"           — connector name, e.g. "stripe"
@@ -34,7 +40,7 @@ mod uniffi_bindings_inner {
     ///                           '{"HeaderKey":{"api_key":"sk_test_..."}}'
     fn parse_metadata(
         metadata: &HashMap<String, String>,
-    ) -> Result<FFIMetadataPayload, UniffiError> {
+    ) -> Result<FfiMetadataPayload, UniffiError> {
         let connector_val =
             metadata
                 .get("connector")
@@ -71,7 +77,7 @@ mod uniffi_bindings_inner {
     /// # Returns
     /// JSON string: `{"url":"...","method":"POST","headers":{...},"body":{...}}`
     #[uniffi::export]
-    pub fn authorize_req(
+    pub fn authorize_req_transformer(
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
     ) -> Result<String, UniffiError> {
@@ -79,12 +85,12 @@ mod uniffi_bindings_inner {
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
-        let masked_metadata = ffi_headers_to_masked_metadata(&metadata);
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FFIRequestData {
+        let request = FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
-            masked_metadata,
+            masked_metadata: Some(masked_metadata),
         };
 
         let result = authorize_req_handler(request).map_err(|e| UniffiError::HandlerError {
@@ -103,12 +109,12 @@ mod uniffi_bindings_inner {
     /// - `status_code`: HTTP status code from the connector response
     /// - `response_headers`: HTTP response headers from the connector
     /// - `request_bytes`: the original protobuf-encoded `PaymentServiceAuthorizeRequest`
-    /// - `metadata`: the original metadata map passed to `authorize_req`
+    /// - `metadata`: the original metadata map passed to `authorize_req_transformer`
     ///
     /// # Returns
     /// protobuf-encoded `PaymentServiceAuthorizeResponse` bytes
     #[uniffi::export]
-    pub fn authorize_res(
+    pub fn authorize_res_transformer(
         response_body: Vec<u8>,
         status_code: u16,
         response_headers: HashMap<String, String>,
@@ -139,16 +145,16 @@ mod uniffi_bindings_inner {
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
-        let masked_metadata = ffi_headers_to_masked_metadata(&metadata);
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FFIRequestData {
+        let request = FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
-            masked_metadata,
+            masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response =
-            authorize_res_handler(request, response).unwrap_or_else(|err_response| err_response);
+        let proto_response = authorize_res_handler(request, response)
+            .unwrap_or_else(grpc_api_types::payments::PaymentServiceAuthorizeResponse::from);
 
         Ok(proto_response.encode_to_vec())
     }

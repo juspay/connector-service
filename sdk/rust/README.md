@@ -33,7 +33,7 @@ make setup
 ### Run (low-level demo only)
 
 ```bash
-make run
+make example-run
 ```
 
 This runs Demo 1 which shows the connector HTTP request JSON without making any external calls.
@@ -41,7 +41,7 @@ This runs Demo 1 which shows the connector HTTP request JSON without making any 
 ### Run with Stripe API key (full round-trip)
 
 ```bash
-STRIPE_API_KEY=sk_test_xxx make run
+STRIPE_API_KEY=sk_test_xxx make example-run
 ```
 
 This runs both demos — Demo 1 shows the request, Demo 2 makes the actual HTTP call to Stripe.

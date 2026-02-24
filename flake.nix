@@ -62,6 +62,7 @@
             python3Packages.pip  # pip for installing Python deps
             python3Packages.grpcio  # gRPC support
             python3Packages.grpcio-tools  # protoc compiler for Python
+            python3Packages.requests  # HTTP library for Python SDK
 
             # Java/Gradle runtime and tools
             jdk17             # Java Development Kit (matches protobuf-java 4.x needs)

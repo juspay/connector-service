@@ -1,6 +1,4 @@
 use base64::{engine::general_purpose, Engine as _};
-use common_crate::configs::ConfigPatch;
-use common_crate::{configs, error::ResultExtGrpc};
 use common_utils::{
     config_patch::Patch,
     consts::{
@@ -27,6 +25,8 @@ use hyperswitch_masking;
 use serde_json::Value;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tonic::metadata;
+use ucs_env::configs::ConfigPatch;
+use ucs_env::{configs, error::ResultExtGrpc};
 
 use crate::request::RequestData;
 
@@ -672,7 +672,7 @@ macro_rules! implement_connector_operation {
             let config = request
                 .extensions
                 // .get::<std::sync::Arc<$crate::configs::Config>>()
-                .get::<std::sync::Arc<common_crate::configs::Config>>()
+                .get::<std::sync::Arc<ucs_env::configs::Config>>()
                 .cloned()
                 .ok_or_else(|| tonic::Status::internal("Configuration not found in request extensions"))?;
             let service_name = request

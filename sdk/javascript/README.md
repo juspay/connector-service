@@ -17,10 +17,10 @@ library as the Python and Kotlin examples. Uses `koffi` to call the C ABI —
 make setup
 
 # 2. Run the example (low-level FFI demo only)
-make run
+make example-run
 
 # 3. Run with full round-trip (requires valid Stripe test key)
-STRIPE_API_KEY=sk_test_your_key make run
+STRIPE_API_KEY=sk_test_your_key make example-run
 ```
 
 ## How it works
@@ -43,13 +43,3 @@ generated/libconnector_service_ffi.dylib — same binary as Python/Kotlin use
 
 No code generation needed for JS — `uniffi_client.js` manually implements the
 UniFFI RustBuffer serialization protocol (~180 lines).
-
-## Why koffi instead of NAPI?
-
-| | NAPI (old approach) | koffi (this example) |
-|--|--|--|
-| Rust wrapper | Separate `napi.rs` | Same `uniffi_bindings.rs` as Python/Kotlin |
-| Boundary format | JSON strings | Protobuf bytes (consistent) |
-| Build | `cargo build --features napi` | `cargo build --features uniffi` (shared) |
-| Native compilation | Required (produces .node addon) | Not needed (koffi is pure JS+prebuilt) |
-| Shared library | Different binary per language | **Same binary for all languages** |

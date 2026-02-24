@@ -3,9 +3,9 @@
  *
  * Handles the full round-trip:
  *   1. Serialize protobuf request to bytes
- *   2. Build connector HTTP request via authorizeReq (UniFFI FFI)
+ *   2. Build connector HTTP request via authorizeReqTransformer (UniFFI FFI)
  *   3. Execute the HTTP request via fetch
- *   4. Parse the connector response via authorizeRes (UniFFI FFI)
+ *   4. Parse the connector response via authorizeResTransformer (UniFFI FFI)
  *   5. Deserialize protobuf response from bytes
  *
  * Mirrors the Python client at examples/example-uniffi-py/connector_client.py.

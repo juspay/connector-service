@@ -1,5 +1,4 @@
 use crate::utils::merge_config_with_override;
-use common_crate::configs::Config;
 use http::{Request, Response};
 use std::{
     future::Future,
@@ -9,6 +8,7 @@ use std::{
 };
 use tonic::body::Body;
 use tower::{Layer, Service};
+use ucs_env::configs::Config;
 // Simple middleware layer for Tonic
 #[derive(Clone)]
 pub struct RequestExtensionsLayer {

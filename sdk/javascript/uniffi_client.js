@@ -38,12 +38,12 @@ function loadLib(libPath) {
 
   return {
     authorize_req: lib.func(
-      "uniffi_connector_service_ffi_fn_func_authorize_req",
+      "uniffi_connector_service_ffi_fn_func_authorize_req_transformer",
       RustBuffer,
       [RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
     ),
     authorize_res: lib.func(
-      "uniffi_connector_service_ffi_fn_func_authorize_res",
+      "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
       RustBuffer,
       [RustBuffer, "uint16", RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
     ),

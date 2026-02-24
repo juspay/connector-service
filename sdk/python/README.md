@@ -10,10 +10,10 @@ bypassing gRPC. Uses UniFFI-generated Python bindings.
 make setup
 
 # 2. Run the example (low-level FFI demo only)
-make run
+make example-run
 
 # 3. Run with full round-trip (requires valid Stripe test key)
-STRIPE_API_KEY=sk_test_your_key make run
+STRIPE_API_KEY=sk_test_your_key make example-run
 ```
 
 ## How it works
@@ -34,11 +34,3 @@ STRIPE_API_KEY=sk_test_your_key make run
 3. Execute the HTTP request using `requests`
 4. Call `authorize_res` via FFI to parse the connector response
 5. Deserialize the protobuf response
-
-## Difference from `example-py`
-
-| | `example-py` | `example-uniffi-py` |
-|--|--|--|
-| Transport | gRPC | Direct FFI (in-process) |
-| Serialization | Proto over gRPC | Proto bytes at FFI boundary |
-| Server required | Yes | No |

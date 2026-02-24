@@ -13,11 +13,18 @@ Prerequisites (run `make setup` first):
 import json
 import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, "./generated")
+# Get the directory containing this script
+SCRIPT_DIR = Path(__file__).parent.absolute()
+SDK_ROOT = SCRIPT_DIR.parent
+
+# Add paths relative to this script
+sys.path.insert(0, str(SDK_ROOT / "generated"))
+sys.path.insert(0, str(SDK_ROOT))
 
 # UniFFI-generated Python module
-from connector_service_ffi import authorize_req, UniffiError
+from connector_service_ffi import authorize_req_transformer, UniffiError
 
 # Protobuf-generated stubs
 from payment_pb2 import PaymentServiceAuthorizeRequest, PaymentAddress
@@ -106,7 +113,7 @@ def build_metadata() -> dict:
 
 def demo_low_level_ffi():
     """Demo 1: Low-level FFI — build the connector HTTP request only."""
-    print("=== Demo 1: Low-level FFI (authorize_req) ===\n")
+    print("=== Demo 1: Low-level FFI (authorize_req_transformer) ===\n")
 
     request_msg = build_authorize_request_msg()
     request_bytes = request_msg.SerializeToString()
@@ -116,7 +123,7 @@ def demo_low_level_ffi():
     print(f"Connector: {metadata['connector']}\n")
 
     try:
-        connector_request_json = authorize_req(request_bytes, metadata)
+        connector_request_json = authorize_req_transformer(request_bytes, metadata)
         connector_request = json.loads(connector_request_json)
 
         print("Connector HTTP request generated successfully:")

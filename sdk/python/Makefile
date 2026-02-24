@@ -1,10 +1,16 @@
-.PHONY: build-lib generate-bindings generate-proto install-deps setup run clean
+.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean package package-native dist
 
-# Path to the ffi crate
-FFI_CRATE=../../backend/ffi
-# Proto files
-PROTO_DIR=../../backend/grpc-api-types/proto
-PYTHON_OUT=./generated
+# Auto-detect SDK root directory (works when run from sdk/python/ or repo root)
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+SDK_ROOT := $(MAKEFILE_DIR)
+REPO_ROOT := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
+
+# Paths relative to SDK root
+FFI_CRATE=$(REPO_ROOT)/backend/ffi
+PROTO_DIR=$(REPO_ROOT)/backend/grpc-api-types/proto
+GENERATED_OUT=$(SDK_ROOT)/generated
+ARTIFACTS_DIR=$(REPO_ROOT)/artifacts
+PACKAGE_DIR=$(ARTIFACTS_DIR)/sdk-python
 
 # Detect OS for library extension
 UNAME := $(shell uname)
@@ -23,71 +29,72 @@ build-lib:
 # Generate UniFFI Python bindings and symlink the shared library
 generate-bindings: build-lib
 	@echo "Generating UniFFI Python bindings..."
-	@mkdir -p $(PYTHON_OUT)
+	@mkdir -p $(GENERATED_OUT)
 	$(eval TARGET_DIR := $(shell cd $(FFI_CRATE) && cargo metadata --format-version 1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['target_directory'])"))
 	@cd $(FFI_CRATE) && cargo run --no-default-features --features uniffi-cli \
 		--bin uniffi-bindgen -- \
 		generate \
 		--library $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) \
 		--language python \
-		--out-dir $(CURDIR)/$(PYTHON_OUT)
-	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(PYTHON_OUT)/
-	@echo "UniFFI bindings generated in $(PYTHON_OUT)/"
+		--out-dir $(GENERATED_OUT)
+	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(GENERATED_OUT)/
+	@echo "UniFFI bindings generated in $(GENERATED_OUT)/"
 
-# Generate Python protobuf stubs (same as example-py)
+# Generate Python protobuf stubs
 generate-proto:
 	@echo "Generating Python protobuf stubs..."
-	@mkdir -p $(PYTHON_OUT)
+	@mkdir -p $(GENERATED_OUT)
 	@python3 -m grpc_tools.protoc \
 		-I $(PROTO_DIR) \
-		--python_out=$(PYTHON_OUT) \
-		--mypy_out=$(PYTHON_OUT) \
+		--python_out=$(GENERATED_OUT) \
 		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto
-	@touch $(PYTHON_OUT)/__init__.py
+	@touch $(GENERATED_OUT)/__init__.py
 	@echo "Proto stubs generated."
 
-# Check if Python dependencies are available
-CHECK_GRPCIO := $(shell python3 -c "import grpc" 2>/dev/null && echo "yes" || echo "no")
-CHECK_PROTOC := $(shell python3 -m grpc_tools.protoc --version 2>/dev/null && echo "yes" || echo "no")
-
-# Install Python dependencies (only if not already available, e.g., via nix)
-install-deps:
-	@echo "Checking Python dependencies..."
-ifeq ($(CHECK_GRPCIO),yes)
-	@echo "  ✓ grpcio already available"
-else
-	@echo "  → Installing grpcio..."
-	@pip install grpcio
-endif
-ifeq ($(CHECK_PROTOC),yes)
-	@echo "  ✓ grpcio-tools already available"
-else
-	@echo "  → Installing grpcio-tools..."
-	@pip install grpcio-tools
-endif
-	@echo "Done."
-
 # Full setup: build lib, generate both bindings and proto stubs
-setup: install-deps generate-proto generate-bindings
-	@echo "Setup complete. Run 'make run' to execute."
+setup: generate-proto generate-bindings
+	@if [ -z "$${IN_NIX_SHELL:-}" ] && [ -f $(SDK_ROOT)/requirements.txt ]; then \
+		echo "Installing Python dependencies (non-nix environment)..."; \
+		pip3 install -r $(SDK_ROOT)/requirements.txt --quiet 2>/dev/null || pip3 install -r $(SDK_ROOT)/requirements.txt --user --quiet; \
+	fi
+	@echo "Setup complete. Run 'make example-run' to execute."
 
 # Run the example
-run:
-	@python3 main.py
+example-run: setup
+	@python3 examples/example.py
 
 clean:
-	@rm -rf $(PYTHON_OUT)
+	@rm -rf $(GENERATED_OUT)
 
-# Packaging targets for release workflow
-package: ## Package SDK for distribution
-	@echo "Packaging Python SDK..."
-	@mkdir -p artifacts/python
-	@cp -rf $(PYTHON_OUT) artifacts/python/
-	@cp main.py artifacts/python/example.py 2>/dev/null || true
-	@cp requirements*.txt artifacts/python/ 2>/dev/null || true
-	@echo "Package created in artifacts/python/"
+# Packaging targets for release workflow - PLATFORM SPECIFIC
+package-linux-x86_64: generate-proto
+	@echo "Packaging Python SDK for Linux x86_64..."
+	@mkdir -p $(PACKAGE_DIR)/linux-x86_64/examples
+	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || \
+		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-linux-x86_64" && exit 1)
+	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
+	@cp $(SDK_ROOT)/connector_client.py $(PACKAGE_DIR)/linux-x86_64/
+	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/linux-x86_64/examples/ 2>/dev/null || true
+	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
 
-dist: ## Create distribution archive
-	@$(MAKE) package
-	@cd artifacts && zip -r connector-service-python-sdk.zip python/
-	@echo "Distribution archive: artifacts/connector-service-python-sdk.zip"
+package-macos-aarch64: generate-proto
+	@echo "Packaging Python SDK for macOS aarch64..."
+	@mkdir -p $(PACKAGE_DIR)/macos-aarch64/examples
+	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || \
+		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-macos-aarch64" && exit 1)
+	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
+	@cp $(SDK_ROOT)/connector_client.py $(PACKAGE_DIR)/macos-aarch64/
+	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/macos-aarch64/examples/ 2>/dev/null || true
+	@echo "macOS aarch64 package created: $(PACKAGE_DIR)/macos-aarch64/"
+
+package-native: package-linux-x86_64 package-macos-aarch64
+
+# Create distribution archives for all platforms
+dist: package-native
+	@echo "Creating Python SDK distribution archives..."
+	@cd $(PACKAGE_DIR) && for dir in */; do \
+		if [ -d "$$dir" ]; then \
+			zip -r "connector-service-python-sdk-$${dir%/}.zip" "$$dir"; \
+		fi; \
+	done
+	@echo "Distribution archives created in $(PACKAGE_DIR)/"

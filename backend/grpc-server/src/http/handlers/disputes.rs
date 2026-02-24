@@ -8,7 +8,6 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use common_crate::configs::Config;
 use grpc_api_types::payments::{
     dispute_service_server::DisputeService, AcceptDisputeRequest, AcceptDisputeResponse,
     DisputeDefendRequest, DisputeDefendResponse, DisputeResponse, DisputeServiceGetRequest,
@@ -16,6 +15,7 @@ use grpc_api_types::payments::{
     DisputeServiceTransformRequest, DisputeServiceTransformResponse,
 };
 use std::sync::Arc;
+use ucs_env::configs::Config;
 
 http_handler!(
     submit_evidence,
