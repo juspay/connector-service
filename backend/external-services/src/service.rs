@@ -380,9 +380,57 @@ where
                             //     .as_ref()
                             //     .or(proxy.http_url.as_ref())
                             //     .map(|url| Secret::new(url.clone())),
-                            Some(Secret::new("http://localhost:8082/proxy".to_string())), // For testing with local proxy, replace with actual proxy URLs in production
-                            None,
-                            None,
+                            Some(Secret::new("http://localhost:8080/v2/proxy".to_string())), // For testing with local proxy, replace with actual proxy URLs in production
+//                             Some(Secret::new("-----BEGIN CERTIFICATE-----
+// MIIC5TCCAc2gAwIBAgIJAPl5ej8X4cY1MA0GCSqGSIb3DQEBCwUAMBQxEjAQBgNV
+// BAMMCWxvY2FsaG9zdDAeFw0yNjAyMjIyMTAyMDFaFw0yNjAzMjQyMTAyMDFaMBQx
+// EjAQBgNVBAMMCWxvY2FsaG9zdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoC
+// ggEBAMuM72nfgQNBuAClCCVypOj6N+txKHFkNOK2k35kDomc/NjetoQ8RruzisFA
+// v8ncVN7heQJW3i2EuEMyOniwRteCsNNZEXY7rJtEIlL04s1oWQzbh4ZXCwgrgFnb
+// fEt77BtpAg2jWSGn03ejTtuuyw/SvpjCqJw2QIU1AaTlJOsZRJmFHbWNZOVIDepd
+// 5MfgW7UArNoo0uptMvMkH3hhd5bJgIkTK6ZdK/bVWVAF4dcPTZEsZMCimdaHCMqw
+// RhKTOX7P1kQe0LWsgvz5dbBk1C3wf6/VjciM/1AxkhJF3dMU8JlzFP46SsRZlu6i
+// TCta08u6T8n5Os+j0O+k9o7bwSUCAwEAAaM6MDgwFAYDVR0RBA0wC4IJbG9jYWxo
+// b3N0MAsGA1UdDwQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDATANBgkqhkiG9w0B
+// AQsFAAOCAQEAspht2N+FANzoV+xZr5viJk3/YhDfKPQInokrs+Po8zMzCYD0zAIv
+// iruuEK02TVQrsUvXXxVFeuYwF3MoVfggwzMkB1Awbn0aIyEMhsxP5eUZSZQ6tDYd
+// CnwgQi94mCpA8A8UI0nAtwmjceK5rx6Sf4aW2V9H4HGN7qFhTbAtEgiYWpCWAxHH
+// Wb8olI29jHcXej7qt/HOi5GW+4eUq3ayCjFZCgKdehikutnZQ0pJAMWxDfR2Ifgn
+// zO0rmnw7W4uwaUY2COhwjFye3smT8Og3+c674//TDvO5M5KMvK2xF7mTThBjb9xG
+// 1cNFR6EiNKyRWBX+Amg/wjeF4wwSFdFLYQ==
+// -----END CERTIFICATE-----
+// ".to_string())), // Replace with actual client cert if needed
+//                             Some(Secret::new("-----BEGIN PRIVATE KEY-----
+// MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDLjO9p34EDQbgA
+// pQglcqTo+jfrcShxZDTitpN+ZA6JnPzY3raEPEa7s4rBQL/J3FTe4XkCVt4thLhD
+// Mjp4sEbXgrDTWRF2O6ybRCJS9OLNaFkM24eGVwsIK4BZ23xLe+wbaQINo1khp9N3
+// o07brssP0r6YwqicNkCFNQGk5STrGUSZhR21jWTlSA3qXeTH4Fu1AKzaKNLqbTLz
+// JB94YXeWyYCJEyumXSv21VlQBeHXD02RLGTAopnWhwjKsEYSkzl+z9ZEHtC1rIL8
+// +XWwZNQt8H+v1Y3IjP9QMZISRd3TFPCZcxT+OkrEWZbuokwrWtPLuk/J+TrPo9Dv
+// pPaO28ElAgMBAAECggEBALhOc5XM35dgUUicJeUqinG95xZTjsglcNF7ec+ur48h
+// S7ze5CqWHYHlzxSvGTmhPGPXiud4WpKioumNOG6BRpPq7UthUbNZ0y9/oQi2XgqZ
+// mlBPEsasV/vcz8oNN91tZttm2IoaxyD3Qj4I6+V0vr8kFpphX6SaZw92cHerWCNa
+// TbT4LaeshoRIzyHcuhXmsuyMHum2i+QaQqBaI3BnVwnazT7jbzCORzx8zavE7WQh
+// AuKUI68KPCjA5bzs7Uw9GNVMw3k1UJ9ofnB2/t1k+yGoN814UMYn/ZAzAyFIOqrq
+// l3H+0Q+E9NNL4Ej37ROwtdLcrKSptsI+2gVrwKoE0b0CgYEA+dQs6Tm32v5a4LQB
+// YiBgjq4/vXzVhvE3wqb6i+K0ieW357npu6Juu4uSdR+AgUmYg8k4bdG5duPSjNAp
+// Lu25NNBEl7GYTnNjxT6L1tXME3nmrnyW9Uods0S2d7naJR1vekyiXa8Tv691AJX7
+// S8fbQmPLpxxxFvialkqQC/DCQ4cCgYEA0JQc9R2D6oHj2QvyPQFtL79+dlAjwNsD
+// mYCuwr9x8MnPfOyvLVQt6IgheED9TX9IMS16zsTHsFdRKOmQ+RHrfWilJrlztpbr
+// xQ+Hy/fyIh22ux4uzQdBfvnHIMNwF4TPZ/LxouXhCcRTNKRzBFv3hsuWxnTPI4ir
+// MLZ1rQkXGPMCgYBNVqGQkY2Y/aSkaxUCi4NYqBiTUFHJtGLOn2Jwa334MmT8F1GE
+// BITDCjIMj/P4EhBku6X8WTBQ3bYQYWBeZrku4Epbq1666n24UeR4XTcP0GzZFzik
+// No17MYpLBf3B/5rDAXZCCjDS5j4SMFva2cPGiZ5B3UwlEFDKtcph5+Y7gQKBgAVj
+// XiAi5A6Bzn4D5f0XdVefbcfmqBXKUpx7i4gyY+IhhH+oqZnVK95u7dZqb2C6IgZL
+// M3n18WanysvwxLL6eIfj1Shb8BZObcbIcOye+h1RgS/yRqk7P8Dk+PTqt5GT97uq
+// tf1MTPTwommguevp6EoOJlX4HIXBeRKoFAAlVPhrAoGBANJFwDg4NLEzbQ7MnYDH
+// SXLscCVUr64jLf2r/sEol4WhgWjyn8/p+BRAO8CPsha5JHHZzBvf6TmpYpuUzus9
+// 7NREH4yJ2bs4Qlt1cSpkzoBldushBc5IQaUIzcZxXfQI+LF55dIfNwfii+IV/gS4
+// kavAsIxXbW2mKcg3TVBvQEwQ
+// -----END PRIVATE KEY-----
+// ".to_string())), // Replace with actual client key if needed
+None, 
+None,
                             None,
                         );
 
@@ -393,9 +441,30 @@ where
                             .await
                             .change_context(ConnectorError::RequestEncodingFailed)?;
 
+                        println!("Injectorrr donee: {:?}", injector_response);
+
+                        println!("respppp: {:?}", injector_response.response);
+
                         // Convert injector response to connector service Response format
-                        let response_bytes = serde_json::to_vec(&injector_response.response)
+                        // The injector response.response may be wrapped as {"response": {...}, "response_headers": {...}, "status_code": ...}
+                        // Extract the inner "response" field if present, otherwise use the value as-is
+                        let actual_response = injector_response
+                            .response
+                            .get("response")
+                            .cloned()
+                            .unwrap_or(injector_response.response.clone());
+
+                        let response_bytes = serde_json::to_vec(&actual_response)
                             .map_err(|_| ConnectorError::ResponseHandlingFailed)?;
+
+                        // Extract the actual connector status_code from the wrapper if present,
+                        // otherwise fall back to the injector-level status_code
+                        let actual_status_code = injector_response
+                            .response
+                            .get("status_code")
+                            .and_then(|v| v.as_u64())
+                            .map(|v| v as u16)
+                            .unwrap_or(injector_response.status_code);
 
                         // Convert headers from HashMap<String, String> to reqwest::HeaderMap if present
                         let headers = injector_response.headers.map(|h| {
@@ -414,7 +483,7 @@ where
                         Ok(Ok(Response {
                             headers,
                             response: response_bytes.into(),
-                            status_code: injector_response.status_code, // Use actual status code from connector
+                            status_code: actual_status_code,
                         }))
                     } else {
                         let test_mode = test_context.is_some();

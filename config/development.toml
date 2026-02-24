@@ -5,6 +5,7 @@ environment = "development"
 enabled = true
 level = "TRACE"
 log_format = "default"
+filtering_directive = "WARN,interfaces=TRACE,connector_integration=TRACE,grpc_api_types=TRACE,ucs_cards=TRACE,domain_types=TRACE,log_utils=TRACE,build_info=TRACE,config_patch_derive=TRACE,tracing_kafka=TRACE,external_services=TRACE,tower_http=TRACE,ucs_common_utils=TRACE,grpc_server=TRACE,ucs_common_enums=TRACE,rust_grpc_client=TRACE,grpc_server=TRACE,injector=TRACE"
 
 [log.kafka]
 enabled = false
@@ -21,7 +22,7 @@ type = "grpc"
 
 [metrics]
 host = "0.0.0.0"
-port = 8080
+port = 8082
 
 [proxy]
 idle_pool_connection_timeout = 90
