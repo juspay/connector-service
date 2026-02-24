@@ -133,12 +133,15 @@ pub struct CardData<T: PaymentMethodDataTypes> {
     cvv: Secret<String>,
 }
 
+// ACH Payment Type Constant
+const ACH_PAYMENT_TYPE: &str = "check";
+
 // ACH Bank Debit Data Structure
 #[derive(Debug, Serialize)]
 pub struct AchData {
     /// Payment type - must be "check" for ACH transactions
     #[serde(rename = "payment")]
-    payment_type: String,
+    payment_type: &'static str,
     /// Name on the customer's ACH account
     checkname: Secret<String>,
     /// Customer's bank routing number (exactly 9 digits)
@@ -147,10 +150,10 @@ pub struct AchData {
     checkaccount: Secret<String>,
     /// Type of ACH account holder (business, personal)
     #[serde(skip_serializing_if = "Option::is_none")]
-    account_holder_type: Option<String>,
+    account_holder_type: Option<common_enums::BankHolderType>,
     /// Type of ACH account (checking, savings)
     #[serde(skip_serializing_if = "Option::is_none")]
-    account_type: Option<String>,
+    account_type: Option<common_enums::BankType>,
     /// Standard Entry Class code of the ACH transaction (PPD, WEB, TEL, CCD)
     #[serde(skip_serializing_if = "Option::is_none")]
     sec_code: Option<String>,
@@ -357,16 +360,12 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
                 })?;
 
             let ach_data = AchData {
-                payment_type: "check".to_string(),
+                payment_type: ACH_PAYMENT_TYPE,
                 checkname,
                 checkaba: routing_number.clone(),
                 checkaccount: account_number.clone(),
-                account_holder_type: bank_holder_type
-                    .as_ref()
-                    .map(|t| format!("{:?}", t).to_lowercase()),
-                account_type: bank_type
-                    .as_ref()
-                    .map(|t| format!("{:?}", t).to_lowercase()),
+                account_holder_type: *bank_holder_type,
+                account_type: *bank_type,
                 sec_code: None, // Can be set if needed: PPD, WEB, TEL, CCD
             };
             Ok(ach_data)
