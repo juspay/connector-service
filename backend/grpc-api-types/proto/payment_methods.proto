@@ -610,15 +610,6 @@ message RevolutPayWallet {
 message Bluecode {
 }
 
-// AliPay QR - AliPay QR code payment
-message AliPayQrWallet {
-  // Fields will be added as needed for AliPay QR integration
-}
-
-// AliPay HK Redirect - AliPay Hong Kong redirect payment
-message AliPayHkRedirectWallet {
-  // Fields will be added as needed for AliPay HK redirect integration
-}
 
 // Dana Redirect - Indonesian digital wallet Dana redirect payment
 message DanaRedirectWallet {
