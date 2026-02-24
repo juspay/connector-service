@@ -1288,6 +1288,25 @@ message ConnectorResponseData {
   optional bool is_overcapture_enabled = 3; // Whether overcapture is enabled
 }
 
+// Payment method update information extracted from a connector response or webhook.
+// This is intended to be used by integrators to update stored payment method details
+// (e.g., expiry/last4 updates from network account updater programs).
+message PaymentMethodUpdate {
+  oneof payment_method_update_data {
+    CardDetailUpdate card = 1;
+  }
+}
+
+message CardDetailUpdate {
+  optional string card_exp_month = 1;
+  optional string card_exp_year = 2;
+  optional string last4_digits = 3;
+  optional string issuer_country = 4;
+  optional string card_issuer = 5;
+  optional string card_network = 6;
+  optional string card_holder_name = 7;
+}
+
 // ============================================================================
 // SESSION TOKEN MESSAGES
 // ============================================================================
@@ -1908,6 +1927,9 @@ message PaymentServiceGetResponse {
 
   // Capability Flags
   optional bool incremental_authorization_allowed = 36; // Whether incremental auth is allowed
+
+  // Payment method updates
+  optional PaymentMethodUpdate payment_method_update = 37; // Updated payment method details, if present
 }
 
 // Request message for voiding a payment.
@@ -2967,6 +2989,15 @@ message PaymentServiceTransformResponse {
 
   // Transformation Status
   WebhookTransformationStatus transformation_status = 5; // Status of the webhook transformation
+
+  // Webhook acknowledgement response
+  optional WebhookApiResponse webhook_api_response = 6; // Suggested HTTP response to send back to the connector
+}
+
+message WebhookApiResponse {
+  uint32 status_code = 1;
+  map<string, string> headers = 2;
+  bytes body = 3;
 }
 
 // Request message for VerifyRedirectResponse
