@@ -3381,6 +3381,9 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // Environment Configuration
   optional bool test_mode = 15; // A boolean value to indicate if the connector is in Test mode  
+
+  // Connector Customer Information
+  optional string connector_customer_id = 16; // Customer ID as recognized by the connector
 }
 
 // Response message for creating a payment method token.
