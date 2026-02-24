@@ -14,7 +14,9 @@ use domain_types::{
         ResponseId,
     },
     errors,
-    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -1010,12 +1012,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
                 account_number,
                 routing_number,
+                card_holder_name,
+                bank_account_holder_name,
                 bank_name,
                 bank_type,
                 bank_holder_type,
-                ..
             }) => {
-                // Get account holder name from billing address (following Hyperswitch pattern)
+                // Get account holder name
                 let person_name = item
                     .router_data
                     .resource_common_data
@@ -1023,26 +1026,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_payment_method_billing()
                     .and_then(|billing| {
                         let first = billing.get_optional_first_name()?;
-                        let last = billing.get_optional_last_name()?;
-                        Some(Secret::new(format!("{} {}", first.peek(), last.peek())))
+                        let last = billing.get_optional_last_name();
+                        match last {
+                            Some(last) => Some(Secret::new(format!("{} {}", first.peek(), last.peek()))),
+                            None => Some(first),
+                        }
                     })
+                    .or_else(|| bank_account_holder_name.clone())
+                    .or_else(|| card_holder_name.clone())
                     .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "billing.first_name and last_name (required by Stax for bank tokenization)",
+                        field_name: "billing.first_name or bank_account_holder_name (required by Stax for bank tokenization)",
                     })?;
 
                 // bank_name is already None if Unspecified was sent in gRPC request
                 let bank_type = bank_type.ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "bank_type",
                 })?;
-                let bank_holder_type = bank_holder_type.ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "bank_holder_type",
-                })?;
+                let bank_holder_type =
+                    bank_holder_type.ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "bank_holder_type",
+                    })?;
 
                 Ok(Self::Bank(StaxBankTokenizeData {
                     person_name,
                     bank_account: account_number.clone(),
                     bank_routing: routing_number.clone(),
-                    bank_name: bank_name.clone(),
+                    bank_name: *bank_name,
                     bank_type,
                     bank_holder_type,
                     customer_id: Secret::new(customer_id),
