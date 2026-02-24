@@ -656,6 +656,32 @@ pub struct AchDebitRequest {
     pub account_holder_name: Secret<String>,
     pub account_type: AchAccountType,
     pub ownership_type: AchOwnershipType,
+    pub billing_address: AchBillingAddress,
+    pub attributes: AchAttributes,
+}
+
+// ACH Billing Address Structure
+#[derive(Debug, Serialize)]
+pub struct AchBillingAddress {
+    pub country_code: common_enums::CountryAlpha2,
+    pub postal_code: Secret<String>,
+}
+
+// ACH Attributes with Verification
+#[derive(Debug, Serialize)]
+pub struct AchAttributes {
+    pub verification: AchVerification,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AchVerification {
+    pub method: AchVerificationMethod,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum AchVerificationMethod {
+    Microdeposits,
 }
 
 #[derive(Debug, Serialize)]
@@ -1138,10 +1164,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             PaymentMethodData::PayLater(ref paylater_data) => Self::try_from(paylater_data),
             PaymentMethodData::BankDebit(ref bank_debit_data) => {
-                let bank_payment_source = create_ach_debit_request(
-                    bank_debit_data,
-                    &item.router_data,
-                )?;
+                let bank_payment_source =
+                    create_ach_debit_request(bank_debit_data, &item.router_data)?;
 
                 // ACH requires CAPTURE intent per PayPal API
                 let bank_debit_intent = if item.router_data.request.is_auto_capture()? {
@@ -1267,7 +1291,12 @@ fn create_ach_debit_request<T: PaymentMethodDataTypes>(
             // Get account holder name with fallback to billing name
             let account_holder_name = bank_account_holder_name
                 .clone()
-                .or_else(|| router_data.resource_common_data.get_billing_full_name().ok())
+                .or_else(|| {
+                    router_data
+                        .resource_common_data
+                        .get_billing_full_name()
+                        .ok()
+                })
                 .ok_or_else(|| ConnectorError::MissingRequiredField {
                     field_name: "bank_account_holder_name",
                 })?;
@@ -1284,6 +1313,9 @@ fn create_ach_debit_request<T: PaymentMethodDataTypes>(
                 _ => AchOwnershipType::Personal,
             };
 
+            // Extract billing address for ACH (country and postal code are required)
+            let billing_address = get_ach_billing_address(router_data)?;
+
             Ok(BankPaymentSource {
                 ach_debit: AchDebitRequest {
                     account_number: account_number.clone(),
@@ -1291,6 +1323,12 @@ fn create_ach_debit_request<T: PaymentMethodDataTypes>(
                     account_holder_name,
                     account_type,
                     ownership_type,
+                    billing_address,
+                    attributes: AchAttributes {
+                        verification: AchVerification {
+                            method: AchVerificationMethod::Microdeposits,
+                        },
+                    },
                 },
             })
         }
@@ -1299,6 +1337,40 @@ fn create_ach_debit_request<T: PaymentMethodDataTypes>(
         )
         .into()),
     }
+}
+
+/// Extract billing address for ACH (country and postal code are required)
+fn get_ach_billing_address<T: PaymentMethodDataTypes>(
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<AchBillingAddress, error_stack::Report<ConnectorError>> {
+    // Try to get billing address from router data
+    let optional_billing = router_data
+        .resource_common_data
+        .get_optional_payment_billing();
+
+    let country_code = optional_billing
+        .and_then(|billing| billing.address.as_ref())
+        .and_then(|address| address.country)
+        .ok_or_else(|| ConnectorError::MissingRequiredField {
+            field_name: "billing_address.country",
+        })?;
+
+    let postal_code = optional_billing
+        .and_then(|billing| billing.address.as_ref())
+        .and_then(|address| address.zip.clone())
+        .ok_or_else(|| ConnectorError::MissingRequiredField {
+            field_name: "billing_address.postal_code",
+        })?;
+
+    Ok(AchBillingAddress {
+        country_code,
+        postal_code,
+    })
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
