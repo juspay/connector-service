@@ -14,7 +14,7 @@ use domain_types::{
         ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -268,7 +268,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let payment_method_id = match item.router_data.request.payment_method_data {
-            PaymentMethodData::Card(_) => {
+            PaymentMethodData::Card(_) | PaymentMethodData::BankDebit(_) => {
                 if let Ok(pm_token) = item
                     .router_data
                     .resource_common_data
@@ -304,7 +304,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             _ => {
                 return Err(errors::ConnectorError::NotImplemented(
-                    "Only card payments are supported for Stax".to_string(),
+                    "Only card and ACH bank debit payments are supported for Stax".to_string(),
                 ))?;
             }
         };
@@ -886,6 +886,22 @@ pub struct StaxCardTokenizeData<T: PaymentMethodDataTypes> {
     pub customer_id: Secret<String>, // From CreateConnectorCustomer
 }
 
+/// Bank tokenization request data for ACH (BankDebit)
+///
+/// # Security
+/// All sensitive fields are masked with Secret<> as appropriate
+#[derive(Debug, Serialize)]
+pub struct StaxBankTokenizeData {
+    pub person_name: Secret<String>,
+    pub bank_account: Secret<String>,
+    pub bank_routing: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bank_name: Option<common_enums::BankNames>,
+    pub bank_type: common_enums::BankType,
+    pub bank_holder_type: common_enums::BankHolderType,
+    pub customer_id: Secret<String>,
+}
+
 /// Tagged enum for different payment method types
 ///
 /// Stax API uses a `method` field to distinguish between card and bank tokenization
@@ -894,7 +910,7 @@ pub struct StaxCardTokenizeData<T: PaymentMethodDataTypes> {
 #[serde(rename_all = "lowercase")]
 pub enum StaxTokenRequest<T: PaymentMethodDataTypes> {
     Card(StaxCardTokenizeData<T>),
-    // Note: Bank tokenization not yet implemented
+    Bank(StaxBankTokenizeData),
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -991,9 +1007,69 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     customer_id: Secret::new(customer_id),
                 }))
             }
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Only card tokenization is supported for Stax".to_string(),
-            ))?,
+            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_name,
+                bank_type,
+                bank_holder_type,
+                ..
+            }) => {
+                // Get account holder name from billing address (following Hyperswitch pattern)
+                let person_name = item
+                    .router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_method_billing()
+                    .and_then(|billing| {
+                        let first = billing.get_optional_first_name()?;
+                        let last = billing.get_optional_last_name()?;
+                        Some(Secret::new(format!("{} {}", first.peek(), last.peek())))
+                    })
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing.first_name and last_name (required by Stax for bank tokenization)",
+                    })?;
+
+                // bank_name is already None if Unspecified was sent in gRPC request
+                let bank_type = bank_type.ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "bank_type",
+                })?;
+                let bank_holder_type = bank_holder_type.ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "bank_holder_type",
+                })?;
+
+                Ok(Self::Bank(StaxBankTokenizeData {
+                    person_name,
+                    bank_account: account_number.clone(),
+                    bank_routing: routing_number.clone(),
+                    bank_name: bank_name.clone(),
+                    bank_type,
+                    bank_holder_type,
+                    customer_id: Secret::new(customer_id),
+                }))
+            }
+            PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::MobilePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    "Only card and ACH bank debit tokenization are supported for Stax".to_string(),
+                ))?
+            }
         }
     }
 }
