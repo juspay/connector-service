@@ -1502,7 +1502,12 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::IndonesianBankTransfer(indonesian_bank_transfer) => {
                     Ok(Self::BankTransfer(Box::new(
                         payment_method_data::BankTransferData::IndonesianBankTransfer {
-                            bank_name: Some(common_enums::BankNames::foreign_try_from(indonesian_bank_transfer.bank_name())?),
+                            bank_name: match indonesian_bank_transfer.bank_name() {
+                                grpc_payment_types::BankNames::Unspecified => None,
+                                _ => Some(common_enums::BankNames::foreign_try_from(
+                                    indonesian_bank_transfer.bank_name(),
+                                )?),
+                            },
                         },
                     )))
                 }

@@ -1222,7 +1222,7 @@ impl TryFrom<&payment_method_data::BankDebitData> for StripePaymentMethodType {
 
 fn get_bank_debit_data(
     bank_debit_data: &payment_method_data::BankDebitData,
-) -> (Option<StripePaymentMethodType>, Option<BankDebitData>) {
+) -> Result<(Option<StripePaymentMethodType>, Option<BankDebitData>), ConnectorError> {
     match bank_debit_data {
         payment_method_data::BankDebitData::AchBankDebit {
             account_number,
@@ -1234,13 +1234,13 @@ fn get_bank_debit_data(
                 account_number: account_number.to_owned(),
                 routing_number: routing_number.to_owned(),
             };
-            (Some(StripePaymentMethodType::Ach), Some(ach_data))
+            Ok((Some(StripePaymentMethodType::Ach), Some(ach_data)))
         }
         payment_method_data::BankDebitData::SepaBankDebit { iban, .. } => {
             let sepa_data: BankDebitData = BankDebitData::Sepa {
                 iban: iban.to_owned(),
             };
-            (Some(StripePaymentMethodType::Sepa), Some(sepa_data))
+            Ok((Some(StripePaymentMethodType::Sepa), Some(sepa_data)))
         }
         payment_method_data::BankDebitData::BecsBankDebit {
             account_number,
@@ -1251,7 +1251,7 @@ fn get_bank_debit_data(
                 account_number: account_number.to_owned(),
                 bsb_number: bsb_number.to_owned(),
             };
-            (Some(StripePaymentMethodType::Becs), Some(becs_data))
+            Ok((Some(StripePaymentMethodType::Becs), Some(becs_data)))
         }
         payment_method_data::BankDebitData::BacsBankDebit {
             account_number,
@@ -1262,9 +1262,13 @@ fn get_bank_debit_data(
                 account_number: account_number.to_owned(),
                 sort_code: Secret::new(sort_code.clone().expose().replace('-', "")),
             };
-            (Some(StripePaymentMethodType::Bacs), Some(bacs_data))
+            Ok((Some(StripePaymentMethodType::Bacs), Some(bacs_data)))
         }
-        payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => (None, None),
+        payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
+            Err(ConnectorError::NotImplemented(
+                get_unimplemented_payment_method_error_message("stripe"),
+            ))
+        }
     }
 }
 
@@ -1348,7 +1352,7 @@ fn create_stripe_payment_method<
             ))
         }
         PaymentMethodData::BankDebit(bank_debit_data) => {
-            let (pm_type, bank_debit_data) = get_bank_debit_data(bank_debit_data);
+            let (pm_type, bank_debit_data) = get_bank_debit_data(bank_debit_data)?;
 
             let pm_data = StripePaymentMethodData::BankDebit(StripeBankDebitData {
                 bank_specific_data: bank_debit_data,
@@ -4486,7 +4490,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
             PaymentMethodData::Wallet(ref wallet_data) => Ok(Self::try_from((wallet_data, None))?),
             PaymentMethodData::BankDebit(bank_debit_data) => {
-                let (_pm_type, bank_data) = get_bank_debit_data(bank_debit_data);
+                let (_pm_type, bank_data) = get_bank_debit_data(bank_debit_data)?;
 
                 Ok(Self::BankDebit(StripeBankDebitData {
                     bank_specific_data: bank_data,
