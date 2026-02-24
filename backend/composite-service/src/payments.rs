@@ -57,8 +57,7 @@ where
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .and_then(|token| AccessTokenResponseData::foreign_try_from(token).ok());
-        let should_create_access_token =
-            should_do_access_token && payload_access_token.is_none();
+        let should_create_access_token = should_do_access_token && payload_access_token.is_none();
 
         let access_token_response = match should_create_access_token {
             true => {
