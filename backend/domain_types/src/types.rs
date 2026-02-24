@@ -1206,12 +1206,7 @@ impl<
                             .and_then(|network| CardNetwork::foreign_try_from(network).ok()),
                         card_type: proxy_network_token_data.card_type,
                         card_issuing_country: proxy_network_token_data
-                            .card_issuing_country
-                            .and_then(|country_i32| grpc_payment_types::CountryAlpha2::try_from(country_i32).ok())
-                            .and_then(|country| match country {
-                                grpc_payment_types::CountryAlpha2::Unspecified => None,
-                                _ => CountryAlpha2::foreign_try_from(country).ok(),
-                            }),
+                            .card_issuing_country,
                         card_holder_name: proxy_network_token_data.card_holder_name,
                         nick_name: proxy_network_token_data.nick_name,
                     }))

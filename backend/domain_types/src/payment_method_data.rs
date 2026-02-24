@@ -315,7 +315,7 @@ pub struct ProxyNetworkTokenData {
     pub card_issuer: Option<String>,
     pub card_network: Option<common_enums::CardNetwork>,
     pub card_type: Option<String>,
-    pub card_issuing_country: Option<common_enums::CountryAlpha2>,
+    pub card_issuing_country: Option<String>,
     pub card_holder_name: Option<Secret<String>>,
     pub nick_name: Option<Secret<String>>,
 }
