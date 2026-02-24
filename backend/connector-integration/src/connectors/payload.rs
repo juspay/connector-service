@@ -760,7 +760,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-        _base_url: Option<&str>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let algorithm = common_utils::crypto::Sha256;
 

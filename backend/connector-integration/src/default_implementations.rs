@@ -16,7 +16,6 @@ use domain_types::{
 };
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;
 use interfaces::connector_types::VerifyWebhookSourceV2;
-use interfaces::verification::SourceVerification;
 
 /// Macro to generate empty implementations of VerifyWebhookSourceV2 for connectors
 /// that don't need external webhook verification.
@@ -43,15 +42,6 @@ macro_rules! default_impl_verify_webhook_source_v2 {
             {
             }
 
-            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
-                SourceVerification<
-                    VerifyWebhookSource,
-                    VerifyWebhookSourceFlowData,
-                    VerifyWebhookSourceRequestData,
-                    VerifyWebhookSourceResponseData,
-                > for $connector<T>
-            {
-            }
         )*
     };
 }
@@ -129,5 +119,7 @@ default_impl_verify_webhook_source_v2!(
     Worldpay,
     Worldpayvantiv,
     Worldpayxml,
-    Xendit // Note: PayPal is NOT listed here because it has its own implementation in paypal.rs
+    Xendit,
+    Zift
 );
+// PayPal has its own implementation in paypal.rs

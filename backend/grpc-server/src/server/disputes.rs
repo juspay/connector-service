@@ -462,17 +462,12 @@ impl DisputeService for Disputes {
                         .transpose()?;
                     // Get connector data
                     let connector_data = ConnectorData::get_connector_by_name(&connector);
-                    // Get base_url for the connector (needed for connectors like PayPal that make API calls for verification)
-                    let base_url = connector_data
-                        .connector
-                        .base_url(&config.connectors);
                     let source_verified = connector_data
                         .connector
                         .verify_webhook_source(
                             request_details.clone(),
                             webhook_secrets.clone(),
                             Some(connector_auth_details.clone()),
-                            Some(base_url),
                         )
                         .await
                         .switch()

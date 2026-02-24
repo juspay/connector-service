@@ -12,7 +12,9 @@ use common_utils::{
     CustomResult, Method,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource},
+    connector_flow::{
+        Authorize, Capture, PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
+    },
     connector_types::{
         AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
@@ -3180,6 +3182,8 @@ impl TryFrom<ResponseRouterData<PaypalSourceVerificationResponse, Self>>
             ..item.router_data
         })
     }
+}
+
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PaypalOrderErrorResponse {
     pub name: Option<String>,
