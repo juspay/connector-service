@@ -61,8 +61,7 @@ message PaymentMethod {
     RevolutPayWallet revolut_pay = 20;                  // Revolut Pay
     MifinityWallet mifinity = 21;                       // Mifinity
     Bluecode bluecode = 22;                             // Bluecode
-    AliPayQrWallet ali_pay_qr = 23;                     // AliPay QR
-    AliPayHkRedirectWallet ali_pay_hk_redirect = 24;    // AliPay HK Redirect
+    AliPayHKWallet ali_pay_hk = 24;                     // AliPay HK Redirect
     DanaRedirectWallet dana_redirect = 25;              // Dana Redirect
     GcashRedirectWallet gcash_redirect = 26;            // GCash Redirect
     GoPayRedirectWallet go_pay_redirect = 27;           // GoPay Redirect
