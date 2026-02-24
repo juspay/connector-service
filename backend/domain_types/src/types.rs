@@ -4321,6 +4321,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::BankTransfer),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::AchBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Ideal(_)),
             } => Ok(Self::BankRedirect),
             grpc_api_types::payments::PaymentMethod {
