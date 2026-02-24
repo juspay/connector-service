@@ -8,6 +8,7 @@ use common_utils::{
     },
     errors::{ParsingError, ReportSwitchExt},
     ext_traits::ValueExt,
+    pii::SecretSerdeValue,
     types::MinorUnit,
     CustomResult,
 };
@@ -479,4 +480,33 @@ fn collect_values_by_removing_signature(value: &Value, signature: &str) -> Vec<S
             .flat_map(|v| collect_values_by_removing_signature(v, signature))
             .collect(),
     }
+}
+
+fn get_masked_string_from_json_object(value: &Value) -> String {
+    match value {
+        Value::Object(map) => {
+            let masked: serde_json::Map<String, Value> = map
+                .keys()
+                .map(|k| (k.clone(), Value::String("***".to_string())))
+                .collect();
+
+            Value::Object(masked).to_string()
+        }
+        _ => "<invalid-json-object>".to_string(),
+    }
+}
+
+pub fn parse_external_auth_value<T>(
+    value: &SecretSerdeValue,
+) -> CustomResult<T, errors::ConnectorError>
+where
+    T: serde::de::DeserializeOwned,
+{
+    serde_json::from_value::<T>(value.peek().clone()).map_err(|_| {
+        let masked_json_string = get_masked_string_from_json_object(value.peek());
+
+        error_stack::report!(errors::ConnectorError::FailedToObtainAuthType).attach_printable(
+            format!("Invalid external auth payload: {}", masked_json_string),
+        )
+    })
 }

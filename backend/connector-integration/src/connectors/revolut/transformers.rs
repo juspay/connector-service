@@ -13,10 +13,10 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 
-use crate::types::ResponseRouterData;
+use crate::{types::ResponseRouterData, utils::parse_external_auth_value};
 use common_enums::AttemptStatus;
 use common_utils::{custom_serde, types::MinorUnit};
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use time::PrimitiveDateTime;
@@ -462,8 +462,8 @@ impl TryFrom<&ConnectorAuthType> for RevolutAuthType {
                 your_secret_api_key: api_key.to_owned(),
             }),
             ConnectorAuthType::ExternalAuth { value } => {
-                let auth_type: Self = serde_json::from_value::<Self>(value.peek().clone())
-                    .map_err(|_| ConnectorError::FailedToObtainAuthType)?;
+                let auth_type: Self = parse_external_auth_value(value)?;
+
                 Ok(Self {
                     your_secret_api_key: auth_type.your_secret_api_key,
                 })
@@ -479,8 +479,8 @@ impl TryFrom<&ConnectorAuthType> for RevolutIncomingWebhookAuthType {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::ExternalAuth { value } => {
-                let auth_type: Self = serde_json::from_value::<Self>(value.peek().clone())
-                    .map_err(|_| ConnectorError::FailedToObtainAuthType)?;
+                let auth_type: Self = parse_external_auth_value(value)?;
+
                 Ok(Self {
                     signing_secret: auth_type.signing_secret,
                 })
