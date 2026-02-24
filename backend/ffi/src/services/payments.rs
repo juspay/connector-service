@@ -1,6 +1,7 @@
 use external_services;
 use grpc_api_types::payments::{PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse};
-use ucs_env::error::PaymentAuthorizationError;
+
+use crate::errors::{FfiError, FfiPaymentError};
 
 use domain_types::{
     connector_flow::Authorize,
@@ -28,7 +29,7 @@ pub fn authorize_req_transformer<
     connector: domain_types::connector_types::ConnectorEnum,
     connector_auth_details: domain_types::router_data::ConnectorAuthType,
     metadata: &common_utils::metadata::MaskedMetadata,
-) -> Result<Option<common_utils::request::Request>, PaymentAuthorizationError> {
+) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
     // connector integration trait
     let connector_data: connector_integration::types::ConnectorData<T> =
         connector_integration::types::ConnectorData::get_connector_by_name(&connector);
@@ -44,26 +45,16 @@ pub fn authorize_req_transformer<
     // Create PaymentFlowData from the payload
     let payment_flow_data =
         PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone(), metadata))
-            .map_err(|err| {
-            tracing::error!(error = ?err, "Failed to create PaymentFlowData");
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Failure,
-                Some(err.to_string()),
-                Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
-                None,
-            )
+            .map_err(|err| FfiError::IntegrationError {
+            message: err.to_string(),
         })?;
 
     // Create flow-specific request data
     let payment_request_data: PaymentsAuthorizeData<T> =
         PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(|err| {
-            tracing::error!(error = ?err, "Failed to create payment request data");
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Failure,
-                Some(err.to_string()),
-                Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
-                None,
-            )
+            FfiError::IntegrationError {
+                message: err.to_string(),
+            }
         })?;
 
     // Construct RouterDataV2 directly
@@ -78,13 +69,8 @@ pub fn authorize_req_transformer<
     // transform common request type to connector specific request type
     let connector_request = connector_integration
         .build_request_v2(&router_data.clone())
-        .map_err(|err| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Failure,
-                Some(err.to_string()),
-                Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
-                None,
-            )
+        .map_err(|err| FfiError::IntegrationError {
+            message: err.to_string(),
         })?;
     Ok(connector_request)
 }
@@ -108,7 +94,7 @@ pub fn authorize_res_transformer<
     connector_auth_details: domain_types::router_data::ConnectorAuthType,
     metadata: &common_utils::metadata::MaskedMetadata,
     response: domain_types::router_response_types::Response,
-) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
+) -> Result<PaymentServiceAuthorizeResponse, FfiPaymentError> {
     // connector integration trait
     let connector_data: connector_integration::types::ConnectorData<T> =
         connector_integration::types::ConnectorData::get_connector_by_name(&connector);
@@ -120,28 +106,19 @@ pub fn authorize_res_transformer<
         domain_types::connector_types::PaymentsResponseData,
     > = connector_data.connector.get_connector_integration_v2();
 
+    // Create PaymentFlowData from the payload
     let payment_flow_data =
         PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone(), metadata))
-            .map_err(|err| {
-            tracing::error!("Failed to process payment flow data: {:?}", err);
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Failure,
-                Some("Failed to process payment flow data".to_string()),
-                Some("PAYMENT_FLOW_ERROR".to_string()),
-                None,
-            )
+            .map_err(|err| FfiError::IntegrationError {
+            message: err.to_string(),
         })?;
 
     // Create flow-specific request data
     let payment_request_data: PaymentsAuthorizeData<T> =
         PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(|err| {
-            tracing::error!(error = ?err, "Failed to create payment request data");
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Failure,
-                Some(err.to_string()),
-                Some("PAYMENT_AUTHORIZE_ERROR".to_string()),
-                None,
-            )
+            FfiError::IntegrationError {
+                message: err.to_string(),
+            }
         })?;
 
     // construct router data
@@ -166,8 +143,8 @@ pub fn authorize_res_transformer<
     )
     .map_err(
         |e: error_stack::Report<domain_types::errors::ConnectorError>| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Failure,
+            FfiPaymentError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
                 Some(e.to_string()),
                 None,
                 Some(500),
@@ -176,8 +153,8 @@ pub fn authorize_res_transformer<
     )?;
 
     domain_types::types::generate_payment_authorize_response(response).map_err(|e| {
-        PaymentAuthorizationError::new(
-            grpc_api_types::payments::PaymentStatus::Failure,
+        FfiPaymentError::new(
+            grpc_api_types::payments::PaymentStatus::Pending,
             Some(e.to_string()),
             None,
             Some(500),

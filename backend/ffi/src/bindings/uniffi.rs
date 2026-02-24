@@ -1,8 +1,9 @@
 #[cfg(feature = "uniffi")]
 mod uniffi_bindings_inner {
+    use crate::errors::{FfiPaymentError, UniffiError};
     use crate::handlers::payments::{authorize_req_handler, authorize_res_handler};
     use crate::types::{FfiMetadataPayload, FfiRequestData};
-    use crate::utils::{ffi_headers_to_masked_metadata, FfiError};
+    use crate::utils::ffi_headers_to_masked_metadata;
     use bytes::Bytes;
     use domain_types::router_response_types::Response;
     use external_services::service::extract_raw_connector_request;
@@ -10,27 +11,6 @@ mod uniffi_bindings_inner {
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
     use std::collections::HashMap;
-
-    /// Error type exposed over the UniFFI boundary.
-    #[derive(Debug, thiserror::Error, uniffi::Error)]
-    pub enum UniffiError {
-        #[error("Failed to decode protobuf request: {msg}")]
-        DecodeError { msg: String },
-        #[error("Missing metadata key: {key}")]
-        MissingMetadata { key: String },
-        #[error("Failed to parse metadata: {msg}")]
-        MetadataParseError { msg: String },
-        #[error("Handler error: {msg}")]
-        HandlerError { msg: String },
-        #[error("No connector request generated")]
-        NoConnectorRequest,
-    }
-
-    impl From<FfiError> for UniffiError {
-        fn from(e: FfiError) -> Self {
-            Self::MetadataParseError { msg: e.to_string() }
-        }
-    }
 
     /// Build FfiMetadataPayload from the caller's flat HashMap.
     ///
@@ -153,8 +133,8 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response = authorize_res_handler(request, response)
-            .unwrap_or_else(grpc_api_types::payments::PaymentServiceAuthorizeResponse::from);
+        let proto_response =
+            authorize_res_handler(request, response).map_err(FfiPaymentError::from)?;
 
         Ok(proto_response.encode_to_vec())
     }

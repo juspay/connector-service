@@ -1,18 +1,10 @@
+use crate::errors::FfiError;
 use common_utils::consts;
 use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tonic::metadata::{Ascii, MetadataMap, MetadataValue};
-use ucs_env::{configs::Config, error::PaymentAuthorizationError};
-
-/// Errors arising from FFI utility operations (header parsing, metadata building).
-#[derive(Debug, thiserror::Error)]
-pub enum FfiError {
-    #[error("Missing required header: {key}")]
-    MissingRequiredHeader { key: String },
-    #[error("Invalid header value for '{key}': {reason}")]
-    InvalidHeaderValue { key: String, reason: String },
-}
+use ucs_env::configs::Config;
 
 /// Converts FFI headers (HashMap) to gRPC metadata with masking support.
 /// Returns an error if any required header is absent or contains an invalid value.
@@ -79,13 +71,10 @@ fn convert_to_metadata_value(key: &str, value: &str) -> Result<MetadataValue<Asc
 
 /// Load development config from the embedded config string.
 /// This avoids runtime path lookup by embedding the config at build time.
-pub fn load_config(embedded_config: &str) -> Result<Arc<Config>, PaymentAuthorizationError> {
-    toml::from_str(embedded_config).map(Arc::new).map_err(|e| {
-        PaymentAuthorizationError::new(
-            grpc_api_types::payments::PaymentStatus::Failure,
-            Some(e.to_string()),
-            Some("CONFIG_PARSE_ERROR".to_string()),
-            None,
-        )
-    })
+pub fn load_config(embedded_config: &str) -> Result<Arc<Config>, FfiError> {
+    toml::from_str(embedded_config)
+        .map(Arc::new)
+        .map_err(|e| FfiError::ConfigError {
+            message: e.to_string(),
+        })
 }
