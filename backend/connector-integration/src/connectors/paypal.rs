@@ -417,9 +417,7 @@ fn get_paypal_event_type(
     }
 }
 
-fn get_paypal_payment_webhook_status(
-    event: paypal::PaypalWebhookEventType,
-) -> AttemptStatus {
+fn get_paypal_payment_webhook_status(event: paypal::PaypalWebhookEventType) -> AttemptStatus {
     match event {
         paypal::PaypalWebhookEventType::PaymentCaptureCompleted
         | paypal::PaypalWebhookEventType::CheckoutOrderCompleted => AttemptStatus::Charged,
