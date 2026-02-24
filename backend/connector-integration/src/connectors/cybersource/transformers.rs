@@ -2662,7 +2662,23 @@ pub struct ClientRiskInformationRules {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CybersourceTokenCustomer {
+    pub id: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CybersourceTokenInstrumentIdentifier {
+    pub id: String,
+    pub state: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CybersourceTokenInformation {
+    pub instrumentidentifier_new: Option<bool>,
+    pub customer: Option<CybersourceTokenCustomer>,
+    pub instrument_identifier: Option<CybersourceTokenInstrumentIdentifier>,
     payment_instrument: Option<CybersoucrePaymentInstrument>,
 }
 
@@ -2719,11 +2735,16 @@ fn get_payment_response(
                         connector_mandate_request_reference_id: None,
                     });
 
+            let connector_metadata = info_response
+                .token_information
+                .clone()
+                .and_then(|token_info| serde_json::to_value(token_info).ok());
+
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(info_response.id.clone()),
                 redirection_data: None,
                 mandate_reference: mandate_reference.map(Box::new),
-                connector_metadata: None,
+                connector_metadata,
                 network_txn_id: info_response.processor_information.as_ref().and_then(
                     |processor_information| processor_information.network_transaction_id.clone(),
                 ),
