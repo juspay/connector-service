@@ -181,9 +181,9 @@ pub struct RedsysOperationRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Messages {
+    pub version: RedsysVersionData,
     pub signature: String,
     pub signature_version: String,
-    pub version: RedsysVersionData,
 }
 
 /// Version wrapper for SOAP sync request
@@ -218,10 +218,10 @@ pub enum MessageContent {
 pub struct RedsysTransactionRequest {
     #[serde(rename = "Ds_MerchantCode")]
     pub ds_merchant_code: Secret<String>,
-    #[serde(rename = "Ds_Order")]
-    pub ds_order: String,
     #[serde(rename = "Ds_Terminal")]
     pub ds_terminal: Secret<String>,
+    #[serde(rename = "Ds_Order")]
+    pub ds_order: String,
     #[serde(rename = "Ds_TransactionType")]
     pub ds_transaction_type: String,
 }
@@ -231,10 +231,10 @@ pub struct RedsysTransactionRequest {
 pub struct RedsysMonitorRequest {
     #[serde(rename = "Ds_MerchantCode")]
     pub ds_merchant_code: Secret<String>,
-    #[serde(rename = "Ds_Order")]
-    pub ds_order: String,
     #[serde(rename = "Ds_Terminal")]
     pub ds_terminal: Secret<String>,
+    #[serde(rename = "Ds_Order")]
+    pub ds_order: String,
 }
 
 /// Request for invoking 3DS method redirect

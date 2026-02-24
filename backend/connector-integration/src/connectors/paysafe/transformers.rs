@@ -403,9 +403,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .payment_method_token
             .as_ref()
-            .and_then(|token| match token {
-                domain_types::router_data::PaymentMethodToken::Token(t) => Some(t.clone()),
-                _ => None,
+            .map(|token| match token {
+                domain_types::router_data::PaymentMethodToken::Token(t) => t.clone(),
             })
             .or_else(|| {
                 router_data

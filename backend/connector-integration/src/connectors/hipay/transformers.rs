@@ -393,9 +393,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .payment_method_token
             .as_ref()
-            .and_then(|pmt| match pmt {
-                PaymentMethodTokenType::Token(token) => Some(token.peek().to_string()),
-                _ => None,
+            .map(|pmt| match pmt {
+                PaymentMethodTokenType::Token(token) => token.peek().to_string(),
             })
             .or_else(|| {
                 item.router_data
