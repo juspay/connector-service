@@ -9,7 +9,9 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -55,6 +57,7 @@ pub enum TransactionType {
     Refund,
     Void,
     Validate,
+    Credit,
 }
 
 // ===== NMI STATUS ENUM =====
@@ -120,6 +123,7 @@ impl From<NmiStatus> for RefundStatus {
 #[serde(untagged)]
 pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
     Card(Box<CardData<T>>),
+    Ach(Box<AchData>),
 }
 
 #[derive(Debug, Serialize)]
@@ -127,6 +131,32 @@ pub struct CardData<T: PaymentMethodDataTypes> {
     ccnumber: RawCardNumber<T>,
     ccexp: Secret<String>, // MMYY format
     cvv: Secret<String>,
+}
+
+// ACH Payment Type Constant
+const ACH_PAYMENT_TYPE: &str = "check";
+
+// ACH Bank Debit Data Structure
+#[derive(Debug, Serialize)]
+pub struct AchData {
+    /// Payment type - must be "check" for ACH transactions
+    #[serde(rename = "payment")]
+    payment_type: &'static str,
+    /// Name on the customer's ACH account
+    checkname: Secret<String>,
+    /// Customer's bank routing number (exactly 9 digits)
+    checkaba: Secret<String>,
+    /// Customer's bank account number
+    checkaccount: Secret<String>,
+    /// Type of ACH account holder (business, personal)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    account_holder_type: Option<common_enums::BankHolderType>,
+    /// Type of ACH account (checking, savings)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    account_type: Option<common_enums::BankType>,
+    /// Standard Entry Class code of the ACH transaction (PPD, WEB, TEL, CCD)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sec_code: Option<String>,
 }
 
 // ===== MERCHANT DEFINED FIELDS =====
@@ -207,15 +237,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
 
-        // Determine transaction type based on auto_capture
-        let transaction_type = if router_data.request.is_auto_capture()? {
-            TransactionType::Sale
-        } else {
-            TransactionType::Auth
-        };
-
         // Extract payment method data
-        let payment_method = NmiPaymentMethod::try_from(&router_data.request.payment_method_data)?;
+        // Handle ACH Bank Debit separately to access billing info for account holder name fallback
+        let (payment_method, transaction_type) = match &router_data.request.payment_method_data {
+            PaymentMethodData::BankDebit(bank_debit_data) => {
+                let ach_data = create_ach_data(bank_debit_data, router_data)?;
+                // ACH only supports "sale" transaction type, not "auth"
+                (
+                    NmiPaymentMethod::Ach(Box::new(ach_data)),
+                    TransactionType::Sale,
+                )
+            }
+            _ => {
+                // Determine transaction type based on auto_capture for card payments
+                let txn_type = if router_data.request.is_auto_capture()? {
+                    TransactionType::Sale
+                } else {
+                    TransactionType::Auth
+                };
+                (
+                    NmiPaymentMethod::try_from(&router_data.request.payment_method_data)?,
+                    txn_type,
+                )
+            }
+        };
 
         // Convert amount from minor units to major units using framework converter
         let converter = FloatMajorUnitForConnector;
@@ -264,10 +309,72 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                 };
                 Ok(Self::Card(Box::new(card)))
             }
+            PaymentMethodData::BankDebit(
+                BankDebitData::SepaBankDebit { .. }
+                | BankDebitData::BecsBankDebit { .. }
+                | BankDebitData::BacsBankDebit { .. },
+            ) => Err(error_stack::report!(
+                errors::ConnectorError::NotImplemented(
+                    "Bank Debit type not supported for NMI".to_string()
+                )
+            )),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::NotImplemented("Payment method not supported".to_string())
             )),
         }
+    }
+}
+
+/// Helper function to create ACH data from BankDebitData with access to router data for billing name fallback
+fn create_ach_data<T: PaymentMethodDataTypes>(
+    bank_debit_data: &BankDebitData,
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<AchData, error_stack::Report<errors::ConnectorError>> {
+    match bank_debit_data {
+        BankDebitData::AchBankDebit {
+            account_number,
+            routing_number,
+            bank_account_holder_name,
+            bank_holder_type,
+            bank_type,
+            ..
+        } => {
+            // Get account holder name: use bank_account_holder_name or fall back to billing name
+            let checkname = bank_account_holder_name
+                .clone()
+                .or_else(|| {
+                    router_data
+                        .resource_common_data
+                        .get_billing_full_name()
+                        .ok()
+                })
+                .ok_or_else(|| {
+                    error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                        field_name: "bank_account_holder_name",
+                    })
+                })?;
+
+            let ach_data = AchData {
+                payment_type: ACH_PAYMENT_TYPE,
+                checkname,
+                checkaba: routing_number.clone(),
+                checkaccount: account_number.clone(),
+                account_holder_type: *bank_holder_type,
+                account_type: *bank_type,
+                sec_code: None, // Can be set if needed: PPD, WEB, TEL, CCD
+            };
+            Ok(ach_data)
+        }
+        _ => Err(error_stack::report!(
+            errors::ConnectorError::NotImplemented(
+                "Only ACH Bank Debit is supported for NMI".to_string()
+            )
+        )),
     }
 }
 
