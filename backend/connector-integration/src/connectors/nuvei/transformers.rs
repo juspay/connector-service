@@ -7,7 +7,9 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -656,62 +658,61 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     alternative_payment_method: None,
                 }
             }
-            PaymentMethodData::BankTransfer(bank_transfer_data) => match bank_transfer_data.as_ref() {
-                BankTransferData::AchBankTransfer {} => {
-                    // For ACH Bank Transfer, Nuvei requires account_number and routing_number
-                    // These should be provided in the request metadata as ACH details
-                    let metadata = router_data
-                        .request
-                        .metadata
-                        .as_ref()
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
-                            field_name: "metadata for ACH details",
-                        })?;
+            PaymentMethodData::BankTransfer(bank_transfer_data) => {
+                match bank_transfer_data.as_ref() {
+                    BankTransferData::AchBankTransfer {} => {
+                        // For ACH Bank Transfer, Nuvei requires account_number and routing_number
+                        // These should be provided in the request metadata as ACH details
+                        let metadata = router_data.request.metadata.as_ref().ok_or(
+                            errors::ConnectorError::MissingRequiredField {
+                                field_name: "metadata for ACH details",
+                            },
+                        )?;
 
-                    let ach_data = metadata
-                        .peek()
-                        .get("ach")
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
-                            field_name: "ach in metadata",
-                        })?;
+                        let ach_data = metadata.peek().get("ach").ok_or(
+                            errors::ConnectorError::MissingRequiredField {
+                                field_name: "ach in metadata",
+                            },
+                        )?;
 
-                    let account_number = ach_data
-                        .get("account_number")
-                        .and_then(|v: &serde_json::Value| v.as_str())
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
-                            field_name: "account_number",
-                        })?;
+                        let account_number = ach_data
+                            .get("account_number")
+                            .and_then(|v: &serde_json::Value| v.as_str())
+                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                                field_name: "account_number",
+                            })?;
 
-                    let routing_number = ach_data
-                        .get("routing_number")
-                        .and_then(|v: &serde_json::Value| v.as_str())
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
-                            field_name: "routing_number",
-                        })?;
+                        let routing_number = ach_data
+                            .get("routing_number")
+                            .and_then(|v: &serde_json::Value| v.as_str())
+                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                                field_name: "routing_number",
+                            })?;
 
-                    let sec_code = ach_data
-                        .get("sec_code")
-                        .and_then(|v: &serde_json::Value| v.as_str())
-                        .map(String::from);
+                        let sec_code = ach_data
+                            .get("sec_code")
+                            .and_then(|v: &serde_json::Value| v.as_str())
+                            .map(String::from);
 
-                    NuveiPaymentOption {
-                        card: None,
-                        alternative_payment_method: Some(NuveiAlternativePaymentMethod {
-                            payment_method: "apmgw_ACH".to_string(),
-                            account_number: Secret::new(account_number.to_string()),
-                            routing_number: Secret::new(routing_number.to_string()),
-                            sec_code,
-                        }),
+                        NuveiPaymentOption {
+                            card: None,
+                            alternative_payment_method: Some(NuveiAlternativePaymentMethod {
+                                payment_method: "apmgw_ACH".to_string(),
+                                account_number: Secret::new(account_number.to_string()),
+                                routing_number: Secret::new(routing_number.to_string()),
+                                sec_code,
+                            }),
+                        }
+                    }
+                    other => {
+                        return Err(errors::ConnectorError::NotSupported {
+                            message: format!("{:?} is not supported for Nuvei", other),
+                            connector: "nuvei",
+                        }
+                        .into())
                     }
                 }
-                other => {
-                    return Err(errors::ConnectorError::NotSupported {
-                        message: format!("{:?} is not supported for Nuvei", other),
-                        connector: "nuvei",
-                    }
-                    .into())
-                }
-            },
+            }
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
                     message: "Payment method not supported".to_string(),
