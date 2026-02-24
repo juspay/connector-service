@@ -1,5 +1,5 @@
 use crate::types::ResponseRouterData;
-use common_enums::{AttemptStatus, Currency, RefundStatus};
+use common_enums::{AttemptStatus, Currency, RefundStatus, BankHolderType, BankType};
 use common_utils::{pii, request::Method, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
@@ -10,14 +10,14 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeOptionInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -74,6 +74,7 @@ pub struct Shift4PaymentsRequest<T: PaymentMethodDataTypes> {
 pub enum Shift4PaymentMethod<T: PaymentMethodDataTypes> {
     Card(Shift4CardPayment<T>),
     BankRedirect(Shift4BankRedirectPayment),
+    BankDebit(Shift4BankDebitPayment),
 }
 
 #[derive(Debug, Serialize)]
@@ -128,6 +129,43 @@ pub struct Shift4Address {
     pub state: Option<Secret<String>>,
     pub zip: Option<Secret<String>>,
     pub country: Option<String>,
+}
+
+// BankDebit Payment Structures
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4BankDebitPayment {
+    pub payment_method: Shift4AchPaymentMethod,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4AchPaymentMethod {
+    #[serde(rename = "type")]
+    pub payment_type: String,
+    pub ach: Shift4AchDetails,
+    pub billing: Shift4Billing,
+    pub fraud_check_data: Shift4FraudCheckData,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4FraudCheckData {
+    pub ip_address: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4AchDetails {
+    pub account: Shift4AchAccount,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4AchAccount {
+    pub account_number: Secret<String>,
+    pub routing_number: Secret<String>,
+    pub account_type: String,
 }
 
 // BankRedirect Data Transformation
@@ -269,6 +307,105 @@ impl<T: PaymentMethodDataTypes>
                     payment_method: bank_redirect_method,
                     flow: Some(Shift4FlowRequest { return_url }),
                 })
+            }
+            PaymentMethodData::BankDebit(bank_debit_data) => {
+                match bank_debit_data {
+                    BankDebitData::AchBankDebit {
+                        account_number,
+                        routing_number,
+                        bank_account_holder_name,
+                        bank_type,
+                        bank_holder_type,
+                        ..
+                    } => {
+                        // Extract billing information for name and address
+                        let billing = item
+                            .resource_common_data
+                            .address
+                            .get_payment_method_billing();
+
+                        // Get account holder name with fallback to billing name
+                        let account_holder_name = bank_account_holder_name
+                            .clone()
+                            .or_else(|| billing.as_ref().and_then(|b| b.get_optional_full_name()))
+                            .ok_or_else(|| {
+                                error_stack::report!(
+                                    errors::ConnectorError::MissingRequiredField {
+                                        field_name: "bank_account_holder_name",
+                                    }
+                                )
+                            })?;
+
+                        // Map bank_type to account_type string expected by Shift4
+                        // Format: "personal_savings", "personal_checking", "business_savings", "business_checking"
+                        let account_type = match (bank_holder_type, bank_type) {
+                            (Some(holder), Some(acc_type)) => {
+                                let holder_str = match holder {
+                                    BankHolderType::Personal => "personal",
+                                    BankHolderType::Business => "business",
+                                };
+                                let type_str = match acc_type {
+                                    BankType::Savings => "savings",
+                                    BankType::Checking => "checking",
+                                };
+                                format!("{}_{}", holder_str, type_str)
+                            }
+                            _ => "personal_checking".to_string(), // Default fallback
+                        };
+
+                        // Build billing info with name and email
+                        let email = item
+                            .request
+                            .email
+                            .as_ref()
+                            .cloned()
+                            .or_else(|| billing.as_ref().and_then(|b| b.email.as_ref()).cloned());
+
+                        let address = billing
+                            .as_ref()
+                            .and_then(|b| b.address.as_ref())
+                            .map(|addr| Shift4Address {
+                                line1: addr.line1.clone(),
+                                line2: addr.line2.clone(),
+                                city: addr.city.clone(),
+                                state: addr.state.clone(),
+                                zip: addr.zip.clone(),
+                                country: addr.country.as_ref().map(|c| c.to_string()),
+                            });
+
+                        let billing_info = Shift4Billing {
+                            name: Some(account_holder_name),
+                            email,
+                            address,
+                        };
+
+                        Shift4PaymentMethod::BankDebit(Shift4BankDebitPayment {
+                            payment_method: Shift4AchPaymentMethod {
+                                payment_type: "ach".to_string(),
+                                ach: Shift4AchDetails {
+                                    account: Shift4AchAccount {
+                                        account_number: account_number.clone(),
+                                        routing_number: routing_number.clone(),
+                                        account_type,
+                                    },
+                                },
+                                billing: billing_info,
+                                fraud_check_data: Shift4FraudCheckData {
+                                    ip_address: item.request.get_ip_address_as_optional().map(|ip| ip.expose().to_string()),
+                                },
+                            },
+                        })
+                    }
+                    BankDebitData::SepaBankDebit { .. }
+                    | BankDebitData::BecsBankDebit { .. }
+                    | BankDebitData::BacsBankDebit { .. } => {
+                        return Err(error_stack::report!(
+                            errors::ConnectorError::NotImplemented(
+                                "SEPA, BECS, and BACS bank debit are not implemented for Shift4".to_string(),
+                            )
+                        ));
+                    }
+                }
             }
             _ => {
                 return Err(error_stack::report!(errors::ConnectorError::NotSupported {
