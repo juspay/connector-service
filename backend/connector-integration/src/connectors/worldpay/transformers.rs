@@ -64,7 +64,7 @@ pub struct WorldpayVoidRequest {
     pub reference: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayAuthorizeResponse {
     pub payment_id: String,
