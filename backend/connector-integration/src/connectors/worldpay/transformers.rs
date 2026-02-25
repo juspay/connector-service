@@ -4,7 +4,7 @@ use common_utils::{
     types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, Refund, Void},
+    connector_flow::{Authorize, Capture, Refund, Void},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
