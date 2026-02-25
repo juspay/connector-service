@@ -28,7 +28,7 @@ output/
 
 # rulesbook/codegen/references/specs/*
 
-**/references/**
+# **/references/**
 
 grace
 .grace
