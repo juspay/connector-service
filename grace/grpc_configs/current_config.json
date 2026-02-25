@@ -1,0 +1,18 @@
+{
+  "connector_name": "",
+  "auth_type": "",
+  "api_key": "",
+  "api_secret": "",
+  "key1": "",
+  "key2": "",
+  "merchant_id": "merchant_100",
+  "server_url": "localhost:8000",
+  "card_details": {
+    "card_number": "",
+    "card_exp_month": "10",
+    "card_exp_year": "30",
+    "card_cvc": "",
+    "card_holder_name": "Test User",
+    "card_network": "VISA"
+  }
+}

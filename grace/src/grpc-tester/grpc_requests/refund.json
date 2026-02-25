@@ -1,0 +1,12 @@
+{
+  "request_ref_id": {
+    "id": "{{REF_ID}}"
+  },
+  "transaction_id": {
+    "id": "{{TRANSACTION_ID}}"
+  },
+  "refund_amount": 1000,
+  "minor_refund_amount": 1000,
+  "currency": "USD",
+  "reason": "test_refund"
+}

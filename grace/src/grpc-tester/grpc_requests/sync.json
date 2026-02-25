@@ -1,0 +1,11 @@
+{
+  "request_ref_id": {
+    "id": "{{REF_ID}}"
+  },
+  "transaction_id": {
+    "id": "{{TRANSACTION_ID}}"
+  },
+  "amount": 1000,
+  "currency": "USD",
+  "capture_method": "{{CAPTURE_METHOD}}"
+}
