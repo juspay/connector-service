@@ -65,9 +65,9 @@ generate-proto:
 setup: generate-proto generate-bindings
 	@echo "Setup complete. Run 'make example-run' to execute."
 
-# Run the example via Gradle
-example-run: setup
-	@./gradlew run --quiet
+# Run the example via Gradle (from separate examples/ project)
+example-run: pack
+	@cd $(SDK_ROOT)/examples && $(SDK_ROOT)/gradlew run --quiet
 
 # Publish to local Maven repository
 pack: setup
@@ -83,8 +83,8 @@ test-pack: pack
 	jar tf "$$JAR" | grep -q 'native/libconnector_service_ffi' && echo "  native lib: found" && \
 	jar tf "$$JAR" | grep -q 'uniffi/connector_service_ffi' && echo "  UniFFI bindings: found" && \
 	jar tf "$$JAR" | grep -q 'ucs/v2/Payment' && echo "  Protobuf stubs: found"
-	@echo "  Running example via Gradle..."
-	@./gradlew run --quiet
+	@echo "  Running example from separate project..."
+	@cd $(SDK_ROOT)/examples && $(SDK_ROOT)/gradlew run --quiet
 	@echo "Pack test passed."
 
 clean:

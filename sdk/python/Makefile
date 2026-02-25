@@ -40,6 +40,13 @@ generate-bindings: build-lib
 	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(GENERATED_OUT)/
 	@echo "UniFFI bindings generated in $(GENERATED_OUT)/"
 
+# Install Python dependencies
+install-deps:
+	@if [ -z "$${IN_NIX_SHELL:-}" ] && [ -f $(SDK_ROOT)/requirements.txt ]; then \
+		echo "Installing Python dependencies (non-nix environment)..."; \
+		pip3 install -r $(SDK_ROOT)/requirements.txt --quiet 2>/dev/null || pip3 install -r $(SDK_ROOT)/requirements.txt --user --quiet; \
+	fi
+
 # Generate Python protobuf stubs
 generate-proto:
 	@echo "Generating Python protobuf stubs..."
@@ -59,11 +66,7 @@ generate-proto:
 	@echo "Proto stubs generated."
 
 # Full setup: build lib, generate both bindings and proto stubs
-setup: generate-proto generate-bindings
-	@if [ -z "$${IN_NIX_SHELL:-}" ] && [ -f $(SDK_ROOT)/requirements.txt ]; then \
-		echo "Installing Python dependencies (non-nix environment)..."; \
-		pip3 install -r $(SDK_ROOT)/requirements.txt --quiet 2>/dev/null || pip3 install -r $(SDK_ROOT)/requirements.txt --user --quiet; \
-	fi
+setup: install-deps generate-proto generate-bindings
 	@echo "Setup complete. Run 'make example-run' to execute."
 
 # Run the example
