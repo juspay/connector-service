@@ -124,6 +124,105 @@ pub struct WalletPaymentInput {
     transaction: WalletTransactionBody,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsBankAccountOwner {
+    pub first_name: String,
+    pub last_name: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsBankAccountBillingAddress {
+    pub street_address: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extended_address: Option<String>,
+    pub city: String,
+    pub state: String,
+    pub zip_code: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsBankAccountData {
+    pub routing_number: Secret<String>,
+    pub account_number: Secret<String>,
+    pub account_type: String,
+    pub ach_mandate: String,
+    pub individual_owner: UsBankAccountOwner,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub billing_address: Option<UsBankAccountBillingAddress>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenizeUsBankAccountInput {
+    pub us_bank_account: UsBankAccountData,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultUsBankAccountInput {
+    pub payment_method_id: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification_merchant_account_id: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification_method: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyUsBankAccountInput {
+    pub payment_method_id: Secret<String>,
+    pub verification_method: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification_add_ons: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsBankAccountTransactionBody {
+    pub amount: StringMajorUnit,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_account_id: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub risk_data: Option<UsBankAccountRiskData>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsBankAccountRiskData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_browser: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_ip: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_data: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChargeUsBankAccountInput {
+    pub payment_method_id: Secret<String>,
+    pub transaction: UsBankAccountTransactionBody,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizeUsBankAccountInput {
+    pub payment_method_id: Secret<String>,
+    pub transaction: UsBankAccountTransactionBody,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BraintreeAchRequest {
+    pub payment_method_id: Secret<String>,
+    pub transaction: UsBankAccountTransactionBody,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BraintreeApiErrorResponse {
