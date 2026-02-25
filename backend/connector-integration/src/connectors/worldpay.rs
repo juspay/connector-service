@@ -146,7 +146,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let auth = transformers::WorldpayAuthType::try_from(auth_type)
             .change_context(ConnectorError::FailedToObtainAuthType)?;
         let credentials = format!("{}:{}", auth.username.peek(), auth.password.peek());
-        let encoded = base64::encode(credentials);
+        let encoded = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, credentials);
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("Basic {}", encoded).into_masked(),
@@ -159,7 +159,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn build_error_response(
         &self,
-        res: domain_types::router_response_types::Response,
+        res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: WorldpayErrorResponse = res
