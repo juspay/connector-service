@@ -4124,7 +4124,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code,
                 authentication_data,
             } => PaymentMethodAuthenticationServicePreAuthenticateResponse {
-                transaction_id: None,
+                connector_transaction_id: None,
                 redirection_data: redirection_data
                     .map(|form| match *form {
                         router_response_types::RedirectForm::Form {
@@ -4239,7 +4239,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
                 .unwrap_or_default();
             PaymentMethodAuthenticationServicePreAuthenticateResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier {
+                connector_transaction_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(
                         grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(()),
                     ),
@@ -4385,7 +4385,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
                 }),
-                transaction_id: resource_id
+                connector_transaction_id: resource_id
                     .map(grpc_api_types::payments::Identifier::foreign_try_from)
                     .transpose()?,
                 redirection_data: redirection_data
@@ -4495,7 +4495,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
                 .unwrap_or_default();
             PaymentMethodAuthenticationServiceAuthenticateResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier {
+                connector_transaction_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
                         "session_created".to_string(),
                     )),
@@ -4561,7 +4561,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 connector_response_reference_id,
                 status_code,
             } => PaymentMethodAuthenticationServicePostAuthenticateResponse {
-                transaction_id: None,
+                connector_transaction_id: None,
                 redirection_data: None,
                 feature_data: None,
                 network_transaction_id: None,
@@ -4595,7 +4595,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
                 .unwrap_or_default();
             PaymentMethodAuthenticationServicePostAuthenticateResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier {
+                connector_transaction_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(
                         grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(()),
                     ),

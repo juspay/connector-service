@@ -3390,7 +3390,7 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             ds_transaction_id: value.ds_trans_id,
             trans_status,
             acs_transaction_id: value.acs_transaction_id,
-            transaction_id: value.transaction_id,
+            connector_transaction_id: value.transaction_id,
             exemption_indicator,
             network_params: value
                 .network_params
@@ -4669,7 +4669,7 @@ pub fn generate_payment_void_post_capture_response(
                     grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?;
 
                 Ok(PaymentServiceReverseResponse {
-                    transaction_id: Some(grpc_resource_id),
+                    connector_transaction_id: Some(grpc_resource_id),
                     status: grpc_status.into(),
                     response_ref_id: connector_response_reference_id.map(|id| {
                         grpc_api_types::payments::Identifier {
@@ -4703,7 +4703,7 @@ pub fn generate_payment_void_post_capture_response(
                 None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
             };
             Ok(PaymentServiceReverseResponse {
-                transaction_id: e.connector_transaction_id.clone().map(|id| {
+                connector_transaction_id: e.connector_transaction_id.clone().map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
@@ -5006,9 +5006,9 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
     fn foreign_try_from(
         value: grpc_api_types::payments::RefundServiceGetRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // Extract transaction_id as connector_transaction_id
+        // Extract connector_transaction_id
         let connector_transaction_id = value
-            .transaction_id
+            .connector_transaction_id
             .and_then(|id| id.id_type)
             .and_then(|id_type| match id_type {
                 grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
@@ -5786,7 +5786,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             connector_transaction_id: value
-                .transaction_id
+                .connector_transaction_id
                 .and_then(|id| id.id_type)
                 .and_then(|id_type| match id_type {
                     grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
@@ -5825,7 +5825,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceReverseRequest>
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             connector_transaction_id: value
-                .transaction_id
+                .connector_transaction_id
                 .and_then(|id| id.id_type)
                 .and_then(|id_type| match id_type {
                     grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
@@ -5917,7 +5917,7 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let connector_transaction_id = ResponseId::ConnectorTransactionId(
             value
-                .transaction_id
+                .connector_transaction_id
                 .clone()
                 .and_then(|id| id.id_type)
                 .and_then(|id_type| match id_type {
@@ -6115,7 +6115,7 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputeResponse {
             .unwrap_or_default();
         Ok(Self {
             dispute_id: Some(value.dispute_id),
-            transaction_id: None,
+            connector_transaction_id: None,
             dispute_status: grpc_status.into(),
             dispute_stage: grpc_stage.into(),
             connector_status_code: None,
@@ -9052,7 +9052,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                 ..
             } => Ok(
                 grpc_api_types::payments::RecurringPaymentServiceChargeResponse {
-                    transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
+                    connector_transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
                         resource_id,
                     )?),
                     status: grpc_status as i32,
@@ -9107,7 +9107,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
             };
             Ok(
                 grpc_api_types::payments::RecurringPaymentServiceChargeResponse {
-                    transaction_id: err.connector_transaction_id.clone().map(|id| {
+                    connector_transaction_id: err.connector_transaction_id.clone().map(|id| {
                         grpc_api_types::payments::Identifier {
                             id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                         }
@@ -10488,7 +10488,7 @@ impl ForeignTryFrom<(bool, RedirectDetailsResponse)>
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             source_verified,
-            transaction_id: redirect_details_response
+            connector_transaction_id: redirect_details_response
                 .resource_id
                 .map(|resource_id| {
                     grpc_api_types::payments::Identifier::foreign_try_from(resource_id)

@@ -109,10 +109,11 @@ async function main() {
   // Build protobuf request using pre-generated static proto module.
   // No runtime .proto file loading needed.
   const requestMsg = PaymentServiceAuthorizeRequest.create({
-    requestRefId: { id: "test_payment_123456" },
-    amount: 1000,
-    minorAmount: 1000,
-    currency: Currency.USD,
+    merchantTransactionId: { id: "test_payment_123456" },
+    amount: {
+      minorAmount: 1000,
+      currency: Currency.USD,
+    },
     captureMethod: CaptureMethod.AUTOMATIC,
     paymentMethod: {
       card: {
@@ -123,8 +124,10 @@ async function main() {
         cardHolderName: { value: "Test User" },
       },
     },
-    email: { value: "customer@example.com" },
-    customerName: "Test Customer",
+    customer: {
+      email: { value: "customer@example.com" },
+      name: "Test Customer",
+    },
     authType: AuthenticationType.NO_THREE_DS,
     enrolledFor_3ds: false,
     returnUrl: "https://example.com/return",

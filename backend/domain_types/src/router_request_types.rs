@@ -158,7 +158,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             ds_transaction_id,
             trans_status,
             acs_transaction_id,
-            transaction_id,
+            connector_transaction_id,
             ucaf_collection_indicator,
             exemption_indicator,
             network_params,
@@ -211,7 +211,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             message_version,
             ds_trans_id: ds_transaction_id,
             acs_transaction_id,
-            transaction_id,
+            transaction_id: connector_transaction_id,
             network_params: network_params.map(NetworkParams::try_from).transpose()?,
             exemption_indicator: exemption_indicator
                 .map(payments::ExemptionIndicator::try_from)
@@ -279,7 +279,7 @@ impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
                 .map(payments::TransactionStatus::foreign_from)
                 .map(i32::from),
             acs_transaction_id: value.acs_transaction_id,
-            transaction_id: value.transaction_id,
+            connector_transaction_id: value.transaction_id,
             exemption_indicator: value
                 .exemption_indicator
                 .map(payments::ExemptionIndicator::foreign_from)
