@@ -43,12 +43,11 @@ def build_authorize_request_msg() -> PaymentServiceAuthorizeRequest:
     req = PaymentServiceAuthorizeRequest()
 
     # Identification
-    req.request_ref_id.id = "test_payment_123456"
+    req.merchant_transaction_id.id = "test_payment_123456"
 
     # Payment details
-    req.amount = 1000
-    req.minor_amount = 1000
-    req.currency = 146           # USD (payment.proto enum)
+    req.amount.minor_amount = 1000
+    req.amount.currency = 146           # USD (payment.proto enum)
     req.capture_method = 1       # AUTOMATIC
 
     # Card payment method
@@ -60,8 +59,8 @@ def build_authorize_request_msg() -> PaymentServiceAuthorizeRequest:
     card.card_holder_name.value = "Test User"
 
     # Customer info
-    req.email.value = "customer@example.com"
-    req.customer_name = "Test Customer"
+    req.customer.email.value = "customer@example.com"
+    req.customer.name = "Test Customer"
 
     # Auth / 3DS
     req.auth_type = 2            # NO_THREE_DS
