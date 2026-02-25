@@ -798,11 +798,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::BankDebit(ref bank_debit_data) => {
                 match bank_debit_data {
                     BankDebitData::AchBankDebit {
-                        account_number,
-                        routing_number,
-                        bank_account_holder_name,
                         bank_type,
-                        bank_holder_type,
                         ..
                     } => {
                         let payment_method_token = item
@@ -814,7 +810,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             PaymentMethodTokenFlow::Token(token) => token,
                         };
 
-                        let account_type = match bank_type {
+                        let _account_type = match bank_type {
                             Some(common_enums::BankType::Savings) => "SAVINGS".to_string(),
                             Some(common_enums::BankType::Checking) | None => "CHECKING".to_string(),
                         };
@@ -834,7 +830,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .connector_request_reference_id
                             .clone();
 
-                        let is_auto_capture = item.router_data.request.is_auto_capture()?;
+                        let _is_auto_capture = item.router_data.request.is_auto_capture()?;
 
                         Ok(Self::AchBankDebit(BraintreeAchRequest {
                             payment_method_id,
