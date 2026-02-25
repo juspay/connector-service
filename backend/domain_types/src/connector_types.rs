@@ -1091,6 +1091,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub request_extended_authorization: Option<bool>,
     pub enable_overcapture: Option<bool>,
     pub setup_mandate_details: Option<MandateData>,
+    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub connector_testing_data: Option<SecretSerdeValue>,
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
@@ -1432,6 +1433,7 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub mandate_id: Option<MandateIds>,
     pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
     pub split_payments: Option<SplitPaymentsRequest>,
+    pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone)]
@@ -1442,8 +1444,9 @@ pub struct PaymentMethodTokenResponse {
 #[derive(Debug, Clone)]
 pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
-    pub amount: Option<Money>,
+    pub amount: MinorUnit,
     pub email: Option<Email>,
+    pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
@@ -1472,8 +1475,9 @@ impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
 #[derive(Debug, Clone)]
 pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
-    pub amount: Option<Money>,
+    pub amount: MinorUnit,
     pub email: Option<Email>,
+    pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
@@ -1551,8 +1555,9 @@ pub enum ThreeDsCompletionIndicator {
 #[derive(Debug, Clone)]
 pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
-    pub amount: Option<Money>,
+    pub amount: MinorUnit,
     pub email: Option<Email>,
+    pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<Url>,
     pub continue_redirection_url: Option<Url>,
@@ -1726,6 +1731,8 @@ impl RefundFlowData {
 pub struct RedirectDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: Option<AttemptStatus>,
+    pub response_minor_amount: Option<MinorUnit>,
+    pub response_currency: Option<Currency>,
     pub response_amount: Option<Money>,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
@@ -2224,6 +2231,7 @@ pub struct RefundsData {
     pub browser_info: Option<BrowserInformation>,
     /// Charges associated with the payment
     pub split_refunds: Option<SplitRefundsRequest>,
+    pub merchant_account_metadata: Option<SecretSerdeValue>,
 }
 
 impl RefundsData {
@@ -2399,7 +2407,9 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
 #[derive(Debug, Clone)]
 pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub mandate_reference: MandateReferenceId,
-    pub amount: Money,
+    pub amount: i64,
+    pub minor_amount: MinorUnit,
+    pub currency: Currency,
     pub merchant_order_reference_id: Option<String>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
@@ -2408,6 +2418,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub email: Option<Email>,
     pub payment_method_type: Option<PaymentMethodType>,
+    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub off_session: Option<bool>,
     pub router_return_url: Option<String>,
     pub split_payments: Option<SplitPaymentsRequest>,

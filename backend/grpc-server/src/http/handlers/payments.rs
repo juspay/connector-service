@@ -4,26 +4,8 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, DisputeResponse,
-    PaymentMethodAuthenticationServiceAuthenticateRequest,
-    PaymentMethodAuthenticationServicePostAuthenticateRequest,
-    PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentServiceAuthenticateResponse,
-     PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
-    MerchantAuthenticationServiceCreateAccessTokenRequest, MerchantAuthenticationServiceCreateAccessTokenResponse,
-    CustomerServiceCreateRequest, CustomerServiceCreateResponse,
-    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse,
-    PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse,
-    MerchantAuthenticationServiceCreateSessionTokenRequest, PaymentServiceCreateSessionTokenResponse,
-    PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
-    PaymentServicePostAuthenticateResponse, PaymentServicePreAuthenticateResponse,
-    PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest,
-    PaymentServiceRegisterAutoDebitResponse, RecurringPaymentServiceChargeResponse,
-    PaymentServiceTransformRequest, PaymentServiceTransformResponse,
-    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
-    PaymentServiceReverseRequest, PaymentServiceReverseResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
-    RefundResponse,
+    CustomerServiceCreateRequest, CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest, MerchantAuthenticationServiceCreateAccessTokenResponse, MerchantAuthenticationServiceCreateSessionTokenRequest, MerchantAuthenticationServiceCreateSessionTokenResponse, PaymentMethodAuthenticationServiceAuthenticateRequest, PaymentMethodAuthenticationServiceAuthenticateResponse, PaymentMethodAuthenticationServicePostAuthenticateRequest, PaymentMethodAuthenticationServicePostAuthenticateResponse, PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest, PaymentServiceRegisterAutoDebitResponse, PaymentServiceReverseRequest, PaymentServiceReverseResponse, PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse, merchant_authentication_service_server::MerchantAuthenticationService, payment_method_authentication_service_server::PaymentMethodAuthenticationService, payment_service_server::PaymentService, recurring_payment_service_server::RecurringPaymentService,
+    customer_service_server::CustomerService, payment_method_service_server::PaymentMethodService,
 };
 use std::sync::Arc;
 
@@ -66,7 +48,7 @@ http_handler!(
     void_post_capture,
     PaymentServiceReverseRequest,
     PaymentServiceReverseResponse,
-    void_post_capture,
+    reverse,
     payments_service
 );
 http_handler!(
@@ -86,23 +68,23 @@ http_handler!(
 http_handler!(
     create_session_token,
     MerchantAuthenticationServiceCreateSessionTokenRequest,
-    PaymentServiceCreateSessionTokenResponse,
+    MerchantAuthenticationServiceCreateSessionTokenResponse,
     create_session_token,
-    payments_service
+    merchant_authentication_service
 );
 http_handler!(
     create_connector_customer,
     CustomerServiceCreateRequest,
     CustomerServiceCreateResponse,
-    create_connector_customer,
-    payments_service
+    create,
+    customer_service
 );
 http_handler!(
     create_payment_method_token,
     PaymentMethodServiceTokenizeRequest,
     PaymentMethodServiceTokenizeResponse,
-    create_payment_method_token,
-    payments_service
+    tokenize,
+    payment_method_service
 );
 http_handler!(
     register,
@@ -111,19 +93,19 @@ http_handler!(
     register,
     payments_service
 );
-http_handler!(
-    register_only,
-    PaymentServiceRegisterAutoDebitRequest,
-    PaymentServiceRegisterAutoDebitResponse,
-    register_only,
-    payments_service
-);
+// http_handler!(
+//     register_only,
+//     PaymentServiceRegisterAutoDebitRequest,
+//     PaymentServiceRegisterAutoDebitResponse,
+//     register_only,
+//     payments_service
+// );
 http_handler!(
     repeat_everything,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
-    repeat_everything,
-    payments_service
+    charge,
+    recurring_payment_service
 );
 http_handler!(
     refund,
@@ -133,47 +115,40 @@ http_handler!(
     payments_service
 );
 http_handler!(
-    dispute,
-    PaymentServiceDisputeRequest,
-    DisputeResponse,
-    dispute,
-    payments_service
-);
-http_handler!(
     pre_authenticate,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
-    PaymentServicePreAuthenticateResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse,
     pre_authenticate,
-    payments_service
+    payment_method_authentication_service
 );
 http_handler!(
     authenticate,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
-    PaymentServiceAuthenticateResponse,
+    PaymentMethodAuthenticationServiceAuthenticateResponse,
     authenticate,
-    payments_service
+    payment_method_authentication_service
 );
 http_handler!(
     post_authenticate,
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
-    PaymentServicePostAuthenticateResponse,
+    PaymentMethodAuthenticationServicePostAuthenticateResponse,
     post_authenticate,
-    payments_service
+    payment_method_authentication_service
 );
 http_handler!(
     create_access_token,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     create_access_token,
-    payments_service
+    merchant_authentication_service
 );
-http_handler!(
-    transform,
-    PaymentServiceTransformRequest,
-    PaymentServiceTransformResponse,
-    transform,
-    payments_service
-);
+// http_handler!(
+//     transform,
+//     PaymentServiceTransformRequest,
+//     PaymentServiceTransformResponse,
+//     transform,
+//     payments_service
+// );
 http_handler!(
     verify_redirect_response,
     PaymentServiceVerifyRedirectResponseRequest,

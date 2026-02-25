@@ -341,8 +341,8 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject>
 
     fn get_request_integrity_object(&self) -> RepeatPaymentIntegrityObject {
         RepeatPaymentIntegrityObject {
-            amount: self.amount.amount.get_amount_as_i64(),
-            currency: self.amount.currency,
+            amount: self.amount,
+            currency: self.currency,
             mandate_reference: match &self.mandate_reference {
                 domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
                     mandate_ref,
@@ -444,8 +444,8 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PreAuthenticateIntegrityObjec
 
     fn get_request_integrity_object(&self) -> PreAuthenticateIntegrityObject {
         PreAuthenticateIntegrityObject {
-            amount: self.amount.clone().map(|a| a.amount).unwrap_or_default(),
-            currency: self.amount.clone().map(|a| a.currency).unwrap_or_default(),
+            amount: self.amount,
+            currency: self.currency.unwrap_or_default(),
         }
     }
 }
@@ -459,8 +459,8 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthenticateIntegrityObject>
 
     fn get_request_integrity_object(&self) -> AuthenticateIntegrityObject {
         AuthenticateIntegrityObject {
-            amount: self.amount.clone().map(|a| a.amount).unwrap_or_default(),
-            currency: self.amount.clone().map(|a| a.currency).unwrap_or_default(),
+            amount: self.amount,
+            currency: self.currency.unwrap_or_default(),
         }
     }
 }
@@ -474,8 +474,8 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PostAuthenticateIntegrityObje
 
     fn get_request_integrity_object(&self) -> PostAuthenticateIntegrityObject {
         PostAuthenticateIntegrityObject {
-            amount: self.amount.clone().map(|a| a.amount).unwrap_or_default(),
-            currency: self.amount.clone().map(|a| a.currency).unwrap_or_default(),
+            amount: self.amount,
+            currency: self.currency.unwrap_or_default(),
         }
     }
 }

@@ -93,6 +93,9 @@ service PaymentService {
   // Validates redirect-based payment responses. Confirms authenticity of
   // redirect-based payment completions to prevent fraud and tampering.
   rpc VerifyRedirectResponse(PaymentServiceVerifyRedirectResponseRequest) returns (PaymentServiceVerifyRedirectResponseResponse);
+
+  // Sets up a mandate for future payments.
+  rpc Register(PaymentServiceRegisterAutoDebitRequest) returns (PaymentServiceRegisterAutoDebitResponse);
 }
 
 // ============================================================================
@@ -165,8 +168,8 @@ service PaymentMethodService {
   // with secure token for one-click payments and recurring billing.
   rpc Tokenize(PaymentMethodServiceTokenizeRequest) returns (PaymentMethodServiceTokenizeResponse);
 
-  // Retrieves payment method details from the connector.
-  rpc Get(PaymentMethodServiceGetRequest) returns (PaymentMethodServiceGetResponse);
+  // // Retrieves payment method details from the connector.
+  // rpc Get(PaymentMethodServiceGetRequest) returns (PaymentMethodServiceGetResponse);
 }
 
 // ============================================================================
@@ -178,14 +181,14 @@ service CustomerService {
   // for future payment operations without re-sending personal information.
   rpc Create(CustomerServiceCreateRequest) returns (CustomerServiceCreateResponse);
 
-  // Retrieves customer details from the connector.
-  rpc Get(CustomerServiceGetRequest) returns (CustomerServiceGetResponse);
+  // // Retrieves customer details from the connector.
+  // rpc Get(CustomerServiceGetRequest) returns (CustomerServiceGetResponse);
 
-  // Updates customer record in the connector system.
-  rpc Update(CustomerServiceUpdateRequest) returns (CustomerServiceUpdateResponse);
+  // // Updates customer record in the connector system.
+  // rpc Update(CustomerServiceUpdateRequest) returns (CustomerServiceUpdateResponse);
 
-  // Deletes customer record from the connector system.
-  rpc Delete(CustomerServiceDeleteRequest) returns (CustomerServiceDeleteResponse);
+  // // Deletes customer record from the connector system.
+  // rpc Delete(CustomerServiceDeleteRequest) returns (CustomerServiceDeleteResponse);
 }
 
 // ============================================================================

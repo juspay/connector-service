@@ -2020,12 +2020,12 @@ impl<
         let merchant_config_currency = common_enums::Currency::foreign_try_from(amount.currency())?;
 
         // Store feature_data for connector use
-        let feature_data = value
+        let merchant_account_metadata = value
             .clone()
             .feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
             .transpose()?;
-        let merchant_account_id = feature_data
+        let merchant_account_id = merchant_account_metadata
             .as_ref()
             .and_then(|m: &Secret<serde_json::Value>| m.peek().get("merchant_account_id"))
             .and_then(|v| v.as_str())
@@ -2183,6 +2183,7 @@ impl<
                 .map(MandateData::foreign_try_from)
                 .transpose()?,
             request_extended_authorization: value.request_extended_authorization,
+            merchant_account_metadata,
             connector_testing_data,
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
@@ -5981,7 +5982,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             webhook_url: value.webhook_url,
             refund_amount: refund_amount.minor_amount,
             connector_metadata: value
-                .feature_data
+                .feature_data.clone()
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
             refund_connector_metadata: value
@@ -6006,6 +6007,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .transpose()?,
             integrity_object: None,
             split_refunds: None,
+            merchant_account_metadata: value
+                .feature_data
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
+                .transpose()?,
         })
     }
 }
@@ -8087,6 +8092,7 @@ impl<T: PaymentMethodDataTypes> From<&PaymentsAuthorizeData<T>>
             setup_mandate_details: data.setup_mandate_details.clone(),
             mandate_id: data.mandate_id.clone(),
             integrity_object: None,
+            merchant_account_metadata: data.merchant_account_metadata.clone(),
         }
     }
 }
@@ -8274,6 +8280,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodServiceTokenizeReques
             setup_mandate_details: None,
             integrity_object: None,
             split_payments: None,
+            merchant_account_metadata: value
+                .feature_data
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
+                .transpose()?,
         })
     }
 }
@@ -8691,10 +8701,7 @@ impl<
             .clone()
             .map(router_request_types::AuthenticationData::try_from)
             .transpose()?;
-
-        Ok(Self {
-            mandate_reference: mandate_ref,
-            amount: match value.amount {
+        let amount = match value.amount {
                 Some(amount) => Ok(common_utils::types::Money {
                     amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                     currency: common_enums::Currency::foreign_try_from(amount.currency())?,
@@ -8705,7 +8712,13 @@ impl<
                     error_message: "Amount is required for repeat payments".to_owned(),
                     error_object: None,
                 }))),
-            }?,
+            }?;
+
+        Ok(Self {
+            mandate_reference: mandate_ref,
+            amount: amount.amount.get_amount_as_i64(),
+            minor_amount: amount.amount,
+            currency: amount.currency,
             merchant_order_reference_id,
             metadata: value
                 .metadata
@@ -8721,6 +8734,10 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             payment_method_type,
+            merchant_account_metadata: value
+                .feature_data
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
+                .transpose()?,
             off_session: value.off_session,
             split_payments: None,
             recurring_mandate_payment_data: match value.original_payment_authorized_amount {
@@ -9503,12 +9520,17 @@ impl<
         };
 
         let amount = match value.amount {
-            Some(money) => Some(common_utils::types::Money {
-                amount: common_utils::types::MinorUnit::new(money.minor_amount),
-                currency: common_enums::Currency::foreign_try_from(money.currency())?,
-            }),
-            None => None,
-        };
+                Some(amount) => Ok(common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+                    currency: common_enums::Currency::foreign_try_from(amount.currency())?,
+                }),
+                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_AMOUNT".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Amount is required for repeat payments".to_owned(),
+                    error_object: None,
+                }))),
+            }?;
         let return_url = value.return_url;
         let enrolled_for_3ds = value.enrolled_for_3ds;
 
@@ -9545,7 +9567,8 @@ impl<
                     error_message: "Payment method data construction failed".to_owned(),
                     error_object: None,
                 }))?,
-            amount,
+            amount: amount.amount,
+            currency: Some(amount.currency),
             email,
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
                 payment_method_clone.unwrap_or_default(),
@@ -9629,12 +9652,17 @@ impl<
         };
 
         let amount = match value.amount {
-            Some(money) => Some(common_utils::types::Money {
-                amount: common_utils::types::MinorUnit::new(money.minor_amount),
-                currency: common_enums::Currency::foreign_try_from(money.currency())?,
-            }),
-            None => None,
-        };
+                Some(amount) => Ok(common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+                    currency: common_enums::Currency::foreign_try_from(amount.currency())?,
+                }),
+                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_AMOUNT".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Amount is required for repeat payments".to_owned(),
+                    error_object: None,
+                }))),
+            }?;
         let return_url = value.return_url;
 
         // Clone payment_method to avoid ownership issues
@@ -9665,8 +9693,9 @@ impl<
                     error_message: "Payment method data construction failed".to_owned(),
                     error_object: None,
                 }))?,
-            amount,
+            amount: amount.amount,
             email,
+            currency: Some(amount.currency),
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
                 payment_method_clone.unwrap_or_default(),
             )?,
@@ -9753,12 +9782,17 @@ impl<
         };
 
         let amount = match value.amount {
-            Some(money) => Some(common_utils::types::Money {
-                amount: common_utils::types::MinorUnit::new(money.minor_amount),
-                currency: common_enums::Currency::foreign_try_from(money.currency())?,
-            }),
-            None => None,
-        };
+                Some(amount) => Ok(common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+                    currency: common_enums::Currency::foreign_try_from(amount.currency())?,
+                }),
+                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_AMOUNT".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Amount is required for repeat payments".to_owned(),
+                    error_object: None,
+                }))),
+            }?;
         let return_url = value.return_url;
 
         // Clone payment_method to avoid ownership issues
@@ -9788,7 +9822,8 @@ impl<
                     error_message: "Payment method data construction failed".to_owned(),
                     error_object: None,
                 }))?,
-            amount,
+            amount: amount.amount,
+            currency: Some(amount.currency),
             email,
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
                 payment_method_clone.unwrap_or_default(),

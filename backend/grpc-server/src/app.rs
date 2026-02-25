@@ -95,6 +95,12 @@ pub struct Service {
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
+    pub recurring_payment_service: crate::server::payments::RecurringPayments,
+    pub event_service: crate::server::payments::Events,
+    pub payment_method_service: crate::server::payments::PaymentMethod,
+    pub merchant_authentication_service: crate::server::payments::MerchantAuthentication,
+    pub customer_service: crate::server::payments::Customer,
+    pub payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
 }
 
 impl Service {
@@ -112,12 +118,22 @@ impl Service {
         } else {
             logger::info!("EventPublisher disabled in configuration");
         }
-
+        let customer_service = crate::server::payments::Customer;
+        let merchant_authentication_service = crate::server::payments::MerchantAuthentication;
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
-            payments_service: crate::server::payments::Payments,
+            payments_service: crate::server::payments::Payments {
+                customer_service: customer_service.clone(),
+                merchant_authentication_service: merchant_authentication_service.clone(),
+            },
             refunds_service: crate::server::refunds::Refunds,
             disputes_service: crate::server::disputes::Disputes,
+            recurring_payment_service: crate::server::payments::RecurringPayments,
+            event_service: crate::server::payments::Events,
+            payment_method_service: crate::server::payments::PaymentMethod,
+            merchant_authentication_service,
+            customer_service,
+            payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
         }
     }
 
@@ -155,6 +171,12 @@ impl Service {
             self.payments_service,
             self.refunds_service,
             self.disputes_service,
+            self.recurring_payment_service,
+            self.event_service,
+            self.payment_method_service,
+            self.merchant_authentication_service,
+            self.customer_service,
+            self.payment_method_authentication_service,
         );
         let router = crate::http::create_router(app_state)
             .layer(logging_layer)

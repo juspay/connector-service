@@ -5,7 +5,7 @@ use axum::{
 };
 use grpc_api_types::payments::{
     refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,
-    RefundServiceTransformRequest, RefundServiceTransformResponse,
+    // RefundServiceTransformRequest, RefundServiceTransformResponse,
 };
 use std::sync::Arc;
 
@@ -21,13 +21,13 @@ http_handler!(
     RefundServiceGetRequest,
     RefundResponse,
     get,
-    refunds_service
+    refund_service
 );
 
-http_handler!(
-    transform_refund,
-    RefundServiceTransformRequest,
-    RefundServiceTransformResponse,
-    transform,
-    refunds_service
-);
+// http_handler!(
+//     transform_refund,
+//     RefundServiceTransformRequest,
+//     RefundServiceTransformResponse,
+//     transform,
+//     refunds_service
+// );

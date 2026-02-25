@@ -22,8 +22,8 @@ use grpc_api_types::payments::{
     dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
     DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
     DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
-    DisputeServiceSubmitEvidenceResponse, DisputeServiceTransformRequest,
-    DisputeServiceTransformResponse, WebhookEventType, WebhookResponseContent,
+    DisputeServiceSubmitEvidenceResponse, 
+     WebhookEventType, EventResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
@@ -403,95 +403,95 @@ impl DisputeService for Disputes {
         .await
     }
 
-    #[tracing::instrument(
-        name = "distpute_transform",
-        fields(
-            name = common_utils::consts::NAME,
-            service_name = tracing::field::Empty,
-            service_method = FlowName::IncomingWebhook.to_string(),
-            request_body = tracing::field::Empty,
-            response_body = tracing::field::Empty,
-            error_message = tracing::field::Empty,
-            merchant_id = tracing::field::Empty,
-            gateway = tracing::field::Empty,
-            request_id = tracing::field::Empty,
-            status_code = tracing::field::Empty,
-            message_ = "Golden Log Line (incoming)",
-            response_time = tracing::field::Empty,
-            tenant_id = tracing::field::Empty,
-            flow = FlowName::IncomingWebhook.to_string(),
-            flow_specific_fields.status = tracing::field::Empty,
-        )
-        skip(self, request)
-    )]
-    async fn transform(
-        &self,
-        request: tonic::Request<DisputeServiceTransformRequest>,
-    ) -> Result<tonic::Response<DisputeServiceTransformResponse>, tonic::Status> {
-        let config = get_config_from_request(&request)?;
-        let service_name = request
-            .extensions()
-            .get::<String>()
-            .cloned()
-            .unwrap_or_else(|| "DisputeService".to_string());
-        grpc_logging_wrapper(
-            request,
-            &service_name,
-            config.clone(),
-            common_utils::events::FlowName::IncomingWebhook,
-            |request_data| {
-                async move {
-                    let connector = request_data.extracted_metadata.connector;
-                    let connector_auth_details = request_data.extracted_metadata.connector_auth_type;
-                    let payload = request_data.payload;
-                    let request_details = payload
-                        .request_details
-                        .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                        .ok_or_else(|| {
-                            tonic::Status::invalid_argument("missing request_details in the payload")
-                        })?
-                        .map_err(|e| e.into_grpc_status())?;
-                    let webhook_secrets = payload
-                        .webhook_secrets
-                        .map(|details| {
-                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                                details,
-                            )
-                            .map_err(|e| e.into_grpc_status())
-                        })
-                        .transpose()?;
-                    // Get connector data
-                    let connector_data = ConnectorData::get_connector_by_name(&connector);
-                    let source_verified = connector_data
-                        .connector
-                        .verify_webhook_source(
-                            request_details.clone(),
-                            webhook_secrets.clone(),
-                            Some(connector_auth_details.clone()),
-                        )
-                        .switch()
-                        .map_err(|e| e.into_grpc_status())?;
+    // #[tracing::instrument(
+    //     name = "distpute_transform",
+    //     fields(
+    //         name = common_utils::consts::NAME,
+    //         service_name = tracing::field::Empty,
+    //         service_method = FlowName::IncomingWebhook.to_string(),
+    //         request_body = tracing::field::Empty,
+    //         response_body = tracing::field::Empty,
+    //         error_message = tracing::field::Empty,
+    //         merchant_id = tracing::field::Empty,
+    //         gateway = tracing::field::Empty,
+    //         request_id = tracing::field::Empty,
+    //         status_code = tracing::field::Empty,
+    //         message_ = "Golden Log Line (incoming)",
+    //         response_time = tracing::field::Empty,
+    //         tenant_id = tracing::field::Empty,
+    //         flow = FlowName::IncomingWebhook.to_string(),
+    //         flow_specific_fields.status = tracing::field::Empty,
+    //     )
+    //     skip(self, request)
+    // )]
+    // async fn transform(
+    //     &self,
+    //     request: tonic::Request<DisputeServiceTransformRequest>,
+    // ) -> Result<tonic::Response<DisputeServiceTransformResponse>, tonic::Status> {
+    //     let config = get_config_from_request(&request)?;
+    //     let service_name = request
+    //         .extensions()
+    //         .get::<String>()
+    //         .cloned()
+    //         .unwrap_or_else(|| "DisputeService".to_string());
+    //     grpc_logging_wrapper(
+    //         request,
+    //         &service_name,
+    //         config.clone(),
+    //         common_utils::events::FlowName::IncomingWebhook,
+    //         |request_data| {
+    //             async move {
+    //                 let connector = request_data.extracted_metadata.connector;
+    //                 let connector_auth_details = request_data.extracted_metadata.connector_auth_type;
+    //                 let payload = request_data.payload;
+    //                 let request_details = payload
+    //                     .request_details
+    //                     .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+    //                     .ok_or_else(|| {
+    //                         tonic::Status::invalid_argument("missing request_details in the payload")
+    //                     })?
+    //                     .map_err(|e| e.into_grpc_status())?;
+    //                 let webhook_secrets = payload
+    //                     .webhook_secrets
+    //                     .map(|details| {
+    //                         domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+    //                             details,
+    //                         )
+    //                         .map_err(|e| e.into_grpc_status())
+    //                     })
+    //                     .transpose()?;
+    //                 // Get connector data
+    //                 let connector_data = ConnectorData::get_connector_by_name(&connector);
+    //                 let source_verified = connector_data
+    //                     .connector
+    //                     .verify_webhook_source(
+    //                         request_details.clone(),
+    //                         webhook_secrets.clone(),
+    //                         Some(connector_auth_details.clone()),
+    //                     )
+    //                     .switch()
+    //                     .map_err(|e| e.into_grpc_status())?;
 
-                    let content = get_disputes_webhook_content(
-                        connector_data,
-                        request_details,
-                        webhook_secrets,
-                        Some(connector_auth_details),
-                    )
-                    .await
-                    .map_err(|e| e.into_grpc_status())?;
-                    let response = DisputeServiceTransformResponse {
-                        event_type: WebhookEventType::WebhookDisputeOpened.into(),
-                        content: Some(content),
-                        source_verified,
-                        response_ref_id: None,
-                    };
-                    Ok(tonic::Response::new(response))
-                }
-            },
-        )
-        .await
-    }
+    //                 let content = get_disputes_webhook_content(
+    //                     connector_data,
+    //                     request_details,
+    //                     webhook_secrets,
+    //                     Some(connector_auth_details),
+    //                 )
+    //                 .await
+    //                 .map_err(|e| e.into_grpc_status())?;
+    //                 let response = DisputeServiceTransformResponse {
+    //                     event_type: WebhookEventType::WebhookDisputeOpened.into(),
+    //                     content: Some(content),
+    //                     source_verified,
+    //                     response_ref_id: None,
+    //                 };
+    //                 Ok(tonic::Response::new(response))
+    //             }
+    //         },
+    //     )
+    //     .await
+    // }
 }
 
 async fn get_disputes_webhook_content(
@@ -499,7 +499,7 @@ async fn get_disputes_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
-) -> CustomResult<WebhookResponseContent, ApplicationErrorResponse> {
+) -> CustomResult<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
         .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
@@ -515,9 +515,9 @@ async fn get_disputes_webhook_content(
         }),
     )?;
 
-    Ok(WebhookResponseContent {
+    Ok(EventResponse {
         content: Some(
-            grpc_api_types::payments::webhook_response_content::Content::DisputesResponse(response),
+            grpc_api_types::payments::event_response::Content::DisputesResponse(response),
         ),
     })
 }
