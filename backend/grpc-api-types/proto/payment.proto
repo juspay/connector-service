@@ -1593,7 +1593,6 @@ message MerchantAuthenticationServiceCreateSessionTokenRequest {
 
   // State Information
   optional ConnectorState state = 5;
-
   // Browser Information
   optional BrowserInformation browser_info = 6;
 
@@ -1726,6 +1725,9 @@ message PaymentServiceCreateOrderRequest {
 
   // Environment Configuration
   optional bool test_mode = 7;
+
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 8; // The type of payment method (e.g., apple_pay, google_pay)
 }
 
 // Response message for create order operation
@@ -1745,6 +1747,9 @@ message PaymentServiceCreateOrderResponse {
   // Raw Request/Response for debugging
   optional SecretString raw_connector_request = 7;
   optional SecretString raw_connector_response = 8;
+
+  // Wallet Session Token
+  optional SessionToken session_token = 9; // JSON serialized session token for wallet payments (Apple Pay, Google Pay)
 }
 
 // Request message for processing a refund
@@ -1920,7 +1925,7 @@ message PaymentServiceRegisterAutoDebitRequest {
   optional ConnectorState state = 29; // State data for access token storage and other connector-specific state
 
   // Payment Method Token
-  optional string payment_method_token = 30;
+  optional SecretString payment_method_token = 30;
 
   // Send the connector order identifier here if an order was created before authorize
   optional string order_id = 31;

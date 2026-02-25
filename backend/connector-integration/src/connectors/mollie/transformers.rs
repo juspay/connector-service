@@ -172,14 +172,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Card(_card_data) => {
                 // Extract card token from payment_method_token
                 // Following Hyperswitch pattern: ALL tokens (cst_ and tkn_) go to cardToken field
-                let card_token = item
-                    .resource_common_data
-                    .payment_method_token
-                    .as_ref()
-                    .and_then(|token| match token {
-                        domain_types::router_data::PaymentMethodToken::Token(t) => Some(t.clone()),
-                        _ => None,
-                    });
+                let card_token = item.resource_common_data.payment_method_token.as_ref().map(
+                    |token| match token {
+                        domain_types::router_data::PaymentMethodToken::Token(t) => t.clone(),
+                    },
+                );
 
                 // Extract billing address if available
                 // Match Hyperswitch format: comma separator, no region

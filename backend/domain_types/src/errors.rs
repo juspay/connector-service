@@ -79,6 +79,15 @@ impl ApplicationErrorResponse {
             Self::DomainError(err) => err,
         }
     }
+
+    pub fn missing_required_field(field_name: &'static str) -> Self {
+        Self::BadRequest(ApiError {
+            sub_code: "MISSING_REQUIRED_FIELD".to_owned(),
+            error_identifier: 400,
+            error_message: format!("Missing required param: {field_name}"),
+            error_object: None,
+        })
+    }
 }
 
 #[derive(Debug, serde::Serialize, Clone)]

@@ -8,7 +8,6 @@ use common_utils::{
     types::{SemanticVersion, StringMajorUnit},
 };
 
-use crate::unimplemented_payment_method;
 use crate::{connectors::cybersource::CybersourceRouterData, types::ResponseRouterData, utils};
 use cards;
 use domain_types::{
@@ -23,16 +22,16 @@ use domain_types::{
         PaymentsSyncData, RecurringMandateData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_address::Address,
     payment_method_data::{
-        self, ApplePayWalletData, CardDetailsForNetworkTransactionId, GPayPredecryptData,
-        GooglePayWalletData, NetworkTokenData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, SamsungPayWalletData, WalletData,
+        self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
+        GooglePayDecryptedData, GooglePayWalletData, NetworkTokenData, PaymentMethodData,
+        PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ApplePayPredecryptData, ConnectorAuthType,
-        ErrorResponse, GooglePayDecryptedData, PaymentMethodToken, PazeDecryptedData,
+        AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ErrorResponse,
+        PazeDecryptedData,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
@@ -193,52 +192,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
 
                 PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-                    WalletData::ApplePay(apple_pay_data) => match item
-                        .router_data
-                        .resource_common_data
-                        .payment_method_token
-                        .clone()
+                    WalletData::ApplePay(apple_pay_data) => match apple_pay_data
+                        .payment_data
+                        .get_decrypted_apple_pay_payment_data_optional()
                     {
-                        Some(payment_method_token) => match payment_method_token {
-                            PaymentMethodToken::ApplePayDecrypt(decrypt_data) => {
-                                let expiration_month = decrypt_data
-                                    .get_expiry_month()
-                                    .change_context(ConnectorError::InvalidDataFormat {
-                                        field_name: "expiration_month",
-                                    })?;
-                                let expiration_year = decrypt_data.get_four_digit_expiry_year();
-                                (
-                                    PaymentInformation::ApplePay(Box::new(
-                                        ApplePayPaymentInformation {
-                                            tokenized_card: TokenizedCard {
-                                                number: decrypt_data
-                                                    .application_primary_account_number,
-                                                cryptogram: Some(
-                                                    decrypt_data
-                                                        .payment_data
-                                                        .online_payment_cryptogram,
-                                                ),
-                                                transaction_type: TransactionType::InApp,
-                                                expiration_year,
-                                                expiration_month,
-                                            },
-                                        },
-                                    )),
-                                    Some(PaymentSolution::ApplePay),
-                                )
-                            }
-                            PaymentMethodToken::Token(_) => Err(unimplemented_payment_method!(
-                                "Apple Pay",
-                                "Manual",
-                                "Cybersource"
-                            ))?,
-                            PaymentMethodToken::PazeDecrypt(_) => {
-                                Err(unimplemented_payment_method!("Paze", "Cybersource"))?
-                            }
-                            PaymentMethodToken::GooglePayDecrypt(_) => {
-                                Err(unimplemented_payment_method!("Google Pay", "Cybersource"))?
-                            }
-                        },
+                        Some(decrypt_data) => (
+                            PaymentInformation::ApplePay(Box::new(ApplePayPaymentInformation {
+                                tokenized_card: TokenizedCard {
+                                    number: decrypt_data.clone().application_primary_account_number,
+                                    cryptogram: Some(
+                                        decrypt_data.clone().payment_data.online_payment_cryptogram,
+                                    ),
+                                    transaction_type: TransactionType::InApp,
+                                    expiration_year: decrypt_data.get_four_digit_expiry_year(),
+                                    expiration_month: decrypt_data.get_expiry_month(),
+                                },
+                            })),
+                            Some(PaymentSolution::ApplePay),
+                        ),
                         None => {
                             let apple_pay_encrypted_data = apple_pay_data
                                 .payment_data
@@ -1552,7 +1523,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-        Box<ApplePayPredecryptData>,
+        Box<ApplePayDecryptedData>,
         ApplePayWalletData,
     )> for CybersourcePaymentsRequest<T>
 {
@@ -1568,7 +1539,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 >,
                 T,
             >,
-            Box<ApplePayPredecryptData>,
+            Box<ApplePayDecryptedData>,
             ApplePayWalletData,
         ),
     ) -> Result<Self, Self::Error> {
@@ -1595,11 +1566,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Some(apple_pay_wallet_data.payment_method.network.clone()),
         ))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let expiration_month = apple_pay_data.get_expiry_month().change_context(
-            ConnectorError::InvalidDataFormat {
-                field_name: "expiration_month",
-            },
-        )?;
+        let expiration_month = apple_pay_data.get_expiry_month();
 
         if let Err(parse_err) = expiration_month.peek().parse::<u8>() {
             tracing::warn!(
@@ -1759,124 +1726,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-        Box<GPayPredecryptData>,
-        GooglePayWalletData,
-    )> for CybersourcePaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        (item, google_pay_decrypted_data, google_pay_data): (
-            &CybersourceRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            Box<GPayPredecryptData>,
-            GooglePayWalletData,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let transaction_type = if item.router_data.request.off_session == Some(true) {
-            TransactionType::StoredCredentials
-        } else {
-            TransactionType::InApp
-        };
-        let email = item
-            .router_data
-            .resource_common_data
-            .get_billing_email()
-            .or(item.router_data.request.get_email())?;
-        let bill_to = build_bill_to(
-            item.router_data.resource_common_data.get_optional_billing(),
-            email,
-        )?;
-        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
-
-        let payment_information =
-            PaymentInformation::GooglePay(Box::new(GooglePayPaymentInformation {
-                tokenized_card: TokenizedCard {
-                    number: google_pay_decrypted_data
-                        .application_primary_account_number
-                        .clone(),
-                    cryptogram: google_pay_decrypted_data.cryptogram.clone(),
-                    transaction_type,
-                    expiration_year: google_pay_decrypted_data
-                        .get_four_digit_expiry_year()
-                        .change_context(ConnectorError::InvalidDataFormat {
-                            field_name: "expiration_year",
-                        })?,
-                    expiration_month: google_pay_decrypted_data
-                        .get_expiry_month()
-                        .change_context(ConnectorError::InvalidDataFormat {
-                            field_name: "expiration_month",
-                        })?,
-                },
-            }));
-        let processing_information = ProcessingInformation::try_from((
-            item,
-            Some(PaymentSolution::GooglePay),
-            Some(google_pay_data.info.card_network.clone()),
-        ))?;
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
-            item.router_data
-                .request
-                .metadata
-                .clone()
-                .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
-        );
-
-        let ucaf_collection_indicator =
-            match google_pay_data.info.card_network.to_lowercase().as_str() {
-                "mastercard" => Some("2".to_string()),
-                _ => None,
-            };
-
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            consumer_authentication_information: Some(CybersourceConsumerAuthInformation {
-                pares_status: None,
-                ucaf_collection_indicator,
-                cavv: None,
-                ucaf_authentication_data: None,
-                xid: None,
-                directory_server_transaction_id: None,
-                specification_version: None,
-                pa_specification_version: None,
-                veres_enrolled: None,
-                eci_raw: None,
-                authentication_date: None,
-                effective_authentication_type: None,
-                challenge_code: None,
-                signed_pares_status_reason: None,
-                challenge_cancel_code: None,
-                network_score: None,
-                acs_transaction_id: None,
-                cavv_algorithm: None,
-            }),
-            merchant_defined_information,
-        })
-    }
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<(
-        &CybersourceRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
         Box<GooglePayDecryptedData>,
         GooglePayWalletData,
     )> for CybersourcePaymentsRequest<T>
@@ -1913,28 +1762,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )?;
         let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
+        let expiration_month = google_pay_decrypted_data
+            .get_expiry_month()
+            .change_context(ConnectorError::InvalidDataFormat {
+                field_name: "google_pay_decrypted_data.card_exp_month",
+            })?;
+        let expiration_year = google_pay_decrypted_data
+            .get_four_digit_expiry_year()
+            .change_context(ConnectorError::InvalidDataFormat {
+                field_name: "google_pay_decrypted_data.card_exp_year",
+            })?;
         let payment_information =
             PaymentInformation::GooglePay(Box::new(GooglePayPaymentInformation {
                 tokenized_card: TokenizedCard {
-                    number: google_pay_decrypted_data.payment_method_details.pan.clone(),
-                    cryptogram: google_pay_decrypted_data
-                        .payment_method_details
-                        .cryptogram
+                    number: google_pay_decrypted_data
+                        .application_primary_account_number
                         .clone(),
+                    cryptogram: google_pay_decrypted_data.cryptogram.clone(),
                     transaction_type,
-                    expiration_year: Secret::new(
-                        google_pay_decrypted_data
-                            .payment_method_details
-                            .expiration_year
-                            .get_year()
-                            .to_string(),
-                    ),
-                    expiration_month: Secret::new(
-                        google_pay_decrypted_data
-                            .payment_method_details
-                            .expiration_month
-                            .two_digits(),
-                    ),
+                    expiration_year,
+                    expiration_month,
                 },
             }));
         let processing_information = ProcessingInformation::try_from((
@@ -2133,173 +1980,131 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(ccard) => Self::try_from((&item, ccard)),
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-                WalletData::ApplePay(apple_pay_data) => {
-                    match item
-                        .router_data
-                        .resource_common_data
-                        .payment_method_token
-                        .clone()
-                    {
-                        Some(payment_method_token) => match payment_method_token {
-                            PaymentMethodToken::ApplePayDecrypt(decrypt_data) => {
-                                Self::try_from((&item, decrypt_data, apple_pay_data))
-                            }
-                            PaymentMethodToken::Token(_) => Err(unimplemented_payment_method!(
-                                "Apple Pay",
-                                "Manual",
-                                "Cybersource"
-                            ))?,
-                            PaymentMethodToken::PazeDecrypt(_) => {
-                                Err(unimplemented_payment_method!("Paze", "Cybersource"))?
-                            }
-                            PaymentMethodToken::GooglePayDecrypt(_) => {
-                                Err(unimplemented_payment_method!("Google Pay", "Cybersource"))?
-                            }
-                        },
-                        None => {
-                            let transaction_type =
-                                if item.router_data.request.off_session == Some(true) {
-                                    TransactionType::StoredCredentials
-                                } else {
-                                    TransactionType::InApp
-                                };
-                            let email = item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_email()
-                                .or(item.router_data.request.get_email())?;
-                            let bill_to = build_bill_to(
-                                item.router_data.resource_common_data.get_optional_billing(),
-                                email,
-                            )?;
-                            let order_information =
-                                OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
-                            let processing_information = ProcessingInformation::try_from((
-                                &item,
-                                Some(PaymentSolution::ApplePay),
-                                Some(apple_pay_data.payment_method.network.clone()),
-                            ))?;
-                            let client_reference_information =
-                                ClientReferenceInformation::from(&item);
-
-                            let apple_pay_encrypted_data = apple_pay_data
-                                .payment_data
-                                .get_encrypted_apple_pay_payment_data_mandatory()
-                                .change_context(ConnectorError::MissingRequiredField {
-                                    field_name: "Apple pay encrypted data",
-                                })?;
-                            let payment_information = PaymentInformation::ApplePayToken(Box::new(
-                                ApplePayTokenPaymentInformation {
-                                    fluid_data: FluidData {
-                                        value: Secret::from(apple_pay_encrypted_data.clone()),
-                                        descriptor: Some(FLUID_DATA_DESCRIPTOR.to_string()),
-                                    },
-                                    tokenized_card: ApplePayTokenizedCard { transaction_type },
-                                },
-                            ));
-                            let merchant_defined_information =
-                                convert_metadata_to_merchant_defined_info(
-                                    item.router_data
-                                        .request
-                                        .metadata
-                                        .clone()
-                                        .map(|metadata| metadata.expose()),
-                                    item.router_data.request.merchant_order_reference_id.clone(),
-                                );
-                            let ucaf_collection_indicator = match apple_pay_data
-                                .payment_method
-                                .network
-                                .to_lowercase()
-                                .as_str()
-                            {
-                                "mastercard" => Some("2".to_string()),
-                                _ => None,
-                            };
-                            Ok(Self {
-                                processing_information,
-                                payment_information,
-                                order_information,
-                                client_reference_information,
-                                merchant_defined_information,
-                                consumer_authentication_information: Some(
-                                    CybersourceConsumerAuthInformation {
-                                        pares_status: None,
-                                        ucaf_collection_indicator,
-                                        cavv: None,
-                                        ucaf_authentication_data: None,
-                                        xid: None,
-                                        directory_server_transaction_id: None,
-                                        specification_version: None,
-                                        pa_specification_version: None,
-                                        veres_enrolled: None,
-                                        eci_raw: None,
-                                        authentication_date: None,
-                                        effective_authentication_type: None,
-                                        challenge_code: None,
-                                        signed_pares_status_reason: None,
-                                        challenge_cancel_code: None,
-                                        network_score: None,
-                                        acs_transaction_id: None,
-                                        cavv_algorithm: None,
-                                    },
-                                ),
-                            })
-                        }
+                WalletData::ApplePay(apple_pay_data) => match apple_pay_data
+                    .payment_data
+                    .get_decrypted_apple_pay_payment_data_optional()
+                {
+                    Some(decrypt_data) => {
+                        Self::try_from((&item, Box::new(decrypt_data.clone()), apple_pay_data))
                     }
-                }
+                    None => {
+                        let transaction_type = if item.router_data.request.off_session == Some(true)
+                        {
+                            TransactionType::StoredCredentials
+                        } else {
+                            TransactionType::InApp
+                        };
+                        let email = item
+                            .router_data
+                            .resource_common_data
+                            .get_billing_email()
+                            .or(item.router_data.request.get_email())?;
+                        let bill_to = build_bill_to(
+                            item.router_data.resource_common_data.get_optional_billing(),
+                            email,
+                        )?;
+                        let order_information =
+                            OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
+                        let processing_information = ProcessingInformation::try_from((
+                            &item,
+                            Some(PaymentSolution::ApplePay),
+                            Some(apple_pay_data.payment_method.network.clone()),
+                        ))?;
+                        let client_reference_information = ClientReferenceInformation::from(&item);
+
+                        let apple_pay_encrypted_data = apple_pay_data
+                            .payment_data
+                            .get_encrypted_apple_pay_payment_data_mandatory()
+                            .change_context(ConnectorError::MissingRequiredField {
+                                field_name: "Apple pay encrypted data",
+                            })?;
+                        let payment_information = PaymentInformation::ApplePayToken(Box::new(
+                            ApplePayTokenPaymentInformation {
+                                fluid_data: FluidData {
+                                    value: Secret::from(apple_pay_encrypted_data.clone()),
+                                    descriptor: Some(FLUID_DATA_DESCRIPTOR.to_string()),
+                                },
+                                tokenized_card: ApplePayTokenizedCard { transaction_type },
+                            },
+                        ));
+                        let merchant_defined_information =
+                            convert_metadata_to_merchant_defined_info(
+                                item.router_data
+                                    .request
+                                    .metadata
+                                    .clone()
+                                    .map(|metadata| metadata.expose()),
+                                item.router_data.request.merchant_order_reference_id.clone(),
+                            );
+                        let ucaf_collection_indicator = match apple_pay_data
+                            .payment_method
+                            .network
+                            .to_lowercase()
+                            .as_str()
+                        {
+                            "mastercard" => Some("2".to_string()),
+                            _ => None,
+                        };
+                        Ok(Self {
+                            processing_information,
+                            payment_information,
+                            order_information,
+                            client_reference_information,
+                            merchant_defined_information,
+                            consumer_authentication_information: Some(
+                                CybersourceConsumerAuthInformation {
+                                    pares_status: None,
+                                    ucaf_collection_indicator,
+                                    cavv: None,
+                                    ucaf_authentication_data: None,
+                                    xid: None,
+                                    directory_server_transaction_id: None,
+                                    specification_version: None,
+                                    pa_specification_version: None,
+                                    veres_enrolled: None,
+                                    eci_raw: None,
+                                    authentication_date: None,
+                                    effective_authentication_type: None,
+                                    challenge_code: None,
+                                    signed_pares_status_reason: None,
+                                    challenge_cancel_code: None,
+                                    network_score: None,
+                                    acs_transaction_id: None,
+                                    cavv_algorithm: None,
+                                },
+                            ),
+                        })
+                    }
+                },
                 WalletData::GooglePay(google_pay_data) => {
-                    match item
-                        .router_data
-                        .resource_common_data
-                        .payment_method_token
-                        .clone()
-                    {
-                        Some(payment_method_token) => match payment_method_token {
-                            PaymentMethodToken::GooglePayDecrypt(decrypt_data) => {
-                                Self::try_from((&item, decrypt_data, google_pay_data))
-                            }
-                            PaymentMethodToken::Token(_) => Err(unimplemented_payment_method!(
-                                "Apple Pay",
-                                "Manual",
-                                "Cybersource"
-                            ))?,
-                            PaymentMethodToken::PazeDecrypt(_) => {
-                                Err(unimplemented_payment_method!("Paze", "Cybersource"))?
-                            }
-                            PaymentMethodToken::ApplePayDecrypt(_) => {
-                                Err(unimplemented_payment_method!(
-                                    "Apple Pay",
-                                    "Simplified",
-                                    "Cybersource"
-                                ))?
-                            }
-                        },
-                        None => Self::try_from((&item, google_pay_data)),
+                    match &google_pay_data.tokenization_data {
+                        payment_method_data::GpayTokenizationData::Decrypted(decrypt_data) => {
+                            Self::try_from((&item, Box::new(decrypt_data.clone()), google_pay_data))
+                        }
+                        payment_method_data::GpayTokenizationData::Encrypted(_) => {
+                            Self::try_from((&item, google_pay_data))
+                        }
                     }
                 }
                 WalletData::SamsungPay(samsung_pay_data) => {
                     Self::try_from((&item, samsung_pay_data))
                 }
-                WalletData::Paze(_) => {
-                    match item
-                        .router_data
-                        .resource_common_data
-                        .payment_method_token
-                        .clone()
-                    {
-                        Some(PaymentMethodToken::PazeDecrypt(paze_decrypted_data)) => {
-                            Self::try_from((&item, paze_decrypted_data))
+                WalletData::Paze(paze_wallet_data) => {
+                    let paze_decrypted_data = match *paze_wallet_data {
+                        payment_method_data::PazeWalletData::Decrypted(paze_decrypted_data) => {
+                            Ok(*paze_decrypted_data)
                         }
-                        Some(PaymentMethodToken::Token(_))
-                        | Some(PaymentMethodToken::ApplePayDecrypt(_))
-                        | Some(PaymentMethodToken::GooglePayDecrypt(_))
-                        | None => Err(ConnectorError::NotImplemented(
-                            domain_types::utils::get_unimplemented_payment_method_error_message(
-                                "Cybersource",
-                            ),
-                        )
-                        .into()),
-                    }
+                        payment_method_data::PazeWalletData::CompleteResponse(
+                            complete_response,
+                        ) => {
+                            // TODO: This needs to be tested.
+                            serde_json::from_str::<PazeDecryptedData>(complete_response.peek())
+                                .change_context(ConnectorError::InvalidWalletToken {
+                                    wallet_name: "Paze".to_string(),
+                                })
+                        }
+                    }?;
+                    Self::try_from((&item, Box::new(paze_decrypted_data)))
                 }
                 WalletData::AliPayQr(_)
                 | WalletData::AliPayRedirect(_)

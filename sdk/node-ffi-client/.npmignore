@@ -1,0 +1,5 @@
+src/
+tsconfig.json
+.gitignore
+build.sh
+tests/

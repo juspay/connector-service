@@ -1,6 +1,7 @@
 #![allow(clippy::expect_used)]
 
-use grpc_server::{app, configs};
+use grpc_server::app;
+use ucs_env::configs;
 mod common;
 use grpc_api_types::payments::{
     payment_service_client::PaymentServiceClient, PaymentServiceAuthorizeOnlyRequest,

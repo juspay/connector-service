@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ucs.v2;
 
-
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
 // ============================================================================
@@ -62,6 +61,7 @@ message PaymentMethod {
     RevolutPayWallet revolut_pay = 20;                  // Revolut Pay
     MifinityWallet mifinity = 21;                       // Mifinity
     Bluecode bluecode = 22;                             // Bluecode
+    PazeWallet paze = 23;                               // Paze
     
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -135,6 +135,22 @@ message PaymentMethod {
     // GIFT CARDS (130-139)
     Givex givex = 137;                                         // Givex gift card
     PaySafeCard pay_safe_card = 138;                           // Paysafecard - Prepaid payment method
+
+    // VOUCHER METHODS (140-149) - Cash and voucher payment methods
+    Boleto boleto = 140;                                       // Boleto - Brazilian payment method
+    Efecty efecty = 141;                                      // Efecty - Colombian cash payment network
+    PagoEfectivo pago_efectivo = 142;                         // PagoEfectivo - Peruvian cash payment method
+    RedCompra red_compra = 143;                               // RedCompra - Chilean debit card network
+    RedPagos red_pagos = 144;                                  // RedPagos - Uruguayan payment network
+    Alfamart alfamart = 145;                                   // Alfamart - Indonesian convenience store payment
+    Indomaret indomaret = 146;
+    Oxxo oxxo = 147;                                // Indomaret - Indonesian convenience store payment
+    SevenEleven seven_eleven = 148;                            // 7-Eleven - Convenience store payment
+    Lawson lawson = 149;                                      // Lawson - Japanese convenience store payment
+    MiniStop mini_stop = 150;                                  // Ministop - Japanese convenience store payment
+    FamilyMart family_mart = 151;                             // FamilyMart - Japanese convenience store payment
+    Seicomart seicomart = 152;                                // Seicomart - Japanese convenience store payment
+    PayEasy pay_easy = 153;                                    // Pay-easy - Japanese bill payment service
   }
 }
 
@@ -314,7 +330,7 @@ message AppleWallet {
   message PaymentData{
     oneof payment_data {
       string encrypted_data = 1;     // Encrypted Apple Pay payment data as string
-      ApplePayPredecryptData decrypted_data = 2;  // Decrypted Apple Pay payment data
+      ApplePayDecryptedData decrypted_data = 2;  // Decrypted Apple Pay payment data
     }
   }
   PaymentData payment_data = 1;
@@ -331,8 +347,8 @@ message AppleWallet {
   string transaction_identifier = 3;
 }
 
-// Apple Pay predecrypted data structure
-message ApplePayPredecryptData {
+// Apple Pay decrypted data structure
+message ApplePayDecryptedData {
   // The primary account number
   CardNumberType application_primary_account_number = 1;
   
@@ -381,20 +397,20 @@ message GoogleWallet {
     }
     optional AssuranceDetails assurance_details = 3;
   }
-  PaymentMethodInfo info = 3;
-  
-  // Tokenization data - can be either encrypted or predecrypted
+
+  // Tokenization data - can be either encrypted or decrypted
   message TokenizationData {
     oneof tokenization_data {
-      GPayPredecryptData decrypted_data = 1;     // Predecrypted Google Pay payment data
-      GpayEncryptedTokenizationData encrypted_data = 2;  // Encrypted Google Pay payment data
+      GooglePayDecryptedData decrypted_data = 1;     // Decrypted Google Pay payment data
+      GooglePayEncryptedTokenizationData encrypted_data = 2;  // Encrypted Google Pay payment data
     }
   }
+
+  PaymentMethodInfo info = 3;
   TokenizationData tokenization_data = 4;
 }
 
-// Google Pay predecrypted data structure
-message GPayPredecryptData {
+message GooglePayDecryptedData {
   // The card's expiry month
   SecretString card_exp_month = 1;
   
@@ -412,7 +428,7 @@ message GPayPredecryptData {
 }
 
 // Google Pay encrypted tokenization data structure
-message GpayEncryptedTokenizationData {
+message GooglePayEncryptedTokenizationData {
   // The type of the token
   string token_type = 1;
   
@@ -487,10 +503,65 @@ message AmazonPayRedirectWallet {
   // Fields will be added as needed for Amazon Pay integration
 }
 
+// TODO: Should we keep both Paze options, or just one?
 // Paze - Digital wallet payment service
 message PazeWallet {
-  // Complete response from Paze
-  string complete_response = 1;
+  oneof paze_data {
+    // Backward-compatible raw payload.
+    SecretString complete_response = 1;
+    // Structured decrypted Paze payload.
+    PazeDecryptedData decrypted_data = 2;
+  }
+}
+
+message PazeToken {
+  NetworkTokenType payment_token = 1;
+  SecretString token_expiration_month = 2;
+  SecretString token_expiration_year = 3;
+  SecretString payment_account_reference = 4;
+}
+
+message PazeDynamicData {
+  optional SecretString dynamic_data_value = 1;
+  optional string dynamic_data_type = 2;
+  optional string dynamic_data_expiration = 3;
+}
+
+message PazePhoneNumber {
+  SecretString country_code = 1;
+  SecretString phone_number = 2;
+}
+
+message PazeConsumer {
+  optional SecretString first_name = 1;
+  optional SecretString last_name = 2;
+  SecretString full_name = 3;
+  SecretString email_address = 4;
+  optional PazePhoneNumber mobile_number = 5;
+  optional CountryAlpha2 country_code = 6;
+  optional string language_code = 7;
+}
+
+message PazeAddress {
+  optional SecretString name = 1;
+  optional SecretString line1 = 2;
+  optional SecretString line2 = 3;
+  optional SecretString line3 = 4;
+  optional SecretString city = 5;
+  optional SecretString state = 6;
+  optional SecretString zip = 7;
+  optional CountryAlpha2 country_code = 8;
+}
+
+message PazeDecryptedData {
+  SecretString client_id = 1;
+  string profile_id = 2;
+  PazeToken token = 3;
+  CardNetwork payment_card_network = 4;
+  repeated PazeDynamicData dynamic_data = 5;
+  PazeAddress billing_address = 6;
+  PazeConsumer consumer = 7;
+  optional string eci = 8;
 }
 // Mifinity - Online payment service by Mifinity
 message MifinityWallet {
@@ -993,10 +1064,8 @@ message CryptoCurrency {
 }
 
 // ============================================================================
-// CASH/VOUCHER PAYMENT METHODS - TODO: Not yet supported
+// CASH/VOUCHER PAYMENT METHODS
 // ============================================================================
-
-/*
 
 // Alfamart - Indonesian convenience store payment
 message Alfamart {
@@ -1006,17 +1075,12 @@ message Alfamart {
 // Boleto - Brazilian payment method
 message Boleto {
   // The shopper's social security number
-  optional string social_security_number = 1 [(validate.rules).string = {min_len: 11, max_len: 11, pattern: "^[0-9]{11}$"}];
+  optional string social_security_number = 1;
 }
 
 // Efecty - Colombian cash payment network
 message Efecty {
   // Fields will be added as needed for Efecty integration
-}
-
-// E-Voucher - Generic electronic voucher payment
-message EVoucher {
-  // Fields will be added as needed for E-Voucher integration
 }
 
 // Indomaret - Indonesian convenience store payment
@@ -1025,13 +1089,23 @@ message Indomaret {
 }
 
 // OXXO - Mexican convenience store payment
-message OXXO {
+message Oxxo {
   // Fields will be added as needed for OXXO integration
 }
 
 // PagoEfectivo - Peruvian cash payment method
 message PagoEfectivo {
   // Fields will be added as needed for PagoEfectivo integration
+}
+
+// RedCompra - Chilean debit card network
+message RedCompra {
+  // Fields will be added as needed for RedCompra integration
+}
+
+// RedPagos - Uruguayan payment network
+message RedPagos {
+  // Fields will be added as needed for RedPagos integration
 }
 
 // 7-Eleven - Convenience store payment
@@ -1063,7 +1137,13 @@ message Seicomart {
 message PayEasy {
   // Fields will be added as needed for Pay-easy integration
 }
-*/
+
+// JCSVoucher - Japanese convenience store voucher (shared by Lawson, MiniStop, FamilyMart, Seicomart, PayEasy)
+message JCSVoucher {
+  // Fields will be added as needed for JCS Voucher integration
+}
+
+
 
 // ============================================================================
 // DIRECT DEBIT PAYMENT METHODS - TODO: Not yet supported
