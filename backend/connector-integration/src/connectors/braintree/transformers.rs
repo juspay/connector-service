@@ -1881,6 +1881,7 @@ pub struct ErrorResponse {
 #[serde(untagged)]
 pub enum BraintreeTokenResponse {
     TokenResponse(Box<TokenResponse>),
+    AchTokenResponse(Box<TokenizeUsBankAccountResponse>),
     ErrorResponse(Box<ErrorResponse>),
 }
 
@@ -1909,6 +1910,17 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         token: token_response
                             .data
                             .tokenize_credit_card
+                            .payment_method
+                            .id
+                            .expose()
+                            .clone(),
+                    })
+                }
+
+                BraintreeTokenResponse::AchTokenResponse(ach_response) => {
+                    Ok(PaymentMethodTokenResponse {
+                        token: ach_response
+                            .tokenize_us_bank_account
                             .payment_method
                             .id
                             .expose()
