@@ -655,7 +655,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Braintree,
-    curl_request: Json(BraintreeTokenRequest),
+    curl_request: Json(BraintreePaymentMethodTokenRequest),
     curl_response: BraintreeTokenResponse,
     flow_name: PaymentMethodToken,
     resource_common_data: PaymentFlowData,
