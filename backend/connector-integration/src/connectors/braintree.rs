@@ -311,7 +311,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: PaymentMethodToken,
-            request_body: BraintreeTokenRequest<T>,
+            request_body: BraintreePaymentMethodTokenRequest<T>,
             response_body: BraintreeTokenResponse,
             router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ),
