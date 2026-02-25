@@ -215,6 +215,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         }
     }
 }
+
+fn parse_account_holder_name(full_name: &Secret<String>) -> (String, String) {
+    let name = full_name.clone().expose();
+    let parts: Vec<&str> = name.split_whitespace().collect();
+    match parts.as_slice() {
+        [] => (String::new(), String::new()),
+        [first] => (first.to_string(), String::new()),
+        [first, rest @ ..] => (first.to_string(), rest.join(" ")),
+    }
+}
+
 pub type BraintreeCaptureRequest = GenericBraintreeRequest<VariableCaptureInput>;
 pub type BraintreeRefundRequest = GenericBraintreeRequest<BraintreeRefundVariables>;
 pub type BraintreePSyncRequest = GenericBraintreeRequest<PSyncInput>;
