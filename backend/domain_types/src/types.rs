@@ -17,12 +17,12 @@ use grpc_api_types::payments::{
     self as grpc_payment_types, AcceptDisputeResponse, ConnectorState, DisputeDefendRequest,
     DisputeDefendResponse, DisputeResponse, DisputeServiceSubmitEvidenceResponse,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse,
-    PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
-    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRegisterRequest,
-    PaymentServiceRegisterResponse, PaymentServiceRevokeMandateRequest,
-    PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
-    PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RefundResponse,
+    PaymentServiceCreateAccessTokenResponse, PaymentServiceGetResponse,
+    PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
+    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceRevokeMandateRequest, PaymentServiceSdkSessionTokenRequest,
+    PaymentServiceSdkSessionTokenResponse, PaymentServiceVoidPostCaptureResponse,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -67,9 +67,9 @@ impl ForeignTryFrom<(Secret<String>, &'static str)> for SecretSerdeValue {
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
-        DefendDispute, IncrementalAuthorization, PSync, PaymentMethodToken, RSync, Refund,
-        RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
+        CreateSessionToken, DefendDispute, IncrementalAuthorization, PSync, PaymentMethodToken,
+        RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ApplePayPaymentRequest,
@@ -4748,6 +4748,61 @@ impl ForeignFrom<grpc_api_types::payments::ProductType> for common_enums::Produc
             grpc_api_types::payments::ProductType::Accommodation => Self::Accommodation,
         }
     }
+}
+
+pub fn generate_access_token_response_data(
+    router_data_v2: RouterDataV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    >,
+) -> Result<AccessTokenResponseData, error_stack::Report<ApplicationErrorResponse>> {
+    match router_data_v2.response {
+        Ok(access_token_data) => {
+            tracing::info!(
+                "Access token created successfully with expiry: {:?}",
+                access_token_data.expires_in
+            );
+            Ok(access_token_data)
+        }
+        Err(err) => Err(report!(ApplicationErrorResponse::InternalServerError(
+            ApiError {
+                sub_code: "ACCESS_TOKEN_CREATION_ERROR".to_string(),
+                error_identifier: err.status_code,
+                error_message: err.message,
+                error_object: None,
+            }
+        ))),
+    }
+}
+
+pub fn create_access_token_data(
+    access_token_data: AccessTokenResponseData,
+) -> PaymentServiceCreateAccessTokenResponse {
+    PaymentServiceCreateAccessTokenResponse {
+        access_token: Some(access_token_data.access_token),
+        token_type: access_token_data.token_type,
+        expires_in_seconds: access_token_data.expires_in,
+        status: i32::from(grpc_api_types::payments::OperationStatus::Success),
+        error_code: None,
+        error_message: None,
+        status_code: 200,
+        response_ref_id: None,
+    }
+}
+
+pub fn generate_access_token_response(
+    router_data_v2: RouterDataV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    >,
+) -> Result<PaymentServiceCreateAccessTokenResponse, error_stack::Report<ApplicationErrorResponse>>
+{
+    let access_token_data = generate_access_token_response_data(router_data_v2)?;
+    Ok(create_access_token_data(access_token_data))
 }
 
 pub fn generate_payment_sync_response(

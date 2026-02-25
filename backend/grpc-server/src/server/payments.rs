@@ -35,6 +35,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types,
     types::{
+        create_access_token_data, generate_access_token_response_data,
         generate_payment_capture_response, generate_payment_incremental_authorization_response,
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
         generate_payment_void_post_capture_response, generate_payment_void_response,
@@ -1401,25 +1402,14 @@ impl Payments {
             )
         })?;
 
-        match response.response {
-            Ok(access_token_data) => {
-                tracing::info!(
-                    "Access token created successfully with expiry: {:?}",
-                    access_token_data.expires_in
-                );
-                Ok(access_token_data)
-            }
-            Err(ErrorResponse {
-                message,
-                status_code,
-                ..
-            }) => Err(PaymentAuthorizationError::new(
+        generate_access_token_response_data(response).map_err(|e| {
+            PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Access Token creation failed: {message}")),
+                Some(e.to_string()),
                 Some("ACCESS_TOKEN_CREATION_ERROR".to_string()),
-                Some(status_code.into()),
-            )),
-        }
+                Some(500),
+            )
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -4311,16 +4301,7 @@ impl PaymentService for Payments {
                     );
 
                     // Create response using the access token data
-                    let create_access_token_response = PaymentServiceCreateAccessTokenResponse {
-                        access_token: Some(access_token_data.access_token),
-                        token_type: access_token_data.token_type,
-                        expires_in_seconds: access_token_data.expires_in,
-                        status: i32::from(grpc_api_types::payments::OperationStatus::Success),
-                        error_code: None,
-                        error_message: None,
-                        status_code: 200,
-                        response_ref_id: None,
-                    };
+                    let create_access_token_response = create_access_token_data(access_token_data);
 
                     Ok(tonic::Response::new(create_access_token_response))
                 })
