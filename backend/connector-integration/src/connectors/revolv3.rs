@@ -7,7 +7,7 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit};
 use domain_types::{
     connector_flow,
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::*,
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -25,9 +25,10 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as revolv3, Revolv3AuthReversalRequest, Revolv3AuthReversalResponse,
-    Revolv3CaptureRequest, Revolv3PaymentSyncResponse, Revolv3PaymentsRequest,
-    Revolv3PaymentsResponse, Revolv3RefundRequest, Revolv3RefundResponse,
-    Revolv3RefundSyncResponse, Revolv3SaleResponse,
+    Revolv3AuthorizeResponse, Revolv3CaptureRequest, Revolv3PaymentSyncResponse,
+    Revolv3PaymentsRequest, Revolv3PaymentsResponse, Revolv3RefundRequest, Revolv3RefundResponse,
+    Revolv3RefundSyncResponse, Revolv3RepeatPaymentRequest, Revolv3RepeatPaymentResponse,
+    Revolv3SaleResponse, Revolv3SetupMandateRequest,
 };
 
 pub(crate) mod headers {
@@ -359,29 +360,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        connector_flow::RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Revolv3<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         connector_flow::SdkSessionToken,
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Revolv3<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        connector_flow::SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
         PaymentsResponseData,
     > for Revolv3<T>
 {
@@ -444,6 +425,18 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: Revolv3RefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: Revolv3RepeatPaymentRequest<T>,
+            response_body: Revolv3RepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: Revolv3SetupMandateRequest<T>,
+            response_body: Revolv3AuthorizeResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -665,6 +658,89 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
              let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/PaymentMethod/reverse-auth"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Revolv3,
+    curl_request: Json(Revolv3RepeatPaymentRequest),
+    curl_response: Revolv3RepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url(req);
+            match req.request.get_mandate_reference() {
+                MandateReferenceId::NetworkMandateId(_) => {
+                      if req.request.is_auto_capture()? {
+                        Ok(format!("{base_url}/api/payments/sale"))
+                    } else {
+                        Ok(format!("{base_url}/api/payments/authorization"))
+                    }
+                }
+                MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
+                    let payment_method_id = connector_mandate_data.get_connector_mandate_id()
+                        .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
+                    if req.request.is_auto_capture()? {
+                        Ok(format!("{base_url}/api/payments/sale/{payment_method_id}"))
+                    } else {
+                        Ok(format!("{base_url}/api/payments/authorization/{payment_method_id}"))
+                    }
+                }
+                MandateReferenceId::NetworkTokenWithNTI(_) => {
+                    Err(errors::ConnectorError::FlowNotSupported {
+                        flow: "Network Token with NTI".to_string(),
+                        connector: "revolv3".to_string(),
+                    })?
+                }
+            }
+        }}
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_error_response_v2, get_content_type],
+    connector: Revolv3,
+    curl_request: Json(Revolv3SetupMandateRequest),
+    curl_response: Revolv3AuthorizeResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url(req);
+            Ok(format!(
+                "{base_url}/api/payments/authorization"
+            ))
         }
     }
 );
