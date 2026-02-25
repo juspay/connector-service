@@ -1146,6 +1146,38 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 }),
                 ..item.router_data
             }),
+            BraintreePaymentsResponse::AchBankDebitResponse(ach_response) => {
+                let transaction_data = &ach_response.charge_us_bank_account.transaction;
+                let status = enums::AttemptStatus::from(transaction_data.status.clone());
+
+                let response = if domain_types::utils::is_payment_failure(status) {
+                    Err(create_failure_error_response(
+                        transaction_data.status.clone(),
+                        Some(transaction_data.id.clone()),
+                        item.http_code,
+                    ))
+                } else {
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(transaction_data.id.clone()),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    })
+                };
+
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response,
+                    ..item.router_data
+                })
+            }
         }
     }
 }
