@@ -196,3 +196,6 @@ pub use self::wellsfargo::Wellsfargo;
 
 pub mod hyperpg;
 pub use self::hyperpg::Hyperpg;
+
+pub mod worldpay;
+pub use self::worldpay::Worldpay;
