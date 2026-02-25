@@ -156,6 +156,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_reason: None,
             network_txn_id: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            currency: None,
         })
     }
 

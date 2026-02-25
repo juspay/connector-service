@@ -288,6 +288,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             error_reason: None,
             network_txn_id: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            currency: None,
         })
     }
 

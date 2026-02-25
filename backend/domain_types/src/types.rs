@@ -5128,8 +5128,16 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                 }
             }),
             amount: None,
-            minor_amount: None,
-            currency: None,
+            minor_amount: value
+                .minor_amount_captured
+                .map(|amount| amount.get_amount_as_i64()),
+            currency: value
+                .currency
+                .map(|c| {
+                    grpc_api_types::payments::Currency::foreign_try_from(c)
+                        .map(|gc| gc as i32)
+                })
+                .transpose()?,
             captured_amount: value.amount_captured,
             minor_captured_amount: value
                 .minor_amount_captured
