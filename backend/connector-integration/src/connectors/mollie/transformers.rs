@@ -13,7 +13,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -27,14 +27,14 @@ pub struct MollieAuthType {
     pub profile_token: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorAuthType> for MollieAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for MollieAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
+            ConnectorSpecificAuth::Mollie { api_key, profile_token } => Ok(Self {
                 api_key: api_key.to_owned(),
-                profile_token: Some(key1.to_owned()),
+                profile_token: profile_token.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType

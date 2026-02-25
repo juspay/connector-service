@@ -14,7 +14,7 @@ use domain_types::{
     connector_types::*,
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -46,21 +46,16 @@ pub struct PayboxAuthType {
     pub merchant_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for PayboxAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for PayboxAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::MultiAuthKey {
-                api_key,
-                key1,
-                api_secret,
-                key2,
-            } => Ok(Self {
-                site: api_key.to_owned(),
-                rank: key1.to_owned(),
-                key: api_secret.to_owned(),
-                merchant_id: key2.to_owned(),
+            ConnectorSpecificAuth::Paybox { site, rank, key, merchant_id } => Ok(Self {
+                site: site.to_owned(),
+                rank: rank.to_owned(),
+                key: key.to_owned(),
+                merchant_id: merchant_id.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }

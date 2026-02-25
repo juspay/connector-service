@@ -25,7 +25,7 @@ use domain_types::{
         PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
         WalletData,
     },
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -1450,28 +1450,27 @@ impl PaypalAuthType {
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for PaypalAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for PaypalAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::AuthWithDetails(
-                PaypalConnectorCredentials::StandardIntegration(StandardFlowCredentials {
-                    client_id: key1.to_owned(),
-                    client_secret: api_key.to_owned(),
-                }),
-            )),
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
-            } => Ok(Self::AuthWithDetails(
-                PaypalConnectorCredentials::PartnerIntegration(PartnerFlowCredentials {
-                    client_id: key1.to_owned(),
-                    client_secret: api_key.to_owned(),
-                    payer_id: api_secret.to_owned(),
-                }),
-            )),
-            ConnectorAuthType::TemporaryAuth => Ok(Self::TemporaryAuth),
+            ConnectorSpecificAuth::Paypal { client_id, client_secret, payer_id } => {
+                match payer_id {
+                    None => Ok(Self::AuthWithDetails(
+                        PaypalConnectorCredentials::StandardIntegration(StandardFlowCredentials {
+                            client_id: client_id.to_owned(),
+                            client_secret: client_secret.to_owned(),
+                        }),
+                    )),
+                    Some(payer_id) => Ok(Self::AuthWithDetails(
+                        PaypalConnectorCredentials::PartnerIntegration(PartnerFlowCredentials {
+                            client_id: client_id.to_owned(),
+                            client_secret: client_secret.to_owned(),
+                            payer_id: payer_id.to_owned(),
+                        }),
+                    )),
+                }
+            }
             _ => Err(ConnectorError::FailedToObtainAuthType)?,
         }
     }

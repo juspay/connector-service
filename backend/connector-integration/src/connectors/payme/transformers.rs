@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -29,22 +29,14 @@ pub struct PaymeAuthType {
     pub payme_client_key: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorAuthType> for PaymeAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for PaymeAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                seller_payme_id: api_key.to_owned(),
-                payme_client_key: Some(key1.to_owned()),
-            }),
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret: _, //this will be utilized later for apple pay
-            } => Ok(Self {
-                seller_payme_id: api_key.to_owned(),
-                payme_client_key: Some(key1.to_owned()),
+            ConnectorSpecificAuth::Payme { seller_payme_id, payme_client_key } => Ok(Self {
+                seller_payme_id: seller_payme_id.to_owned(),
+                payme_client_key: payme_client_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType

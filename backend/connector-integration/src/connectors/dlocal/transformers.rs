@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -243,19 +243,15 @@ pub struct DlocalAuthType {
     pub(super) secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for DlocalAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for DlocalAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::SignatureKey {
-            api_key,
-            key1,
-            api_secret,
-        } = auth_type
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Dlocal { x_login, x_trans_key, secret } = auth_type
         {
             Ok(Self {
-                x_login: api_key.to_owned(),
-                x_trans_key: key1.to_owned(),
-                secret: api_secret.to_owned(),
+                x_login: x_login.to_owned(),
+                x_trans_key: x_trans_key.to_owned(),
+                secret: secret.to_owned(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType.into())

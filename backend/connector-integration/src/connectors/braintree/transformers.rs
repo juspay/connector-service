@@ -24,7 +24,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
-    router_data::{ConnectorAuthType, PaymentMethodToken as PaymentMethodTokenFlow},
+    router_data::{ConnectorSpecificAuth, PaymentMethodToken as PaymentMethodTokenFlow},
     router_data_v2::RouterDataV2,
     router_request_types,
     router_response_types::RedirectForm,
@@ -175,19 +175,15 @@ pub struct BraintreeAuthType {
     pub(super) private_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for BraintreeAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for BraintreeAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::SignatureKey {
-            api_key,
-            api_secret,
-            key1: _merchant_id,
-        } = item
+    fn try_from(item: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Braintree { public_key, private_key } = item
         {
             Ok(Self {
-                public_key: api_key.to_owned(),
-                private_key: api_secret.to_owned(),
+                public_key: public_key.to_owned(),
+                private_key: private_key.to_owned(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?

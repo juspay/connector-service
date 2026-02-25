@@ -9,7 +9,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -313,9 +313,9 @@ pub struct VoltAuthUpdateRequest {
     password: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for VoltAuthUpdateRequest {
+impl TryFrom<&ConnectorSpecificAuth> for VoltAuthUpdateRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         let auth = VoltAuthType::try_from(auth_type)?;
         Ok(Self {
             grant_type: PASSWORD.to_string(),
@@ -388,20 +388,15 @@ pub struct VoltAuthType {
     pub(super) client_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for VoltAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for VoltAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::MultiAuthKey {
-                api_key,
-                key1,
-                api_secret,
-                key2,
-            } => Ok(Self {
-                username: api_key.to_owned(),
-                password: api_secret.to_owned(),
-                client_id: key1.to_owned(),
-                client_secret: key2.to_owned(),
+            ConnectorSpecificAuth::Volt { username, password, client_id, client_secret } => Ok(Self {
+                username: username.to_owned(),
+                password: password.to_owned(),
+                client_id: client_id.to_owned(),
+                client_secret: client_secret.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }

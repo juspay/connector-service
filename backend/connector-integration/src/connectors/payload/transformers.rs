@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    ext_traits::ValueExt,
     types::FloatMajorUnit,
 };
 use domain_types::{
@@ -16,7 +15,7 @@ use domain_types::{
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
+        AdditionalPaymentMethodConnectorResponse, ConnectorSpecificAuth, ConnectorResponseData,
         ErrorResponse,
     },
     router_data_v2::RouterDataV2,
@@ -62,47 +61,32 @@ pub struct PayloadAuthType {
     pub auths: HashMap<enums::Currency, PayloadAuth>,
 }
 
-impl TryFrom<(&ConnectorAuthType, enums::Currency)> for PayloadAuth {
+impl TryFrom<(&ConnectorSpecificAuth, enums::Currency)> for PayloadAuth {
     type Error = Error;
-    fn try_from(value: (&ConnectorAuthType, enums::Currency)) -> Result<Self, Self::Error> {
-        let (auth_type, currency) = value;
+    fn try_from(value: (&ConnectorSpecificAuth, enums::Currency)) -> Result<Self, Self::Error> {
+        let (auth_type, _currency) = value;
         match auth_type {
-            ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
-                let auth_key = auth_key_map.get(&currency).ok_or(
-                    errors::ConnectorError::CurrencyNotSupported {
-                        message: currency.to_string(),
-                        connector: "Payload",
-                    },
-                )?;
-
-                auth_key
-                    .to_owned()
-                    .parse_value("PayloadAuth")
-                    .change_context(errors::ConnectorError::FailedToObtainAuthType)
+            ConnectorSpecificAuth::Payload { api_key, processing_account_id } => {
+                Ok(Self {
+                    api_key: api_key.to_owned(),
+                    processing_account_id: processing_account_id.to_owned(),
+                })
             }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for PayloadAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for PayloadAuthType {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
-                let auths = auth_key_map
-                    .iter()
-                    .map(|(currency, auth_key)| {
-                        let auth: PayloadAuth = auth_key
-                            .to_owned()
-                            .parse_value("PayloadAuth")
-                            .change_context(errors::ConnectorError::InvalidDataFormat {
-                                field_name: "auth_key_map",
-                            })?;
-                        Ok((*currency, auth))
-                    })
-                    .collect::<Result<_, Self::Error>>()?;
-                Ok(Self { auths })
+            ConnectorSpecificAuth::Payload { api_key, processing_account_id } => {
+                let auth = PayloadAuth {
+                    api_key: api_key.to_owned(),
+                    processing_account_id: processing_account_id.to_owned(),
+                };
+                Ok(Self { auths: HashMap::from([(common_enums::Currency::USD, auth)]) })
             }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -112,7 +96,7 @@ impl TryFrom<&ConnectorAuthType> for PayloadAuthType {
 // Helper function to build card request data
 fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
-    connector_auth_type: &ConnectorAuthType,
+    connector_auth_type: &ConnectorSpecificAuth,
     currency: enums::Currency,
     amount: FloatMajorUnit,
     resource_common_data: &PaymentFlowData,

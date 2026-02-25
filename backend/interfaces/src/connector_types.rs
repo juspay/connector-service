@@ -20,7 +20,7 @@ use domain_types::{
         SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
@@ -311,7 +311,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
         Ok(false)
     }
@@ -338,7 +338,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorError>> {
         Err(
             domain_types::errors::ConnectorError::NotImplemented("get_event_type".to_string())
@@ -350,7 +350,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorError>>
     {
         Err(domain_types::errors::ConnectorError::NotImplemented(
@@ -363,7 +363,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<
         RefundWebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorError>,
@@ -377,7 +377,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<
         DisputeWebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorError>,

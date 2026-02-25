@@ -428,21 +428,17 @@ pub struct WellsfargoAuthType {
     pub api_secret: Secret<String>,
 }
 
-impl TryFrom<&domain_types::router_data::ConnectorAuthType> for WellsfargoAuthType {
+impl TryFrom<&domain_types::router_data::ConnectorSpecificAuth> for WellsfargoAuthType {
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        auth_type: &domain_types::router_data::ConnectorAuthType,
+        auth_type: &domain_types::router_data::ConnectorSpecificAuth,
     ) -> Result<Self, Self::Error> {
-        use domain_types::router_data::ConnectorAuthType;
+        use domain_types::router_data::ConnectorSpecificAuth;
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
-            } => Ok(Self {
+            ConnectorSpecificAuth::Wellsfargo { api_key, merchant_account, api_secret } => Ok(Self {
                 api_key: api_key.clone(),
-                merchant_account: key1.clone(),
+                merchant_account: merchant_account.clone(),
                 api_secret: api_secret.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),

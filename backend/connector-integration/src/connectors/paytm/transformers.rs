@@ -19,7 +19,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, UpiData},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
@@ -113,34 +113,17 @@ pub struct PaytmAuthType {
     pub client_id: Option<Secret<String>>, // Unique key for each merchant
 }
 
-impl TryFrom<&ConnectorAuthType> for PaytmAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for PaytmAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::MultiAuthKey {
-                api_key,
-                key1,
-                api_secret,
-                key2,
-            } => {
+            ConnectorSpecificAuth::Paytm { merchant_id, merchant_key, website, client_id } => {
                 Ok(Self {
-                    merchant_id: api_key.to_owned(),  // merchant_id
-                    merchant_key: key1.to_owned(),    // signing key
-                    website: api_secret.to_owned(),   // website name
-                    client_id: Some(key2.to_owned()), // client_id - Unique key for each merchant
-                })
-            }
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
-            } => {
-                Ok(Self {
-                    merchant_id: api_key.to_owned(), // merchant_id
-                    merchant_key: key1.to_owned(),   // signing key
-                    website: api_secret.to_owned(),  // website name
-                    client_id: None,
+                    merchant_id: merchant_id.to_owned(),
+                    merchant_key: merchant_key.to_owned(),
+                    website: website.to_owned(),
+                    client_id: client_id.to_owned(),
                 })
             }
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),

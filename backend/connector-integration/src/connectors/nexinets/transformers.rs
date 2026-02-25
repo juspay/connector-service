@@ -13,7 +13,7 @@ use domain_types::{
         ApplePayWalletData, BankRedirectData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber, WalletData,
     },
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -240,13 +240,17 @@ pub struct NexinetsAuthType {
     pub(super) api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for NexinetsAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for NexinetsAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => {
-                let auth_key = format!("{}:{}", key1.peek(), api_key.peek());
-                let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
+            ConnectorSpecificAuth::Nexinets {
+                merchant_id,
+                api_key,
+            } => {
+                let auth_key = format!("{}:{}", merchant_id.peek(), api_key.peek());
+                let auth_header =
+                    format!("Basic {}", BASE64_ENGINE.encode(auth_key));
                 Ok(Self {
                     api_key: Secret::new(auth_header),
                 })

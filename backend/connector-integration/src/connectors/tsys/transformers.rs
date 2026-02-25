@@ -9,7 +9,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -167,19 +167,15 @@ pub struct TsysAuthType {
     pub developer_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for TsysAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for TsysAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
-            } => Ok(Self {
-                device_id: api_key.to_owned(),
-                transaction_key: key1.to_owned(),
-                developer_id: api_secret.to_owned(),
+            ConnectorSpecificAuth::Tsys { device_id, transaction_key, developer_id } => Ok(Self {
+                device_id: device_id.to_owned(),
+                transaction_key: transaction_key.to_owned(),
+                developer_id: developer_id.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType

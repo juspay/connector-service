@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -28,19 +28,21 @@ impl BamboraAuthType {
     /// Generates the Passcode authorization header
     /// Format: "Passcode base64(merchant_id:api_key)"
     pub fn generate_authorization_header(&self) -> String {
-        // The api_key contains the full auth string already formatted
         self.api_key.peek().to_string()
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for BamboraAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for BamboraAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            // BodyKey contains merchant_id in key1 and api_key in api_key
-            ConnectorAuthType::BodyKey { api_key, key1 } => {
-                let auth_string = format!("{}:{}", key1.peek(), api_key.peek());
+            ConnectorSpecificAuth::Bambora {
+                merchant_id,
+                api_key,
+            } => {
+                let auth_string =
+                    format!("{}:{}", merchant_id.peek(), api_key.peek());
                 let encoded = base64::Engine::encode(
                     &base64::engine::general_purpose::STANDARD,
                     auth_string.as_bytes(),

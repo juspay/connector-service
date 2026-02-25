@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     utils,
 };
@@ -198,31 +198,26 @@ pub struct ForteAuthType {
     pub(super) api_secret_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for ForteAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for ForteAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::MultiAuthKey {
-                api_key,
-                key1,
-                api_secret,
-                key2,
-            } => {
-                let organization_id = key1.peek();
-                let location_id = key2.peek();
+            ConnectorSpecificAuth::Forte { api_access_id, organization_id, location_id, api_secret_key } => {
+                let organization_id_str = organization_id.peek();
+                let location_id_str = location_id.peek();
                 Ok(Self {
-                    api_access_id: api_key.to_owned(),
-                    organization_id: if organization_id.starts_with("org_") {
-                        key1.to_owned()
+                    api_access_id: api_access_id.to_owned(),
+                    organization_id: if organization_id_str.starts_with("org_") {
+                        organization_id.to_owned()
                     } else {
-                        Secret::new(format!("org_{organization_id}"))
+                        Secret::new(format!("org_{organization_id_str}"))
                     },
-                    location_id: if location_id.starts_with("loc_") {
-                        key2.to_owned()
+                    location_id: if location_id_str.starts_with("loc_") {
+                        location_id.to_owned()
                     } else {
-                        Secret::new(format!("loc_{location_id}"))
+                        Secret::new(format!("loc_{location_id_str}"))
                     },
-                    api_secret_key: api_secret.to_owned(),
+                    api_secret_key: api_secret_key.to_owned(),
                 })
             }
             _ => Err(ConnectorError::FailedToObtainAuthType)?,

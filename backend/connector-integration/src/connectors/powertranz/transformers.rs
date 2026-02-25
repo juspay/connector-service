@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -30,14 +30,14 @@ pub struct PowertranzAuthType {
     pub power_tranz_password: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for PowertranzAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for PowertranzAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                power_tranz_id: key1.clone(),
-                power_tranz_password: api_key.clone(),
+            ConnectorSpecificAuth::Powertranz { power_tranz_id, power_tranz_password } => Ok(Self {
+                power_tranz_id: power_tranz_id.clone(),
+                power_tranz_password: power_tranz_password.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }

@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -26,19 +26,15 @@ pub struct NuveiAuthType {
     pub(super) merchant_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for NuveiAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for NuveiAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                api_secret,
-                key1,
-            } => Ok(Self {
-                merchant_id: api_key.clone(),
-                merchant_site_id: key1.clone(),
-                merchant_secret: api_secret.clone(),
+            ConnectorSpecificAuth::Nuvei { merchant_id, merchant_site_id, merchant_secret } => Ok(Self {
+                merchant_id: merchant_id.clone(),
+                merchant_site_id: merchant_site_id.clone(),
+                merchant_secret: merchant_secret.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }

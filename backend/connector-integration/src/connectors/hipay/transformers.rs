@@ -14,7 +14,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorAuthType, PaymentMethodToken as PaymentMethodTokenType},
+    router_data::{ConnectorSpecificAuth, PaymentMethodToken as PaymentMethodTokenType},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -27,15 +27,12 @@ pub struct HipayAuthType {
     pub api_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for HipayAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for HipayAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey {
-                api_key,
-                key1: api_secret,
-            } => Ok(Self {
+            ConnectorSpecificAuth::Hipay { api_key, api_secret } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),

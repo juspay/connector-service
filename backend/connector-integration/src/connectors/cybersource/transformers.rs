@@ -30,7 +30,7 @@ use domain_types::{
         PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ErrorResponse,
+        AdditionalPaymentMethodConnectorResponse, ConnectorSpecificAuth, ErrorResponse,
         PazeDecryptedData,
     },
     router_data_v2::RouterDataV2,
@@ -2455,18 +2455,14 @@ pub struct CybersourceAuthType {
     pub(super) api_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for CybersourceAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for CybersourceAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::SignatureKey {
-            api_key,
-            key1,
-            api_secret,
-        } = auth_type
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Cybersource { api_key, merchant_account, api_secret } = auth_type
         {
             Ok(Self {
                 api_key: api_key.to_owned(),
-                merchant_account: key1.to_owned(),
+                merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),
             })
         } else {

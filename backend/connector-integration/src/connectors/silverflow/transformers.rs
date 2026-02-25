@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -24,19 +24,15 @@ pub struct SilverflowAuthType {
     pub merchant_acceptor_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for SilverflowAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for SilverflowAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                api_secret,
-                key1,
-            } => Ok(Self {
+            ConnectorSpecificAuth::Silverflow { api_key, api_secret, merchant_acceptor_key } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
-                merchant_acceptor_key: key1.to_owned(),
+                merchant_acceptor_key: merchant_acceptor_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType

@@ -29,7 +29,7 @@ use domain_types::{
         BankRedirectData, BankTransferData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
@@ -49,19 +49,15 @@ pub struct TrustpayAuthType {
     pub(super) secret_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for TrustpayAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for TrustpayAuthType {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::SignatureKey {
-            api_key,
-            key1,
-            api_secret,
-        } = auth_type
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Trustpay { api_key, project_id, secret_key } = auth_type
         {
             Ok(Self {
                 api_key: api_key.to_owned(),
-                project_id: key1.to_owned(),
-                secret_key: api_secret.to_owned(),
+                project_id: project_id.to_owned(),
+                secret_key: secret_key.to_owned(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType.into())

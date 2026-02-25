@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     utils,
 };
@@ -28,19 +28,15 @@ pub struct HyperpgAuthType {
     pub merchant_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for HyperpgAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for HyperpgAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
-            } => Ok(Self {
-                username: api_key.to_owned(),
-                password: key1.to_owned(),
-                merchant_id: api_secret.to_owned(),
+            ConnectorSpecificAuth::Hyperpg { username, password, merchant_id } => Ok(Self {
+                username: username.to_owned(),
+                password: password.to_owned(),
+                merchant_id: merchant_id.to_owned(),
             }),
             _other => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType

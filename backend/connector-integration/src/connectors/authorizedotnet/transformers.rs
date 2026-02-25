@@ -15,7 +15,7 @@ use domain_types::{
         DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
@@ -251,19 +251,18 @@ pub struct MerchantAuthentication {
     transaction_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for MerchantAuthentication {
+impl TryFrom<&ConnectorSpecificAuth> for MerchantAuthentication {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                name: api_key.clone(),
-                transaction_key: key1.clone(),
+            ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } => Ok(Self {
+                name: name.clone(),
+                transaction_key: transaction_key.clone(),
             }),
             _ => Err(error_stack::report!(ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
-
 impl ForeignTryFrom<serde_json::Value> for Vec<UserField> {
     type Error = Error;
     fn foreign_try_from(metadata: serde_json::Value) -> Result<Self, Self::Error> {
@@ -1062,21 +1061,20 @@ pub struct AuthorizedotnetAuthType {
     transaction_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for AuthorizedotnetAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for AuthorizedotnetAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::BodyKey { api_key, key1 } = auth_type {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } = auth_type {
             Ok(Self {
-                name: api_key.to_owned(),
-                transaction_key: key1.to_owned(),
+                name: name.to_owned(),
+                transaction_key: transaction_key.to_owned(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?
         }
     }
 }
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthorizedotnetRouterData<
