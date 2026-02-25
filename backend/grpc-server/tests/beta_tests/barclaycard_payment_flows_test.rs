@@ -71,12 +71,12 @@ fn load_barclaycard_credentials() -> (Secret<String>, Secret<String>, Secret<Str
         .expect("Failed to load Barclaycard credentials");
 
     match auth {
-        domain_types::router_data::ConnectorAuthType::SignatureKey {
+        domain_types::router_data::ConnectorSpecificAuth::Barclaycard {
             api_key,
-            key1,
+            merchant_account,
             api_secret,
         } => (api_key, key1, api_secret),
-        _ => panic!("Expected SignatureKey auth type for Barclaycard"),
+        _ => panic!("Expected Barclaycard auth type"),
     }
 }
 

@@ -55,8 +55,8 @@ fn add_xendit_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load xendit credentials");
 
     let api_key = match auth {
-        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
-        _ => panic!("Expected HeaderKey auth type for xendit"),
+        domain_types::router_data::ConnectorSpecificAuth::Xendit { api_key } => api_key.expose(),
+        _ => panic!("Expected Xendit auth type"),
     };
 
     request.metadata_mut().append(
@@ -174,6 +174,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         connector_order_reference_id: None,
         test_mode: None,
         payment_experience: None,
+        connector_auth: None,
     }
 }
 
@@ -228,6 +229,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         state: None,
         merchant_account_metadata: None,
         payment_method_type: None,
+        connector_auth: None,
     }
 }
 

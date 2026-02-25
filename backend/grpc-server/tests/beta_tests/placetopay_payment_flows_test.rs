@@ -53,10 +53,10 @@ fn add_placetopay_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load placetopay credentials");
 
     let (api_key, key1) = match auth {
-        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+        domain_types::router_data::ConnectorSpecificAuth::Placetopay { login, tran_key } => {
             (api_key.expose(), key1.expose())
         }
-        _ => panic!("Expected BodyKey auth type for placetopay"),
+        _ => panic!("Expected Placetopay auth type"),
     };
 
     request.metadata_mut().append(

@@ -60,8 +60,8 @@ fn add_stripe_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load Stripe credentials");
 
     let api_key = match auth {
-        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
-        _ => panic!("Expected HeaderKey auth type for Stripe"),
+        domain_types::router_data::ConnectorSpecificAuth::Stripe { api_key } => api_key.expose(),
+        _ => panic!("Expected Stripe auth type"),
     };
 
     request.metadata_mut().append(
@@ -181,6 +181,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         connector_order_reference_id: None,
         test_mode: None,
         payment_experience: None,
+        connector_auth: None,
     }
 }
 

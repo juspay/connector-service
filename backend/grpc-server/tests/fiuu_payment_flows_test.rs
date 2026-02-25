@@ -59,12 +59,12 @@ fn add_fiuu_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load fiuu credentials");
 
     let (api_key, key1, api_secret) = match auth {
-        domain_types::router_data::ConnectorAuthType::SignatureKey {
-            api_key,
-            key1,
-            api_secret,
-        } => (api_key.expose(), key1.expose(), api_secret.expose()),
-        _ => panic!("Expected SignatureKey auth type for fiuu"),
+        domain_types::router_data::ConnectorSpecificAuth::Fiuu {
+            merchant_id,
+            verify_key,
+            secret_key,
+        } => (verify_key.expose(), merchant_id.expose(), secret_key.expose()),
+        _ => panic!("Expected Fiuu auth type"),
     };
 
     request.metadata_mut().append(
@@ -178,6 +178,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         connector_order_reference_id: None,
         test_mode: None,
         payment_experience: None,
+        connector_auth: None,
     }
 }
 
@@ -252,6 +253,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         state: None,
         merchant_account_metadata: None,
         payment_method_type: None,
+        connector_auth: None,
     }
 }
 

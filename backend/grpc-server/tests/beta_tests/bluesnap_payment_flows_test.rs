@@ -64,8 +64,8 @@ fn load_bluesnap_credentials() -> (Secret<String>, Secret<String>) {
         .expect("Failed to load BlueSnap credentials");
 
     match auth {
-        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => (api_key, key1),
-        _ => panic!("Expected BodyKey auth type for BlueSnap"),
+        domain_types::router_data::ConnectorSpecificAuth::Bluesnap { username, password } => (username, password),
+        _ => panic!("Expected Bluesnap auth type"),
     }
 }
 

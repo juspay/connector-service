@@ -55,10 +55,10 @@ fn add_aci_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load ACI credentials");
 
     let (api_key, key1) = match auth {
-        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+        domain_types::router_data::ConnectorSpecificAuth::Aci { api_key, entity_id } => {
             (api_key.expose(), key1.expose())
         }
-        _ => panic!("Expected BodyKey auth type for ACI"),
+        _ => panic!("Expected Aci auth type"),
     };
 
     request.metadata_mut().append(

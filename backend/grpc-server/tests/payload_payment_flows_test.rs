@@ -60,11 +60,10 @@ fn add_payload_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load Payload credentials");
 
     let auth_key_map_json = match auth {
-        domain_types::router_data::ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
-            // Convert the auth_key_map to JSON string format expected by the metadata
-            serde_json::to_string(&auth_key_map).expect("Failed to serialize auth_key_map")
+        domain_types::router_data::ConnectorSpecificAuth::Payload { .. } => {
+            "{}".to_string()
         }
-        _ => panic!("Expected CurrencyAuthKey auth type for Payload"),
+        _ => panic!("Expected Payload auth type for Payload"),
     };
 
     request.metadata_mut().append(
@@ -175,6 +174,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         connector_order_reference_id: None,
         test_mode: None,
         payment_experience: None,
+        connector_auth: None,
     }
 }
 
@@ -519,6 +519,7 @@ async fn test_authorize_capture_refund_rsync() {
             connector_order_reference_id: None,
             test_mode: None,
             payment_experience: None,
+            connector_auth: None,
         };
         let mut rsync_grpc_request = Request::new(rsync_request);
         add_payload_metadata(&mut rsync_grpc_request);

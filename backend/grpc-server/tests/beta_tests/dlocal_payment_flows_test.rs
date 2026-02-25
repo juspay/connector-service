@@ -54,12 +54,12 @@ fn add_dlocal_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load dlocal credentials");
 
     let (api_key, key1, api_secret) = match auth {
-        domain_types::router_data::ConnectorAuthType::SignatureKey {
-            api_key,
-            key1,
-            api_secret,
-        } => (api_key.expose(), key1.expose(), api_secret.expose()),
-        _ => panic!("Expected SignatureKey auth type for dlocal"),
+        domain_types::router_data::ConnectorSpecificAuth::Dlocal {
+            x_login,
+            x_trans_key,
+            secret,
+        } => (x_login.expose(), x_trans_key.expose(), secret.expose()),
+        _ => panic!("Expected Dlocal auth type"),
     };
 
     request.metadata_mut().append(

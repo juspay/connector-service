@@ -54,12 +54,12 @@ fn add_noon_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load noon credentials");
 
     let (api_key, key1, api_secret) = match auth {
-        domain_types::router_data::ConnectorAuthType::SignatureKey {
+        domain_types::router_data::ConnectorSpecificAuth::Noon {
             api_key,
-            key1,
-            api_secret,
-        } => (api_key.expose(), key1.expose(), api_secret.expose()),
-        _ => panic!("Expected SignatureKey auth type for noon"),
+            application_identifier,
+            business_identifier,
+        } => (api_key.expose(), application_identifier.expose(), business_identifier.expose()),
+        _ => panic!("Expected Noon auth type"),
     };
 
     request.metadata_mut().append(

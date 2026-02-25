@@ -43,8 +43,8 @@ fn add_mifinity_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load mifinity credentials");
 
     let api_key = match auth {
-        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
-        _ => panic!("Expected HeaderKey auth type for mifinity"),
+        domain_types::router_data::ConnectorSpecificAuth::Mifinity { key } => key.expose(),
+        _ => panic!("Expected Mifinity auth type"),
     };
 
     request.metadata_mut().append(

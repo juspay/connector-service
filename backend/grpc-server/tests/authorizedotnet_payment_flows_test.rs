@@ -90,10 +90,10 @@ fn add_authorizenet_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load Authorize.Net credentials");
 
     let (api_key, key1) = match auth {
-        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
-            (api_key.expose(), key1.expose())
+        domain_types::router_data::ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } => {
+            (name.expose(), transaction_key.expose())
         }
-        _ => panic!("Expected BodyKey auth type for Authorize.Net"),
+        _ => panic!("Expected Authorizedotnet auth type"),
     };
 
     request.metadata_mut().append(
@@ -419,6 +419,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         connector_order_reference_id: None,
         test_mode: None,
         payment_experience: None,
+        connector_auth: None,
     }
 }
 
@@ -446,6 +447,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         merchant_account_metadata: None,
         test_mode: None,
         merchant_order_reference_id: None,
+        connector_auth: None,
     }
 }
 
@@ -519,6 +521,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_metadata: None,
         payment_method_type: None,
         customer_id: Some("TEST_CONNECTOR".to_string()),
+        connector_auth: None,
     }
 }
 
@@ -543,6 +546,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         state: None,
         merchant_account_metadata: None,
         payment_method_type: None,
+        connector_auth: None,
     }
 }
 

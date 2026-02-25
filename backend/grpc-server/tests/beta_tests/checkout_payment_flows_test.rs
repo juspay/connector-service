@@ -54,12 +54,12 @@ fn add_checkout_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load checkout credentials");
 
     let (api_key, key1, api_secret) = match auth {
-        domain_types::router_data::ConnectorAuthType::SignatureKey {
+        domain_types::router_data::ConnectorSpecificAuth::Checkout {
             api_key,
-            key1,
             api_secret,
-        } => (api_key.expose(), key1.expose(), api_secret.expose()),
-        _ => panic!("Expected SignatureKey auth type for checkout"),
+            processing_channel_id,
+        } => (api_key.expose(), processing_channel_id.expose(), api_secret.expose()),
+        _ => panic!("Expected Checkout auth type"),
     };
 
     request.metadata_mut().append(
