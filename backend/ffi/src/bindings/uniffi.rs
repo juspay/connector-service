@@ -73,9 +73,10 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let result = authorize_req_handler(request).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
-        })?;
+        let result =
+            authorize_req_handler(None, request).map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
@@ -134,7 +135,7 @@ mod uniffi_bindings_inner {
         };
 
         let proto_response =
-            authorize_res_handler(request, response).map_err(FfiPaymentError::from)?;
+            authorize_res_handler(None, request, response).map_err(FfiPaymentError::from)?;
 
         Ok(proto_response.encode_to_vec())
     }
