@@ -50,7 +50,7 @@ use transformers::{
     BraintreePSyncRequest, BraintreePSyncResponse, BraintreePaymentsRequest,
     BraintreePaymentsResponse, BraintreeRSyncRequest, BraintreeRSyncResponse,
     BraintreeRefundRequest, BraintreeRefundResponse, BraintreeRepeatPaymentRequest,
-    BraintreeRepeatPaymentResponse, BraintreeSessionResponse, BraintreeTokenRequest,
+    BraintreeRepeatPaymentResponse, BraintreeSessionResponse, BraintreePaymentMethodTokenRequest,
     BraintreeTokenResponse,
 };
 
