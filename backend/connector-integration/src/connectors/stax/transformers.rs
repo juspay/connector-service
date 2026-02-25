@@ -280,21 +280,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         domain_types::router_data::PaymentMethodToken::Token(token) => {
                             token.expose()
                         }
-                        domain_types::router_data::PaymentMethodToken::ApplePayDecrypt(_) => {
-                            return Err(errors::ConnectorError::NotImplemented(
-                                "Apple Pay is not supported for Stax".to_string(),
-                            ))?;
-                        }
-                        domain_types::router_data::PaymentMethodToken::GooglePayDecrypt(_) => {
-                            return Err(errors::ConnectorError::NotImplemented(
-                                "Google Pay is not supported for Stax".to_string(),
-                            ))?;
-                        }
-                        domain_types::router_data::PaymentMethodToken::PazeDecrypt(_) => {
-                            return Err(errors::ConnectorError::NotImplemented(
-                                "Paze is not supported for Stax".to_string(),
-                            ))?;
-                        }
                     }
                 } else if let Some(mandate_id) = item.router_data.request.connector_mandate_id() {
                     mandate_id

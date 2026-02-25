@@ -61,6 +61,7 @@ message PaymentMethod {
     RevolutPayWallet revolut_pay = 20;                  // Revolut Pay
     MifinityWallet mifinity = 21;                       // Mifinity
     Bluecode bluecode = 22;                             // Bluecode
+    PazeWallet paze = 23;                               // Paze
     
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -88,6 +89,8 @@ message PaymentMethod {
     Blik blik = 57;
     OpenBanking open_banking = 58;
     Interac interac = 59;                                     // Interac - Canadian bank redirect payment method
+    Bizum bizum = 156;
+    Eft eft = 157;
     
     // MOBILE PAYMENTS (60-69) - Direct variants
     DuitNow duit_now = 60;
@@ -115,12 +118,15 @@ message PaymentMethod {
     CIMBVaBankTransfer cimb_va_bank_transfer = 134;            // CIMB VA Bank transfer in Indonesia
     DanamonVaBankTransfer danamon_va_bank_transfer = 135;      // Danamon VA Bank transfer in Indonesia
     MandiriVaBankTransfer mandiri_va_bank_transfer = 136;      // Mandiri VA Bank transfer in Indonesia
+    LocalBankTransfer local_bank_transfer = 154;               // Generic local bank transfer
+    IndonesianBankTransfer indonesian_bank_transfer = 155;     // Indonesian bank transfer method
 
     // DIRECT DEBIT (100-109)
     Ach ach = 100;                                              // Ach - Automated Clearing House
     Sepa sepa = 101;                                            // Sepa - Single Euro Payments Area direct debit
     Bacs bacs = 102;                                            // Bacs - Bankers' Automated Clearing Services
     Becs becs = 103;                                            // Becs - Bulk Electronic Clearing System - Australian direct debit
+    SepaGuaranteedDebit sepa_guaranteed_debit = 104;            // SEPA Guaranteed Direct Debit - bank debit with payment guarantee
 
     // BUY NOW, PAY LATER (110-119)
     Affirm affirm = 110;                                       // Affirm - US BNPL service
@@ -329,7 +335,7 @@ message AppleWallet {
   message PaymentData{
     oneof payment_data {
       string encrypted_data = 1;     // Encrypted Apple Pay payment data as string
-      ApplePayPredecryptData decrypted_data = 2;  // Decrypted Apple Pay payment data
+      ApplePayDecryptedData decrypted_data = 2;  // Decrypted Apple Pay payment data
     }
   }
   PaymentData payment_data = 1;
@@ -346,8 +352,8 @@ message AppleWallet {
   string transaction_identifier = 3;
 }
 
-// Apple Pay predecrypted data structure
-message ApplePayPredecryptData {
+// Apple Pay decrypted data structure
+message ApplePayDecryptedData {
   // The primary account number
   CardNumberType application_primary_account_number = 1;
   
@@ -396,20 +402,20 @@ message GoogleWallet {
     }
     optional AssuranceDetails assurance_details = 3;
   }
-  PaymentMethodInfo info = 3;
-  
-  // Tokenization data - can be either encrypted or predecrypted
+
+  // Tokenization data - can be either encrypted or decrypted
   message TokenizationData {
     oneof tokenization_data {
-      GPayPredecryptData decrypted_data = 1;     // Predecrypted Google Pay payment data
-      GpayEncryptedTokenizationData encrypted_data = 2;  // Encrypted Google Pay payment data
+      GooglePayDecryptedData decrypted_data = 1;     // Decrypted Google Pay payment data
+      GooglePayEncryptedTokenizationData encrypted_data = 2;  // Encrypted Google Pay payment data
     }
   }
+
+  PaymentMethodInfo info = 3;
   TokenizationData tokenization_data = 4;
 }
 
-// Google Pay predecrypted data structure
-message GPayPredecryptData {
+message GooglePayDecryptedData {
   // The card's expiry month
   SecretString card_exp_month = 1;
   
@@ -427,7 +433,7 @@ message GPayPredecryptData {
 }
 
 // Google Pay encrypted tokenization data structure
-message GpayEncryptedTokenizationData {
+message GooglePayEncryptedTokenizationData {
   // The type of the token
   string token_type = 1;
   
@@ -502,10 +508,65 @@ message AmazonPayRedirectWallet {
   // Fields will be added as needed for Amazon Pay integration
 }
 
+// TODO: Should we keep both Paze options, or just one?
 // Paze - Digital wallet payment service
 message PazeWallet {
-  // Complete response from Paze
-  string complete_response = 1;
+  oneof paze_data {
+    // Backward-compatible raw payload.
+    SecretString complete_response = 1;
+    // Structured decrypted Paze payload.
+    PazeDecryptedData decrypted_data = 2;
+  }
+}
+
+message PazeToken {
+  NetworkTokenType payment_token = 1;
+  SecretString token_expiration_month = 2;
+  SecretString token_expiration_year = 3;
+  SecretString payment_account_reference = 4;
+}
+
+message PazeDynamicData {
+  optional SecretString dynamic_data_value = 1;
+  optional string dynamic_data_type = 2;
+  optional string dynamic_data_expiration = 3;
+}
+
+message PazePhoneNumber {
+  SecretString country_code = 1;
+  SecretString phone_number = 2;
+}
+
+message PazeConsumer {
+  optional SecretString first_name = 1;
+  optional SecretString last_name = 2;
+  SecretString full_name = 3;
+  SecretString email_address = 4;
+  optional PazePhoneNumber mobile_number = 5;
+  optional CountryAlpha2 country_code = 6;
+  optional string language_code = 7;
+}
+
+message PazeAddress {
+  optional SecretString name = 1;
+  optional SecretString line1 = 2;
+  optional SecretString line2 = 3;
+  optional SecretString line3 = 4;
+  optional SecretString city = 5;
+  optional SecretString state = 6;
+  optional SecretString zip = 7;
+  optional CountryAlpha2 country_code = 8;
+}
+
+message PazeDecryptedData {
+  SecretString client_id = 1;
+  string profile_id = 2;
+  PazeToken token = 3;
+  CardNetwork payment_card_network = 4;
+  repeated PazeDynamicData dynamic_data = 5;
+  PazeAddress billing_address = 6;
+  PazeConsumer consumer = 7;
+  optional string eci = 8;
 }
 // Mifinity - Online payment service by Mifinity
 message MifinityWallet {
@@ -661,23 +722,31 @@ message MultibancoBankTransfer {
 
 }
 
-/*
-
-// EFT (Electronic Funds Transfer) - Generic electronic transfer of funds
-message EFT {
-  // Fields will be added as needed for EFT integration
+// Eft (Electronic Funds Transfer) - Generic electronic transfer of funds
+message Eft {
+  // Identifier for the specific Eft provider/service to be used  
+  // Examples: "ozow", "paystack", "instant_eft"
+  string provider = 1;
 }
 
+/*
 // FPS (Faster Payments Service) - UK real-time payments
 message FPS {
   // Fields will be added as needed for FPS integration
 }
+*/
 
 // Local Bank Transfer - Generic local bank transfer method
 message LocalBankTransfer {
-  // Fields will be added as needed for local bank transfers
+  // The bank code for local bank transfer
+  optional string bank_code = 1;
 }
-*/
+
+// Indonesian Bank Transfer - Indonesian bank transfer method
+message IndonesianBankTransfer {
+  // The bank name for bank transfer
+  optional BankNames bank_name = 1;
+}
 
 // Instant Bank Transfer - Generic instant bank transfer method
 message InstantBankTransfer {
@@ -739,17 +808,20 @@ message MandiriVaBankTransfer {
 
 // Thai online banking systems
 message OnlineBankingThailand {
-  // Fields will be added as needed for Thai online banking integration
+  // Bank issuer for Thailand Online Banking
+  BankNames issuer = 1;
 }
 
 // Czech Republic online banking systems
 message OnlineBankingCzechRepublic {
-  // Fields will be added as needed for Czech online banking integration
+  // Bank issuer for Czech Republic Online Banking
+  BankNames issuer = 1;
 }
 
 // Finnish online banking systems
 message OnlineBankingFinland {
-  // Fields will be added as needed for Finnish online banking integration
+  // Email address for finland's online banking
+  optional SecretString email = 1;
 }
 
 // FPX (Financial Process Exchange) - Malaysian online banking
@@ -759,12 +831,14 @@ message OnlineBankingFPX {
 
 // Polish online banking systems
 message OnlineBankingPoland {
-  // Fields will be added as needed for Polish online banking integration
+  // Bank issuer for Poland Online Banking
+  BankNames issuer = 1;
 }
 
 // Slovak online banking systems
 message OnlineBankingSlovakia {
-  // Fields will be added as needed for Slovak online banking integration
+  // Bank issuer for Slovakia Online Banking
+  BankNames issuer = 1;
 }
 
 // UK Open Banking - Open Banking implementation in the UK
@@ -918,13 +992,12 @@ message Walley {
 // MOBILE PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
 
-/*
-
 // Bizum - Spanish mobile payment solution
 message Bizum {
   // Fields will be added as needed for Bizum integration
 }
 
+/*
 // DANA - Indonesian digital wallet
 message Dana {
   // Fields will be added as needed for DANA integration
@@ -1148,6 +1221,15 @@ message  Bacs {
   
   // Holder name for bank debit
   optional SecretString bank_account_holder_name = 3;
+}
+
+// SEPA Guaranteed Direct Debit - bank debit with payment guarantee
+message SepaGuaranteedDebit {
+  // International bank account number (iban)
+  SecretString iban = 1;
+  
+  // Owner name for bank debit
+  optional SecretString bank_account_holder_name = 2;
 }
 
 /*
