@@ -6,7 +6,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData, BillingDescriptor,
     },
     errors,
     payment_method_data::{
@@ -54,6 +54,8 @@ pub struct Revolv3AuthorizeRequest<T: PaymentMethodDataTypes> {
     pub payment_method: Revolv3PaymentMethodData<T>,
     pub amount: Revolv3AmountData,
     pub network_processing: Option<NetworkProcessingData>,
+    pub customer_id: Option<String>,
+    pub dynamic_descriptor: Option<Revolv3DynamicDescriptor>,
 }
 
 #[derive(Debug, Serialize)]
@@ -62,6 +64,17 @@ pub struct Revolv3SaleRequest<T: PaymentMethodDataTypes> {
     pub payment_method: Revolv3PaymentMethodData<T>,
     pub invoice: Revolv3InvoiceData,
     pub network_processing: Option<NetworkProcessingData>,
+    pub customer_id: Option<String>,
+    pub dynamic_descriptor: Option<Revolv3DynamicDescriptor>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Revolv3DynamicDescriptor {
+    pub sub_merchant_id: Option<String>,
+    pub sub_merchant_name: Option<Secret<String>>,
+    pub sub_merchant_phone: Option<Secret<String>>,
+    pub city: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -234,6 +247,22 @@ impl
     }
 }
 
+impl From<
+        &BillingDescriptor
+    > for Revolv3DynamicDescriptor
+{
+    fn from(
+        item: &BillingDescriptor
+    ) -> Self{
+        Self {
+            sub_merchant_id: item.reference.clone(),
+            sub_merchant_name: item.name.clone(),
+            sub_merchant_phone: item.phone.clone(),
+            city: item.city.clone(),
+        }
+    }
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::Revolv3RouterData<
@@ -290,6 +319,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency: item.router_data.request.currency,
         };
 
+        let customer_id = item
+            .router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .map(|id| id.get_string_repr().to_owned());
+
+        let dynamic_descriptor = item.router_data.request.billing_descriptor.as_ref().map(Revolv3DynamicDescriptor::from);
+
         if item.router_data.request.is_auto_capture()? {
             let invoice = Revolv3InvoiceData {
                 merchant_invoice_ref_id: item
@@ -306,12 +344,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 payment_method: payment_method_specific_response.payment_method_data,
                 invoice,
                 network_processing: payment_method_specific_response.network_data,
+                customer_id,
+                dynamic_descriptor,
             }))
         } else {
             Ok(Self::Authorize(Revolv3AuthorizeRequest {
                 payment_method: payment_method_specific_response.payment_method_data,
                 amount,
                 network_processing: payment_method_specific_response.network_data,
+                customer_id,
+                dynamic_descriptor,
             }))
         }
     }
