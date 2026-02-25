@@ -72,6 +72,13 @@ pub type MandatePaymentRequest = GenericBraintreeRequest<VariablePaymentInput>;
 pub type BraintreeClientTokenRequest = GenericBraintreeRequest<VariableClientTokenInput>;
 pub type BraintreeTokenRequest<T> = GenericBraintreeRequest<VariableInput<T>>;
 pub type BraintreeAchTokenRequest = GenericBraintreeRequest<TokenizeUsBankAccountInput>;
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum BraintreePaymentMethodTokenRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+    Card(BraintreeTokenRequest<T>),
+    AchBankDebit(BraintreeAchTokenRequest),
+}
 pub type BraintreeCaptureRequest = GenericBraintreeRequest<VariableCaptureInput>;
 pub type BraintreeRefundRequest = GenericBraintreeRequest<BraintreeRefundVariables>;
 pub type BraintreePSyncRequest = GenericBraintreeRequest<PSyncInput>;
