@@ -1415,11 +1415,14 @@ pub struct PaymentCreateOrderData {
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
 }
 
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
+    /// Optional session token for wallet flows (Apple Pay, Google Pay)
+    pub session_token: Option<SessionToken>,
 }
 
 #[derive(Debug, Clone)]
@@ -2783,6 +2786,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::BankDebitData::SepaBankDebit { .. } => Self::SepaBankDebit,
                 payment_method_data::BankDebitData::BecsBankDebit { .. } => Self::BecsBankDebit,
                 payment_method_data::BankDebitData::BacsBankDebit { .. } => Self::BacsBankDebit,
+                payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                    Self::SepaGuaranteedBankDebit
+                }
             },
             PaymentMethodData::BankTransfer(bank_transfer_data) => match *bank_transfer_data {
                 payment_method_data::BankTransferData::AchBankTransfer { .. } => {
@@ -2831,6 +2837,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 }
                 payment_method_data::BankTransferData::InstantBankTransferPoland { .. } => {
                     Self::InstantBankTransferPoland
+                }
+                payment_method_data::BankTransferData::IndonesianBankTransfer { .. } => {
+                    Self::IndonesianBankTransfer
                 }
             },
             PaymentMethodData::Crypto(_) => Self::Crypto,
