@@ -56,7 +56,7 @@ use crate::{
     types::ResponseRouterData,
     utils::{
         convert_uppercase, deserialize_zero_minor_amount_as_none, is_refund_failure,
-        SplitPaymentData,
+        parse_upstream_auth_value, SplitPaymentData,
     },
 };
 
@@ -106,8 +106,8 @@ impl TryFrom<&ConnectorAuthType> for StripeAuthType {
                 api_key: api_key.to_owned(),
             }),
             ConnectorAuthType::UpstreamAuth { value } => {
-                let auth_type: Self = serde_json::from_value::<Self>(value.peek().clone())
-                    .map_err(|_| ConnectorError::FailedToObtainAuthType)?;
+                let auth_type: Self = parse_upstream_auth_value(value)?;
+
                 Ok(Self {
                     api_key: auth_type.api_key,
                 })
