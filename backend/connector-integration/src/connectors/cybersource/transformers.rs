@@ -25,7 +25,7 @@ use domain_types::{
     errors::ConnectorError,
     payment_address::Address,
     payment_method_data::{
-        self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
+        self, ApplePayDecryptedData, ApplePayWalletData, BankDebitData, CardDetailsForNetworkTransactionId,
         GooglePayDecryptedData, GooglePayWalletData, NetworkTokenData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
     },
@@ -764,6 +764,35 @@ pub struct SamsungPayFluidDataValue {
     data: Secret<String>,
 }
 
+// ACH/eCheck Bank Payment Information Structures
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankPaymentInformation {
+    bank: BankDetails,
+    payment_type: PaymentType,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankDetails {
+    routing_number: Secret<String>,
+    account: BankAccount,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankAccount {
+    number: Secret<String>,
+    #[serde(rename = "type")]
+    account_type: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentType {
+    name: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageExtensionAttribute {
@@ -786,6 +815,7 @@ pub enum PaymentInformation<
     MandatePayment(Box<MandatePaymentInformation>),
     SamsungPay(Box<SamsungPayPaymentInformation>),
     NetworkToken(Box<NetworkTokenPaymentInformation>),
+    BankDebit(Box<BankPaymentInformation>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1397,6 +1427,134 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             consumer_authentication_information: None,
             merchant_defined_information,
         })
+    }
+}
+
+// ACH Bank Debit (eCheck) implementation
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &CybersourceRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        BankDebitData,
+    )> for CybersourcePaymentsRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        (item, bank_debit_data): (
+            &CybersourceRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            BankDebitData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match bank_debit_data {
+            BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_account_holder_name,
+                bank_type,
+                ..
+            } => {
+                // Get account holder name: use bank_account_holder_name or fall back to billing name
+                let _account_holder_name = bank_account_holder_name
+                    .clone()
+                    .or_else(|| {
+                        item.router_data
+                            .resource_common_data
+                            .get_billing_full_name()
+                            .ok()
+                    })
+                    .ok_or_else(|| {
+                        ConnectorError::MissingRequiredField {
+                            field_name: "bank_account_holder_name",
+                        }
+                    })?;
+
+                // Map bank type to Cybersource format: "C" for checking, "S" for savings
+                let account_type = bank_type
+                    .map(|bt| match bt {
+                        common_enums::BankType::Checking => "C".to_string(),
+                        common_enums::BankType::Savings => "S".to_string(),
+                    })
+                    .unwrap_or_else(|| "C".to_string()); // Default to checking if not specified
+
+                // Build eCheck payment information
+                let payment_information = PaymentInformation::BankDebit(Box::new(BankPaymentInformation {
+                    bank: BankDetails {
+                        routing_number: routing_number.clone(),
+                        account: BankAccount {
+                            number: account_number.clone(),
+                            account_type,
+                        },
+                    },
+                    payment_type: PaymentType {
+                        name: "check".to_string(),
+                    },
+                }));
+
+                // Build billing information - eCheck requires full billing address
+                let email = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_email()
+                    .or(item.router_data.request.get_email())?;
+                let bill_to = build_bill_to(
+                    item.router_data.resource_common_data.get_optional_billing(),
+                    email,
+                )?;
+                let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
+
+                // Build processing information for eCheck
+                let processing_information = ProcessingInformation {
+                    action_list: None,
+                    action_token_types: None,
+                    authorization_options: None,
+                    commerce_indicator: "internet".to_string(),
+                    capture: Some(true), // eCheck is always a sale (auto-capture)
+                    capture_options: None,
+                    payment_solution: None,
+                };
+
+                let client_reference_information = ClientReferenceInformation::from(item);
+                let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+                    item.router_data
+                        .request
+                        .metadata
+                        .clone()
+                        .map(|metadata| metadata.expose()),
+                    item.router_data.request.merchant_order_reference_id.clone(),
+                );
+
+                Ok(Self {
+                    processing_information,
+                    payment_information,
+                    order_information,
+                    client_reference_information,
+                    consumer_authentication_information: None,
+                    merchant_defined_information,
+                })
+            }
+            BankDebitData::SepaBankDebit { .. }
+            | BankDebitData::BecsBankDebit { .. }
+            | BankDebitData::BacsBankDebit { .. }
+            | BankDebitData::SepaGuaranteedBankDebit { .. } => Err(ConnectorError::NotImplemented(
+                domain_types::utils::get_unimplemented_payment_method_error_message("Cybersource"),
+            )
+            .into()),
+        }
     }
 }
 
@@ -2140,12 +2298,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .into()),
             },
             PaymentMethodData::NetworkToken(token_data) => Self::try_from((&item, token_data)),
+            PaymentMethodData::BankDebit(bank_debit_data) => {
+                Self::try_from((&item, bank_debit_data))
+            }
             PaymentMethodData::MandatePayment
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
             | PaymentMethodData::BankTransfer(_)
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::Reward
