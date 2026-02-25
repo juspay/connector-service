@@ -236,7 +236,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         payment_method: PaymentMethod,
         _payment_method_type: Option<PaymentMethodType>,
     ) -> bool {
-        matches!(payment_method, PaymentMethod::Card)
+        matches!(payment_method, PaymentMethod::Card | PaymentMethod::BankDebit)
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
