@@ -1,6 +1,6 @@
 use crate::{types::ResponseRouterData, utils::is_refund_failure};
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::types::FloatMajorUnit;
+use common_utils::{pii::Email, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
@@ -110,7 +110,23 @@ pub enum Revolv3PaymentMethodData<T: PaymentMethodDataTypes> {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Revolv3BillingAddress {
+    address_line1: Option<Secret<String>>,
+    address_line2: Option<Secret<String>>,
+    city: Option<Secret<String>>,
+    state: Option<Secret<String>>,
+    postal_code: Option<Secret<String>>,
+    phone_number: Option<Secret<String>>,
+    email: Option<Email>,
+    country: Option<common_enums::CountryAlpha2>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NtidCreditCardPaymentMethodData {
+    billing_address: Option<Revolv3BillingAddress>,
+    billing_first_name: Option<Secret<String>>,
+    billing_last_name: Option<Secret<String>>,
     billing_full_name: Secret<String>,
     credit_card: Revolv3NtidCreditCardData,
 }
@@ -125,6 +141,9 @@ pub struct Revolv3NtidCreditCardData {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreditCardPaymentMethodData<T: PaymentMethodDataTypes> {
+    billing_address: Option<Revolv3BillingAddress>,
+    billing_first_name: Option<Secret<String>>,
+    billing_last_name: Option<Secret<String>>,
     billing_full_name: Secret<String>,
     credit_card: Revolv3CreditCardData<T>,
 }
@@ -135,6 +154,27 @@ pub struct Revolv3CreditCardData<T: PaymentMethodDataTypes> {
     payment_account_number: RawCardNumber<T>,
     expiration_date: Secret<String>,
     security_code: Secret<String>,
+}
+
+impl Revolv3BillingAddress {
+    fn try_from_payment_flow_data(common_data: &PaymentFlowData) -> Option<Self> {
+        common_data.get_optional_billing().map(|billing| {
+            let address = billing.address.as_ref();
+            Self {
+                address_line1: address.and_then(|a| a.line1.clone()),
+                address_line2: address.and_then(|a| a.line2.clone()),
+                city: address.and_then(|a| a.city.clone()),
+                state: address.and_then(|a| a.state.clone()),
+                postal_code: address.and_then(|a| a.zip.clone()),
+                phone_number: billing
+                    .phone
+                    .as_ref()
+                    .and_then(|p| p.get_number_with_country_code().ok()),
+                email: billing.email.clone(),
+                country: address.and_then(|a| a.country),
+            }
+        })
+    }
 }
 
 pub struct PaymentMethodSpecificRequest<T: PaymentMethodDataTypes> {
@@ -152,8 +192,12 @@ impl<T: PaymentMethodDataTypes> PaymentMethodSpecificRequest<T> {
         >,
         card: Card<T>,
     ) -> Result<Self, error_stack::Report<errors::ConnectorError>> {
+        let common_data = &item.resource_common_data;
         let credit_card_data = CreditCardPaymentMethodData {
-            billing_full_name: item.resource_common_data.get_billing_full_name()?,
+            billing_address: Revolv3BillingAddress::try_from_payment_flow_data(common_data),
+            billing_first_name: common_data.get_optional_billing_first_name(),
+            billing_last_name: common_data.get_optional_billing_last_name(),
+            billing_full_name: common_data.get_billing_full_name()?,
             credit_card: Revolv3CreditCardData {
                 payment_account_number: card.card_number.clone(),
                 expiration_date: card.get_expiry_date_as_mmyy()?,
@@ -914,11 +958,13 @@ pub struct Revolv3RepeatAuthorizeRequest<T: PaymentMethodDataTypes> {
 impl<T: PaymentMethodDataTypes> Revolv3PaymentMethodData<T> {
     pub fn set_credit_card_data_for_ntid(
         card: CardDetailsForNetworkTransactionId,
+        common_data: &PaymentFlowData,
     ) -> Result<Self, error_stack::Report<errors::ConnectorError>> {
         let credit_card_data = NtidCreditCardPaymentMethodData {
-            billing_full_name: card.card_holder_name.clone().ok_or(errors::ConnectorError::MissingRequiredField{
-                field_name: "card_holder_name",
-            })?,
+            billing_address: Revolv3BillingAddress::try_from_payment_flow_data(common_data),
+            billing_first_name: common_data.get_optional_billing_first_name(),
+            billing_last_name: common_data.get_optional_billing_last_name(),
+            billing_full_name: common_data.get_billing_full_name()?,
             credit_card: Revolv3NtidCreditCardData {
                 payment_account_number: card.card_number.clone(),
                 expiration_date: card.get_expiry_date_as_mmyy()?,
@@ -972,6 +1018,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 };
                 Revolv3PaymentMethodData::set_credit_card_data_for_ntid(
                     card_data.clone(),
+                    &item.router_data.resource_common_data,
                 )?
             }
             PaymentMethodData::MandatePayment => Revolv3PaymentMethodData::set_mandate_data()?,
@@ -1094,11 +1141,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         connector: "revolv3",
                     })?
                 };
+                let common_data = &item.router_data.resource_common_data;
                 Revolv3PaymentMethodData::CreditCard(CreditCardPaymentMethodData {
-                    billing_full_name: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_full_name()?,
+                    billing_address: Revolv3BillingAddress::try_from_payment_flow_data(common_data),
+                    billing_first_name: common_data.get_optional_billing_first_name(),
+                    billing_last_name: common_data.get_optional_billing_last_name(),
+                    billing_full_name: common_data.get_billing_full_name()?,
                     credit_card: Revolv3CreditCardData {
                         payment_account_number: card_data.card_number.clone(),
                         expiration_date: card_data.get_expiry_date_as_mmyy()?,
