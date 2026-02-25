@@ -232,6 +232,7 @@ pub enum PaymentMethodData<T: PaymentMethodDataTypes> {
     CardToken(CardToken),
     OpenBanking(OpenBankingData),
     NetworkToken(NetworkTokenData),
+    ProxyNetworkToken(ProxyNetworkTokenData),
     MobilePayment(MobilePaymentData),
 }
 
@@ -309,6 +310,51 @@ impl NetworkTokenData {
 
     pub fn get_cryptogram(&self) -> Option<Secret<String>> {
         self.token_cryptogram.clone()
+    }
+}
+
+#[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Default)]
+pub struct ProxyNetworkTokenData {
+    pub network_token: Secret<String>,
+    pub network_token_exp_month: Secret<String>,
+    pub network_token_exp_year: Secret<String>,
+    pub cryptogram: Option<Secret<String>>,
+    pub card_issuer: Option<String>,
+    pub card_network: Option<common_enums::CardNetwork>,
+    pub card_type: Option<String>,
+    pub card_issuing_country: Option<String>,
+    pub card_holder_name: Option<Secret<String>>,
+    pub nick_name: Option<Secret<String>>,
+}
+
+impl ProxyNetworkTokenData {
+    pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
+        get_card_issuer(self.network_token.peek())
+    }
+
+    pub fn get_expiry_year_4_digit(&self) -> Secret<String> {
+        let mut year = self.network_token_exp_year.peek().clone();
+        if year.len() == 2 {
+            year = format!("20{year}");
+        }
+        Secret::new(year)
+    }
+
+    pub fn get_network_token(&self) -> cards::NetworkToken {
+        cards::NetworkToken::try_from(self.network_token.peek().clone())
+            .unwrap_or(cards::NetworkToken::default())
+    }
+
+    pub fn get_network_token_expiry_month(&self) -> Secret<String> {
+        self.network_token_exp_month.clone()
+    }
+
+    pub fn get_network_token_expiry_year(&self) -> Secret<String> {
+        self.network_token_exp_year.clone()
+    }
+
+    pub fn get_cryptogram(&self) -> Option<Secret<String>> {
+        self.cryptogram.clone()
     }
 }
 

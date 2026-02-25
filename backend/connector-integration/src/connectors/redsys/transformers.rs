@@ -246,6 +246,7 @@ where
             | Some(PaymentMethodData::OpenBanking(_))
             | Some(PaymentMethodData::CardToken(..))
             | Some(PaymentMethodData::NetworkToken(..))
+            | Some(PaymentMethodData::ProxyNetworkToken(..))
             | Some(PaymentMethodData::CardDetailsForNetworkTransactionId(_))
             | None => Err(errors::ConnectorError::NotImplemented(
                 domain_types::utils::get_unimplemented_payment_method_error_message("redsys"),

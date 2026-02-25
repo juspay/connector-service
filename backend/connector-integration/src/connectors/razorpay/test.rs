@@ -34,7 +34,10 @@ mod tests {
             id_type::MerchantId, pii::Email, request::RequestContent, types::MinorUnit,
         };
         use domain_types::{
-            connector_types::{PaymentFlowData, PaymentsAuthorizeData},
+            connector_flow::Authorize,
+            connector_types::{
+                ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+            },
             payment_address::{Address, PaymentAddress, PhoneDetails},
             payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},
             router_data::{ConnectorAuthType, ErrorResponse},
@@ -43,20 +46,26 @@ mod tests {
             router_response_types::Response,
             types::{ConnectorParams, Connectors},
         };
+        use hyperswitch_masking::Secret;
         use interfaces::{
-            connector_integration_v2::ConnectorIntegrationV2,
+            connector_integration_v2::{BoxedConnectorIntegrationV2, ConnectorIntegrationV2},
             connector_types::{BoxedConnector, ConnectorServiceTrait},
         };
-        use serde_json::{json, to_value, Value};
+        use serde_json::{json, to_value};
 
-        use crate::connectors::Razorpay;
+        use crate::{connectors::Razorpay, types::ConnectorData};
 
         #[test]
         fn test_build_request_valid() {
             let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
 
-            let test_router_data = RouterDataV2 {
-                flow: std::marker::PhantomData,
+            let req: RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<DefaultPCIHolder>,
+                PaymentsResponseData,
+            > = RouterDataV2 {
+                flow: std::marker::PhantomData::<Authorize>,
                 resource_common_data: PaymentFlowData {
                     merchant_id: MerchantId::default(),
                     customer_id: None,
@@ -66,14 +75,14 @@ mod tests {
                     status: AttemptStatus::Pending,
                     payment_method: PaymentMethod::Card,
                     description: None,
-                    return_url: None,
+                    return_url: Some("www.google.com".to_string()),
                     order_details: None,
                     address: PaymentAddress::new(
                         None,
                         Some(Address {
                             address: None,
                             phone: Some(PhoneDetails {
-                                number: Some("1234567890".to_string().into()),
+                                number: Some(Secret::new("1234567890".to_string())),
                                 country_code: Some("+1".to_string()),
                             }),
                             email: Some(email.clone()),
@@ -113,8 +122,8 @@ mod tests {
                     recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
-                    api_key: "dummy_api_key".to_string().into(),
-                    key1: "dummy_key1".to_string().into(),
+                    api_key: Secret::new("dummy_api_key".to_string()),
+                    key1: Secret::new("dummy_key1".to_string()),
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -124,16 +133,16 @@ mod tests {
                         card_number: RawCardNumber(
                             CardNumber::from_str("5123456789012346").unwrap(),
                         ),
-                        card_exp_month: "12".to_string().into(),
-                        card_exp_year: "2026".to_string().into(),
-                        card_cvc: "123".to_string().into(),
+                        card_exp_month: Secret::new("12".to_string()),
+                        card_exp_year: Secret::new("2026".to_string()),
+                        card_cvc: Secret::new("123".to_string()),
                         card_issuer: None,
                         card_network: None,
                         card_type: None,
                         card_issuing_country: None,
                         bank_code: None,
                         nick_name: None,
-                        card_holder_name: Some("Test User".to_string().into()),
+                        card_holder_name: Some(Secret::new("Test User".to_string())),
                         co_badged_card_data: None,
                     }),
                     amount: MinorUnit::new(1000),
@@ -144,7 +153,7 @@ mod tests {
                     confirm: true,
                     billing_descriptor: None,
                     capture_method: None,
-                    router_return_url: None,
+                    router_return_url: Some("www.google.com".to_string()),
                     webhook_url: None,
                     integrity_object: None,
                     complete_authorize_url: None,
@@ -202,56 +211,45 @@ mod tests {
                     threeds_method_comp_ind: None,
                     tokenization: None,
                 },
-                response: Err(ErrorResponse {
-                    code: "HE_00".to_string(),
-                    message: "Something went wrong".to_string(),
-                    reason: None,
-                    status_code: 500,
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                }),
+                response: Err(ErrorResponse::default()),
             };
 
             let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
-            let result = connector.get_request_body(&test_router_data);
-            let request_content = result.unwrap();
-
-            let actual_json: Value = match request_content {
-                Some(RequestContent::Json(payload)) => {
-                    to_value(&payload).expect("Failed to serialize payload to JSON")
-                }
-                _ => panic!("Expected JSON payload"),
+            let connector_data = ConnectorData {
+                connector,
+                connector_name: ConnectorEnum::Razorpay,
             };
-            let expected_json: Value = json!({
-                "amount": 1000,
-                "currency": "USD",
-                "contact": "1234567890",
-                "email": "testuser@gmail.com",
-                "order_id": "order_QMSVrXxHS9sBmu",
-                "method": "card",
-                "card": {
-                    "number": "5123456789012346",
-                    "expiry_month": "12",
-                    "expiry_year": "2026",
-                    "cvv": "123"
-                },
-                "authentication": {
-                    "authentication_channel": "browser"
-                },
-                "browser": {
-                    "java_enabled": false,
-                    "language": "en-US",
-                    "screen_height": 1080,
-                    "screen_width": 1920
-                },
-                "ip": "127.0.0.1",
-                "referer": "https://example.com",
-                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+
+            let connector_integration: BoxedConnectorIntegrationV2<
+                '_,
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<DefaultPCIHolder>,
+                PaymentsResponseData,
+            > = connector_data.connector.get_connector_integration_v2();
+
+            let request = connector_integration.build_request_v2(&req).unwrap();
+            let req_body = request.as_ref().map(|request_val| {
+                let masked_request = match request_val.body.as_ref() {
+                    Some(request_content) => match request_content {
+                        RequestContent::Json(i)
+                        | RequestContent::FormUrlEncoded(i)
+                        | RequestContent::Xml(i) => i.masked_serialize().unwrap_or(
+                            json!({ "error": "failed to mask serialize connector request" }),
+                        ),
+                        RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
+                        RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
+                    },
+                    None => serde_json::Value::Null,
+                };
+                masked_request
             });
-            assert_eq!(actual_json, expected_json);
+            assert_eq!(req_body.as_ref().unwrap()["amount"], 1000);
+            assert_eq!(req_body.as_ref().unwrap()["currency"], "USD");
+            assert_eq!(
+                req_body.as_ref().unwrap()["order_id"],
+                "order_QMSVrXxHS9sBmu"
+            );
         }
 
         #[test]

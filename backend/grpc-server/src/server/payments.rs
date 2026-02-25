@@ -103,6 +103,15 @@ struct CardTokenData {
     exp_year: String,
 }
 
+/// Helper struct for converting ProxyNetworkTokenData to TokenData
+#[derive(Debug, serde::Serialize)]
+struct NetworkTokenTokenData {
+    network_token: String,
+    network_token_exp_month: String,
+    network_token_exp_year: String,
+    cryptogram: Option<String>,
+}
+
 trait ToTokenData {
     fn to_token_data(&self) -> TokenData;
     fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData;
@@ -145,6 +154,45 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
         }
     }
 }
+
+impl ToTokenData for grpc_api_types::payments::ProxyNetworkTokenData {
+    fn to_token_data(&self) -> TokenData {
+        self.to_token_data_with_vault(VaultConnectors::VGS)
+    }
+
+    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {
+        let network_token_data = NetworkTokenTokenData {
+            network_token: self
+                .network_token
+                .as_ref()
+                .map(|nt| nt.clone().expose())
+                .unwrap_or_default(),
+            network_token_exp_month: self
+                .network_token_exp_month
+                .as_ref()
+                .map(|m| m.clone().expose())
+                .unwrap_or_default(),
+            network_token_exp_year: self
+                .network_token_exp_year
+                .as_ref()
+                .map(|y| y.clone().expose())
+                .unwrap_or_default(),
+            cryptogram: self
+                .cryptogram
+                .as_ref()
+                .map(|c| c.clone().expose()),
+        };
+
+        let network_token_json =
+            serde_json::to_value(network_token_data).unwrap_or(serde_json::Value::Null);
+
+        TokenData {
+            specific_token_data: SecretSerdeValue::new(network_token_json),
+            vault_connector,
+        }
+    }
+}
+
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_void_payment(
@@ -2015,6 +2063,31 @@ impl PaymentService for Payments {
                                     },
                                 }
                             }
+                            Some(payment_method::PaymentMethod::ProxyNetworkToken(proxy_network_token_details)) => {
+                                let token_data = proxy_network_token_details.to_token_data();
+                                match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
+                                    &config,
+                                    payload.clone(),
+                                    metadata_payload.connector,
+                                    metadata_payload.connector_auth_type.clone(),
+                                    metadata,
+                                    &metadata_payload,
+                                    &service_name,
+                                    &metadata_payload.request_id,
+                                    Some(token_data),
+                                ))
+                                .await
+                                {
+                                    Ok(response) => {
+                                        tracing::info!("INJECTOR: ProxyNetworkToken Authorization completed successfully with injector");
+                                        response
+                                    },
+                                    Err(error_response) => {
+                                        tracing::error!("INJECTOR: ProxyNetworkToken Authorization failed with injector - error: {:?}", error_response);
+                                        PaymentServiceAuthorizeResponse::from(error_response)
+                                    },
+                                }
+                            }
                             _ => {
                                 match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                                     &config,
@@ -2124,6 +2197,31 @@ impl PaymentService for Payments {
                                     },
                                     Err(error_response) => {
                                         tracing::error!("INJECTOR: Authorization only failed with injector - error: {:?}", error_response);
+                                        PaymentServiceAuthorizeResponse::from(error_response)
+                                    },
+                                }
+                            }
+                            Some(payment_method::PaymentMethod::ProxyNetworkToken(proxy_network_token_details)) => {
+                                let token_data = proxy_network_token_details.to_token_data();
+                                match Box::pin(self.process_authorization_only_internal::<VaultTokenHolder>(
+                                    &config,
+                                    payload.clone(),
+                                    metadata_payload.connector,
+                                    metadata_payload.connector_auth_type.clone(),
+                                    metadata,
+                                    &metadata_payload,
+                                    &service_name,
+                                    &metadata_payload.request_id,
+                                    Some(token_data),
+                                ))
+                                .await
+                                {
+                                    Ok(response) => {
+                                        tracing::info!("INJECTOR: ProxyNetworkToken Authorization only completed successfully with injector");
+                                        response
+                                    },
+                                    Err(error_response) => {
+                                        tracing::error!("INJECTOR: ProxyNetworkToken Authorization only failed with injector - error: {:?}", error_response);
                                         PaymentServiceAuthorizeResponse::from(error_response)
                                     },
                                 }
