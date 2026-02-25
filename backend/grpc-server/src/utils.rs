@@ -310,29 +310,29 @@ pub fn auth_from_metadata(
             )?;
             Ok(ConnectorAuthType::CurrencyAuthKey { auth_key_map })
         }
-        "external-auth" => {
-            let auth_json_base64 = parse_metadata(metadata, consts::X_EXTERNAL_AUTH)?;
+        "upstream-auth" => {
+            let auth_json_base64 = parse_metadata(metadata, consts::X_UPSTREAM_AUTHORIZATION)?;
 
             // Decode base64
             let decoded_bytes = BASE64_ENGINE
                 .decode(auth_json_base64.as_bytes())
                 .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EXTERNAL_AUTH_BASE64".to_string(),
+                    sub_code: "INVALID_UPSTREAM_AUTHORIZATION_BASE64".to_string(),
                     error_identifier: 400,
-                    error_message: "Invalid base64 encoded external auth".to_string(),
+                    error_message: "Invalid base64 encoded upstream authorization".to_string(),
                     error_object: None,
                 }))?;
 
             let auth_json: Value = serde_json::from_slice(&decoded_bytes).change_context(
                 ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EXTERNAL_AUTH_JSON".to_string(),
+                    sub_code: "INVALID_UPSTREAM_AUTHORIZATION_JSON".to_string(),
                     error_identifier: 400,
-                    error_message: "Invalid JSON format in external auth".to_string(),
+                    error_message: "Invalid JSON format in upstream authorization".to_string(),
                     error_object: None,
                 }),
             )?;
 
-            Ok(ConnectorAuthType::ExternalAuth {
+            Ok(ConnectorAuthType::UpstreamAuth {
                 value: auth_json.into(),
             })
         }

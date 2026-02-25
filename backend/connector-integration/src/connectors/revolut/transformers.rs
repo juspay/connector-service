@@ -461,7 +461,7 @@ impl TryFrom<&ConnectorAuthType> for RevolutAuthType {
             ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
                 your_secret_api_key: api_key.to_owned(),
             }),
-            ConnectorAuthType::ExternalAuth { value } => {
+            ConnectorAuthType::UpstreamAuth { value } => {
                 let auth_type: Self = parse_external_auth_value(value)?;
 
                 Ok(Self {
@@ -478,7 +478,7 @@ impl TryFrom<&ConnectorAuthType> for RevolutIncomingWebhookAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::ExternalAuth { value } => {
+            ConnectorAuthType::UpstreamAuth { value } => {
                 let auth_type: Self = parse_external_auth_value(value)?;
 
                 Ok(Self {

@@ -37,7 +37,7 @@ pub enum ConnectorAuthType {
     CurrencyAuthKey {
         auth_key_map: HashMap<common_enums::enums::Currency, common_utils::pii::SecretSerdeValue>,
     },
-    ExternalAuth {
+    UpstreamAuth {
         value: common_utils::pii::SecretSerdeValue,
     },
     CertificateAuth {
@@ -127,7 +127,7 @@ impl ConnectorAuthType {
             Self::CurrencyAuthKey { auth_key_map } => Self::CurrencyAuthKey {
                 auth_key_map: auth_key_map.clone(),
             },
-            Self::ExternalAuth { value } => Self::ExternalAuth {
+            Self::UpstreamAuth { value } => Self::UpstreamAuth {
                 value: value.clone(),
             },
             Self::CertificateAuth {
