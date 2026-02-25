@@ -1114,6 +1114,7 @@ pub enum BraintreePaymentsResponse {
     PaymentsResponse(Box<PaymentsResponse>),
     WalletPaymentsResponse(Box<WalletPaymentsResponse>),
     ClientTokenResponse(Box<ClientTokenResponse>),
+    AchBankDebitResponse(Box<ChargeUsBankAccountResponse>),
     ErrorResponse(Box<ErrorResponse>),
 }
 
