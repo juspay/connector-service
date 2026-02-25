@@ -673,16 +673,6 @@ pub struct AuthResponse {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
-pub enum BraintreeAuthResponse {
-    AuthResponse(Box<AuthResponse>),
-    ClientTokenResponse(Box<ClientTokenResponse>),
-    ErrorResponse(Box<ErrorResponse>),
-    WalletAuthResponse(Box<WalletAuthResponse>),
-    AchBankDebitAuthResponse(Box<AuthorizeUsBankAccountResponse>),
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(untagged)]
 pub enum BraintreeCompleteAuthResponse {
     AuthResponse(Box<AuthResponse>),
     ErrorResponse(Box<ErrorResponse>),
