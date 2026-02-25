@@ -654,10 +654,11 @@ fn create_regular_transaction_request<
                     Ok(PaymentDetails::BankAccount(bank_account_details))
                 }
                 BankDebitData::SepaBankDebit { .. }
+                | BankDebitData::SepaGuaranteedBankDebit { .. }
                 | BankDebitData::BecsBankDebit { .. }
                 | BankDebitData::BacsBankDebit { .. } => {
                     Err(error_stack::report!(ConnectorError::NotImplemented(
-                        "SEPA, BECS, and BACS bank debits are not supported for authorizedotnet"
+                        "SEPA, SEPA Guaranteed, BECS, and BACS bank debits are not supported for authorizedotnet"
                             .to_string(),
                     )))
                 }
