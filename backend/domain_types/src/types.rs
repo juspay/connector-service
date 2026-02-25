@@ -6498,7 +6498,7 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateSdkSessionTokenRequest>
         };
 
         Ok(Self {
-            amount: money.amount.clone(),
+            amount: money.amount,
             currency: money.currency,
             country: Some(CountryAlpha2::foreign_try_from(
                 value.country_alpha2_code(),
