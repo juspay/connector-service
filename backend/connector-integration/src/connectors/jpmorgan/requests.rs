@@ -17,12 +17,17 @@ pub struct JpmorganPaymentsRequest<T: PaymentMethodDataTypes> {
     pub currency: common_enums::Currency,
     pub merchant: JpmorganMerchant,
     pub payment_method_type: JpmorganPaymentMethodType<T>,
+    pub account_holder: JpmorganAccountHolder,
+    pub statement_descriptor: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganPaymentMethodType<T: PaymentMethodDataTypes> {
-    pub card: JpmorganCard<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card: Option<JpmorganCard<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ach: Option<JpmorganAch>,
 }
 
 #[derive(Debug, Serialize)]
@@ -30,6 +35,31 @@ pub struct JpmorganPaymentMethodType<T: PaymentMethodDataTypes> {
 pub struct JpmorganCard<T: PaymentMethodDataTypes> {
     pub account_number: RawCardNumber<T>,
     pub expiry: Expiry,
+}
+
+/// ACH Bank Debit payment method structure for JPMorgan
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganAch {
+    pub account_number: Secret<String>,
+    pub financial_institution_routing_number: Secret<String>,
+    pub account_type: JpmorganAchAccountType,
+}
+
+/// ACH Account Holder structure
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganAccountHolder {
+    pub first_name: Secret<String>,
+    pub last_name: Secret<String>,
+}
+
+/// ACH Account Type enum
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum JpmorganAchAccountType {
+    Checking,
+    Savings,
 }
 
 #[derive(Debug, Serialize)]
@@ -43,6 +73,7 @@ pub struct Expiry {
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganMerchant {
     pub merchant_software: JpmorganMerchantSoftware,
+    pub soft_merchant: JpmorganSoftMerchant,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +81,12 @@ pub struct JpmorganMerchant {
 pub struct JpmorganMerchantSoftware {
     pub company_name: Secret<String>,
     pub product_name: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganSoftMerchant {
+    pub merchant_purchase_description: Secret<String>,
 }
 
 #[derive(Debug, Default, Copy, Serialize, Deserialize, Clone, PartialEq, Eq)]
