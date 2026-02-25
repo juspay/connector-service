@@ -77,7 +77,7 @@ pub struct WorldpayAuthorizeResponse {
 
 pub type WorldpayPSyncResponse = WorldpayAuthorizeResponse;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayCaptureResponse {
     pub settlement_id: String,
@@ -86,7 +86,7 @@ pub struct WorldpayCaptureResponse {
     pub currency: common_enums::Currency,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayRefundResponse {
     pub refund_id: String,
@@ -95,14 +95,14 @@ pub struct WorldpayRefundResponse {
     pub currency: common_enums::Currency,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayVoidResponse {
     pub cancellation_id: String,
     pub status: WorldpayPaymentStatus,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum WorldpayPaymentStatus {
     Success,
@@ -114,7 +114,7 @@ pub enum WorldpayPaymentStatus {
     Pending,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum WorldpayRefundStatus {
     Success,
