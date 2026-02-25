@@ -678,6 +678,7 @@ pub enum BraintreeAuthResponse {
     ClientTokenResponse(Box<ClientTokenResponse>),
     ErrorResponse(Box<ErrorResponse>),
     WalletAuthResponse(Box<WalletAuthResponse>),
+    AchBankDebitAuthResponse(Box<AuthorizeUsBankAccountResponse>),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
