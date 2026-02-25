@@ -1672,7 +1672,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::Wallet(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
             | PaymentMethodData::BankTransfer(_)
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::MandatePayment
@@ -1691,7 +1690,91 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )
                 .into())
             }
+            PaymentMethodData::BankDebit(ref bank_debit_data) => {
+                match bank_debit_data {
+                    BankDebitData::AchBankDebit {
+                        account_number,
+                        routing_number,
+                        bank_account_holder_name,
+                        bank_type,
+                        bank_holder_type,
+                        ..
+                    } => {
+                        let account_holder_name = bank_account_holder_name
+                            .clone()
+                            .or_else(|| item.router_data.resource_common_data.get_billing_full_name().ok())
+                            .ok_or_else(|| ConnectorError::MissingRequiredField {
+                                field_name: "bank_account_holder_name",
+                            })?;
+
+                        let (first_name, last_name) = parse_account_holder_name(&account_holder_name);
+
+                        let account_type = match bank_type {
+                            Some(common_enums::BankType::Savings) => "SAVINGS".to_string(),
+                            Some(common_enums::BankType::Checking) | None => "CHECKING".to_string(),
+                        };
+
+                        let ach_mandate = item
+                            .router_data
+                            .request
+                            .mandate_data
+                            .as_ref()
+                            .and_then(|m| m.customer_acceptance.as_ref())
+                            .and_then(|ca| ca.acceptance_type.as_ref())
+                            .map(|_| "I authorize Braintree to debit my bank account".to_string())
+                            .unwrap_or_else(|| "I authorize Braintree to debit my bank account".to_string());
+
+                        let billing_address = item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing()
+                            .and_then(|b| b.address.as_ref())
+                            .map(|addr| UsBankAccountBillingAddress {
+                                street_address: addr.line1.clone().unwrap_or_default(),
+                                extended_address: addr.line2.clone(),
+                                city: addr.city.clone().unwrap_or_default(),
+                                state: addr.state.clone().unwrap_or_default(),
+                                zip_code: addr.zip.clone().unwrap_or_default(),
+                            });
+
+                        Ok(Self {
+                            query: constants::TOKENIZE_US_BANK_ACCOUNT.to_string(),
+                            variables: TokenizeUsBankAccountInput {
+                                us_bank_account: UsBankAccountData {
+                                    routing_number: routing_number.clone(),
+                                    account_number: account_number.clone(),
+                                    account_type,
+                                    ach_mandate,
+                                    individual_owner: UsBankAccountOwner {
+                                        first_name,
+                                        last_name,
+                                    },
+                                    billing_address,
+                                },
+                            },
+                        })
+                    }
+                    BankDebitData::SepaBankDebit { .. }
+                    | BankDebitData::BecsBankDebit { .. }
+                    | BankDebitData::BacsBankDebit { .. } => {
+                        Err(ConnectorError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("braintree"),
+                        )
+                        .into())
+                    }
+                }
+            }
         }
+    }
+}
+
+fn parse_account_holder_name(full_name: &Secret<String>) -> (String, String) {
+    let name = full_name.expose();
+    let parts: Vec<&str> = name.split_whitespace().collect();
+    match parts.as_slice() {
+        [] => (String::new(), String::new()),
+        [first] => (first.to_string(), String::new()),
+        [first, rest @ ..] => (first.to_string(), rest.join(" ")),
     }
 }
 
