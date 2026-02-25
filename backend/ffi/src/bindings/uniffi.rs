@@ -1,13 +1,23 @@
 #[cfg(feature = "uniffi")]
+// macro implementation need to implemented
 mod uniffi_bindings_inner {
     use crate::errors::{FfiPaymentError, UniffiError};
-    use crate::handlers::payments::{authorize_req_handler, authorize_res_handler};
+    use crate::handlers::payments::{
+        authorize_req_handler, authorize_res_handler, capture_req_handler, capture_res_handler,
+        create_access_token_req_handler, create_access_token_res_handler, get_req_handler,
+        get_res_handler, refund_req_handler, refund_res_handler, void_req_handler,
+        void_res_handler,
+    };
     use crate::types::{FfiMetadataPayload, FfiRequestData};
     use crate::utils::ffi_headers_to_masked_metadata;
     use bytes::Bytes;
     use domain_types::router_response_types::Response;
     use external_services::service::extract_raw_connector_request;
-    use grpc_api_types::payments::PaymentServiceAuthorizeRequest;
+    use grpc_api_types::payments::{
+        PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest,
+        PaymentServiceCreateAccessTokenRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest,
+    };
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
     use std::collections::HashMap;
@@ -74,7 +84,7 @@ mod uniffi_bindings_inner {
         };
 
         let result =
-            authorize_req_handler(None, request).map_err(|e| UniffiError::HandlerError {
+            authorize_req_handler(request, None).map_err(|e| UniffiError::HandlerError {
                 msg: format!("{e:?}"),
             })?;
 
@@ -135,11 +145,384 @@ mod uniffi_bindings_inner {
         };
 
         let proto_response =
-            authorize_res_handler(None, request, response).map_err(FfiPaymentError::from)?;
+            authorize_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+
+        Ok(proto_response.encode_to_vec())
+    }
+
+    /// Build the connector HTTP request for capture operation.
+    #[uniffi::export]
+    pub fn capture_req_transformer(
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<String, UniffiError> {
+        let payload = PaymentServiceCaptureRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let result = capture_req_handler(request, None).map_err(|e| UniffiError::HandlerError {
+            msg: format!("{e:?}"),
+        })?;
+
+        let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
+
+        Ok(extract_raw_connector_request(&connector_request))
+    }
+
+    /// Process the connector HTTP response for capture operation.
+    #[uniffi::export]
+    pub fn capture_res_transformer(
+        response_body: Vec<u8>,
+        status_code: u16,
+        response_headers: HashMap<String, String>,
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<Vec<u8>, UniffiError> {
+        let mut header_map = HeaderMap::new();
+        for (key, value) in &response_headers {
+            if let (Ok(name), Ok(val)) = (
+                HeaderName::from_bytes(key.as_bytes()),
+                HeaderValue::from_str(value),
+            ) {
+                header_map.insert(name, val);
+            }
+        }
+
+        let response = Response {
+            headers: if header_map.is_empty() {
+                None
+            } else {
+                Some(header_map)
+            },
+            response: Bytes::from(response_body),
+            status_code,
+        };
+
+        let payload = PaymentServiceCaptureRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let proto_response =
+            capture_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+
+        Ok(proto_response.encode_to_vec())
+    }
+
+    /// Build the connector HTTP request for void operation.
+    #[uniffi::export]
+    pub fn void_req_transformer(
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<String, UniffiError> {
+        let payload = PaymentServiceVoidRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let result = void_req_handler(request, None).map_err(|e| UniffiError::HandlerError {
+            msg: format!("{e:?}"),
+        })?;
+
+        let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
+
+        Ok(extract_raw_connector_request(&connector_request))
+    }
+
+    /// Process the connector HTTP response for void operation.
+    #[uniffi::export]
+    pub fn void_res_transformer(
+        response_body: Vec<u8>,
+        status_code: u16,
+        response_headers: HashMap<String, String>,
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<Vec<u8>, UniffiError> {
+        let mut header_map = HeaderMap::new();
+        for (key, value) in &response_headers {
+            if let (Ok(name), Ok(val)) = (
+                HeaderName::from_bytes(key.as_bytes()),
+                HeaderValue::from_str(value),
+            ) {
+                header_map.insert(name, val);
+            }
+        }
+
+        let response = Response {
+            headers: if header_map.is_empty() {
+                None
+            } else {
+                Some(header_map)
+            },
+            response: Bytes::from(response_body),
+            status_code,
+        };
+
+        let payload = PaymentServiceVoidRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let proto_response =
+            void_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+
+        Ok(proto_response.encode_to_vec())
+    }
+
+    /// Build the connector HTTP request for get operation.
+    #[uniffi::export]
+    pub fn get_req_transformer(
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<String, UniffiError> {
+        let payload = PaymentServiceGetRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let result = get_req_handler(request, None).map_err(|e| UniffiError::HandlerError {
+            msg: format!("{e:?}"),
+        })?;
+
+        let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
+
+        Ok(extract_raw_connector_request(&connector_request))
+    }
+
+    /// Process the connector HTTP response for get operation.
+    #[uniffi::export]
+    pub fn get_res_transformer(
+        response_body: Vec<u8>,
+        status_code: u16,
+        response_headers: HashMap<String, String>,
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<Vec<u8>, UniffiError> {
+        let mut header_map = HeaderMap::new();
+        for (key, value) in &response_headers {
+            if let (Ok(name), Ok(val)) = (
+                HeaderName::from_bytes(key.as_bytes()),
+                HeaderValue::from_str(value),
+            ) {
+                header_map.insert(name, val);
+            }
+        }
+
+        let response = Response {
+            headers: if header_map.is_empty() {
+                None
+            } else {
+                Some(header_map)
+            },
+            response: Bytes::from(response_body),
+            status_code,
+        };
+
+        let payload = PaymentServiceGetRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let proto_response =
+            get_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+
+        Ok(proto_response.encode_to_vec())
+    }
+
+    /// Build the connector HTTP request for create access token operation.
+    #[uniffi::export]
+    pub fn create_access_token_req_transformer(
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<String, UniffiError> {
+        let payload = PaymentServiceCreateAccessTokenRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let result = create_access_token_req_handler(request, None).map_err(|e| {
+            UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            }
+        })?;
+
+        let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
+
+        Ok(extract_raw_connector_request(&connector_request))
+    }
+
+    /// Process the connector HTTP response for create access token operation.
+    #[uniffi::export]
+    pub fn create_access_token_res_transformer(
+        response_body: Vec<u8>,
+        status_code: u16,
+        response_headers: HashMap<String, String>,
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<Vec<u8>, UniffiError> {
+        let mut header_map = HeaderMap::new();
+        for (key, value) in &response_headers {
+            if let (Ok(name), Ok(val)) = (
+                HeaderName::from_bytes(key.as_bytes()),
+                HeaderValue::from_str(value),
+            ) {
+                header_map.insert(name, val);
+            }
+        }
+
+        let response = Response {
+            headers: if header_map.is_empty() {
+                None
+            } else {
+                Some(header_map)
+            },
+            response: Bytes::from(response_body),
+            status_code,
+        };
+
+        let payload = PaymentServiceCreateAccessTokenRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let proto_response = create_access_token_res_handler(request, response, None)
+            .map_err(FfiPaymentError::from)?;
+
+        Ok(proto_response.encode_to_vec())
+    }
+
+    /// Build the connector HTTP request for refund operation.
+    #[uniffi::export]
+    pub fn refund_req_transformer(
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<String, UniffiError> {
+        let payload = PaymentServiceRefundRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let result = refund_req_handler(request, None).map_err(|e| UniffiError::HandlerError {
+            msg: format!("{e:?}"),
+        })?;
+
+        let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
+
+        Ok(extract_raw_connector_request(&connector_request))
+    }
+
+    /// Process the connector HTTP response for refund operation.
+    #[uniffi::export]
+    pub fn refund_res_transformer(
+        response_body: Vec<u8>,
+        status_code: u16,
+        response_headers: HashMap<String, String>,
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<Vec<u8>, UniffiError> {
+        let mut header_map = HeaderMap::new();
+        for (key, value) in &response_headers {
+            if let (Ok(name), Ok(val)) = (
+                HeaderName::from_bytes(key.as_bytes()),
+                HeaderValue::from_str(value),
+            ) {
+                header_map.insert(name, val);
+            }
+        }
+
+        let response = Response {
+            headers: if header_map.is_empty() {
+                None
+            } else {
+                Some(header_map)
+            },
+            response: Bytes::from(response_body),
+            status_code,
+        };
+
+        let payload = PaymentServiceRefundRequest::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let proto_response =
+            refund_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
 
         Ok(proto_response.encode_to_vec())
     }
 }
 
 #[cfg(feature = "uniffi")]
+// macro implementation need to implemented
 pub use uniffi_bindings_inner::*;

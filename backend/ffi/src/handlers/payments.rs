@@ -21,8 +21,8 @@ use crate::types::FfiRequestData;
 use domain_types::payment_method_data::DefaultPCIHolder;
 // authorize_req handler
 pub fn authorize_req_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceAuthorizeRequest>,
+    test_mode: Option<bool>,
 ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -42,9 +42,9 @@ pub fn authorize_req_handler(
 
 // authorize_res handler
 pub fn authorize_res_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceAuthorizeRequest>,
     response: domain_types::router_response_types::Response,
+    test_mode: Option<bool>,
 ) -> Result<PaymentServiceAuthorizeResponse, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -65,8 +65,8 @@ pub fn authorize_res_handler(
 
 // capture_req handler
 pub fn capture_req_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceCaptureRequest>,
+    test_mode: Option<bool>,
 ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -86,9 +86,9 @@ pub fn capture_req_handler(
 
 // capture_res handler
 pub fn capture_res_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceCaptureRequest>,
     response: domain_types::router_response_types::Response,
+    test_mode: Option<bool>,
 ) -> Result<PaymentServiceCaptureResponse, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -109,8 +109,8 @@ pub fn capture_res_handler(
 
 // void_req handler
 pub fn void_req_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceVoidRequest>,
+    test_mode: Option<bool>,
 ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -129,9 +129,9 @@ pub fn void_req_handler(
 
 // void_res handler
 pub fn void_res_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceVoidRequest>,
     response: domain_types::router_response_types::Response,
+    test_mode: Option<bool>,
 ) -> Result<PaymentServiceVoidResponse, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -151,8 +151,8 @@ pub fn void_res_handler(
 
 // get_req handler
 pub fn get_req_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceGetRequest>,
+    test_mode: Option<bool>,
 ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -171,9 +171,9 @@ pub fn get_req_handler(
 
 // get_res handler
 pub fn get_res_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceGetRequest>,
     response: domain_types::router_response_types::Response,
+    test_mode: Option<bool>,
 ) -> Result<PaymentServiceGetResponse, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -193,8 +193,8 @@ pub fn get_res_handler(
 
 // create_access_token_req handler
 pub fn create_access_token_req_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceCreateAccessTokenRequest>,
+    test_mode: Option<bool>,
 ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -213,9 +213,9 @@ pub fn create_access_token_req_handler(
 
 // create_access_token_res handler
 pub fn create_access_token_res_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceCreateAccessTokenRequest>,
     response: domain_types::router_response_types::Response,
+    test_mode: Option<bool>,
 ) -> Result<PaymentServiceCreateAccessTokenResponse, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -235,8 +235,8 @@ pub fn create_access_token_res_handler(
 
 // refund_req handler
 pub fn refund_req_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceRefundRequest>,
+    test_mode: Option<bool>,
 ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
@@ -255,9 +255,9 @@ pub fn refund_req_handler(
 
 // refund_res handler
 pub fn refund_res_handler(
-    test_mode: Option<bool>,
     request: FfiRequestData<PaymentServiceRefundRequest>,
     response: domain_types::router_response_types::Response,
+    test_mode: Option<bool>,
 ) -> Result<RefundResponse, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
