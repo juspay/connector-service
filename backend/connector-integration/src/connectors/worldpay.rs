@@ -14,6 +14,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
+    router_response_types::Response,
     types::Connectors,
 };
 use error_stack::ResultExt;
