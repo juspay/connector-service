@@ -1032,8 +1032,12 @@ dependencies = [
  "connector-integration",
  "domain_types",
  "grpc-api-types",
+ "masking",
+ "prost",
+ "prost-types",
  "tonic 0.13.1",
  "ucs_common_enums",
+ "ucs_common_utils",
 ]
 
 [[package]]
@@ -2791,6 +2795,7 @@ dependencies = [
  "base64 0.21.7",
  "build_info",
  "chrono",
+ "composite-service",
  "config",
  "config_patch_derive",
  "connector-integration",

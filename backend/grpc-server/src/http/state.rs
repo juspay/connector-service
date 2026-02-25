@@ -1,5 +1,8 @@
-type CompositePaymentsService =
-    composite_service::payments::Payments<crate::server::payments::Payments>;
+type CompositePaymentsService = composite_service::payments::Payments<
+    crate::server::payments::Payments,
+    crate::server::payments::MerchantAuthentication,
+    crate::server::payments::Customer,
+>;
 
 #[derive(Clone)]
 pub struct AppState {

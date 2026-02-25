@@ -14,9 +14,9 @@ mod uniffi_bindings_inner {
     use domain_types::router_response_types::Response;
     use external_services::service::extract_raw_connector_request;
     use grpc_api_types::payments::{
-        PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest,
-        PaymentServiceCreateAccessTokenRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceVoidRequest,
+        MerchantAuthenticationServiceCreateAccessTokenRequest, PaymentServiceAuthorizeRequest,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceVoidRequest,
     };
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
@@ -378,8 +378,10 @@ mod uniffi_bindings_inner {
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
     ) -> Result<String, UniffiError> {
-        let payload = PaymentServiceCreateAccessTokenRequest::decode(Bytes::from(request_bytes))
-            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+        let payload = MerchantAuthenticationServiceCreateAccessTokenRequest::decode(Bytes::from(
+            request_bytes,
+        ))
+        .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
@@ -430,8 +432,10 @@ mod uniffi_bindings_inner {
             status_code,
         };
 
-        let payload = PaymentServiceCreateAccessTokenRequest::decode(Bytes::from(request_bytes))
-            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+        let payload = MerchantAuthenticationServiceCreateAccessTokenRequest::decode(Bytes::from(
+            request_bytes,
+        ))
+        .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
