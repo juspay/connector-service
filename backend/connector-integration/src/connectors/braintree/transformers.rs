@@ -71,6 +71,7 @@ pub type CardPaymentRequest = GenericBraintreeRequest<VariablePaymentInput>;
 pub type MandatePaymentRequest = GenericBraintreeRequest<VariablePaymentInput>;
 pub type BraintreeClientTokenRequest = GenericBraintreeRequest<VariableClientTokenInput>;
 pub type BraintreeTokenRequest<T> = GenericBraintreeRequest<VariableInput<T>>;
+pub type BraintreeAchTokenRequest = GenericBraintreeRequest<TokenizeUsBankAccountInput>;
 pub type BraintreeCaptureRequest = GenericBraintreeRequest<VariableCaptureInput>;
 pub type BraintreeRefundRequest = GenericBraintreeRequest<BraintreeRefundVariables>;
 pub type BraintreePSyncRequest = GenericBraintreeRequest<PSyncInput>;
