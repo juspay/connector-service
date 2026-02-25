@@ -1710,6 +1710,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | BankTransferData::Pse {}
             | BankTransferData::LocalBankTransfer { .. }
             | BankTransferData::InstantBankTransfer {}
+            | BankTransferData::IndonesianBankTransfer { .. }
             | BankTransferData::InstantBankTransferFinland {}
             | BankTransferData::InstantBankTransferPoland {} => {
                 Err(errors::ConnectorError::NotImplemented(
@@ -1790,10 +1791,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .unwrap_or(item.resource_common_data.get_billing_full_name()?),
                 })))
             }
-            BankDebitData::BecsBankDebit { .. } => Err(errors::ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Adyen"),
-            )
-            .into()),
+            BankDebitData::BecsBankDebit { .. } | BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                Err(errors::ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Adyen"),
+                )
+                .into())
+            }
         }
     }
 }
@@ -2391,6 +2394,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }),
             BankDebitData::SepaBankDebit { .. }
             | BankDebitData::BacsBankDebit { .. }
+            | BankDebitData::SepaGuaranteedBankDebit { .. }
             | BankDebitData::BecsBankDebit { .. } => billing_address,
         };
 
