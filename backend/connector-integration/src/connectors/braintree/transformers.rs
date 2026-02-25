@@ -701,7 +701,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                     BankDebitData::SepaBankDebit { .. }
                     | BankDebitData::BecsBankDebit { .. }
-                    | BankDebitData::BacsBankDebit { .. } => {
+                    | BankDebitData::BacsBankDebit { .. }
+                    | BankDebitData::SepaGuaranteedBankDebit { .. } => {
                         Err(ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("braintree"),
                         )
@@ -1730,11 +1731,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .get_optional_billing()
                             .and_then(|b| b.address.as_ref())
                             .map(|addr| UsBankAccountBillingAddress {
-                                street_address: addr.line1.clone().unwrap_or_default(),
-                                extended_address: addr.line2.clone(),
-                                city: addr.city.clone().unwrap_or_default(),
-                                state: addr.state.clone().unwrap_or_default(),
-                                zip_code: addr.zip.clone().unwrap_or_default(),
+                                street_address: addr.line1.clone().map(|s| s.expose()).unwrap_or_default(),
+                                extended_address: addr.line2.clone().map(|s| s.expose()),
+                                city: addr.city.clone().map(|s| s.expose()).unwrap_or_default(),
+                                state: addr.state.clone().map(|s| s.expose()).unwrap_or_default(),
+                                zip_code: addr.zip.clone().map(|s| s.expose()).unwrap_or_default(),
                             });
 
                         Ok(Self {
@@ -1769,7 +1770,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 fn parse_account_holder_name(full_name: &Secret<String>) -> (String, String) {
-    let name = full_name.expose();
+    let name = full_name.clone().expose();
     let parts: Vec<&str> = name.split_whitespace().collect();
     match parts.as_slice() {
         [] => (String::new(), String::new()),
