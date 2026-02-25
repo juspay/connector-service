@@ -98,7 +98,7 @@ macros::create_all_prerequisites!(
             request_body: WorldpayRefundRequest,
             response_body: WorldpayRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
+        )
     ],
     amount_converters: [],
     member_functions: {
