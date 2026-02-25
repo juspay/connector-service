@@ -1567,6 +1567,145 @@ pub struct TokenizePaymentMethodData {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct UsBankAccountDetails {
+    pub accountholder_name: Option<String>,
+    pub account_type: Option<String>,
+    pub bank_name: Option<String>,
+    pub last4: Option<String>,
+    pub routing_number: Option<String>,
+    pub verified: Option<bool>,
+    pub ach_mandate: Option<AchMandateDetails>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AchMandateDetails {
+    pub accepted_at: Option<String>,
+    pub acceptance_text: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenizeUsBankAccountPaymentMethod {
+    pub id: Secret<String>,
+    pub usage: Option<String>,
+    pub created_at: Option<String>,
+    pub details: Option<UsBankAccountDetails>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenizeUsBankAccountData {
+    pub payment_method: TokenizeUsBankAccountPaymentMethod,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenizeUsBankAccountResponse {
+    pub tokenize_us_bank_account: TokenizeUsBankAccountData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultUsBankAccountPaymentMethod {
+    pub id: Secret<String>,
+    pub legacy_id: Option<String>,
+    pub details: Option<UsBankAccountDetails>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultVerificationData {
+    pub id: Option<String>,
+    pub status: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultUsBankAccountData {
+    pub payment_method: VaultUsBankAccountPaymentMethod,
+    pub verification: Option<VaultVerificationData>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultUsBankAccountResponse {
+    pub vault_us_bank_account: VaultUsBankAccountData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyUsBankAccountVerification {
+    pub id: String,
+    pub legacy_id: Option<String>,
+    pub status: Option<String>,
+    pub merchant_account_id: Option<String>,
+    pub created_at: Option<String>,
+    pub gateway_rejection_reason: Option<String>,
+    pub payment_method: Option<TokenizePaymentMethodData>,
+    pub processor_response: Option<ProcessorResponse>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessorResponse {
+    pub legacy_code: Option<String>,
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyUsBankAccountData {
+    pub verification: VerifyUsBankAccountVerification,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyUsBankAccountResponse {
+    pub verify_us_bank_account: VerifyUsBankAccountData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsBankAccountTransactionAmount {
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsBankAccountTransactionData {
+    pub id: String,
+    pub amount: Option<UsBankAccountTransactionAmount>,
+    pub status: BraintreePaymentStatus,
+    pub payment_method_snapshot: Option<UsBankAccountDetails>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChargeUsBankAccountData {
+    pub transaction: UsBankAccountTransactionData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChargeUsBankAccountResponse {
+    pub charge_us_bank_account: ChargeUsBankAccountData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizeUsBankAccountData {
+    pub transaction: UsBankAccountTransactionData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizeUsBankAccountResponse {
+    pub authorize_us_bank_account: AuthorizeUsBankAccountData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TokenizeCreditCardData {
     payment_method: TokenizePaymentMethodData,
 }
