@@ -8664,7 +8664,7 @@ impl
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            connector_customer: None,
+            connector_customer: value.connector_customer_id,
             description: None,
             return_url: value.return_url,
             connector_meta_data: None,
