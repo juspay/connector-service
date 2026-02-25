@@ -366,8 +366,7 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response =
-            get_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+        let proto_response = get_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }
@@ -402,51 +401,50 @@ mod uniffi_bindings_inner {
     }
 
     /// Process the connector HTTP response for create access token operation.
-    #[uniffi::export]
-    pub fn create_access_token_res_transformer(
-        response_body: Vec<u8>,
-        status_code: u16,
-        response_headers: HashMap<String, String>,
-        request_bytes: Vec<u8>,
-        metadata: HashMap<String, String>,
-    ) -> Result<Vec<u8>, UniffiError> {
-        let mut header_map = HeaderMap::new();
-        for (key, value) in &response_headers {
-            if let (Ok(name), Ok(val)) = (
-                HeaderName::from_bytes(key.as_bytes()),
-                HeaderValue::from_str(value),
-            ) {
-                header_map.insert(name, val);
-            }
-        }
+    // #[uniffi::export]
+    // pub fn create_access_token_res_transformer(
+    //     response_body: Vec<u8>,
+    //     status_code: u16,
+    //     response_headers: HashMap<String, String>,
+    //     request_bytes: Vec<u8>,
+    //     metadata: HashMap<String, String>,
+    // ) -> Result<Vec<u8>, UniffiError> {
+    //     let mut header_map = HeaderMap::new();
+    //     for (key, value) in &response_headers {
+    //         if let (Ok(name), Ok(val)) = (
+    //             HeaderName::from_bytes(key.as_bytes()),
+    //             HeaderValue::from_str(value),
+    //         ) {
+    //             header_map.insert(name, val);
+    //         }
+    //     }
 
-        let response = Response {
-            headers: if header_map.is_empty() {
-                None
-            } else {
-                Some(header_map)
-            },
-            response: Bytes::from(response_body),
-            status_code,
-        };
+    //     let response = Response {
+    //         headers: if header_map.is_empty() {
+    //             None
+    //         } else {
+    //             Some(header_map)
+    //         },
+    //         response: Bytes::from(response_body),
+    //         status_code,
+    //     };
 
-        let payload = PaymentServiceCreateAccessTokenRequest::decode(Bytes::from(request_bytes))
-            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+    //     let payload = PaymentServiceCreateAccessTokenRequest::decode(Bytes::from(request_bytes))
+    //         .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
-        let ffi_metadata = parse_metadata(&metadata)?;
-        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+    //     let ffi_metadata = parse_metadata(&metadata)?;
+    //     let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
-            payload,
-            extracted_metadata: ffi_metadata,
-            masked_metadata: Some(masked_metadata),
-        };
+    //     let request = FfiRequestData {
+    //         payload,
+    //         extracted_metadata: ffi_metadata,
+    //         masked_metadata: Some(masked_metadata),
+    //     };
 
-        let proto_response = create_access_token_res_handler(request, response, None)
-            .map_err(FfiPaymentError::from)?;
+    //     let proto_response = create_access_token_res_handler(request, response, None);
 
-        Ok(proto_response.encode_to_vec())
-    }
+    //     Ok(proto_response.encode_to_vec())
+    // }
 
     /// Build the connector HTTP request for refund operation.
     #[uniffi::export]
@@ -516,8 +514,7 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response =
-            refund_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+        let proto_response = refund_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }
