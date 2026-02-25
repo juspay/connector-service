@@ -35,8 +35,8 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types,
     types::{
-        generate_access_token_response_data,
-        generate_payment_capture_response, generate_payment_incremental_authorization_response,
+        generate_access_token_response_data, generate_payment_capture_response,
+        generate_payment_incremental_authorization_response,
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
         generate_payment_void_post_capture_response, generate_payment_void_response,
         generate_refund_response, generate_repeat_payment_response,

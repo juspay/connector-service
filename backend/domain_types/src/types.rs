@@ -16,8 +16,8 @@ use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     self as grpc_payment_types, ConnectorState, DisputeResponse, DisputeServiceAcceptResponse,
     DisputeServiceDefendRequest, DisputeServiceDefendResponse,
-    DisputeServiceSubmitEvidenceResponse,
-    MerchantAuthenticationServiceCreateSdkSessionTokenRequest, MerchantAuthenticationServiceCreateAccessTokenResponse,
+    DisputeServiceSubmitEvidenceResponse, MerchantAuthenticationServiceCreateAccessTokenResponse,
+    MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
     MerchantAuthenticationServiceCreateSdkSessionTokenResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
@@ -4969,8 +4969,10 @@ pub fn generate_access_token_response(
         AccessTokenRequestData,
         AccessTokenResponseData,
     >,
-) -> Result<MerchantAuthenticationServiceCreateAccessTokenResponse, error_stack::Report<ApplicationErrorResponse>>
-{
+) -> Result<
+    MerchantAuthenticationServiceCreateAccessTokenResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
     let access_token_data = generate_access_token_response_data(router_data_v2)?;
     Ok(create_access_token_data(access_token_data))
 }
