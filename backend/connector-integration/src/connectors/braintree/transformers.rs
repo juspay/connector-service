@@ -640,11 +640,71 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .into()),
                 }
             }
+            PaymentMethodData::BankDebit(ref bank_debit_data) => {
+                match bank_debit_data {
+                    BankDebitData::AchBankDebit {
+                        account_number,
+                        routing_number,
+                        bank_account_holder_name,
+                        bank_type,
+                        bank_holder_type,
+                        ..
+                    } => {
+                        let payment_method_token = item
+                            .router_data
+                            .resource_common_data
+                            .get_payment_method_token()?;
+
+                        let payment_method_id = match payment_method_token {
+                            PaymentMethodTokenFlow::Token(token) => token,
+                        };
+
+                        let account_type = match bank_type {
+                            Some(common_enums::BankType::Savings) => "SAVINGS".to_string(),
+                            Some(common_enums::BankType::Checking) | None => "CHECKING".to_string(),
+                        };
+
+                        let amount = item
+                            .connector
+                            .amount_converter
+                            .convert(
+                                item.router_data.request.minor_amount,
+                                item.router_data.request.currency,
+                            )
+                            .change_context(ConnectorError::AmountConversionFailed)?;
+
+                        let order_id = item
+                            .router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone();
+
+                        let is_auto_capture = item.router_data.request.is_auto_capture()?;
+
+                        Ok(Self::AchBankDebit(BraintreeAchRequest {
+                            payment_method_id,
+                            transaction: UsBankAccountTransactionBody {
+                                amount,
+                                order_id: Some(order_id),
+                                merchant_account_id: Some(metadata.merchant_account_id),
+                                risk_data: None,
+                            },
+                        }))
+                    }
+                    BankDebitData::SepaBankDebit { .. }
+                    | BankDebitData::BecsBankDebit { .. }
+                    | BankDebitData::BacsBankDebit { .. } => {
+                        Err(ConnectorError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("braintree"),
+                        )
+                        .into())
+                    }
+                }
+            }
             PaymentMethodData::MandatePayment
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
             | PaymentMethodData::BankTransfer(_)
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::Reward
