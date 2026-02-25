@@ -1,4 +1,4 @@
-use crate::configs::ConfigPatch;
+use crate::{configs::ConfigPatch, logger};
 use base64::{engine::general_purpose, Engine as _};
 use common_utils::{
     config_patch::Patch,
@@ -18,7 +18,8 @@ use domain_types::{
     },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
+    utils::ForeignTryFrom,
 };
 use error_stack::{Report, ResultExt};
 use http::request::Request;
@@ -162,7 +163,7 @@ pub struct MetadataPayload {
     pub merchant_id: String,
     pub connector: connector_types::ConnectorEnum,
     pub lineage_ids: LineageIds<'static>,
-    pub connector_auth_type: ConnectorAuthType,
+    pub connector_auth_type: ConnectorSpecificAuth,
     pub reference_id: Option<String>,
     pub shadow_mode: bool,
     pub resource_id: Option<String>,
@@ -171,13 +172,15 @@ pub struct MetadataPayload {
 pub fn get_metadata_payload(
     metadata: &metadata::MetadataMap,
     server_config: Arc<configs::Config>,
+    proto_auth: Option<grpc_api_types::payments::ConnectorAuth>,
 ) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
     let connector = connector_from_metadata(metadata)?;
     let merchant_id = merchant_id_from_metadata(metadata)?;
     let tenant_id = tenant_id_from_metadata(metadata)?;
     let request_id = request_id_from_metadata(metadata)?;
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
-    let connector_auth_type = auth_from_metadata(metadata)?;
+    let connector_auth_type =
+        connector_auth_from_payload_or_metadata(proto_auth, metadata, &connector)?;
     let reference_id = reference_id_from_metadata(metadata)?;
     let resource_id = resource_id_from_metadata(metadata)?;
     let shadow_mode = shadow_mode_from_metadata(metadata);
@@ -192,6 +195,48 @@ pub fn get_metadata_payload(
         shadow_mode,
         resource_id,
     })
+}
+
+pub fn extract_proto_auth_from_payload<T: serde::Serialize>(
+    payload: &T,
+) -> Option<grpc_api_types::payments::ConnectorAuth> {
+    let payload_value = serde_json::to_value(payload).ok()?;
+    let connector_auth_value = payload_value
+        .get("connector_auth")
+        .cloned()
+        .or_else(|| payload_value.get("connectorAuth").cloned())?;
+
+    serde_json::from_value(connector_auth_value).ok()
+}
+
+fn connector_auth_from_payload_or_metadata(
+    proto_auth: Option<grpc_api_types::payments::ConnectorAuth>,
+    metadata: &metadata::MetadataMap,
+    connector: &connector_types::ConnectorEnum,
+) -> CustomResult<ConnectorSpecificAuth, ApplicationErrorResponse> {
+    proto_auth.map_or_else(
+        || {
+            logger::debug!(
+                "Connector auth not found in payload, falling back to metadata for connector: {}",
+                connector
+            );
+            auth_from_metadata(metadata, connector)
+        },
+        |auth| {
+            logger::debug!(
+                "Connector auth found in payload, using it for connector: {}",
+                connector
+            );
+            ConnectorSpecificAuth::foreign_try_from(auth).map_err(|_| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "AUTH_CONVERSION_FAILED".to_string(),
+                    error_identifier: 400,
+                    error_message: "Failed to convert auth from request payload".to_string(),
+                    error_object: None,
+                }))
+            })
+        },
+    )
 }
 
 pub fn connector_from_metadata(
@@ -267,9 +312,30 @@ pub fn shadow_mode_from_metadata(metadata: &metadata::MetadataMap) -> bool {
         .unwrap_or(false)
 }
 
+/// Extracts connector-specific auth from metadata headers.
+/// Uses the connector name to determine which variant to create.
 pub fn auth_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<ConnectorAuthType, ApplicationErrorResponse> {
+    connector: &connector_types::ConnectorEnum,
+) -> CustomResult<ConnectorSpecificAuth, ApplicationErrorResponse> {
+    let generic_auth = generic_auth_from_metadata(metadata)?;
+    ConnectorSpecificAuth::foreign_try_from((&generic_auth, connector)).map_err(|_| {
+        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "AUTH_CONVERSION_FAILED".to_string(),
+            error_identifier: 400,
+            error_message: format!("Failed to convert auth for connector: {}", connector),
+            error_object: None,
+        }))
+    })
+}
+
+/// Extracts generic auth type from metadata headers.
+/// This is the legacy format that uses key1, key2, etc.
+pub fn generic_auth_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<domain_types::router_data::ConnectorAuthType, ApplicationErrorResponse> {
+    use domain_types::router_data::ConnectorAuthType;
+
     let auth = parse_metadata(metadata, X_AUTH)?;
 
     #[allow(clippy::wildcard_in_or_patterns)]
@@ -774,4 +840,106 @@ macro_rules! implement_connector_operation {
         result
     }
 }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::connector_auth_from_payload_or_metadata;
+    use common_utils::consts;
+    use domain_types::{connector_types, router_data::ConnectorSpecificAuth};
+    use hyperswitch_masking::ExposeInterface;
+    use tonic::metadata::MetadataMap;
+
+    fn stripe_payload_auth(api_key: &str) -> grpc_api_types::payments::ConnectorAuth {
+        grpc_api_types::payments::ConnectorAuth {
+            auth_type: Some(grpc_api_types::payments::connector_auth::AuthType::Stripe(
+                grpc_api_types::payments::StripeAuth {
+                    api_key: Some(hyperswitch_masking::Secret::new(api_key.to_string())),
+                },
+            )),
+        }
+    }
+
+    fn metadata_with_header_auth(api_key: &str) -> MetadataMap {
+        let mut metadata = MetadataMap::new();
+        metadata.insert(
+            consts::X_AUTH,
+            "header-key".parse().expect("valid x-auth header"),
+        );
+        metadata.insert(
+            consts::X_API_KEY,
+            api_key.parse().expect("valid x-api-key header"),
+        );
+        metadata
+    }
+
+    #[test]
+    fn connector_auth_uses_header_when_payload_missing() {
+        let metadata = metadata_with_header_auth("header-key-value");
+
+        let auth = connector_auth_from_payload_or_metadata(
+            None,
+            &metadata,
+            &connector_types::ConnectorEnum::Stripe,
+        )
+        .expect("header auth should resolve");
+
+        match auth {
+            ConnectorSpecificAuth::Stripe { api_key } => {
+                assert_eq!(api_key.expose(), "header-key-value");
+            }
+            _ => panic!("expected stripe auth"),
+        }
+    }
+
+    #[test]
+    fn connector_auth_uses_payload_when_header_missing() {
+        let metadata = MetadataMap::new();
+
+        let auth = connector_auth_from_payload_or_metadata(
+            Some(stripe_payload_auth("payload-key-value")),
+            &metadata,
+            &connector_types::ConnectorEnum::Stripe,
+        )
+        .expect("payload auth should resolve");
+
+        match auth {
+            ConnectorSpecificAuth::Stripe { api_key } => {
+                assert_eq!(api_key.expose(), "payload-key-value");
+            }
+            _ => panic!("expected stripe auth"),
+        }
+    }
+
+    #[test]
+    fn connector_auth_prefers_payload_over_header() {
+        let metadata = metadata_with_header_auth("header-key-value");
+
+        let auth = connector_auth_from_payload_or_metadata(
+            Some(stripe_payload_auth("payload-key-value")),
+            &metadata,
+            &connector_types::ConnectorEnum::Stripe,
+        )
+        .expect("payload auth should take precedence");
+
+        match auth {
+            ConnectorSpecificAuth::Stripe { api_key } => {
+                assert_eq!(api_key.expose(), "payload-key-value");
+            }
+            _ => panic!("expected stripe auth"),
+        }
+    }
+
+    #[test]
+    fn connector_auth_fails_when_payload_and_header_are_missing() {
+        let metadata = MetadataMap::new();
+
+        let result = connector_auth_from_payload_or_metadata(
+            None,
+            &metadata,
+            &connector_types::ConnectorEnum::Stripe,
+        );
+
+        assert!(result.is_err());
+    }
 }

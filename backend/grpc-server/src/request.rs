@@ -5,7 +5,7 @@ use common_utils::metadata::MaskedMetadata;
 use crate::{
     configs,
     error::ResultExtGrpc,
-    utils::{get_metadata_payload, MetadataPayload},
+    utils::{extract_proto_auth_from_payload, get_metadata_payload, MetadataPayload},
 };
 
 /// Structured request data with secure metadata access.
@@ -22,12 +22,16 @@ impl<T> RequestData<T> {
     pub fn from_grpc_request(
         request: tonic::Request<T>,
         config: Arc<configs::Config>,
-    ) -> Result<Self, tonic::Status> {
+    ) -> Result<Self, tonic::Status>
+    where
+        T: serde::Serialize,
+    {
         let (metadata, extensions, payload) = request.into_parts();
+        let proto_auth = extract_proto_auth_from_payload(&payload);
 
         // Construct MetadataPayload from raw metadata (existing functions need it)
         let metadata_payload =
-            get_metadata_payload(&metadata, config.clone()).into_grpc_status()?;
+            get_metadata_payload(&metadata, config.clone(), proto_auth).into_grpc_status()?;
 
         // Pass tonic metadata and config to MaskedMetadata
         let masked_metadata = MaskedMetadata::new(metadata, config.unmasked_headers.clone());
