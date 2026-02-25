@@ -3,7 +3,10 @@ use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
-    payments::{dispute_service_server, payment_service_server, refund_service_server},
+    payments::{
+        composite_payment_service_server, dispute_service_server, payment_service_server,
+        refund_service_server,
+    },
 };
 use std::{future::Future, net, sync::Arc};
 use tokio::{
@@ -94,6 +97,11 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
 
 pub struct Service {
     pub health_check_service: crate::server::health_check::HealthCheck,
+    pub composite_payments_service: composite_service::payments::Payments<
+        crate::server::payments::Payments,
+        crate::server::payments::MerchantAuthentication,
+        crate::server::payments::Customer,
+    >,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
@@ -122,12 +130,21 @@ impl Service {
         }
         let customer_service = crate::server::payments::Customer;
         let merchant_authentication_service = crate::server::payments::MerchantAuthentication;
+
+        let payments_service = crate::server::payments::Payments {
+            customer_service: customer_service.clone(),
+            merchant_authentication_service: merchant_authentication_service.clone(),
+        };
+        let composite_payments_service = composite_service::payments::Payments::new(
+            payments_service.clone(),
+            merchant_authentication_service.clone(),
+            customer_service.clone(),
+        );
+
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
-            payments_service: crate::server::payments::Payments {
-                customer_service: customer_service.clone(),
-                merchant_authentication_service: merchant_authentication_service.clone(),
-            },
+            composite_payments_service,
+            payments_service,
             refunds_service: crate::server::refunds::Refunds,
             disputes_service: crate::server::disputes::Disputes,
             recurring_payment_service: crate::server::payments::RecurringPayments,
@@ -171,6 +188,7 @@ impl Service {
 
         let config_override_layer = HttpRequestExtensionsLayer::new(base_config.clone());
         let app_state = crate::http::AppState::new(
+            self.composite_payments_service,
             self.payments_service,
             self.refunds_service,
             self.disputes_service,
@@ -244,6 +262,11 @@ impl Service {
             .add_service(payment_service_server::PaymentServiceServer::new(
                 self.payments_service.clone(),
             ))
+            .add_service(
+                composite_payment_service_server::CompositePaymentServiceServer::new(
+                    self.composite_payments_service,
+                ),
+            )
             .add_service(refund_service_server::RefundServiceServer::new(
                 self.refunds_service,
             ))

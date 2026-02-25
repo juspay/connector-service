@@ -25,7 +25,7 @@ impl ConnectorClient {
         let ffi_request = build_ffi_request(request.clone(), metadata)?;
 
         // Step 1: Build the connector HTTP request
-        let connector_request = authorize_req_handler(ffi_request)
+        let connector_request = authorize_req_handler(ffi_request, None)
             .map_err(|e| format!("authorize_req_handler failed: {:?}", e))?
             .ok_or("No connector request generated")?;
 
@@ -97,7 +97,7 @@ impl ConnectorClient {
 
         // Step 5: Parse response via authorize_res_handler
         let ffi_request_for_res = build_ffi_request(request, metadata)?;
-        match authorize_res_handler(ffi_request_for_res, response) {
+        match authorize_res_handler(ffi_request_for_res, response, None) {
             Ok(auth_response) => Ok(auth_response),
             Err(error_response) => {
                 Err(format!("Authorization failed: {:?}", error_response).into())

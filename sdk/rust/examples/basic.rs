@@ -130,7 +130,7 @@ fn demo_low_level(request: &PaymentServiceAuthorizeRequest, metadata: &HashMap<S
             }
         };
 
-    match connector_service_ffi::handlers::payments::authorize_req_handler(ffi_request) {
+    match connector_service_ffi::handlers::payments::authorize_req_handler(ffi_request, None) {
         Ok(Some(connector_request)) => {
             let raw_json =
                 external_services::service::extract_raw_connector_request(&connector_request);

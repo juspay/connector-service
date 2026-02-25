@@ -94,6 +94,18 @@ message CompositeAuthorizeRequest {
 
   // Tokenization Configuration
   optional Tokenization tokenization_strategy = 46; // Tokenization strategy for payment processing
+
+  // Payment Method Token
+  optional SecretString payment_method_token = 47;
+
+  // URL for Redirection
+  optional string continue_redirection_url = 48; // URL to complete authorization
+
+  // Indicates if 3DS method data was successfully completed or not
+  optional ThreeDsCompletionIndicator threeds_completion_indicator = 49;
+
+  // Redirection Information after DDC step
+  optional RedirectionResponse redirection_response = 50; // Redirection Response from client browser
 }
 
 // Response message for composite authorize flow.
