@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean pack test-pack package package-native dist
+.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean pack pack-archive test-pack dist
 
 # Auto-detect SDK root directory (works when run from sdk/python/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -73,53 +73,34 @@ setup: install-deps generate-proto generate-bindings
 example-run: setup
 	@cd $(SDK_ROOT) && python3 examples/example.py
 
-# Build distributable wheel
-pack: setup
-	@cd $(SDK_ROOT) && python3 -m pip wheel . --no-deps --wheel-dir dist
-	@echo "Package built. Artifacts in $(SDK_ROOT)/dist/"
+# Archive step only — assumes generated/ already has binaries and proto stubs
+pack-archive:
+	@mkdir -p $(PACKAGE_DIR)
+	@cd $(SDK_ROOT) && python3 -m pip wheel . --no-deps --wheel-dir $(PACKAGE_DIR)/
+	@echo "Wheel built in $(PACKAGE_DIR)/"
+
+# Local dev: build everything from scratch, then archive
+pack: setup pack-archive
 
 # Test the packed wheel in isolation
 test-pack: pack
 	@echo "Testing packed wheel..."
 	@rm -rf /tmp/test-hyperswitch-py
-	@python3 -m pip install --target /tmp/test-hyperswitch-py $(SDK_ROOT)/dist/hyperswitch_payments-0.1.0-py3-none-any.whl --no-deps --force-reinstall
+	@python3 -m pip install --target /tmp/test-hyperswitch-py $(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl --no-deps --force-reinstall
 	@cd $(SDK_ROOT) && python3 examples/test_pack.py /tmp/test-hyperswitch-py
 	@rm -rf /tmp/test-hyperswitch-py
 	@echo "Pack test passed."
 
+# CI / cross-platform dist: copy all available binaries, then archive once
+dist: generate-proto
+	@echo "Building Python SDK distribution archive..."
+	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so \
+		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: Linux x86_64 binary not found (skipping)"
+	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib \
+		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: macOS aarch64 binary not found (skipping)"
+	@$(MAKE) pack-archive
+	@echo "Distribution archive created in $(PACKAGE_DIR)/"
+
 clean:
 	@rm -rf $(GENERATED_OUT)
-	@rm -rf $(SDK_ROOT)/dist $(SDK_ROOT)/build $(SDK_ROOT)/*.egg-info $(SDK_ROOT)/src/*.egg-info
-
-# Packaging targets for release workflow - PLATFORM SPECIFIC
-package-linux-x86_64: generate-proto
-	@echo "Packaging Python SDK for Linux x86_64..."
-	@mkdir -p $(PACKAGE_DIR)/linux-x86_64/examples
-	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || \
-		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-linux-x86_64" && exit 1)
-	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/src/payments/connector_client.py $(PACKAGE_DIR)/linux-x86_64/
-	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/linux-x86_64/examples/ 2>/dev/null || true
-	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
-
-package-macos-aarch64: generate-proto
-	@echo "Packaging Python SDK for macOS aarch64..."
-	@mkdir -p $(PACKAGE_DIR)/macos-aarch64/examples
-	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || \
-		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-macos-aarch64" && exit 1)
-	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/src/payments/connector_client.py $(PACKAGE_DIR)/macos-aarch64/
-	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/macos-aarch64/examples/ 2>/dev/null || true
-	@echo "macOS aarch64 package created: $(PACKAGE_DIR)/macos-aarch64/"
-
-package-native: package-linux-x86_64 package-macos-aarch64
-
-# Create distribution archives for all platforms
-dist: package-native
-	@echo "Creating Python SDK distribution archives..."
-	@cd $(PACKAGE_DIR) && for dir in */; do \
-		if [ -d "$$dir" ]; then \
-			zip -r "connector-service-python-sdk-$${dir%/}.zip" "$$dir"; \
-		fi; \
-	done
-	@echo "Distribution archives created in $(PACKAGE_DIR)/"
+	@rm -rf $(SDK_ROOT)/build $(SDK_ROOT)/*.egg-info $(SDK_ROOT)/src/*.egg-info

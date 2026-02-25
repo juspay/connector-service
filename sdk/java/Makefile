@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto setup example-run clean pack test-pack package package-native dist
+.PHONY: build-lib generate-bindings generate-proto setup example-run clean pack pack-archive test-pack dist
 
 # Auto-detect SDK root directory (works when run from sdk/java/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -69,10 +69,18 @@ setup: generate-proto generate-bindings
 example-run: pack
 	@cd $(SDK_ROOT)/examples && $(SDK_ROOT)/gradlew run --quiet
 
-# Publish to local Maven repository
+# Archive step only — assumes native/ has binaries and generated/ has UniFFI + proto stubs
+pack-archive:
+	@mkdir -p $(PACKAGE_DIR)
+	@cd $(SDK_ROOT) && ./gradlew jar
+	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/payments-client-0.1.0.jar
+	@echo "JAR built in $(PACKAGE_DIR)/"
+
+# Local dev: build everything, publish to Maven Local (for test-pack/example-run), and build dist JAR
 pack: setup
 	@./gradlew publishToMavenLocal
 	@echo "Published to Maven Local (~/.m2/repository/com/hyperswitch/payments-client/0.1.0/)"
+	@$(MAKE) pack-archive
 
 # Test the packed JAR — verify it contains the expected classes and native lib
 test-pack: pack
@@ -87,47 +95,17 @@ test-pack: pack
 	@cd $(SDK_ROOT)/examples && $(SDK_ROOT)/gradlew run --quiet
 	@echo "Pack test passed."
 
+# CI / cross-platform dist: copy all available binaries, then archive once
+dist: generate-proto
+	@echo "Building Java SDK distribution JAR..."
+	@mkdir -p $(NATIVE_DIR)
+	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so \
+		$(NATIVE_DIR)/ 2>/dev/null || echo "  Note: Linux x86_64 binary not found (skipping)"
+	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib \
+		$(NATIVE_DIR)/ 2>/dev/null || echo "  Note: macOS aarch64 binary not found (skipping)"
+	@$(MAKE) pack-archive
+	@echo "Distribution JAR created in $(PACKAGE_DIR)/"
+
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)
 	@./gradlew clean 2>/dev/null || true
-
-# Packaging targets for release workflow - PLATFORM SPECIFIC
-package-linux-x86_64: generate-proto
-	@echo "Packaging Java SDK for Linux x86_64..."
-	@mkdir -p $(PACKAGE_DIR)/linux-x86_64/native
-	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/native/ 2>/dev/null || \
-		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-linux-x86_64" && exit 1)
-	@cp -rf $(GENERATED_JAVA)/*.java $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@cp -rf $(GENERATED_KOTLIN)/*.kt $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@cp -rf $(SDK_ROOT)/src $(PACKAGE_DIR)/linux-x86_64/
-	@cp $(SDK_ROOT)/build.gradle* $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/settings.gradle* $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/gradlew* $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@cp -rf $(SDK_ROOT)/gradle $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
-
-package-macos-aarch64: generate-proto
-	@echo "Packaging Java SDK for macOS aarch64..."
-	@mkdir -p $(PACKAGE_DIR)/macos-aarch64/native
-	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/native/ 2>/dev/null || \
-		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-macos-aarch64" && exit 1)
-	@cp -rf $(GENERATED_JAVA)/*.java $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@cp -rf $(GENERATED_KOTLIN)/*.kt $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@cp -rf $(SDK_ROOT)/src $(PACKAGE_DIR)/macos-aarch64/
-	@cp $(SDK_ROOT)/build.gradle* $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/settings.gradle* $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/gradlew* $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@cp -rf $(SDK_ROOT)/gradle $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@echo "macOS aarch64 package created: $(PACKAGE_DIR)/macos-aarch64/"
-
-package-native: package-linux-x86_64 package-macos-aarch64
-
-# Create distribution archives for all platforms
-dist: package-native
-	@echo "Creating Java SDK distribution archives..."
-	@cd $(PACKAGE_DIR) && for dir in */; do \
-		if [ -d "$$dir" ]; then \
-			zip -r "connector-service-java-sdk-$${dir%/}.zip" "$$dir"; \
-		fi; \
-	done
-	@echo "Distribution archives created in $(PACKAGE_DIR)/"

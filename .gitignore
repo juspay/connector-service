@@ -423,3 +423,5 @@ sdk/**/resources/native
 sdk/**/*.tgz
 sdk/**/dist/
 sdk/**/build/
+
+artifacts/
