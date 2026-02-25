@@ -291,7 +291,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
             None => {
-                // If webhook secrets are not provided, take them from External Auth details
+                // If webhook secrets are not provided, take them from Upstream Auth details
                 let auth = revolut::RevolutIncomingWebhookAuthType::try_from(
                     connector_account_details
                         .as_ref()

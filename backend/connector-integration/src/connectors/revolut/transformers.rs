@@ -13,7 +13,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 
-use crate::{types::ResponseRouterData, utils::parse_external_auth_value};
+use crate::{types::ResponseRouterData, utils::parse_upstream_auth_value};
 use common_enums::AttemptStatus;
 use common_utils::{custom_serde, types::MinorUnit};
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -462,7 +462,7 @@ impl TryFrom<&ConnectorAuthType> for RevolutAuthType {
                 your_secret_api_key: api_key.to_owned(),
             }),
             ConnectorAuthType::UpstreamAuth { value } => {
-                let auth_type: Self = parse_external_auth_value(value)?;
+                let auth_type: Self = parse_upstream_auth_value(value)?;
 
                 Ok(Self {
                     your_secret_api_key: auth_type.your_secret_api_key,
@@ -479,7 +479,7 @@ impl TryFrom<&ConnectorAuthType> for RevolutIncomingWebhookAuthType {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::UpstreamAuth { value } => {
-                let auth_type: Self = parse_external_auth_value(value)?;
+                let auth_type: Self = parse_upstream_auth_value(value)?;
 
                 Ok(Self {
                     signing_secret: auth_type.signing_secret,

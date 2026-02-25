@@ -496,7 +496,7 @@ fn get_masked_string_from_json_object(value: &Value) -> String {
     }
 }
 
-pub fn parse_external_auth_value<T>(
+pub fn parse_upstream_auth_value<T>(
     value: &SecretSerdeValue,
 ) -> CustomResult<T, errors::ConnectorError>
 where
