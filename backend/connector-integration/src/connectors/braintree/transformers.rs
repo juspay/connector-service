@@ -79,6 +79,142 @@ pub enum BraintreePaymentMethodTokenRequest<T: PaymentMethodDataTypes + std::fmt
     Card(BraintreeTokenRequest<T>),
     AchBankDebit(BraintreeAchTokenRequest),
 }
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BraintreeRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
+    > for BraintreePaymentMethodTokenRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: BraintreeRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        match item.router_data.request.payment_method_data.clone() {
+            PaymentMethodData::Card(card_data) => Ok(Self::Card(BraintreeTokenRequest {
+                query: constants::TOKENIZE_CREDIT_CARD.to_string(),
+                variables: VariableInput {
+                    input: InputData {
+                        credit_card: CreditCardData {
+                            number: card_data.card_number,
+                            expiration_year: card_data.card_exp_year,
+                            expiration_month: card_data.card_exp_month,
+                            cvv: card_data.card_cvc,
+                            cardholder_name: item
+                                .router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                                .unwrap_or(Secret::new("".to_string())),
+                        },
+                    },
+                },
+            })),
+            PaymentMethodData::BankDebit(ref bank_debit_data) => {
+                match bank_debit_data {
+                    BankDebitData::AchBankDebit {
+                        account_number,
+                        routing_number,
+                        bank_account_holder_name,
+                        bank_type,
+                        ..
+                    } => {
+                        let account_holder_name = bank_account_holder_name
+                            .clone()
+                            .or_else(|| item.router_data.resource_common_data.get_billing_full_name().ok())
+                            .ok_or_else(|| ConnectorError::MissingRequiredField {
+                                field_name: "bank_account_holder_name",
+                            })?;
+
+                        let (first_name, last_name) = parse_account_holder_name(&account_holder_name);
+
+                        let account_type = match bank_type {
+                            Some(common_enums::BankType::Savings) => "SAVINGS".to_string(),
+                            Some(common_enums::BankType::Checking) | None => "CHECKING".to_string(),
+                        };
+
+                        let ach_mandate = "I authorize Braintree to debit my bank account".to_string();
+
+                        let billing_address = item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing()
+                            .and_then(|b| b.address.as_ref())
+                            .map(|addr| UsBankAccountBillingAddress {
+                                street_address: addr.line1.clone().map(|s| s.expose()).unwrap_or_default(),
+                                extended_address: addr.line2.clone().map(|s| s.expose()),
+                                city: addr.city.clone().map(|s| s.expose()).unwrap_or_default(),
+                                state: addr.state.clone().map(|s| s.expose()).unwrap_or_default(),
+                                zip_code: addr.zip.clone().map(|s| s.expose()).unwrap_or_default(),
+                            });
+
+                        Ok(Self::AchBankDebit(BraintreeAchTokenRequest {
+                            query: constants::TOKENIZE_US_BANK_ACCOUNT.to_string(),
+                            variables: TokenizeUsBankAccountInput {
+                                us_bank_account: UsBankAccountData {
+                                    routing_number: routing_number.clone(),
+                                    account_number: account_number.clone(),
+                                    account_type,
+                                    ach_mandate,
+                                    individual_owner: UsBankAccountOwner {
+                                        first_name,
+                                        last_name,
+                                    },
+                                    billing_address,
+                                },
+                            },
+                        }))
+                    }
+                    BankDebitData::SepaBankDebit { .. }
+                    | BankDebitData::BecsBankDebit { .. }
+                    | BankDebitData::BacsBankDebit { .. }
+                    | BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                        Err(ConnectorError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("braintree"),
+                        )
+                        .into())
+                    }
+                }
+            }
+            PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::MobilePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("braintree"),
+                )
+                .into())
+            }
+        }
+    }
+}
 pub type BraintreeCaptureRequest = GenericBraintreeRequest<VariableCaptureInput>;
 pub type BraintreeRefundRequest = GenericBraintreeRequest<BraintreeRefundVariables>;
 pub type BraintreePSyncRequest = GenericBraintreeRequest<PSyncInput>;
