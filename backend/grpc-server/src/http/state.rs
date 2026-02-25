@@ -1,8 +1,8 @@
 #[derive(Clone)]
 pub struct AppState {
     pub payments_service: crate::server::payments::Payments,
-    pub refund_service: crate::server::refunds::Refunds,
-    pub dispute_service: crate::server::disputes::Disputes,
+    pub refunds_service: crate::server::refunds::Refunds,
+    pub disputes_service: crate::server::disputes::Disputes,
     pub recurring_payment_service: crate::server::payments::RecurringPayments,
     pub event_service: crate::server::payments::Events,
     pub payment_method_service: crate::server::payments::PaymentMethod,
@@ -25,8 +25,8 @@ impl AppState {
     ) -> Self {
         Self {
             payments_service,
-            refund_service,
-            dispute_service,
+            refunds_service: refund_service,
+            disputes_service: dispute_service,
             recurring_payment_service,
             event_service,
             payment_method_service,

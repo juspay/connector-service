@@ -63,17 +63,17 @@ pub fn create_router(state: AppState) -> Router {
             "/payments/create_access_token",
             post(handlers::payments::create_access_token),
         )
-        // .route("/payments/transform", post(handlers::payments::transform))
+        .route("/payments/transform", post(handlers::payments::transform))
         .route(
             "/payments/verify_redirect_response",
             post(handlers::payments::verify_redirect_response),
         )
         // RefundService routes
         .route("/refunds/get", post(handlers::refunds::get_refund))
-        // .route(
-        //     "/refunds/transform",
-        //     post(handlers::refunds::transform_refund),
-        // )
+        .route(
+            "/refunds/transform",
+            post(handlers::refunds::transform_refund),
+        )
         // DisputeService routes
         .route(
             "/disputes/submit_evidence",
@@ -82,9 +82,9 @@ pub fn create_router(state: AppState) -> Router {
         .route("/disputes/get", post(handlers::disputes::get_dispute))
         .route("/disputes/defend", post(handlers::disputes::defend_dispute))
         .route("/disputes/accept", post(handlers::disputes::accept_dispute))
-        // .route(
-        //     "/disputes/transform",
-        //     post(handlers::disputes::transform_dispute),
-        // )
+        .route(
+            "/disputes/transform",
+            post(handlers::disputes::transform_dispute),
+        )
         .with_state(state)
 }

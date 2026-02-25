@@ -4,7 +4,6 @@ use cards::NetworkToken;
 use common_utils::{
     ext_traits::{OptionExt, ValueExt},
     types::Money,
-    MinorUnit,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};

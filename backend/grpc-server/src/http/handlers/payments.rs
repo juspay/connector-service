@@ -4,8 +4,31 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    CustomerServiceCreateRequest, CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest, MerchantAuthenticationServiceCreateAccessTokenResponse, MerchantAuthenticationServiceCreateSessionTokenRequest, MerchantAuthenticationServiceCreateSessionTokenResponse, PaymentMethodAuthenticationServiceAuthenticateRequest, PaymentMethodAuthenticationServiceAuthenticateResponse, PaymentMethodAuthenticationServicePostAuthenticateRequest, PaymentMethodAuthenticationServicePostAuthenticateResponse, PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest, PaymentServiceRegisterAutoDebitResponse, PaymentServiceReverseRequest, PaymentServiceReverseResponse, PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse, merchant_authentication_service_server::MerchantAuthenticationService, payment_method_authentication_service_server::PaymentMethodAuthenticationService, payment_service_server::PaymentService, recurring_payment_service_server::RecurringPaymentService,
-    customer_service_server::CustomerService, payment_method_service_server::PaymentMethodService,
+    customer_service_server::CustomerService,
+    merchant_authentication_service_server::MerchantAuthenticationService,
+    payment_method_authentication_service_server::PaymentMethodAuthenticationService,
+    payment_method_service_server::PaymentMethodService, payment_service_server::PaymentService,
+    recurring_payment_service_server::RecurringPaymentService, CustomerServiceCreateRequest,
+    CustomerServiceCreateResponse, EventServiceHandleRequest, EventServiceHandleResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse,
+    MerchantAuthenticationServiceCreateSessionTokenRequest,
+    MerchantAuthenticationServiceCreateSessionTokenResponse,
+    PaymentMethodAuthenticationServiceAuthenticateRequest,
+    PaymentMethodAuthenticationServiceAuthenticateResponse,
+    PaymentMethodAuthenticationServicePostAuthenticateRequest,
+    PaymentMethodAuthenticationServicePostAuthenticateResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest,
+    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest,
+    PaymentServiceRegisterAutoDebitResponse, PaymentServiceReverseRequest,
+    PaymentServiceReverseResponse, PaymentServiceVerifyRedirectResponseRequest,
+    PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
+    RecurringPaymentServiceChargeResponse, RefundResponse,
 };
 use std::sync::Arc;
 
@@ -142,13 +165,13 @@ http_handler!(
     create_access_token,
     merchant_authentication_service
 );
-// http_handler!(
-//     transform,
-//     PaymentServiceTransformRequest,
-//     PaymentServiceTransformResponse,
-//     transform,
-//     payments_service
-// );
+http_handler!(
+    transform,
+    EventServiceHandleRequest,
+    EventServiceHandleResponse,
+    transform,
+    payments_service
+);
 http_handler!(
     verify_redirect_response,
     PaymentServiceVerifyRedirectResponseRequest,

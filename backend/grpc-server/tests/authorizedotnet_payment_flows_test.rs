@@ -28,8 +28,8 @@ use grpc_api_types::{
         PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
         PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest,
-        RecurringPaymentServiceChargeResponse, PaymentServiceVoidRequest, PaymentStatus,
-        RecurringPaymentServiceChargeRequest, RefundServiceGetRequest, RefundStatus,
+        PaymentServiceVoidRequest, PaymentStatus, RecurringPaymentServiceChargeRequest,
+        RecurringPaymentServiceChargeResponse, RefundServiceGetRequest, RefundStatus,
     },
 };
 use rand::{distributions::Alphanumeric, Rng};

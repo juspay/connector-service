@@ -12,7 +12,7 @@ use grpc_api_types::payments::{
     dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
     DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
     DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
-    DisputeServiceSubmitEvidenceResponse,
+    DisputeServiceSubmitEvidenceResponse, EventServiceHandleRequest, EventServiceHandleResponse,
 };
 use std::sync::Arc;
 use ucs_env::configs::Config;
@@ -22,7 +22,7 @@ http_handler!(
     DisputeServiceSubmitEvidenceRequest,
     DisputeServiceSubmitEvidenceResponse,
     submit_evidence,
-    dispute_service
+    disputes_service
 );
 
 http_handler!(
@@ -30,7 +30,7 @@ http_handler!(
     DisputeServiceGetRequest,
     DisputeResponse,
     get,
-    dispute_service
+    disputes_service
 );
 
 http_handler!(
@@ -38,7 +38,7 @@ http_handler!(
     DisputeServiceDefendRequest,
     DisputeServiceDefendResponse,
     defend,
-    dispute_service
+    disputes_service
 );
 
 http_handler!(
@@ -46,13 +46,13 @@ http_handler!(
     DisputeServiceAcceptRequest,
     DisputeServiceAcceptResponse,
     accept,
-    dispute_service
+    disputes_service
 );
 
-// http_handler!(
-//     transform_dispute,
-//     DisputeServiceTransformRequest,
-//     DisputeServiceTransformResponse,
-//     transform,
-//     dispute_service
-// );
+http_handler!(
+    transform_dispute,
+    EventServiceHandleRequest,
+    EventServiceHandleResponse,
+    transform,
+    disputes_service
+);

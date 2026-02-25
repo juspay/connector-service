@@ -4639,10 +4639,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .recurring_mandate_payment_data
                     .as_ref()
                     .and_then(|recurring_mandate_payment_data| {
-                        recurring_mandate_payment_data.original_payment_authorized_amount.clone()
-                    }).map(|original_amount| {
-                        (original_amount.amount, original_amount.currency)
-                    });
+                        recurring_mandate_payment_data
+                            .original_payment_authorized_amount
+                            .clone()
+                    })
+                    .map(|original_amount| (original_amount.amount, original_amount.currency));
 
                 let original_authorized_amount = match original_authorized_amount {
                     Some((original_amount, original_currency)) => {

@@ -135,7 +135,8 @@ impl Service {
             payment_method_service: crate::server::payments::PaymentMethod,
             merchant_authentication_service,
             customer_service,
-            payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
+            payment_method_authentication_service:
+                crate::server::payments::PaymentMethodAuthentication,
         }
     }
 
