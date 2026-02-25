@@ -1,1 +1,1 @@
-rootProject.name = "example-uniffi-kt"
+rootProject.name = "hyperswitch-payments"

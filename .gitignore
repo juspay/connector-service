@@ -419,3 +419,4 @@ gen/**
 sdk/**/generated
 sdk/**/node_modules
 sdk/**/.gradle
+sdk/**/resources/native

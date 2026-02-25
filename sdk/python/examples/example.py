@@ -19,18 +19,17 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent.absolute()
 SDK_ROOT = SCRIPT_DIR.parent
 
-# Add paths relative to this script
-sys.path.insert(0, str(SDK_ROOT / "generated"))
-sys.path.insert(0, str(SDK_ROOT))
+# Add src/ to path so "payments" package is importable
+sys.path.insert(0, str(SDK_ROOT / "src"))
 
 # UniFFI-generated Python module
-from connector_service_ffi import authorize_req_transformer, UniffiError
+from payments.generated.connector_service_ffi import authorize_req_transformer, UniffiError
 
 # Protobuf-generated stubs
-from payment_pb2 import PaymentServiceAuthorizeRequest, PaymentAddress
+from payments.generated.payment_pb2 import PaymentServiceAuthorizeRequest, PaymentAddress
 
 # High-level client
-from connector_client import ConnectorClient
+from payments import ConnectorClient
 
 
 def build_authorize_request_msg() -> PaymentServiceAuthorizeRequest:

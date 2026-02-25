@@ -1,7 +1,11 @@
 plugins {
     kotlin("jvm") version "1.9.25"
     application
+    `maven-publish`
 }
+
+group = "com.hyperswitch"
+version = "0.1.0"
 
 repositories {
     mavenCentral()
@@ -23,12 +27,23 @@ application {
 // Add generated UniFFI + protobuf sources
 sourceSets {
     main {
-        kotlin.srcDir("generated")
-        java.srcDir("generated")
+        kotlin.srcDir("src/main/kotlin/generated")
+        java.srcDir("src/main/java/generated")
+        resources.srcDir("src/main/resources")
     }
 }
 
 // Pass the library path so JNA can find the native library
 tasks.named<JavaExec>("run") {
-    systemProperty("jna.library.path", file("generated").absolutePath)
+    systemProperty("jna.library.path", file("src/main/resources/native").absolutePath)
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "com.hyperswitch"
+            artifactId = "payments-client"
+            from(components["java"])
+        }
+    }
 }

@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean package package-native dist
+.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean pack package package-native dist
 
 # Auto-detect SDK root directory (works when run from sdk/python/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -8,7 +8,7 @@ REPO_ROOT := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
 # Paths relative to SDK root
 FFI_CRATE=$(REPO_ROOT)/backend/ffi
 PROTO_DIR=$(REPO_ROOT)/backend/grpc-api-types/proto
-GENERATED_OUT=$(SDK_ROOT)/generated
+GENERATED_OUT=$(SDK_ROOT)/src/payments/generated
 ARTIFACTS_DIR=$(REPO_ROOT)/artifacts
 PACKAGE_DIR=$(ARTIFACTS_DIR)/sdk-python
 
@@ -61,10 +61,16 @@ setup: generate-proto generate-bindings
 
 # Run the example
 example-run: setup
-	@python3 examples/example.py
+	@cd $(SDK_ROOT) && PYTHONPATH=$(SDK_ROOT)/src python3 examples/example.py
+
+# Build distributable wheel
+pack: setup
+	@cd $(SDK_ROOT) && python3 -m build
+	@echo "Package built. Artifacts in $(SDK_ROOT)/dist/"
 
 clean:
 	@rm -rf $(GENERATED_OUT)
+	@rm -rf $(SDK_ROOT)/dist $(SDK_ROOT)/build $(SDK_ROOT)/*.egg-info $(SDK_ROOT)/src/*.egg-info
 
 # Packaging targets for release workflow - PLATFORM SPECIFIC
 package-linux-x86_64: generate-proto
@@ -73,7 +79,7 @@ package-linux-x86_64: generate-proto
 	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || \
 		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-linux-x86_64" && exit 1)
 	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/connector_client.py $(PACKAGE_DIR)/linux-x86_64/
+	@cp $(SDK_ROOT)/src/payments/connector_client.py $(PACKAGE_DIR)/linux-x86_64/
 	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/linux-x86_64/examples/ 2>/dev/null || true
 	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
 
@@ -83,7 +89,7 @@ package-macos-aarch64: generate-proto
 	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || \
 		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-macos-aarch64" && exit 1)
 	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/connector_client.py $(PACKAGE_DIR)/macos-aarch64/
+	@cp $(SDK_ROOT)/src/payments/connector_client.py $(PACKAGE_DIR)/macos-aarch64/
 	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/macos-aarch64/examples/ 2>/dev/null || true
 	@echo "macOS aarch64 package created: $(PACKAGE_DIR)/macos-aarch64/"
 

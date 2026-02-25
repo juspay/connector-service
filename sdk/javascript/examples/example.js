@@ -22,9 +22,8 @@ const path = require("path");
 const SCRIPT_DIR = __dirname;
 const SDK_ROOT = path.resolve(SCRIPT_DIR, "..");
 
-const { UniffiClient } = require(path.join(SDK_ROOT, "uniffi_client"));
-const { ConnectorClient } = require(path.join(SDK_ROOT, "connector_client"));
-const { ucs } = require(path.join(SDK_ROOT, "generated", "proto"));
+const { UniffiClient, ConnectorClient } = require(path.join(SDK_ROOT, "src", "payments"));
+const { ucs } = require(path.join(SDK_ROOT, "src", "payments", "generated", "proto"));
 
 const PaymentServiceAuthorizeRequest = ucs.v2.PaymentServiceAuthorizeRequest;
 const Currency = ucs.v2.Currency;
