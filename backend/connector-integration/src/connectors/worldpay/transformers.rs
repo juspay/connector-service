@@ -214,7 +214,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             card: Some(card_data),
             amount: item.router_data.request.minor_amount,
             currency: item.router_data.request.currency,
-            order_description: item.router_data.request.description.clone(),
+            order_description: item.router_data.request.order_category.clone(),
             customer_order_code: item
                 .router_data
                 .resource_common_data
