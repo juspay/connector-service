@@ -315,6 +315,7 @@ pub enum BraintreePaymentsRequest {
     CardThreeDs(BraintreeClientTokenRequest),
     Mandate(MandatePaymentRequest),
     Wallet(BraintreeWalletRequest),
+    AchBankDebit(BraintreeAchRequest),
 }
 
 #[derive(Debug, Deserialize)]
