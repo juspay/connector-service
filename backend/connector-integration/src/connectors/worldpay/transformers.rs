@@ -470,7 +470,7 @@ impl<F> TryFrom<ResponseRouterData<WorldpayRefundResponse, Self>>
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WorldpayErrorResponse {
     pub error_name: String,
     pub message: String,
