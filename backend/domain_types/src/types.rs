@@ -5204,6 +5204,7 @@ pub fn generate_payment_sync_response(
                     raw_connector_request,
                     connector_response,
                     incremental_authorization_allowed,
+                    payment_method_update: None,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -5270,6 +5271,7 @@ pub fn generate_payment_sync_response(
                 connector_response,
                 redirection_data: None,
                 incremental_authorization_allowed: None,
+                payment_method_update: None,
             })
         }
     }
@@ -5974,6 +5976,25 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                     connector_mandate_request_reference_id: m
                         .connector_mandate_request_reference_id,
                 });
+        let payment_method_update_grpc = value.payment_method_update.map(|update| {
+            grpc_api_types::payments::PaymentMethodUpdate {
+                payment_method_update_data: Some(match update {
+                    crate::connector_types::PaymentMethodUpdate::Card(card) => {
+                        grpc_api_types::payments::payment_method_update::PaymentMethodUpdateData::Card(
+                            grpc_api_types::payments::CardDetailUpdate {
+                                card_exp_month: card.card_exp_month,
+                                card_exp_year: card.card_exp_year,
+                                last4_digits: card.last4_digits,
+                                issuer_country: card.issuer_country,
+                                card_issuer: card.card_issuer,
+                                card_network: card.card_network,
+                                card_holder_name: card.card_holder_name,
+                            },
+                        )
+                    }
+                }),
+            }
+        });
         Ok(Self {
             transaction_id: value
                 .resource_id
@@ -6022,6 +6043,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             connector_response: None,
             redirection_data: None,
             incremental_authorization_allowed: None,
+            payment_method_update: payment_method_update_grpc,
         })
     }
 }

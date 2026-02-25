@@ -2671,6 +2671,47 @@ impl PaymentService for Payments {
                         )
                         .switch()
                         .into_grpc_status()?;
+
+                    let webhook_api_response = connector_data
+                        .connector
+                        .get_webhook_api_response(request_details.clone(), None)
+                        .ok()
+                        .and_then(|resp| match resp {
+                            interfaces::api::ApplicationResponse::StatusOk => Some(
+                                grpc_api_types::payments::WebhookApiResponse {
+                                    status_code: 200,
+                                    headers: Default::default(),
+                                    body: Vec::new(),
+                                },
+                            ),
+                            interfaces::api::ApplicationResponse::TextPlain(body) => {
+                                let mut headers = HashMap::new();
+                                headers.insert(
+                                    "content-type".to_string(),
+                                    "text/plain".to_string(),
+                                );
+                                Some(grpc_api_types::payments::WebhookApiResponse {
+                                    status_code: 200,
+                                    headers,
+                                    body: body.into_bytes(),
+                                })
+                            }
+                            interfaces::api::ApplicationResponse::Json(json_body) => {
+                                let mut headers = HashMap::new();
+                                headers.insert(
+                                    "content-type".to_string(),
+                                    "application/json".to_string(),
+                                );
+                                serde_json::to_vec(&json_body).ok().map(|body| {
+                                    grpc_api_types::payments::WebhookApiResponse {
+                                        status_code: 200,
+                                        headers,
+                                        body,
+                                    }
+                                })
+                            }
+                            _ => None,
+                        });
                     // Get content for the webhook based on the event type using categorization
                     let content = if event_type.is_payment_event() {
                         get_payments_webhook_content(
@@ -2720,12 +2761,20 @@ impl PaymentService for Payments {
                         _ => WebhookTransformationStatus::Complete,
                     };
 
+                    let response_ref_id = content.content.as_ref().and_then(|c| match c {
+                        grpc_api_types::payments::webhook_response_content::Content::PaymentsResponse(r) => r.response_ref_id.clone(),
+                        grpc_api_types::payments::webhook_response_content::Content::RefundsResponse(r) => r.response_ref_id.clone(),
+                        grpc_api_types::payments::webhook_response_content::Content::DisputesResponse(r) => r.response_ref_id.clone(),
+                        _ => None,
+                    });
+
                     let response = PaymentServiceTransformResponse {
                         event_type: api_event_type.into(),
                         content: Some(content),
                         source_verified,
-                        response_ref_id: None,
+                        response_ref_id,
                         transformation_status: webhook_transformation_status.into(),
+                        webhook_api_response,
                     };
 
                     Ok(tonic::Response::new(response))
