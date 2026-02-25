@@ -96,7 +96,7 @@ message CompositeAuthorizeRequest {
   optional Tokenization tokenization_strategy = 46; // Tokenization strategy for payment processing
 
   // Payment Method Token
-  optional string payment_method_token = 47;
+  optional SecretString payment_method_token = 47;
 
   // URL for Redirection
   optional string continue_redirection_url = 48; // URL to complete authorization
