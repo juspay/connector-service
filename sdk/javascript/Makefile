@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean pack package package-native dist
+.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean pack test-pack package package-native dist
 
 # Auto-detect SDK root directory (works when run from sdk/javascript/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -63,8 +63,26 @@ example-run: setup
 
 # Build distributable tarball
 pack: setup
+	@# TODO: npm pack does not follow symlinks. The generate-bindings step creates a
+	@# symlink to the cargo build output for fast dev iteration. This workaround
+	@# replaces the symlink with a real copy before packing. Remove if generate-bindings
+	@# is changed to copy instead of symlink, or if npm adds symlink support.
+	@if [ -L $(GENERATED_OUT)/libconnector_service_ffi.$(LIB_EXT) ]; then \
+		cp -fL $(GENERATED_OUT)/libconnector_service_ffi.$(LIB_EXT) $(GENERATED_OUT)/libconnector_service_ffi.$(LIB_EXT).tmp && \
+		mv -f $(GENERATED_OUT)/libconnector_service_ffi.$(LIB_EXT).tmp $(GENERATED_OUT)/libconnector_service_ffi.$(LIB_EXT); \
+	fi
 	@cd $(SDK_ROOT) && npm pack
 	@echo "Package built. Tarball in $(SDK_ROOT)/"
+
+# Test the packed tarball in isolation
+test-pack: pack
+	@echo "Testing packed tarball..."
+	@rm -rf /tmp/test-hyperswitch-js
+	@mkdir -p /tmp/test-hyperswitch-js && cd /tmp/test-hyperswitch-js && npm init -y --silent && npm install $(SDK_ROOT)/hyperswitch-payments-0.1.0.tgz --silent
+	@cp $(SDK_ROOT)/examples/test_pack.js /tmp/test-hyperswitch-js/test_pack.js
+	@cd /tmp/test-hyperswitch-js && node test_pack.js
+	@rm -rf /tmp/test-hyperswitch-js
+	@echo "Pack test passed."
 
 clean:
 	@rm -rf $(GENERATED_OUT) node_modules

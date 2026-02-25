@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean pack package package-native dist
+.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean pack test-pack package package-native dist
 
 # Auto-detect SDK root directory (works when run from sdk/python/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -48,6 +48,13 @@ generate-proto:
 		-I $(PROTO_DIR) \
 		--python_out=$(GENERATED_OUT) \
 		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto
+	@# TODO: protoc --python_out generates bare imports (e.g. "import payment_methods_pb2")
+	@# which break under a package layout. This sed rewrites them to relative imports.
+	@# Remove this workaround if protoc adds a --python_relative_imports flag or if we
+	@# switch to a protoc plugin that generates package-aware imports.
+	@cd $(GENERATED_OUT) && for f in *_pb2.py; do \
+		sed -i.bak 's/^import \(.*_pb2\) as/from . import \1 as/' "$$f" && rm -f "$$f.bak"; \
+	done
 	@touch $(GENERATED_OUT)/__init__.py
 	@echo "Proto stubs generated."
 
@@ -61,12 +68,21 @@ setup: generate-proto generate-bindings
 
 # Run the example
 example-run: setup
-	@cd $(SDK_ROOT) && PYTHONPATH=$(SDK_ROOT)/src python3 examples/example.py
+	@cd $(SDK_ROOT) && python3 examples/example.py
 
 # Build distributable wheel
 pack: setup
-	@cd $(SDK_ROOT) && python3 -m build
+	@cd $(SDK_ROOT) && python3 -m pip wheel . --no-deps --wheel-dir dist
 	@echo "Package built. Artifacts in $(SDK_ROOT)/dist/"
+
+# Test the packed wheel in isolation
+test-pack: pack
+	@echo "Testing packed wheel..."
+	@rm -rf /tmp/test-hyperswitch-py
+	@python3 -m pip install --target /tmp/test-hyperswitch-py $(SDK_ROOT)/dist/hyperswitch_payments-0.1.0-py3-none-any.whl --no-deps --force-reinstall
+	@cd $(SDK_ROOT) && python3 examples/test_pack.py /tmp/test-hyperswitch-py
+	@rm -rf /tmp/test-hyperswitch-py
+	@echo "Pack test passed."
 
 clean:
 	@rm -rf $(GENERATED_OUT)

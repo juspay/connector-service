@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto setup example-run clean pack package package-native dist
+.PHONY: build-lib generate-bindings generate-proto setup example-run clean pack test-pack package package-native dist
 
 # Auto-detect SDK root directory (works when run from sdk/java/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -41,6 +41,14 @@ generate-bindings: build-lib
 		--language kotlin \
 		--out-dir $(GENERATED_KOTLIN)
 	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(NATIVE_DIR)/
+	@# TODO: UniFFI codegen (v0.28) generates IntegrationException with a constructor
+	@# parameter `val message: String` that conflicts with Exception.message. The sed
+	@# below adds `override` and removes the redundant getter. Remove this workaround
+	@# when upgrading to a UniFFI version that fixes this Kotlin codegen issue.
+	@# See: https://github.com/mozilla/uniffi-rs/issues/2182
+	@find $(GENERATED_KOTLIN) -name '*.kt' -exec sed -i.bak 's/^        val `message`: kotlin\.String/        override val `message`: kotlin.String/' {} +
+	@find $(GENERATED_KOTLIN) -name '*.kt' -exec sed -i.bak '/class IntegrationException/,/^    }/{/^        override val message/d;/^            get() = "message=/d;}' {} +
+	@find $(GENERATED_KOTLIN) -name '*.kt.bak' -delete
 	@echo "UniFFI Kotlin bindings generated in $(GENERATED_KOTLIN)/"
 
 # Generate Java protobuf stubs (usable from Kotlin)
@@ -65,6 +73,19 @@ example-run: setup
 pack: setup
 	@./gradlew publishToMavenLocal
 	@echo "Published to Maven Local (~/.m2/repository/com/hyperswitch/payments-client/0.1.0/)"
+
+# Test the packed JAR — verify it contains the expected classes and native lib
+test-pack: pack
+	@echo "Testing packed JAR..."
+	@JAR=$$HOME/.m2/repository/com/hyperswitch/payments-client/0.1.0/payments-client-0.1.0.jar && \
+	echo "  JAR: $$JAR" && \
+	jar tf "$$JAR" | grep -q 'ConnectorClient.class' && echo "  ConnectorClient.class: found" && \
+	jar tf "$$JAR" | grep -q 'native/libconnector_service_ffi' && echo "  native lib: found" && \
+	jar tf "$$JAR" | grep -q 'uniffi/connector_service_ffi' && echo "  UniFFI bindings: found" && \
+	jar tf "$$JAR" | grep -q 'ucs/v2/Payment' && echo "  Protobuf stubs: found"
+	@echo "  Running example via Gradle..."
+	@./gradlew run --quiet
+	@echo "Pack test passed."
 
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)

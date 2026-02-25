@@ -24,15 +24,6 @@ application {
     mainClass.set("ExampleKt")
 }
 
-// Add generated UniFFI + protobuf sources
-sourceSets {
-    main {
-        kotlin.srcDir("src/main/kotlin/generated")
-        java.srcDir("src/main/java/generated")
-        resources.srcDir("src/main/resources")
-    }
-}
-
 // Pass the library path so JNA can find the native library
 tasks.named<JavaExec>("run") {
     systemProperty("jna.library.path", file("src/main/resources/native").absolutePath)

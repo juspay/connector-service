@@ -420,3 +420,6 @@ sdk/**/generated
 sdk/**/node_modules
 sdk/**/.gradle
 sdk/**/resources/native
+sdk/**/*.tgz
+sdk/**/dist/
+sdk/**/build/
