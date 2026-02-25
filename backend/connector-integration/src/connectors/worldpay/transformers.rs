@@ -1,6 +1,5 @@
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    errors::CustomResult,
     types::MinorUnit,
 };
 use domain_types::{
