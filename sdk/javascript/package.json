@@ -1,11 +1,16 @@
 {
-  "name": "example-uniffi-js",
+  "name": "hyperswitch-payments",
   "version": "0.1.0",
-  "description": "Node.js UniFFI FFI example — calls the same shared library as Python/Kotlin via koffi",
-  "main": "main.js",
+  "description": "Hyperswitch Payments SDK — Node.js client for connector integrations via UniFFI FFI",
+  "main": "src/payments/index.js",
+  "files": [
+    "src/payments/**/*.js",
+    "src/payments/**/*.d.ts",
+    "src/payments/generated/libconnector_service_ffi.*"
+  ],
   "scripts": {
-    "start": "node main.js",
-    "test": "node main.js"
+    "start": "node examples/example.js",
+    "test": "node examples/example.js"
   },
   "dependencies": {
     "koffi": "^2.9.0",
