@@ -3099,6 +3099,16 @@ pub struct PaypalAccessTokenResponse {
     pub expires_in: u64,
 }
 
+// Normalize headers to lowercase keys (HTTP header names are case-insensitive per RFC 7230).
+fn webhook_headers_lowercase(
+    headers: &std::collections::HashMap<String, String>,
+) -> std::collections::HashMap<String, String> {
+    headers
+        .iter()
+        .map(|(k, v)| (k.to_lowercase(), v.clone()))
+        .collect()
+}
+
 // Transformers for VerifyWebhookSource flow
 impl TryFrom<&VerifyWebhookSourceRequestData> for PaypalSourceVerificationRequest {
     type Error = error_stack::Report<ConnectorError>;
@@ -3109,37 +3119,34 @@ impl TryFrom<&VerifyWebhookSourceRequestData> for PaypalSourceVerificationReques
             .change_context(ConnectorError::WebhookBodyDecodingFailed)
             .attach_printable("Webhook body is not valid JSON")?;
 
+        let headers = webhook_headers_lowercase(&req.webhook_headers);
+
         Ok(Self {
-            transmission_id: req
-                .webhook_headers
+            transmission_id: headers
                 .get(webhook_headers::PAYPAL_TRANSMISSION_ID)
                 .ok_or(ConnectorError::MissingRequiredField {
                     field_name: webhook_headers::PAYPAL_TRANSMISSION_ID,
                 })?
                 .clone(),
-            transmission_time: req
-                .webhook_headers
+            transmission_time: headers
                 .get(webhook_headers::PAYPAL_TRANSMISSION_TIME)
                 .ok_or(ConnectorError::MissingRequiredField {
                     field_name: webhook_headers::PAYPAL_TRANSMISSION_TIME,
                 })?
                 .clone(),
-            cert_url: req
-                .webhook_headers
+            cert_url: headers
                 .get(webhook_headers::PAYPAL_CERT_URL)
                 .ok_or(ConnectorError::MissingRequiredField {
                     field_name: webhook_headers::PAYPAL_CERT_URL,
                 })?
                 .clone(),
-            transmission_sig: req
-                .webhook_headers
+            transmission_sig: headers
                 .get(webhook_headers::PAYPAL_TRANSMISSION_SIG)
                 .ok_or(ConnectorError::MissingRequiredField {
                     field_name: webhook_headers::PAYPAL_TRANSMISSION_SIG,
                 })?
                 .clone(),
-            auth_algo: req
-                .webhook_headers
+            auth_algo: headers
                 .get(webhook_headers::PAYPAL_AUTH_ALGO)
                 .ok_or(ConnectorError::MissingRequiredField {
                     field_name: webhook_headers::PAYPAL_AUTH_ALGO,
