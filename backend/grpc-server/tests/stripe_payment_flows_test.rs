@@ -60,8 +60,8 @@ fn add_stripe_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load Stripe credentials");
 
     let api_key = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Stripe { api_key } => api_key.expose(),
-        _ => panic!("Expected Stripe auth type"),
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for Stripe"),
     };
 
     request.metadata_mut().append(

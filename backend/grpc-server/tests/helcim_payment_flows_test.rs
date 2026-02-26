@@ -61,8 +61,8 @@ fn add_helcim_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load helcim credentials");
 
     let api_key = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Helcim { api_key } => api_key.expose(),
-        _ => panic!("Expected Helcim auth type"),
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for helcim"),
     };
 
     request.metadata_mut().append(

@@ -60,8 +60,11 @@ fn add_payload_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load Payload credentials");
 
     let auth_key_map_json = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Payload { .. } => "{}".to_string(),
-        _ => panic!("Expected Payload auth type for Payload"),
+        domain_types::router_data::ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
+            // Convert the auth_key_map to JSON string format expected by the metadata
+            serde_json::to_string(&auth_key_map).expect("Failed to serialize auth_key_map")
+        }
+        _ => panic!("Expected CurrencyAuthKey auth type for Payload"),
     };
 
     request.metadata_mut().append(

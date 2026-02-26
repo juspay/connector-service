@@ -87,12 +87,12 @@ async fn process_webhook_and_get_response(
         .expect("Failed to load adyen credentials");
 
     let (api_key, key1, api_secret) = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Adyen {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
             api_key,
-            merchant_account,
-            review_key,
-        } => (api_key.expose(), merchant_account.expose(), review_key.expose()),
-        _ => panic!("Expected Adyen auth type"),
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for adyen"),
     };
 
     request.metadata_mut().append(

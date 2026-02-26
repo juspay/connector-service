@@ -191,10 +191,10 @@ async fn process_webhook_request(
         .expect("Failed to load authorizedotnet credentials");
 
     let (api_key, key1) = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } => {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
             (api_key.expose(), key1.expose())
         }
-        _ => panic!("Expected Authorizedotnet auth type"),
+        _ => panic!("Expected BodyKey auth type for authorizedotnet"),
     };
 
     request.metadata_mut().append(
@@ -749,10 +749,10 @@ card_details),
             .expect("Failed to load authorizedotnet credentials");
 
         let api_key = match auth {
-            domain_types::router_data::ConnectorSpecificAuth::Authorizedotnet { name, .. } => {
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, .. } => {
                 api_key.expose()
             }
-            _ => panic!("Expected Authorizedotnet auth type"),
+            _ => panic!("Expected BodyKey auth type for authorizedotnet"),
         };
 
         // Get transaction_key from metadata
@@ -1022,10 +1022,10 @@ card_details),
             .expect("Failed to load authorizedotnet credentials");
 
         let (api_key, key1) = match auth {
-            domain_types::router_data::ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } => {
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
                 (api_key.expose(), key1.expose())
             }
-            _ => panic!("Expected Authorizedotnet auth type"),
+            _ => panic!("Expected BodyKey auth type for authorizedotnet"),
         };
 
         request.metadata_mut().append(
@@ -1130,10 +1130,10 @@ card_details),
             .expect("Failed to load authorizedotnet credentials");
 
         let (api_key, key1) = match auth {
-            domain_types::router_data::ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } => {
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
                 (api_key.expose(), key1.expose())
             }
-            _ => panic!("Expected Authorizedotnet auth type"),
+            _ => panic!("Expected BodyKey auth type for authorizedotnet"),
         };
 
         request.metadata_mut().append(
@@ -1231,10 +1231,10 @@ card_details),
             .expect("Failed to load authorizedotnet credentials");
 
         let (api_key, key1) = match auth {
-            domain_types::router_data::ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } => {
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
                 (api_key.expose(), key1.expose())
             }
-            _ => panic!("Expected Authorizedotnet auth type"),
+            _ => panic!("Expected BodyKey auth type for authorizedotnet"),
         };
 
         request.metadata_mut().append(

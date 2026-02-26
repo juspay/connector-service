@@ -90,11 +90,10 @@ fn add_authorizenet_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load Authorize.Net credentials");
 
     let (api_key, key1) = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Authorizedotnet {
-            name,
-            transaction_key,
-        } => (name.expose(), transaction_key.expose()),
-        _ => panic!("Expected Authorizedotnet auth type"),
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
+        }
+        _ => panic!("Expected BodyKey auth type for Authorize.Net"),
     };
 
     request.metadata_mut().append(

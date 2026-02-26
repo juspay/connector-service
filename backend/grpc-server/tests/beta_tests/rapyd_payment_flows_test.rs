@@ -52,10 +52,10 @@ fn add_rapyd_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load rapyd credentials");
 
     let (api_key, key1) = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Rapyd { access_key, secret_key } => {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
             (api_key.expose(), key1.expose())
         }
-        _ => panic!("Expected Rapyd auth type"),
+        _ => panic!("Expected BodyKey auth type for rapyd"),
     };
 
     request.metadata_mut().append(

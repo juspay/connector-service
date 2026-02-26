@@ -40,10 +40,16 @@ fn add_cashtocode_metadata<T>(request: &mut Request<T>) {
     let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
         .expect("Failed to load cashtocode credentials");
 
-    let auth_key_map_json = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Cashtocode { .. } => "{}".to_string(),
-        _ => panic!("Expected Cashtocode auth type for cashtocode"),
+    let auth_key_map = match auth {
+        domain_types::router_data::ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
+            auth_key_map
+        }
+        _ => panic!("Expected CurrencyAuthKey auth type for cashtocode"),
     };
+
+    // Serialize the auth_key_map to JSON for metadata
+    let auth_key_map_json =
+        serde_json::to_string(&auth_key_map).expect("Failed to serialize auth_key_map");
 
     request.metadata_mut().append(
         "x-connector",

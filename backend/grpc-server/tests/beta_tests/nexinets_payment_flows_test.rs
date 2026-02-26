@@ -55,10 +55,10 @@ fn add_nexinets_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load nexinets credentials");
 
     let (api_key, key1) = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Nexinets { api_key } => {
-            (api_key.expose(), String::new())
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
         }
-        _ => panic!("Expected Nexinets auth type"),
+        _ => panic!("Expected BodyKey auth type for nexinets"),
     };
 
     request.metadata_mut().append(
@@ -260,8 +260,8 @@ async fn visit_3ds_authentication_url(
         .expect("Failed to load nexinets credentials");
 
     let key1 = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Nexinets { api_key } => api_key.expose(),
-        _ => panic!("Expected Nexinets auth type"),
+        domain_types::router_data::ConnectorAuthType::BodyKey { key1, .. } => key1.expose(),
+        _ => panic!("Expected BodyKey auth type for nexinets"),
     };
 
     // Construct the 3DS authentication URL with correct format

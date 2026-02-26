@@ -114,10 +114,10 @@ fn load_paysafe_credentials() -> Option<(String, String)> {
     // Fallback to credentials file
     match utils::credential_utils::load_connector_auth(CONNECTOR_NAME) {
         Ok(auth) => match auth {
-            domain_types::router_data::ConnectorSpecificAuth::Paysafe { username, password } => {
-                Some((username.expose(), password.expose()))
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+                Some((api_key.expose(), key1.expose()))
             }
-            _ => panic!("Expected Paysafe auth type"),
+            _ => panic!("Expected BodyKey auth type for paysafe"),
         },
         Err(_) => None, // Credentials not found - tests will be skipped
     }

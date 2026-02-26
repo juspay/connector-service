@@ -7,7 +7,7 @@
 
 use common_enums::enums::Currency;
 use common_utils::pii::SecretSerdeValue;
-use domain_types::router_data::ConnectorSpecificAuth;
+use domain_types::router_data::ConnectorAuthType;
 use hyperswitch_masking::Secret;
 use std::{collections::HashMap, fs};
 
@@ -70,14 +70,14 @@ pub enum CredentialError {
 /// * `connector_name` - Name of the connector (e.g., "aci", "authorizedotnet")
 ///
 /// # Returns
-/// * `ConnectorSpecificAuth` - The loaded and converted credentials
+/// * `ConnectorAuthType` - The loaded and converted credentials
 ///
 /// # Examples
 /// ```
 /// // Load Authorize.Net credentials
 /// let auth = load_connector_auth("authorizedotnet").unwrap();
 /// ```
-pub fn load_connector_auth(connector_name: &str) -> Result<ConnectorSpecificAuth, CredentialError> {
+pub fn load_connector_auth(connector_name: &str) -> Result<ConnectorAuthType, CredentialError> {
     load_from_json(connector_name)
 }
 
@@ -130,7 +130,7 @@ pub fn load_connector_metadata(
 }
 
 /// Load credentials from JSON file
-fn load_from_json(connector_name: &str) -> Result<ConnectorSpecificAuth, CredentialError> {
+fn load_from_json(connector_name: &str) -> Result<ConnectorAuthType, CredentialError> {
     let creds_file_path = get_creds_file_path();
     let creds_content = fs::read_to_string(&creds_file_path)?;
 
@@ -337,321 +337,106 @@ fn parse_currency_auth_key_details(
     })
 }
 
-/// Convert generic credential details to specific ConnectorSpecificAuth
-/// based on connector name
+/// Convert generic credential details to specific ConnectorAuthType
 fn convert_to_auth_type(
     details: &ConnectorAccountDetails,
     connector_name: &str,
-) -> Result<ConnectorSpecificAuth, CredentialError> {
-    match connector_name {
-        // --- HeaderKey connectors (single api_key) ---
-        "stripe" => {
+) -> Result<ConnectorAuthType, CredentialError> {
+    match details.auth_type.as_str() {
+        "HeaderKey" => {
             let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "stripe".to_string())
+                CredentialError::MissingField("api_key".to_string(), "HeaderKey".to_string())
             })?;
-            Ok(ConnectorSpecificAuth::Stripe {
-                api_key: Secret::new(api_key.clone()),
-            })
-        }
-        "helcim" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "helcim".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Helcim {
-                api_key: Secret::new(api_key.clone()),
-            })
-        }
-        "xendit" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "xendit".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Xendit {
-                api_key: Secret::new(api_key.clone()),
-            })
-        }
-        "mifinity" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "mifinity".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Mifinity {
-                key: Secret::new(api_key.clone()),
-            })
-        }
 
-        // --- BodyKey connectors (two fields) ---
-        "authorizedotnet" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "authorizedotnet".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "authorizedotnet".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Authorizedotnet {
-                name: Secret::new(api_key.clone()),
-                transaction_key: Secret::new(key1.clone()),
-            })
-        }
-        "paysafe" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "paysafe".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "paysafe".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Paysafe {
-                username: Secret::new(api_key.clone()),
-                password: Secret::new(key1.clone()),
-            })
-        }
-        "cryptopay" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "cryptopay".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "cryptopay".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Cryptopay {
-                api_key: Secret::new(api_key.clone()),
-                api_secret: Secret::new(key1.clone()),
-            })
-        }
-        "bluesnap" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "bluesnap".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "bluesnap".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Bluesnap {
-                username: Secret::new(key1.clone()),
-                password: Secret::new(api_key.clone()),
-            })
-        }
-        "aci" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "aci".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "aci".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Aci {
-                api_key: Secret::new(api_key.clone()),
-                entity_id: Secret::new(key1.clone()),
-            })
-        }
-        "placetopay" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "placetopay".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "placetopay".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Placetopay {
-                login: Secret::new(api_key.clone()),
-                tran_key: Secret::new(key1.clone()),
-            })
-        }
-        "nexinets" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "nexinets".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "nexinets".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Nexinets {
-                merchant_id: Secret::new(key1.clone()),
+            Ok(ConnectorAuthType::HeaderKey {
                 api_key: Secret::new(api_key.clone()),
             })
         }
-        "rapyd" => {
+        "BodyKey" => {
             let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "rapyd".to_string())
+                CredentialError::MissingField("api_key".to_string(), "BodyKey".to_string())
             })?;
             let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "rapyd".to_string())
+                CredentialError::MissingField("key1".to_string(), "BodyKey".to_string())
             })?;
-            Ok(ConnectorSpecificAuth::Rapyd {
-                access_key: Secret::new(api_key.clone()),
-                secret_key: Secret::new(key1.clone()),
-            })
-        }
 
-        // --- SignatureKey connectors (three fields) ---
-        "braintree" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "braintree".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "braintree".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Braintree {
-                public_key: Secret::new(api_key.clone()),
-                private_key: Secret::new(api_secret.clone()),
-            })
-        }
-        "novalnet" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "novalnet".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "novalnet".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "novalnet".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Novalnet {
-                product_activation_key: Secret::new(api_key.clone()),
-                payment_access_key: Secret::new(key1.clone()),
-                tariff_id: Secret::new(api_secret.clone()),
-            })
-        }
-        "adyen" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "adyen".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "adyen".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "adyen".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Adyen {
+            Ok(ConnectorAuthType::BodyKey {
                 api_key: Secret::new(api_key.clone()),
-                merchant_account: Secret::new(key1.clone()),
-                review_key: Some(Secret::new(api_secret.clone())),
+                key1: Secret::new(key1.clone()),
             })
         }
-        "fiuu" => {
+        "SignatureKey" => {
             let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "fiuu".to_string())
+                CredentialError::MissingField("api_key".to_string(), "SignatureKey".to_string())
             })?;
             let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "fiuu".to_string())
+                CredentialError::MissingField("key1".to_string(), "SignatureKey".to_string())
             })?;
             let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "fiuu".to_string())
+                CredentialError::MissingField("api_secret".to_string(), "SignatureKey".to_string())
             })?;
-            Ok(ConnectorSpecificAuth::Fiuu {
-                merchant_id: Secret::new(key1.clone()),
-                verify_key: Secret::new(api_key.clone()),
-                secret_key: Secret::new(api_secret.clone()),
-            })
-        }
-        "dlocal" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "dlocal".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "dlocal".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "dlocal".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Dlocal {
-                x_login: Secret::new(api_key.clone()),
-                x_trans_key: Secret::new(key1.clone()),
-                secret: Secret::new(api_secret.clone()),
-            })
-        }
-        "barclaycard" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "barclaycard".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "barclaycard".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "barclaycard".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Barclaycard {
+
+            Ok(ConnectorAuthType::SignatureKey {
                 api_key: Secret::new(api_key.clone()),
-                merchant_account: Secret::new(key1.clone()),
+                key1: Secret::new(key1.clone()),
                 api_secret: Secret::new(api_secret.clone()),
             })
         }
-        "fiserv" => {
+        "MultiAuthKey" => {
             let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "fiserv".to_string())
+                CredentialError::MissingField("api_key".to_string(), "MultiAuthKey".to_string())
             })?;
             let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "fiserv".to_string())
+                CredentialError::MissingField("key1".to_string(), "MultiAuthKey".to_string())
             })?;
             let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "fiserv".to_string())
+                CredentialError::MissingField("api_secret".to_string(), "MultiAuthKey".to_string())
             })?;
-            Ok(ConnectorSpecificAuth::Fiserv {
-                api_key: Secret::new(api_key.clone()),
-                merchant_account: Secret::new(key1.clone()),
-                api_secret: Secret::new(api_secret.clone()),
-            })
-        }
-        "elavon" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "elavon".to_string())
+            let key2 = details.key2.as_ref().ok_or_else(|| {
+                CredentialError::MissingField("key2".to_string(), "MultiAuthKey".to_string())
             })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "elavon".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "elavon".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Elavon {
-                ssl_merchant_id: Secret::new(api_key.clone()),
-                ssl_user_id: Secret::new(key1.clone()),
-                ssl_pin: Secret::new(api_secret.clone()),
-            })
-        }
-        "checkout" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "checkout".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "checkout".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "checkout".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Checkout {
-                api_key: Secret::new(api_key.clone()),
-                api_secret: Secret::new(api_secret.clone()),
-                processing_channel_id: Secret::new(key1.clone()),
-            })
-        }
-        "noon" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "noon".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "noon".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "noon".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Noon {
-                api_key: Secret::new(api_key.clone()),
-                business_identifier: Secret::new(key1.clone()),
-                application_identifier: Secret::new(api_secret.clone()),
-            })
-        }
 
-        // --- CurrencyAuthKey / special connectors ---
-        "cashtocode" => Ok(ConnectorSpecificAuth::Cashtocode {
-            password_classic: details.api_key.as_ref().map(|k| Secret::new(k.clone())),
-            password_evoucher: details.api_secret.as_ref().map(|k| Secret::new(k.clone())),
-            username_classic: details.key1.as_ref().map(|k| Secret::new(k.clone())),
-            username_evoucher: details.key2.as_ref().map(|k| Secret::new(k.clone())),
-        }),
-        "payload" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "payload".to_string())
-            })?;
-            Ok(ConnectorSpecificAuth::Payload {
+            Ok(ConnectorAuthType::MultiAuthKey {
                 api_key: Secret::new(api_key.clone()),
-                processing_account_id: details.key1.as_ref().map(|k| Secret::new(k.clone())),
+                key1: Secret::new(key1.clone()),
+                api_secret: Secret::new(api_secret.clone()),
+                key2: Secret::new(key2.clone()),
             })
         }
+        "CurrencyAuthKey" => {
+            // For CurrencyAuthKey, we expect the auth_key_map field to contain the mapping
+            let auth_key_map = details.auth_key_map.as_ref().ok_or_else(|| {
+                CredentialError::MissingField(
+                    "auth_key_map".to_string(),
+                    "CurrencyAuthKey".to_string(),
+                )
+            })?;
 
-        // Fallback for unsupported connectors
+            Ok(ConnectorAuthType::CurrencyAuthKey {
+                auth_key_map: auth_key_map.clone(),
+            })
+        }
+        "CertificateAuth" => {
+            let certificate = details.certificate.as_ref().ok_or_else(|| {
+                CredentialError::MissingField(
+                    "certificate".to_string(),
+                    "CertificateAuth".to_string(),
+                )
+            })?;
+            let private_key = details.private_key.as_ref().ok_or_else(|| {
+                CredentialError::MissingField(
+                    "private_key".to_string(),
+                    "CertificateAuth".to_string(),
+                )
+            })?;
+
+            Ok(ConnectorAuthType::CertificateAuth {
+                certificate: Secret::new(certificate.clone()),
+                private_key: Secret::new(private_key.clone()),
+            })
+        }
+        "NoKey" => Ok(ConnectorAuthType::NoKey),
+        "TemporaryAuth" => Ok(ConnectorAuthType::TemporaryAuth),
         _ => Err(CredentialError::InvalidAuthType(
             details.auth_type.clone(),
             connector_name.to_string(),

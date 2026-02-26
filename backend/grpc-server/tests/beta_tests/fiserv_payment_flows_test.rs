@@ -54,12 +54,12 @@ fn add_fiserv_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load fiserv credentials");
 
     let (api_key, key1, api_secret) = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Fiserv {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
             api_key,
-            merchant_account,
+            key1,
             api_secret,
-        } => (api_key.expose(), merchant_account.expose(), api_secret.expose()),
-        _ => panic!("Expected Fiserv auth type"),
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for fiserv"),
     };
 
     // Get the terminal_id from metadata

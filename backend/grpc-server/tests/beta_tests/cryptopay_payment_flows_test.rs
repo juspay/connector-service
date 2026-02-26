@@ -44,10 +44,10 @@ fn add_cryptopay_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load cryptopay credentials");
 
     let (api_key, key1) = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Cryptopay { api_key, api_secret } => {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
             (api_key.expose(), key1.expose())
         }
-        _ => panic!("Expected Cryptopay auth type"),
+        _ => panic!("Expected BodyKey auth type for cryptopay"),
     };
 
     request.metadata_mut().append(

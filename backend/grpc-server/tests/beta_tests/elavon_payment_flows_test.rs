@@ -54,12 +54,12 @@ fn add_elavon_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load elavon credentials");
 
     let (api_key, api_user, api_secret) = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Elavon {
-            ssl_merchant_id,
-            ssl_user_id,
-            ssl_pin,
-        } => (ssl_merchant_id.expose(), ssl_user_id.expose(), ssl_pin.expose()),
-        _ => panic!("Expected Elavon auth type"),
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for elavon"),
     };
 
     request.metadata_mut().append(

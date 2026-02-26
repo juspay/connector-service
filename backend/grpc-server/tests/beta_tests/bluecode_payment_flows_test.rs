@@ -45,8 +45,8 @@ fn add_bluecode_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load bluecode credentials");
 
     let api_key = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Bluecode { api_key } => api_key.expose(),
-        _ => panic!("Expected Bluecode auth type"),
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for bluecode"),
     };
 
     // Get the shop_name from metadata

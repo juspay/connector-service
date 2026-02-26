@@ -56,16 +56,12 @@ fn add_novalnet_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load novalnet credentials");
 
     let (api_key, key1, api_secret) = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Novalnet {
-            product_activation_key,
-            payment_access_key,
-            tariff_id,
-        } => (
-            product_activation_key.expose(),
-            payment_access_key.expose(),
-            tariff_id.expose(),
-        ),
-        _ => panic!("Expected Novalnet auth type"),
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for novalnet"),
     };
 
     request.metadata_mut().append(
