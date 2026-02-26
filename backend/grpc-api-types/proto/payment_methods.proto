@@ -56,7 +56,8 @@ message PaymentMethod {
     AmazonPayRedirectWallet amazon_pay_redirect = 15;   // Amazon Pay
     CashappQrWallet cashapp_qr = 16;                    // Cash App
     PaypalRedirectWallet paypal_redirect = 17;          // PayPal
-    WeChatPayQrWallet we_chat_pay_qr = 18;              // WeChat Pay
+    WeChatPayQrWallet we_chat_pay_qr = 18;              // WeChat Pay QR
+    WeChatPayRedirectWallet we_chat_pay_redirect = 163; // WeChat Pay Redirect
     AliPayRedirectWallet ali_pay_redirect = 19;         // AliPay
     RevolutPayWallet revolut_pay = 20;                  // Revolut Pay
     MifinityWallet mifinity = 21;                       // Mifinity
@@ -596,6 +597,11 @@ message PaypalRedirectWallet {
 // WeChat Pay QR - WeChat Pay QR code payment
 message WeChatPayQrWallet {
   // Fields will be added as needed for WeChat Pay QR integration
+}
+
+// WeChat Pay Redirect - WeChat Pay redirect payment service
+message WeChatPayRedirectWallet {
+  // Fields will be added as needed for WeChat Pay redirect integration
 }
 
 // Alipay Redirect - Alipay redirect payment service
