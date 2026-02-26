@@ -160,6 +160,10 @@ pub enum ConnectorSpecificAuth {
     Mifinity {
         key: Secret<String>,
     },
+    Mpgs {
+        api_key: Secret<String>,
+        api_secret: Option<Secret<String>>,
+    },
     Multisafepay {
         api_key: Secret<String>,
     },
@@ -868,6 +872,17 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
             ConnectorEnum::Mifinity => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Mifinity {
                     key: api_key.clone(),
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Mpgs => match auth {
+                ConnectorAuthType::SignatureKey {
+                    api_key,
+                    api_secret,
+                    ..
+                } => Ok(Self::Mpgs {
+                    api_key: api_key.clone(),
+                    api_secret: Some(api_secret.clone()),
                 }),
                 _ => Err(err().into()),
             },

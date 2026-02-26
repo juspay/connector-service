@@ -121,6 +121,7 @@ pub enum ConnectorEnum {
     Hyperpg,
     Zift,
     Revolv3,
+    Mpgs,
     Truelayer,
     Finix,
 }
@@ -203,6 +204,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Hyperpg => Ok(Self::Hyperpg),
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
             grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
+            grpc_api_types::payments::Connector::Mpgs => Ok(Self::Mpgs),
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
             grpc_api_types::payments::Connector::Unspecified => {
