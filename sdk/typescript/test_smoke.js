@@ -34,10 +34,11 @@ const metadata = {
 };
 
 const requestMsg = PaymentServiceAuthorizeRequest.create({
-  requestRefId: { id: "test_pack_123" },
-  amount: 1000,
-  minorAmount: 1000,
-  currency: Currency.USD,
+  merchantTransactionId: { id: "test_pack_123" },
+  amount: {
+    minorAmount: 1000,
+    currency: Currency.USD
+  },
   captureMethod: CaptureMethod.AUTOMATIC,
   paymentMethod: {
     card: {
@@ -48,8 +49,10 @@ const requestMsg = PaymentServiceAuthorizeRequest.create({
       cardHolderName: { value: "Test User" },
     },
   },
-  email: { value: "test@example.com" },
-  customerName: "Test",
+  customer: {
+    email: { value: "test@example.com" },
+    name: "Test"
+  },
   authType: AuthenticationType.NO_THREE_DS,
   returnUrl: "https://example.com/return",
   webhookUrl: "https://example.com/webhook",
@@ -64,12 +67,12 @@ const requestBytes = Buffer.from(
 // --- Test 1: Low-level FFI ---
 console.log("\n=== Test 1: Low-level FFI (UniffiClient.authorizeReq) ===");
 const uniffi = new UniffiClient();
+// Now returns a native object, no JSON.parse needed!
 const result = uniffi.authorizeReq(requestBytes, metadata);
-const parsed = JSON.parse(result);
-console.log(`  URL:    ${parsed.url}`);
-console.log(`  Method: ${parsed.method}`);
-if (parsed.url !== "https://api.stripe.com/v1/payment_intents") throw new Error("Unexpected URL");
-if (parsed.method !== "POST") throw new Error("Unexpected method");
+console.log(`  URL:    ${result.url}`);
+console.log(`  Method: ${result.method}`);
+if (result.url !== "https://api.stripe.com/v1/payment_intents") throw new Error(`Unexpected URL: ${result.url}`);
+if (result.method !== "POST") throw new Error("Unexpected method");
 console.log("  PASSED");
 
 // --- Test 2: Full round-trip via ConnectorClient ---

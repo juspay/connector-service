@@ -37,19 +37,16 @@ class ConnectorClient:
         request_bytes = request.SerializeToString()
 
         # Step 2: Build the connector HTTP request via FFI
-        connector_request_json = authorize_req_transformer(request_bytes, metadata)
-        connector_request = json.loads(connector_request_json)
+        # Now returns a native FfiConnectorHttpRequest object, no json.loads needed!
+        connector_request = authorize_req_transformer(request_bytes, metadata)
 
-        url = connector_request["url"]
-        method = connector_request["method"]
-        headers = connector_request.get("headers", {})
-        body = connector_request.get("body")
-
-        # Body may be a dict/object — serialize to string for the HTTP call
-        if body is not None and not isinstance(body, (str, bytes)):
-            body = json.dumps(body)
+        url = connector_request.url
+        method = connector_request.method
+        headers = connector_request.headers
+        body = connector_request.body
 
         # Step 3: Execute the HTTP request
+        # body is already bytes (or None), requests handles this natively
         response = http_requests.request(method, url, headers=headers, data=body)
 
         # Step 4: Parse the connector response via FFI

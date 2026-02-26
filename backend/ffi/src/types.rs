@@ -22,3 +22,12 @@ pub struct FfiApiResponse {
     pub headers: HashMap<String, String>,
     pub body: String,
 }
+
+/// Unified Request structure exported via UniFFI
+#[derive(uniffi::Record, Debug)]
+pub struct FfiConnectorHttpRequest {
+    pub url: String,
+    pub method: String,
+    pub headers: HashMap<String, String>,
+    pub body: Option<Vec<u8>>,
+}

@@ -43,13 +43,8 @@ export class ConnectorClient {
     );
 
     // 2. Build the connector HTTP request via FFI bridge
-    const connectorRequestJson = this._uniffi.authorizeReq(requestBytes, metadata);
-    const connectorRequest: HttpRequest = JSON.parse(connectorRequestJson);
-
-    // Ensure body is stringified if it's a JSON object from FFI.
-    if (connectorRequest.body && typeof connectorRequest.body === "object") {
-      connectorRequest.body = JSON.stringify(connectorRequest.body);
-    }
+    // Now returns a native HttpRequest object, no JSON.parse needed!
+    const connectorRequest: HttpRequest = this._uniffi.authorizeReq(requestBytes, metadata);
 
     // 3. Execute the HTTP request via our high-performance transport layer
     const response = await execute(connectorRequest, this._options);

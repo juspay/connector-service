@@ -7,13 +7,7 @@ export interface HttpRequest {
   url: string;
   method: string;
   headers?: Record<string, string>;
-  body?: string | Buffer | Uint8Array;
-  /** Client certificate for mTLS (from Rust core) */
-  certificate?: string;
-  /** Client certificate private key for mTLS (from Rust core) */
-  certificateKey?: string;
-  /** Custom CA certificate for server verification (from Rust core) */
-  caCertificate?: string;
+  body?: string | Uint8Array;
 }
 
 /**
@@ -32,25 +26,17 @@ export interface HttpResponse {
  * Configuration options for the network transport layer.
  */
 export interface HttpOptions {
-  /** Absolute ceiling for the entire request (DNS + Connect + Response) */
   totalTimeoutMs?: number; 
-  /** Max time to establish TCP/TLS connection */
   connectTimeoutMs?: number; 
-  /** Max time to wait for the gateway to respond (Headers + Body) */
   responseTimeoutMs?: number; 
   
   keepAliveTimeout?: number;
-  redirect?: "follow" | "manual" | "error";
   proxy?: {
     http_url?: string;
     https_url?: string;
     bypass_urls?: string[];
   };
-  tls?: {
-    /** Global/Infrastructure CA cert (e.g. for MITM proxy) */
-    ca?: string | Buffer;
-    rejectUnauthorized?: boolean;
-  };
+  ca_cert?: string | Buffer;
 }
 
 /**
@@ -74,21 +60,11 @@ const TRANSPORT_DIRECT = "TRANSPORT_DIRECT";
 const MAX_CACHE_SIZE = 100; // Prevent OOM by capping unique connection pools
 
 const DEFAULT_CONFIG = {
-  totalTimeoutMs: 30_000,
+  totalTimeoutMs: 45_000,
   connectTimeoutMs: 10_000,
   responseTimeoutMs: 30_000,
   keepAliveTimeout: 60_000,
 };
-
-/**
- * Generates a stable fingerprint for binary assets (Certs/Keys) without heavy crypto.
- * Portable across languages: Length + Suffix.
- */
-function fingerprint(data?: string | Buffer | Uint8Array): string | undefined {
-  if (!data) return undefined;
-  const buf = typeof data === "string" ? Buffer.from(data) : data;
-  return `${buf.length}_${buf.subarray(-16).toString("hex")}`;
-}
 
 /**
  * Normalize execution options by applying defaults.
@@ -100,7 +76,6 @@ function normalizeOptions(options: HttpOptions): HttpOptions {
     connectTimeoutMs: options.connectTimeoutMs ?? DEFAULT_CONFIG.connectTimeoutMs,
     responseTimeoutMs: options.responseTimeoutMs ?? DEFAULT_CONFIG.responseTimeoutMs,
     keepAliveTimeout: options.keepAliveTimeout ?? DEFAULT_CONFIG.keepAliveTimeout,
-    redirect: options.redirect ?? "manual",
   };
 }
 
@@ -119,35 +94,25 @@ function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): string | nu
 /**
  * Generates a stable key to identify a unique connection pool configuration.
  */
-function getConnectionKey(proxyUrl: string | null, config: HttpOptions, request: HttpRequest): string {
+function getConnectionKey(proxyUrl: string | null, config: HttpOptions): string {
   return JSON.stringify({
     uri: proxyUrl || TRANSPORT_DIRECT,
     connectTimeoutMs: config.connectTimeoutMs,
     responseTimeoutMs: config.responseTimeoutMs,
-    // Request-specific mTLS fingerprints
-    certFingerprint: fingerprint(request.certificate),
-    keyFingerprint: fingerprint(request.certificateKey),
-    // Combined CA fingerprint (Proxy CA + Bank CA)
-    caFingerprint: fingerprint(request.caCertificate) || fingerprint(config.tls?.ca),
+    caLength: config.ca_cert?.length,
   });
 }
 
 /**
  * Creates a high-performance dispatcher with specialized fintech timeouts.
  */
-function createDispatcher(proxyUrl: string | null, config: HttpOptions, request: HttpRequest): Dispatcher {
+function createDispatcher(proxyUrl: string | null, config: HttpOptions): Dispatcher {
   const responseTimeout = config.responseTimeoutMs;
   
-  // Combine CAs: Prefer specific bank CA, fallback to proxy CA
-  const ca = request.caCertificate || config.tls?.ca;
-
   const dispatcherOptions: any = {
     connect: {
       timeout: config.connectTimeoutMs,
-      cert: request.certificate,
-      key: request.certificateKey,
-      ca: ca,
-      rejectUnauthorized: config.tls?.rejectUnauthorized !== false,
+      ca: config.ca_cert,
     },
     headersTimeout: responseTimeout,
     bodyTimeout: responseTimeout,
@@ -171,7 +136,7 @@ export async function execute(
 
   // 1. Connection Management
   const proxyUrl = resolveProxyUrl(url, config.proxy);
-  const connectionKey = getConnectionKey(proxyUrl, config, request);
+  const connectionKey = getConnectionKey(proxyUrl, config);
   
   let dispatcher = DISPATCHER_CACHE.get(connectionKey);
   if (!dispatcher) {
@@ -181,7 +146,7 @@ export async function execute(
       if (oldestKey) DISPATCHER_CACHE.delete(oldestKey);
     }
 
-    dispatcher = createDispatcher(proxyUrl, config, request);
+    dispatcher = createDispatcher(proxyUrl, config);
     DISPATCHER_CACHE.set(connectionKey, dispatcher);
   }
 
@@ -196,7 +161,7 @@ export async function execute(
       method: method.toUpperCase(),
       headers: headers || {},
       body: body ?? undefined,
-      redirect: config.redirect,
+      redirect: "manual",
       signal: controller.signal,
       // @ts-ignore - undici dispatcher is supported in Node.js fetch
       dispatcher,

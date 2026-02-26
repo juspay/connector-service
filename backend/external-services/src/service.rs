@@ -5,7 +5,7 @@ use common_utils::{
     consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
     ext_traits::AsyncExt,
     lineage,
-    request::{Method, Request, RequestContent},
+    request::{FormDataPart, Method, MultipartData, Request, RequestContent},
 };
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},
@@ -16,6 +16,35 @@ use domain_types::{
 };
 use hyperswitch_masking::Secret;
 use injector;
+
+fn build_reqwest_form(data: MultipartData) -> reqwest::multipart::Form {
+    let mut form = reqwest::multipart::Form::new();
+    for part in data.parts {
+        match part {
+            FormDataPart::Text { name, value } => {
+                form = form.text(name, value);
+            }
+            FormDataPart::File {
+                name,
+                filename,
+                bytes,
+                mime_type,
+            } => {
+                let part = reqwest::multipart::Part::bytes(bytes.clone()).file_name(filename.clone());
+                let part = if !mime_type.is_empty() {
+                    match part.mime_str(&mime_type) {
+                        Ok(p) => p,
+                        Err(_) => reqwest::multipart::Part::bytes(bytes).file_name(filename),
+                    }
+                } else {
+                    part
+                };
+                form = form.part(name, part);
+            }
+        }
+    }
+    form
+}
 
 /// Test context for mock server integration
 #[derive(Debug, Clone)]
@@ -415,7 +444,7 @@ where
                         | RequestContent::Xml(i) => (**i).masked_serialize().unwrap_or(
                             json!({ "error": "failed to mask serialize connector request"}),
                         ),
-                        RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
+                        RequestContent::FormData(data) => serde_json::to_value(data).unwrap_or(json!({"request_type": "FORM_DATA"})),
                         RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
                     },
                     None => serde_json::Value::Null,
@@ -684,7 +713,7 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::FormData(data)) => client.multipart(build_reqwest_form(data)),
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -705,7 +734,7 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::FormData(data)) => client.multipart(build_reqwest_form(data)),
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -726,7 +755,7 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::FormData(data)) => client.multipart(build_reqwest_form(data)),
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -747,7 +776,7 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::FormData(data)) => client.multipart(build_reqwest_form(data)),
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -1086,16 +1115,30 @@ fn strip_bom_and_convert_to_string(response_bytes: &[u8]) -> Option<String> {
     })
 }
 
-pub fn extract_raw_connector_request(connector_request: &Request) -> String {
-    // Extract actual body content as a raw string
+fn extract_raw_connector_request(connector_request: &Request) -> String {
+    // Extract actual body content
     let body_content = match connector_request.body.as_ref() {
         Some(request) => {
-            let exposed_value = request.get_inner_value().expose();
-            serde_json::Value::String(exposed_value)
+            match request {
+                // For RawBytes (e.g., SOAP XML), use the string directly without JSON parsing
+                RequestContent::RawBytes(_) => {
+                    serde_json::Value::String(request.get_inner_value().expose())
+                }
+                // For other content types, try to parse as JSON
+                RequestContent::Json(_)
+                | RequestContent::FormUrlEncoded(_)
+                | RequestContent::FormData(_)
+                | RequestContent::Xml(_) => {
+                    let exposed_value = request.get_inner_value().expose();
+                    serde_json::from_str(&exposed_value).unwrap_or_else(|_| {
+                        tracing::warn!("failed to parse body as JSON, treating as string in extract_raw_connector_request");
+                        serde_json::Value::String(exposed_value)
+                    })
+                }
+            }
         }
         None => serde_json::Value::Null,
     };
-
     // Extract unmasked headers
     let headers_content = connector_request
         .headers
