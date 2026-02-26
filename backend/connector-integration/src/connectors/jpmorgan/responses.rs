@@ -64,6 +64,15 @@ pub struct JpmorganPaymentsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct PaymentMethodType {
     pub card: Option<Card>,
+    pub ach: Option<AchResponse>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AchResponse {
+    pub account_number: Option<Secret<String>>,
+    pub account_type: Option<String>,
+    pub financial_institution_routing_number: Option<Secret<String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
