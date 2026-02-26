@@ -159,6 +159,7 @@ fn build_server(
 /// # Panics
 ///
 /// Will panic if the socket file cannot be created or removed
+#[allow(dead_code)]
 pub async fn server_and_client_stub<T>(
     service: grpc_server::app::Service,
     base_config: Arc<Config>,
@@ -204,6 +205,7 @@ where
     Ok((serve_future, client))
 }
 
+#[allow(dead_code)]
 pub async fn server_and_channel_stub(
     service: grpc_server::app::Service,
     base_config: Arc<Config>,
