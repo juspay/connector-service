@@ -3526,6 +3526,11 @@ message ScreenstreamAuth {
   SecretString api_key = 1;
 }
 
+message AuthorizedotnetAuth {
+  SecretString name = 1;
+  SecretString transaction_key = 2;
+}
+
 // Two field auth types
 message BraintreeAuth {
   SecretString public_key = 1;
@@ -4058,5 +4063,8 @@ message ConnectorAuth {
 
     // REVOLV3 = 109
     Revolv3Auth revolv3 = 71;
+
+    // AUTHORIZEDOTNET = 5
+    AuthorizedotnetAuth authorizedotnet = 72;
   }
 }

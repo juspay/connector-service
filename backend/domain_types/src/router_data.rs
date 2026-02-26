@@ -806,6 +806,10 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
             AuthType::Revolv3(revolv3) => Ok(Self::Revolv3 {
                 api_key: revolv3.api_key.ok_or_else(err)?,
             }),
+            AuthType::Authorizedotnet(authorizedotnet) => Ok(Self::Authorizedotnet {
+                name: authorizedotnet.name.ok_or_else(err)?,
+                transaction_key: authorizedotnet.transaction_key.ok_or_else(err)?,
+            }),
         }
     }
 }
