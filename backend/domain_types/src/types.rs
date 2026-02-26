@@ -348,6 +348,7 @@ pub struct Connectors {
     pub wellsfargo: ConnectorParams,
     pub hyperpg: ConnectorParams,
     pub zift: ConnectorParams,
+    pub revolv3: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -8663,7 +8664,7 @@ impl
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            connector_customer: None,
+            connector_customer: value.connector_customer_id,
             description: None,
             return_url: value.return_url,
             connector_meta_data: None,

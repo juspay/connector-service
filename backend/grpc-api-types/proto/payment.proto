@@ -600,6 +600,7 @@ enum Connector {
   GIGADAT = 106;
   HYPERPG = 107;
   ZIFT = 108;
+  REVOLV3 = 109;
 }
 
 // Payment method types.
@@ -3380,7 +3381,10 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
  optional SecretString connector_metadata = 14; // Connector-specific metadata for the transaction
 
   // Environment Configuration
-  optional bool test_mode = 15; // A boolean value to indicate if the connector is in Test mode
+  optional bool test_mode = 15; // A boolean value to indicate if the connector is in Test mode  
+
+  // Connector Customer Information
+  optional string connector_customer_id = 16; // Customer ID as recognized by the connector
 }
 
 // Response message for creating a payment method token.
