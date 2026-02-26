@@ -1049,6 +1049,8 @@ pub enum PaymentMethodType {
     InstantBankTransferFinland,
     InstantBankTransferPoland,
     RevolutPay,
+    SepaGuaranteedDebit,
+    IndonesianBankTransfer,
 }
 
 impl PaymentMethodType {
@@ -1777,7 +1779,7 @@ pub enum CavvAlgorithm {
     A,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum GooglePayAuthMethod {
     /// Contain pan data only

@@ -600,7 +600,8 @@ enum Connector {
   GIGADAT = 106;
   HYPERPG = 107;
   ZIFT = 108;
-  TRUELAYER = 109;
+  REVOLV3 = 109;
+  TRUELAYER = 110;
 }
 
 // Payment method types.
@@ -1726,7 +1727,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
 
   // Payment Method Token
-  optional string payment_method_token = 40;
+  optional SecretString payment_method_token = 40;
 
   // Send the connector order identifier here if an order was created before authorize
   optional string connector_order_reference_id = 41; // Connector's reference id for order
@@ -2152,14 +2153,16 @@ message PaymentServiceCreateOrderRequest {
   // Environment Configuration
   optional bool test_mode = 9; // A boolean value to indicate if the connector is in Test mode
 
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 10; // The type of payment method (e.g., apple_pay, google_pay)
 }
 
 // Response message for create order operation.
 message PaymentServiceCreateOrderResponse {
-// Identification
+  // Identification
   Identifier order_id = 1; // Identifier for the create order response
 
-// Status Information
+  // Status Information
   PaymentStatus status = 2; // Status of the payment after the capture attempt
   optional string error_code = 3; // Error code if the capture failed
   optional string error_message = 4; // Error message if the capture failed
@@ -2174,6 +2177,9 @@ message PaymentServiceCreateOrderResponse {
 
   // Raw Response
   optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Wallet Session Token
+  optional SessionToken session_token = 10; // JSON serialized session token for wallet payments (Apple Pay, Google Pay)
 }
 
 // Request message for processing a refund.
@@ -2378,7 +2384,7 @@ message PaymentServiceRegisterRequest {
   optional ConnectorState state = 31; // State data for access token storage and other connector-specific state
 
   // Payment Method Token
-  optional string payment_method_token = 32;
+  optional SecretString payment_method_token = 32;
   // Send the connector order identifier here if an order was created before authorize
   optional string order_id = 33;
 
@@ -3377,6 +3383,9 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // Environment Configuration
   optional bool test_mode = 15; // A boolean value to indicate if the connector is in Test mode  
+
+  // Connector Customer Information
+  optional string connector_customer_id = 16; // Customer ID as recognized by the connector
 }
 
 // Response message for creating a payment method token.
