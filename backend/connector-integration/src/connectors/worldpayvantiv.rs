@@ -172,7 +172,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     VerifyRedirectResponse for Worldpayvantiv<T>
 {
