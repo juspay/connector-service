@@ -166,7 +166,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         encoded_data: None,
         capture_method: None,
         handle_response: None,
-        amount:  Some(grpc_api_types::payments::Money {
+        amount: Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
             currency: i32::from(Currency::Idr),
         }),
@@ -187,7 +187,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         connector_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
-        amount_to_capture:  Some(grpc_api_types::payments::Money {
+        amount_to_capture: Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
             currency: i32::from(Currency::Idr),
         }),

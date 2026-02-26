@@ -22,15 +22,16 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, mandate_reference_id::MandateIdType, payment_method,
-        payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
-        BrowserInformation, CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReferenceId, PaymentAddress,
-        PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest,
-        PaymentServiceVoidRequest, PaymentStatus, RecurringPaymentServiceChargeRequest,
-        RecurringPaymentServiceChargeResponse, RefundServiceGetRequest, RefundStatus,
-        recurring_payment_service_client::RecurringPaymentServiceClient,
+        payment_service_client::PaymentServiceClient,
+        recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
+        AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
+        ConnectorMandateReferenceId, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage,
+        Identifier, MandateReferenceId, PaymentAddress, PaymentMethod, PaymentMethodType,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceRegisterAutoDebitRequest, PaymentServiceVoidRequest, PaymentStatus,
+        RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse,
+        RefundServiceGetRequest, RefundStatus,
     },
 };
 use rand::{distributions::Alphanumeric, Rng};
@@ -327,14 +328,14 @@ fn create_payment_authorize_request(
     request.payment_method = Some(PaymentMethod {
         payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
     });
-    
+
     request.customer = Some(grpc_api_types::payments::Customer {
-            email: Some(generate_unique_email().into()),
-            name: None,
-            id: Some("TEST_CONNECTOR".to_string()),
-            connector_id: Some("TEST_CONNECTOR".to_string()),
-            phone_number: None,
-        });
+        email: Some(generate_unique_email().into()),
+        name: None,
+        id: Some("TEST_CONNECTOR".to_string()),
+        connector_id: Some("TEST_CONNECTOR".to_string()),
+        phone_number: None,
+    });
     // Generate random names for billing to prevent duplicate transaction errors
     let billing_first_name = random_name();
     let billing_last_name = random_name();
@@ -1052,11 +1053,8 @@ async fn test_register() {
         // Verify the mandate reference has the expected structure
         if let Some(mandate_ref) = &response.mandate_reference {
             // Verify the composite ID format (profile_id-payment_profile_id)
-            if let Some(
-                MandateIdType::ConnectorMandateId(
-                    mandate_id,
-                ),
-            ) = &mandate_ref.mandate_id_type
+            if let Some(MandateIdType::ConnectorMandateId(mandate_id)) =
+                &mandate_ref.mandate_id_type
             {
                 assert!(
                     mandate_id.connector_mandate_id.is_some(),

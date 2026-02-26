@@ -455,8 +455,11 @@ async fn test_payment_void() {
         let request_ref_id = extract_request_ref_id(&auth_response);
 
         // After authentication, sync the payment to get updated status
-        let sync_request =
-            create_payment_sync_request(&transaction_id, &request_ref_id, auth_request.amount.unwrap().minor_amount);
+        let sync_request = create_payment_sync_request(
+            &transaction_id,
+            &request_ref_id,
+            auth_request.amount.unwrap().minor_amount,
+        );
         let mut sync_grpc_request = Request::new(sync_request);
         add_helcim_metadata(&mut sync_grpc_request);
 
@@ -488,8 +491,11 @@ async fn test_payment_void() {
         let void_transaction_id = extract_void_transaction_id(&void_response);
 
         // Verify the payment status with a sync operation using the void transaction ID
-        let sync_request =
-            create_payment_sync_request(&void_transaction_id, &request_ref_id, auth_request.amount.unwrap().minor_amount);
+        let sync_request = create_payment_sync_request(
+            &void_transaction_id,
+            &request_ref_id,
+            auth_request.amount.unwrap().minor_amount,
+        );
         let mut sync_grpc_request = Request::new(sync_request);
         add_helcim_metadata(&mut sync_grpc_request);
 
@@ -536,8 +542,11 @@ async fn test_payment_sync() {
         std::thread::sleep(std::time::Duration::from_secs(2));
 
         // Create sync request with the specific transaction ID
-        let sync_request =
-            create_payment_sync_request(&transaction_id, &request_ref_id, auth_request.amount.unwrap().minor_amount);
+        let sync_request = create_payment_sync_request(
+            &transaction_id,
+            &request_ref_id,
+            auth_request.amount.unwrap().minor_amount,
+        );
 
         // Add metadata headers for sync request
         let mut sync_grpc_request = Request::new(sync_request);

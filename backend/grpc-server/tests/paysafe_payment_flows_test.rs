@@ -310,7 +310,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
         merchant_refund_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("refund_{}", get_timestamp_micros()))),
-        }) ,
+        }),
         connector_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),

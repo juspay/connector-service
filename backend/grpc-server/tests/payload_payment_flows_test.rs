@@ -572,11 +572,8 @@ async fn test_setup_mandate() {
             "Mandate reference should be present"
         );
 
-        if let Some(
-            MandateIdType::ConnectorMandateId(
-                mandate_ref,
-            ),
-        ) = &response.mandate_reference.and_then(|m| m.mandate_id_type)
+        if let Some(MandateIdType::ConnectorMandateId(mandate_ref)) =
+            &response.mandate_reference.and_then(|m| m.mandate_id_type)
         {
             assert!(
                 mandate_ref.connector_mandate_id.is_some()

@@ -80,7 +80,7 @@ fn add_cashtocode_metadata<T>(request: &mut Request<T>) {
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
-        amount:  Some(grpc_api_types::payments::Money {
+        amount: Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
             currency: i32::from(Currency::Eur),
         }),

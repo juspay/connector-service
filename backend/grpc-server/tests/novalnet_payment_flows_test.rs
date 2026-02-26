@@ -120,7 +120,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         shipping_address: None,
     };
     PaymentServiceAuthorizeRequest {
-        amount:Some(grpc_api_types::payments::Money {
+        amount: Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
             currency: i32::from(Currency::Usd),
         }),
