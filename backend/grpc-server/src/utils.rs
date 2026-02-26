@@ -3,7 +3,8 @@ use base64::{engine::general_purpose, Engine as _};
 use common_utils::{
     config_patch::Patch,
     consts::{
-        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_SHADOW_MODE,
+        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_CONNECTOR_AUTH, X_KEY1, X_KEY2,
+        X_SHADOW_MODE,
     },
     errors::CustomResult,
     events::{Event, EventStage, FlowName, MaskedSerdeValue},
@@ -172,15 +173,13 @@ pub struct MetadataPayload {
 pub fn get_metadata_payload(
     metadata: &metadata::MetadataMap,
     server_config: Arc<configs::Config>,
-    proto_auth: Option<grpc_api_types::payments::ConnectorAuth>,
 ) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
     let connector = connector_from_metadata(metadata)?;
     let merchant_id = merchant_id_from_metadata(metadata)?;
     let tenant_id = tenant_id_from_metadata(metadata)?;
     let request_id = request_id_from_metadata(metadata)?;
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
-    let connector_auth_type =
-        connector_auth_from_payload_or_metadata(proto_auth, metadata, &connector)?;
+    let connector_auth_type = resolve_connector_auth(metadata, &connector)?;
     let reference_id = reference_id_from_metadata(metadata)?;
     let resource_id = resource_id_from_metadata(metadata)?;
     let shadow_mode = shadow_mode_from_metadata(metadata);
@@ -197,41 +196,65 @@ pub fn get_metadata_payload(
     })
 }
 
-pub fn extract_proto_auth_from_payload<T: serde::Serialize>(
-    payload: &T,
-) -> Option<grpc_api_types::payments::ConnectorAuth> {
-    let payload_value = serde_json::to_value(payload).ok()?;
-    let connector_auth_value = payload_value
-        .get("connector_auth")
-        .cloned()
-        .or_else(|| payload_value.get("connectorAuth").cloned())?;
-
-    serde_json::from_value(connector_auth_value).ok()
+/// Extracts typed `ConnectorAuth` from the `X-Connector-Auth` header (JSON).
+///
+/// Returns `Ok(Some(...))` if header is present and valid,
+/// `Ok(None)` if header is absent (legitimate fallback case),
+/// `Err(...)` if header is present but malformed.
+fn extract_connector_auth_from_header(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<Option<grpc_api_types::payments::ConnectorAuth>, ApplicationErrorResponse> {
+    metadata
+        .get(X_CONNECTOR_AUTH)
+        .map(|value| {
+            value
+                .to_str()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CONNECTOR_AUTH_HEADER".to_string(),
+                    error_identifier: 400,
+                    error_message: "X-Connector-Auth header contains non-ASCII characters"
+                        .to_string(),
+                    error_object: None,
+                }))
+                .and_then(|header_str| {
+                    serde_json::from_str(header_str).change_context(
+                        ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_CONNECTOR_AUTH_JSON".to_string(),
+                            error_identifier: 400,
+                            error_message: "Failed to parse X-Connector-Auth header as JSON"
+                                .to_string(),
+                            error_object: None,
+                        }),
+                    )
+                })
+        })
+        .transpose()
 }
 
-fn connector_auth_from_payload_or_metadata(
-    proto_auth: Option<grpc_api_types::payments::ConnectorAuth>,
+/// Resolves connector auth by trying the typed `X-Connector-Auth` header first,
+/// then falling back to legacy `x-auth` / `x-api-key` / `x-key1` headers.
+fn resolve_connector_auth(
     metadata: &metadata::MetadataMap,
     connector: &connector_types::ConnectorEnum,
 ) -> CustomResult<ConnectorSpecificAuth, ApplicationErrorResponse> {
-    proto_auth.map_or_else(
+    extract_connector_auth_from_header(metadata)?.map_or_else(
         || {
             logger::debug!(
-                "Connector auth not found in payload, falling back to metadata for connector: {}",
+                "X-Connector-Auth header not found, falling back to legacy headers for connector: {}",
                 connector
             );
             auth_from_metadata(metadata, connector)
         },
-        |auth| {
+        |typed_auth| {
             logger::debug!(
-                "Connector auth found in payload, using it for connector: {}",
+                "Connector specific auth found in X-Connector-Auth header for connector: {}",
                 connector
             );
-            ConnectorSpecificAuth::foreign_try_from(auth).map_err(|_| {
+            ConnectorSpecificAuth::foreign_try_from(typed_auth).map_err(|_| {
                 Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "AUTH_CONVERSION_FAILED".to_string(),
                     error_identifier: 400,
-                    error_message: "Failed to convert auth from request payload".to_string(),
+                    error_message: "Failed to convert auth from X-Connector-Auth header".to_string(),
                     error_object: None,
                 }))
             })
@@ -844,23 +867,36 @@ macro_rules! implement_connector_operation {
 
 #[cfg(test)]
 mod tests {
-    use super::connector_auth_from_payload_or_metadata;
+    use super::resolve_connector_auth;
     use common_utils::consts;
     use domain_types::{connector_types, router_data::ConnectorSpecificAuth};
     use hyperswitch_masking::ExposeInterface;
     use tonic::metadata::MetadataMap;
 
-    fn stripe_payload_auth(api_key: &str) -> grpc_api_types::payments::ConnectorAuth {
-        grpc_api_types::payments::ConnectorAuth {
-            auth_type: Some(grpc_api_types::payments::connector_auth::AuthType::Stripe(
-                grpc_api_types::payments::StripeAuth {
-                    api_key: Some(hyperswitch_masking::Secret::new(api_key.to_string())),
-                },
-            )),
-        }
+    /// Build JSON for a Stripe ConnectorAuth header value.
+    ///
+    /// Format matches prost-generated serde: PascalCase enum variant, snake_case fields.
+    /// Note: We hand-craft JSON because `Secret<String>` serializes to `"***"`.
+    fn stripe_auth_json(api_key: &str) -> String {
+        format!(
+            r#"{{"auth_type":{{"Stripe":{{"api_key":"{}"}}}}}}"#,
+            api_key
+        )
     }
 
-    fn metadata_with_header_auth(api_key: &str) -> MetadataMap {
+    /// Build a MetadataMap with a typed `X-Connector-Auth` JSON header for Stripe.
+    fn metadata_with_typed_auth(api_key: &str) -> MetadataMap {
+        let mut metadata = MetadataMap::new();
+        let json = stripe_auth_json(api_key);
+        metadata.insert(
+            consts::X_CONNECTOR_AUTH,
+            json.parse().expect("valid x-connector-auth header"),
+        );
+        metadata
+    }
+
+    /// Build a MetadataMap with legacy `x-auth` / `x-api-key` headers.
+    fn metadata_with_legacy_auth(api_key: &str) -> MetadataMap {
         let mut metadata = MetadataMap::new();
         metadata.insert(
             consts::X_AUTH,
@@ -874,71 +910,61 @@ mod tests {
     }
 
     #[test]
-    fn connector_auth_uses_header_when_payload_missing() {
-        let metadata = metadata_with_header_auth("header-key-value");
+    fn connector_auth_resolves_from_typed_header() {
+        let metadata = metadata_with_typed_auth("typed-key-value");
 
-        let auth = connector_auth_from_payload_or_metadata(
-            None,
-            &metadata,
-            &connector_types::ConnectorEnum::Stripe,
-        )
-        .expect("header auth should resolve");
+        let auth = resolve_connector_auth(&metadata, &connector_types::ConnectorEnum::Stripe)
+            .expect("typed header auth should resolve");
 
         match auth {
             ConnectorSpecificAuth::Stripe { api_key } => {
-                assert_eq!(api_key.expose(), "header-key-value");
+                assert_eq!(api_key.expose(), "typed-key-value");
             }
             _ => panic!("expected stripe auth"),
         }
     }
 
     #[test]
-    fn connector_auth_uses_payload_when_header_missing() {
-        let metadata = MetadataMap::new();
+    fn connector_auth_falls_back_to_legacy_headers() {
+        let metadata = metadata_with_legacy_auth("legacy-key-value");
 
-        let auth = connector_auth_from_payload_or_metadata(
-            Some(stripe_payload_auth("payload-key-value")),
-            &metadata,
-            &connector_types::ConnectorEnum::Stripe,
-        )
-        .expect("payload auth should resolve");
+        let auth = resolve_connector_auth(&metadata, &connector_types::ConnectorEnum::Stripe)
+            .expect("legacy header auth should resolve");
 
         match auth {
             ConnectorSpecificAuth::Stripe { api_key } => {
-                assert_eq!(api_key.expose(), "payload-key-value");
+                assert_eq!(api_key.expose(), "legacy-key-value");
             }
             _ => panic!("expected stripe auth"),
         }
     }
 
     #[test]
-    fn connector_auth_prefers_payload_over_header() {
-        let metadata = metadata_with_header_auth("header-key-value");
-
-        let auth = connector_auth_from_payload_or_metadata(
-            Some(stripe_payload_auth("payload-key-value")),
-            &metadata,
-            &connector_types::ConnectorEnum::Stripe,
-        )
-        .expect("payload auth should take precedence");
-
-        match auth {
-            ConnectorSpecificAuth::Stripe { api_key } => {
-                assert_eq!(api_key.expose(), "payload-key-value");
-            }
-            _ => panic!("expected stripe auth"),
-        }
-    }
-
-    #[test]
-    fn connector_auth_fails_when_payload_and_header_are_missing() {
-        let metadata = MetadataMap::new();
-
-        let result = connector_auth_from_payload_or_metadata(
-            None,
-            &metadata,
-            &connector_types::ConnectorEnum::Stripe,
+    fn connector_auth_prefers_typed_header_over_legacy() {
+        let mut metadata = metadata_with_legacy_auth("legacy-key-value");
+        // Add typed header too — it should take priority
+        let json = stripe_auth_json("typed-key-value");
+        metadata.insert(
+            consts::X_CONNECTOR_AUTH,
+            json.parse().expect("valid x-connector-auth header"),
         );
+
+        let auth = resolve_connector_auth(&metadata, &connector_types::ConnectorEnum::Stripe)
+            .expect("typed header should take precedence");
+
+        match auth {
+            ConnectorSpecificAuth::Stripe { api_key } => {
+                assert_eq!(api_key.expose(), "typed-key-value");
+            }
+            _ => panic!("expected stripe auth"),
+        }
+    }
+
+    #[test]
+    fn connector_auth_fails_when_no_auth_present() {
+        let metadata = MetadataMap::new();
+
+        let result = resolve_connector_auth(&metadata, &connector_types::ConnectorEnum::Stripe);
 
         assert!(result.is_err());
     }

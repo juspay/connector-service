@@ -1542,9 +1542,6 @@ message PaymentServiceCreateAccessTokenRequest {
   
   // Environment Configuration
   optional bool test_mode = 6; // A boolean value to indicate if the connector is in Test mode
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 7;
 }
 
 // Response message for creating an access token.
@@ -1647,9 +1644,6 @@ message PaymentServiceAuthorizeRequest {
 
   // Tokenization configuration
   optional Tokenization tokenization_strategy = 46; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 47;
 }
 
 // Request message for authorizing a payment only (without setup flows).
@@ -1750,9 +1744,6 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Tokenization configuration
   optional Tokenization tokenization_strategy = 49; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 50;
 }
 
 // Response message for a payment authorization.
@@ -1848,9 +1839,6 @@ message PaymentServiceGetRequest {
   optional bool test_mode = 16; // A boolean value to indicate if the connector is in Test mode
 
   optional PaymentExperience payment_experience = 7; // Preferred payment experience
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 17;
 }
 
 // Response message for a payment status synchronization.
@@ -1954,9 +1942,6 @@ message PaymentServiceVoidRequest {
 
   // Additional Context
   optional string merchant_order_reference_id = 14; // Merchant's internal reference ID
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 15;
 }
 
 // Response message for a payment void operation.
@@ -2009,9 +1994,6 @@ message PaymentServiceVoidPostCaptureRequest {
   optional SecretString metadata = 6; // Additional metadata for the connector
   optional SecretString merchant_account_metadata = 7; // Account-level configuration metadata (e.g., merchant_name, brand_id)
   optional SecretString connector_metadata = 8; // Connector-specific metadata for the transaction
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 9;
 }
 
 // Response message for a payment void post-capture operation.
@@ -2059,9 +2041,6 @@ message PaymentServiceSdkSessionTokenRequest {
   // Metadata
   optional SecretString metadata = 18; // Additional metadata for the connector
   optional SecretString connector_metadata = 19; // Connector-specific metadata for the transaction
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 20;
 }
 
 // Response message for a sdk session token operation.
@@ -2111,9 +2090,6 @@ message PaymentServiceCaptureRequest {
 
   // Additional Context
   optional string merchant_order_reference_id = 15; // Merchant's internal reference ID
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 16;
 }
 
 // Response message for a payment capture operation.
@@ -2177,9 +2153,6 @@ message PaymentServiceCreateOrderRequest {
 
   // Payment Method Type
   optional PaymentMethodType payment_method_type = 10; // The type of payment method (e.g., apple_pay, google_pay)
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 11;
 }
 
 // Response message for create order operation.
@@ -2247,9 +2220,6 @@ message PaymentServiceRefundRequest {
   // Payment Method Type
   optional PaymentMethodType payment_method_type = 20; // Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
   optional string customer_id = 22; // Merchant's customer ID
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 23;
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -2308,9 +2278,6 @@ message PaymentServiceDisputeRequest {
 
   // State Information
   optional ConnectorState state = 5; // State data for access token storage and other connector-specific state
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 6;
 }
 
 // Response message for dispute operations (unified for both Create and Get).
@@ -2424,9 +2391,6 @@ message PaymentServiceRegisterRequest {
 
   // Testing Data
   optional SecretString connector_testing_data = 46; // Connector-specific testing data (JSON stringified)
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 47;
 }
 
 // Response message for a mandate setup operation.
@@ -2536,9 +2500,6 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Testing Data
   optional SecretString connector_testing_data = 40; // Connector-specific testing data (JSON stringified)
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 41;
 }
 
 // Container for recurring mandate payment data
@@ -2609,9 +2570,6 @@ message PaymentServiceRevokeMandateRequest {
   // Mandate Details
   string mandate_id = 2; // unique identifier for the mandate.
   optional string connector_mandate_id = 3;
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 4;
 }
 
 // Response message for a mandate revoke operation.
@@ -2682,9 +2640,6 @@ message PaymentServicePreAuthenticateRequest {
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
   optional string description = 20; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 21;
 }
 
 // Response message for pre-authentication step
@@ -2774,9 +2729,6 @@ message PaymentServiceAuthenticateRequest {
 
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 19;
 }
 
 // Response message for authentication step
@@ -2864,9 +2816,6 @@ message PaymentServicePostAuthenticateRequest {
   // Account-Specific Configuration
   optional SecretString merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
   optional SecretString connector_metadata = 19; // Connector-specific metadata for the transaction
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 20;
 }
 
 // Response message for post-authentication step
@@ -2932,9 +2881,6 @@ message PaymentServiceIncrementalAuthorizationRequest {
 
   // State Information
   optional ConnectorState state = 7; // State data for access token storage and other connector-specific state
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 8;
 }
 
 // Response message for incremental authorization
@@ -2975,9 +2921,6 @@ message PaymentServiceCreateSessionTokenRequest {
   optional BrowserInformation browser_info = 7; // Information about the customer's browser
 
   optional bool test_mode = 10; // A boolean value to indicate if the connector is in Test mode
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 11;
 }
 
 // Response message for creating a session token
@@ -3004,9 +2947,6 @@ message PaymentServiceTransformRequest {
 
   // State Information
   optional ConnectorState state = 5; // State data for access token storage and other connector-specific state
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 6;
 }
 
 // Status of webhook transformation process
@@ -3044,9 +2984,6 @@ message PaymentServiceVerifyRedirectResponseRequest {
 
   // Security
   optional RedirectResponseSecrets redirect_response_secrets = 3; // Secrets for verifying authenticity
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 4;
 }
 
 // Response message for VerifyRedirectResponse
@@ -3105,9 +3042,6 @@ message RefundServiceGetRequest {
 
   // Payment Method Type
   optional PaymentMethodType payment_method_type = 11; // Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 12;
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
@@ -3193,9 +3127,6 @@ message RefundServiceTransformRequest {
 
   // Security
   optional WebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 4;
 }
 
 // Response message for RefundService.Transform RPC
@@ -3230,9 +3161,6 @@ message DisputeServiceSubmitEvidenceRequest {
 
   // Evidence
   repeated EvidenceDocument evidence_documents = 6; // Collection of evidence documents
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 7;
 }
 
 // Response message for a submit evidence operation.
@@ -3263,9 +3191,6 @@ message DisputeServiceGetRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
   optional string dispute_id = 2; // Merchant's unique identifier for the dispute
   string connector_dispute_id = 3; // Connector's unique identifier
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 4;
 }
 
 // Legacy alias for backward compatibility - use DisputeResponse instead
@@ -3342,9 +3267,6 @@ message DisputeServiceTransformRequest {
 
   // Security
   optional WebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 4;
 }
 
 // Response message for DisputeService.Transform RPC
@@ -3375,9 +3297,6 @@ message DisputeDefendRequest {
 
   // Defend Details
   optional string reason_code = 4; // Reason code for defending the dispute
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 5;
 }
 
 // Response message for defending a dispute.
@@ -3407,9 +3326,6 @@ message AcceptDisputeRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
   Identifier transaction_id = 2; // Transaction ID to accept dispute for
   string dispute_id = 3; // Connector's unique identifier
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 4;
 }
 
 // Response message for accepting a dispute.
@@ -3465,9 +3381,6 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // Environment Configuration
   optional bool test_mode = 15; // A boolean value to indicate if the connector is in Test mode
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 16;
 }
 
 // Response message for creating a payment method token.
@@ -3510,9 +3423,6 @@ message PaymentServiceCreateConnectorCustomerRequest {
   optional SecretString connector_metadata = 10; // Connector-specific metadata for the transaction
 
   optional bool test_mode = 11; // A boolean value to indicate if the connector is in Test mode
-
-  // Connector-specific authentication credentials
-  optional ConnectorAuth connector_auth = 12;
 }
 
 // Response message for creating a connector customer.
