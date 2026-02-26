@@ -60,7 +60,11 @@ fn add_novalnet_metadata<T>(request: &mut Request<T>) {
             product_activation_key,
             payment_access_key,
             tariff_id,
-        } => (product_activation_key.expose(), payment_access_key.expose(), tariff_id.expose()),
+        } => (
+            product_activation_key.expose(),
+            payment_access_key.expose(),
+            tariff_id.expose(),
+        ),
         _ => panic!("Expected Novalnet auth type"),
     };
 

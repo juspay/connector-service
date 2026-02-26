@@ -118,14 +118,17 @@ impl TryFrom<&ConnectorSpecificAuth> for PaytmAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Paytm { merchant_id, merchant_key, website, client_id } => {
-                Ok(Self {
-                    merchant_id: merchant_id.to_owned(),
-                    merchant_key: merchant_key.to_owned(),
-                    website: website.to_owned(),
-                    client_id: client_id.to_owned(),
-                })
-            }
+            ConnectorSpecificAuth::Paytm {
+                merchant_id,
+                merchant_key,
+                website,
+                client_id,
+            } => Ok(Self {
+                merchant_id: merchant_id.to_owned(),
+                merchant_key: merchant_key.to_owned(),
+                website: website.to_owned(),
+                client_id: client_id.to_owned(),
+            }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }

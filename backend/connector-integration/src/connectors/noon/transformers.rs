@@ -489,7 +489,11 @@ impl TryFrom<&ConnectorSpecificAuth> for NoonAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Noon { api_key, application_identifier, business_identifier } => Ok(Self {
+            ConnectorSpecificAuth::Noon {
+                api_key,
+                application_identifier,
+                business_identifier,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 application_identifier: application_identifier.to_owned(),
                 business_identifier: business_identifier.to_owned(),

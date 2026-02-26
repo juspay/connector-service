@@ -43,7 +43,11 @@ impl TryFrom<&ConnectorSpecificAuth> for ElavonAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Elavon { ssl_merchant_id, ssl_user_id, ssl_pin } => Ok(Self {
+            ConnectorSpecificAuth::Elavon {
+                ssl_merchant_id,
+                ssl_user_id,
+                ssl_pin,
+            } => Ok(Self {
                 ssl_merchant_id: ssl_merchant_id.clone(),
                 ssl_user_id: ssl_user_id.clone(),
                 ssl_pin: ssl_pin.clone(),

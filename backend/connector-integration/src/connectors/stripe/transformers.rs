@@ -31,7 +31,7 @@ use domain_types::{
         WalletData,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorSpecificAuth, ConnectorResponseData,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
         ExtendedAuthorizationResponseData,
     },
     router_data_v2::RouterDataV2,

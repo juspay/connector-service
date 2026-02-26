@@ -599,7 +599,11 @@ impl TryFrom<&ConnectorSpecificAuth> for WorldpayAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Worldpay { username, password, entity_id } => {
+            ConnectorSpecificAuth::Worldpay {
+                username,
+                password,
+                entity_id,
+            } => {
                 let auth_key = format!("{}:{}", username.peek(), password.peek());
                 let auth_header = format!(
                     "Basic {}",

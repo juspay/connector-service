@@ -179,7 +179,10 @@ impl TryFrom<&ConnectorSpecificAuth> for BraintreeAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Braintree { public_key, private_key } = item
+        if let ConnectorSpecificAuth::Braintree {
+            public_key,
+            private_key,
+        } = item
         {
             Ok(Self {
                 public_key: public_key.to_owned(),

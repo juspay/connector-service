@@ -41,8 +41,7 @@ impl TryFrom<&ConnectorSpecificAuth> for BamboraAuthType {
                 merchant_id,
                 api_key,
             } => {
-                let auth_string =
-                    format!("{}:{}", merchant_id.peek(), api_key.peek());
+                let auth_string = format!("{}:{}", merchant_id.peek(), api_key.peek());
                 let encoded = base64::Engine::encode(
                     &base64::engine::general_purpose::STANDARD,
                     auth_string.as_bytes(),

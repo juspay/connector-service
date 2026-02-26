@@ -25,7 +25,7 @@ use domain_types::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         RealTimePaymentData, WalletData,
     },
-    router_data::{ ErrorResponse, ConnectorSpecificAuth},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -57,7 +57,11 @@ impl TryFrom<&ConnectorSpecificAuth> for FiuuAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Fiuu { merchant_id, verify_key, secret_key } => Ok(Self {
+            ConnectorSpecificAuth::Fiuu {
+                merchant_id,
+                verify_key,
+                secret_key,
+            } => Ok(Self {
                 merchant_id: merchant_id.to_owned(),
                 verify_key: verify_key.to_owned(),
                 secret_key: secret_key.to_owned(),

@@ -635,14 +635,12 @@ fn convert_to_auth_type(
         }
 
         // --- CurrencyAuthKey / special connectors ---
-        "cashtocode" => {
-            Ok(ConnectorSpecificAuth::Cashtocode {
-                password_classic: details.api_key.as_ref().map(|k| Secret::new(k.clone())),
-                password_evoucher: details.api_secret.as_ref().map(|k| Secret::new(k.clone())),
-                username_classic: details.key1.as_ref().map(|k| Secret::new(k.clone())),
-                username_evoucher: details.key2.as_ref().map(|k| Secret::new(k.clone())),
-            })
-        }
+        "cashtocode" => Ok(ConnectorSpecificAuth::Cashtocode {
+            password_classic: details.api_key.as_ref().map(|k| Secret::new(k.clone())),
+            password_evoucher: details.api_secret.as_ref().map(|k| Secret::new(k.clone())),
+            username_classic: details.key1.as_ref().map(|k| Secret::new(k.clone())),
+            username_evoucher: details.key2.as_ref().map(|k| Secret::new(k.clone())),
+        }),
         "payload" => {
             let api_key = details.api_key.as_ref().ok_or_else(|| {
                 CredentialError::MissingField("api_key".to_string(), "payload".to_string())

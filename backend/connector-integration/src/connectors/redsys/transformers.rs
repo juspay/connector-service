@@ -258,7 +258,11 @@ where
 impl TryFrom<&ConnectorSpecificAuth> for RedsysAuthType {
     type Error = Error;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Redsys { merchant_id, terminal_id, sha256_pwd } = auth_type
+        if let ConnectorSpecificAuth::Redsys {
+            merchant_id,
+            terminal_id,
+            sha256_pwd,
+        } = auth_type
         {
             Ok(Self {
                 merchant_id: merchant_id.to_owned(),

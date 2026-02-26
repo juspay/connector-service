@@ -41,7 +41,11 @@ impl TryFrom<&ConnectorSpecificAuth> for BarclaycardAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Barclaycard { api_key, merchant_account, api_secret } => Ok(Self {
+            ConnectorSpecificAuth::Barclaycard {
+                api_key,
+                merchant_account,
+                api_secret,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),

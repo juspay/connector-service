@@ -249,8 +249,7 @@ impl TryFrom<&ConnectorSpecificAuth> for NexinetsAuthType {
                 api_key,
             } => {
                 let auth_key = format!("{}:{}", merchant_id.peek(), api_key.peek());
-                let auth_header =
-                    format!("Basic {}", BASE64_ENGINE.encode(auth_key));
+                let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
                 Ok(Self {
                     api_key: Secret::new(auth_header),
                 })

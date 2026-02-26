@@ -2458,7 +2458,11 @@ pub struct CybersourceAuthType {
 impl TryFrom<&ConnectorSpecificAuth> for CybersourceAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Cybersource { api_key, merchant_account, api_secret } = auth_type
+        if let ConnectorSpecificAuth::Cybersource {
+            api_key,
+            merchant_account,
+            api_secret,
+        } = auth_type
         {
             Ok(Self {
                 api_key: api_key.to_owned(),

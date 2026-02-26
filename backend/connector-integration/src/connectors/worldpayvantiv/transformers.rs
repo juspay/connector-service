@@ -270,7 +270,11 @@ impl TryFrom<&ConnectorSpecificAuth> for WorldpayvantivAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Worldpayvantiv { user, password, merchant_id } => Ok(Self {
+            ConnectorSpecificAuth::Worldpayvantiv {
+                user,
+                password,
+                merchant_id,
+            } => Ok(Self {
                 user: user.to_owned(),
                 password: password.to_owned(),
                 merchant_id: merchant_id.to_owned(),

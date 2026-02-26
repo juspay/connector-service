@@ -172,7 +172,11 @@ impl TryFrom<&ConnectorSpecificAuth> for TsysAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Tsys { device_id, transaction_key, developer_id } => Ok(Self {
+            ConnectorSpecificAuth::Tsys {
+                device_id,
+                transaction_key,
+                developer_id,
+            } => Ok(Self {
                 device_id: device_id.to_owned(),
                 transaction_key: transaction_key.to_owned(),
                 developer_id: developer_id.to_owned(),

@@ -60,7 +60,11 @@ impl TryFrom<&ConnectorSpecificAuth> for GigadatAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Gigadat { campaign_id, access_token, security_token } => Ok(Self {
+            ConnectorSpecificAuth::Gigadat {
+                campaign_id,
+                access_token,
+                security_token,
+            } => Ok(Self {
                 security_token: security_token.to_owned(),
                 access_token: access_token.to_owned(),
                 campaign_id: campaign_id.to_owned(),

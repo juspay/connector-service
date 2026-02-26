@@ -246,7 +246,11 @@ pub struct DlocalAuthType {
 impl TryFrom<&ConnectorSpecificAuth> for DlocalAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Dlocal { x_login, x_trans_key, secret } = auth_type
+        if let ConnectorSpecificAuth::Dlocal {
+            x_login,
+            x_trans_key,
+            secret,
+        } = auth_type
         {
             Ok(Self {
                 x_login: x_login.to_owned(),

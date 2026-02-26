@@ -35,7 +35,10 @@ impl TryFrom<&ConnectorSpecificAuth> for PowertranzAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Powertranz { power_tranz_id, power_tranz_password } => Ok(Self {
+            ConnectorSpecificAuth::Powertranz {
+                power_tranz_id,
+                power_tranz_password,
+            } => Ok(Self {
                 power_tranz_id: power_tranz_id.clone(),
                 power_tranz_password: power_tranz_password.clone(),
             }),

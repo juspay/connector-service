@@ -51,7 +51,12 @@ impl TryFrom<&ConnectorSpecificAuth> for PayboxAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Paybox { site, rank, key, merchant_id } => Ok(Self {
+            ConnectorSpecificAuth::Paybox {
+                site,
+                rank,
+                key,
+                merchant_id,
+            } => Ok(Self {
                 site: site.to_owned(),
                 rank: rank.to_owned(),
                 key: key.to_owned(),

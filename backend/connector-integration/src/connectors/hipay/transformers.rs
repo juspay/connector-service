@@ -32,7 +32,10 @@ impl TryFrom<&ConnectorSpecificAuth> for HipayAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Hipay { api_key, api_secret } => Ok(Self {
+            ConnectorSpecificAuth::Hipay {
+                api_key,
+                api_secret,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),

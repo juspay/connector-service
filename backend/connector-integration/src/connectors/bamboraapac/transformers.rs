@@ -128,7 +128,11 @@ impl TryFrom<&ConnectorSpecificAuth> for BamboraapacAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Bamboraapac { username, password, account_number } => Ok(Self {
+            ConnectorSpecificAuth::Bamboraapac {
+                username,
+                password,
+                account_number,
+            } => Ok(Self {
                 username: username.clone(),
                 password: password.clone(),
                 account_number: account_number.clone(),

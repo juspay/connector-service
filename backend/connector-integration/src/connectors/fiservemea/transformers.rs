@@ -72,7 +72,10 @@ impl TryFrom<&ConnectorSpecificAuth> for FiservemeaAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Fiservemea { api_key, api_secret } => Ok(Self {
+            ConnectorSpecificAuth::Fiservemea {
+                api_key,
+                api_secret,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),

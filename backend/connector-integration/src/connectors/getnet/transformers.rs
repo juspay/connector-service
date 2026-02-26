@@ -70,7 +70,11 @@ impl TryFrom<&ConnectorSpecificAuth> for GetnetAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Getnet { api_key, api_secret, seller_id } => Ok(Self {
+            ConnectorSpecificAuth::Getnet {
+                api_key,
+                api_secret,
+                seller_id,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
                 seller_id: seller_id.to_owned(),

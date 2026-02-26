@@ -15,7 +15,7 @@ use domain_types::{
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorSpecificAuth, ConnectorResponseData,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
         ErrorResponse,
     },
     router_data_v2::RouterDataV2,
@@ -290,7 +290,11 @@ pub struct CheckoutThreeDS {
 impl TryFrom<&ConnectorSpecificAuth> for CheckoutAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Checkout { api_key, api_secret, processing_channel_id } = auth_type
+        if let ConnectorSpecificAuth::Checkout {
+            api_key,
+            api_secret,
+            processing_channel_id,
+        } = auth_type
         {
             Ok(Self {
                 api_key: api_key.to_owned(),

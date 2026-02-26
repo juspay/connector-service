@@ -255,7 +255,10 @@ impl TryFrom<&ConnectorSpecificAuth> for MerchantAuthentication {
     type Error = Error;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } => Ok(Self {
+            ConnectorSpecificAuth::Authorizedotnet {
+                name,
+                transaction_key,
+            } => Ok(Self {
                 name: name.clone(),
                 transaction_key: transaction_key.clone(),
             }),
@@ -1065,7 +1068,11 @@ impl TryFrom<&ConnectorSpecificAuth> for AuthorizedotnetAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } = auth_type {
+        if let ConnectorSpecificAuth::Authorizedotnet {
+            name,
+            transaction_key,
+        } = auth_type
+        {
             Ok(Self {
                 name: name.to_owned(),
                 transaction_key: transaction_key.to_owned(),

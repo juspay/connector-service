@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use common_utils::{
-    errors::CustomResult, id_type, request::Method, types::FloatMajorUnit,
-    Email,
-};
+use common_utils::{errors::CustomResult, id_type, request::Method, types::FloatMajorUnit, Email};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -137,7 +134,12 @@ impl TryFrom<&ConnectorSpecificAuth> for CashtocodeAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Cashtocode { password_classic: _, password_evoucher: _, username_classic: _, username_evoucher: _ } => {
+            ConnectorSpecificAuth::Cashtocode {
+                password_classic: _,
+                password_evoucher: _,
+                username_classic: _,
+                username_evoucher: _,
+            } => {
                 // For now, return empty auths since the old CurrencyAuthKey mapping was complex.
                 // This connector needs proper auth handling implementation.
                 Ok(Self {
@@ -152,10 +154,18 @@ impl TryFrom<&ConnectorSpecificAuth> for CashtocodeAuthType {
 impl TryFrom<(&ConnectorSpecificAuth, &common_enums::Currency)> for CashtocodeAuth {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(value: (&ConnectorSpecificAuth, &common_enums::Currency)) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: (&ConnectorSpecificAuth, &common_enums::Currency),
+    ) -> Result<Self, Self::Error> {
         let (auth_type, _currency) = value;
 
-        if let ConnectorSpecificAuth::Cashtocode { password_classic, password_evoucher, username_classic, username_evoucher } = auth_type {
+        if let ConnectorSpecificAuth::Cashtocode {
+            password_classic,
+            password_evoucher,
+            username_classic,
+            username_evoucher,
+        } = auth_type
+        {
             Ok(Self {
                 password_classic: password_classic.to_owned(),
                 password_evoucher: password_evoucher.to_owned(),

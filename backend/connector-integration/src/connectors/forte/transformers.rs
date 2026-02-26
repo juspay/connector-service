@@ -202,7 +202,12 @@ impl TryFrom<&ConnectorSpecificAuth> for ForteAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Forte { api_access_id, organization_id, location_id, api_secret_key } => {
+            ConnectorSpecificAuth::Forte {
+                api_access_id,
+                organization_id,
+                location_id,
+                api_secret_key,
+            } => {
                 let organization_id_str = organization_id.peek();
                 let location_id_str = location_id.peek();
                 Ok(Self {

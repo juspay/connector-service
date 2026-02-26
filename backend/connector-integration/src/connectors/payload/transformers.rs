@@ -15,7 +15,7 @@ use domain_types::{
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorSpecificAuth, ConnectorResponseData,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
         ErrorResponse,
     },
     router_data_v2::RouterDataV2,
@@ -66,12 +66,13 @@ impl TryFrom<(&ConnectorSpecificAuth, enums::Currency)> for PayloadAuth {
     fn try_from(value: (&ConnectorSpecificAuth, enums::Currency)) -> Result<Self, Self::Error> {
         let (auth_type, _currency) = value;
         match auth_type {
-            ConnectorSpecificAuth::Payload { api_key, processing_account_id } => {
-                Ok(Self {
-                    api_key: api_key.to_owned(),
-                    processing_account_id: processing_account_id.to_owned(),
-                })
-            }
+            ConnectorSpecificAuth::Payload {
+                api_key,
+                processing_account_id,
+            } => Ok(Self {
+                api_key: api_key.to_owned(),
+                processing_account_id: processing_account_id.to_owned(),
+            }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
@@ -81,12 +82,17 @@ impl TryFrom<&ConnectorSpecificAuth> for PayloadAuthType {
     type Error = Error;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Payload { api_key, processing_account_id } => {
+            ConnectorSpecificAuth::Payload {
+                api_key,
+                processing_account_id,
+            } => {
                 let auth = PayloadAuth {
                     api_key: api_key.to_owned(),
                     processing_account_id: processing_account_id.to_owned(),
                 };
-                Ok(Self { auths: HashMap::from([(common_enums::Currency::USD, auth)]) })
+                Ok(Self {
+                    auths: HashMap::from([(common_enums::Currency::USD, auth)]),
+                })
             }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }

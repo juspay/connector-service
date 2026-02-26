@@ -436,7 +436,11 @@ impl TryFrom<&domain_types::router_data::ConnectorSpecificAuth> for WellsfargoAu
     ) -> Result<Self, Self::Error> {
         use domain_types::router_data::ConnectorSpecificAuth;
         match auth_type {
-            ConnectorSpecificAuth::Wellsfargo { api_key, merchant_account, api_secret } => Ok(Self {
+            ConnectorSpecificAuth::Wellsfargo {
+                api_key,
+                merchant_account,
+                api_secret,
+            } => Ok(Self {
                 api_key: api_key.clone(),
                 merchant_account: merchant_account.clone(),
                 api_secret: api_secret.clone(),

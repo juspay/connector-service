@@ -92,7 +92,11 @@ impl TryFrom<&ConnectorSpecificAuth> for TrustpaymentsAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Trustpayments { username, password, site_reference } => Ok(Self {
+            ConnectorSpecificAuth::Trustpayments {
+                username,
+                password,
+                site_reference,
+            } => Ok(Self {
                 username: username.to_owned(),
                 password: password.to_owned(),
                 site_reference: site_reference.to_owned(),

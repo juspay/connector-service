@@ -34,7 +34,10 @@ impl TryFrom<&ConnectorSpecificAuth> for PaymeAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Payme { seller_payme_id, payme_client_key } => Ok(Self {
+            ConnectorSpecificAuth::Payme {
+                seller_payme_id,
+                payme_client_key,
+            } => Ok(Self {
                 seller_payme_id: seller_payme_id.to_owned(),
                 payme_client_key: payme_client_key.to_owned(),
             }),

@@ -28,7 +28,8 @@ use domain_types::{
         RawCardNumber, VoucherData, VoucherNextStepData, WalletData,
     },
     router_data::{
-        ConnectorSpecificAuth, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
+        ConnectorResponseData, ConnectorSpecificAuth, ErrorResponse,
+        ExtendedAuthorizationResponseData,
     },
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
@@ -1269,7 +1270,11 @@ impl TryFrom<&ConnectorSpecificAuth> for AdyenAuthType {
     type Error = errors::ConnectorError;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Adyen { api_key, merchant_account, review_key } => Ok(Self {
+            ConnectorSpecificAuth::Adyen {
+                api_key,
+                merchant_account,
+                review_key,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 merchant_account: merchant_account.to_owned(),
                 review_key: review_key.to_owned(),

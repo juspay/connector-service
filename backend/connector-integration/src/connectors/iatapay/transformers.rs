@@ -36,7 +36,11 @@ impl TryFrom<&ConnectorSpecificAuth> for IatapayAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Iatapay { client_id, merchant_id, client_secret } => Ok(Self {
+            ConnectorSpecificAuth::Iatapay {
+                client_id,
+                merchant_id,
+                client_secret,
+            } => Ok(Self {
                 client_id: client_id.to_owned(),
                 merchant_id: merchant_id.to_owned(),
                 client_secret: client_secret.to_owned(),

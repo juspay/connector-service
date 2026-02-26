@@ -41,7 +41,10 @@ impl TryFrom<&ConnectorSpecificAuth> for DatatransAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Datatrans { merchant_id, password } => Ok(Self {
+            ConnectorSpecificAuth::Datatrans {
+                merchant_id,
+                password,
+            } => Ok(Self {
                 merchant_id: merchant_id.to_owned(),
                 password: password.to_owned(),
             }),

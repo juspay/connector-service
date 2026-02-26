@@ -125,7 +125,10 @@ impl TryFrom<&ConnectorSpecificAuth> for RapydAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Rapyd { access_key, secret_key } => Ok(Self {
+            ConnectorSpecificAuth::Rapyd {
+                access_key,
+                secret_key,
+            } => Ok(Self {
                 access_key: access_key.to_owned(),
                 secret_key: secret_key.to_owned(),
             }),

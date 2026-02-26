@@ -60,9 +60,7 @@ fn add_payload_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load Payload credentials");
 
     let auth_key_map_json = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Payload { .. } => {
-            "{}".to_string()
-        }
+        domain_types::router_data::ConnectorSpecificAuth::Payload { .. } => "{}".to_string(),
         _ => panic!("Expected Payload auth type for Payload"),
     };
 

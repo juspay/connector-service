@@ -355,7 +355,11 @@ pub struct CardVerificationDetails<T: PaymentMethodDataTypes + Serialize + Debug
 impl TryFrom<&ConnectorSpecificAuth> for ZiftAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Zift { user_name, password, account_id } = auth_type
+        if let ConnectorSpecificAuth::Zift {
+            user_name,
+            password,
+            account_id,
+        } = auth_type
         {
             Ok(Self {
                 user_name: user_name.to_owned(),

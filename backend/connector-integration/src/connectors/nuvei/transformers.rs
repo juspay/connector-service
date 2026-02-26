@@ -31,7 +31,11 @@ impl TryFrom<&ConnectorSpecificAuth> for NuveiAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nuvei { merchant_id, merchant_site_id, merchant_secret } => Ok(Self {
+            ConnectorSpecificAuth::Nuvei {
+                merchant_id,
+                merchant_site_id,
+                merchant_secret,
+            } => Ok(Self {
                 merchant_id: merchant_id.clone(),
                 merchant_site_id: merchant_site_id.clone(),
                 merchant_secret: merchant_secret.clone(),

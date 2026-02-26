@@ -32,7 +32,10 @@ impl TryFrom<&ConnectorSpecificAuth> for JpmorganAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Jpmorgan { client_id, client_secret } => Ok(Self {
+            ConnectorSpecificAuth::Jpmorgan {
+                client_id,
+                client_secret,
+            } => Ok(Self {
                 client_id: client_id.clone(),
                 client_secret: client_secret.clone(),
             }),

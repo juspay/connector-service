@@ -35,7 +35,10 @@ impl TryFrom<&ConnectorSpecificAuth> for NmiAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nmi { api_key, public_key } => Ok(Self {
+            ConnectorSpecificAuth::Nmi {
+                api_key,
+                public_key,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 public_key: public_key.to_owned(),
             }),

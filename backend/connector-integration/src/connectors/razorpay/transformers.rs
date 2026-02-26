@@ -230,15 +230,16 @@ impl TryFrom<&ConnectorSpecificAuth> for RazorpayAuthType {
     type Error = errors::ConnectorError;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Razorpay { api_key, api_secret } => {
-                match api_secret {
-                    None => Ok(Self::AuthToken(api_key.to_owned())),
-                    Some(secret) => Ok(Self::ApiKeySecret {
-                        api_key: api_key.to_owned(),
-                        api_secret: secret.to_owned(),
-                    }),
-                }
-            }
+            ConnectorSpecificAuth::Razorpay {
+                api_key,
+                api_secret,
+            } => match api_secret {
+                None => Ok(Self::AuthToken(api_key.to_owned())),
+                Some(secret) => Ok(Self::ApiKeySecret {
+                    api_key: api_key.to_owned(),
+                    api_secret: secret.to_owned(),
+                }),
+            },
             _ => Err(errors::ConnectorError::FailedToObtainAuthType),
         }
     }

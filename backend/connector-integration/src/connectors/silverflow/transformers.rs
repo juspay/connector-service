@@ -29,7 +29,11 @@ impl TryFrom<&ConnectorSpecificAuth> for SilverflowAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Silverflow { api_key, api_secret, merchant_acceptor_key } => Ok(Self {
+            ConnectorSpecificAuth::Silverflow {
+                api_key,
+                api_secret,
+                merchant_acceptor_key,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
                 merchant_acceptor_key: merchant_acceptor_key.to_owned(),

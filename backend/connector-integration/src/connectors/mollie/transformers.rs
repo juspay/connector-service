@@ -32,7 +32,10 @@ impl TryFrom<&ConnectorSpecificAuth> for MollieAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Mollie { api_key, profile_token } => Ok(Self {
+            ConnectorSpecificAuth::Mollie {
+                api_key,
+                profile_token,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 profile_token: profile_token.to_owned(),
             }),

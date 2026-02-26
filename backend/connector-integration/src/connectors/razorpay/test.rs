@@ -113,9 +113,9 @@ mod tests {
                     recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                    api_key: "dummy_api_key".to_string().into(),
-                                    api_secret: Some("dummy_key1".to_string().into()),
-                                },
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
+                },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
                     authentication_data: None,
@@ -302,9 +302,9 @@ mod tests {
                     minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                    api_key: "dummy_api_key".to_string().into(),
-                                    api_secret: Some("dummy_key1".to_string().into()),
-                                },
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
+                },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
                     authentication_data: None,
@@ -442,9 +442,9 @@ mod tests {
                     minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                    api_key: "dummy_api_key".to_string().into(),
-                                    api_secret: Some("dummy_key1".to_string().into()),
-                                },
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
+                },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
                     authentication_data: None,
@@ -604,9 +604,9 @@ mod tests {
                     minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                    api_key: "dummy_api_key".to_string().into(),
-                                    api_secret: Some("dummy_key1".to_string().into()),
-                                },
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
+                },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
                     authentication_data: None,
@@ -937,9 +937,9 @@ mod tests {
                 minor_amount_capturable: None,
             },
             connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                api_key: "dummy_api_key".to_string().into(),
-                                api_secret: Some("dummy_key1".to_string().into()),
-                            },
+                api_key: "dummy_api_key".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
+            },
             request: PaymentsAuthorizeData {
                 payment_channel: None,
                 authentication_data: None,
@@ -1133,9 +1133,9 @@ mod tests {
                 order_details: None,
             },
             connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                api_key: "dummy_api_key".to_string().into(),
-                                api_secret: Some("dummy_key1".to_string().into()),
-                            },
+                api_key: "dummy_api_key".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
+            },
             request: PaymentsAuthorizeData {
                 payment_channel: None,
                 authentication_data: None,
@@ -1331,9 +1331,9 @@ mod tests {
                     order_details: None,
                 },
                 connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                    api_key: "dummy_api_key".to_string().into(),
-                                    api_secret: Some("dummy_key1".to_string().into()),
-                                },
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
+                },
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(1000),
                     currency: Currency::USD,
@@ -1447,9 +1447,9 @@ mod tests {
                     order_details: None,
                 },
                 connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                    api_key: "dummy_api_key".to_string().into(),
-                                    api_secret: Some("dummy_key1".to_string().into()),
-                                },
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
+                },
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(0),
                     currency: Currency::default(),
@@ -1566,9 +1566,9 @@ mod tests {
                     order_details: None,
                 },
                 connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                    api_key: "invalid_key".to_string().into(),
-                                    api_secret: Some("invalid_key1".to_string().into()),
-                                },
+                    api_key: "invalid_key".to_string().into(),
+                    api_secret: Some("invalid_key1".to_string().into()),
+                },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
                     authentication_data: None,
@@ -1727,9 +1727,9 @@ mod tests {
                 minor_amount_capturable: None,
             },
             connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                api_key: "dummy_api_key".to_string().into(),
-                                api_secret: Some("dummy_key1".to_string().into()),
-                            },
+                api_key: "dummy_api_key".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
+            },
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
@@ -1855,9 +1855,9 @@ mod tests {
                 order_details: None,
             },
             connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                api_key: "dummy_api_key".to_string().into(),
-                                api_secret: Some("dummy_key1".to_string().into()),
-                            },
+                api_key: "dummy_api_key".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
+            },
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
@@ -1972,9 +1972,9 @@ mod tests {
                 order_details: None,
             },
             connector_auth_type: ConnectorSpecificAuth::Razorpay {
-                                api_key: "dummy_api_key".to_string().into(),
-                                api_secret: Some("dummy_key1".to_string().into()),
-                            },
+                api_key: "dummy_api_key".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
+            },
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,

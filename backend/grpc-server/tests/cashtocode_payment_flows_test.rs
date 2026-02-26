@@ -41,9 +41,7 @@ fn add_cashtocode_metadata<T>(request: &mut Request<T>) {
         .expect("Failed to load cashtocode credentials");
 
     let auth_key_map_json = match auth {
-        domain_types::router_data::ConnectorSpecificAuth::Cashtocode { .. } => {
-            "{}".to_string()
-        }
+        domain_types::router_data::ConnectorSpecificAuth::Cashtocode { .. } => "{}".to_string(),
         _ => panic!("Expected Cashtocode auth type for cashtocode"),
     };
 

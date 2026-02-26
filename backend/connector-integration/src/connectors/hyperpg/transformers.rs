@@ -33,7 +33,11 @@ impl TryFrom<&ConnectorSpecificAuth> for HyperpgAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Hyperpg { username, password, merchant_id } => Ok(Self {
+            ConnectorSpecificAuth::Hyperpg {
+                username,
+                password,
+                merchant_id,
+            } => Ok(Self {
                 username: username.to_owned(),
                 password: password.to_owned(),
                 merchant_id: merchant_id.to_owned(),

@@ -128,7 +128,11 @@ pub struct CryptopayAuthType {
 impl TryFrom<&ConnectorSpecificAuth> for CryptopayAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Cryptopay { api_key, api_secret } = auth_type {
+        if let ConnectorSpecificAuth::Cryptopay {
+            api_key,
+            api_secret,
+        } = auth_type
+        {
             Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),

@@ -52,7 +52,11 @@ pub struct TrustpayAuthType {
 impl TryFrom<&ConnectorSpecificAuth> for TrustpayAuthType {
     type Error = Error;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Trustpay { api_key, project_id, secret_key } = auth_type
+        if let ConnectorSpecificAuth::Trustpay {
+            api_key,
+            project_id,
+            secret_key,
+        } = auth_type
         {
             Ok(Self {
                 api_key: api_key.to_owned(),

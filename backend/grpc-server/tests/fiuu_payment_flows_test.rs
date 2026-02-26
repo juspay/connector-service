@@ -63,7 +63,11 @@ fn add_fiuu_metadata<T>(request: &mut Request<T>) {
             merchant_id,
             verify_key,
             secret_key,
-        } => (verify_key.expose(), merchant_id.expose(), secret_key.expose()),
+        } => (
+            verify_key.expose(),
+            merchant_id.expose(),
+            secret_key.expose(),
+        ),
         _ => panic!("Expected Fiuu auth type"),
     };
 

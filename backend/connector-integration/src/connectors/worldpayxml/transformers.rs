@@ -38,7 +38,11 @@ impl TryFrom<&ConnectorSpecificAuth> for WorldpayxmlAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Worldpayxml { api_username, api_password, merchant_code } => Ok(Self {
+            ConnectorSpecificAuth::Worldpayxml {
+                api_username,
+                api_password,
+                merchant_code,
+            } => Ok(Self {
                 api_username: api_username.to_owned(),
                 api_password: api_password.to_owned(),
                 merchant_code: merchant_code.to_owned(),

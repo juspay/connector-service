@@ -79,7 +79,10 @@ impl TryFrom<&ConnectorSpecificAuth> for AuthipayAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Authipay { api_key, api_secret } => Ok(Self {
+            ConnectorSpecificAuth::Authipay {
+                api_key,
+                api_secret,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),

@@ -392,7 +392,12 @@ impl TryFrom<&ConnectorSpecificAuth> for VoltAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Volt { username, password, client_id, client_secret } => Ok(Self {
+            ConnectorSpecificAuth::Volt {
+                username,
+                password,
+                client_id,
+                client_secret,
+            } => Ok(Self {
                 username: username.to_owned(),
                 password: password.to_owned(),
                 client_id: client_id.to_owned(),

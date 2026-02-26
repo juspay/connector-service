@@ -677,7 +677,11 @@ impl TryFrom<&ConnectorSpecificAuth> for PhonepeAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Phonepe { merchant_id, salt_key, salt_index } => Ok(Self {
+            ConnectorSpecificAuth::Phonepe {
+                merchant_id,
+                salt_key,
+                salt_index,
+            } => Ok(Self {
                 merchant_id: merchant_id.clone(),
                 salt_key: salt_key.clone(),
                 key_index: salt_index.peek().clone(),

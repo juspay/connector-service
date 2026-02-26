@@ -545,7 +545,11 @@ impl TryFrom<&ConnectorSpecificAuth> for NovalnetAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Novalnet { product_activation_key, payment_access_key, tariff_id } => Ok(Self {
+            ConnectorSpecificAuth::Novalnet {
+                product_activation_key,
+                payment_access_key,
+                tariff_id,
+            } => Ok(Self {
                 product_activation_key: product_activation_key.to_owned(),
                 payment_access_key: payment_access_key.to_owned(),
                 tariff_id: tariff_id.to_owned(),

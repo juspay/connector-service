@@ -1454,23 +1454,25 @@ impl TryFrom<&ConnectorSpecificAuth> for PaypalAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Paypal { client_id, client_secret, payer_id } => {
-                match payer_id {
-                    None => Ok(Self::AuthWithDetails(
-                        PaypalConnectorCredentials::StandardIntegration(StandardFlowCredentials {
-                            client_id: client_id.to_owned(),
-                            client_secret: client_secret.to_owned(),
-                        }),
-                    )),
-                    Some(payer_id) => Ok(Self::AuthWithDetails(
-                        PaypalConnectorCredentials::PartnerIntegration(PartnerFlowCredentials {
-                            client_id: client_id.to_owned(),
-                            client_secret: client_secret.to_owned(),
-                            payer_id: payer_id.to_owned(),
-                        }),
-                    )),
-                }
-            }
+            ConnectorSpecificAuth::Paypal {
+                client_id,
+                client_secret,
+                payer_id,
+            } => match payer_id {
+                None => Ok(Self::AuthWithDetails(
+                    PaypalConnectorCredentials::StandardIntegration(StandardFlowCredentials {
+                        client_id: client_id.to_owned(),
+                        client_secret: client_secret.to_owned(),
+                    }),
+                )),
+                Some(payer_id) => Ok(Self::AuthWithDetails(
+                    PaypalConnectorCredentials::PartnerIntegration(PartnerFlowCredentials {
+                        client_id: client_id.to_owned(),
+                        client_secret: client_secret.to_owned(),
+                        payer_id: payer_id.to_owned(),
+                    }),
+                )),
+            },
             _ => Err(ConnectorError::FailedToObtainAuthType)?,
         }
     }
