@@ -366,8 +366,7 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response =
-            get_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+        let proto_response = get_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }
@@ -446,8 +445,7 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response = create_access_token_res_handler(request, response, None)
-            .map_err(FfiPaymentError::from)?;
+        let proto_response = create_access_token_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }
@@ -520,8 +518,7 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response =
-            refund_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+        let proto_response = refund_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }
