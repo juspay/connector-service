@@ -26,11 +26,11 @@ export interface HttpResponse {
  * Configuration options for the network transport layer.
  */
 export interface HttpOptions {
-  totalTimeoutMs?: number; 
-  connectTimeoutMs?: number; 
-  responseTimeoutMs?: number; 
+  total_timeout_ms?: number; 
+  connect_timeout_ms?: number; 
+  response_timeout_ms?: number; 
   
-  keepAliveTimeout?: number;
+  keep_alive_timeout?: number;
   proxy?: {
     http_url?: string;
     https_url?: string;
@@ -60,10 +60,10 @@ const TRANSPORT_DIRECT = "TRANSPORT_DIRECT";
 const MAX_CACHE_SIZE = 100; // Prevent OOM by capping unique connection pools
 
 const DEFAULT_CONFIG = {
-  totalTimeoutMs: 45_000,
-  connectTimeoutMs: 10_000,
-  responseTimeoutMs: 30_000,
-  keepAliveTimeout: 60_000,
+  total_timeout_ms: 45_000,
+  connect_timeout_ms: 10_000,
+  response_timeout_ms: 30_000,
+  keep_alive_timeout: 60_000,
 };
 
 /**
@@ -72,10 +72,10 @@ const DEFAULT_CONFIG = {
 function normalizeOptions(options: HttpOptions): HttpOptions {
   return {
     ...options,
-    totalTimeoutMs: options.totalTimeoutMs ?? DEFAULT_CONFIG.totalTimeoutMs,
-    connectTimeoutMs: options.connectTimeoutMs ?? DEFAULT_CONFIG.connectTimeoutMs,
-    responseTimeoutMs: options.responseTimeoutMs ?? DEFAULT_CONFIG.responseTimeoutMs,
-    keepAliveTimeout: options.keepAliveTimeout ?? DEFAULT_CONFIG.keepAliveTimeout,
+    total_timeout_ms: options.total_timeout_ms ?? DEFAULT_CONFIG.total_timeout_ms,
+    connect_timeout_ms: options.connect_timeout_ms ?? DEFAULT_CONFIG.connect_timeout_ms,
+    response_timeout_ms: options.response_timeout_ms ?? DEFAULT_CONFIG.response_timeout_ms,
+    keep_alive_timeout: options.keep_alive_timeout ?? DEFAULT_CONFIG.keep_alive_timeout,
   };
 }
 
@@ -97,8 +97,8 @@ function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): string | nu
 function getConnectionKey(proxyUrl: string | null, config: HttpOptions): string {
   return JSON.stringify({
     uri: proxyUrl || TRANSPORT_DIRECT,
-    connectTimeoutMs: config.connectTimeoutMs,
-    responseTimeoutMs: config.responseTimeoutMs,
+    connect_timeout_ms: config.connect_timeout_ms,
+    response_timeout_ms: config.response_timeout_ms,
     caLength: config.ca_cert?.length,
   });
 }
@@ -107,16 +107,16 @@ function getConnectionKey(proxyUrl: string | null, config: HttpOptions): string 
  * Creates a high-performance dispatcher with specialized fintech timeouts.
  */
 function createDispatcher(proxyUrl: string | null, config: HttpOptions): Dispatcher {
-  const responseTimeout = config.responseTimeoutMs;
+  const responseTimeout = config.response_timeout_ms;
   
   const dispatcherOptions: any = {
     connect: {
-      timeout: config.connectTimeoutMs,
+      timeout: config.connect_timeout_ms,
       ca: config.ca_cert,
     },
     headersTimeout: responseTimeout,
     bodyTimeout: responseTimeout,
-    keepAliveTimeout: config.keepAliveTimeout,
+    keepAliveTimeout: config.keep_alive_timeout,
   };
 
   return proxyUrl 
@@ -152,7 +152,7 @@ export async function execute(
 
   // 2. Lifecycle Management
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), config.totalTimeoutMs);
+  const timeoutId = setTimeout(() => controller.abort(), config.total_timeout_ms);
 
   const startTime = Date.now();
 
@@ -176,7 +176,7 @@ export async function execute(
   } catch (error: any) {
     if (error.name === 'AbortError') {
       throw new ConnectorError(
-        `Total Request Timeout: ${method} ${url} exceeded ${config.totalTimeoutMs}ms`,
+        `Total Request Timeout: ${method} ${url} exceeded ${config.total_timeout_ms}ms`,
         504,
         'TOTAL_TIMEOUT'
       );
@@ -186,14 +186,14 @@ export async function execute(
     if (cause) {
       if (cause.code === 'UND_ERR_CONNECT_TIMEOUT') {
         throw new ConnectorError(
-          `Connection Timeout: Failed to connect to ${url} within ${config.connectTimeoutMs}ms`, 
+          `Connection Timeout: Failed to connect to ${url} within ${config.connect_timeout_ms}ms`, 
           504, 
           'CONNECT_TIMEOUT'
         );
       }
       if (cause.code === 'UND_ERR_BODY_TIMEOUT' || cause.code === 'UND_ERR_HEADERS_TIMEOUT') {
         throw new ConnectorError(
-          `Response Timeout: Gateway ${url} accepted connection but failed to respond within ${config.responseTimeoutMs}ms`, 
+          `Response Timeout: Gateway ${url} accepted connection but failed to respond within ${config.response_timeout_ms}ms`, 
           504, 
           'RESPONSE_TIMEOUT'
         );
