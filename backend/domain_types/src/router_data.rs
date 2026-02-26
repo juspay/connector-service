@@ -462,14 +462,10 @@ pub enum ConnectorSpecificAuth {
         client_secret: Secret<String>,
     },
     Cashtocode {
-        password_classic: Option<Secret<String>>,
-        password_evoucher: Option<Secret<String>>,
-        username_classic: Option<Secret<String>>,
-        username_evoucher: Option<Secret<String>>,
+        auth_key_map: HashMap<common_enums::enums::Currency, common_utils::pii::SecretSerdeValue>,
     },
     Payload {
-        api_key: Secret<String>,
-        processing_account_id: Option<Secret<String>>,
+        auth_key_map: HashMap<common_enums::enums::Currency, common_utils::pii::SecretSerdeValue>,
     },
 
     // --- Proto-only connectors (not in ConnectorEnum, reachable via proto auth path) ---
@@ -534,10 +530,9 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
                 private_key: braintree.private_key.ok_or_else(err)?,
             }),
             AuthType::Cashtocode(cashtocode) => Ok(Self::Cashtocode {
-                password_classic: cashtocode.password_classic,
-                password_evoucher: cashtocode.password_evoucher,
-                username_classic: cashtocode.username_classic,
-                username_evoucher: cashtocode.username_evoucher,
+                auth_key_map: serde_json::to_value(cashtocode.auth_key_map)
+                    .and_then(serde_json::from_value)
+                    .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?,
             }),
             AuthType::Cryptopay(cryptopay) => Ok(Self::Cryptopay {
                 api_key: cryptopay.api_key.ok_or_else(err)?,
@@ -727,8 +722,9 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
                 api_key: calida.api_key.ok_or_else(err)?,
             }),
             AuthType::Payload(payload) => Ok(Self::Payload {
-                api_key: payload.api_key.ok_or_else(err)?,
-                processing_account_id: payload.processing_account_id,
+                auth_key_map: serde_json::to_value(payload.auth_key_map)
+                    .and_then(serde_json::from_value)
+                    .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?,
             }),
             AuthType::Authipay(authipay) => Ok(Self::Authipay {
                 api_key: authipay.api_key.ok_or_else(err)?,
@@ -1574,21 +1570,17 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
             },
 
             // --- CurrencyAuthKey connectors ---
-            ConnectorEnum::Cashtocode => Ok(Self::Cashtocode {
-                password_classic: None,
-                password_evoucher: None,
-                username_classic: None,
-                username_evoucher: None,
-            }),
+            ConnectorEnum::Cashtocode => match auth {
+                ConnectorAuthType::CurrencyAuthKey { auth_key_map } => Ok(Self::Cashtocode {
+                    auth_key_map: auth_key_map.clone(),
+                }),
+                _ => Err(err().into()),
+            },
             ConnectorEnum::Payload => match auth {
-                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Payload {
-                    api_key: api_key.clone(),
-                    processing_account_id: None,
+                ConnectorAuthType::CurrencyAuthKey { auth_key_map } => Ok(Self::Payload {
+                    auth_key_map: auth_key_map.clone(),
                 }),
-                _ => Ok(Self::Payload {
-                    api_key: Secret::new(String::new()),
-                    processing_account_id: None,
-                }),
+                _ => Err(err().into()),
             },
             ConnectorEnum::Revolv3 => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Revolv3 {

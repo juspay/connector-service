@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use common_utils::{errors::CustomResult, id_type, request::Method, types::FloatMajorUnit, Email};
+use common_utils::{
+    errors::CustomResult, ext_traits::ValueExt, id_type, request::Method, types::FloatMajorUnit,
+    Email,
+};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
@@ -37,18 +40,23 @@ fn get_mid(
     connector_auth_type: &ConnectorSpecificAuth,
     payment_method_type: Option<common_enums::PaymentMethodType>,
     currency: common_enums::Currency,
-) -> Result<Secret<String>, ConnectorError> {
-    match CashtocodeAuth::try_from((connector_auth_type, &currency)) {
-        Ok(cashtocode_auth) => match payment_method_type {
-            Some(common_enums::PaymentMethodType::ClassicReward) => Ok(cashtocode_auth
-                .merchant_id_classic
-                .ok_or(ConnectorError::FailedToObtainAuthType)?),
-            Some(common_enums::PaymentMethodType::Evoucher) => Ok(cashtocode_auth
-                .merchant_id_evoucher
-                .ok_or(ConnectorError::FailedToObtainAuthType)?),
-            _ => Err(ConnectorError::FailedToObtainAuthType),
-        },
-        Err(_) => Err(ConnectorError::FailedToObtainAuthType)?,
+) -> Result<Secret<String>, error_stack::Report<ConnectorError>> {
+    let cashtocode_auth = CashtocodeAuth::try_from((connector_auth_type, &currency))
+        .attach_printable_lazy(|| {
+            format!("failed to fetch cashtocode credentials for currency '{currency}'")
+        })?;
+
+    match payment_method_type {
+        Some(common_enums::PaymentMethodType::ClassicReward) => cashtocode_auth
+            .merchant_id_classic
+            .ok_or(ConnectorError::FailedToObtainAuthType)
+            .attach_printable("missing merchant_id_classic in cashtocode credentials"),
+        Some(common_enums::PaymentMethodType::Evoucher) => cashtocode_auth
+            .merchant_id_evoucher
+            .ok_or(ConnectorError::FailedToObtainAuthType)
+            .attach_printable("missing merchant_id_evoucher in cashtocode credentials"),
+        _ => Err(ConnectorError::FailedToObtainAuthType)
+            .attach_printable("unsupported payment method type for cashtocode"),
     }
 }
 
@@ -134,18 +142,18 @@ impl TryFrom<&ConnectorSpecificAuth> for CashtocodeAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Cashtocode {
-                password_classic: _,
-                password_evoucher: _,
-                username_classic: _,
-                username_evoucher: _,
-            } => {
-                // For now, return empty auths since the old CurrencyAuthKey mapping was complex.
-                // This connector needs proper auth handling implementation.
-                Ok(Self {
-                    auths: HashMap::new(),
-                })
-            }
+            ConnectorSpecificAuth::Cashtocode { auth_key_map } => Ok(Self {
+                auths: auth_key_map
+                    .iter()
+                    .map(|(currency, auth_value)| {
+                        let auth = auth_value
+                            .to_owned()
+                            .parse_value::<CashtocodeAuth>("CashtocodeAuth")
+                            .change_context(ConnectorError::FailedToObtainAuthType)?;
+                        Ok((*currency, auth))
+                    })
+                    .collect::<Result<_, Self::Error>>()?,
+            }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
@@ -157,25 +165,24 @@ impl TryFrom<(&ConnectorSpecificAuth, &common_enums::Currency)> for CashtocodeAu
     fn try_from(
         value: (&ConnectorSpecificAuth, &common_enums::Currency),
     ) -> Result<Self, Self::Error> {
-        let (auth_type, _currency) = value;
+        let (auth_type, currency) = value;
 
-        if let ConnectorSpecificAuth::Cashtocode {
-            password_classic,
-            password_evoucher,
-            username_classic,
-            username_evoucher,
-        } = auth_type
-        {
-            Ok(Self {
-                password_classic: password_classic.to_owned(),
-                password_evoucher: password_evoucher.to_owned(),
-                username_classic: username_classic.to_owned(),
-                username_evoucher: username_evoucher.to_owned(),
-                merchant_id_classic: None,
-                merchant_id_evoucher: None,
-            })
-        } else {
-            Err(ConnectorError::FailedToObtainAuthType.into())
+        match auth_type {
+            ConnectorSpecificAuth::Cashtocode { auth_key_map } => {
+                let identity_auth_key =
+                    auth_key_map
+                        .get(currency)
+                        .ok_or(ConnectorError::CurrencyNotSupported {
+                            message: currency.to_string(),
+                            connector: "CashToCode",
+                        })?;
+
+                identity_auth_key
+                    .to_owned()
+                    .parse_value::<Self>("CashtocodeAuth")
+                    .change_context(ConnectorError::FailedToObtainAuthType)
+            }
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }

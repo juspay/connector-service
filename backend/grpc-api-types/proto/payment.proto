@@ -3797,12 +3797,18 @@ message PaytmAuth {
   optional SecretString client_id = 4;
 }
 
-// Complex auth types with optional fields
-message CashtocodeAuth {
+message CashtocodeCurrencyAuthData {
   optional SecretString password_classic = 1;
   optional SecretString password_evoucher = 2;
   optional SecretString username_classic = 3;
   optional SecretString username_evoucher = 4;
+  optional SecretString merchant_id_classic = 5;
+  optional SecretString merchant_id_evoucher = 6;
+}
+
+// Complex auth types with optional fields
+message CashtocodeAuth {
+  map<string, CashtocodeCurrencyAuthData> auth_key_map = 1;
 }
 
 message MollieAuth {
@@ -3820,9 +3826,13 @@ message PaymeAuth {
   optional SecretString payme_client_key = 2;
 }
 
-message PayloadAuth {
+message PayloadCurrencyAuthData {
   SecretString api_key = 1;
   optional SecretString processing_account_id = 2;
+}
+
+message PayloadAuth {
+  map<string, PayloadCurrencyAuthData> auth_key_map = 1;
 }
 
 message EbanxAuth {
