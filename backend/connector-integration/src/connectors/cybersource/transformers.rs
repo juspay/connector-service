@@ -31,7 +31,7 @@ use domain_types::{
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ErrorResponse,
-        GooglePayDecryptedData, PazeDecryptedData,
+        PazeDecryptedData,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
