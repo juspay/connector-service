@@ -92,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Razorpay reference id 
 
-- Initliazing event publisher only if config.event is enabled 
+- Initializing event publisher only if config.event is enabled 
 
 - Improve flow mapping and make audit events fail-safe 
 
