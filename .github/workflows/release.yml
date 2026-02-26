@@ -161,9 +161,9 @@ jobs:
       - name: Build binary (${{ matrix.target }})
         run: |
           if [ "${{ matrix.os }}" = "linux" ]; then
-            make -f sdk/Makefile build-linux-${{ matrix.arch }}
+            make -C sdk build-linux-${{ matrix.arch }}
           else
-            make -f sdk/Makefile build-macos-${{ matrix.arch }}
+            make -C sdk build-macos-${{ matrix.arch }}
           fi
 
       - name: Upload binary artifact
@@ -175,7 +175,7 @@ jobs:
 
       - name: Generate UniFFI Kotlin bindings
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: make -f sdk/java/Makefile generate-bindings
+        run: make -C sdk/java generate-bindings-ci LIBRARY=$(pwd)/target/${{ matrix.target }}/release/libconnector_service_ffi.so
       - name: Upload UniFFI Kotlin bindings
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         uses: actions/upload-artifact@v4
@@ -246,7 +246,7 @@ jobs:
           name: uniffi-kotlin-bindings
           path: sdk/java/src/main/kotlin/generated/
       - name: Package Java SDK
-        run: make -f sdk/java/Makefile dist
+        run: make -C sdk/java dist
       - name: Upload Java SDK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -284,7 +284,7 @@ jobs:
             fi
           done
       - name: Package Python SDK
-        run: make -f sdk/python/Makefile dist
+        run: make -C sdk/python dist
       - name: Upload Python SDK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -323,7 +323,7 @@ jobs:
             fi
           done
       - name: Package JavaScript SDK
-        run: make -f sdk/javascript/Makefile dist
+        run: make -C sdk/javascript dist
       - name: Upload JavaScript SDK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -348,7 +348,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Package Rust SDK
-        run: make -f sdk/rust/Makefile dist
+        run: make -C sdk/rust dist
       - name: Upload Rust SDK artifact
         uses: actions/upload-artifact@v4
         with:
