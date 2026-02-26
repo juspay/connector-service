@@ -1736,8 +1736,6 @@ impl RefundFlowData {
 pub struct RedirectDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: Option<AttemptStatus>,
-    pub response_minor_amount: Option<MinorUnit>,
-    pub response_currency: Option<Currency>,
     pub response_amount: Option<Money>,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,

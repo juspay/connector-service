@@ -152,9 +152,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_code: None,
             error_message: None,
             error_reason: None,
-            response_currency: None,
             response_amount: None,
-            response_minor_amount: None,
             raw_connector_response: None,
         })
     }
