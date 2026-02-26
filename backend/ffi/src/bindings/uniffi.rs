@@ -145,7 +145,7 @@ mod uniffi_bindings_inner {
         };
 
         let proto_response =
-            authorize_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+            authorize_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }
@@ -219,7 +219,7 @@ mod uniffi_bindings_inner {
         };
 
         let proto_response =
-            capture_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+            capture_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }
@@ -293,7 +293,7 @@ mod uniffi_bindings_inner {
         };
 
         let proto_response =
-            void_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+            void_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }

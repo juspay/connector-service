@@ -64,7 +64,7 @@ pub enum UniffiError {
 
 impl From<FfiError> for FfiPaymentError {
     fn from(e: FfiError) -> Self {
-        FfiPaymentError::new(
+        Self::new(
             grpc_api_types::payments::PaymentStatus::Pending,
             Some(e.to_string()),
             None,
@@ -84,7 +84,7 @@ impl From<FfiError> for UniffiError {
 
 impl From<FfiPaymentError> for UniffiError {
     fn from(e: FfiPaymentError) -> Self {
-        UniffiError::ConnectorError {
+        Self::ConnectorError {
             status: e.status.into(),
             error_message: e.error_message,
             error_code: e.error_code,

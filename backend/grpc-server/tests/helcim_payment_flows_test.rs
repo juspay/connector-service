@@ -266,7 +266,7 @@ fn create_payment_authorize_request_with_amount(
 // Helper function to create a payment sync request
 fn create_payment_sync_request(
     transaction_id: &str,
-    request_ref_id: &str,
+    _request_ref_id: &str,
     amount: i64,
 ) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {

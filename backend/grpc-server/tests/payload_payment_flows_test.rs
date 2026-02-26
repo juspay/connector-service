@@ -302,7 +302,7 @@ fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
     create_register_request_with_prefix("payload_mandate")
 }
 
-fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterAutoDebitRequest {
+fn create_register_request_with_prefix(_prefix: &str) -> PaymentServiceRegisterAutoDebitRequest {
     let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
