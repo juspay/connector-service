@@ -52,13 +52,21 @@ generate-bindings: build-lib
 	@echo "UniFFI Kotlin bindings generated in $(GENERATED_KOTLIN)/"
 
 # CI variant: generate Kotlin bindings from a pre-built library (no rebuild step).
-# Usage: make generate-bindings-ci LIBRARY=target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so
+# LIBRARY: path to the pre-built shared library (required)
+# TARGET_TRIPLE: Rust target triple to pass to cargo run (optional).
+#   Set this to the same triple used to build the library so cargo reuses the
+#   already-compiled artifacts in target/<triple>/ instead of doing a cold rebuild
+#   into target/release/.
+#   Example: make generate-bindings-ci \
+#              LIBRARY=$(pwd)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so \
+#              TARGET_TRIPLE=x86_64-unknown-linux-gnu
 generate-bindings-ci:
 	@[ -n "$(LIBRARY)" ] || (echo "Error: LIBRARY must be set (e.g. LIBRARY=target/.../libconnector_service_ffi.so)" && exit 1)
 	@echo "Generating UniFFI Kotlin bindings from pre-built library $(LIBRARY)..."
 	@mkdir -p $(GENERATED_KOTLIN) $(NATIVE_DIR)
 	@cd $(FFI_CRATE) && cargo run --no-default-features --features uniffi-cli \
-		--bin uniffi-bindgen -- \
+		--bin uniffi-bindgen --release \
+		$(if $(TARGET_TRIPLE),--target $(TARGET_TRIPLE),) -- \
 		generate \
 		--library $(LIBRARY) \
 		--language kotlin \
