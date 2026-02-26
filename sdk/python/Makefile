@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean package package-native dist
+.PHONY: build-lib generate-bindings generate-proto install-deps setup clean pack pack-archive test-pack dist
 
 # Auto-detect SDK root directory (works when run from sdk/python/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -8,7 +8,7 @@ REPO_ROOT := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
 # Paths relative to SDK root
 FFI_CRATE=$(REPO_ROOT)/backend/ffi
 PROTO_DIR=$(REPO_ROOT)/backend/grpc-api-types/proto
-GENERATED_OUT=$(SDK_ROOT)/generated
+GENERATED_OUT=$(SDK_ROOT)/src/payments/generated
 ARTIFACTS_DIR=$(REPO_ROOT)/artifacts
 PACKAGE_DIR=$(ARTIFACTS_DIR)/sdk-python
 
@@ -40,6 +40,13 @@ generate-bindings: build-lib
 	@ln -sf $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) $(GENERATED_OUT)/
 	@echo "UniFFI bindings generated in $(GENERATED_OUT)/"
 
+# Install Python dependencies
+install-deps:
+	@if [ -z "$${IN_NIX_SHELL:-}" ] && [ -f $(SDK_ROOT)/requirements.txt ]; then \
+		echo "Installing Python dependencies (non-nix environment)..."; \
+		pip3 install -r $(SDK_ROOT)/requirements.txt --quiet 2>/dev/null || pip3 install -r $(SDK_ROOT)/requirements.txt --user --quiet; \
+	fi
+
 # Generate Python protobuf stubs
 generate-proto:
 	@echo "Generating Python protobuf stubs..."
@@ -48,53 +55,50 @@ generate-proto:
 		-I $(PROTO_DIR) \
 		--python_out=$(GENERATED_OUT) \
 		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto
+	@# TODO: protoc --python_out generates bare imports (e.g. "import payment_methods_pb2")
+	@# which break under a package layout. This sed rewrites them to relative imports.
+	@# Remove this workaround if protoc adds a --python_relative_imports flag or if we
+	@# switch to a protoc plugin that generates package-aware imports.
+	@cd $(GENERATED_OUT) && for f in *_pb2.py; do \
+		sed -i.bak 's/^import \(.*_pb2\) as/from . import \1 as/' "$$f" && rm -f "$$f.bak"; \
+	done
 	@touch $(GENERATED_OUT)/__init__.py
 	@echo "Proto stubs generated."
 
 # Full setup: build lib, generate both bindings and proto stubs
-setup: generate-proto generate-bindings
-	@if [ -z "$${IN_NIX_SHELL:-}" ] && [ -f $(SDK_ROOT)/requirements.txt ]; then \
-		echo "Installing Python dependencies (non-nix environment)..."; \
-		pip3 install -r $(SDK_ROOT)/requirements.txt --quiet 2>/dev/null || pip3 install -r $(SDK_ROOT)/requirements.txt --user --quiet; \
-	fi
-	@echo "Setup complete. Run 'make example-run' to execute."
+setup: install-deps generate-proto generate-bindings
+	@echo "Setup complete. Run 'make test-pack' to package it and test the package."
 
-# Run the example
-example-run: setup
-	@python3 examples/example.py
+# Archive step only — assumes generated/ already has binaries and proto stubs
+pack-archive:
+	@mkdir -p $(PACKAGE_DIR)
+	@cd $(SDK_ROOT) && python3 -m pip wheel . --no-deps --wheel-dir $(PACKAGE_DIR)/
+	@echo "Wheel built in $(PACKAGE_DIR)/"
+
+# Local dev: build everything from scratch, then archive
+pack: setup pack-archive
+
+# Test the packed wheel in isolation
+test-pack: pack
+	@echo "Testing packed wheel..."
+	@rm -rf /tmp/test-hyperswitch-py
+	@mkdir -p /tmp/test-hyperswitch-py
+	@cp $(SDK_ROOT)/test_smoke.py /tmp/test-hyperswitch-py/
+	@python3 -m pip install --target /tmp/test-hyperswitch-py $(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl --no-deps --force-reinstall
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py
+	#@rm -rf /tmp/test-hyperswitch-py
+	@echo "Pack test passed."
+
+# CI / cross-platform dist: copy all available binaries, then archive once
+dist: generate-proto
+	@echo "Building Python SDK distribution archive..."
+	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so \
+		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: Linux x86_64 binary not found (skipping)"
+	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib \
+		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: macOS aarch64 binary not found (skipping)"
+	@$(MAKE) pack-archive
+	@echo "Distribution archive created in $(PACKAGE_DIR)/"
 
 clean:
 	@rm -rf $(GENERATED_OUT)
-
-# Packaging targets for release workflow - PLATFORM SPECIFIC
-package-linux-x86_64: generate-proto
-	@echo "Packaging Python SDK for Linux x86_64..."
-	@mkdir -p $(PACKAGE_DIR)/linux-x86_64/examples
-	@cp -f $(REPO_ROOT)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || \
-		(echo "Warning: Linux x86_64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-linux-x86_64" && exit 1)
-	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/linux-x86_64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/connector_client.py $(PACKAGE_DIR)/linux-x86_64/
-	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/linux-x86_64/examples/ 2>/dev/null || true
-	@echo "Linux x86_64 package created: $(PACKAGE_DIR)/linux-x86_64/"
-
-package-macos-aarch64: generate-proto
-	@echo "Packaging Python SDK for macOS aarch64..."
-	@mkdir -p $(PACKAGE_DIR)/macos-aarch64/examples
-	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || \
-		(echo "Warning: macOS aarch64 binary not found. Build it first with: make -C $(REPO_ROOT)/sdk build-macos-aarch64" && exit 1)
-	@cp -rf $(GENERATED_OUT)/*.py $(PACKAGE_DIR)/macos-aarch64/ 2>/dev/null || true
-	@cp $(SDK_ROOT)/connector_client.py $(PACKAGE_DIR)/macos-aarch64/
-	@cp $(SDK_ROOT)/examples/example.py $(PACKAGE_DIR)/macos-aarch64/examples/ 2>/dev/null || true
-	@echo "macOS aarch64 package created: $(PACKAGE_DIR)/macos-aarch64/"
-
-package-native: package-linux-x86_64 package-macos-aarch64
-
-# Create distribution archives for all platforms
-dist: package-native
-	@echo "Creating Python SDK distribution archives..."
-	@cd $(PACKAGE_DIR) && for dir in */; do \
-		if [ -d "$$dir" ]; then \
-			zip -r "connector-service-python-sdk-$${dir%/}.zip" "$$dir"; \
-		fi; \
-	done
-	@echo "Distribution archives created in $(PACKAGE_DIR)/"
+	@rm -rf $(SDK_ROOT)/build $(SDK_ROOT)/*.egg-info $(SDK_ROOT)/src/*.egg-info

@@ -13,8 +13,8 @@ import json
 
 import requests as http_requests
 
-from connector_service_ffi import authorize_req_transformer, authorize_res_transformer
-from payment_pb2 import PaymentServiceAuthorizeResponse
+from payments.generated.connector_service_ffi import authorize_req_transformer, authorize_res_transformer
+from payments.generated.payment_pb2 import PaymentServiceAuthorizeResponse
 
 
 class ConnectorClient:
