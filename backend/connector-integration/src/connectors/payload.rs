@@ -729,7 +729,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // SourceVerification implementations for all flows
 
 // Webhook implementation
-#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Payload<T>
 {
@@ -755,7 +754,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(request.body.to_vec())
     }
 
-    async fn verify_webhook_source(
+    fn verify_webhook_source(
         &self,
         request: domain_types::connector_types::RequestDetails,
         connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,

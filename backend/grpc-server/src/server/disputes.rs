@@ -469,7 +469,6 @@ impl DisputeService for Disputes {
                             webhook_secrets.clone(),
                             Some(connector_auth_details.clone()),
                         )
-                        .await
                         .switch()
                         .map_err(|e| e.into_grpc_status())?;
 

@@ -188,11 +188,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     IncomingWebhook for Worldpayvantiv<T>
 {
-    async fn verify_webhook_source(
+    fn verify_webhook_source(
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,

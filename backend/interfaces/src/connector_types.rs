@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use std::str::FromStr;
 
-use async_trait::async_trait;
 use common_enums::{AttemptStatus, CaptureMethod, PaymentMethod, PaymentMethodType};
 use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
@@ -337,9 +336,8 @@ pub trait VerifyWebhookSourceV2:
 {
 }
 
-#[async_trait]
 pub trait IncomingWebhook {
-    async fn verify_webhook_source(
+    fn verify_webhook_source(
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,

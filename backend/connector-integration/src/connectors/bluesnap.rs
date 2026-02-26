@@ -204,11 +204,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== WEBHOOK TRAIT IMPLEMENTATIONS =====
-#[async_trait::async_trait]
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Bluesnap<T>
 {
-    async fn verify_webhook_source(
+    fn verify_webhook_source(
         &self,
         request: domain_types::connector_types::RequestDetails,
         connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,

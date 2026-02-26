@@ -2654,7 +2654,6 @@ impl PaymentService for Payments {
                                 webhook_secrets.clone(),
                                 Some(connector_auth_details.clone()),
                             )
-                            .await
                         {
                             Ok(result) => result,
                             Err(err) => {
