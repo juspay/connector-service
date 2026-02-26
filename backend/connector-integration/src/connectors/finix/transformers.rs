@@ -1,11 +1,14 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use domain_types::{
-    connector_flow::{Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, Refund, RSync, Void},
+    connector_flow::{
+        Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void,
+    },
     connector_types::{
-        ConnectorCustomerData, ConnectorCustomerResponse, PaymentFlowData, PaymentMethodTokenizationData,
-        PaymentMethodTokenResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        ConnectorCustomerData, ConnectorCustomerResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -53,7 +56,11 @@ impl TryFrom<&ConnectorAuthType> for FinixAuthType {
 
 impl FinixAuthType {
     pub fn generate_basic_auth(&self) -> String {
-        let credentials = format!("{}:{}", self.finix_user_name.peek(), self.finix_password.peek());
+        let credentials = format!(
+            "{}:{}",
+            self.finix_user_name.peek(),
+            self.finix_password.peek()
+        );
         base64::Engine::encode(&base64::engine::general_purpose::STANDARD, credentials)
     }
 }
@@ -304,11 +311,11 @@ pub enum FinixPaymentStatus {
 impl From<&FinixPaymentStatus> for AttemptStatus {
     fn from(status: &FinixPaymentStatus) -> Self {
         match status {
-            FinixPaymentStatus::Succeeded => AttemptStatus::Charged,
-            FinixPaymentStatus::Failed => AttemptStatus::Failure,
-            FinixPaymentStatus::Pending => AttemptStatus::Pending,
-            FinixPaymentStatus::Canceled => AttemptStatus::Voided,
-            FinixPaymentStatus::Unknown => AttemptStatus::Pending,
+            FinixPaymentStatus::Succeeded => Self::Charged,
+            FinixPaymentStatus::Failed => Self::Failure,
+            FinixPaymentStatus::Pending => Self::Pending,
+            FinixPaymentStatus::Canceled => Self::Voided,
+            FinixPaymentStatus::Unknown => Self::Pending,
         }
     }
 }
@@ -320,7 +327,12 @@ impl From<&FinixPaymentStatus> for AttemptStatus {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::FinixRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for FinixAuthorizeRequest
@@ -329,7 +341,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::FinixRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -341,7 +358,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // For Finix, we need a payment instrument ID (source)
         // First try to get token from payment_method_token, otherwise create instrument inline
-        let source = match router_data.resource_common_data.payment_method_token.clone() {
+        let source = match router_data
+            .resource_common_data
+            .payment_method_token
+            .clone()
+        {
             Some(token) => match token {
                 router_data::PaymentMethodToken::Token(secret) => secret.expose(),
             },
@@ -359,7 +380,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency: router_data.request.currency.to_string(),
             source,
             merchant: merchant_id,
-            idempotency_id: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
+            idempotency_id: Some(
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             tags: None,
         })
     }
@@ -370,20 +396,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ResponseRouterData<
-            FinixAuthorizeResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    TryFrom<ResponseRouterData<FinixAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FinixAuthorizeResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<FinixAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
@@ -427,7 +446,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // - Authorization (AU*): Use transfer field if present (for refunds), else use ID
         let connector_transaction_id = match finix_id {
             FinixId::Transfer(_) => response.id.clone(),
-            FinixId::Auth(_) => response.transfer.clone().unwrap_or_else(|| response.id.clone()),
+            FinixId::Auth(_) => response
+                .transfer
+                .clone()
+                .unwrap_or_else(|| response.id.clone()),
         };
 
         Ok(Self {
@@ -472,21 +494,12 @@ pub struct FinixPSyncResponse {
 // TRYFROM IMPLEMENTATIONS - PSync RESPONSE
 // =============================================================================
 
-impl TryFrom<
-    ResponseRouterData<
-        FinixPSyncResponse,
-        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    >,
-> for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<FinixPSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            FinixPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FinixPSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // Determine status based on ID type (AU* = Auth/Authorized, TR* = Transfer/Charged)
@@ -555,13 +568,20 @@ pub struct FinixCaptureResponse {
 // =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::FinixRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for FinixCaptureRequest
+    TryFrom<
+        super::FinixRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for FinixCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::FinixRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: super::FinixRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             capture_amount: item.router_data.request.amount_to_capture,
@@ -574,14 +594,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // TRYFROM IMPLEMENTATIONS - CAPTURE RESPONSE
 // =============================================================================
 
-impl TryFrom<ResponseRouterData<FinixCaptureResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
+impl TryFrom<ResponseRouterData<FinixCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<FinixCaptureResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FinixCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         let status = AttemptStatus::from(&response.state);
 
@@ -664,21 +682,12 @@ pub struct FinixRSyncResponse {
 // TRYFROM IMPLEMENTATIONS - RSync RESPONSE
 // =============================================================================
 
-impl TryFrom<
-    ResponseRouterData<
-        FinixRSyncResponse,
-        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    >,
-> for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<FinixRSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            FinixRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FinixRSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         let refund_status = match response.state {
             FinixPaymentStatus::Succeeded => RefundStatus::Success,
@@ -703,17 +712,22 @@ impl TryFrom<
 // =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::FinixRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for FinixVoidRequest
+    TryFrom<
+        super::FinixRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for FinixVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: super::FinixRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        _item: super::FinixRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            void_me: true,
-        })
+        Ok(Self { void_me: true })
     }
 }
 
@@ -721,12 +735,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // TRYFROM IMPLEMENTATIONS - VOID RESPONSE
 // =============================================================================
 
-impl TryFrom<ResponseRouterData<FinixVoidResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>> for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> {
+impl TryFrom<ResponseRouterData<FinixVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<FinixVoidResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FinixVoidResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         // Void-specific status mapping
         let status = match response.state {
@@ -762,13 +776,20 @@ impl TryFrom<ResponseRouterData<FinixVoidResponse, RouterDataV2<Void, PaymentFlo
 // =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::FinixRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for FinixRefundRequest
+    TryFrom<
+        super::FinixRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for FinixRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::FinixRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: super::FinixRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             refund_amount: item.router_data.request.minor_refund_amount.0,
@@ -781,14 +802,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // TRYFROM IMPLEMENTATIONS - REFUND RESPONSE
 // =============================================================================
 
-impl TryFrom<ResponseRouterData<FinixRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
+impl TryFrom<ResponseRouterData<FinixRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<FinixRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FinixRefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         let status = match response.state {
             FinixPaymentStatus::Succeeded => RefundStatus::Success,
@@ -814,28 +833,48 @@ impl TryFrom<ResponseRouterData<FinixRefundResponse, RouterDataV2<Refund, Refund
 // =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::FinixRouterData<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>>
-    for FinixCreateIdentityRequest
+    TryFrom<
+        super::FinixRouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
+    > for FinixCreateIdentityRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::FinixRouterData<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>,
+        item: super::FinixRouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let customer_data = &item.router_data.request;
 
         // Parse name into first and last name if available
-        let (first_name, last_name) = if let Some(name) = &customer_data.name {
-            let name_str = name.peek();
-            let parts: Vec<&str> = name_str.split_whitespace().collect();
-            if parts.len() >= 2 {
-                (Some(Secret::new(parts[0].to_string())), Some(Secret::new(parts[1..].join(" "))))
-            } else {
-                (Some(name.clone()), None)
-            }
-        } else {
-            (None, None)
-        };
+        let (first_name, last_name) = customer_data
+            .name
+            .as_ref()
+            .map(|name| {
+                let name_str = name.peek().trim();
+                match name_str.rsplit_once(' ') {
+                    Some((first, last)) => (
+                        Some(Secret::new(first.to_string())),
+                        Some(Secret::new(last.to_string())),
+                    ),
+                    None => (Some(Secret::new(name_str.to_string())), None),
+                }
+            })
+            .unwrap_or((None, None));
 
         Ok(Self {
             entity: FinixIdentityEntity {
@@ -859,13 +898,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // TRYFROM IMPLEMENTATIONS - CREATE CONNECTOR CUSTOMER RESPONSE
 // =============================================================================
 
-impl TryFrom<ResponseRouterData<FinixIdentityResponse, RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>>>
-    for RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
+impl TryFrom<ResponseRouterData<FinixIdentityResponse, Self>>
+    for RouterDataV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<FinixIdentityResponse, RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>>,
+        item: ResponseRouterData<FinixIdentityResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
         Ok(Self {
@@ -882,13 +926,30 @@ impl TryFrom<ResponseRouterData<FinixIdentityResponse, RouterDataV2<CreateConnec
 // =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::FinixRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>>
-    for FinixCreatePaymentInstrumentRequest
+    TryFrom<
+        super::FinixRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
+    > for FinixCreatePaymentInstrumentRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::FinixRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>,
+        item: super::FinixRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let token_data = &item.router_data.request;
 
@@ -940,7 +1001,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             match holder_type {
                                 common_enums::BankHolderType::Personal => "CHECKING",
                                 common_enums::BankHolderType::Business => "BUSINESS_CHECKING",
-                            }.to_string()
+                            }
+                            .to_string()
                         });
 
                         Ok(Self {
@@ -961,11 +1023,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         })
                     }
                     _ => Err(errors::ConnectorError::NotImplemented(
-                        "Only ACH Bank Debit is supported".to_string()
-                    ).into()),
+                        "Only ACH Bank Debit is supported".to_string(),
+                    )
+                    .into()),
                 }
             }
-            _ => Err(errors::ConnectorError::NotImplemented("Only card and bank debit tokenization are supported".into()).into()),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "Only card and bank debit tokenization are supported".into(),
+            )
+            .into()),
         }
     }
 }
@@ -975,19 +1041,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<FinixInstrumentResponse, RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>>>
-    for RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    TryFrom<ResponseRouterData<FinixInstrumentResponse, Self>>
+    for RouterDataV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<FinixInstrumentResponse, RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>>,
+        item: ResponseRouterData<FinixInstrumentResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
         Ok(Self {
-            response: Ok(PaymentMethodTokenResponse {
-                token: response.id,
-            }),
+            response: Ok(PaymentMethodTokenResponse { token: response.id }),
             ..item.router_data
         })
     }
