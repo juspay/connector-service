@@ -32,7 +32,7 @@ class ConnectorClient {
 
   /**
    * Execute a full authorize round-trip.
-   * @param {Object} requestMsg - PaymentServiceAuthorizeRequest message
+   * @param {Object} requestMsg - PaymentServiceAuthorizeRequest message (plain object or Message instance)
    * @param {Object<string,string>} metadata - connector routing + auth metadata
    * @returns {Promise<Object>} decoded PaymentServiceAuthorizeResponse message
    */
@@ -47,7 +47,6 @@ class ConnectorClient {
     const connectorRequest = JSON.parse(connectorRequestJson);
 
     // Ensure body is stringified if it's a JSON object from FFI.
-    // This provides parity with Rust's client.json() behavior.
     if (connectorRequest.body && typeof connectorRequest.body === "object") {
       connectorRequest.body = JSON.stringify(connectorRequest.body);
     }
