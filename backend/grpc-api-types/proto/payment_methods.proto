@@ -479,7 +479,7 @@ message SamsungWallet {
     string card_last_four_digits = 5;
     
     // 3DS token data
-    message TokenData {
+    message TokenData {  
       // 3DS type
       optional string type = 1;
       
