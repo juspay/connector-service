@@ -490,17 +490,6 @@ pub enum ConnectorSpecificAuth {
     },
 }
 
-impl ConnectorSpecificAuth {
-    /// Convenience method to convert from generic `ConnectorAuthType` + connector name
-    /// into a connector-specific auth variant.
-    pub fn try_from_generic(
-        auth: &ConnectorAuthType,
-        connector: &crate::connector_types::ConnectorEnum,
-    ) -> Result<Self, Error> {
-        <Self as ForeignTryFrom<(&ConnectorAuthType, &crate::connector_types::ConnectorEnum)>>::foreign_try_from((auth, connector))
-    }
-}
-
 impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecificAuth {
     type Error = crate::errors::ConnectorError;
 
