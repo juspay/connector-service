@@ -4,15 +4,13 @@ use super::macros;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{
-    errors::CustomResult,
-    events, ext_traits::ByteSliceExt,
-    types::MinorUnit,
-};
 use common_enums::{PaymentMethod, PaymentMethodType};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::MinorUnit};
 use domain_types::{
     connector_flow,
-    connector_flow::{Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void},
+    connector_flow::{
+        Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void,
+    },
     connector_types::*,
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
     errors,
@@ -32,8 +30,8 @@ use serde::Serialize;
 use transformers::{
     self as finix, FinixAuthorizeRequest, FinixAuthorizeResponse, FinixCaptureRequest,
     FinixCaptureResponse, FinixCreateIdentityRequest, FinixCreatePaymentInstrumentRequest,
-    FinixIdentityResponse, FinixInstrumentResponse, FinixPSyncResponse, FinixRefundRequest,
-    FinixRefundResponse, FinixRSyncResponse, FinixVoidRequest, FinixVoidResponse,
+    FinixIdentityResponse, FinixInstrumentResponse, FinixPSyncResponse, FinixRSyncResponse,
+    FinixRefundRequest, FinixRefundResponse, FinixVoidRequest, FinixVoidResponse,
 };
 
 use crate::{types::ResponseRouterData, with_error_response_body};
@@ -143,7 +141,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         payment_method: PaymentMethod,
         _payment_method_type: Option<PaymentMethodType>,
     ) -> bool {
-        matches!(payment_method, PaymentMethod::Card | PaymentMethod::BankDebit)
+        matches!(
+            payment_method,
+            PaymentMethod::Card | PaymentMethod::BankDebit
+        )
     }
 }
 // =============================================================================
@@ -265,7 +266,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Finix<T>
 {
 }
-
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Finix<T>
