@@ -1329,6 +1329,7 @@ impl TryFrom<ResponseRouterData<AirwallexIntentResponse, Self>>
 
         router_data.response = Ok(domain_types::connector_types::PaymentCreateOrderResponse {
             order_id: item.response.id.clone(),
+            session_token: None,
         });
 
         // Update the flow data with the new status and store payment intent ID as reference_id (like Razorpay V2)
@@ -1396,7 +1397,7 @@ impl TryFrom<ResponseRouterData<AirwallexAccessTokenResponse, Self>>
         let expires = (item.response.expires_at - common_utils::date_time::now()).whole_seconds();
 
         router_data.response = Ok(domain_types::connector_types::AccessTokenResponseData {
-            access_token: item.response.token.expose(),
+            access_token: item.response.token,
             token_type: Some("Bearer".to_string()),
             expires_in: Some(expires),
         });

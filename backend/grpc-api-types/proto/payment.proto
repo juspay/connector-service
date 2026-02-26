@@ -600,6 +600,7 @@ enum Connector {
   GIGADAT = 106;
   HYPERPG = 107;
   ZIFT = 108;
+  REVOLV3 = 109;
 }
 
 // Payment method types.
@@ -806,7 +807,7 @@ message OrderDetailsWithAmount {
 // Access token details.
 message AccessToken {
   // The token string.
-  string token = 1;
+  SecretString token = 1;
 
   // Expiration timestamp of the token (seconds since epoch).
   optional int64 expires_in_seconds = 2;
@@ -1251,6 +1252,25 @@ message ApplePayConnectorResponse {
   optional string auth_code = 1; // Unique authorisation code generated for the payment
 }
 
+// Customer information for payments  
+message CustomerInfo {  
+  optional SecretString customer_name = 1; // Full name of the customer
+  optional SecretString customer_email = 2; // Email address of the customer for notifications and receipts  
+  optional SecretString customer_phone_number = 3; // Phone number for SMS verification and customer contact  
+  optional SecretString customer_bank_id = 4; // Bank identifier or institution number for the customer's bank  
+  optional SecretString customer_bank_name = 5; // Name of the customer's bank for display purposes  
+}
+
+// Interac-specific customer information wrapper  
+message InteracCustomerInfo {  
+  optional CustomerInfo customer_info = 1; // Base customer information for Interac payments  
+} 
+
+// Additional payment method data for Bank Redirect
+message BankRedirectConnectorResponse {
+  optional InteracCustomerInfo interac = 1; // Interac-specific customer information when using bank redirect  
+}
+
 // Additional payment method connector response
 message AdditionalPaymentMethodConnectorResponse {
   oneof payment_method_data {
@@ -1258,6 +1278,7 @@ message AdditionalPaymentMethodConnectorResponse {
     UpiConnectorResponse upi = 2;  // UPI-specific response data
     GooglePayConnectorResponse google_pay = 3; // Google Pay-specific response data
     ApplePayConnectorResponse apple_pay = 4; // Apple Pay-specific response data
+    BankRedirectConnectorResponse bank_redirect = 5; // Bank Redirect-specific response data
   }
 }
 
@@ -1527,7 +1548,7 @@ message PaymentServiceCreateAccessTokenRequest {
 // Response message for creating an access token.
 message PaymentServiceCreateAccessTokenResponse {
   // Core token information
-  string access_token = 1; // The access token string
+  SecretString access_token = 1; // The access token string
   optional string token_type = 2; // Token type (e.g., "Bearer", "Basic")
   optional int64 expires_in_seconds = 3; // Expiration timestamp of the token (seconds since epoch)
 
@@ -1705,7 +1726,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
 
   // Payment Method Token
-  optional string payment_method_token = 40;
+  optional SecretString payment_method_token = 40;
 
   // Send the connector order identifier here if an order was created before authorize
   optional string connector_order_reference_id = 41; // Connector's reference id for order
@@ -2131,14 +2152,16 @@ message PaymentServiceCreateOrderRequest {
   // Environment Configuration
   optional bool test_mode = 9; // A boolean value to indicate if the connector is in Test mode
 
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 10; // The type of payment method (e.g., apple_pay, google_pay)
 }
 
 // Response message for create order operation.
 message PaymentServiceCreateOrderResponse {
-// Identification
+  // Identification
   Identifier order_id = 1; // Identifier for the create order response
 
-// Status Information
+  // Status Information
   PaymentStatus status = 2; // Status of the payment after the capture attempt
   optional string error_code = 3; // Error code if the capture failed
   optional string error_message = 4; // Error message if the capture failed
@@ -2153,6 +2176,9 @@ message PaymentServiceCreateOrderResponse {
 
   // Raw Response
   optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Wallet Session Token
+  optional SessionToken session_token = 10; // JSON serialized session token for wallet payments (Apple Pay, Google Pay)
 }
 
 // Request message for processing a refund.
@@ -2357,7 +2383,7 @@ message PaymentServiceRegisterRequest {
   optional ConnectorState state = 31; // State data for access token storage and other connector-specific state
 
   // Payment Method Token
-  optional string payment_method_token = 32;
+  optional SecretString payment_method_token = 32;
   // Send the connector order identifier here if an order was created before authorize
   optional string order_id = 33;
 
@@ -3356,6 +3382,9 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // Environment Configuration
   optional bool test_mode = 15; // A boolean value to indicate if the connector is in Test mode  
+
+  // Connector Customer Information
+  optional string connector_customer_id = 16; // Customer ID as recognized by the connector
 }
 
 // Response message for creating a payment method token.

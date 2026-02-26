@@ -4,6 +4,87 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.02.26.0
+
+### Features
+
+- **connector:** [revolv3] add no-threeds card payments ([#520](https://github.com/juspay/connector-service/pull/520)) ([`4cf7158`](https://github.com/juspay/connector-service/commit/4cf7158a744fc77bf23765a0c00951059197cb8a))
+- **core:** Added Missing BankTransfer, BankDebit & BankRedirect Payment Method Types ([#538](https://github.com/juspay/connector-service/pull/538)) ([`84493fe`](https://github.com/juspay/connector-service/commit/84493fefd9acfa016d380683a7a8c5e2e32d6b1f))
+- [STAX] ACH BankDebit ([#548](https://github.com/juspay/connector-service/pull/548)) ([`50bf11c`](https://github.com/juspay/connector-service/commit/50bf11c04e0158e6e0b425b22d0695df380b9522))
+
+### Miscellaneous Tasks
+
+- Added Composite Authorize Flow ([#517](https://github.com/juspay/connector-service/pull/517)) ([`fedc4ad`](https://github.com/juspay/connector-service/commit/fedc4ad617862addc81c08016635380031accf12))
+
+**Full Changelog:** [`2026.02.25.0...2026.02.26.0`](https://github.com/juspay/connector-service/compare/2026.02.25.0...2026.02.26.0)
+
+- - -
+
+## 2026.02.25.0
+
+### Features
+
+- **connector:** [Checkout] Implement googlepay and applepay decrypt flow and card ntid flow ([#546](https://github.com/juspay/connector-service/pull/546)) ([`576dfbe`](https://github.com/juspay/connector-service/commit/576dfbe4c3e3113a30d607c84d1bdcd43e26412b))
+- Ach bankdebit integration for nmi ([#545](https://github.com/juspay/connector-service/pull/545)) ([`e07b1c3`](https://github.com/juspay/connector-service/commit/e07b1c3b71d02396fc6c8284dddee8958b8e3e40))
+
+### Miscellaneous Tasks
+
+- Refactored the wallet Payment Method ([#526](https://github.com/juspay/connector-service/pull/526)) ([`bb898de`](https://github.com/juspay/connector-service/commit/bb898deefab57b6100ca07754c1427a8035cfe50))
+
+**Full Changelog:** [`2026.02.24.0...2026.02.25.0`](https://github.com/juspay/connector-service/compare/2026.02.24.0...2026.02.25.0)
+
+- - -
+
+## 2026.02.24.0
+
+### Features
+
+- **connector:** Adyen voucher paymentmethod added ([#500](https://github.com/juspay/connector-service/pull/500)) ([`948bd45`](https://github.com/juspay/connector-service/commit/948bd45c0a5ba816a25f2793265c2469609f4e69))
+
+**Full Changelog:** [`2026.02.23.0...2026.02.24.0`](https://github.com/juspay/connector-service/compare/2026.02.23.0...2026.02.24.0)
+
+- - -
+
+## 2026.02.23.0
+
+### Features
+
+- **connector:** [trustpay] introduce wallet support - apple pay and google pay ([#503](https://github.com/juspay/connector-service/pull/503)) ([`5976300`](https://github.com/juspay/connector-service/commit/5976300a6eb3746990502970ca089b4eac4b4e24))
+
+**Full Changelog:** [`2026.02.20.0...2026.02.23.0`](https://github.com/juspay/connector-service/compare/2026.02.20.0...2026.02.23.0)
+
+- - -
+
+
+## 2026.02.18.1
+
+### Refactors
+
+- **connector:** [PHONEPE] add Phonepe specific headers and target_app for upi request ([#507](https://github.com/juspay/connector-service/pull/507)) ([`0cf90e9`](https://github.com/juspay/connector-service/commit/0cf90e92e945fe4d7a641ca3029eba76955ca611))
+
+**Full Changelog:** [`2026.02.18.0...2026.02.18.1`](https://github.com/juspay/connector-service/compare/2026.02.18.0...2026.02.18.1)
+
+- - -
+
+## 2026.02.18.0
+
+### Features
+
+- **connector:** Added ConnectorResponse for Connector Loonio ([#513](https://github.com/juspay/connector-service/pull/513)) ([`931f76b`](https://github.com/juspay/connector-service/commit/931f76bab2353ef69d2d5a90946ae6bffaa72385))
+- **framework:** Changed access_token type from String to SecretString in proto and connector_types ([#490](https://github.com/juspay/connector-service/pull/490)) ([`425566c`](https://github.com/juspay/connector-service/commit/425566c6060cff496b7fcf03d6d4ba36ed3bdf64))
+
+### Bug Fixes
+
+- **redsys:** Correct XML element ordering in SOAP sync requests to comply with DTD validation ([#516](https://github.com/juspay/connector-service/pull/516)) ([`c1d5ae7`](https://github.com/juspay/connector-service/commit/c1d5ae7cf45e82684a43e55d13f1d060b4b7738b))
+
+### Miscellaneous Tasks
+
+- Added Crate for Composite Flows ([#512](https://github.com/juspay/connector-service/pull/512)) ([`8401920`](https://github.com/juspay/connector-service/commit/84019200ffa5f85dc849783583a378a5b6ae3a42))
+
+**Full Changelog:** [`2026.02.16.0...2026.02.18.0`](https://github.com/juspay/connector-service/compare/2026.02.16.0...2026.02.18.0)
+
+- - -
+
 ## 2026.02.16.0
 
 ### Bug Fixes

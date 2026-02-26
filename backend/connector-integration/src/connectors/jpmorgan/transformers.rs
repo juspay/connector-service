@@ -101,7 +101,7 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganAuthUpdateResponse, Self>>
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
-                access_token: item.response.access_token.peek().to_string(),
+                access_token: item.response.access_token,
                 token_type: Some(item.response.token_type.clone()),
                 expires_in: Some(item.response.expires_in),
             }),
