@@ -5776,7 +5776,9 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
         } else {
             None
         };
-        let amount = value.amount.map(|a| common_utils::MinorUnit::new(a.minor_amount));
+        let amount = value
+            .amount
+            .map(|a| common_utils::MinorUnit::new(a.minor_amount));
         Ok(Self {
             browser_info: value
                 .browser_info
