@@ -6,14 +6,14 @@ use domain_types::{
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
 use error_stack;
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Debug;
@@ -159,18 +159,38 @@ pub struct PaymentMethodOptions {
 pub struct PaymentMethod<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "type")]
     pub pm_type: String,
-    pub fields: Option<PaymentFields<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fields: Option<PaymentMethodFields<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub address: Option<Address>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub digital_wallet: Option<RapydWallet>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum PaymentMethodFields<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
+    Card(CardPaymentFields<T>),
+    Ach(AchPaymentFields),
+}
+
 #[derive(Default, Debug, Serialize)]
-pub struct PaymentFields<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
+pub struct CardPaymentFields<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     pub number: RawCardNumber<T>,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
     pub name: Secret<String>,
     pub cvv: Secret<String>,
+}
+
+#[derive(Default, Debug, Serialize)]
+pub struct AchPaymentFields {
+    pub account_number: Secret<String>,
+    pub routing_number: Secret<String>,
+    pub first_name: Secret<String>,
+    pub last_name: Secret<String>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub proof_of_authorization: bool,
 }
 
 #[derive(Default, Debug, Serialize)]
@@ -245,7 +265,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentMethodData::Card(ref ccard) => {
                 Some(PaymentMethod {
                     pm_type: "in_amex_card".to_owned(), //[#369] Map payment method type based on country
-                    fields: Some(PaymentFields {
+                    fields: Some(PaymentMethodFields::Card(CardPaymentFields {
                         number: ccard.card_number.to_owned(),
                         expiration_month: ccard.card_exp_month.to_owned(),
                         expiration_year: ccard.card_exp_year.to_owned(),
@@ -256,7 +276,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             .to_owned()
                             .unwrap_or(Secret::new("".to_string())),
                         cvv: ccard.card_cvc.to_owned(),
-                    }),
+                    })),
                     address: None,
                     digital_wallet: None,
                 })
@@ -294,6 +314,60 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     address: None,
                     digital_wallet,
                 })
+            }
+            PaymentMethodData::BankDebit(ref bank_debit_data) => {
+                match bank_debit_data {
+                    BankDebitData::AchBankDebit {
+                        account_number,
+                        routing_number,
+                        bank_account_holder_name,
+                        card_holder_name,
+                        ..
+                    } => {
+                        // Get account holder name: prefer bank_account_holder_name, fall back to billing name
+                        let full_name = bank_account_holder_name
+                            .clone()
+                            .or_else(|| card_holder_name.clone())
+                            .or_else(|| item.router_data.resource_common_data.get_optional_billing_full_name())
+                            .ok_or(ConnectorError::MissingRequiredField {
+                                field_name: "bank_account_holder_name or billing name",
+                            })?;
+
+                        // Split full name into first_name and last_name
+                        let name_parts: Vec<&str> = full_name.peek().split_whitespace().collect();
+                        let first_name = if !name_parts.is_empty() {
+                            Secret::new(name_parts[0].to_string())
+                        } else {
+                            Secret::new("".to_string())
+                        };
+                        let last_name = if name_parts.len() > 1 {
+                            Secret::new(name_parts[1..].join(" "))
+                        } else {
+                            Secret::new("".to_string())
+                        };
+
+                        Some(PaymentMethod {
+                            pm_type: "us_ach_bank".to_owned(),
+                            fields: Some(PaymentMethodFields::Ach(AchPaymentFields {
+                                account_number: account_number.clone(),
+                                routing_number: routing_number.clone(),
+                                first_name,
+                                last_name,
+                                proof_of_authorization: true,
+                            })),
+                            address: None,
+                            digital_wallet: None,
+                        })
+                    }
+                    BankDebitData::SepaBankDebit { .. }
+                    | BankDebitData::SepaGuaranteedBankDebit { .. }
+                    | BankDebitData::BecsBankDebit { .. }
+                    | BankDebitData::BacsBankDebit { .. } => {
+                        return Err(ConnectorError::NotImplemented(
+                            "Only ACH bank debit is supported for Rapyd".to_owned(),
+                        ))?;
+                    }
+                }
             }
             _ => None,
         }
