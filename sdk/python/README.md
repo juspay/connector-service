@@ -1,19 +1,41 @@
-# UniFFI Python FFI Example
+# Python Payments SDK
 
 Calls the connector FFI layer directly from Python using protobuf-encoded bytes,
 bypassing gRPC. Uses UniFFI-generated Python bindings.
 
+## Prerequisites
+
+- Rust toolchain (`cargo`)
+- Python 3.9+
+- `protoc` (Protocol Buffers compiler)
+
 ## Setup
 
 ```bash
-# 1. Install Python deps and build the Rust library
-make setup
+# Build Rust lib, generate UniFFI bindings and proto stubs, build wheel
+make pack
+```
 
-# 2. Run the example (low-level FFI demo only)
-make example-run
+## Test
 
-# 3. Run with full round-trip (requires valid Stripe test key)
-STRIPE_API_KEY=sk_test_your_key make example-run
+```bash
+# Verify the packed wheel installs and the FFI layer works end-to-end
+make test-pack
+
+# With full round-trip (requires valid Stripe test key)
+STRIPE_API_KEY=sk_test_your_key make test-pack
+```
+
+`test-pack` installs the wheel into an isolated temp directory and runs
+`test_smoke.py`, which asserts the connector request URL and method, then
+optionally exercises the full HTTP round-trip if `STRIPE_API_KEY` is set.
+
+## Distribution
+
+```bash
+# Build wheel containing all available platform binaries (for CI / release)
+make dist
+# → artifacts/sdk-python/hyperswitch_payments-0.1.0.whl
 ```
 
 ## How it works
@@ -21,10 +43,7 @@ STRIPE_API_KEY=sk_test_your_key make example-run
 1. `make build-lib` — builds `backend/ffi` with `--features uniffi`
 2. `make generate-bindings` — runs `uniffi-bindgen` to produce `generated/connector_service_ffi.py`
 3. `make generate-proto` — runs `grpc_tools.protoc` to produce `generated/payment_pb2.py`
-4. `main.py` — two demos:
-   - **Low-level FFI**: builds a `PaymentServiceAuthorizeRequest`, serializes to proto bytes,
-     calls `authorize_req(bytes, metadata)`, prints the connector HTTP request
-   - **Full round-trip**: uses `ConnectorClient` to build request → HTTP call → parse response
+4. `make pack-archive` — runs `pip wheel` to produce the installable `.whl`
 
 ## ConnectorClient
 
