@@ -26,8 +26,8 @@ use domain_types::{
     payment_address::Address,
     payment_method_data::{
         self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
-        GooglePayWalletData, NetworkTokenData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, SamsungPayWalletData, WalletData,
+        GooglePayDecryptedData, GooglePayWalletData, NetworkTokenData, PaymentMethodData,
+        PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ErrorResponse,
@@ -195,13 +195,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )
             }
 
-            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-                WalletData::ApplePay(apple_pay_data) => {
-                    if let Some(decrypt_data) = apple_pay_data
+                PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                    WalletData::ApplePay(apple_pay_data) => match apple_pay_data
                         .payment_data
                         .get_decrypted_apple_pay_payment_data_optional()
                     {
-                        (
+                        Some(decrypt_data) => (
                             PaymentInformation::ApplePay(Box::new(ApplePayPaymentInformation {
                                 tokenized_card: TokenizedCard {
                                     number: decrypt_data.clone().application_primary_account_number,
@@ -214,117 +213,117 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 },
                             })),
                             Some(PaymentSolution::ApplePay),
-                        )
-                    } else {
-                        let apple_pay_encrypted_data = apple_pay_data
-                            .payment_data
-                            .get_encrypted_apple_pay_payment_data_mandatory()
-                            .change_context(ConnectorError::MissingRequiredField {
-                                field_name: "Apple pay encrypted data",
-                            })?;
-                        (
-                            PaymentInformation::ApplePayToken(Box::new(
-                                ApplePayTokenPaymentInformation {
-                                    fluid_data: FluidData {
-                                        value: Secret::from(apple_pay_encrypted_data.clone()),
-                                        descriptor: Some(FLUID_DATA_DESCRIPTOR.to_string()),
+                        ),
+                        None => {
+                            let apple_pay_encrypted_data = apple_pay_data
+                                .payment_data
+                                .get_encrypted_apple_pay_payment_data_mandatory()
+                                .change_context(ConnectorError::MissingRequiredField {
+                                    field_name: "Apple pay encrypted data",
+                                })?;
+                            (
+                                PaymentInformation::ApplePayToken(Box::new(
+                                    ApplePayTokenPaymentInformation {
+                                        fluid_data: FluidData {
+                                            value: Secret::from(apple_pay_encrypted_data.clone()),
+                                            descriptor: Some(FLUID_DATA_DESCRIPTOR.to_string()),
+                                        },
+                                        tokenized_card: ApplePayTokenizedCard {
+                                            transaction_type: TransactionType::InApp,
+                                        },
                                     },
-                                    tokenized_card: ApplePayTokenizedCard {
-                                        transaction_type: TransactionType::InApp,
-                                    },
-                                },
-                            )),
-                            Some(PaymentSolution::ApplePay),
-                        )
-                    }
-                }
-                WalletData::GooglePay(google_pay_data) => (
-                    PaymentInformation::GooglePayToken(Box::new(
-                        GooglePayTokenPaymentInformation {
-                            fluid_data: FluidData {
-                                value: Secret::from(
-                                    BASE64_ENGINE.encode(
-                                        google_pay_data
-                                            .tokenization_data
-                                            .get_encrypted_google_pay_token()
-                                            .change_context(
-                                                ConnectorError::MissingRequiredField {
-                                                    field_name: "gpay wallet_token",
-                                                },
-                                            )?,
+                                )),
+                                Some(PaymentSolution::ApplePay),
+                            )
+                        }
+                    },
+                    WalletData::GooglePay(google_pay_data) => (
+                        PaymentInformation::GooglePayToken(Box::new(
+                            GooglePayTokenPaymentInformation {
+                                fluid_data: FluidData {
+                                    value: Secret::from(
+                                        BASE64_ENGINE.encode(
+                                            google_pay_data
+                                                .tokenization_data
+                                                .get_encrypted_google_pay_token()
+                                                .change_context(
+                                                    ConnectorError::MissingRequiredField {
+                                                        field_name: "gpay wallet_token",
+                                                    },
+                                                )?,
+                                        ),
                                     ),
-                                ),
-                                descriptor: None,
+                                    descriptor: None,
+                                },
+                                tokenized_card: GooglePayTokenizedCard {
+                                    transaction_type: TransactionType::InApp,
+                                },
                             },
-                            tokenized_card: GooglePayTokenizedCard {
-                                transaction_type: TransactionType::InApp,
-                            },
-                        },
-                    )),
-                    Some(PaymentSolution::GooglePay),
-                ),
-                WalletData::SamsungPay(samsung_pay_data) => (
-                    (get_samsung_pay_payment_information(&samsung_pay_data)
-                        .attach_printable("Failed to get samsung pay payment information")?),
-                    Some(PaymentSolution::SamsungPay),
-                ),
-                WalletData::AliPayQr(_)
-                | WalletData::AliPayRedirect(_)
-                | WalletData::AliPayHkRedirect(_)
-                | WalletData::AmazonPayRedirect(_)
-                | WalletData::BluecodeRedirect {}
-                | WalletData::MomoRedirect(_)
-                | WalletData::KakaoPayRedirect(_)
-                | WalletData::GoPayRedirect(_)
-                | WalletData::GcashRedirect(_)
-                | WalletData::ApplePayRedirect(_)
-                | WalletData::ApplePayThirdPartySdk(_)
-                | WalletData::DanaRedirect {}
-                | WalletData::GooglePayRedirect(_)
-                | WalletData::GooglePayThirdPartySdk(_)
-                | WalletData::MbWayRedirect(_)
-                | WalletData::MobilePayRedirect(_)
-                | WalletData::PaypalRedirect(_)
-                | WalletData::PaypalSdk(_)
-                | WalletData::Paze(_)
-                | WalletData::TwintRedirect {}
-                | WalletData::VippsRedirect {}
-                | WalletData::TouchNGoRedirect(_)
-                | WalletData::WeChatPayRedirect(_)
-                | WalletData::WeChatPayQr(_)
-                | WalletData::CashappQr(_)
-                | WalletData::SwishQr(_)
-                | WalletData::Mifinity(_)
-                | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
-                    domain_types::utils::get_unimplemented_payment_method_error_message(
-                        "Cybersource",
+                        )),
+                        Some(PaymentSolution::GooglePay),
                     ),
-                ))?,
-            },
-            PaymentMethodData::CardRedirect(_)
-            | PaymentMethodData::PayLater(_)
-            | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
-            | PaymentMethodData::BankTransfer(_)
-            | PaymentMethodData::Crypto(_)
-            | PaymentMethodData::MandatePayment
-            | PaymentMethodData::Reward
-            | PaymentMethodData::RealTimePayment(_)
-            | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::Upi(_)
-            | PaymentMethodData::Voucher(_)
-            | PaymentMethodData::GiftCard(_)
-            | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::CardToken(_)
-            | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
-                    domain_types::utils::get_unimplemented_payment_method_error_message(
-                        "Cybersource",
+                    WalletData::SamsungPay(samsung_pay_data) => (
+                        (get_samsung_pay_payment_information(&samsung_pay_data)
+                            .attach_printable("Failed to get samsung pay payment information")?),
+                        Some(PaymentSolution::SamsungPay),
                     ),
-                ))?
-            }
-        };
+                    WalletData::AliPayQr(_)
+                    | WalletData::AliPayRedirect(_)
+                    | WalletData::AliPayHkRedirect(_)
+                    | WalletData::AmazonPayRedirect(_)
+                    | WalletData::BluecodeRedirect {}
+                    | WalletData::MomoRedirect(_)
+                    | WalletData::KakaoPayRedirect(_)
+                    | WalletData::GoPayRedirect(_)
+                    | WalletData::GcashRedirect(_)
+                    | WalletData::ApplePayRedirect(_)
+                    | WalletData::ApplePayThirdPartySdk(_)
+                    | WalletData::DanaRedirect {}
+                    | WalletData::GooglePayRedirect(_)
+                    | WalletData::GooglePayThirdPartySdk(_)
+                    | WalletData::MbWayRedirect(_)
+                    | WalletData::MobilePayRedirect(_)
+                    | WalletData::PaypalRedirect(_)
+                    | WalletData::PaypalSdk(_)
+                    | WalletData::Paze(_)
+                    | WalletData::TwintRedirect {}
+                    | WalletData::VippsRedirect {}
+                    | WalletData::TouchNGoRedirect(_)
+                    | WalletData::WeChatPayRedirect(_)
+                    | WalletData::WeChatPayQr(_)
+                    | WalletData::CashappQr(_)
+                    | WalletData::SwishQr(_)
+                    | WalletData::Mifinity(_)
+                    | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
+                        domain_types::utils::get_unimplemented_payment_method_error_message(
+                            "Cybersource",
+                        ),
+                    ))?,
+                },
+                PaymentMethodData::CardRedirect(_)
+                | PaymentMethodData::PayLater(_)
+                | PaymentMethodData::BankRedirect(_)
+                | PaymentMethodData::BankDebit(_)
+                | PaymentMethodData::BankTransfer(_)
+                | PaymentMethodData::Crypto(_)
+                | PaymentMethodData::MandatePayment
+                | PaymentMethodData::Reward
+                | PaymentMethodData::RealTimePayment(_)
+                | PaymentMethodData::MobilePayment(_)
+                | PaymentMethodData::Upi(_)
+                | PaymentMethodData::Voucher(_)
+                | PaymentMethodData::GiftCard(_)
+                | PaymentMethodData::OpenBanking(_)
+                | PaymentMethodData::CardToken(_)
+                | PaymentMethodData::NetworkToken(_)
+                | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                    Err(ConnectorError::NotImplemented(
+                        domain_types::utils::get_unimplemented_payment_method_error_message(
+                            "Cybersource",
+                        ),
+                    ))?
+                }
+            };
 
         let processing_information = ProcessingInformation {
             capture: Some(false),
@@ -1840,7 +1839,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         &CybersourceRouterData<
@@ -1986,13 +1984,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(ccard) => Self::try_from((&item, ccard)),
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-                WalletData::ApplePay(apple_pay_data) => {
-                    if let Some(decrypt_data) = apple_pay_data
-                        .payment_data
-                        .get_decrypted_apple_pay_payment_data_optional()
-                    {
+                WalletData::ApplePay(apple_pay_data) => match apple_pay_data
+                    .payment_data
+                    .get_decrypted_apple_pay_payment_data_optional()
+                {
+                    Some(decrypt_data) => {
                         Self::try_from((&item, Box::new(decrypt_data.clone()), apple_pay_data))
-                    } else {
+                    }
+                    None => {
                         let transaction_type = if item.router_data.request.off_session == Some(true)
                         {
                             TransactionType::StoredCredentials
@@ -2080,7 +2079,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             ),
                         })
                     }
-                }
+                },
                 WalletData::GooglePay(google_pay_data) => {
                     match &google_pay_data.tokenization_data {
                         payment_method_data::GpayTokenizationData::Decrypted(decrypt_data) => {
@@ -2095,21 +2094,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Self::try_from((&item, samsung_pay_data))
                 }
                 WalletData::Paze(paze_wallet_data) => {
-                    let paze_decrypted_data = match (
-                        paze_wallet_data.decrypted_data,
-                        paze_wallet_data.complete_response,
-                    ) {
-                        (Some(paze_decrypted_data), _) => Ok(paze_decrypted_data),
-                        (None, Some(complete_response)) => {
+                    let paze_decrypted_data = match *paze_wallet_data {
+                        payment_method_data::PazeWalletData::Decrypted(paze_decrypted_data) => {
+                            Ok(*paze_decrypted_data)
+                        }
+                        payment_method_data::PazeWalletData::CompleteResponse(
+                            complete_response,
+                        ) => {
+                            // TODO: This needs to be tested.
                             serde_json::from_str::<PazeDecryptedData>(complete_response.peek())
                                 .change_context(ConnectorError::InvalidWalletToken {
                                     wallet_name: "Paze".to_string(),
                                 })
                         }
-                        (None, None) => Err(ConnectorError::MissingRequiredField {
-                            field_name: "wallet_data.paze.complete_response",
-                        }
-                        .into()),
                     }?;
                     Self::try_from((&item, Box::new(paze_decrypted_data)))
                 }

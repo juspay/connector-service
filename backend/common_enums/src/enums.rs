@@ -1049,6 +1049,8 @@ pub enum PaymentMethodType {
     InstantBankTransferFinland,
     InstantBankTransferPoland,
     RevolutPay,
+    SepaGuaranteedDebit,
+    IndonesianBankTransfer,
 }
 
 impl PaymentMethodType {

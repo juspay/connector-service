@@ -1178,6 +1178,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         match value {
             BankDebitData::AchBankDebit { .. }
             | BankDebitData::SepaBankDebit { .. }
+            | BankDebitData::SepaGuaranteedBankDebit { .. }
             | BankDebitData::BecsBankDebit { .. }
             | BankDebitData::BacsBankDebit { .. } => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Paypal"),
@@ -1209,6 +1210,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | BankTransferData::InstantBankTransfer {}
             | BankTransferData::InstantBankTransferFinland {}
             | BankTransferData::InstantBankTransferPoland {}
+            | BankTransferData::IndonesianBankTransfer { .. }
             | BankTransferData::LocalBankTransfer { .. } => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Paypal"),
             )

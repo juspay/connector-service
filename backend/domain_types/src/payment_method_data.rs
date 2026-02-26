@@ -9,10 +9,10 @@ use common_utils::{
 use error_stack::{self, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use time::Date;
+use time::{Date, PrimitiveDateTime};
 use utoipa::ToSchema;
 
-pub use crate::router_data::{GooglePayDecryptedData, PazeDecryptedData};
+pub use crate::router_data::PazeDecryptedData;
 use crate::{
     errors::{self, ApiError, ApplicationErrorResponse, ConnectorError},
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
@@ -156,6 +156,12 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             delimiter,
             self.card_exp_month.peek()
         ))
+    }
+
+    pub fn get_expiry_date_as_mmyy(&self) -> Result<Secret<String>, ConnectorError> {
+        let year = self.get_card_expiry_year_2_digit()?;
+        let month = self.get_card_expiry_month_2_digit()?;
+        Ok(Secret::new(format!("{}{}", month.peek(), year.peek())))
     }
 
     pub fn get_card_expiry_year_month_2_digit_with_delimiter(
@@ -347,6 +353,38 @@ pub struct IndomaretVoucherData {}
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct JCSVoucherData {}
 
+/// Data required for the next step in a voucher-based payment flow.
+///
+/// Voucher payments (like Boleto in Brazil) require the customer to complete payment offline
+/// by visiting a physical location or using banking apps. This structure contains all the
+/// information needed to display payment instructions to the customer, including:
+/// - Reference number to identify the payment
+/// - Barcode/digitable line for scanning or manual entry
+/// - URLs to download or view payment instructions
+/// - QR code URL for mobile wallet payments (Pix)
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct VoucherNextStepData {
+    /// Voucher entry date
+    pub entry_date: Option<String>,
+    /// Voucher expiry date and time
+    pub expires_at: Option<i64>,
+    /// Voucher expiry date and time
+    pub expiry_date: Option<PrimitiveDateTime>,
+    /// Reference number required for the transaction
+    pub reference: String,
+    /// Url to download the payment instruction
+    pub download_url: Option<String>,
+    /// Url to payment instruction page
+    pub instructions_url: Option<String>,
+    /// Human-readable numeric version of the barcode.
+    pub digitable_line: Option<Secret<String>>,
+    /// Machine-readable numeric code used to generate the barcode representation.
+    pub barcode: Option<Secret<String>>,
+    /// The url for Pix Qr code given by the connector associated with the voucher
+    pub qr_code_url: Option<String>,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum VoucherData {
@@ -477,6 +515,9 @@ pub enum BankTransferData {
     InstantBankTransfer {},
     InstantBankTransferFinland {},
     InstantBankTransferPoland {},
+    IndonesianBankTransfer {
+        bank_name: Option<common_enums::BankNames>,
+    },
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
@@ -492,6 +533,10 @@ pub enum BankDebitData {
         bank_holder_type: Option<common_enums::BankHolderType>,
     },
     SepaBankDebit {
+        iban: Secret<String>,
+        bank_account_holder_name: Option<Secret<String>>,
+    },
+    SepaGuaranteedBankDebit {
         iban: Secret<String>,
         bank_account_holder_name: Option<Secret<String>>,
     },
@@ -711,11 +756,10 @@ pub struct SamsungPayWalletData {
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct PazeWalletData {
-    #[schema(value_type = Option<String>)]
-    pub complete_response: Option<Secret<String>>,
-    #[schema(value_type = Option<String>)]
-    pub decrypted_data: Option<PazeDecryptedData>,
+#[serde(untagged)]
+pub enum PazeWalletData {
+    CompleteResponse(Secret<String>),
+    Decrypted(Box<PazeDecryptedData>),
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
@@ -823,6 +867,75 @@ pub struct GpayEncryptedTokenizationData {
     pub token_type: String,
     /// Token generated for the wallet
     pub token: String,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePayDecryptedData {
+    pub card_exp_month: Secret<String>,
+    pub card_exp_year: Secret<String>,
+    pub application_primary_account_number: cards::CardNumber,
+    pub cryptogram: Option<Secret<String>>,
+    pub eci_indicator: Option<String>,
+}
+
+impl GooglePayDecryptedData {
+    pub fn get_four_digit_expiry_year(
+        &self,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
+        let mut year = self.card_exp_year.peek().clone();
+
+        if year.len() == 2 {
+            year = format!("20{year}");
+        } else if year.len() != 4 {
+            return Err(ValidationError::InvalidValue {
+                message: format!(
+                    "Invalid expiry year length: {}. Must be 2 or 4 digits",
+                    year.len()
+                ),
+            }
+            .into());
+        }
+        Ok(Secret::new(year))
+    }
+
+    pub fn get_two_digit_expiry_year(
+        &self,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
+        let binding = self.card_exp_year.clone();
+        let year = binding.peek();
+        Ok(Secret::new(
+            year.get(year.len() - 2..)
+                .ok_or(ValidationError::InvalidValue {
+                    message: "Invalid two-digit year".to_string(),
+                })?
+                .to_string(),
+        ))
+    }
+
+    pub fn get_expiry_date_as_mmyy(&self) -> error_stack::Result<Secret<String>, ValidationError> {
+        let year = self.get_two_digit_expiry_year()?.expose();
+        let month = self.get_expiry_month()?.clone().expose();
+        Ok(Secret::new(format!("{month}{year}")))
+    }
+
+    pub fn get_expiry_month(&self) -> error_stack::Result<Secret<String>, ValidationError> {
+        let month_str = self.card_exp_month.peek();
+        let month = month_str
+            .parse::<u8>()
+            .map_err(|_| ValidationError::InvalidValue {
+                message: format!("Failed to parse expiry month: {month_str}"),
+            })?;
+
+        if !(1..=12).contains(&month) {
+            return Err(ValidationError::InvalidValue {
+                message: format!("Invalid expiry month: {month}. Must be between 1 and 12"),
+            }
+            .into());
+        }
+
+        Ok(self.card_exp_month.clone())
+    }
 }
 
 impl GpayTokenizationData {

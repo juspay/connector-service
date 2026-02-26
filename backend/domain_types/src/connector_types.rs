@@ -117,6 +117,7 @@ pub enum ConnectorEnum {
     Wellsfargo,
     Hyperpg,
     Zift,
+    Revolv3,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -196,6 +197,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Wellsfargo => Ok(Self::Wellsfargo),
             grpc_api_types::payments::Connector::Hyperpg => Ok(Self::Hyperpg),
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
+            grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1413,11 +1415,14 @@ pub struct PaymentCreateOrderData {
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
 }
 
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
+    /// Optional session token for wallet flows (Apple Pay, Google Pay)
+    pub session_token: Option<SessionToken>,
 }
 
 #[derive(Debug, Clone)]
@@ -2770,6 +2775,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::BankDebitData::SepaBankDebit { .. } => Self::SepaBankDebit,
                 payment_method_data::BankDebitData::BecsBankDebit { .. } => Self::BecsBankDebit,
                 payment_method_data::BankDebitData::BacsBankDebit { .. } => Self::BacsBankDebit,
+                payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                    Self::SepaGuaranteedBankDebit
+                }
             },
             PaymentMethodData::BankTransfer(bank_transfer_data) => match *bank_transfer_data {
                 payment_method_data::BankTransferData::AchBankTransfer { .. } => {
@@ -2818,6 +2826,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 }
                 payment_method_data::BankTransferData::InstantBankTransferPoland { .. } => {
                     Self::InstantBankTransferPoland
+                }
+                payment_method_data::BankTransferData::IndonesianBankTransfer { .. } => {
+                    Self::IndonesianBankTransfer
                 }
             },
             PaymentMethodData::Crypto(_) => Self::Crypto,
