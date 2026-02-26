@@ -80,21 +80,27 @@ fn add_cashtocode_metadata<T>(request: &mut Request<T>) {
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
-        amount: TEST_AMOUNT,
-        minor_amount: TEST_AMOUNT,
-        currency: i32::from(Currency::Eur),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Eur),
+        }),
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::ClassicReward(
                 ClassicReward {},
             )),
         }),
-        customer_id: Some("cust_1233".to_string()),
+        customer: Some(grpc_api_types::payments::Customer {
+            email: Some(TEST_EMAIL.to_string().into()),
+            name: None,
+            id: Some("cust_1233".to_string()),
+            connector_id: Some("cust_1233".to_string()),
+            phone_number: None,
+        }),
         return_url: Some("https://hyperswitch.io/connector-service".to_string()),
         webhook_url: Some("https://hyperswitch.io/connector-service".to_string()),
-        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        request_ref_id: Some(Identifier {
+        merchant_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("cashtocode_test_{}", get_timestamp()))),
         }),
         enrolled_for_3ds: Some(false),

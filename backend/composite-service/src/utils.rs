@@ -3,8 +3,8 @@ use std::str::FromStr;
 use common_utils::consts::X_CONNECTOR_NAME;
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    AccessToken, PaymentServiceCreateAccessTokenResponse,
-    PaymentServiceCreateConnectorCustomerResponse,
+    AccessToken, CustomerServiceCreateResponse,
+    MerchantAuthenticationServiceCreateAccessTokenResponse,
 };
 
 pub fn connector_from_composite_authorize_metadata(
@@ -43,14 +43,14 @@ pub fn grpc_connector_from_connector_enum(connector: &ConnectorEnum) -> i32 {
 
 pub fn get_connector_customer_id(
     connector_customer_id_from_request: Option<String>,
-    create_connector_customer_response: Option<&PaymentServiceCreateConnectorCustomerResponse>,
+    create_connector_customer_response: Option<&CustomerServiceCreateResponse>,
 ) -> Option<String> {
     connector_customer_id_from_request
         .or_else(|| create_connector_customer_response.map(|res| res.connector_customer_id.clone()))
 }
 
 pub fn access_token_from_create_access_token_response(
-    access_token_response: Option<&PaymentServiceCreateAccessTokenResponse>,
+    access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
 ) -> Option<AccessToken> {
     access_token_response.and_then(|response| {
         response.access_token.clone().map(|token| AccessToken {
@@ -63,7 +63,7 @@ pub fn access_token_from_create_access_token_response(
 
 pub fn get_access_token(
     access_token_from_request: Option<AccessToken>,
-    access_token_response: Option<&PaymentServiceCreateAccessTokenResponse>,
+    access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
 ) -> Option<AccessToken> {
     access_token_from_request
         .or_else(|| access_token_from_create_access_token_response(access_token_response))

@@ -22,14 +22,16 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, mandate_reference_id::MandateIdType, payment_method,
-        payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
-        BrowserInformation, CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReferenceId, PaymentAddress,
-        PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
-        PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
-        PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
+        payment_service_client::PaymentServiceClient,
+        recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
+        AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
+        ConnectorMandateReferenceId, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage,
+        Identifier, MandateReferenceId, PaymentAddress, PaymentMethod, PaymentMethodType,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceRegisterAutoDebitRequest, PaymentServiceVoidRequest, PaymentStatus,
+        RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse,
+        RefundServiceGetRequest, RefundStatus,
     },
 };
 use rand::{distributions::Alphanumeric, Rng};
@@ -146,7 +148,7 @@ fn add_authorizenet_metadata<T>(request: &mut Request<T>) {
 // Helper function to extract transaction ID from response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
     // First try to get the transaction ID from transaction_id field
-    match &response.transaction_id {
+    match &response.connector_transaction_id {
         Some(id) => match &id.id_type {
             Some(id_type) => match id_type {
                 IdType::Id(id) => id.clone(),
@@ -157,7 +159,7 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
         },
         None => {
             // Fallback to response_ref_id if transaction_id is not available
-            if let Some(ref_id) = &response.response_ref_id {
+            if let Some(ref_id) = &response.merchant_transaction_id {
                 match &ref_id.id_type {
                     Some(id_type) => match id_type {
                         IdType::Id(id) => id.clone(),
@@ -175,7 +177,7 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 
 // Helper function to create a repeat payment request (matching your JSON format)
 #[allow(clippy::field_reassign_with_default)]
-fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEverythingRequest {
+fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceChargeRequest {
     let request_ref_id = Identifier {
         id_type: Some(IdType::Id(generate_unique_request_ref_id("repeat_req"))),
     };
@@ -200,12 +202,13 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
 
     let metadata_json = serde_json::to_string(&metadata_map).unwrap();
 
-    PaymentServiceRepeatEverythingRequest {
+    RecurringPaymentServiceChargeRequest {
         request_ref_id: Some(request_ref_id),
         mandate_reference_id: Some(mandate_reference),
-        amount: REPEAT_AMOUNT,
-        currency: i32::from(Currency::Usd),
-        minor_amount: REPEAT_AMOUNT,
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: REPEAT_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
         metadata: Some(Secret::new(metadata_json)),
         webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
@@ -214,9 +217,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         browser_info: None,
         test_mode: None,
         payment_method_type: None,
-        merchant_account_metadata: None,
         state: None,
-        recurring_mandate_payment_data: None,
         address: None,
         connector_customer_id: None,
         description: None,
@@ -228,7 +229,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
 // Test repeat payment (MIT) flow using previously created mandate
 #[tokio::test]
 async fn test_repeat_everything() {
-    grpc_test!(client, PaymentServiceClient<Channel>, {
+    grpc_test!([client: PaymentServiceClient<Channel>, recurring_client: RecurringPaymentServiceClient<Channel>], {
         // First, create a mandate using register
         let register_request = create_register_request();
 
@@ -251,26 +252,34 @@ async fn test_repeat_everything() {
             .mandate_reference
             .as_ref()
             .unwrap()
-            .mandate_id
+            .mandate_id_type
             .as_ref()
             .expect("Mandate ID should be present");
 
+        let mandate_id = match mandate_id {
+            MandateIdType::ConnectorMandateId(connector_mandate) => connector_mandate
+                .connector_mandate_id
+                .clone()
+                .expect("Connector mandate ID should be present"),
+            _ => panic!("Expected ConnectorMandateId type for mandate reference"),
+        };
+
         // Now perform a repeat payment using the mandate
-        let repeat_request = create_repeat_payment_request(mandate_id);
+        let repeat_request = create_repeat_payment_request(&mandate_id);
 
         let mut repeat_grpc_request = Request::new(repeat_request);
         add_authorizenet_metadata(&mut repeat_grpc_request);
 
         // Send the repeat payment request
-        let repeat_response = client
-            .repeat_everything(repeat_grpc_request)
+        let repeat_response = recurring_client
+            .charge(repeat_grpc_request)
             .await
-            .expect("gRPC repeat_everything call failed")
+            .expect("gRPC recurring_client::charge call failed")
             .into_inner();
 
         // Verify the response
         assert!(
-            repeat_response.transaction_id.is_some(),
+            repeat_response.connector_transaction_id.is_some(),
             "Transaction ID should be present"
         );
 
@@ -295,11 +304,11 @@ fn create_payment_authorize_request(
     request_ref_id.id_type = Some(IdType::Id(
         generate_unique_request_ref_id("req_"), // Using timestamp to make unique
     ));
-    request.request_ref_id = Some(request_ref_id);
     // Set the basic payment details matching working grpcurl
-    request.amount = TEST_AMOUNT;
-    request.minor_amount = TEST_AMOUNT;
-    request.currency = 146; // Currency value from working grpcurl
+    request.amount = Some(grpc_api_types::payments::Money {
+        minor_amount: TEST_AMOUNT,
+        currency: 146, // Currency value from working grpcurl
+    });
 
     // Set up card payment method using the correct structure
     let card_details = CardDetails {
@@ -320,10 +329,13 @@ fn create_payment_authorize_request(
         payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
     });
 
-    request.customer_id = Some("TEST_CONNECTOR".to_string());
-    // Set the customer information with unique email
-    request.email = Some(generate_unique_email().into());
-
+    request.customer = Some(grpc_api_types::payments::Customer {
+        email: Some(generate_unique_email().into()),
+        name: None,
+        id: Some("TEST_CONNECTOR".to_string()),
+        connector_id: Some("TEST_CONNECTOR".to_string()),
+        phone_number: None,
+    });
     // Generate random names for billing to prevent duplicate transaction errors
     let billing_first_name = random_name();
     let billing_last_name = random_name();
@@ -399,22 +411,18 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         id_type: Some(IdType::Id(transaction_id.to_string())),
     };
 
-    let request_ref_id = Identifier {
-        id_type: Some(IdType::Id(transaction_id.to_string())),
-    };
-
     PaymentServiceGetRequest {
-        transaction_id: Some(transaction_id_obj),
+        connector_transaction_id: Some(transaction_id_obj),
         encoded_data: None,
-        request_ref_id: Some(request_ref_id),
         capture_method: None,
         handle_response: None,
-        amount: TEST_AMOUNT,
-        currency: 146, // Currency value from working grpcurl
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: 146, // Currency value from working grpcurl
+        }),
         state: None,
         metadata: None,
-        merchant_account_metadata: None,
-        connector_metadata: None,
+        feature_data: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
@@ -434,17 +442,18 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
     };
 
     PaymentServiceCaptureRequest {
-        request_ref_id: Some(request_ref_id),
-        transaction_id: Some(transaction_id_obj),
-        amount_to_capture: TEST_AMOUNT,
-        currency: i32::from(Currency::Usd),
+        merchant_capture_id: Some(request_ref_id),
+        connector_transaction_id: Some(transaction_id_obj),
+        amount_to_capture: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         multiple_capture_data: None,
         metadata: None,
-        connector_metadata: None,
+        feature_data: None,
         browser_info: None,
         capture_method: None,
         state: None,
-        merchant_account_metadata: None,
         test_mode: None,
         merchant_order_reference_id: None,
     }
@@ -461,13 +470,12 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
     };
 
     PaymentServiceVoidRequest {
-        transaction_id: Some(transaction_id_obj),
+        connector_transaction_id: Some(transaction_id_obj),
         request_ref_id: Some(request_ref_id),
         cancellation_reason: None,
         all_keys_required: None,
         browser_info: None,
         amount: None,
-        currency: None,
         ..Default::default()
     }
 }
@@ -499,25 +507,23 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     let refund_metadata_json = serde_json::to_string(&refund_metadata_map).unwrap();
 
     PaymentServiceRefundRequest {
-        request_ref_id: Some(request_ref_id),
-        refund_id: generate_unique_request_ref_id("refund_id"),
-        transaction_id: Some(transaction_id_obj),
-        currency: i32::from(Currency::Usd),
+        merchant_refund_id: Some(request_ref_id),
+        connector_transaction_id: Some(transaction_id_obj),
         payment_amount: TEST_AMOUNT,
-        refund_amount: TEST_AMOUNT,
-        minor_payment_amount: TEST_AMOUNT,
-        minor_refund_amount: TEST_AMOUNT,
+        refund_amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         reason: Some("Test refund".to_string()),
         webhook_url: None,
         merchant_account_id: None,
         capture_method: None,
         metadata: None,
-        connector_metadata: None,
+        feature_data: None,
         refund_metadata: Some(Secret::new(refund_metadata_json)),
         browser_info: None,
         test_mode: Some(true),
         state: None,
-        merchant_account_metadata: None,
         payment_method_type: None,
         customer_id: Some("TEST_CONNECTOR".to_string()),
     }
@@ -535,26 +541,28 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
 
     RefundServiceGetRequest {
         request_ref_id: Some(request_ref_id),
-        transaction_id: Some(transaction_id_obj),
+        connector_transaction_id: Some(transaction_id_obj),
         refund_id: refund_id.to_string(),
         browser_info: None,
         refund_reason: None,
         test_mode: Some(true),
         refund_metadata: None,
         state: None,
-        merchant_account_metadata: None,
+        feature_data: None,
         payment_method_type: None,
     }
 }
 
 // Helper function to create a register (setup mandate) request (matching your JSON format)
 #[allow(clippy::field_reassign_with_default)]
-fn create_register_request() -> PaymentServiceRegisterRequest {
-    let mut request = PaymentServiceRegisterRequest::default();
+fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
+    let mut request = PaymentServiceRegisterAutoDebitRequest::default();
 
     // Set amounts matching your JSON (3000 minor units)
-    request.minor_amount = Some(TEST_AMOUNT);
-    request.currency = i32::from(Currency::Usd);
+    request.amount = Some(grpc_api_types::payments::Money {
+        minor_amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Usd),
+    });
 
     // Set up card payment method with Visa network as in your JSON
     let card_details = CardDetails {
@@ -576,8 +584,13 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
     });
 
     // Set customer information with unique email
-    request.customer_name = Some(TEST_CARD_HOLDER.to_string());
-    request.email = Some(generate_unique_email().into());
+    request.customer = Some(grpc_api_types::payments::Customer {
+        email: Some(generate_unique_email().into()),
+        name: Some(TEST_CARD_HOLDER.to_string()),
+        id: None,
+        connector_id: None,
+        phone_number: None,
+    });
 
     // Add customer acceptance as required by the server (matching your JSON: "acceptance_type": "OFFLINE")
     request.customer_acceptance = Some(CustomerAcceptance {
@@ -615,7 +628,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
     request.enrolled_for_3ds = false;
 
     // Set request reference ID with unique UUID (this will be unique every time)
-    request.request_ref_id = Some(Identifier {
+    request.merchant_registration_id = Some(Identifier {
         id_type: Some(IdType::Id(generate_unique_request_ref_id("mandate"))),
     });
 
@@ -671,7 +684,7 @@ async fn test_payment_authorization_auto_capture() {
         ];
         if successful_statuses.contains(&response.status) {
             assert!(
-                response.transaction_id.is_some(),
+                response.connector_transaction_id.is_some(),
                 "Transaction ID should be present for successful payments, but status was: {}",
                 response.status
             );
@@ -723,7 +736,7 @@ async fn test_payment_authorization_manual_capture() {
         // );
         if successful_statuses.contains(&auth_response.status) {
             assert!(
-                auth_response.transaction_id.is_some(),
+                auth_response.connector_transaction_id.is_some(),
                 "Transaction ID should be present for successful payments, but status was: {}",
                 auth_response.status
             );
@@ -839,7 +852,7 @@ async fn test_payment_sync() {
 
         // Verify we have transaction ID in the response
         assert!(
-            get_response.transaction_id.is_some(),
+            get_response.connector_transaction_id.is_some(),
             "Transaction ID should be present in get response"
         );
     });
@@ -982,7 +995,14 @@ async fn test_refund() {
         });
 
         let has_expected_error = refund_result.as_ref().is_ok_and(|response| {
-            let error_msg = response.get_ref().error_message();
+            let error_msg = response
+                .get_ref()
+                .error
+                .clone()
+                .and_then(|e| e.connector_details)
+                .and_then(|e| e.message)
+                .unwrap_or_default()
+                .to_lowercase();
             error_msg.contains(
                 "The referenced transaction does not meet the criteria for issuing a credit.",
             ) || error_msg.contains("credit")
@@ -1020,7 +1040,7 @@ async fn test_register() {
 
         // Verify the response
         assert!(
-            response.registration_id.is_some(),
+            response.connector_registration_id.is_some(),
             "Registration ID should be present"
         );
 
@@ -1032,23 +1052,30 @@ async fn test_register() {
 
         // Verify the mandate reference has the expected structure
         if let Some(mandate_ref) = &response.mandate_reference {
-            assert!(
-                mandate_ref.mandate_id.is_some(),
-                "Mandate ID should be present"
-            );
-
             // Verify the composite ID format (profile_id-payment_profile_id)
-            if let Some(mandate_id) = &mandate_ref.mandate_id {
+            if let Some(MandateIdType::ConnectorMandateId(mandate_id)) =
+                &mandate_ref.mandate_id_type
+            {
                 assert!(
-                    mandate_id.contains('-') || !mandate_id.is_empty(),
-                    "Mandate ID should be either a composite ID or a profile ID"
+                    mandate_id.connector_mandate_id.is_some(),
+                    "Mandate ID should be present"
                 );
+                if let Some(mandate_id) = mandate_id.connector_mandate_id.as_ref() {
+                    assert!(
+                        mandate_id.contains('-') || !mandate_id.is_empty(),
+                        "Mandate ID should be either a composite ID or a profile ID"
+                    );
+                }
             }
         }
 
+        let error_message = response
+            .error
+            .and_then(|e| e.connector_details)
+            .and_then(|e| e.message);
         // Verify no error occurred
         assert!(
-            response.error_message.is_none() || response.error_message.as_ref().unwrap().is_empty(),
+            error_message.is_none() || error_message.as_ref().unwrap().is_empty(),
             "No error message should be present for successful register"
         );
     });
@@ -1083,7 +1110,7 @@ async fn test_authorize_with_setup_future_usage() {
         ];
         if successful_statuses.contains(&auth_response.status) {
             assert!(
-                auth_response.transaction_id.is_some(),
+                auth_response.connector_transaction_id.is_some(),
                 "Transaction ID should be present for successful payments, but status was: {}",
                 auth_response.status
             );

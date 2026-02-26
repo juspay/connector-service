@@ -4,24 +4,31 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthenticateRequest,
-    PaymentServiceAuthenticateResponse, PaymentServiceAuthorizeOnlyRequest,
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-    PaymentServiceCaptureResponse, PaymentServiceCreateAccessTokenRequest,
-    PaymentServiceCreateAccessTokenResponse, PaymentServiceCreateConnectorCustomerRequest,
-    PaymentServiceCreateConnectorCustomerResponse, PaymentServiceCreateOrderRequest,
-    PaymentServiceCreateOrderResponse, PaymentServiceCreatePaymentMethodTokenRequest,
-    PaymentServiceCreatePaymentMethodTokenResponse, PaymentServiceCreateSessionTokenRequest,
-    PaymentServiceCreateSessionTokenResponse, PaymentServiceDisputeRequest,
-    PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServicePostAuthenticateRequest,
-    PaymentServicePostAuthenticateResponse, PaymentServicePreAuthenticateRequest,
-    PaymentServicePreAuthenticateResponse, PaymentServiceRefundRequest,
-    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
-    PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
-    PaymentServiceTransformRequest, PaymentServiceTransformResponse,
-    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
-    PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
+    customer_service_server::CustomerService,
+    merchant_authentication_service_server::MerchantAuthenticationService,
+    payment_method_authentication_service_server::PaymentMethodAuthenticationService,
+    payment_method_service_server::PaymentMethodService, payment_service_server::PaymentService,
+    recurring_payment_service_server::RecurringPaymentService, CustomerServiceCreateRequest,
+    CustomerServiceCreateResponse, EventServiceHandleRequest, EventServiceHandleResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse,
+    MerchantAuthenticationServiceCreateSessionTokenRequest,
+    MerchantAuthenticationServiceCreateSessionTokenResponse,
+    PaymentMethodAuthenticationServiceAuthenticateRequest,
+    PaymentMethodAuthenticationServiceAuthenticateResponse,
+    PaymentMethodAuthenticationServicePostAuthenticateRequest,
+    PaymentMethodAuthenticationServicePostAuthenticateResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest,
+    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest,
+    PaymentServiceRegisterAutoDebitResponse, PaymentServiceReverseRequest,
+    PaymentServiceReverseResponse, PaymentServiceVerifyRedirectResponseRequest,
+    PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
+    RecurringPaymentServiceChargeResponse, RefundResponse,
 };
 use std::sync::Arc;
 
@@ -39,13 +46,13 @@ http_handler!(
     authorize,
     payments_service
 );
-http_handler!(
-    authorize_only,
-    PaymentServiceAuthorizeOnlyRequest,
-    PaymentServiceAuthorizeResponse,
-    authorize_only,
-    payments_service
-);
+// http_handler!(
+//     authorize_only,
+//     PaymentServiceAuthorizeOnlyRequest,
+//     PaymentServiceAuthorizeResponse,
+//     authorize_only,
+//     payments_service
+// );
 http_handler!(
     capture,
     PaymentServiceCaptureRequest,
@@ -62,9 +69,9 @@ http_handler!(
 );
 http_handler!(
     void_post_capture,
-    PaymentServiceVoidPostCaptureRequest,
-    PaymentServiceVoidPostCaptureResponse,
-    void_post_capture,
+    PaymentServiceReverseRequest,
+    PaymentServiceReverseResponse,
+    reverse,
     payments_service
 );
 http_handler!(
@@ -83,45 +90,45 @@ http_handler!(
 );
 http_handler!(
     create_session_token,
-    PaymentServiceCreateSessionTokenRequest,
-    PaymentServiceCreateSessionTokenResponse,
+    MerchantAuthenticationServiceCreateSessionTokenRequest,
+    MerchantAuthenticationServiceCreateSessionTokenResponse,
     create_session_token,
-    payments_service
+    merchant_authentication_service
 );
 http_handler!(
     create_connector_customer,
-    PaymentServiceCreateConnectorCustomerRequest,
-    PaymentServiceCreateConnectorCustomerResponse,
-    create_connector_customer,
-    payments_service
+    CustomerServiceCreateRequest,
+    CustomerServiceCreateResponse,
+    create,
+    customer_service
 );
 http_handler!(
     create_payment_method_token,
-    PaymentServiceCreatePaymentMethodTokenRequest,
-    PaymentServiceCreatePaymentMethodTokenResponse,
-    create_payment_method_token,
-    payments_service
+    PaymentMethodServiceTokenizeRequest,
+    PaymentMethodServiceTokenizeResponse,
+    tokenize,
+    payment_method_service
 );
 http_handler!(
     register,
-    PaymentServiceRegisterRequest,
-    PaymentServiceRegisterResponse,
+    PaymentServiceRegisterAutoDebitRequest,
+    PaymentServiceRegisterAutoDebitResponse,
     register,
     payments_service
 );
-http_handler!(
-    register_only,
-    PaymentServiceRegisterRequest,
-    PaymentServiceRegisterResponse,
-    register_only,
-    payments_service
-);
+// http_handler!(
+//     register_only,
+//     PaymentServiceRegisterAutoDebitRequest,
+//     PaymentServiceRegisterAutoDebitResponse,
+//     register_only,
+//     payments_service
+// );
 http_handler!(
     repeat_everything,
-    PaymentServiceRepeatEverythingRequest,
-    PaymentServiceRepeatEverythingResponse,
-    repeat_everything,
-    payments_service
+    RecurringPaymentServiceChargeRequest,
+    RecurringPaymentServiceChargeResponse,
+    charge,
+    recurring_payment_service
 );
 http_handler!(
     refund,
@@ -131,44 +138,37 @@ http_handler!(
     payments_service
 );
 http_handler!(
-    dispute,
-    PaymentServiceDisputeRequest,
-    DisputeResponse,
-    dispute,
-    payments_service
-);
-http_handler!(
     pre_authenticate,
-    PaymentServicePreAuthenticateRequest,
-    PaymentServicePreAuthenticateResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse,
     pre_authenticate,
-    payments_service
+    payment_method_authentication_service
 );
 http_handler!(
     authenticate,
-    PaymentServiceAuthenticateRequest,
-    PaymentServiceAuthenticateResponse,
+    PaymentMethodAuthenticationServiceAuthenticateRequest,
+    PaymentMethodAuthenticationServiceAuthenticateResponse,
     authenticate,
-    payments_service
+    payment_method_authentication_service
 );
 http_handler!(
     post_authenticate,
-    PaymentServicePostAuthenticateRequest,
-    PaymentServicePostAuthenticateResponse,
+    PaymentMethodAuthenticationServicePostAuthenticateRequest,
+    PaymentMethodAuthenticationServicePostAuthenticateResponse,
     post_authenticate,
-    payments_service
+    payment_method_authentication_service
 );
 http_handler!(
     create_access_token,
-    PaymentServiceCreateAccessTokenRequest,
-    PaymentServiceCreateAccessTokenResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse,
     create_access_token,
-    payments_service
+    merchant_authentication_service
 );
 http_handler!(
     transform,
-    PaymentServiceTransformRequest,
-    PaymentServiceTransformResponse,
+    EventServiceHandleRequest,
+    EventServiceHandleResponse,
     transform,
     payments_service
 );

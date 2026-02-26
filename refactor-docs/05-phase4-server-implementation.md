@@ -240,15 +240,15 @@ All gRPC service handlers implemented and working. Server starts successfully an
        
        async fn defend(
            &self,
-           request: Request<grpc_api_types::DisputeDefendRequest>,
-       ) -> Result<Response<grpc_api_types::DisputeDefendResponse>, Status> {
+           request: Request<grpc_api_types::DisputeServiceDefendRequest>,
+       ) -> Result<Response<grpc_api_types::DisputeServiceDefendResponse>, Status> {
            // New: Handle dispute defense
        }
        
        async fn accept(
            &self,
-           request: Request<grpc_api_types::AcceptDisputeRequest>,
-       ) -> Result<Response<grpc_api_types::AcceptDisputeResponse>, Status> {
+           request: Request<grpc_api_types::DisputeServiceAcceptRequest>,
+       ) -> Result<Response<grpc_api_types::DisputeServiceAcceptResponse>, Status> {
            // New: Handle dispute acceptance
        }
        

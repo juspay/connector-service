@@ -9,10 +9,10 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, AcceptDisputeRequest, AcceptDisputeResponse,
-    DisputeDefendRequest, DisputeDefendResponse, DisputeResponse, DisputeServiceGetRequest,
-    DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,
-    DisputeServiceTransformRequest, DisputeServiceTransformResponse,
+    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
+    DisputeServiceSubmitEvidenceResponse, EventServiceHandleRequest, EventServiceHandleResponse,
 };
 use std::sync::Arc;
 use ucs_env::configs::Config;
@@ -35,24 +35,24 @@ http_handler!(
 
 http_handler!(
     defend_dispute,
-    DisputeDefendRequest,
-    DisputeDefendResponse,
+    DisputeServiceDefendRequest,
+    DisputeServiceDefendResponse,
     defend,
     disputes_service
 );
 
 http_handler!(
     accept_dispute,
-    AcceptDisputeRequest,
-    AcceptDisputeResponse,
+    DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse,
     accept,
     disputes_service
 );
 
 http_handler!(
     transform_dispute,
-    DisputeServiceTransformRequest,
-    DisputeServiceTransformResponse,
+    EventServiceHandleRequest,
+    EventServiceHandleResponse,
     transform,
     disputes_service
 );

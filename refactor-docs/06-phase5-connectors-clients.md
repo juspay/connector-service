@@ -246,8 +246,8 @@ All connectors work with new proto interfaces. All client SDKs are updated and f
    export class DisputeClient {
      async submitEvidence(request: DisputeSubmitEvidenceRequest): Promise<DisputeSubmitEvidenceResponse> { }
      async get(request: DisputeGetRequest): Promise<DisputeResponse> { }
-     async defend(request: DisputeDefendRequest): Promise<DisputeDefendResponse> { }
-     async accept(request: AcceptDisputeRequest): Promise<AcceptDisputeResponse> { }
+     async defend(request: DisputeServiceDefendRequest): Promise<DisputeServiceDefendResponse> { }
+     async accept(request: DisputeServiceAcceptRequest): Promise<DisputeServiceAcceptResponse> { }
    }
    ```
 
