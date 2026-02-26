@@ -1,7 +1,7 @@
 #[cfg(feature = "uniffi")]
 // macro implementation need to implemented
 mod uniffi_bindings_inner {
-    use crate::errors::{FfiPaymentError, UniffiError};
+    use crate::errors::UniffiError;
     use crate::handlers::payments::{
         authorize_req_handler, authorize_res_handler, capture_req_handler, capture_res_handler,
         create_access_token_req_handler, create_access_token_res_handler, get_req_handler,
@@ -144,8 +144,7 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response =
-            authorize_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+        let proto_response = authorize_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }
@@ -218,8 +217,7 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response =
-            capture_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+        let proto_response = capture_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }
@@ -292,8 +290,7 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
-        let proto_response =
-            void_res_handler(request, response, None).map_err(FfiPaymentError::from)?;
+        let proto_response = void_res_handler(request, response, None)?;
 
         Ok(proto_response.encode_to_vec())
     }

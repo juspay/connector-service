@@ -133,7 +133,6 @@ macro_rules! req_transformer {
 /// Macro to generate response transformer functions
 ///
 /// # Example
-/// ```ignore
 /// res_transformer! {
 ///     fn_name: authorize_res_transformer,
 ///     request_type: PaymentServiceAuthorizeRequest,
@@ -142,7 +141,6 @@ macro_rules! req_transformer {
 ///     request_data_type: PaymentsAuthorizeData<T>,
 ///     generate_response_fn: generate_payment_authorize_response,
 /// }
-/// ```
 
 macro_rules! res_transformer {
     (
