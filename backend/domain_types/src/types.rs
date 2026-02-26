@@ -5766,20 +5766,17 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     fn foreign_try_from(
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let amount = value
-            .amount
-            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required".to_owned(),
-                error_object: None,
-            }))?;
         // If currency is unspecified, send None, otherwise try to convert it
-        let currency = if amount.currency() == grpc_api_types::payments::Currency::Unspecified {
-            None
+        let currency = if let Some(a) = value.amount {
+            if a.currency() == grpc_api_types::payments::Currency::Unspecified {
+                None
+            } else {
+                Some(common_enums::Currency::foreign_try_from(a.currency())?)
+            }
         } else {
-            Some(common_enums::Currency::foreign_try_from(amount.currency())?)
+            None
         };
+        let amount = value.amount.map(|a| common_utils::MinorUnit::new(a.minor_amount));
         Ok(Self {
             browser_info: value
                 .browser_info
@@ -5800,7 +5797,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
             integrity_object: None,
-            amount: Some(common_utils::MinorUnit::new(amount.minor_amount)),
+            amount,
             currency,
             connector_metadata: value
                 .feature_data
