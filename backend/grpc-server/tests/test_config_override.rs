@@ -28,10 +28,17 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
         // .unwrap();
         // Create a request with configuration override
         let mut request = Request::new(PaymentServiceAuthorizeRequest {
-            amount: 1000,
-            minor_amount: 1000,
-            currency: Currency::Inr as i32,
-            email: Some(Secret::new("example@gmail.com".to_string())),
+            amount: Some(grpc_api_types::payments::Money {
+                minor_amount: 1000,
+                currency: Currency::Inr as i32,
+            }),
+            customer: Some(grpc_api_types::payments::Customer {
+                email: Some(Secret::new("example@gmail.com".to_string())),
+                name: None,
+                id: None,
+                connector_id: None,
+                phone_number: None,
+            }),
             payment_method: Some(PaymentMethod {
                 payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
                     card_number: Some(CardNumber::from_str("5123456789012346").unwrap()),
@@ -63,7 +70,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
                 java_enabled: Some(false),
                 ..Default::default()
             }),
-            request_ref_id: Some(Identifier {
+            merchant_transaction_id: Some(Identifier {
                 id_type: Some(IdType::Id("payment_9089".to_string())),
             }),
             return_url: Some("www.google.com".to_string()),

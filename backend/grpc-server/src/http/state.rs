@@ -18,6 +18,7 @@ pub struct AppState {
     pub payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
 }
 
+#[allow(clippy::too_many_arguments)]
 impl AppState {
     pub fn new(
         composite_payments_service: CompositePaymentsService,
