@@ -7,36 +7,36 @@
  *   3. Execute the HTTP request via our standardized HttpClient
  *   4. Parse the connector response via authorizeResTransformer (UniFFI FFI)
  *   5. Deserialize protobuf response from bytes
- *
- * Mirrors the Python client at examples/example-uniffi-py/connector_client.py.
  */
 
-"use strict";
-
-const { UniffiClient } = require("./uniffi_client");
-const { execute } = require("./http_client");
-const { ucs } = require("./generated/proto");
+import { UniffiClient } from "./uniffi_client";
+import { execute, HttpOptions, HttpRequest } from "../http_client";
+// @ts-ignore - protobuf generated files might not have types yet
+import { ucs } from "./generated/proto";
 
 const PaymentServiceAuthorizeRequest = ucs.v2.PaymentServiceAuthorizeRequest;
 const PaymentServiceAuthorizeResponse = ucs.v2.PaymentServiceAuthorizeResponse;
 
-class ConnectorClient {
+export class ConnectorClient {
+  private _uniffi: UniffiClient;
+  private _options: HttpOptions;
+
   /**
-   * @param {string} [libPath] - optional path to the UniFFI shared library
-   * @param {Object} [options] - global configuration (proxy, timeouts, etc.)
+   * @param libPath - optional path to the UniFFI shared library
+   * @param options - global configuration (proxy, timeouts, tls, etc.)
    */
-  constructor(libPath, options = {}) {
+  constructor(libPath?: string, options: HttpOptions = {}) {
     this._uniffi = new UniffiClient(libPath);
     this._options = options;
   }
 
   /**
    * Execute a full authorize round-trip.
-   * @param {Object} requestMsg - PaymentServiceAuthorizeRequest message (plain object or Message instance)
-   * @param {Object<string,string>} metadata - connector routing + auth metadata
-   * @returns {Promise<Object>} decoded PaymentServiceAuthorizeResponse message
+   * @param requestMsg - PaymentServiceAuthorizeRequest message
+   * @param metadata - connector routing + auth metadata
+   * @returns decoded PaymentServiceAuthorizeResponse message
    */
-  async authorize(requestMsg, metadata) {
+  async authorize(requestMsg: any, metadata: Record<string, string>): Promise<any> {
     // 1. Serialize protobuf request to bytes
     const requestBytes = Buffer.from(
       PaymentServiceAuthorizeRequest.encode(requestMsg).finish()
@@ -44,7 +44,7 @@ class ConnectorClient {
 
     // 2. Build the connector HTTP request via FFI bridge
     const connectorRequestJson = this._uniffi.authorizeReq(requestBytes, metadata);
-    const connectorRequest = JSON.parse(connectorRequestJson);
+    const connectorRequest: HttpRequest = JSON.parse(connectorRequestJson);
 
     // Ensure body is stringified if it's a JSON object from FFI.
     if (connectorRequest.body && typeof connectorRequest.body === "object") {
@@ -68,5 +68,3 @@ class ConnectorClient {
     return PaymentServiceAuthorizeResponse.decode(resultBytes);
   }
 }
-
-module.exports = { ConnectorClient };

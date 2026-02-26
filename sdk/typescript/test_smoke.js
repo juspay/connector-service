@@ -9,8 +9,8 @@
 
 "use strict";
 
-const { UniffiClient, ConnectorClient } = require("hyperswitch-payments");
-const { ucs } = require("hyperswitch-payments/src/payments/generated/proto");
+const { UniffiClient, ConnectorClient } = require("./dist/src/index");
+const { ucs } = require("./dist/src/payments/generated/proto");
 
 const PaymentServiceAuthorizeRequest = ucs.v2.PaymentServiceAuthorizeRequest;
 const Currency = ucs.v2.Currency;

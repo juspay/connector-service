@@ -5,33 +5,52 @@
  * Handles RustBuffer serialization/deserialization for the UniFFI protocol.
  */
 
-"use strict";
+import koffi from "koffi";
+import path from "path";
 
-const koffi = require("koffi");
-const path = require("path");
+// Standard Node.js __dirname
+declare const __dirname: string;
+const _dirname = __dirname;
 
 // ── RustBuffer struct layout ────────────────────────────────────────────────
 // UniFFI uses RustBuffer { capacity: u64, len: u64, data: *u8 } for all
-// compound types (bytes, strings, maps). We allocate via the Rust allocator
-// and free via Rust — never from JS.
+// compound types (bytes, strings, maps). 
 
-const RustBuffer = koffi.struct("RustBuffer", {
+export interface RustBuffer {
+  capacity: bigint;
+  len: bigint;
+  data: Buffer | null;
+}
+
+export interface RustCallStatus {
+  code: number;
+  error_buf: RustBuffer;
+}
+
+const RustBufferStruct = koffi.struct("RustBuffer", {
   capacity: "uint64",
   len: "uint64",
   data: "void *",
 });
 
-const RustCallStatus = koffi.struct("RustCallStatus", {
+const RustCallStatusStruct = koffi.struct("RustCallStatus", {
   code: "int8",
-  error_buf: RustBuffer,
+  error_buf: RustBufferStruct,
 });
 
-// ── Load the shared library ─────────────────────────────────────────────────
+// ── Shared Library Interface ─────────────────────────────────────────────────
 
-function loadLib(libPath) {
+interface FfiFunctions {
+  authorize_req: (req: RustBuffer, meta: RustBuffer, status: any) => RustBuffer;
+  authorize_res: (body: RustBuffer, code: number, headers: RustBuffer, req: RustBuffer, meta: RustBuffer, status: any) => RustBuffer;
+  alloc: (len: bigint, status: any) => RustBuffer;
+  free: (buf: RustBuffer, status: any) => void;
+}
+
+function loadLib(libPath?: string): FfiFunctions {
   if (!libPath) {
     const ext = process.platform === "darwin" ? "dylib" : "so";
-    libPath = path.join(__dirname, "generated", `libconnector_service_ffi.${ext}`);
+    libPath = path.join(_dirname, "generated", `libconnector_service_ffi.${ext}`);
   }
 
   const lib = koffi.load(libPath);
@@ -39,45 +58,43 @@ function loadLib(libPath) {
   return {
     authorize_req: lib.func(
       "uniffi_connector_service_ffi_fn_func_authorize_req_transformer",
-      RustBuffer,
-      [RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
+      RustBufferStruct,
+      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     authorize_res: lib.func(
       "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
-      RustBuffer,
-      [RustBuffer, "uint16", RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
+      RustBufferStruct,
+      [RustBufferStruct, "uint16", RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     alloc: lib.func(
       "ffi_connector_service_ffi_rustbuffer_alloc",
-      RustBuffer,
-      ["uint64", koffi.out(koffi.pointer(RustCallStatus))]
+      RustBufferStruct,
+      ["uint64", koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     free: lib.func(
       "ffi_connector_service_ffi_rustbuffer_free",
       "void",
-      [RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
+      [RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
   };
 }
 
-// ── RustBuffer helpers ──────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────
 
-function makeCallStatus() {
-  return { code: 0, error_buf: { capacity: 0, len: 0, data: null } };
+function makeCallStatus(): RustCallStatus {
+  return { code: 0, error_buf: { capacity: 0n, len: 0n, data: null } };
 }
 
-function checkCallStatus(ffi, status) {
-  if (status.code === 0) return; // SUCCESS
+function checkCallStatus(ffi: FfiFunctions, status: RustCallStatus): void {
+  if (status.code === 0) return;
 
   if (status.code === 1) {
-    // CALL_ERROR — lift the UniffiError from error_buf
     const errMsg = liftError(status.error_buf);
     freeRustBuffer(ffi, status.error_buf);
     throw new Error(errMsg);
   }
 
-  // CALL_UNEXPECTED_ERROR (panic)
-  if (status.error_buf.len > 0) {
+  if (status.error_buf.len > 0n) {
     const msg = liftString(status.error_buf);
     freeRustBuffer(ffi, status.error_buf);
     throw new Error(`Rust panic: ${msg}`);
@@ -85,16 +102,15 @@ function checkCallStatus(ffi, status) {
   throw new Error("Unknown Rust panic");
 }
 
-function liftError(buf) {
-  if (!buf.data || buf.len === 0) return "Unknown error";
+function liftError(buf: RustBuffer): string {
+  if (!buf.data || buf.len === 0n) return "Unknown error";
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
   let offset = 0;
 
-  // variant: i32 big-endian
   const variant = raw.readInt32BE(offset);
   offset += 4;
 
-  const variantNames = {
+  const variantNames: Record<number, string> = {
     1: "DecodeError",
     2: "MissingMetadata",
     3: "MetadataParseError",
@@ -104,59 +120,52 @@ function liftError(buf) {
 
   if (variant === 5) return "NoConnectorRequest";
 
-  // All other variants have a string field
   const strLen = raw.readInt32BE(offset);
   offset += 4;
   const msg = raw.subarray(offset, offset + strLen).toString("utf-8");
   return `${variantNames[variant] || "UniffiError"}: ${msg}`;
 }
 
-function liftString(buf) {
-  if (!buf.data || buf.len === 0) return "";
+function liftString(buf: RustBuffer): string {
+  if (!buf.data || buf.len === 0n) return "";
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
   return raw.toString("utf-8");
 }
 
-function liftBytes(buf) {
-  if (!buf.data || buf.len === 0) return Buffer.alloc(0);
+function liftBytes(buf: RustBuffer): Buffer {
+  if (!buf.data || buf.len === 0n) return Buffer.alloc(0);
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
-  // Bytes are serialized as: i32 length + raw bytes
   const len = raw.readInt32BE(0);
   return raw.subarray(4, 4 + len);
 }
 
-function freeRustBuffer(ffi, buf) {
-  if (buf.data && buf.len > 0) {
+function freeRustBuffer(ffi: FfiFunctions, buf: RustBuffer): void {
+  if (buf.data && buf.len > 0n) {
     const status = makeCallStatus();
     ffi.free(buf, status);
   }
 }
 
-function allocRustBuffer(ffi, data) {
+function allocRustBuffer(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuffer {
   const status = makeCallStatus();
-  const buf = ffi.alloc(data.length, status);
+  const buf = ffi.alloc(BigInt(data.length), status);
   checkCallStatus(ffi, status);
 
-  // Copy data into the Rust-allocated buffer
   koffi.encode(buf.data, "uint8", Array.from(data), data.length);
-  buf.len = data.length;
+  buf.len = BigInt(data.length);
   return buf;
 }
 
-// ── Serialization (lower) ───────────────────────────────────────────────────
-
-function lowerBytes(ffi, bytes) {
-  // UniFFI bytes format: i32 length prefix + raw bytes
+function lowerBytes(ffi: FfiFunctions, bytes: Buffer | Uint8Array): RustBuffer {
   const buf = Buffer.alloc(4 + bytes.length);
   buf.writeInt32BE(bytes.length, 0);
   Buffer.from(bytes).copy(buf, 4);
   return allocRustBuffer(ffi, buf);
 }
 
-function lowerMap(ffi, map) {
-  // Map<String,String> format: i32 count + [i32 keyLen + keyBytes + i32 valLen + valBytes]*
+function lowerMap(ffi: FfiFunctions, map: Record<string, string>): RustBuffer {
   const entries = Object.entries(map);
-  let totalSize = 4; // count
+  let totalSize = 4;
   const encoded = entries.map(([k, v]) => {
     const keyBuf = Buffer.from(k, "utf-8");
     const valBuf = Buffer.from(v, "utf-8");
@@ -186,18 +195,14 @@ function lowerMap(ffi, map) {
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
-class UniffiClient {
-  constructor(libPath) {
+export class UniffiClient {
+  private _ffi: FfiFunctions;
+
+  constructor(libPath?: string) {
     this._ffi = loadLib(libPath);
   }
 
-  /**
-   * Build the connector HTTP request.
-   * @param {Buffer|Uint8Array} requestBytes - protobuf-encoded PaymentServiceAuthorizeRequest
-   * @param {Object<string,string>} metadata - connector routing + auth metadata
-   * @returns {string} JSON string: {url, method, headers, body}
-   */
-  authorizeReq(requestBytes, metadata) {
+  authorizeReq(requestBytes: Buffer | Uint8Array, metadata: Record<string, string>): string {
     const status = makeCallStatus();
     const rbRequest = lowerBytes(this._ffi, requestBytes);
     const rbMetadata = lowerMap(this._ffi, metadata);
@@ -206,23 +211,19 @@ class UniffiClient {
 
     try {
       checkCallStatus(this._ffi, status);
-      const str = liftString(result);
-      return str;
+      return liftString(result);
     } finally {
       freeRustBuffer(this._ffi, result);
     }
   }
 
-  /**
-   * Parse the connector HTTP response.
-   * @param {Buffer|Uint8Array} responseBody - raw response body bytes
-   * @param {number} statusCode - HTTP status code
-   * @param {Object<string,string>} responseHeaders - HTTP response headers
-   * @param {Buffer|Uint8Array} requestBytes - original protobuf request bytes
-   * @param {Object<string,string>} metadata - original metadata
-   * @returns {Buffer} protobuf-encoded PaymentServiceAuthorizeResponse
-   */
-  authorizeRes(responseBody, statusCode, responseHeaders, requestBytes, metadata) {
+  authorizeRes(
+    responseBody: Buffer | Uint8Array,
+    statusCode: number,
+    responseHeaders: Record<string, string>,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>
+  ): Buffer {
     const status = makeCallStatus();
     const rbResponseBody = lowerBytes(this._ffi, responseBody);
     const rbResponseHeaders = lowerMap(this._ffi, responseHeaders);
@@ -246,5 +247,3 @@ class UniffiClient {
     }
   }
 }
-
-module.exports = { UniffiClient };
