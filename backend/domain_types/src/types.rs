@@ -9898,8 +9898,6 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
-        let redirect_response = None;
-
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -9947,7 +9945,7 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             enrolled_for_3ds,
-            redirect_response,
+            redirect_response: None,
             capture_method: value
                 .capture_method
                 .map(|cm| {
