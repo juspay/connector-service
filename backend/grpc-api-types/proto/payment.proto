@@ -2092,8 +2092,6 @@ message PaymentServiceCaptureRequest {
   // Additional Context
   optional string merchant_order_reference_id = 15; // Merchant's internal reference ID
 
-  // Contextual Information
-  optional PaymentChannel payment_channel = 16; // Describes the channel through which the payment was initiated
 }
 
 // Response message for a payment capture operation.

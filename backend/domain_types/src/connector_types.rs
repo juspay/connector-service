@@ -2296,7 +2296,6 @@ pub struct PaymentsCaptureData {
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub metadata: Option<SecretSerdeValue>,
     pub merchant_order_reference_id: Option<String>,
-    pub payment_channel: Option<PaymentChannel>,
 }
 
 impl PaymentsCaptureData {

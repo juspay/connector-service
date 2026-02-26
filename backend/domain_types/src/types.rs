@@ -6777,13 +6777,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
 
         let minor_amount = common_utils::types::MinorUnit::new(value.amount_to_capture);
 
-        let payment_channel = match value.payment_channel() {
-            grpc_payment_types::PaymentChannel::Unspecified => None,
-            _ => Some(common_enums::PaymentChannel::foreign_try_from(
-                value.payment_channel(),
-            )?),
-        };
-
         Ok(Self {
             amount_to_capture: value.amount_to_capture,
             minor_amount_to_capture: minor_amount,
@@ -6805,7 +6798,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
             merchant_order_reference_id: value.merchant_order_reference_id,
-            payment_channel,
         })
     }
 }

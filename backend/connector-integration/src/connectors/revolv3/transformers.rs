@@ -1,12 +1,16 @@
-use crate::{types::ResponseRouterData, utils::is_refund_failure};
+use crate::{
+    types::ResponseRouterData,
+    utils::is_refund_failure,
+};
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{pii::Email, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData, BillingDescriptor,
+        BillingDescriptor, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     errors,
     payment_method_data::{
@@ -54,7 +58,7 @@ pub struct Revolv3AuthorizeRequest<T: PaymentMethodDataTypes> {
     pub payment_method: Revolv3PaymentMethodData<T>,
     pub amount: Revolv3AmountData,
     pub network_processing: Option<NetworkProcessingData>,
-    pub customer_id: Option<String>,
+    pub order_processing_channel: Option<OrderProcessingChannelType>,
     pub dynamic_descriptor: Option<Revolv3DynamicDescriptor>,
 }
 
@@ -64,7 +68,6 @@ pub struct Revolv3SaleRequest<T: PaymentMethodDataTypes> {
     pub payment_method: Revolv3PaymentMethodData<T>,
     pub invoice: Revolv3InvoiceData,
     pub network_processing: Option<NetworkProcessingData>,
-    pub customer_id: Option<String>,
     pub dynamic_descriptor: Option<Revolv3DynamicDescriptor>,
 }
 
@@ -210,7 +213,13 @@ impl<T: PaymentMethodDataTypes> PaymentMethodSpecificRequest<T> {
             billing_address: Revolv3BillingAddress::try_from_payment_flow_data(common_data),
             billing_first_name: common_data.get_optional_billing_first_name(),
             billing_last_name: common_data.get_optional_billing_last_name(),
-            billing_full_name: common_data.get_billing_full_name()?,
+            billing_full_name: common_data
+                .get_billing_full_name()
+                .ok()
+                .or(card.card_holder_name.clone())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "payment_method_data.billing.address.first_name",
+                })?,
             credit_card: Revolv3CreditCardData {
                 payment_account_number: card.card_number.clone(),
                 expiration_date: card.get_expiry_date_as_mmyy()?,
@@ -232,28 +241,18 @@ impl<T: PaymentMethodDataTypes> PaymentMethodSpecificRequest<T> {
     }
 }
 
-impl
-    From<
-        common_enums::PaymentChannel
-    > for OrderProcessingChannelType
-{
-    fn from(
-        item: common_enums::PaymentChannel
-    ) -> Self {
+impl From<common_enums::PaymentChannel> for OrderProcessingChannelType {
+    fn from(item: common_enums::PaymentChannel) -> Self {
         match item {
             common_enums::PaymentChannel::Ecommerce => Self::Ecommerce,
-            common_enums::PaymentChannel::MailOrder | common_enums::PaymentChannel::TelephoneOrder => Self::Moto,
+            common_enums::PaymentChannel::MailOrder
+            | common_enums::PaymentChannel::TelephoneOrder => Self::Moto,
         }
     }
 }
 
-impl From<
-        &BillingDescriptor
-    > for Revolv3DynamicDescriptor
-{
-    fn from(
-        item: &BillingDescriptor
-    ) -> Self{
+impl From<&BillingDescriptor> for Revolv3DynamicDescriptor {
+    fn from(item: &BillingDescriptor) -> Self {
         Self {
             sub_merchant_id: item.reference.clone(),
             sub_merchant_name: item.name.clone(),
@@ -319,14 +318,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency: item.router_data.request.currency,
         };
 
-        let customer_id = item
+        let dynamic_descriptor = item
             .router_data
-            .resource_common_data
-            .customer_id
+            .request
+            .billing_descriptor
             .as_ref()
-            .map(|id| id.get_string_repr().to_owned());
+            .map(Revolv3DynamicDescriptor::from);
 
-        let dynamic_descriptor = item.router_data.request.billing_descriptor.as_ref().map(Revolv3DynamicDescriptor::from);
+        let order_processing_channel = item
+            .router_data
+            .request
+            .payment_channel
+            .clone()
+            .map(OrderProcessingChannelType::from);
 
         if item.router_data.request.is_auto_capture()? {
             let invoice = Revolv3InvoiceData {
@@ -336,15 +340,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .merchant_order_reference_id
                     .clone(),
                 amount,
-                order_processing_channel: item.router_data.request.payment_channel.map(|channel|
-                OrderProcessingChannelType::from(channel)), 
+                order_processing_channel,
             };
 
             Ok(Self::Sale(Revolv3SaleRequest {
                 payment_method: payment_method_specific_response.payment_method_data,
                 invoice,
                 network_processing: payment_method_specific_response.network_data,
-                customer_id,
                 dynamic_descriptor,
             }))
         } else {
@@ -352,8 +354,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 payment_method: payment_method_specific_response.payment_method_data,
                 amount,
                 network_processing: payment_method_specific_response.network_data,
-                customer_id,
                 dynamic_descriptor,
+                order_processing_channel,
             }))
         }
     }
@@ -630,12 +632,24 @@ impl TryFrom<ResponseRouterData<Revolv3PaymentSyncResponse, Self>>
                 network_error_message: None,
             })
         } else {
+            let mandate_reference = item.response.payment_method.and_then(|payment_method| {
+                payment_method
+                    .payment_method_id
+                    .map(
+                        |connector_mandate_id| domain_types::connector_types::MandateReference {
+                            connector_mandate_id: Some(connector_mandate_id.to_string()),
+                            payment_method_id: None,
+                            connector_mandate_request_reference_id: None,
+                        },
+                    )
+            });
+
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
                     item.response.invoice_id.to_string(),
                 ),
                 redirection_data: None,
-                mandate_reference: None,
+                mandate_reference: mandate_reference.map(Box::new),
                 connector_metadata: None,
                 network_txn_id: item.response.network_transaction_id.clone(),
                 connector_response_reference_id: item.response.merchant_invoice_ref_id.clone(),
@@ -863,8 +877,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .change_context(errors::ConnectorError::AmountConversionFailed)?,
                 currency: item.router_data.request.currency,
             },
-            order_processing_channel: item.router_data.request.payment_channel.map(|channel|
-                OrderProcessingChannelType::from(channel)),
+            order_processing_channel: None,
         };
 
         Ok(Self { invoice })
@@ -1006,7 +1019,13 @@ impl<T: PaymentMethodDataTypes> Revolv3PaymentMethodData<T> {
             billing_address: Revolv3BillingAddress::try_from_payment_flow_data(common_data),
             billing_first_name: common_data.get_optional_billing_first_name(),
             billing_last_name: common_data.get_optional_billing_last_name(),
-            billing_full_name: common_data.get_billing_full_name()?,
+            billing_full_name: common_data
+                .get_billing_full_name()
+                .ok()
+                .or(card.card_holder_name.clone())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "payment_method_data.billing.address.first_name",
+                })?,
             credit_card: Revolv3NtidCreditCardData {
                 payment_account_number: card.card_number.clone(),
                 expiration_date: card.get_expiry_date_as_mmyy()?,
@@ -1147,6 +1166,8 @@ pub struct Revolv3SetupMandateRequest<T: PaymentMethodDataTypes> {
     pub payment_method: Revolv3PaymentMethodData<T>,
     pub network_processing: NetworkProcessingData,
     pub amount: Revolv3AmountData,
+    pub order_processing_channel: Option<OrderProcessingChannelType>,
+    pub dynamic_descriptor: Option<Revolv3DynamicDescriptor>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -1188,7 +1209,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     billing_address: Revolv3BillingAddress::try_from_payment_flow_data(common_data),
                     billing_first_name: common_data.get_optional_billing_first_name(),
                     billing_last_name: common_data.get_optional_billing_last_name(),
-                    billing_full_name: common_data.get_billing_full_name()?,
+                    billing_full_name: common_data
+                        .get_billing_full_name()
+                        .ok()
+                        .or(card_data.card_holder_name.clone())
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "payment_method_data.billing.address.first_name",
+                        })?,
                     credit_card: Revolv3CreditCardData {
                         payment_account_number: card_data.card_number.clone(),
                         expiration_date: card_data.get_expiry_date_as_mmyy()?,
@@ -1211,10 +1238,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency: item.router_data.request.currency,
         };
 
+        let order_processing_channel = item
+            .router_data
+            .request
+            .payment_channel
+            .map(OrderProcessingChannelType::from);
+
+        let dynamic_descriptor = item
+            .router_data
+            .request
+            .billing_descriptor
+            .as_ref()
+            .map(Revolv3DynamicDescriptor::from);
+
         Ok(Self {
             payment_method,
             network_processing,
             amount,
+            order_processing_channel,
+            dynamic_descriptor,
         })
     }
 }
