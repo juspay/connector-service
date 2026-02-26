@@ -97,11 +97,20 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
 
 pub struct Service {
     pub health_check_service: crate::server::health_check::HealthCheck,
-    pub composite_payments_service:
-        composite_service::payments::Payments<crate::server::payments::Payments>,
+    pub composite_payments_service: composite_service::payments::Payments<
+        crate::server::payments::Payments,
+        crate::server::payments::MerchantAuthentication,
+        crate::server::payments::Customer,
+    >,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
+    pub recurring_payment_service: crate::server::payments::RecurringPayments,
+    pub event_service: crate::server::payments::Events,
+    pub payment_method_service: crate::server::payments::PaymentMethod,
+    pub merchant_authentication_service: crate::server::payments::MerchantAuthentication,
+    pub customer_service: crate::server::payments::Customer,
+    pub payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
 }
 
 impl Service {
@@ -119,10 +128,18 @@ impl Service {
         } else {
             logger::info!("EventPublisher disabled in configuration");
         }
+        let customer_service = crate::server::payments::Customer;
+        let merchant_authentication_service = crate::server::payments::MerchantAuthentication;
 
-        let payments_service = crate::server::payments::Payments;
-        let composite_payments_service =
-            composite_service::payments::Payments::new(payments_service.clone());
+        let payments_service = crate::server::payments::Payments {
+            customer_service: customer_service.clone(),
+            merchant_authentication_service: merchant_authentication_service.clone(),
+        };
+        let composite_payments_service = composite_service::payments::Payments::new(
+            payments_service.clone(),
+            merchant_authentication_service.clone(),
+            customer_service.clone(),
+        );
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
@@ -130,6 +147,13 @@ impl Service {
             payments_service,
             refunds_service: crate::server::refunds::Refunds,
             disputes_service: crate::server::disputes::Disputes,
+            recurring_payment_service: crate::server::payments::RecurringPayments,
+            event_service: crate::server::payments::Events,
+            payment_method_service: crate::server::payments::PaymentMethod,
+            merchant_authentication_service,
+            customer_service,
+            payment_method_authentication_service:
+                crate::server::payments::PaymentMethodAuthentication,
         }
     }
 
@@ -168,6 +192,12 @@ impl Service {
             self.payments_service,
             self.refunds_service,
             self.disputes_service,
+            self.recurring_payment_service,
+            self.event_service,
+            self.payment_method_service,
+            self.merchant_authentication_service,
+            self.customer_service,
+            self.payment_method_authentication_service,
         );
         let router = crate::http::create_router(app_state)
             .layer(logging_layer)

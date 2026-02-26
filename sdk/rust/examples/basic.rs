@@ -21,16 +21,17 @@ async fn main() {
 fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
         // Identification
-        request_ref_id: Some(payments::Identifier {
+        merchant_transaction_id: Some(payments::Identifier {
             id_type: Some(payments::identifier::IdType::Id(
                 "test_payment_123456".to_string(),
             )),
         }),
 
         // Payment details
-        amount: 1000,
-        minor_amount: 1000,
-        currency: payments::Currency::Usd.into(),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: 1000,
+            currency: payments::Currency::Usd.into(),
+        }),
         capture_method: Some(payments::CaptureMethod::Automatic.into()),
 
         // Card payment method
@@ -55,10 +56,15 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
         }),
 
         // Customer info
-        email: Some(hyperswitch_masking::Secret::new(
-            "customer@example.com".to_string(),
-        )),
-        customer_name: Some("Test Customer".to_string()),
+        customer: Some(payments::Customer {
+            email: Some(hyperswitch_masking::Secret::new(
+                "customer@example.com".to_string(),
+            )),
+            name: Some("Test Customer".to_string()),
+            id: None,
+            connector_id: None,
+            phone_number: None,
+        }),
 
         // Auth / 3DS
         auth_type: payments::AuthenticationType::NoThreeDs.into(),

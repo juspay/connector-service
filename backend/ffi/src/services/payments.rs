@@ -1,10 +1,10 @@
 use external_services;
 use grpc_api_types::payments::{
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-    PaymentServiceCaptureResponse, PaymentServiceCreateAccessTokenRequest,
-    PaymentServiceCreateAccessTokenResponse, PaymentServiceGetRequest, PaymentServiceGetResponse,
-    PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RefundResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServiceRefundRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
 };
 
 use crate::errors::{FfiError, FfiPaymentError};
@@ -110,7 +110,7 @@ res_transformer!(
 // access token request transformer
 req_transformer!(
     fn_name: access_token_req_transformer,
-    request_type: PaymentServiceCreateAccessTokenRequest,
+    request_type: MerchantAuthenticationServiceCreateAccessTokenRequest,
     flow_marker: CreateAccessToken,
     resource_common_data_type: PaymentFlowData,
     request_data_type: AccessTokenRequestData,
@@ -120,8 +120,8 @@ req_transformer!(
 // access token response transformer
 res_transformer!(
     fn_name: access_token_res_transformer,
-    request_type: PaymentServiceCreateAccessTokenRequest,
-    response_type: PaymentServiceCreateAccessTokenResponse,
+    request_type: MerchantAuthenticationServiceCreateAccessTokenRequest,
+    response_type: MerchantAuthenticationServiceCreateAccessTokenResponse,
     flow_marker: CreateAccessToken,
     resource_common_data_type: PaymentFlowData,
     request_data_type: AccessTokenRequestData,
