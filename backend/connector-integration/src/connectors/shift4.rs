@@ -48,7 +48,7 @@ use self::transformers::{
     Shift4PaymentsRequest, Shift4PaymentsResponse as Shift4AuthorizeResponse,
     Shift4PaymentsResponse as Shift4CaptureResponse, Shift4PaymentsResponse as Shift4PSyncResponse,
     Shift4RSyncRequest, Shift4RefundRequest, Shift4RefundResponse,
-    Shift4RefundResponse as Shift4RSyncResponse,
+    Shift4RefundResponse as Shift4RSyncResponse, Shift4TokenRequest, Shift4TokenResponse,
 };
 use crate::{connectors::macros, types::ResponseRouterData, with_error_response_body};
 
@@ -184,6 +184,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Shift4<T>
 {
+    /// Enable automatic payment method tokenization for ACH/BankDebit
+    /// This creates a payment method at Shift4 before charging
+    fn should_do_payment_method_token(
+        &self,
+        payment_method: common_enums::PaymentMethod,
+        _payment_method_type: Option<common_enums::PaymentMethodType>,
+    ) -> bool {
+        matches!(payment_method, common_enums::PaymentMethod::BankDebit)
+    }
 }
 
 // ===== MACRO-BASED CONNECTOR IMPLEMENTATION =====
@@ -221,6 +230,12 @@ macros::create_all_prerequisites!(
             request_body: Shift4RSyncRequest,
             response_body: Shift4RSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: PaymentMethodToken,
+            request_body: Shift4TokenRequest,
+            response_body: Shift4TokenResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         )
     ],
     amount_converters: [],
@@ -415,6 +430,31 @@ macros::macro_connector_implementation!(
             let connector_refund_id = req.request.connector_refund_id.clone();
             let base_url = self.connector_base_url_refunds(req);
             Ok(format!("{base_url}/refunds/{connector_refund_id}"))
+        }
+    }
+);
+
+// PaymentMethodToken Flow (POST to /payment-methods)
+// Used for ACH bank debit tokenization before charging
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
+    connector: Shift4,
+    curl_request: Json(Shift4TokenRequest),
+    curl_response: Shift4TokenResponse,
+    flow_name: PaymentMethodToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentMethodTokenizationData<T>,
+    flow_response: PaymentMethodTokenResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{base_url}/payment-methods"))
         }
     }
 );
@@ -636,17 +676,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SubmitEvidenceV2 for Shift4<T>
-{
-}
-
-// Payment Method Token
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Shift4<T>
 {
 }
 

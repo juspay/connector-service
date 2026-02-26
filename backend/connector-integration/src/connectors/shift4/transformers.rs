@@ -2,11 +2,11 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus, BankHolderType, BankType};
 use common_utils::{pii, request::Method, types::MinorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund},
+    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{
@@ -75,6 +75,20 @@ pub enum Shift4PaymentMethod<T: PaymentMethodDataTypes> {
     Card(Shift4CardPayment<T>),
     BankRedirect(Shift4BankRedirectPayment),
     BankDebit(Shift4BankDebitPayment),
+    Token(Shift4TokenPayment),
+}
+
+/// Token-based payment method (for ACH after tokenization)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4TokenPayment {
+    pub payment_method: Shift4PaymentMethodId,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4PaymentMethodId {
+    pub id: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -318,83 +332,105 @@ impl<T: PaymentMethodDataTypes>
                         bank_holder_type,
                         ..
                     } => {
-                        // Extract billing information for name and address
-                        let billing = item
-                            .resource_common_data
-                            .address
-                            .get_payment_method_billing();
+                        // For ACH, check if we have a payment method token from the PaymentMethodToken flow
+                        // This is the preferred approach as raw ACH details cannot be charged directly
+                        if let Ok(pm_token) = item.resource_common_data.get_payment_method_token() {
+                            let token_id = match pm_token {
+                                domain_types::router_data::PaymentMethodToken::Token(token) => token.expose(),
+                                _ => {
+                                    return Err(error_stack::report!(
+                                        errors::ConnectorError::NotSupported {
+                                            message: "Only string tokens are supported for Shift4 ACH".to_string(),
+                                            connector: "Shift4",
+                                        }
+                                    ));
+                                }
+                            };
 
-                        // Get account holder name with fallback to billing name
-                        let account_holder_name = bank_account_holder_name
-                            .clone()
-                            .or_else(|| billing.as_ref().and_then(|b| b.get_optional_full_name()))
-                            .ok_or_else(|| {
-                                error_stack::report!(
-                                    errors::ConnectorError::MissingRequiredField {
-                                        field_name: "bank_account_holder_name",
-                                    }
-                                )
-                            })?;
+                            Shift4PaymentMethod::Token(Shift4TokenPayment {
+                                payment_method: Shift4PaymentMethodId { id: token_id },
+                            })
+                        } else {
+                            // Fallback: Try to use raw ACH details (will fail for most ACH accounts
+                            // as they require pre-verification via payment-methods endpoint)
+                            // Extract billing information for name and address
+                            let billing = item
+                                .resource_common_data
+                                .address
+                                .get_payment_method_billing();
 
-                        // Map bank_type to account_type string expected by Shift4
-                        // Format: "personal_savings", "personal_checking", "business_savings", "business_checking"
-                        let account_type = match (bank_holder_type, bank_type) {
-                            (Some(holder), Some(acc_type)) => {
-                                let holder_str = match holder {
-                                    BankHolderType::Personal => "personal",
-                                    BankHolderType::Business => "business",
-                                };
-                                let type_str = match acc_type {
-                                    BankType::Savings => "savings",
-                                    BankType::Checking => "checking",
-                                };
-                                format!("{}_{}", holder_str, type_str)
-                            }
-                            _ => "personal_checking".to_string(), // Default fallback
-                        };
+                            // Get account holder name with fallback to billing name
+                            let account_holder_name = bank_account_holder_name
+                                .clone()
+                                .or_else(|| billing.as_ref().and_then(|b| b.get_optional_full_name()))
+                                .ok_or_else(|| {
+                                    error_stack::report!(
+                                        errors::ConnectorError::MissingRequiredField {
+                                            field_name: "bank_account_holder_name",
+                                        }
+                                    )
+                                })?;
 
-                        // Build billing info with name and email
-                        let email = item
-                            .request
-                            .email
-                            .as_ref()
-                            .cloned()
-                            .or_else(|| billing.as_ref().and_then(|b| b.email.as_ref()).cloned());
+                            // Map bank_type to account_type string expected by Shift4
+                            // Format: "personal_savings", "personal_checking", "business_savings", "business_checking"
+                            let account_type = match (bank_holder_type, bank_type) {
+                                (Some(holder), Some(acc_type)) => {
+                                    let holder_str = match holder {
+                                        BankHolderType::Personal => "personal",
+                                        BankHolderType::Business => "business",
+                                    };
+                                    let type_str = match acc_type {
+                                        BankType::Savings => "savings",
+                                        BankType::Checking => "checking",
+                                    };
+                                    format!("{}_{}", holder_str, type_str)
+                                }
+                                _ => "personal_checking".to_string(), // Default fallback
+                            };
 
-                        let address = billing
-                            .as_ref()
-                            .and_then(|b| b.address.as_ref())
-                            .map(|addr| Shift4Address {
-                                line1: addr.line1.clone(),
-                                line2: addr.line2.clone(),
-                                city: addr.city.clone(),
-                                state: addr.state.clone(),
-                                zip: addr.zip.clone(),
-                                country: addr.country.as_ref().map(|c| c.to_string()),
-                            });
+                            // Build billing info with name and email
+                            let email = item
+                                .request
+                                .email
+                                .as_ref()
+                                .cloned()
+                                .or_else(|| billing.as_ref().and_then(|b| b.email.as_ref()).cloned());
 
-                        let billing_info = Shift4Billing {
-                            name: Some(account_holder_name),
-                            email,
-                            address,
-                        };
+                            let address = billing
+                                .as_ref()
+                                .and_then(|b| b.address.as_ref())
+                                .map(|addr| Shift4Address {
+                                    line1: addr.line1.clone(),
+                                    line2: addr.line2.clone(),
+                                    city: addr.city.clone(),
+                                    state: addr.state.clone(),
+                                    zip: addr.zip.clone(),
+                                    country: addr.country.as_ref().map(|c| c.to_string()),
+                                });
 
-                        Shift4PaymentMethod::BankDebit(Shift4BankDebitPayment {
-                            payment_method: Shift4AchPaymentMethod {
-                                payment_type: "ach".to_string(),
-                                ach: Shift4AchDetails {
-                                    account: Shift4AchAccount {
-                                        account_number: account_number.clone(),
-                                        routing_number: routing_number.clone(),
-                                        account_type,
+                            let billing_info = Shift4Billing {
+                                name: Some(account_holder_name),
+                                email,
+                                address,
+                            };
+
+                            Shift4PaymentMethod::BankDebit(Shift4BankDebitPayment {
+                                payment_method: Shift4AchPaymentMethod {
+                                    payment_type: "ach".to_string(),
+                                    ach: Shift4AchDetails {
+                                        account: Shift4AchAccount {
+                                            account_number: account_number.clone(),
+                                            routing_number: routing_number.clone(),
+                                            account_type,
+                                        },
+                                    },
+                                    billing: billing_info,
+                                    fraud_check_data: Shift4FraudCheckData {
+                                        ip_address: item.request.get_ip_address_as_optional().map(|ip| ip.expose().to_string()),
                                     },
                                 },
-                                billing: billing_info,
-                                fraud_check_data: Shift4FraudCheckData {
-                                    ip_address: item.request.get_ip_address_as_optional().map(|ip| ip.expose().to_string()),
-                                },
-                            },
-                        })
+                            })
+                        }
                     }
                     BankDebitData::SepaBankDebit { .. }
                     | BankDebitData::BecsBankDebit { .. }
@@ -815,6 +851,198 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Delegate to the existing TryFrom<&RouterDataV2> implementation
         Self::try_from(&item.router_data)
+    }
+}
+
+// ===== PAYMENT METHOD TOKENIZATION STRUCTURES =====
+
+/// Request to create a payment method at Shift4
+/// Used for ACH/bank debit before creating a charge
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4TokenRequest {
+    #[serde(rename = "type")]
+    pub payment_type: String,
+    #[serde(flatten)]
+    pub payment_method: Shift4TokenPaymentMethod,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum Shift4TokenPaymentMethod {
+    Ach(Shift4AchTokenData),
+    // Can be extended for other payment methods that need tokenization
+}
+
+/// ACH-specific tokenization data
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4AchTokenData {
+    pub ach: Shift4AchTokenDetails,
+    pub billing: Shift4Billing,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4AchTokenDetails {
+    pub account: Shift4AchTokenAccount,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4AchTokenAccount {
+    pub account_number: Secret<String>,
+    pub routing_number: Secret<String>,
+    pub account_type: String,
+}
+
+/// Response from payment method creation
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Shift4TokenResponse {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub payment_type: String,
+    pub status: String,
+}
+
+// ===== PAYMENT METHOD TOKENIZATION TRANSFORMERS =====
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        Shift4RouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
+    > for Shift4TokenRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: Shift4RouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        match &item.router_data.request.payment_method_data {
+            PaymentMethodData::BankDebit(bank_debit_data) => {
+                match bank_debit_data {
+                    BankDebitData::AchBankDebit {
+                        account_number,
+                        routing_number,
+                        bank_account_holder_name,
+                        bank_type,
+                        bank_holder_type,
+                        ..
+                    } => {
+                        // Extract billing information
+                        let billing = item
+                            .router_data
+                            .resource_common_data
+                            .address
+                            .get_payment_method_billing();
+
+                        // Get account holder name
+                        let account_holder_name = bank_account_holder_name
+                            .clone()
+                            .or_else(|| billing.as_ref().and_then(|b| b.get_optional_full_name()))
+                            .ok_or_else(|| {
+                                error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                                    field_name: "bank_account_holder_name",
+                                })
+                            })?;
+
+                        // Map account type
+                        let account_type = match (bank_holder_type, bank_type) {
+                            (Some(holder), Some(acc_type)) => {
+                                let holder_str = match holder {
+                                    BankHolderType::Personal => "personal",
+                                    BankHolderType::Business => "business",
+                                };
+                                let type_str = match acc_type {
+                                    BankType::Savings => "savings",
+                                    BankType::Checking => "checking",
+                                };
+                                format!("{}_{}", holder_str, type_str)
+                            }
+                            _ => "personal_checking".to_string(),
+                        };
+
+                        // Build billing with name and email (from billing address)
+                        let email = billing.as_ref().and_then(|b| b.email.as_ref()).cloned();
+
+                        let address = billing
+                            .as_ref()
+                            .and_then(|b| b.address.as_ref())
+                            .map(|addr| Shift4Address {
+                                line1: addr.line1.clone(),
+                                line2: addr.line2.clone(),
+                                city: addr.city.clone(),
+                                state: addr.state.clone(),
+                                zip: addr.zip.clone(),
+                                country: addr.country.as_ref().map(|c| c.to_string()),
+                            });
+
+                        let billing_info = Shift4Billing {
+                            name: Some(account_holder_name),
+                            email,
+                            address,
+                        };
+
+                        Ok(Self {
+                            payment_type: "ach".to_string(),
+                            payment_method: Shift4TokenPaymentMethod::Ach(Shift4AchTokenData {
+                                ach: Shift4AchTokenDetails {
+                                    account: Shift4AchTokenAccount {
+                                        account_number: account_number.clone(),
+                                        routing_number: routing_number.clone(),
+                                        account_type,
+                                    },
+                                },
+                                billing: billing_info,
+                            }),
+                        })
+                    }
+                    _ => Err(error_stack::report!(errors::ConnectorError::NotImplemented(
+                        "Only ACH bank debit tokenization is supported for Shift4".to_string(),
+                    ))),
+                }
+            }
+            _ => Err(error_stack::report!(errors::ConnectorError::NotImplemented(
+                "Only BankDebit payment method tokenization is supported for Shift4".to_string(),
+            ))),
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4TokenResponse, Self>>
+    for RouterDataV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<Shift4TokenResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(PaymentMethodTokenResponse {
+                token: item.response.id,
+            }),
+            ..item.router_data
+        })
     }
 }
 
