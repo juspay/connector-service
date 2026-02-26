@@ -62,6 +62,7 @@ message PaymentMethod {
     MifinityWallet mifinity = 21;                       // Mifinity
     Bluecode bluecode = 22;                             // Bluecode
     PazeWallet paze = 23;                               // Paze
+    SamsungWallet samsung_pay = 24;                     //Samsung
     
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
