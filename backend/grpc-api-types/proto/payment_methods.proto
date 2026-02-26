@@ -67,10 +67,10 @@ message PaymentMethod {
     GoPayRedirectWallet go_pay_redirect = 27;           // GoPay Redirect
     KakaoPayRedirectWallet kakao_pay_redirect = 28;     // KakaoPay Redirect
     MbWayRedirectWallet mb_way_redirect = 29;           // MB WAY Redirect
-    MomoRedirectWallet momo_redirect = 154;             // MoMo Redirect
-    TouchNGoRedirectWallet touch_n_go_redirect = 155;   // Touch 'n Go Redirect
-    TwintRedirectWallet twint_redirect = 156;           // TWINT Redirect
-    VippsRedirectWallet vipps_redirect = 157;           // Vipps Redirect
+    MomoRedirectWallet momo_redirect = 159;             // MoMo Redirect
+    TouchNGoRedirectWallet touch_n_go_redirect = 160;   // Touch 'n Go Redirect
+    TwintRedirectWallet twint_redirect = 161;           // TWINT Redirect
+    VippsRedirectWallet vipps_redirect = 162;           // Vipps Redirect
     SwishQrWallet swish_qr = 158;                       // Swish QR
     PazeWallet paze = 23;                               // Paze
     
