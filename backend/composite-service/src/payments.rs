@@ -106,7 +106,7 @@ where
         let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
         let should_create_connector_customer =
             connector_data.connector.should_create_connector_customer()
-                && payload.connector_customer_id.is_none();
+                && payload.customer.as_ref().and_then(|c| c.connector_id.as_ref()).is_none();
 
         let create_customer_response = match should_create_connector_customer {
             true => {

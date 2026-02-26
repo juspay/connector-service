@@ -10,7 +10,7 @@ option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/
 // Request message for composite authorize flow.
 message CompositeAuthorizeRequest {
   // Payment Identification
-  Identifier request_ref_id = 1; // Reference ID for tracking
+  Identifier merchant_transaction_id = 1; // Reference ID for tracking
 
   // Metadata
   optional SecretString metadata = 2; // Additional metadata for the connector
@@ -20,87 +20,82 @@ message CompositeAuthorizeRequest {
   optional bool test_mode = 4; // A boolean value to indicate if the connector is in Test mode
 
   // Customer Information
-  optional string customer_name = 5; // Name of the customer
-  optional SecretString email = 6; // Email address of the customer
-  optional string customer_id = 7; // Merchant's customer ID
-  optional string phone_number = 8; // Phone number of the customer
+  optional Customer customer = 5;
 
   // Address Information
-  optional PaymentAddress address = 9; // Billing and shipping address details
+  optional PaymentAddress address = 6; // Billing and shipping address details
 
   // Amount Information
-  int64 amount = 10; // The amount for the payment in major currency units
-  Currency currency = 11; // The currency for the payment, in ISO 4217 three-letter code
-  int64 minor_amount = 12; // The minor amount for the payment (e.g., cents)
-  optional int64 order_tax_amount = 13; // Tax amount for the order
-  optional int64 shipping_cost = 14; // Cost of shipping for the order
+  Money amount = 7; // The amount for the payment in major currency units
+  optional int64 order_tax_amount = 8; // Tax amount for the order
+  optional int64 shipping_cost = 9; // Cost of shipping for the order
 
   // Payment Method and Capture Settings
-  PaymentMethod payment_method = 15; // Payment method to be used
-  optional CaptureMethod capture_method = 16; // Method for capturing the payment
-  optional string connector_customer_id = 17; // Customer ID as recognized by the connector
+  PaymentMethod payment_method = 10; // Payment method to be used
+  optional CaptureMethod capture_method = 11; // Method for capturing the payment
 
   // Authentication Details
-  AuthenticationType auth_type = 18; // Type of authentication to be used
-  optional bool enrolled_for_3ds = 19; // Indicates if the customer is enrolled for 3D Secure
-  optional AuthenticationData authentication_data = 20; // Additional authentication data
+  AuthenticationType auth_type = 12; // Type of authentication to be used
+  optional bool enrolled_for_3ds = 13; // Indicates if the customer is enrolled for 3D Secure
+  optional AuthenticationData authentication_data = 14; // Additional authentication data
 
   // URLs for Redirection and Webhooks
-  optional string return_url = 21; // URL to redirect after payment
-  optional string webhook_url = 22; // URL for webhook notifications
-  optional string complete_authorize_url = 23; // URL to complete authorization
+  optional string return_url = 15; // URL to redirect after payment
+  optional string webhook_url = 16; // URL for webhook notifications
+  optional string complete_authorize_url = 17; // URL to complete authorization
 
   // Session and Token Information
-  optional string session_token = 24; // Session token, if applicable
+  optional string session_token = 18; // Session token, if applicable
 
   // Order Details
-  optional string order_category = 25; // Category of the order
-  optional string merchant_order_reference_id = 26; // Merchant's internal reference ID
-  optional string connector_order_reference_id = 27; // Connector's reference id for order
-
+  optional string order_category = 19; // Category of the order
+  optional string merchant_order_id = 20; // Merchant's internal reference ID
   // Behavioral Flags and Preferences
-  optional FutureUsage setup_future_usage = 28; // Indicates future usage intention
-  optional bool off_session = 29; // Indicates if off-session transaction
-  optional bool request_incremental_authorization = 30; // Indicates if incremental authorization is requested
-  optional bool request_extended_authorization = 31; // Indicates if extended authorization is requested
-  optional bool enable_partial_authorization = 32; // Indicates if partial authorization is enabled
+  optional FutureUsage setup_future_usage = 21; // Indicates future usage intention
+  optional bool off_session = 22; // Indicates if off-session transaction
+  optional bool request_incremental_authorization = 23; // Indicates if incremental authorization is requested
+  optional bool request_extended_authorization = 24; // Indicates if extended authorization is requested
+  optional bool enable_partial_authorization = 25; // Indicates if partial authorization is enabled
 
   // Contextual Information
-  optional CustomerAcceptance customer_acceptance = 33; // Details of customer acceptance
-  optional BrowserInformation browser_info = 34; // Information about the customer's browser
-  optional PaymentExperience payment_experience = 35; // Preferred payment experience
-  optional string description = 36; // Additional description for the payment
-  optional PaymentChannel payment_channel = 37; // Describes the channel through which the payment was initiated
+  optional CustomerAcceptance customer_acceptance = 26; // Details of customer acceptance
+  optional BrowserInformation browser_info = 27; // Information about the customer's browser
+  optional PaymentExperience payment_experience = 28; // Preferred payment experience
+  optional string description = 29; // Additional description for the payment
+  optional PaymentChannel payment_channel = 30; // Describes the channel through which the payment was initiated
   // Mandate Setup Details
-  optional SetupMandateDetails setup_mandate_details = 38; // Setup mandate details for the authorization
-
+  optional SetupMandateDetails setup_mandate_details = 31; // Setup mandate details for the authorization
   // Statement Descriptor
-  optional string statement_descriptor_name = 39; // Complete description that appears on customers' statements
-  optional string statement_descriptor_suffix = 40; // Provides information about a card payment that customers see on their statements
-  optional BillingDescriptor billing_descriptor = 41; // Billing Descriptor information to be sent to the payment gateway
+  optional string statement_descriptor_name = 32; // Complete description that appears on customers' statements
+  optional string statement_descriptor_suffix = 33; // Provides information about a card payment that customers see on their statements
+  optional BillingDescriptor billing_descriptor = 34; // Billing Descriptor information to be sent to the payment gateway
 
   // State Information
-  optional ConnectorState state = 42; // State data for access token storage and other connector-specific state
+  optional ConnectorState state = 35; // State data for access token storage and other connector-specific state
 
   // Order Line Items
-  repeated OrderDetailsWithAmount order_details = 43; // Details about the different products for which the payment is being made
+  repeated OrderDetailsWithAmount order_details = 36; // Details about the different products for which the payment is being made
 
   // Locale Information
-  optional string locale = 44; // Locale/language preference for the shopper (e.g., "en-US")
-
+  optional string locale = 37; // Locale/language preference for the shopper (e.g., "en-US")
   // Tokenization Configuration
-  optional Tokenization tokenization_strategy = 45; // Tokenization strategy for payment processing
+  optional Tokenization tokenization_strategy = 38; // Tokenization strategy for payment processing
   // Payment Method Token
-  optional SecretString payment_method_token = 46;
+  optional SecretString payment_method_token = 39;
 
   // URL for Redirection
-  optional string continue_redirection_url = 47; // URL to complete authorization
+  optional string continue_redirection_url = 40; // URL to complete authorization
 
   // Indicates if 3DS method data was successfully completed or not
-  optional ThreeDsCompletionIndicator threeds_completion_indicator = 48;
+  optional ThreeDsCompletionIndicator threeds_completion_indicator = 41;
 
   // Redirection Information after DDC step
-  optional RedirectionResponse redirection_response = 49; // Redirection Response from client browser
+  optional RedirectionResponse redirection_response = 42; // Redirection Response from client browser
+  Identifier request_ref_id = 43; // Reference ID for tracking
+  optional string customer_name = 44;
+  optional SecretString email = 45;
+  optional Identifier merchant_customer_id = 46;
+  optional string phone_number = 47;
 }
 
 // Response message for composite authorize flow.

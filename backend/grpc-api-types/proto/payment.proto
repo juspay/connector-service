@@ -1340,6 +1340,19 @@ message PaymentServiceAuthorizeRequest {
 
   // Tokenization configuration
   optional Tokenization tokenization_strategy = 39;
+
+  // Indicates if 3DS method data was successfully completed or not
+  optional ThreeDsCompletionIndicator threeds_completion_indicator = 40;
+
+  // Redirection Information after DDC step
+  optional RedirectionResponse redirection_response = 41; // Redirection Response from client browser
+
+  // URL for Redirection
+  optional string continue_redirection_url = 42; // URL to complete authorization
+
+  // Payment Method Token
+  optional SecretString payment_method_token = 43;
+
 }
 
 // Response message for a payment authorization
