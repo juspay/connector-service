@@ -488,6 +488,9 @@ pub enum ConnectorSpecificAuth {
     Coingate {
         api_key: Secret<String>,
     },
+    Revolv3 {
+        api_key: Secret<String>,
+    },
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecificAuth {
@@ -799,6 +802,9 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
             }),
             AuthType::Coingate(coingate) => Ok(Self::Coingate {
                 api_key: coingate.api_key.ok_or_else(err)?,
+            }),
+            AuthType::Revolv3(revolv3) => Ok(Self::Revolv3 {
+                api_key: revolv3.api_key.ok_or_else(err)?,
             }),
         }
     }
@@ -1579,6 +1585,12 @@ impl ForeignTryFrom<(&ConnectorAuthType, &crate::connector_types::ConnectorEnum)
                     api_key: Secret::new(String::new()),
                     processing_account_id: None,
                 }),
+            },
+            ConnectorEnum::Revolv3 => match auth {
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Revolv3 {
+                    api_key: api_key.clone(),
+                }),
+                _ => Err(err().into()),
             },
         }
     }

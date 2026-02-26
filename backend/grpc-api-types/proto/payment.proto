@@ -3494,6 +3494,10 @@ message RevolutAuth {
   SecretString api_key = 1;
 }
 
+message Revolv3Auth {
+  SecretString api_key = 1;
+}
+
 message Shift4Auth {
   SecretString api_key = 1;
 }
@@ -4051,5 +4055,8 @@ message ConnectorAuth {
 
     // COINGATE = 18
     CoingateAuth coingate = 70;
+
+    // REVOLV3 = 109
+    Revolv3Auth revolv3 = 71;
   }
 }
