@@ -112,6 +112,8 @@ pub enum CardBrand {
     Bcmc,
 }
 
+const GOOGLE_PAY_BRAND: &str = "googlepay";
+
 impl TryFrom<&domain_utils::CardIssuer> for CardBrand {
     type Error = Error;
     fn try_from(card_issuer: &domain_utils::CardIssuer) -> Result<Self, Self::Error> {
@@ -1396,11 +1398,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 field_name: "expiry_year",
                             })?;
 
+                        let expiry_month = decrypt_data.get_expiry_month().change_context(
+                            errors::ConnectorError::InvalidDataFormat {
+                                field_name: "expiry_month",
+                            },
+                        )?;
+
                         let google_pay_decrypt_data = AdyenGooglePayDecryptData {
                             number: decrypt_data.application_primary_account_number.clone(),
-                            expiry_month: decrypt_data.card_exp_month.clone(),
+                            expiry_month,
                             expiry_year,
-                            brand: "googlepay".to_string(),
+                            brand: GOOGLE_PAY_BRAND.to_string(),
                             payment_type: PaymentType::Scheme,
                         };
 
