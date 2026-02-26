@@ -208,6 +208,13 @@ pub struct FinixCreatePaymentInstrumentRequest {
     pub merchant_identity: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub third_party_token: Option<Secret<String>>,
+    // Bank account specific fields for ACH
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_number: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bank_code: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_type: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -884,10 +891,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         item: super::FinixRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>,
     ) -> Result<Self, Self::Error> {
         let token_data = &item.router_data.request;
-        let card = match &token_data.payment_method_data {
-            PaymentMethodData::Card(card) => card,
-            _ => return Err(errors::ConnectorError::NotImplemented("Only card tokenization is supported".into()).into()),
-        };
 
         // Get customer_id from connector metadata stored in resource_common_data
         let customer_id = item
@@ -899,19 +902,71 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 field_name: "connector_customer_id",
             })?;
 
-        Ok(Self {
-            instrument_type: FinixPaymentInstrumentType::PaymentCard,
-            name: card.card_holder_name.clone(),
-            number: Some(Secret::new(card.card_number.peek().to_string())),
-            security_code: Some(card.card_cvc.clone()),
-            expiration_month: Some(card.card_exp_month.peek().parse::<i8>().unwrap_or(0)),
-            expiration_year: Some(card.card_exp_year.peek().parse::<i32>().unwrap_or(0)),
-            identity: customer_id,
-            tags: None,
-            address: None,
-            merchant_identity: None,
-            third_party_token: None,
-        })
+        match &token_data.payment_method_data {
+            PaymentMethodData::Card(card) => Ok(Self {
+                instrument_type: FinixPaymentInstrumentType::PaymentCard,
+                name: card.card_holder_name.clone(),
+                number: Some(Secret::new(card.card_number.peek().to_string())),
+                security_code: Some(card.card_cvc.clone()),
+                expiration_month: Some(card.card_exp_month.peek().parse::<i8>().unwrap_or(0)),
+                expiration_year: Some(card.card_exp_year.peek().parse::<i32>().unwrap_or(0)),
+                identity: customer_id,
+                tags: None,
+                address: None,
+                merchant_identity: None,
+                third_party_token: None,
+                account_number: None,
+                bank_code: None,
+                account_type: None,
+            }),
+            PaymentMethodData::BankDebit(bank_debit_data) => {
+                match bank_debit_data {
+                    domain_types::payment_method_data::BankDebitData::AchBankDebit {
+                        account_number,
+                        routing_number,
+                        card_holder_name,
+                        bank_account_holder_name,
+                        bank_holder_type,
+                        ..
+                    } => {
+                        // Determine account holder name: prefer bank_account_holder_name, fall back to card_holder_name
+                        let name = bank_account_holder_name
+                            .clone()
+                            .or_else(|| card_holder_name.clone());
+
+                        // Map bank_holder_type to account_type (CHECKING or SAVINGS)
+                        // Default to CHECKING if not specified
+                        let account_type = bank_holder_type.as_ref().map(|holder_type| {
+                            match holder_type {
+                                common_enums::BankHolderType::Personal => "CHECKING",
+                                common_enums::BankHolderType::Business => "BUSINESS_CHECKING",
+                            }.to_string()
+                        });
+
+                        Ok(Self {
+                            instrument_type: FinixPaymentInstrumentType::BankAccount,
+                            name,
+                            number: None,
+                            security_code: None,
+                            expiration_month: None,
+                            expiration_year: None,
+                            identity: customer_id,
+                            tags: None,
+                            address: None,
+                            merchant_identity: None,
+                            third_party_token: None,
+                            account_number: Some(account_number.clone()),
+                            bank_code: Some(routing_number.clone()),
+                            account_type,
+                        })
+                    }
+                    _ => Err(errors::ConnectorError::NotImplemented(
+                        "Only ACH Bank Debit is supported".to_string()
+                    ).into()),
+                }
+            }
+            _ => Err(errors::ConnectorError::NotImplemented("Only card and bank debit tokenization are supported".into()).into()),
+        }
     }
 }
 
