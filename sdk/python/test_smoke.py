@@ -1,27 +1,25 @@
 """
 Smoke test for the packed hyperswitch-payments wheel.
 
-Usage:
-    pip install --target /tmp/test-py-sdk dist/hyperswitch_payments-*.whl --no-deps
-    python3 examples/test_pack.py /tmp/test-py-sdk
+Run via `make test-pack` — the Makefile installs the wheel into a temp
+directory, copies this script there, and runs it in-place so imports
+resolve against the installed package.
 """
 
 import json
 import os
-import sys
-
-if len(sys.argv) < 2:
-    print("Usage: python3 examples/test_pack.py <install-dir>", file=sys.stderr)
-    sys.exit(1)
-
-# Prepend the install directory so we load from the installed wheel
-sys.path.insert(0, sys.argv[1])
 
 from payments import ConnectorClient
 from payments.generated.connector_service_ffi import authorize_req_transformer
-from payments.generated.payment_pb2 import PaymentServiceAuthorizeRequest, PaymentAddress
+from payments.generated.payment_pb2 import (
+    PaymentServiceAuthorizeRequest,
+    PaymentAddress,
+    USD,
+    AUTOMATIC,
+    NO_THREE_DS,
+)
 
-print(f"Loaded payments package from: {sys.argv[1]}")
+print(f"Loaded payments package from: {__file__}")
 print(f"  ConnectorClient: {ConnectorClient}")
 print(f"  authorize_req_transformer: {authorize_req_transformer}")
 
@@ -42,8 +40,8 @@ req = PaymentServiceAuthorizeRequest()
 req.request_ref_id.id = "test_pack_123"
 req.amount = 1000
 req.minor_amount = 1000
-req.currency = 146  # USD
-req.capture_method = 1  # AUTOMATIC
+req.currency = USD
+req.capture_method = AUTOMATIC
 card = req.payment_method.card
 card.card_number.value = "4111111111111111"
 card.card_exp_month.value = "12"
@@ -52,7 +50,7 @@ card.card_cvc.value = "123"
 card.card_holder_name.value = "Test User"
 req.email.value = "test@example.com"
 req.customer_name = "Test"
-req.auth_type = 2  # NO_THREE_DS
+req.auth_type = NO_THREE_DS
 req.return_url = "https://example.com/return"
 req.webhook_url = "https://example.com/webhook"
 req.address.CopyFrom(PaymentAddress())

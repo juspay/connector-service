@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean pack pack-archive test-pack dist
+.PHONY: build-lib generate-bindings generate-proto install-deps setup clean pack pack-archive test-pack dist
 
 # Auto-detect SDK root directory (works when run from sdk/javascript/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -55,11 +55,7 @@ install-deps:
 
 # Full setup
 setup: install-deps generate-bindings generate-proto
-	@echo "Setup complete. Run 'make example-run' to execute."
-
-# Run the example
-example-run: setup
-	@node examples/example.js
+	@echo "Setup complete. Run 'make test-pack' to package it and test the package."
 
 # Archive step only — assumes generated/ already has binaries and proto stubs
 # Resolves any symlink before packing (npm does not follow symlinks)
@@ -82,8 +78,8 @@ test-pack: pack
 	@echo "Testing packed tarball..."
 	@rm -rf /tmp/test-hyperswitch-js
 	@mkdir -p /tmp/test-hyperswitch-js && cd /tmp/test-hyperswitch-js && npm init -y --silent && npm install $(PACKAGE_DIR)/hyperswitch-payments-0.1.0.tgz --silent
-	@cp $(SDK_ROOT)/examples/test_pack.js /tmp/test-hyperswitch-js/test_pack.js
-	@cd /tmp/test-hyperswitch-js && node test_pack.js
+	@cp $(SDK_ROOT)/test_smoke.js /tmp/test-hyperswitch-js/test_smoke.js
+	@cd /tmp/test-hyperswitch-js && node test_smoke.js
 	@rm -rf /tmp/test-hyperswitch-js
 	@echo "Pack test passed."
 

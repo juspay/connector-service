@@ -57,7 +57,6 @@ class ConnectorClient {
       responseHeaders[key] = value;
     });
 
-    console.log("raw connector response:", responseText);
     // Step 5: Parse the connector response via FFI
     const responseBody = Buffer.from(responseText, "utf-8");
     const resultBytes = this._uniffi.authorizeRes(

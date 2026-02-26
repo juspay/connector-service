@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto install-deps setup example-run clean pack pack-archive test-pack dist
+.PHONY: build-lib generate-bindings generate-proto install-deps setup clean pack pack-archive test-pack dist
 
 # Auto-detect SDK root directory (works when run from sdk/python/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -67,11 +67,7 @@ generate-proto:
 
 # Full setup: build lib, generate both bindings and proto stubs
 setup: install-deps generate-proto generate-bindings
-	@echo "Setup complete. Run 'make example-run' to execute."
-
-# Run the example
-example-run: setup
-	@cd $(SDK_ROOT) && python3 examples/example.py
+	@echo "Setup complete. Run 'make test-pack' to package it and test the package."
 
 # Archive step only — assumes generated/ already has binaries and proto stubs
 pack-archive:
@@ -86,9 +82,11 @@ pack: setup pack-archive
 test-pack: pack
 	@echo "Testing packed wheel..."
 	@rm -rf /tmp/test-hyperswitch-py
+	@mkdir -p /tmp/test-hyperswitch-py
+	@cp $(SDK_ROOT)/test_smoke.py /tmp/test-hyperswitch-py/
 	@python3 -m pip install --target /tmp/test-hyperswitch-py $(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl --no-deps --force-reinstall
-	@cd $(SDK_ROOT) && python3 examples/test_pack.py /tmp/test-hyperswitch-py
-	@rm -rf /tmp/test-hyperswitch-py
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py
+	#@rm -rf /tmp/test-hyperswitch-py
 	@echo "Pack test passed."
 
 # CI / cross-platform dist: copy all available binaries, then archive once

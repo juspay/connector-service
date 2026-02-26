@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto setup example-run clean pack pack-archive test-pack dist
+.PHONY: build-lib generate-bindings generate-proto setup clean pack pack-archive test-pack dist
 
 # Auto-detect SDK root directory (works when run from sdk/java/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -63,11 +63,7 @@ generate-proto:
 
 # Full setup: build lib, generate both bindings and proto stubs
 setup: generate-proto generate-bindings
-	@echo "Setup complete. Run 'make example-run' to execute."
-
-# Run the example via Gradle (from separate examples/ project)
-example-run: pack
-	@cd $(SDK_ROOT)/examples && $(SDK_ROOT)/gradlew run --quiet
+	@echo "Setup complete. Run 'make test-pack' to build and test the package."
 
 # Archive step only — assumes native/ has binaries and generated/ has UniFFI + proto stubs
 pack-archive:
@@ -91,8 +87,8 @@ test-pack: pack
 	jar tf "$$JAR" | grep -q 'native/libconnector_service_ffi' && echo "  native lib: found" && \
 	jar tf "$$JAR" | grep -q 'uniffi/connector_service_ffi' && echo "  UniFFI bindings: found" && \
 	jar tf "$$JAR" | grep -q 'ucs/v2/Payment' && echo "  Protobuf stubs: found"
-	@echo "  Running example from separate project..."
-	@cd $(SDK_ROOT)/examples && $(SDK_ROOT)/gradlew run --quiet
+	@echo "  Running smoke test from separate project..."
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --quiet
 	@echo "Pack test passed."
 
 # CI / cross-platform dist: copy all available binaries, then archive once

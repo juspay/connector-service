@@ -423,5 +423,6 @@ sdk/**/resources/native
 sdk/**/*.tgz
 sdk/**/dist/
 sdk/**/build/
+sdk/java/smoke-test/gradle*
 
 artifacts/
