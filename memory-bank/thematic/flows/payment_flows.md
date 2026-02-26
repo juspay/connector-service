@@ -473,17 +473,54 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 }
 ```
 
+## Connector Authentication Resolution
+
+Connector credentials are resolved entirely from gRPC metadata headers — the request payload carries only business data.
+
+### Auth Paths (in priority order)
+
+1. **Typed header** (`x-connector-auth`): A JSON-serialized `ConnectorAuth` proto message containing connector-specific credentials. Format uses PascalCase enum variant names (matching prost serde):
+   ```
+   x-connector-auth: {"auth_type":{"Stripe":{"api_key":"sk_test_..."}}}
+   x-connector-auth: {"auth_type":{"Adyen":{"api_key":"...","merchant_account":"...","review_key":"..."}}}
+   ```
+
+2. **Legacy headers** (fallback): Generic auth spread across multiple headers:
+   ```
+   x-auth: header-key|body-key|signature-key|multi-auth-key|no-key
+   x-api-key: <key>
+   x-key1: <key>
+   x-key2: <key>
+   x-api-secret: <secret>
+   ```
+
+### Resolution Flow
+
+```
+x-connector-auth present?
+├─ YES → parse JSON → ForeignTryFrom<ConnectorAuth> → ConnectorSpecificAuth
+└─ NO  → read x-auth + x-api-key + ... → ConnectorAuthType → ForeignTryFrom<(&AuthType, &Connector)> → ConnectorSpecificAuth
+```
+
+Both paths produce `ConnectorSpecificAuth` (e.g., `Stripe { api_key }`, `Adyen { api_key, merchant_account, review_key }`), which connector transformers consume via `TryFrom<&ConnectorSpecificAuth>`.
+
+### Key files
+- `backend/grpc-server/src/utils.rs`: `resolve_connector_auth()`, `extract_connector_auth_from_header()`
+- `backend/common_utils/src/consts.rs`: `X_CONNECTOR_AUTH` header constant
+- `backend/domain_types/src/router_data.rs`: `ConnectorSpecificAuth` enum, `ForeignTryFrom` impls
+
 ## Flow Execution
 
 The flow execution process follows these steps:
 
-1. Client sends a request to the gRPC server
-2. Server identifies the connector and flow type
-3. Server creates the appropriate `RouterDataV2` instance
-4. Server calls the `execute_connector_processing_step` function with the connector integration and router data
-5. Connector integration processes the request and sends it to the payment processor
-6. Connector integration processes the response and returns it to the server
-7. Server converts the response to the gRPC response format and returns it to the client
+1. Client sends a request to the gRPC server with auth in metadata headers
+2. Server resolves connector auth from headers (`resolve_connector_auth`)
+3. Server identifies the connector and flow type
+4. Server creates the appropriate `RouterDataV2` instance with resolved `ConnectorSpecificAuth`
+5. Server calls the `execute_connector_processing_step` function with the connector integration and router data
+6. Connector integration processes the request and sends it to the payment processor
+7. Connector integration processes the response and returns it to the server
+8. Server converts the response to the gRPC response format and returns it to the client
 
 Example flow execution:
 
