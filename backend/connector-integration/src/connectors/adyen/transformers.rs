@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use cards::{NetworkToken, CardNumber};
+use cards::{CardNumber, NetworkToken};
 use common_enums::{self, AttemptStatus, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -25,7 +25,8 @@ use domain_types::{
     payment_method_data::{
         ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
         CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, PayLaterData,
-        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData, VoucherNextStepData, WalletData,
+        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData, VoucherNextStepData,
+        WalletData,
     },
     router_data::{
         ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
@@ -1381,7 +1382,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentFlowData,
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
-            >
+            >,
         ),
     ) -> Result<Self, Self::Error> {
         let (wallet_data, _item) = value;
@@ -2206,8 +2207,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             }
             WalletData::GooglePay(gpay_data) => {
-                if let GpayTokenizationData::Decrypted(decrypt_data) = &gpay_data.tokenization_data {
-                    match (decrypt_data.cryptogram.clone(), decrypt_data.eci_indicator.clone()) {
+                if let GpayTokenizationData::Decrypted(decrypt_data) = &gpay_data.tokenization_data
+                {
+                    match (
+                        decrypt_data.cryptogram.clone(),
+                        decrypt_data.eci_indicator.clone(),
+                    ) {
                         (Some(cryptogram), Some(eci_indicator)) => Some(AdyenMpiData {
                             directory_response: common_enums::TransactionStatus::Success,
                             authentication_response: common_enums::TransactionStatus::Success,
