@@ -9,11 +9,11 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 
 use crate::{
-    payment_method_data,
+    connector_types, errors, payment_method_data,
     utils::{missing_field_err, ForeignTryFrom},
 };
 
-pub type Error = error_stack::Report<crate::errors::ConnectorError>;
+pub type Error = error_stack::Report<errors::ConnectorError>;
 
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(tag = "auth_type")]
@@ -494,12 +494,12 @@ pub enum ConnectorSpecificAuth {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecificAuth {
-    type Error = crate::errors::ConnectorError;
+    type Error = errors::ConnectorError;
 
     fn foreign_try_from(auth: grpc_api_types::payments::ConnectorAuth) -> Result<Self, Error> {
         use grpc_api_types::payments::connector_auth::AuthType;
 
-        let err = || crate::errors::ConnectorError::FailedToObtainAuthType;
+        let err = || errors::ConnectorError::FailedToObtainAuthType;
         let auth_type = auth.auth_type.ok_or_else(err)?;
 
         match auth_type {
@@ -810,17 +810,17 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
     }
 }
 
-impl ForeignTryFrom<(&ConnectorAuthType, &crate::connector_types::ConnectorEnum)>
+impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
     for ConnectorSpecificAuth
 {
-    type Error = crate::errors::ConnectorError;
+    type Error = errors::ConnectorError;
 
     fn foreign_try_from(
-        (auth, connector): (&ConnectorAuthType, &crate::connector_types::ConnectorEnum),
+        (auth, connector): (&ConnectorAuthType, &connector_types::ConnectorEnum),
     ) -> Result<Self, Error> {
-        use crate::connector_types::ConnectorEnum;
+        use connector_types::ConnectorEnum;
 
-        let err = || crate::errors::ConnectorError::FailedToObtainAuthType;
+        let err = || errors::ConnectorError::FailedToObtainAuthType;
 
         match connector {
             // --- HeaderKey connectors ---

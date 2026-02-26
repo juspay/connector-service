@@ -346,7 +346,7 @@ pub fn auth_from_metadata(
         Report::new(ApplicationErrorResponse::BadRequest(ApiError {
             sub_code: "AUTH_CONVERSION_FAILED".to_string(),
             error_identifier: 400,
-            error_message: format!("Failed to convert auth for connector: {}", connector),
+            error_message: format!("Failed to convert legacy auth for connector: {}", connector),
             error_object: None,
         }))
     })
@@ -866,6 +866,7 @@ macro_rules! implement_connector_operation {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
 mod tests {
     use super::resolve_connector_auth;
     use common_utils::consts;
