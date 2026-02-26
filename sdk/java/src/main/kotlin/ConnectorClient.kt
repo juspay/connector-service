@@ -17,7 +17,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import ucs.v2.Payment.PaymentServiceAuthorizeRequest
 import ucs.v2.Payment.PaymentServiceAuthorizeResponse
 
@@ -40,22 +39,17 @@ class ConnectorClient {
         val requestBytes = request.toByteArray()
 
         // Step 2: Build the connector HTTP request via FFI
-        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata)
-        val connectorRequest = JSONObject(connectorRequestJson)
+        // Now returns a native FfiConnectorHttpRequest object, no JSONObject needed!
+        val connectorRequest = authorizeReqTransformer(requestBytes, metadata)
 
-        val url = connectorRequest.getString("url")
-        val method = connectorRequest.getString("method")
-
-        val headersObj = connectorRequest.optJSONObject("headers") ?: JSONObject()
-        val headersMap = mutableMapOf<String, String>()
-        for (key in headersObj.keys()) {
-            headersMap[key] = headersObj.getString(key)
-        }
-
-        val body = connectorRequest.opt("body")?.toString()
+        val url = connectorRequest.url
+        val method = connectorRequest.method
+        val headersMap = connectorRequest.headers
+        val bodyBytes = connectorRequest.body
 
         // Step 3: Execute the HTTP request via OkHttp
-        val requestBody = body?.toRequestBody(
+        // bodyBytes is already a ByteArray (or null), OkHttp handles this natively
+        val requestBody = bodyBytes?.toRequestBody(
             headersMap["Content-Type"]?.toMediaTypeOrNull()
         )
 
@@ -68,14 +62,14 @@ class ConnectorClient {
         val response = httpClient.newCall(httpRequest).execute()
 
         // Step 4: Parse the connector response via FFI
-        val responseBody = response.body?.string() ?: ""
+        val responseBody = response.body?.bytes() ?: byteArrayOf()
         val responseHeaders = mutableMapOf<String, String>()
         for (name in response.headers.names()) {
             responseHeaders[name] = response.header(name) ?: ""
         }
 
         val resultBytes = authorizeResTransformer(
-            responseBody.toByteArray(Charsets.UTF_8),
+            responseBody,
             response.code.toUShort(),
             responseHeaders,
             requestBytes,

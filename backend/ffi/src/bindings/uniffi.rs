@@ -66,7 +66,7 @@ mod uniffi_bindings_inner {
         // Sync the Content-Type header with the generated boundary if applicable
         if let Some(boundary) = boundary {
             headers.insert(
-                "Content-Type".to_string(),
+                "content-type".to_string(),
                 format!("multipart/form-data; boundary={}", boundary),
             );
         }

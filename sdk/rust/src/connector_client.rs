@@ -29,46 +29,34 @@ impl ConnectorClient {
             .map_err(|e| format!("authorize_req_handler failed: {:?}", e))?
             .ok_or("No connector request generated")?;
 
-        // Step 2: Extract raw request JSON for the HTTP call
-        let raw_json =
-            external_services::service::extract_raw_connector_request(&connector_request);
-        let raw: serde_json::Value = serde_json::from_str(&raw_json)?;
+        // Step 2: Extract data using native methods (Binary Safe)
+        let url = connector_request.url.clone();
+        let method = connector_request.method;
+        let mut headers = connector_request.get_headers_map();
+        let (body, boundary) = connector_request.body.as_ref().map_or((None, None), |b| b.get_body_bytes());
 
-        let url = raw["url"]
-            .as_str()
-            .ok_or("Missing url in connector request")?;
-        let method = raw["method"]
-            .as_str()
-            .ok_or("Missing method in connector request")?;
+        if let Some(boundary) = boundary {
+            headers.insert("content-type".to_string(), format!("multipart/form-data; boundary={}", boundary));
+        }
 
         // Step 3: Make the HTTP call with reqwest
         let client = reqwest::Client::new();
-        let mut req_builder = match method.to_uppercase().as_str() {
-            "GET" => client.get(url),
-            "POST" => client.post(url),
-            "PUT" => client.put(url),
-            "DELETE" => client.delete(url),
-            "PATCH" => client.patch(url),
-            other => return Err(format!("Unsupported HTTP method: {}", other).into()),
+        let mut req_builder = match method {
+            common_utils::request::Method::Get => client.get(url),
+            common_utils::request::Method::Post => client.post(url),
+            common_utils::request::Method::Put => client.put(url),
+            common_utils::request::Method::Delete => client.delete(url),
+            common_utils::request::Method::Patch => client.patch(url),
         };
 
         // Add headers
-        if let Some(headers) = raw["headers"].as_object() {
-            for (key, value) in headers {
-                if let Some(val) = value.as_str() {
-                    req_builder = req_builder.header(key.as_str(), val);
-                }
-            }
+        for (key, value) in headers {
+            req_builder = req_builder.header(key, value);
         }
 
         // Add body
-        if !raw["body"].is_null() {
-            let body_str = if raw["body"].is_string() {
-                raw["body"].as_str().unwrap_or("").to_string()
-            } else {
-                raw["body"].to_string()
-            };
-            req_builder = req_builder.body(body_str);
+        if let Some(body_bytes) = body {
+            req_builder = req_builder.body(body_bytes);
         }
 
         let http_response = req_builder.send().await?;
