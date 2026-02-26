@@ -78,7 +78,6 @@ macro_rules! build_router_data {
 ///     request_data_type: PaymentsAuthorizeData<T>,
 /// }
 /// ```
-
 macro_rules! req_transformer {
     (
         fn_name: $fn_name:ident,
@@ -141,7 +140,6 @@ macro_rules! req_transformer {
 ///     request_data_type: PaymentsAuthorizeData<T>,
 ///     generate_response_fn: generate_payment_authorize_response,
 /// }
-
 macro_rules! res_transformer {
     (
         fn_name: $fn_name:ident,
