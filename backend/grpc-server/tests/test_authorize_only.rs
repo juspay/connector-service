@@ -1,10 +1,10 @@
-#![allow(clippy::expect_used)]
+// #![allow(clippy::expect_used)]
 
-use grpc_server::app;
-use ucs_env::configs;
-mod common;
-use grpc_api_types::payments::payment_service_client::PaymentServiceClient;
-use tonic::{transport::Channel, Request};
+// use grpc_server::app;
+// use ucs_env::configs;
+// mod common;
+// use grpc_api_types::payments::payment_service_client::PaymentServiceClient;
+// use tonic::{transport::Channel, Request};
 
 // #[tokio::test]
 // async fn test_authorize_only_basic() {

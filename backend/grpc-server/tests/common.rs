@@ -205,6 +205,9 @@ where
     Ok((serve_future, client))
 }
 
+/// # Panics
+///
+/// Will panic if the socket file cannot be created or removed
 #[allow(dead_code)]
 pub async fn server_and_channel_stub(
     service: grpc_server::app::Service,
