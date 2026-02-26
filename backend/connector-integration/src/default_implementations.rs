@@ -107,6 +107,7 @@ default_impl_verify_webhook_source_v2!(
     RazorpayV2,
     Redsys,
     Revolut,
+    Revolv3,
     Shift4,
     Silverflow,
     Stax,
