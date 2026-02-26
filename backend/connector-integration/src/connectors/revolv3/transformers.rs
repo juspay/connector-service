@@ -1,7 +1,4 @@
-use crate::{
-    types::ResponseRouterData,
-    utils::is_refund_failure,
-};
+use crate::{types::ResponseRouterData, utils::is_refund_failure};
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{pii::Email, types::FloatMajorUnit};
 use domain_types::{
@@ -1031,7 +1028,7 @@ impl<T: PaymentMethodDataTypes> Revolv3PaymentMethodData<T> {
                 expiration_date: card.get_expiry_date_as_mmyy()?,
             },
         };
-        Ok(Revolv3PaymentMethodData::Ntid(credit_card_data))
+        Ok(Self::Ntid(credit_card_data))
     }
 
     pub fn set_mandate_data() -> Result<Self, error_stack::Report<errors::ConnectorError>> {
