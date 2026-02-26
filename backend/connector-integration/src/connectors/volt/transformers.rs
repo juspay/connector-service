@@ -47,7 +47,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-fn get_attempt_status((item, current_status): (VoltPaymentStatus, AttemptStatus)) -> AttemptStatus {
+fn get_attempt_status(item: VoltPaymentStatus) -> AttemptStatus {
     match item {
         VoltPaymentStatus::Received | VoltPaymentStatus::Settled => AttemptStatus::Charged,
         VoltPaymentStatus::Completed
@@ -68,7 +68,7 @@ fn get_attempt_status((item, current_status): (VoltPaymentStatus, AttemptStatus)
         | VoltPaymentStatus::AbandonedByUser
         | VoltPaymentStatus::Failed
         | VoltPaymentStatus::ProviderCommunicationError => AttemptStatus::Failure,
-        VoltPaymentStatus::Unknown => current_status,
+        VoltPaymentStatus::Unknown => AttemptStatus::Unspecified,
     }
 }
 
@@ -372,7 +372,7 @@ impl<F, T> TryFrom<ResponseRouterData<VoltAuthUpdateResponse, Self>>
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
-                access_token: item.response.access_token.expose(),
+                access_token: item.response.access_token,
                 expires_in: Some(item.response.expires_in),
                 token_type: Some(item.response.token_type),
             }),
@@ -468,6 +468,10 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponse, Self>>
             form_fields: Default::default(),
         });
         Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::AuthenticationPending,
+                ..item.router_data.resource_common_data
+            },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data: redirection_data.map(Box::new),
@@ -525,54 +529,6 @@ pub struct VoltPsyncResponse {
     currency: common_enums::Currency,
 }
 
-impl<F> TryFrom<ResponseRouterData<VoltPsyncResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: ResponseRouterData<VoltPsyncResponse, Self>) -> Result<Self, Self::Error> {
-        let current_status = match &item.router_data.response {
-            Ok(_) => AttemptStatus::Pending,
-            Err(err) => err.attempt_status.unwrap_or(AttemptStatus::Pending),
-        };
-        let status = get_attempt_status((item.response.status.clone(), current_status));
-        let payments_response_data = match status {
-            AttemptStatus::Failure => Err(ErrorResponse {
-                code: item.response.status.clone().to_string(),
-                message: item.response.status.clone().to_string(),
-                reason: Some(item.response.status.to_string()),
-                status_code: item.http_code,
-                attempt_status: Some(status),
-                connector_transaction_id: Some(item.response.id),
-                network_advice_code: None,
-                network_decline_code: None,
-                network_error_message: None,
-            }),
-            _ => Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: item
-                    .response
-                    .merchant_internal_reference
-                    .or(Some(item.response.id)),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            response: payments_response_data,
-            ..item.router_data
-        })
-    }
-}
-
 impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
@@ -582,81 +538,89 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
     ) -> Result<Self, Self::Error> {
         match item.response {
             VoltPaymentsResponseData::PsyncResponse(payment_response) => {
-                let current_status = match &item.router_data.response {
-                    Ok(_) => AttemptStatus::Pending,
-                    Err(err) => err.attempt_status.unwrap_or(AttemptStatus::Pending),
-                };
-                let status = get_attempt_status((payment_response.status.clone(), current_status));
-                let mut router_data = item.router_data;
-                router_data.response = match status {
-                    AttemptStatus::Failure => Err(ErrorResponse {
-                        code: payment_response.status.clone().to_string(),
-                        message: payment_response.status.clone().to_string(),
-                        reason: Some(payment_response.status.to_string()),
-                        status_code: item.http_code,
-                        attempt_status: Some(status),
-                        connector_transaction_id: Some(payment_response.id),
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                    }),
-                    _ => Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            payment_response.id.clone(),
-                        ),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: payment_response
-                            .merchant_internal_reference
-                            .or(Some(payment_response.id)),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    }),
-                };
-                Ok(router_data)
+                let status = get_attempt_status(payment_response.status.clone());
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: if utils::is_payment_failure(status) {
+                        Err(ErrorResponse {
+                            code: payment_response.status.clone().to_string(),
+                            message: payment_response.status.clone().to_string(),
+                            reason: Some(payment_response.status.to_string()),
+                            status_code: item.http_code,
+                            attempt_status: Some(status),
+                            connector_transaction_id: Some(payment_response.id),
+                            network_advice_code: None,
+                            network_decline_code: None,
+                            network_error_message: None,
+                        })
+                    } else {
+                        Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                payment_response.id.clone(),
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: payment_response
+                                .merchant_internal_reference
+                                .or(Some(payment_response.id)),
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        })
+                    },
+                    ..item.router_data
+                })
             }
             VoltPaymentsResponseData::WebhookResponse(webhook_response) => {
                 let detailed_status = webhook_response.detailed_status.clone();
                 let status = AttemptStatus::from(webhook_response.status);
-                let mut router_data = item.router_data;
-                router_data.response = match status {
-                    AttemptStatus::Failure => Err(ErrorResponse {
-                        code: detailed_status
-                            .clone()
-                            .map(|volt_status| volt_status.to_string())
-                            .unwrap_or_else(|| consts::NO_ERROR_CODE.to_owned()),
-                        message: detailed_status
-                            .clone()
-                            .map(|volt_status| volt_status.to_string())
-                            .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_owned()),
-                        reason: detailed_status
-                            .clone()
-                            .map(|volt_status| volt_status.to_string()),
-                        status_code: item.http_code,
-                        attempt_status: Some(status),
-                        connector_transaction_id: Some(webhook_response.payment.clone()),
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                    }),
-                    _ => Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            webhook_response.payment.clone(),
-                        ),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: webhook_response
-                            .merchant_internal_reference
-                            .or(Some(webhook_response.payment)),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    }),
-                };
-                Ok(router_data)
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: if utils::is_payment_failure(status) {
+                        Err(ErrorResponse {
+                            code: detailed_status
+                                .clone()
+                                .map(|volt_status| volt_status.to_string())
+                                .unwrap_or_else(|| consts::NO_ERROR_CODE.to_owned()),
+                            message: detailed_status
+                                .clone()
+                                .map(|volt_status| volt_status.to_string())
+                                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_owned()),
+                            reason: detailed_status
+                                .clone()
+                                .map(|volt_status| volt_status.to_string()),
+                            status_code: item.http_code,
+                            attempt_status: Some(status),
+                            connector_transaction_id: Some(webhook_response.payment.clone()),
+                            network_advice_code: None,
+                            network_decline_code: None,
+                            network_error_message: None,
+                        })
+                    } else {
+                        Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                webhook_response.payment.clone(),
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: webhook_response
+                                .merchant_internal_reference
+                                .or(Some(webhook_response.payment)),
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        })
+                    },
+                    ..item.router_data
+                })
             }
         }
     }
@@ -693,7 +657,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         item: VoltRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: MinorUnit::new(item.router_data.request.refund_amount),
+            amount: item.router_data.request.minor_refund_amount,
             external_reference: item.router_data.request.refund_id.clone(),
         })
     }

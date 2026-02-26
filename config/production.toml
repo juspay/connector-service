@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+revolv3.base_url = "https://api.revolv3.com"
 mollie.base_url = "https://api.mollie.com/v2"
 mollie.secondary_base_url = "https://api.cc.mollie.com/v1/"
 gigadat.base_url = "https://interac.express-connect.com/"
@@ -77,7 +78,7 @@ noon.base_url = "https://api.noonpayments.com/"
 mifinity.base_url = "https://secure.mifinity.com/"
 braintree.base_url = "https://payments.braintree-api.com/graphql"
 volt.base_url = "https://gateway.volt.io"
-volt.secondary_base_url = "https://api.volt.io/"
+volt.secondary_base_url = "https://api.volt.io"
 calida.base_url = "https://app.eorder.reloadhero.com/"
 cryptopay.base_url = "https://business.cryptopay.me/"
 helcim.base_url = "https://api.helcim.com/"
