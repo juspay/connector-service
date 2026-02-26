@@ -1414,9 +1414,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                         Self::GooglePayDecrypt(Box::new(google_pay_decrypt_data))
                     }
-                    GpayTokenizationData::Encrypted(encrypted_data) => {
+                    GpayTokenizationData::Encrypted(_) => {
                         let gpay_data = AdyenGPay {
-                            google_pay_token: Secret::new(encrypted_data.token.clone()),
+                            google_pay_token: Secret::new(
+                                data.tokenization_data
+                                    .get_encrypted_google_pay_token()
+                                    .change_context(errors::ConnectorError::InvalidDataFormat {
+                                        field_name: "google_pay_token",
+                                    })?,
+                            ),
                         };
 
                         Self::Gpay(Box::new(gpay_data))
