@@ -158,6 +158,12 @@ impl<T: PaymentMethodDataTypes> Card<T> {
         ))
     }
 
+    pub fn get_expiry_date_as_mmyy(&self) -> Result<Secret<String>, ConnectorError> {
+        let year = self.get_card_expiry_year_2_digit()?;
+        let month = self.get_card_expiry_month_2_digit()?;
+        Ok(Secret::new(format!("{}{}", month.peek(), year.peek())))
+    }
+
     pub fn get_card_expiry_year_month_2_digit_with_delimiter(
         &self,
         delimiter: String,
@@ -509,6 +515,9 @@ pub enum BankTransferData {
     InstantBankTransfer {},
     InstantBankTransferFinland {},
     InstantBankTransferPoland {},
+    IndonesianBankTransfer {
+        bank_name: Option<common_enums::BankNames>,
+    },
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
@@ -524,6 +533,10 @@ pub enum BankDebitData {
         bank_holder_type: Option<common_enums::BankHolderType>,
     },
     SepaBankDebit {
+        iban: Secret<String>,
+        bank_account_holder_name: Option<Secret<String>>,
+    },
+    SepaGuaranteedBankDebit {
         iban: Secret<String>,
         bank_account_holder_name: Option<Secret<String>>,
     },
