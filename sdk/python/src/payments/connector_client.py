@@ -51,7 +51,7 @@ class ConnectorClient:
 
         # Step 4: Parse the connector response via FFI
         result_bytes = authorize_res_transformer(
-            http_response.body.encode("utf-8"),
+            http_response.body,
             http_response.status_code,
             http_response.headers,
             request_bytes,

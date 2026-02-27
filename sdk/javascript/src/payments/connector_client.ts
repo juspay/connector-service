@@ -50,9 +50,8 @@ export class ConnectorClient {
     const response = await execute(connectorRequest, this._options);
 
     // 4. Parse the connector response via FFI bridge
-    const responseBody = Buffer.from(response.body, "utf-8");
     const resultBytes = this._uniffi.authorizeRes(
-      responseBody,
+      response.body,
       response.statusCode,
       response.headers,
       requestBytes,

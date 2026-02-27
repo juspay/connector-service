@@ -17,7 +17,7 @@ data class HttpRequest(
 data class HttpResponse(
     val statusCode: Int,
     val headers: Map<String, String>,
-    val body: String,
+    val body: ByteArray,
     val latencyMs: Long
 )
 
@@ -104,7 +104,7 @@ object HttpClient {
                 return HttpResponse(
                     statusCode = response.code,
                     headers = responseHeaders,
-                    body = response.body?.string() ?: "",
+                    body = response.body?.bytes() ?: byteArrayOf(),
                     latencyMs = System.currentTimeMillis() - startTime
                 )
             }

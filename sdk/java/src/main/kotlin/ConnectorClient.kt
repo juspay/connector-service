@@ -42,7 +42,7 @@ class ConnectorClient(private val options: Map<String, Any> = emptyMap()) {
 
         // Step 4: Parse the connector response via FFI
         val resultBytes = authorizeResTransformer(
-            httpResponse.body.toByteArray(Charsets.UTF_8),
+            httpResponse.body,
             httpResponse.statusCode.toUShort(),
             httpResponse.headers,
             requestBytes,

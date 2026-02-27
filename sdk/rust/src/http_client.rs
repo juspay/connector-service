@@ -12,7 +12,7 @@ pub struct HttpRequest {
 pub struct HttpResponse {
     pub status_code: u16,
     pub headers: HashMap<String, String>,
-    pub body: String,
+    pub body: Vec<u8>,
     pub latency_ms: u128,
 }
 
@@ -114,7 +114,7 @@ impl HttpClient {
             response_headers.insert(key.to_string().to_lowercase(), value.to_str().unwrap_or("").to_string());
         }
 
-        let body = response.text().await?;
+        let body = response.bytes().await?.to_vec();
 
         Ok(HttpResponse {
             status_code,

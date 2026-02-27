@@ -15,7 +15,7 @@ class HttpRequest:
 class HttpResponse:
     status_code: int
     headers: Dict[str, str]
-    body: str
+    body: bytes
     latency_ms: float
 
 class ConnectorError(Exception):
@@ -94,7 +94,7 @@ def execute(request: HttpRequest, options: Optional[Dict[str, Any]] = None) -> H
         return HttpResponse(
             status_code=response.status_code,
             headers=response_headers,
-            body=response.text,
+            body=response.content,
             latency_ms=latency
         )
 

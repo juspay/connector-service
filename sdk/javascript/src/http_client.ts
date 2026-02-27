@@ -16,7 +16,7 @@ export interface HttpRequest {
 export interface HttpResponse {
   statusCode: number;
   headers: Record<string, string>;
-  body: string;
+  body: Uint8Array;
   meta: {
     latencyMs: number;
   };
@@ -98,7 +98,7 @@ function getConnectionKey(proxyUrl: string | null, config: HttpOptions): string 
     uri: proxyUrl || TRANSPORT_DIRECT,
     connect_timeout_ms: config.connect_timeout_ms,
     response_timeout_ms: config.response_timeout_ms,
-    ca_length: config.ca_cert?.length,
+    caLength: config.ca_cert?.length,
   });
 }
 
@@ -173,7 +173,7 @@ export async function execute(
     return {
       statusCode: response.status,
       headers: responseHeaders,
-      body: await response.text(),
+      body: new Uint8Array(await response.arrayBuffer()),
       meta: { latencyMs: Date.now() - startTime }
     };
   } catch (error: any) {
