@@ -1289,6 +1289,72 @@ message ConnectorResponseData {
   optional bool is_overcapture_enabled = 3; // Whether overcapture is enabled
 }
 
+message Customer {
+    optional SecretString name = 1;            // Customer's full name
+    optional SecretString email = 2;     // Customer's email address
+    optional string id = 3;              // Internal customer ID
+    optional SecretString phone_number = 4;    // Customer's phone number
+    optional string phone_country_code = 5;    // Customer's phone country code
+}
+
+// Tax status for L2/L3 data.
+enum TaxStatus {
+  TAX_STATUS_UNSPECIFIED = 0; // Default value
+  TAX_STATUS_TAXABLE = 1;     // The order is taxable
+  TAX_STATUS_EXEMPT = 2;      // The order is tax-exempt
+}
+
+// Order-level information for L2/L3 data.
+message OrderInfo {
+  // Date the order was placed (Unix timestamp in seconds)
+  optional int64 order_date = 1;
+
+  // Line items for the order
+  repeated OrderDetailsWithAmount order_details = 2;
+
+  // Merchant's internal reference ID for the order
+  optional string merchant_order_reference_id = 3;
+
+  // Discount applied to the order (in minor currency units)
+  optional int64 discount_amount = 4;
+
+  // Shipping cost for the order (in minor currency units)
+  optional int64 shipping_cost = 5;
+
+  // Duty/customs amount for the order (in minor currency units)
+  optional int64 duty_amount = 6;
+}
+
+// Tax information for L2/L3 data.
+message TaxInfo {
+  // Tax status of the order
+  optional TaxStatus tax_status = 1;
+
+  // Customer's tax registration ID (sensitive)
+  optional SecretString customer_tax_registration_id = 2;
+
+  // Merchant's tax registration ID (sensitive)
+  optional SecretString merchant_tax_registration_id = 3;
+
+  // Tax on the shipping amount (in minor currency units)
+  optional int64 shipping_amount_tax = 4;
+
+  // Total tax amount for the order (in minor currency units)
+  optional int64 order_tax_amount = 5;
+}
+
+// Level 2 / Level 3 data for enhanced payment processing.
+message L2L3Data {
+  // Order-level information
+  optional OrderInfo order_info = 1;
+
+  // Tax information
+  optional TaxInfo tax_info = 2;
+
+  // Customer information for the order
+  optional Customer customer_info = 3; // TODO: Remove this field once Customer Object is added at top level request
+}
+
 // ============================================================================
 // SESSION TOKEN MESSAGES
 // ============================================================================
@@ -1645,6 +1711,9 @@ message PaymentServiceAuthorizeRequest {
 
   // Tokenization configuration
   optional Tokenization tokenization_strategy = 46; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
+
+  // Level 2 / Level 3 data for enhanced payment processing
+  optional L2L3Data l2_l3_data = 47; 
 }
 
 // Request message for authorizing a payment only (without setup flows).
@@ -1745,6 +1814,9 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Tokenization configuration
   optional Tokenization tokenization_strategy = 49; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
+
+  // Level 2 / Level 3 data for enhanced payment processing
+  optional L2L3Data l2_l3_data = 50; 
 }
 
 // Response message for a payment authorization.
@@ -2392,6 +2464,9 @@ message PaymentServiceRegisterRequest {
 
   // Testing Data
   optional SecretString connector_testing_data = 46; // Connector-specific testing data (JSON stringified)
+
+  // Level 2 / Level 3 data for enhanced payment processing
+  optional L2L3Data l2_l3_data = 47; 
 }
 
 // Response message for a mandate setup operation.
@@ -2501,6 +2576,9 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Testing Data
   optional SecretString connector_testing_data = 40; // Connector-specific testing data (JSON stringified)
+
+  // Level 2 / Level 3 data for enhanced payment processing
+  optional L2L3Data l2_l3_data = 41; 
 }
 
 // Container for recurring mandate payment data

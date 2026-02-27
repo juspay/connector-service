@@ -246,6 +246,11 @@ pub struct PaymentsRequest<
     pub previous_payment_id: Option<String>,
     pub store_for_future_use: Option<bool>,
     pub billing_descriptor: Option<CheckoutBillingDescriptor>,
+    // Level 2/3 data fields
+    pub customer: Option<CheckoutCustomer>,
+    pub processing: Option<CheckoutProcessing>,
+    pub shipping: Option<CheckoutShipping>,
+    pub items: Option<Vec<CheckoutLineItem>>,
     pub partial_authorization: Option<CheckoutPartialAuthorization>,
     pub payment_ip: Option<Secret<String, common_utils::pii::IpAddress>>,
 }
@@ -583,6 +588,60 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let processing_channel_id = auth_type.processing_channel_id;
         let metadata = build_metadata(&item);
 
+        let (customer, processing, shipping, items) = if let Some(l2l3_data) =
+            &item.router_data.resource_common_data.l2_l3_data
+        {
+            (
+                l2l3_data.customer_info.as_ref().map(|_| CheckoutCustomer {
+                    name: l2l3_data.get_customer_name(),
+                    email: l2l3_data.get_customer_email(),
+                    phone: Some(CheckoutPhoneDetails {
+                        country_code: l2l3_data.get_customer_phone_country_code(),
+                        number: l2l3_data.get_customer_phone_number(),
+                    }),
+                    tax_number: l2l3_data.get_customer_tax_registration_id(),
+                }),
+                l2l3_data.order_info.as_ref().map(|_| CheckoutProcessing {
+                    order_id: l2l3_data.get_merchant_order_reference_id(),
+                    tax_amount: l2l3_data.get_order_tax_amount(),
+                    discount_amount: l2l3_data.get_discount_amount(),
+                    duty_amount: l2l3_data.get_duty_amount(),
+                    shipping_amount: l2l3_data.get_shipping_cost(),
+                    shipping_tax_amount: l2l3_data.get_shipping_amount_tax(),
+                }),
+                Some(CheckoutShipping {
+                    address: Some(CheckoutAddress {
+                        country: l2l3_data.get_shipping_country(),
+                        address_line1: l2l3_data.get_shipping_address_line1(),
+                        address_line2: l2l3_data.get_shipping_address_line2(),
+                        city: l2l3_data.get_shipping_city(),
+                        state: l2l3_data.get_shipping_state(),
+                        zip: l2l3_data.get_shipping_zip(),
+                    }),
+                    from_address_zip: l2l3_data.get_shipping_origin_zip().map(|zip| zip.expose()),
+                }),
+                l2l3_data.get_order_details().map(|details| {
+                    details
+                        .iter()
+                        .map(|item| CheckoutLineItem {
+                            commodity_code: item.commodity_code.clone(),
+                            discount_amount: item.unit_discount_amount,
+                            name: Some(item.product_name.clone()),
+                            quantity: Some(item.quantity),
+                            reference: item.product_id.clone(),
+                            tax_exempt: None,
+                            tax_amount: item.total_tax_amount,
+                            total_amount: item.total_amount,
+                            unit_of_measure: item.unit_of_measure.clone(),
+                            unit_price: Some(item.amount),
+                        })
+                        .collect::<Vec<_>>()
+                }),
+            )
+        } else {
+            (None, None, None, None)
+        };
+
         let partial_authorization = item.router_data.request.enable_partial_authorization.map(
             |enable_partial_authorization| CheckoutPartialAuthorization {
                 enabled: enable_partial_authorization,
@@ -623,6 +682,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             partial_authorization,
             payment_ip,
             billing_descriptor,
+            customer,
+            processing,
+            shipping,
+            items,
         };
 
         Ok(request)
@@ -791,6 +854,60 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let metadata = item.router_data.request.metadata.clone();
 
+        let (customer, processing, shipping, items) = if let Some(l2l3_data) =
+            &item.router_data.resource_common_data.l2_l3_data
+        {
+            (
+                l2l3_data.customer_info.as_ref().map(|_| CheckoutCustomer {
+                    name: l2l3_data.get_customer_name(),
+                    email: l2l3_data.get_customer_email(),
+                    phone: Some(CheckoutPhoneDetails {
+                        country_code: l2l3_data.get_customer_phone_country_code(),
+                        number: l2l3_data.get_customer_phone_number(),
+                    }),
+                    tax_number: l2l3_data.get_customer_tax_registration_id(),
+                }),
+                l2l3_data.order_info.as_ref().map(|_| CheckoutProcessing {
+                    order_id: l2l3_data.get_merchant_order_reference_id(),
+                    tax_amount: l2l3_data.get_order_tax_amount(),
+                    discount_amount: l2l3_data.get_discount_amount(),
+                    duty_amount: l2l3_data.get_duty_amount(),
+                    shipping_amount: l2l3_data.get_shipping_cost(),
+                    shipping_tax_amount: l2l3_data.get_shipping_amount_tax(),
+                }),
+                Some(CheckoutShipping {
+                    address: Some(CheckoutAddress {
+                        country: l2l3_data.get_shipping_country(),
+                        address_line1: l2l3_data.get_shipping_address_line1(),
+                        address_line2: l2l3_data.get_shipping_address_line2(),
+                        city: l2l3_data.get_shipping_city(),
+                        state: l2l3_data.get_shipping_state(),
+                        zip: l2l3_data.get_shipping_zip(),
+                    }),
+                    from_address_zip: l2l3_data.get_shipping_origin_zip().map(|zip| zip.expose()),
+                }),
+                l2l3_data.get_order_details().map(|details| {
+                    details
+                        .iter()
+                        .map(|item| CheckoutLineItem {
+                            commodity_code: item.commodity_code.clone(),
+                            discount_amount: item.unit_discount_amount,
+                            name: Some(item.product_name.clone()),
+                            quantity: Some(item.quantity),
+                            reference: item.product_id.clone(),
+                            tax_exempt: None,
+                            tax_amount: item.total_tax_amount,
+                            total_amount: item.total_amount,
+                            unit_of_measure: item.unit_of_measure.clone(),
+                            unit_price: Some(item.amount),
+                        })
+                        .collect::<Vec<_>>()
+                }),
+            )
+        } else {
+            (None, None, None, None)
+        };
+
         let partial_authorization = item.router_data.request.enable_partial_authorization.map(
             |enable_partial_authorization| CheckoutPartialAuthorization {
                 enabled: enable_partial_authorization,
@@ -831,6 +948,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             partial_authorization,
             payment_ip,
             billing_descriptor,
+            customer,
+            processing,
+            shipping,
+            items,
         };
 
         Ok(request)
@@ -970,6 +1091,60 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
 
+        let (customer, processing, shipping, items) = if let Some(l2l3_data) =
+            &item.router_data.resource_common_data.l2_l3_data
+        {
+            (
+                l2l3_data.customer_info.as_ref().map(|_| CheckoutCustomer {
+                    name: l2l3_data.get_customer_name(),
+                    email: l2l3_data.get_customer_email(),
+                    phone: Some(CheckoutPhoneDetails {
+                        country_code: l2l3_data.get_customer_phone_country_code(),
+                        number: l2l3_data.get_customer_phone_number(),
+                    }),
+                    tax_number: l2l3_data.get_customer_tax_registration_id(),
+                }),
+                l2l3_data.order_info.as_ref().map(|_| CheckoutProcessing {
+                    order_id: l2l3_data.get_merchant_order_reference_id(),
+                    tax_amount: l2l3_data.get_order_tax_amount(),
+                    discount_amount: l2l3_data.get_discount_amount(),
+                    duty_amount: l2l3_data.get_duty_amount(),
+                    shipping_amount: l2l3_data.get_shipping_cost(),
+                    shipping_tax_amount: l2l3_data.get_shipping_amount_tax(),
+                }),
+                Some(CheckoutShipping {
+                    address: Some(CheckoutAddress {
+                        country: l2l3_data.get_shipping_country(),
+                        address_line1: l2l3_data.get_shipping_address_line1(),
+                        address_line2: l2l3_data.get_shipping_address_line2(),
+                        city: l2l3_data.get_shipping_city(),
+                        state: l2l3_data.get_shipping_state(),
+                        zip: l2l3_data.get_shipping_zip(),
+                    }),
+                    from_address_zip: l2l3_data.get_shipping_origin_zip().map(|zip| zip.expose()),
+                }),
+                l2l3_data.get_order_details().map(|details| {
+                    details
+                        .iter()
+                        .map(|item| CheckoutLineItem {
+                            commodity_code: item.commodity_code.clone(),
+                            discount_amount: item.unit_discount_amount,
+                            name: Some(item.product_name.clone()),
+                            quantity: Some(item.quantity),
+                            reference: item.product_id.clone(),
+                            tax_exempt: None,
+                            tax_amount: item.total_tax_amount,
+                            total_amount: item.total_amount,
+                            unit_of_measure: item.unit_of_measure.clone(),
+                            unit_price: Some(item.amount),
+                        })
+                        .collect::<Vec<_>>()
+                }),
+            )
+        } else {
+            (None, None, None, None)
+        };
+
         let partial_authorization = item.router_data.request.enable_partial_authorization.map(
             |enable_partial_authorization| CheckoutPartialAuthorization {
                 enabled: enable_partial_authorization,
@@ -1010,6 +1185,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             partial_authorization,
             payment_ip,
             billing_descriptor,
+            customer,
+            processing,
+            shipping,
+            items,
         };
 
         Ok(request)
