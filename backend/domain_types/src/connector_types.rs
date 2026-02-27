@@ -3000,7 +3000,7 @@ pub struct L2L3Data {
     pub tax_info: Option<TaxInfo>,
     pub customer_info: Option<CustomerInfo>,
     pub shipping_details: Option<AddressDetails>,
-    pub billing_details: Option<BillingDetails>,
+    pub billing_details: Option<AddressDetails>,
 }
 #[derive(Debug, Clone)]
 pub struct OrderInfo {
@@ -3028,11 +3028,6 @@ pub struct CustomerInfo {
     pub customer_name: Option<Secret<String>>,
     pub customer_phone_number: Option<Secret<String>>,
     pub customer_phone_country_code: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct BillingDetails {
-    pub address_city: Option<Secret<String>>,
 }
 
 impl L2L3Data {
@@ -3168,7 +3163,7 @@ impl L2L3Data {
     pub fn get_billing_city(&self) -> Option<Secret<String>> {
         self.billing_details
             .as_ref()
-            .and_then(|billing| billing.address_city.clone())
+            .and_then(|billing| billing.city.clone())
     }
 }
 

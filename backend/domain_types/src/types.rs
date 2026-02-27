@@ -227,7 +227,7 @@ use crate::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ApplePayPaymentRequest,
-        ApplePaySessionResponse, BillingDescriptor, BillingDetails, ConnectorCustomerData,
+        ApplePaySessionResponse, BillingDescriptor, ConnectorCustomerData,
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
         CustomerInfo, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         DisputeWebhookDetailsResponse, GpayAllowedPaymentMethods, GpayBillingAddressFormat,
@@ -7675,12 +7675,8 @@ impl ForeignTryFrom<(&grpc_api_types::payments::L2l3Data, &PaymentAddress)> for 
             tax_info,
             customer_info,
             billing_details: billing_address
-                .as_ref()
-                .and_then(|addr| addr.address.as_ref())
-                .and_then(|details| details.city.clone())
-                .map(|city| BillingDetails {
-                    address_city: Some(city),
-                }),
+                .and_then(|address| address.address.as_ref())
+                .cloned(),
             shipping_details: shipping_address
                 .and_then(|address| address.address.as_ref())
                 .cloned(),
