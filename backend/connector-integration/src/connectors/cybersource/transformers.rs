@@ -1,9 +1,8 @@
 use base64::Engine;
-use jsonwebtoken as jwt;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    ext_traits::{OptionExt, ValueExt},
+    ext_traits::{ValueExt},
     pii,
     types::{SemanticVersion, StringMajorUnit},
 };
@@ -1874,10 +1873,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             email,
         )?;
         let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
-
+        
         let payment_information = get_samsung_pay_payment_information(&samsung_pay_data)
             .attach_printable("Failed to get samsung pay payment information")?;
-
+       
         let processing_information = ProcessingInformation::try_from((
             item,
             Some(PaymentSolution::SamsungPay),
@@ -1911,11 +1910,11 @@ fn get_samsung_pay_payment_information<
 ) -> Result<PaymentInformation<T>, error_stack::Report<ConnectorError>> {
     let samsung_pay_fluid_data_value =
         get_samsung_pay_fluid_data_value(&samsung_pay_data.payment_credential.token_data)?;
-
+    
     let samsung_pay_fluid_data_str = serde_json::to_string(&samsung_pay_fluid_data_value)
         .change_context(ConnectorError::RequestEncodingFailed)
         .attach_printable("Failed to serialize samsung pay fluid data")?;
-
+    
     let payment_information =
         PaymentInformation::SamsungPay(Box::new(SamsungPayPaymentInformation {
             fluid_data: FluidData {
@@ -1926,25 +1925,16 @@ fn get_samsung_pay_payment_information<
                 transaction_type: TransactionType::InApp,
             },
         }));
-
+    
     Ok(payment_information)
 }
 
 fn get_samsung_pay_fluid_data_value(
     samsung_pay_token_data: &payment_method_data::SamsungPayTokenData,
 ) -> Result<SamsungPayFluidDataValue, error_stack::Report<ConnectorError>> {
-    let samsung_pay_header = jwt::decode_header(samsung_pay_token_data.data.clone().peek())
-        .change_context(ConnectorError::RequestEncodingFailed)
-        .attach_printable("Failed to decode samsung pay header")?;
-
-    let samsung_pay_kid_optional = samsung_pay_header.kid;
-
     let samsung_pay_fluid_data_value = SamsungPayFluidDataValue {
         public_key_hash: Secret::new(
-            samsung_pay_kid_optional
-                .get_required_value("samsung pay public_key_hash")
-                .change_context(ConnectorError::RequestEncodingFailed)?
-                .to_string(),
+            String::new()
         ),
         version: samsung_pay_token_data.version.clone(),
         data: Secret::new(BASE64_ENGINE.encode(samsung_pay_token_data.data.peek())),
