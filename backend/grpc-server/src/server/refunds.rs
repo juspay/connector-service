@@ -12,9 +12,8 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,
-    RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
-    WebhookResponseContent,
+    refund_service_server::RefundService, EventResponse, EventServiceHandleRequest,
+    EventServiceHandleResponse, RefundResponse, RefundServiceGetRequest, WebhookEventType,
 };
 
 use ucs_env::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
@@ -112,8 +111,8 @@ impl RefundService for Refunds {
     )]
     async fn transform(
         &self,
-        request: tonic::Request<RefundServiceTransformRequest>,
-    ) -> Result<tonic::Response<RefundServiceTransformResponse>, tonic::Status> {
+        request: tonic::Request<EventServiceHandleRequest>,
+    ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
         let config = utils::get_config_from_request(&request)?;
         let service_name = request
             .extensions()
@@ -170,11 +169,12 @@ impl RefundService for Refunds {
                 .await
                 .map_err(|e| e.into_grpc_status())?;
 
-                let response = RefundServiceTransformResponse {
+                let response = EventServiceHandleResponse {
                     event_type: WebhookEventType::WebhookRefundSuccess.into(),
-                    content: Some(content),
+                    event_response: Some(content),
                     source_verified,
                     response_ref_id: None,
+                    event_status: grpc_api_types::payments::WebhookEventStatus::Complete.into(),
                 };
 
                 Ok(tonic::Response::new(response))
@@ -189,7 +189,7 @@ async fn get_refunds_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorSpecificAuth>,
-) -> CustomResult<WebhookResponseContent, ApplicationErrorResponse> {
+) -> CustomResult<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
         .process_refund_webhook(request_details, webhook_secrets, connector_auth_details)
@@ -205,9 +205,7 @@ async fn get_refunds_webhook_content(
         }),
     )?;
 
-    Ok(WebhookResponseContent {
-        content: Some(
-            grpc_api_types::payments::webhook_response_content::Content::RefundsResponse(response),
-        ),
+    Ok(EventResponse {
+        content: Some(grpc_api_types::payments::event_response::Content::RefundsResponse(response)),
     })
 }

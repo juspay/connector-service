@@ -2,11 +2,11 @@ pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/d
 pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/production.toml");
 
 use grpc_api_types::payments::{
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-    PaymentServiceCaptureResponse, PaymentServiceCreateAccessTokenRequest,
-    PaymentServiceCreateAccessTokenResponse, PaymentServiceGetRequest, PaymentServiceGetResponse,
-    PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RefundResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServiceRefundRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
 };
 
 use crate::services::payments::{
@@ -193,7 +193,7 @@ pub fn get_res_handler(
 
 // create_access_token_req handler
 pub fn create_access_token_req_handler(
-    request: FfiRequestData<PaymentServiceCreateAccessTokenRequest>,
+    request: FfiRequestData<MerchantAuthenticationServiceCreateAccessTokenRequest>,
     test_mode: Option<bool>,
 ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
@@ -213,10 +213,10 @@ pub fn create_access_token_req_handler(
 
 // create_access_token_res handler
 pub fn create_access_token_res_handler(
-    request: FfiRequestData<PaymentServiceCreateAccessTokenRequest>,
+    request: FfiRequestData<MerchantAuthenticationServiceCreateAccessTokenRequest>,
     response: domain_types::router_response_types::Response,
     test_mode: Option<bool>,
-) -> Result<PaymentServiceCreateAccessTokenResponse, FfiPaymentError> {
+) -> Result<MerchantAuthenticationServiceCreateAccessTokenResponse, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
     } else {

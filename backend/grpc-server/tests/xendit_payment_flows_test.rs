@@ -42,7 +42,6 @@ const CONNECTOR_CUSTOMER_ID: &str = "abc123";
 
 // Test card data - Updated to match new JSON payload
 const TEST_AMOUNT: i64 = 10000000000; // 10 trillion from new payload
-const TEST_MINOR_AMOUNT: i64 = 10000000000; // Minor amount from new payload
 const TEST_CARD_NUMBER: &str = "4000000000001091"; // Valid test card for Xendit
 const TEST_CARD_EXP_MONTH: &str = "10";
 const TEST_CARD_EXP_YEAR: &str = "2027"; // Full year format
@@ -86,7 +85,7 @@ fn add_xendit_metadata<T>(request: &mut Request<T>) {
 
 // Helper function to extract connector transaction ID from response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
-    match &response.transaction_id {
+    match &response.connector_transaction_id {
         Some(id) => match id.id_type.as_ref().unwrap() {
             IdType::Id(id) => id.clone(),
             _ => panic!("Expected connector transaction ID"),
@@ -97,7 +96,7 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 
 // Helper function to extract connector Refund ID from response
 fn extract_refund_id(response: &RefundResponse) -> &String {
-    &response.refund_id
+    &response.connector_refund_id
 }
 
 // Helper function to create a payment authorize request
@@ -116,9 +115,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         nick_name: None,
     };
     PaymentServiceAuthorizeRequest {
-        amount: TEST_AMOUNT,
-        minor_amount: TEST_MINOR_AMOUNT,
-        currency: i32::from(Currency::Idr),
+        amount:  Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Idr),
+        }),
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
@@ -128,7 +128,6 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         webhook_url: Some(
             "http://localhost:8080/webhooks/merchant_1753672298/mca_8rIwEeXmFvrIA59fMH75".to_string(),
         ),
-        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress {
             billing_address: Some(grpc_api_types::payments::Address {
                 phone_number: Some(Secret::new("9123456789".to_string())),
@@ -139,12 +138,18 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             ..Default::default()
         }),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        request_ref_id: Some(Identifier {
+        merchant_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(TEST_REQUEST_REF_ID.to_string())),
         }),
         enrolled_for_3ds: Some(true),
         request_incremental_authorization: Some(false),
-        customer_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
+        customer: Some(grpc_api_types::payments::Customer {
+            email: Some(TEST_EMAIL.to_string().into()),
+            name: None,
+            id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
+            connector_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
+            phone_number: None,
+        }),
         // browser_info: TODO - BrowserInfo type not available in grpc_api_types
         capture_method: Some(i32::from(capture_method)),
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
@@ -155,21 +160,19 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        transaction_id: Some(Identifier {
+        connector_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         encoded_data: None,
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("xendit_sync_{}", get_timestamp()))),
-        }),
         capture_method: None,
         handle_response: None,
-        amount: TEST_AMOUNT,
-        currency: i32::from(Currency::Idr),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Idr),
+        }),
         state: None,
         metadata: None,
-        merchant_account_metadata: None,
-        connector_metadata: None,
+        feature_data: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
@@ -181,13 +184,15 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
 // Helper function to create a payment capture request
 fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
-        transaction_id: Some(Identifier {
+        connector_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
-        amount_to_capture: TEST_AMOUNT,
-        currency: i32::from(Currency::Idr),
+        amount_to_capture: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Idr),
+        }),
         multiple_capture_data: None,
-        request_ref_id: None,
+        merchant_capture_id: None,
         ..Default::default()
     }
 }
@@ -195,21 +200,22 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        refund_id: format!("refund_{}", get_timestamp()),
-        transaction_id: Some(Identifier {
+        merchant_refund_id: Some(Identifier {
+            id_type: Some(IdType::Id(format!("refund_{}", get_timestamp()))),
+        }),
+        connector_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
-        currency: i32::from(Currency::Idr),
         payment_amount: TEST_AMOUNT,
-        refund_amount: TEST_AMOUNT,
-        minor_payment_amount: TEST_AMOUNT,
-        minor_refund_amount: TEST_AMOUNT,
+        refund_amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Idr),
+        }),
         reason: None,
         webhook_url: None,
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
-        request_ref_id: None,
         ..Default::default()
     }
 }
@@ -217,7 +223,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
 // Helper function to create a refund sync request
 fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
     RefundServiceGetRequest {
-        transaction_id: Some(Identifier {
+        connector_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         refund_id: refund_id.to_string(),
@@ -227,7 +233,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         test_mode: Some(true),
         refund_metadata: None,
         state: None,
-        merchant_account_metadata: None,
+        feature_data: None,
         payment_method_type: None,
     }
 }

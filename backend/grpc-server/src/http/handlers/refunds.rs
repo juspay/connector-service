@@ -4,8 +4,8 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,
-    RefundServiceTransformRequest, RefundServiceTransformResponse,
+    refund_service_server::RefundService, EventServiceHandleRequest, EventServiceHandleResponse,
+    RefundResponse, RefundServiceGetRequest,
 };
 use std::sync::Arc;
 
@@ -26,8 +26,8 @@ http_handler!(
 
 http_handler!(
     transform_refund,
-    RefundServiceTransformRequest,
-    RefundServiceTransformResponse,
+    EventServiceHandleRequest,
+    EventServiceHandleResponse,
     transform,
     refunds_service
 );

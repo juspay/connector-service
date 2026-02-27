@@ -90,7 +90,7 @@ dist: generate-proto install-deps
 		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: Linux x86_64 binary not found (skipping)"
 	@cp -fL $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib \
 		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: macOS aarch64 binary not found (skipping)"
-	@$(MAKE) pack-archive
+	@$(MAKE) -C $(SDK_ROOT) pack-archive
 	@echo "Distribution archive created in $(PACKAGE_DIR)/"
 
 clean:

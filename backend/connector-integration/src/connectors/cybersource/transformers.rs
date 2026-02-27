@@ -4633,25 +4633,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
         {
             MandateReferenceId::ConnectorMandateId(_) => {
-                let original_amount = item
+                let original_authorized_amount = item
                     .router_data
                     .request
                     .recurring_mandate_payment_data
                     .as_ref()
                     .and_then(|recurring_mandate_payment_data| {
-                        recurring_mandate_payment_data.original_payment_authorized_amount
-                    });
+                        recurring_mandate_payment_data
+                            .original_payment_authorized_amount
+                            .clone()
+                    })
+                    .map(|original_amount| (original_amount.amount, original_amount.currency));
 
-                let original_currency = item
-                    .router_data
-                    .request
-                    .recurring_mandate_payment_data
-                    .as_ref()
-                    .and_then(|recurring_mandate_payment_data| {
-                        recurring_mandate_payment_data.original_payment_authorized_currency
-                    });
-
-                let original_authorized_amount = match original_amount.zip(original_currency) {
+                let original_authorized_amount = match original_authorized_amount {
                     Some((original_amount, original_currency)) => {
                         Some(domain_types::utils::get_amount_as_string(
                             &common_enums::CurrencyUnit::Base,

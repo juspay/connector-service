@@ -7,10 +7,14 @@
 # Default target
 .DEFAULT_GOAL := help
 
+# Auto-detect repo root (works when run from sdk/ via -C or from repo root via -f)
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+REPO_ROOT := $(shell cd $(MAKEFILE_DIR).. && pwd)
+
 # Configuration
-FFI_CRATE := backend/ffi
-RELEASE_DIR := target/release
-CROSS_RELEASE_DIR := target/cross
+FFI_CRATE := $(REPO_ROOT)/backend/ffi
+RELEASE_DIR := $(REPO_ROOT)/target/release
+CROSS_RELEASE_DIR := $(REPO_ROOT)/target/cross
 
 # Target platforms
 TARGET_MACOS_x86_64 := x86_64-apple-darwin
@@ -35,7 +39,7 @@ check-cargo: ## Verify cargo is installed
 build: check-cargo ## Build UniFFI library for current platform
 	@echo "Building UniFFI library for current platform..."
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi --release
-	@echo "Build complete: target/release/libconnector_service_ffi.$(LIB_EXT)"
+	@echo "Build complete: $(REPO_ROOT)/target/release/libconnector_service_ffi.$(LIB_EXT)"
 
 # macOS builds
 build-macos-x86_64: check-cargo ## Build for macOS Intel (x86_64)
@@ -50,12 +54,12 @@ build-macos-aarch64: check-cargo ## Build for macOS Apple Silicon (aarch64)
 
 build-macos-universal: build-macos-x86_64 build-macos-aarch64 ## Build universal binary for macOS
 	@echo "Creating universal binary for macOS..."
-	@mkdir -p target/universal/release
+	@mkdir -p $(REPO_ROOT)/target/universal/release
 	@lipo -create \
-		target/$(TARGET_MACOS_x86_64)/release/libconnector_service_ffi.dylib \
-		target/$(TARGET_MACOS_AARCH64)/release/libconnector_service_ffi.dylib \
-		-output target/universal/release/libconnector_service_ffi.dylib
-	@echo "Universal binary created: target/universal/release/libconnector_service_ffi.dylib"
+		$(REPO_ROOT)/target/$(TARGET_MACOS_x86_64)/release/libconnector_service_ffi.dylib \
+		$(REPO_ROOT)/target/$(TARGET_MACOS_AARCH64)/release/libconnector_service_ffi.dylib \
+		-output $(REPO_ROOT)/target/universal/release/libconnector_service_ffi.dylib
+	@echo "Universal binary created: $(REPO_ROOT)/target/universal/release/libconnector_service_ffi.dylib"
 
 build-macos: ## Build for all macOS platforms
 	$(if $(filter Darwin,$(UNAME)),,$(error "macOS builds can only be done on macOS"))

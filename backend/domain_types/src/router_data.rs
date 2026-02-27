@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use cards::NetworkToken;
 use common_utils::{
     ext_traits::{OptionExt, ValueExt},
-    MinorUnit,
+    types::Money,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -1735,19 +1735,15 @@ pub enum PaymentMethodToken {
 #[derive(Debug, Default, Clone)]
 pub struct RecurringMandatePaymentData {
     pub payment_method_type: Option<common_enums::enums::PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
-    pub original_payment_authorized_amount: Option<MinorUnit>,
-    pub original_payment_authorized_currency: Option<common_enums::enums::Currency>,
+    pub original_payment_authorized_amount: Option<Money>,
     pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl RecurringMandatePaymentData {
-    pub fn get_original_payment_amount(&self) -> Result<MinorUnit, Error> {
+    pub fn get_original_payment_amount(&self) -> Result<Money, Error> {
         self.original_payment_authorized_amount
+            .clone()
             .ok_or_else(missing_field_err("original_payment_authorized_amount"))
-    }
-    pub fn get_original_payment_currency(&self) -> Result<common_enums::Currency, Error> {
-        self.original_payment_authorized_currency
-            .ok_or_else(missing_field_err("original_payment_authorized_currency"))
     }
 }
 
