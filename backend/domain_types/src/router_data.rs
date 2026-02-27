@@ -142,7 +142,7 @@ impl ConnectorAuthType {
 ///
 /// Each variant holds the exact credentials a specific connector needs,
 /// as opposed to the generic `ConnectorAuthType` which uses positional fields.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub enum ConnectorSpecificAuth {
     // --- Single-field (HeaderKey) connectors ---
     Stripe {
