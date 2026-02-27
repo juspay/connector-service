@@ -7719,13 +7719,9 @@ impl ForeignTryFrom<&grpc_api_types::payments::OrderInfo> for OrderInfo {
             merchant_order_reference_id: value.merchant_order_reference_id.clone(),
             discount_amount: value
                 .discount_amount
-                .map(|amount| common_utils::types::MinorUnit::new(amount)),
-            shipping_cost: value
-                .shipping_cost
-                .map(|amount| common_utils::types::MinorUnit::new(amount)),
-            duty_amount: value
-                .duty_amount
-                .map(|amount| common_utils::types::MinorUnit::new(amount)),
+                .map(common_utils::types::MinorUnit::new),
+            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
+            duty_amount: value.duty_amount.map(common_utils::types::MinorUnit::new),
         })
     }
 }
@@ -7748,10 +7744,10 @@ impl ForeignTryFrom<&grpc_api_types::payments::TaxInfo> for TaxInfo {
             merchant_tax_registration_id: value.merchant_tax_registration_id.clone(),
             shipping_amount_tax: value
                 .shipping_amount_tax
-                .map(|amount| common_utils::types::MinorUnit::new(amount)),
+                .map(common_utils::types::MinorUnit::new),
             order_tax_amount: value
                 .order_tax_amount
-                .map(|amount| common_utils::types::MinorUnit::new(amount)),
+                .map(common_utils::types::MinorUnit::new),
         })
     }
 }

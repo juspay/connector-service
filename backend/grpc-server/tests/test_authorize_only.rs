@@ -24,7 +24,7 @@ async fn test_authorize_only_basic() {
 
         // This should fail gracefully since we don't have valid credentials,
         // but it proves the endpoint exists and is reachable
-        let response = client.authorize_only(request).await;
+        let response = Box::pin(client.authorize_only(request)).await;
 
         // We expect this to fail due to missing/invalid data, but not to panic
         assert!(response.is_err() || response.is_ok());

@@ -81,6 +81,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    l2_l3_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -272,6 +273,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    l2_l3_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
