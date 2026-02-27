@@ -1,5 +1,6 @@
 use crate::configs::ConfigPatch;
 use base64::{engine::general_purpose, Engine as _};
+const BASE64_ENGINE: base64::engine::GeneralPurpose = general_purpose::STANDARD;
 use common_utils::{
     config_patch::Patch,
     consts::{
@@ -308,6 +309,32 @@ pub fn auth_from_metadata(
                 }),
             )?;
             Ok(ConnectorAuthType::CurrencyAuthKey { auth_key_map })
+        }
+        "upstream-auth" => {
+            let auth_json_base64 = parse_metadata(metadata, consts::X_UPSTREAM_AUTHORIZATION)?;
+
+            // Decode base64
+            let decoded_bytes = BASE64_ENGINE
+                .decode(auth_json_base64.as_bytes())
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_UPSTREAM_AUTHORIZATION_BASE64".to_string(),
+                    error_identifier: 400,
+                    error_message: "Invalid base64 encoded upstream authorization".to_string(),
+                    error_object: None,
+                }))?;
+
+            let auth_json: Value = serde_json::from_slice(&decoded_bytes).change_context(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_UPSTREAM_AUTHORIZATION_JSON".to_string(),
+                    error_identifier: 400,
+                    error_message: "Invalid JSON format in upstream authorization".to_string(),
+                    error_object: None,
+                }),
+            )?;
+
+            Ok(ConnectorAuthType::UpstreamAuth {
+                value: auth_json.into(),
+            })
         }
         "certificate-auth" | _ => Err(Report::new(ApplicationErrorResponse::BadRequest(
             ApiError {

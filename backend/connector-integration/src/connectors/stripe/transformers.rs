@@ -56,7 +56,7 @@ use crate::{
     types::ResponseRouterData,
     utils::{
         convert_uppercase, deserialize_zero_minor_amount_as_none, is_refund_failure,
-        SplitPaymentData,
+        parse_upstream_auth_value, SplitPaymentData,
     },
 };
 
@@ -93,19 +93,26 @@ impl<T: PaymentMethodDataTypes> GetRequestIncrementalAuthorization for RepeatPay
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StripeAuthType {
-    pub(super) api_key: Secret<String>,
+    pub api_key: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for StripeAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::HeaderKey { api_key } = item {
-            Ok(Self {
+        match item {
+            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
-            })
-        } else {
-            Err(ConnectorError::FailedToObtainAuthType.into())
+            }),
+            ConnectorAuthType::UpstreamAuth { value } => {
+                let auth_type: Self = parse_upstream_auth_value(value)?;
+
+                Ok(Self {
+                    api_key: auth_type.api_key,
+                })
+            }
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
