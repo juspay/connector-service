@@ -18,7 +18,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{format_description::well_known::Iso8601, PrimitiveDateTime};
 
@@ -249,8 +249,8 @@ impl From<common_enums::PaymentChannel> for OrderProcessingChannelType {
     }
 }
 
-impl From<&BillingDescriptor> for Revolv3DynamicDescriptor {
-    fn from(item: &BillingDescriptor) -> Self {
+impl From<BillingDescriptor> for Revolv3DynamicDescriptor {
+    fn from(item: BillingDescriptor) -> Self {
         Self {
             sub_merchant_id: item.reference.clone(),
             sub_merchant_name: item.name.clone(),
@@ -320,7 +320,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .billing_descriptor
-            .as_ref()
+            .clone()
             .map(Revolv3DynamicDescriptor::from);
 
         let order_processing_channel = item
@@ -437,7 +437,7 @@ impl Revolv3SaleResponse {
                 resource_id: ResponseId::ConnectorTransactionId(self.invoice_id.to_string()),
                 redirection_data: None,
                 mandate_reference: mandate_reference.map(Box::new),
-                connector_metadata: None,
+                connector_metadata:  Some(serde_json::json!(Revolv3OperationMetadata::PsyncAllowed)),
                 network_txn_id: self.network_transaction_id.clone(),
                 connector_response_reference_id: self.merchant_invoice_ref_id.clone(),
                 incremental_authorization_allowed: None,
@@ -1246,7 +1246,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .billing_descriptor
-            .as_ref()
+           .clone()
             .map(Revolv3DynamicDescriptor::from);
 
         Ok(Self {
@@ -1293,4 +1293,35 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 pub struct Revolv3ErrorResponse {
     pub message: String,
     pub errors: Option<Vec<String>>,
+}
+
+/// Authorize and void operations do not support psync.
+/// This metadata acts as a flag to determine whether a psync
+/// request should be triggered to the connector.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Revolv3OperationMetadata {
+    PsyncAllowed,
+}
+pub fn validate_psync(
+    connector_metadata: &Option<Secret<serde_json::Value>>,
+) -> Result<(), error_stack::Report<errors::ConnectorError>> {
+    let metadata = connector_metadata
+        .clone()
+        .map(|metadata| metadata.expose())
+        .ok_or_else(|| errors::ConnectorError::NotSupported {
+            message: "PSync for authorization/void operations".to_string(),
+            connector: "revolv3",
+        })?;
+
+    let operation_metadata: Revolv3OperationMetadata =
+        serde_json::from_value(metadata.clone())
+            .map_err(|_| errors::ConnectorError::NotSupported {
+                message: "Invalid connector metadata for PSync validation".to_string(),
+                connector: "revolv3",
+            })?;
+
+    match operation_metadata {
+        Revolv3OperationMetadata::PsyncAllowed => Ok(()),
+    }
 }

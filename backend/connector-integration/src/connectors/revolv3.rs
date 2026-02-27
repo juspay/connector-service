@@ -28,7 +28,7 @@ use transformers::{
     Revolv3AuthorizeResponse, Revolv3CaptureRequest, Revolv3PaymentSyncResponse,
     Revolv3PaymentsRequest, Revolv3PaymentsResponse, Revolv3RefundRequest, Revolv3RefundResponse,
     Revolv3RefundSyncResponse, Revolv3RepeatPaymentRequest, Revolv3RepeatPaymentResponse,
-    Revolv3SaleResponse, Revolv3SetupMandateRequest,
+    Revolv3SaleResponse, Revolv3SetupMandateRequest, validate_psync
 };
 
 pub(crate) mod headers {
@@ -521,6 +521,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            validate_psync(&req.request.connector_metadata)?;
             self.build_headers(req)
         }
 
