@@ -14,7 +14,7 @@ use domain_types::{
         Card, CardDetailsForNetworkTransactionId, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
     },
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
