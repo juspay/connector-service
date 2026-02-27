@@ -354,7 +354,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             _ => Err(errors::ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Volt"),
+                utils::get_unimplemented_payment_method_error_message("Truelayer"),
             )
             .into()),
         }
@@ -712,9 +712,10 @@ fn get_address(billing: &domain_types::payment_address::Address) -> Option<Addre
 
 fn get_attempt_status(item: TruelayerPaymentStatus) -> AttemptStatus {
     match item {
-        TruelayerPaymentStatus::Authorized
-        | TruelayerPaymentStatus::Settled
-        | TruelayerPaymentStatus::Executed => AttemptStatus::Charged,
+        TruelayerPaymentStatus::Authorized | TruelayerPaymentStatus::Executed => {
+            AttemptStatus::Authorized
+        }
+        TruelayerPaymentStatus::Settled => AttemptStatus::Charged,
         TruelayerPaymentStatus::AuthorizationRequired => AttemptStatus::AuthenticationPending,
         TruelayerPaymentStatus::Failed | TruelayerPaymentStatus::AttemptFailed => {
             AttemptStatus::Failure

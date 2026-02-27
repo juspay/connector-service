@@ -556,7 +556,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type],
     connector: Truelayer,
-    curl_response: TruelayerPaymentsResponseData,
+    curl_response: TruelayerPSyncResponseData,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -609,7 +609,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type],
     connector: Truelayer,
     curl_request: Json(TruelayerRefundRequest),
-    curl_response: RefundResponse,
+    curl_response: TruelayerRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
