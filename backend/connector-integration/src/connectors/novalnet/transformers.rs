@@ -57,6 +57,8 @@ pub enum NovalNetPaymentTypes {
     APPLEPAY,
     #[serde(rename = "DIRECT_DEBIT_SEPA")]
     DirectDebitSepa,
+    #[serde(rename = "DIRECT_DEBIT_ACH")]
+    DirectDebitAch,
 }
 
 #[derive(Default, Debug, Serialize, Clone)]
@@ -114,6 +116,13 @@ pub struct NovalnetSepaDebit {
     iban: Secret<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NovalnetAchDebit {
+    account_holder: Secret<String>,
+    account_number: Secret<String>,
+    routing_number: Secret<String>,
+}
+
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct NovalnetGooglePay {
     wallet_data: Secret<String>,
@@ -135,6 +144,7 @@ pub enum NovalNetPaymentData<
     ApplePay(NovalnetApplePay),
     MandatePayment(NovalnetMandate),
     Sepa(NovalnetSepaDebit),
+    Ach(NovalnetAchDebit),
 }
 
 #[derive(Default, Debug, Serialize, Clone)]
@@ -185,6 +195,7 @@ impl TryFrom<&common_enums::PaymentMethodType> for NovalNetPaymentTypes {
             common_enums::PaymentMethodType::GooglePay => Ok(Self::GOOGLEPAY),
             common_enums::PaymentMethodType::Paypal => Ok(Self::PAYPAL),
             common_enums::PaymentMethodType::Sepa => Ok(Self::DirectDebitSepa),
+            common_enums::PaymentMethodType::Ach => Ok(Self::DirectDebitAch),
             _ => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Novalnet"),
             ))?,
@@ -473,7 +484,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ok_or(ConnectorError::MissingPaymentMethodType)?,
                 )?;
 
-                let (iban, account_holder) = match bank_debit_data {
+                let transaction = match bank_debit_data {
                     BankDebitData::SepaBankDebit {
                         iban,
                         bank_account_holder_name,
@@ -485,10 +496,63 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .resource_common_data
                                 .get_billing_full_name()?,
                         };
-                        (iban.clone(), account_holder)
+                        NovalnetPaymentsRequestTransaction {
+                            test_mode,
+                            payment_type,
+                            amount: NovalNetAmount::StringMinor(amount.clone()),
+                            currency: item.router_data.request.currency,
+                            order_no: item
+                                .router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
+                            hook_url: Some(hook_url),
+                            return_url: Some(return_url.clone()),
+                            error_return_url: Some(return_url.clone()),
+                            payment_data: Some(NovalNetPaymentData::Sepa(NovalnetSepaDebit {
+                                account_holder: account_holder.clone(),
+                                iban: iban.clone(),
+                            })),
+                            enforce_3d,
+                            create_token,
+                        }
                     }
-                    BankDebitData::AchBankDebit { .. }
-                    | BankDebitData::SepaGuaranteedBankDebit { .. }
+                    BankDebitData::AchBankDebit {
+                        account_number,
+                        routing_number,
+                        bank_account_holder_name,
+                        ..
+                    } => {
+                        let account_holder = match bank_account_holder_name {
+                            Some(name) => name.clone(),
+                            None => item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_full_name()?,
+                        };
+                        NovalnetPaymentsRequestTransaction {
+                            test_mode,
+                            payment_type,
+                            amount: NovalNetAmount::StringMinor(amount.clone()),
+                            currency: item.router_data.request.currency,
+                            order_no: item
+                                .router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
+                            hook_url: Some(hook_url),
+                            return_url: Some(return_url.clone()),
+                            error_return_url: Some(return_url.clone()),
+                            payment_data: Some(NovalNetPaymentData::Ach(NovalnetAchDebit {
+                                account_holder: account_holder.clone(),
+                                account_number: account_number.clone(),
+                                routing_number: routing_number.clone(),
+                            })),
+                            enforce_3d,
+                            create_token,
+                        }
+                    }
+                    BankDebitData::SepaGuaranteedBankDebit { .. }
                     | BankDebitData::BecsBankDebit { .. }
                     | BankDebitData::BacsBankDebit { .. } => {
                         return Err(ConnectorError::NotImplemented(
@@ -496,27 +560,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         )
                         .into());
                     }
-                };
-
-                let transaction = NovalnetPaymentsRequestTransaction {
-                    test_mode,
-                    payment_type,
-                    amount: NovalNetAmount::StringMinor(amount.clone()),
-                    currency: item.router_data.request.currency,
-                    order_no: item
-                        .router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                    hook_url: Some(hook_url),
-                    return_url: Some(return_url.clone()),
-                    error_return_url: Some(return_url.clone()),
-                    payment_data: Some(NovalNetPaymentData::Sepa(NovalnetSepaDebit {
-                        account_holder: account_holder.clone(),
-                        iban,
-                    })),
-                    enforce_3d,
-                    create_token,
                 };
 
                 Ok(Self {
