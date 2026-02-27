@@ -4354,7 +4354,7 @@ async fn verify_webhook_source_external(
     connector_data: &ConnectorData<DefaultPCIHolder>,
     request_details: &domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: &ConnectorAuthType,
+    connector_auth_details: &ConnectorSpecificAuth,
     metadata_payload: &utils::MetadataPayload,
     service_name: &str,
 ) -> Result<bool, tonic::Status> {
