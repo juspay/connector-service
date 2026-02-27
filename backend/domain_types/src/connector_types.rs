@@ -1764,6 +1764,7 @@ pub struct WebhookDetailsResponse {
     // minor amount for amount framework
     pub minor_amount_captured: Option<MinorUnit>,
     pub network_txn_id: Option<String>,
+    pub currency: Option<Currency>,
 }
 
 #[derive(Debug, Clone)]

@@ -745,6 +745,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             error_reason,
             network_txn_id: None,
+            currency: None,
         })
     }
 
