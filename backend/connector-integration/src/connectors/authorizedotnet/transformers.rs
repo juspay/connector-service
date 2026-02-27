@@ -12,7 +12,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{
-        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
     },
     router_data::{ConnectorSpecificAuth, ErrorResponse},
@@ -322,10 +322,29 @@ pub struct CreditCardDetails<T: PaymentMethodDataTypes> {
     card_code: Option<Secret<String>>,
 }
 
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BankAccountDetails {
+    account_type: AccountType,
+    routing_number: Secret<String>,
+    account_number: Secret<String>,
+    name_on_account: Secret<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum PaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
+    BankAccount(BankAccountDetails),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum AccountType {
+    Checking,
+    Savings,
+    BusinessChecking,
 }
 
 #[skip_serializing_none]
@@ -563,27 +582,92 @@ fn create_regular_transaction_request<
     >,
     currency: api_enums::Currency,
 ) -> Result<AuthorizedotnetTransactionRequest<T>, Error> {
-    let card_data = match &item.router_data.request.payment_method_data {
-        PaymentMethodData::Card(card) => Ok(card),
-        _ => Err(ConnectorError::RequestEncodingFailed),
+    let payment_details = match &item.router_data.request.payment_method_data {
+        PaymentMethodData::Card(card) => {
+            let expiry_month = card.card_exp_month.peek().clone();
+            let year = card.card_exp_year.peek().clone();
+            let expiry_year = if year.len() == 2 {
+                format!("20{year}")
+            } else {
+                year
+            };
+            let expiration_date = format!("{expiry_year}-{expiry_month}");
+
+            let credit_card_details = CreditCardDetails {
+                card_number: card.card_number.clone(),
+                expiration_date: Secret::new(expiration_date),
+                card_code: Some(card.card_cvc.clone()),
+            };
+
+            Ok(PaymentDetails::CreditCard(credit_card_details))
+        }
+        PaymentMethodData::BankDebit(bank_debit_data) => {
+            match bank_debit_data {
+                BankDebitData::AchBankDebit {
+                    account_number,
+                    routing_number,
+                    bank_account_holder_name,
+                    bank_type,
+                    ..
+                } => {
+                    // Get account holder name from bank_account_holder_name or billing address
+                    let name_on_account = bank_account_holder_name
+                        .clone()
+                        .or_else(|| {
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_billing()
+                                .and_then(|billing| {
+                                    billing.address.as_ref().and_then(|addr| {
+                                        let first =
+                                            addr.first_name.as_ref().map(|f| f.peek().clone());
+                                        let last =
+                                            addr.last_name.as_ref().map(|l| l.peek().clone());
+                                        match (first, last) {
+                                            (Some(f), Some(l)) => {
+                                                Some(Secret::new(format!("{f} {l}")))
+                                            }
+                                            (Some(f), None) => Some(Secret::new(f)),
+                                            (None, Some(l)) => Some(Secret::new(l)),
+                                            (None, None) => None,
+                                        }
+                                    })
+                                })
+                        })
+                        .ok_or_else(|| {
+                            error_stack::report!(ConnectorError::MissingRequiredField {
+                                field_name: "bank_account_holder_name",
+                            })
+                        })?;
+
+                    // Map bank_type to AccountType (default to Checking if not provided)
+                    let account_type = match bank_type {
+                        Some(common_enums::BankType::Savings) => AccountType::Savings,
+                        _ => AccountType::Checking,
+                    };
+
+                    let bank_account_details = BankAccountDetails {
+                        account_type,
+                        routing_number: routing_number.clone(),
+                        account_number: account_number.clone(),
+                        name_on_account,
+                    };
+
+                    Ok(PaymentDetails::BankAccount(bank_account_details))
+                }
+                BankDebitData::SepaBankDebit { .. }
+                | BankDebitData::SepaGuaranteedBankDebit { .. }
+                | BankDebitData::BecsBankDebit { .. }
+                | BankDebitData::BacsBankDebit { .. } => {
+                    Err(error_stack::report!(ConnectorError::NotImplemented(
+                        "SEPA, SEPA Guaranteed, BECS, and BACS bank debits are not supported for authorizedotnet"
+                            .to_string(),
+                    )))
+                }
+            }
+        }
+        _ => Err(error_stack::report!(ConnectorError::RequestEncodingFailed)),
     }?;
-
-    let expiry_month = card_data.card_exp_month.peek().clone();
-    let year = card_data.card_exp_year.peek().clone();
-    let expiry_year = if year.len() == 2 {
-        format!("20{year}")
-    } else {
-        year
-    };
-    let expiration_date = format!("{expiry_year}-{expiry_month}");
-
-    let credit_card_details = CreditCardDetails {
-        card_number: card_data.card_number.clone(),
-        expiration_date: Secret::new(expiration_date),
-        card_code: Some(card_data.card_cvc.clone()),
-    };
-
-    let payment_details = PaymentDetails::CreditCard(credit_card_details);
 
     let transaction_type = match item.router_data.request.capture_method {
         Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
