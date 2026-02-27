@@ -176,6 +176,7 @@ jobs:
       - name: Generate UniFFI Kotlin bindings
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: make -C sdk/java generate-bindings-ci LIBRARY=$(pwd)/target/${{ matrix.target }}/release/libconnector_service_ffi.so TARGET_TRIPLE=${{ matrix.target }}
+
       - name: Upload UniFFI Kotlin bindings
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         uses: actions/upload-artifact@v4

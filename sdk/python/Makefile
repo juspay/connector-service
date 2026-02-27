@@ -86,7 +86,7 @@ test-pack: pack
 	@cp $(SDK_ROOT)/test_smoke.py /tmp/test-hyperswitch-py/
 	@python3 -m pip install --target /tmp/test-hyperswitch-py $(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl --no-deps --force-reinstall
 	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py
-	#@rm -rf /tmp/test-hyperswitch-py
+	@rm -rf /tmp/test-hyperswitch-py
 	@echo "Pack test passed."
 
 # CI / cross-platform dist: copy all available binaries, then archive once

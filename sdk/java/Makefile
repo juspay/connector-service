@@ -39,7 +39,7 @@ generate-bindings: build-lib
 	@echo "Generating UniFFI Kotlin bindings..."
 	@mkdir -p $(GENERATED_KOTLIN) $(NATIVE_DIR)
 	$(eval TARGET_DIR := $(shell cd $(FFI_CRATE) && cargo metadata --format-version 1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['target_directory'])"))
-	@cd $(FFI_CRATE) && cargo run --no-default-features --features uniffi-cli \
+	@cd $(FFI_CRATE) && cargo run --no-default-features --features uniffi,uniffi-cli \
 		--bin uniffi-bindgen -- \
 		generate \
 		--library $(TARGET_DIR)/release/libconnector_service_ffi.$(LIB_EXT) \
@@ -68,7 +68,7 @@ generate-bindings: build-lib
 generate-bindings-ci:
 	@[ -n "$(LIBRARY)" ] || (echo "Error: LIBRARY must be set (e.g. LIBRARY=target/.../libconnector_service_ffi.so)" && exit 1)
 	@echo "Building uniffi-bindgen binary..."
-	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi-cli \
+	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi,uniffi-cli \
 		--release $(if $(TARGET_TRIPLE),--target $(TARGET_TRIPLE),) --bin uniffi-bindgen
 	@echo "Generating UniFFI Kotlin bindings from $(LIBRARY)..."
 	@mkdir -p $(GENERATED_KOTLIN) $(NATIVE_DIR)
@@ -79,7 +79,8 @@ generate-bindings-ci:
 	@find $(GENERATED_KOTLIN) -name '*.kt' -exec sed -i.bak 's/^        val `message`: kotlin\.String/        override val `message`: kotlin.String/' {} +
 	@find $(GENERATED_KOTLIN) -name '*.kt' -exec sed -i.bak '/class IntegrationException/,/^    }/{/^        override val message/d;/^            get() = "message=/d;}' {} +
 	@find $(GENERATED_KOTLIN) -name '*.kt.bak' -delete
-	@echo "UniFFI Kotlin bindings generated in $(GENERATED_KOTLIN)/"
+	@echo "UniFFI Kotlin bindings generated in $(GENERATED_KOTLIN)/.  Listing them ..."
+	@ls -lR $(GENERATED_KOTLIN)
 
 # Generate Java protobuf stubs (usable from Kotlin)
 generate-proto:

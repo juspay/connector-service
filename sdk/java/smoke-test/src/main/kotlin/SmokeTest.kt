@@ -18,9 +18,11 @@ import ucs.v2.Payment.AuthenticationType
 
 fun buildRequest(): PaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.newBuilder().apply {
-        requestRefIdBuilder.id = "smoke_test_123"
-        amount.minorAmount = 1000
-        amount.currency = Currency.USD
+        merchantTransactionIdBuilder.id = "smoke_test_123"
+        amountBuilder.apply {
+            minorAmount = 1000
+            currency = Currency.USD
+        }
         captureMethod = CaptureMethod.AUTOMATIC
         paymentMethodBuilder.cardBuilder.apply {
             cardNumberBuilder.value = "4111111111111111"
@@ -31,7 +33,7 @@ fun buildRequest(): PaymentServiceAuthorizeRequest =
         }
         customerBuilder.apply {
             emailBuilder.value = "test@example.com"
-            nameBuilder.value = "Test"
+            name = "Test"
         }
         authType = AuthenticationType.NO_THREE_DS
         returnUrl = "https://example.com/return"
