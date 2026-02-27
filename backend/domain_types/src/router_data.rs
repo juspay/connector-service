@@ -1656,7 +1656,6 @@ impl ErrorResponse {
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApplePayCryptogramData {
     pub online_payment_cryptogram: Secret<String>,
     pub eci_indicator: Option<String>,
