@@ -115,7 +115,7 @@ message Customer {
     optional string name = 1;            // Customer's full name
     optional SecretString email = 2;           // Customer's email address
     optional string id = 3;              // Internal customer ID
-    optional string connector_id = 4;    // Customer ID in the connector system
+    optional string connector_customer_id = 4;    // Customer ID in the connector system
     optional string phone_number = 5;    // Customer's phone number
 }
 

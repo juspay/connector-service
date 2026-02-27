@@ -53,6 +53,6 @@ http_handler!(
     transform_dispute,
     EventServiceHandleRequest,
     EventServiceHandleResponse,
-    transform,
+    handle_event,
     disputes_service
 );

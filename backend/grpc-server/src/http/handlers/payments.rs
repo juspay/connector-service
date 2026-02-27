@@ -169,7 +169,7 @@ http_handler!(
     transform,
     EventServiceHandleRequest,
     EventServiceHandleResponse,
-    transform,
+    handle_event,
     payments_service
 );
 http_handler!(

@@ -2458,7 +2458,7 @@ impl<
             payment_experience: None,
             customer_id: value
                 .customer
-                .and_then(|customer| customer.connector_id)
+                .and_then(|customer| customer.connector_customer_id)
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(ApplicationErrorResponse::BadRequest(ApiError {
@@ -3070,7 +3070,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             customer_id: value
                 .customer
                 .clone()
-                .and_then(|customer| customer.connector_id)
+                .and_then(|customer| customer.connector_customer_id)
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(ApplicationErrorResponse::BadRequest(ApiError {
@@ -3079,7 +3079,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            connector_customer: value.customer.and_then(|customer| customer.connector_id),
+            connector_customer: value.customer.and_then(|customer| customer.connector_customer_id),
             description: value.description,
             return_url: value.return_url.clone(),
             connector_meta_data,
@@ -7036,7 +7036,7 @@ impl
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            connector_customer: value.customer.and_then(|customer| customer.connector_id),
+            connector_customer: value.customer.and_then(|customer| customer.connector_customer_id),
             description,
             return_url: None,
             connector_meta_data,

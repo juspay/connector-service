@@ -24,7 +24,7 @@ console.log(`  UniffiClient: ${typeof UniffiClient}`);
 const apiKey = process.env.STRIPE_API_KEY || "sk_test_placeholder";
 const metadata = {
   connector: "Stripe",
-  connector_auth_type: JSON.stringify({ auth_type: "HeaderKey", api_key: apiKey }),
+  connector_auth_type: JSON.stringify({ Stripe: { api_key: apiKey } }),
   "x-connector": "Stripe",
   "x-merchant-id": "test_merchant_123",
   "x-request-id": "test-pack-001",
@@ -35,9 +35,10 @@ const metadata = {
 
 const requestMsg = PaymentServiceAuthorizeRequest.create({
   requestRefId: { id: "test_pack_123" },
-  amount: 1000,
-  minorAmount: 1000,
-  currency: Currency.USD,
+  amount: {
+    minorAmount: 1000,
+    currency: Currency.USD,
+  },
   captureMethod: CaptureMethod.AUTOMATIC,
   paymentMethod: {
     card: {
@@ -48,8 +49,10 @@ const requestMsg = PaymentServiceAuthorizeRequest.create({
       cardHolderName: { value: "Test User" },
     },
   },
-  email: { value: "test@example.com" },
-  customerName: "Test",
+  customer: {
+    email: { value: "test@example.com" },
+    name: "Test",
+  },
   authType: AuthenticationType.NO_THREE_DS,
   returnUrl: "https://example.com/return",
   webhookUrl: "https://example.com/webhook",

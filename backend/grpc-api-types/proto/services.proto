@@ -120,7 +120,7 @@ service PaymentService {
 
   // Handle incoming webhooks from payment processors.
   // This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type.
-  rpc Transform(EventServiceHandleRequest) returns (EventServiceHandleResponse);
+  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
 // ======================================================================================
@@ -149,7 +149,7 @@ service RefundService {
   rpc Get(RefundServiceGetRequest) returns (RefundResponse);
 
   // Handle incoming webhooks from payment processor.
-  rpc Transform(EventServiceHandleRequest) returns (EventServiceHandleResponse);
+  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 
 }
 
@@ -177,7 +177,7 @@ service DisputeService {
   rpc Accept(DisputeServiceAcceptRequest) returns (DisputeServiceAcceptResponse);
 
   // Handle incoming webhooks from connectors.
-  rpc Transform(EventServiceHandleRequest) returns (EventServiceHandleResponse);
+  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
 // ============================================================================

@@ -423,7 +423,7 @@ impl DisputeService for Disputes {
         )
         skip(self, request)
     )]
-    async fn transform(
+    async fn handle_event(
         &self,
         request: tonic::Request<EventServiceHandleRequest>,
     ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {

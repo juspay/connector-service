@@ -848,7 +848,7 @@ impl Payments {
         let cached_connector_customer_id = payload
             .customer
             .clone()
-            .and_then(|c| c.connector_id)
+            .and_then(|c| c.connector_customer_id.clone())
             .clone();
 
         // Check if connector supports customer creation
@@ -2111,7 +2111,7 @@ impl PaymentService for Payments {
         )
         skip(self, request)
     )]
-    async fn transform(
+    async fn handle_event(
         &self,
         request: tonic::Request<EventServiceHandleRequest>,
     ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
@@ -2653,7 +2653,7 @@ impl PaymentService for Payments {
                     let cached_connector_customer_id = payload
                         .customer
                         .clone()
-                        .and_then(|c| c.connector_id)
+                        .and_then(|c| c.connector_customer_id)
                         .clone();
 
                     // Check if connector supports customer creation

@@ -109,7 +109,7 @@ impl RefundService for Refunds {
             flow = DomainFlowName::IncomingWebhook.to_string(),
         )
     )]
-    async fn transform(
+    async fn handle_event(
         &self,
         request: tonic::Request<EventServiceHandleRequest>,
     ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {

@@ -19,9 +19,8 @@ import ucs.v2.Payment.AuthenticationType
 fun buildRequest(): PaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.newBuilder().apply {
         requestRefIdBuilder.id = "smoke_test_123"
-        amount = 1000
-        minorAmount = 1000
-        currency = Currency.USD
+        amount.minorAmount = 1000
+        amount.currency = Currency.USD
         captureMethod = CaptureMethod.AUTOMATIC
         paymentMethodBuilder.cardBuilder.apply {
             cardNumberBuilder.value = "4111111111111111"
@@ -30,8 +29,10 @@ fun buildRequest(): PaymentServiceAuthorizeRequest =
             cardCvcBuilder.value = "123"
             cardHolderNameBuilder.value = "Test User"
         }
-        emailBuilder.value = "test@example.com"
-        customerName = "Test"
+        customerBuilder.apply {
+            emailBuilder.value = "test@example.com"
+            nameBuilder.value = "Test"
+        }
         authType = AuthenticationType.NO_THREE_DS
         returnUrl = "https://example.com/return"
         webhookUrl = "https://example.com/webhook"
@@ -44,8 +45,9 @@ fun buildMetadata(): Map<String, String> {
     return mapOf(
         "connector" to "Stripe",
         "connector_auth_type" to JSONObject(mapOf(
-            "auth_type" to "HeaderKey",
-            "api_key" to apiKey,
+            "Stripe" to mapOf(
+                "api_key" to apiKey
+            )
         )).toString(),
         "x-connector" to "Stripe",
         "x-merchant-id" to "test_merchant_123",
