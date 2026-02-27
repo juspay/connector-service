@@ -56,11 +56,23 @@ message PaymentMethod {
     AmazonPayRedirectWallet amazon_pay_redirect = 15;   // Amazon Pay
     CashappQrWallet cashapp_qr = 16;                    // Cash App
     PaypalRedirectWallet paypal_redirect = 17;          // PayPal
-    WeChatPayQrWallet we_chat_pay_qr = 18;              // WeChat Pay
+    WeChatPayQrWallet we_chat_pay_qr = 18;              // WeChat Pay QR
+    WeChatPayRedirectWallet we_chat_pay_redirect = 163; // WeChat Pay Redirect
     AliPayRedirectWallet ali_pay_redirect = 19;         // AliPay
     RevolutPayWallet revolut_pay = 20;                  // Revolut Pay
     MifinityWallet mifinity = 21;                       // Mifinity
     Bluecode bluecode = 22;                             // Bluecode
+    AliPayHKWallet ali_pay_hk = 24;                     // AliPay HK Redirect
+    DanaRedirectWallet dana_redirect = 25;              // Dana Redirect
+    GcashRedirectWallet gcash_redirect = 26;            // GCash Redirect
+    GoPayRedirectWallet go_pay_redirect = 27;           // GoPay Redirect
+    KakaoPayRedirectWallet kakao_pay_redirect = 28;     // KakaoPay Redirect
+    MbWayRedirectWallet mb_way_redirect = 29;           // MB WAY Redirect
+    MomoRedirectWallet momo_redirect = 159;             // MoMo Redirect
+    TouchNGoRedirectWallet touch_n_go_redirect = 160;   // Touch 'n Go Redirect
+    TwintRedirectWallet twint_redirect = 161;           // TWINT Redirect
+    VippsRedirectWallet vipps_redirect = 162;           // Vipps Redirect
+    SwishQrWallet swish_qr = 158;                       // Swish QR
     PazeWallet paze = 23;                               // Paze
     
     // UPI METHODS (30-39) - Direct variants
@@ -468,7 +480,7 @@ message SamsungWallet {
     string card_last_four_digits = 5;
     
     // 3DS token data
-    message TokenData {
+    message TokenData {  
       // 3DS type
       optional string type = 1;
       
@@ -587,6 +599,11 @@ message WeChatPayQrWallet {
   // Fields will be added as needed for WeChat Pay QR integration
 }
 
+// WeChat Pay Redirect - WeChat Pay redirect payment service
+message WeChatPayRedirectWallet {
+  // Fields will be added as needed for WeChat Pay redirect integration
+}
+
 // Alipay Redirect - Alipay redirect payment service
 message AliPayRedirectWallet {
   // Fields will be added as needed for Alipay redirect integration
@@ -602,6 +619,57 @@ message RevolutPayWallet {
 }
 
 message Bluecode {
+}
+
+
+// Dana Redirect - Indonesian digital wallet Dana redirect payment
+message DanaRedirectWallet {
+  // Fields will be added as needed for Dana redirect integration
+}
+
+// GCash Redirect - Filipino mobile wallet GCash redirect payment
+message GcashRedirectWallet {
+  // Fields will be added as needed for GCash redirect integration
+}
+
+// GoPay Redirect - Indonesian digital wallet GoPay redirect payment
+message GoPayRedirectWallet {
+  // Fields will be added as needed for GoPay redirect integration
+}
+
+// KakaoPay Redirect - South Korean mobile payment KakaoPay redirect
+message KakaoPayRedirectWallet {
+  // Fields will be added as needed for KakaoPay redirect integration
+}
+
+// MB Way Redirect - Portuguese mobile payment MB WAY redirect
+message MbWayRedirectWallet {
+  // Fields will be added as needed for MB WAY redirect integration
+}
+
+// MoMo Redirect - Vietnamese digital wallet MoMo redirect payment
+message MomoRedirectWallet {
+  // Fields will be added as needed for MoMo redirect integration
+}
+
+// Touch n Go Redirect - Malaysian e-wallet Touch 'n Go redirect payment
+message TouchNGoRedirectWallet {
+  // Fields will be added as needed for Touch 'n Go redirect integration
+}
+
+// Twint Redirect - Swiss mobile payment TWINT redirect
+message TwintRedirectWallet {
+  // Fields will be added as needed for TWINT redirect integration
+}
+
+// Vipps Redirect - Norwegian mobile payment Vipps redirect
+message VippsRedirectWallet {
+  // Fields will be added as needed for Vipps redirect integration
+}
+
+// Swish QR - Swedish mobile payment Swish QR code payment
+message SwishQrWallet {
+  // Fields will be added as needed for Swish QR integration
 }
 
 // Apple Pay Third Party SDK - Apple Pay with token from third-party SDK

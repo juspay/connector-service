@@ -732,6 +732,39 @@ impl<
                         payment_method_data::AliPayRedirection {},
                     )),
                 ),
+                grpc_api_types::payments::payment_method::PaymentMethod::AliPayHk(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::AliPayHkRedirect(
+                        payment_method_data::AliPayHkRedirection {},
+                    )),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::GcashRedirect(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::GcashRedirect(
+                        payment_method_data::GcashRedirection {},
+                    )),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::DanaRedirect(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::DanaRedirect {}),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::GoPayRedirect(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::GoPayRedirect(
+                        payment_method_data::GoPayRedirection {},
+                    )),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::KakaoPayRedirect(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::KakaoPayRedirect(
+                        payment_method_data::KakaoPayRedirection {},
+                    )),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::MbWayRedirect(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::MbWayRedirect(Box::new(
+                        payment_method_data::MbWayRedirection {},
+                    ))),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::MomoRedirect(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::MomoRedirect(
+                        payment_method_data::MomoRedirection {},
+                    )),
+                ),
                 grpc_api_types::payments::payment_method::PaymentMethod::AmazonPayRedirect(_) => {
                     Ok(Self::Wallet(
                         payment_method_data::WalletData::AmazonPayRedirect(Box::new(
@@ -1816,6 +1849,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(_) => Ok(Some(PaymentMethodType::Mifinity)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Bluecode(_) => Ok(Some(PaymentMethodType::Bluecode)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Paze(_) => Ok(Some(PaymentMethodType::Paze)),
+                grpc_api_types::payments::payment_method::PaymentMethod::AliPayHk(_) => Ok(Some(PaymentMethodType::AliPayHk)),
+                grpc_api_types::payments::payment_method::PaymentMethod::DanaRedirect(_) => Ok(Some(PaymentMethodType::Dana)),
+                grpc_api_types::payments::payment_method::PaymentMethod::GcashRedirect(_) => Ok(Some(PaymentMethodType::Gcash)),
+                grpc_api_types::payments::payment_method::PaymentMethod::GoPayRedirect(_) => Ok(Some(PaymentMethodType::GoPay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::KakaoPayRedirect(_) => Ok(Some(PaymentMethodType::KakaoPay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::MbWayRedirect(_) => Ok(Some(PaymentMethodType::MbWay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::MomoRedirect(_) => Ok(Some(PaymentMethodType::Momo)),
+                grpc_api_types::payments::payment_method::PaymentMethod::TouchNGoRedirect(_) => Ok(Some(PaymentMethodType::TouchNGo)),
+                grpc_api_types::payments::payment_method::PaymentMethod::TwintRedirect(_) => Ok(Some(PaymentMethodType::Twint)),
+                grpc_api_types::payments::payment_method::PaymentMethod::VippsRedirect(_) => Ok(Some(PaymentMethodType::Vipps)),
+                grpc_api_types::payments::payment_method::PaymentMethod::SwishQr(_) => Ok(Some(PaymentMethodType::Swish)),
                 // ============================================================================
                 // BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
@@ -4359,6 +4403,34 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::AliPayRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::AliPayHk(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::GcashRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::DanaRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::GoPayRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::KakaoPayRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::MbWayRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::MomoRedirect(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
