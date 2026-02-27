@@ -39,7 +39,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{
@@ -91,7 +91,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> CustomResult<bool, ConnectorError> {
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets.secret,
@@ -125,7 +125,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorError>> {
         let request_body_copy = request.body.clone();
         let webhook_body: CalidaWebhookResponse = request
@@ -160,7 +160,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<EventType, error_stack::Report<ConnectorError>> {
         Ok(EventType::Payment)
     }
@@ -538,7 +538,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorAuthType,
+        auth_type: &ConnectorSpecificAuth,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         let auth = CalidaAuthType::try_from(auth_type)
             .change_context(ConnectorError::FailedToObtainAuthType)?;

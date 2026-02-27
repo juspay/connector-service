@@ -21,7 +21,7 @@ use domain_types::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils::{self, ForeignTryFrom},
@@ -584,18 +584,18 @@ pub struct NovalnetAuthType {
     pub(super) tariff_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for NovalnetAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for NovalnetAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
+            ConnectorSpecificAuth::Novalnet {
+                product_activation_key,
+                payment_access_key,
+                tariff_id,
             } => Ok(Self {
-                product_activation_key: api_key.to_owned(),
-                payment_access_key: key1.to_owned(),
-                tariff_id: api_secret.to_owned(),
+                product_activation_key: product_activation_key.to_owned(),
+                payment_access_key: payment_access_key.to_owned(),
+                tariff_id: tariff_id.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
