@@ -106,6 +106,9 @@ message CompositeAuthorizeRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 50; // Redirection Response from client browser
+
+  // Level 2 / Level 3 data for enhanced payment processing
+  optional L2L3Data l2_l3_data = 51; 
 }
 
 // Response message for composite authorize flow.

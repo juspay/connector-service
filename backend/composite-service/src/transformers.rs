@@ -129,6 +129,7 @@ impl
             threeds_completion_indicator: item.threeds_completion_indicator,
             redirection_response: item.redirection_response.clone(),
             tokenization_strategy: item.tokenization_strategy,
+            l2_l3_data: item.l2_l3_data.clone(),
         }
     }
 }
