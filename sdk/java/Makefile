@@ -1,4 +1,4 @@
-.PHONY: build-lib generate-bindings generate-proto setup clean pack pack-archive test-pack dist
+.PHONY: build-lib generate-bindings generate-bindings-ci generate-proto setup clean pack pack-archive test-pack dist
 
 # Auto-detect SDK root directory (works when run from sdk/java/ or repo root)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -51,6 +51,31 @@ generate-bindings: build-lib
 	@find $(GENERATED_KOTLIN) -name '*.kt.bak' -delete
 	@echo "UniFFI Kotlin bindings generated in $(GENERATED_KOTLIN)/"
 
+# CI variant: generate Kotlin bindings from a pre-built library (no rebuild step).
+# LIBRARY: path to the pre-built shared library (required)
+# TARGET_TRIPLE: Rust target triple to pass to cargo run (optional).
+#   Set this to the same triple used to build the library so cargo reuses the
+#   already-compiled artifacts in target/<triple>/ instead of doing a cold rebuild
+#   into target/release/.
+#   Example: make generate-bindings-ci \
+#              LIBRARY=$(pwd)/target/x86_64-unknown-linux-gnu/release/libconnector_service_ffi.so \
+#              TARGET_TRIPLE=x86_64-unknown-linux-gnu
+generate-bindings-ci:
+	@[ -n "$(LIBRARY)" ] || (echo "Error: LIBRARY must be set (e.g. LIBRARY=target/.../libconnector_service_ffi.so)" && exit 1)
+	@echo "Generating UniFFI Kotlin bindings from pre-built library $(LIBRARY)..."
+	@mkdir -p $(GENERATED_KOTLIN) $(NATIVE_DIR)
+	@cd $(FFI_CRATE) && cargo run --no-default-features --features uniffi-cli \
+		--bin uniffi-bindgen --release \
+		$(if $(TARGET_TRIPLE),--target $(TARGET_TRIPLE),) -- \
+		generate \
+		--library $(LIBRARY) \
+		--language kotlin \
+		--out-dir $(GENERATED_KOTLIN)
+	@find $(GENERATED_KOTLIN) -name '*.kt' -exec sed -i.bak 's/^        val `message`: kotlin\.String/        override val `message`: kotlin.String/' {} +
+	@find $(GENERATED_KOTLIN) -name '*.kt' -exec sed -i.bak '/class IntegrationException/,/^    }/{/^        override val message/d;/^            get() = "message=/d;}' {} +
+	@find $(GENERATED_KOTLIN) -name '*.kt.bak' -delete
+	@echo "UniFFI Kotlin bindings generated in $(GENERATED_KOTLIN)/"
+
 # Generate Java protobuf stubs (usable from Kotlin)
 generate-proto:
 	@echo "Generating Java protobuf stubs..."
@@ -74,9 +99,9 @@ pack-archive:
 
 # Local dev: build everything, publish to Maven Local (for test-pack/example-run), and build dist JAR
 pack: setup
-	@./gradlew publishToMavenLocal
+	@$(SDK_ROOT)/gradlew publishToMavenLocal
 	@echo "Published to Maven Local (~/.m2/repository/com/hyperswitch/payments-client/0.1.0/)"
-	@$(MAKE) pack-archive
+	@$(MAKE) -C $(SDK_ROOT) pack-archive
 
 # Test the packed JAR — verify it contains the expected classes and native lib
 test-pack: pack
@@ -99,7 +124,7 @@ dist: generate-proto
 		$(NATIVE_DIR)/ 2>/dev/null || echo "  Note: Linux x86_64 binary not found (skipping)"
 	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib \
 		$(NATIVE_DIR)/ 2>/dev/null || echo "  Note: macOS aarch64 binary not found (skipping)"
-	@$(MAKE) pack-archive
+	@$(MAKE) -C $(SDK_ROOT) pack-archive
 	@echo "Distribution JAR created in $(PACKAGE_DIR)/"
 
 clean:

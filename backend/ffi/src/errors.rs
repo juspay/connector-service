@@ -39,6 +39,7 @@ pub enum FfiError {
 }
 
 /// Error type exposed over the UniFFI boundary.
+#[cfg(feature = "uniffi")]
 #[derive(Debug, Clone, thiserror::Error, uniffi::Error)]
 pub enum UniffiError {
     #[error("Failed to decode protobuf request: {msg}")]
@@ -73,6 +74,7 @@ impl From<FfiError> for FfiPaymentError {
     }
 }
 
+#[cfg(feature = "uniffi")]
 impl From<FfiError> for UniffiError {
     fn from(e: FfiError) -> Self {
         match e {
@@ -82,6 +84,7 @@ impl From<FfiError> for UniffiError {
     }
 }
 
+#[cfg(feature = "uniffi")]
 impl From<FfiPaymentError> for UniffiError {
     fn from(e: FfiPaymentError) -> Self {
         Self::ConnectorError {
