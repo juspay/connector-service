@@ -171,22 +171,16 @@ pub struct Revolv3CreditCardData<T: PaymentMethodDataTypes> {
 
 impl Revolv3BillingAddress {
     fn try_from_payment_flow_data(common_data: &PaymentFlowData) -> Option<Self> {
-        common_data.get_optional_billing().map(|billing| {
-            let address = billing.address.as_ref();
-            Self {
-                address_line1: address.and_then(|a| a.line1.clone()),
-                address_line2: address.and_then(|a| a.line2.clone()),
-                city: address.and_then(|a| a.city.clone()),
-                state: address.and_then(|a| a.state.clone()),
-                postal_code: address.and_then(|a| a.zip.clone()),
-                phone_number: billing
-                    .phone
-                    .as_ref()
-                    .and_then(|p| p.get_number_with_country_code().ok()),
-                email: billing.email.clone(),
-                country: address.and_then(|a| a.country),
-            }
-        })
+        Self {
+            address_line1: common_data.get_optional_billing_line1(),
+            address_line2: common_data.get_optional_billing_line2(),
+            city: common_data.get_optional_billing_city(),
+            state: common_data.get_optional_billing_state(),
+            postal_code: common_data.get_optional_billing_postal_code(),
+            phone_number: common_data.get_optional_billing_phone_number(),
+            email: common_data.get_optional_billing_email(),
+            country: common_data.get_optional_billing_country(),
+        }
     }
 }
 

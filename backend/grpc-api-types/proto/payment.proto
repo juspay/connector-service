@@ -2091,7 +2091,6 @@ message PaymentServiceCaptureRequest {
 
   // Additional Context
   optional string merchant_order_reference_id = 15; // Merchant's internal reference ID
-
 }
 
 // Response message for a payment capture operation.
