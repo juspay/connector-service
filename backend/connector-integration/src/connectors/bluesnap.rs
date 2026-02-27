@@ -41,8 +41,8 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as bluesnap, BluesnapAuthorizeResponse, BluesnapCaptureRequest, BluesnapCaptureResponse,
-    BluesnapPSyncResponse, BluesnapPaymentsRequest, BluesnapRefundRequest, BluesnapRefundResponse,
+    self as bluesnap, BluesnapAuthorizeRequest, BluesnapAuthorizeResponse, BluesnapCaptureRequest,
+    BluesnapCaptureResponse, BluesnapPSyncResponse, BluesnapRefundRequest, BluesnapRefundResponse,
     BluesnapRefundSyncResponse, BluesnapVoidRequest, BluesnapVoidResponse,
 };
 
@@ -391,7 +391,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: BluesnapPaymentsRequest,
+            request_body: BluesnapAuthorizeRequest,
             response_body: BluesnapAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -461,7 +461,7 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Bluesnap,
-    curl_request: Json(BluesnapPaymentsRequest),
+    curl_request: Json(BluesnapAuthorizeRequest),
     curl_response: BluesnapAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -482,7 +482,20 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/services/2/transactions", self.connector_base_url_payments(req)))
+            use domain_types::payment_method_data::PaymentMethodData;
+
+            let base_url = self.connector_base_url_payments(req);
+
+            match &req.request.payment_method_data {
+                PaymentMethodData::BankDebit(_) => {
+                    // ACH uses alt-transactions endpoint
+                    Ok(format!("{}/services/2/alt-transactions", base_url))
+                },
+                _ => {
+                    // Cards and wallets use standard transactions endpoint
+                    Ok(format!("{}/services/2/transactions", base_url))
+                },
+            }
         }
     }
 );

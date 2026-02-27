@@ -104,7 +104,9 @@ pub struct BluesnapCreditCardResponse {
 #[serde(rename_all = "camelCase")]
 pub struct BluesnapPaymentsResponse {
     pub transaction_id: String,
-    pub card_transaction_type: BluesnapTxnType,
+    // Note: card_transaction_type is not present in ACH/ECP responses
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_transaction_type: Option<BluesnapTxnType>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<FloatMajorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
