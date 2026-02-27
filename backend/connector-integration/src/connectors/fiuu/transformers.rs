@@ -25,7 +25,7 @@ use domain_types::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         RealTimePaymentData, WalletData,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -53,18 +53,18 @@ pub struct FiuuAuthType {
     pub(super) secret_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for FiuuAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for FiuuAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
+            ConnectorSpecificAuth::Fiuu {
+                merchant_id,
+                verify_key,
+                secret_key,
             } => Ok(Self {
-                merchant_id: key1.to_owned(),
-                verify_key: api_key.to_owned(),
-                secret_key: api_secret.to_owned(),
+                merchant_id: merchant_id.to_owned(),
+                verify_key: verify_key.to_owned(),
+                secret_key: secret_key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }

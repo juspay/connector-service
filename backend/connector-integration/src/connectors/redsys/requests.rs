@@ -197,6 +197,12 @@ pub struct RedsysVersionData {
 }
 
 /// Message wrapper containing the actual message type
+///
+/// Note: Uses Transaction or Monitor based on transaction_type parameter in construct_sync_request()
+/// - Transaction: Filters by Ds_TransactionType
+/// - Monitor: Returns all transaction types
+///
+/// Both use same field ordering as simple variants (not Masiva).
 #[derive(Debug, Serialize)]
 #[serde(rename = "Message")]
 pub struct Message {
@@ -213,7 +219,14 @@ pub enum MessageContent {
     Monitor(RedsysMonitorRequest),
 }
 
-/// Transaction request for querying transaction status
+/// SOAP XML Transaction request for querying transaction status
+///
+/// CRITICAL: Field ordering must match Redsys DTD exactly.
+/// Alphabetical sorting will cause XML0001 error (DTD validation failure).
+///
+/// Required DTD order: Ds_MerchantCode → Ds_Terminal → Ds_Order → Ds_TransactionType
+///
+/// Ref: RS.TE.CEL.MAN.0021 v1.4, Section 3.2.1 (Transaction simple)
 #[derive(Debug, Serialize)]
 pub struct RedsysTransactionRequest {
     #[serde(rename = "Ds_MerchantCode")]
@@ -226,7 +239,16 @@ pub struct RedsysTransactionRequest {
     pub ds_transaction_type: String,
 }
 
-/// Monitor request (simpler - no transaction type needed)
+/// SOAP XML Monitor request for querying all transaction types
+///
+/// CRITICAL: Field ordering must match Redsys DTD exactly.
+/// Alphabetical sorting will cause XML0001 error (DTD validation failure).
+///
+/// Required DTD order: Ds_MerchantCode → Ds_Terminal → Ds_Order
+///
+/// Note: Monitor (simple) does NOT include Ds_TransactionType
+///
+/// Ref: RS.TE.CEL.MAN.0021 v1.4, Section 3.2.1 (Monitor simple)
 #[derive(Debug, Serialize)]
 pub struct RedsysMonitorRequest {
     #[serde(rename = "Ds_MerchantCode")]
