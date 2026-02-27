@@ -600,6 +600,7 @@ enum Connector {
   GIGADAT = 106;
   HYPERPG = 107;
   ZIFT = 108;
+  REVOLV3 = 109;
 }
 
 // Payment method types.
@@ -1642,7 +1643,7 @@ message PaymentServiceAuthorizeRequest {
   // Locale Information
   optional string locale = 45; // Locale/language preference for the shopper (e.g., "en-US")
 
-  // Tokenization configuration  
+  // Tokenization configuration
   optional Tokenization tokenization_strategy = 46; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
 }
 
@@ -1742,7 +1743,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 48; // Redirection Response from client browser
 
-  // Tokenization configuration  
+  // Tokenization configuration
   optional Tokenization tokenization_strategy = 49; // Tokenization strategy for payment processing - controls token creation at provider vs platform level
 }
 
@@ -3381,6 +3382,9 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // Environment Configuration
   optional bool test_mode = 15; // A boolean value to indicate if the connector is in Test mode  
+
+  // Connector Customer Information
+  optional string connector_customer_id = 16; // Customer ID as recognized by the connector
 }
 
 // Response message for creating a payment method token.
@@ -3451,4 +3455,626 @@ message DisputesSyncResponse {
   optional string dispute_message = 3;
   DisputeStatus status = 4;
   DisputeStage stage = 5;
+}
+
+
+
+// ============================================================================
+// CONNECTOR AUTHENTICATION MESSAGES
+// ============================================================================
+
+// Single field auth types
+message StripeAuth {
+  SecretString api_key = 1;
+}
+
+message BamboraAuth {
+  SecretString merchant_id = 1;
+  SecretString api_key = 2;
+}
+
+message CalidaAuth {
+  SecretString api_key = 1;
+}
+
+message CeleroAuth {
+  SecretString api_key = 1;
+}
+
+message NexinetsAuth {
+  SecretString merchant_id = 1;
+  SecretString api_key = 2;
+}
+
+message NexixpayAuth {
+  SecretString api_key = 1;
+}
+
+message RevolutAuth {
+  SecretString api_key = 1;
+}
+
+message Revolv3Auth {
+  SecretString api_key = 1;
+}
+
+message Shift4Auth {
+  SecretString api_key = 1;
+}
+
+message StaxAuth {
+  SecretString api_key = 1;
+}
+
+message XenditAuth {
+  SecretString api_key = 1;
+}
+
+message HelcimAuth {
+  SecretString api_key = 1;
+}
+
+message MifinityAuth {
+  SecretString key = 1;
+}
+
+message MultisafepayAuth {
+  SecretString api_key = 1;
+}
+
+message ScreenstreamAuth {
+  SecretString api_key = 1;
+}
+
+message AuthorizedotnetAuth {
+  SecretString name = 1;
+  SecretString transaction_key = 2;
+}
+
+// Two field auth types
+message BraintreeAuth {
+  SecretString public_key = 1;
+  SecretString private_key = 2;
+}
+
+message AirwallexAuth {
+  SecretString api_key = 1;
+  SecretString client_id = 2;
+}
+
+message AuthipayAuth {
+  SecretString api_key = 1;
+  SecretString api_secret = 2;
+}
+
+message BillwerkAuth {
+  SecretString api_key = 1;
+  SecretString public_api_key = 2;
+}
+
+message BluesnapAuth {
+  SecretString username = 1;
+  SecretString password = 2;
+}
+
+message CashfreeAuth {
+  SecretString app_id = 1;
+  SecretString secret_key = 2;
+}
+
+message CryptopayAuth {
+  SecretString api_key = 1;
+  SecretString api_secret = 2;
+}
+
+message DatatransAuth {
+  SecretString merchant_id = 1;
+  SecretString password = 2;
+}
+
+message FiservemeaAuth {
+  SecretString api_key = 1;
+  SecretString api_secret = 2;
+}
+
+message GlobalpayAuth {
+  SecretString app_id = 1;
+  SecretString app_key = 2;
+}
+
+message HipayAuth {
+  SecretString api_key = 1;
+  SecretString api_secret = 2;
+}
+
+message JpmorganAuth {
+  SecretString client_id = 1;
+  SecretString client_secret = 2;
+}
+
+message LoonioAuth {
+  SecretString merchant_id = 1;
+  SecretString merchant_token = 2;
+}
+
+message PaysafeAuth {
+  SecretString username = 1;
+  SecretString password = 2;
+}
+
+message PayuAuth {
+  SecretString api_key = 1;
+  SecretString api_secret = 2;
+}
+
+message PowertranzAuth {
+  SecretString power_tranz_id = 1;
+  SecretString power_tranz_password = 2;
+}
+
+message RapydAuth {
+  SecretString access_key = 1;
+  SecretString secret_key = 2;
+}
+
+message WorldpayAuth {
+  SecretString username = 1;
+  SecretString password = 2;
+  SecretString entity_id = 3;
+}
+
+// Three field auth types
+message AdyenAuth {
+  SecretString api_key = 1;
+  SecretString merchant_account = 2;
+  optional SecretString review_key = 3;
+}
+
+message BankOfAmericaAuth {
+  SecretString api_key = 1;
+  SecretString merchant_account = 2;
+  SecretString api_secret = 3;
+}
+
+message BarclaycardAuth {
+  SecretString api_key = 1;
+  SecretString merchant_account = 2;
+  SecretString api_secret = 3;
+}
+
+message CybersourceAuth {
+  SecretString api_key = 1;
+  SecretString merchant_account = 2;
+  SecretString api_secret = 3;
+}
+
+message DlocalAuth {
+  SecretString x_login = 1;
+  SecretString x_trans_key = 2;
+  SecretString secret = 3;
+}
+
+message ElavonAuth {
+  SecretString ssl_merchant_id = 1;
+  SecretString ssl_user_id = 2;
+  SecretString ssl_pin = 3;
+}
+
+message FiservAuth {
+  SecretString api_key = 1;
+  SecretString merchant_account = 2;
+  SecretString api_secret = 3;
+}
+
+message GetnetAuth {
+  SecretString api_key = 1;
+  SecretString api_secret = 2;
+  SecretString seller_id = 3;
+}
+
+message HyperpgAuth {
+  SecretString username = 1;
+  SecretString password = 2;
+  SecretString merchant_id = 3;
+}
+
+message IatapayAuth {
+  SecretString client_id = 1;
+  SecretString merchant_id = 2;
+  SecretString client_secret = 3;
+}
+
+message NuveiAuth {
+  SecretString merchant_id = 1;
+  SecretString merchant_site_id = 2;
+  SecretString merchant_secret = 3;
+}
+
+message NovalnetAuth {
+  SecretString product_activation_key = 1;
+  SecretString payment_access_key = 2;
+  SecretString tariff_id = 3;
+}
+
+message NoonAuth {
+  SecretString api_key = 1;
+  SecretString application_identifier = 2;
+  SecretString business_identifier = 3;
+}
+
+message RedsysAuth {
+  SecretString merchant_id = 1;
+  SecretString terminal_id = 2;
+  SecretString sha256_pwd = 3;
+}
+
+message SilverflowAuth {
+  SecretString api_key = 1;
+  SecretString api_secret = 2;
+  SecretString merchant_acceptor_key = 3;
+}
+
+message TrustpayAuth {
+  SecretString api_key = 1;
+  SecretString project_id = 2;
+  SecretString secret_key = 3;
+}
+
+message TrustpaymentsAuth {
+  SecretString username = 1;
+  SecretString password = 2;
+  SecretString site_reference = 3;
+}
+
+message TsysAuth {
+  SecretString device_id = 1;
+  SecretString transaction_key = 2;
+  SecretString developer_id = 3;
+}
+
+message WellsfargoAuth {
+  SecretString api_key = 1;
+  SecretString merchant_account = 2;
+  SecretString api_secret = 3;
+}
+
+message WorldpayvantivAuth {
+  SecretString user = 1;
+  SecretString password = 2;
+  SecretString merchant_id = 3;
+}
+
+message WorldpayxmlAuth {
+  SecretString api_username = 1;
+  SecretString api_password = 2;
+  SecretString merchant_code = 3;
+}
+
+message ZiftAuth {
+  SecretString user_name = 1;
+  SecretString password = 2;
+  SecretString account_id = 3;
+}
+
+message GigadatAuth {
+  SecretString campaign_id = 1;
+  SecretString access_token = 2;
+  SecretString security_token = 3;
+}
+
+message PhonepeAuth {
+  SecretString merchant_id = 1;
+  SecretString salt_key = 2;
+  SecretString salt_index = 3;
+}
+
+// Four field auth types
+message ForteAuth {
+  SecretString api_access_id = 1;
+  SecretString organization_id = 2;
+  SecretString location_id = 3;
+  SecretString api_secret_key = 4;
+}
+
+message VoltAuth {
+  SecretString username = 1;
+  SecretString password = 2;
+  SecretString client_id = 3;
+  SecretString client_secret = 4;
+}
+
+message PayboxAuth {
+  SecretString site = 1;
+  SecretString rank = 2;
+  SecretString key = 3;
+  SecretString merchant_id = 4;
+}
+
+message PaytmAuth {
+  SecretString merchant_id = 1;
+  SecretString merchant_key = 2;
+  SecretString website = 3;
+  optional SecretString client_id = 4;
+}
+
+message CashtocodeCurrencyAuthData {
+  optional SecretString password_classic = 1;
+  optional SecretString password_evoucher = 2;
+  optional SecretString username_classic = 3;
+  optional SecretString username_evoucher = 4;
+  optional SecretString merchant_id_classic = 5;
+  optional SecretString merchant_id_evoucher = 6;
+}
+
+// Complex auth types with optional fields
+message CashtocodeAuth {
+  map<string, CashtocodeCurrencyAuthData> auth_key_map = 1;
+}
+
+message MollieAuth {
+  SecretString api_key = 1;
+  optional SecretString profile_token = 2;
+}
+
+message NmiAuth {
+  SecretString api_key = 1;
+  optional SecretString public_key = 2;
+}
+
+message PaymeAuth {
+  SecretString seller_payme_id = 1;
+  optional SecretString payme_client_key = 2;
+}
+
+message PayloadCurrencyAuthData {
+  SecretString api_key = 1;
+  optional SecretString processing_account_id = 2;
+}
+
+message PayloadAuth {
+  map<string, PayloadCurrencyAuthData> auth_key_map = 1;
+}
+
+message EbanxAuth {
+  SecretString api_key = 1;
+}
+
+message FiuuAuth {
+  SecretString merchant_id = 1;
+  SecretString verify_key = 2;
+  SecretString secret_key = 3;
+}
+
+message GlobepayAuth {
+  SecretString api_key = 1;
+}
+
+message CoinbaseAuth {
+  SecretString api_key = 1;
+}
+
+message CoingateAuth {
+  SecretString api_key = 1;
+}
+
+// ConnectorAuth message with oneof containing all 70 auth types
+// Ordered to match Connector enum order
+message ConnectorAuth {
+  oneof auth_type {
+    // ADYEN = 3
+    AdyenAuth adyen = 1;
+
+    // AIRWALLEX = 4
+    AirwallexAuth airwallex = 2;
+
+    // BAMBORA = 6
+    BamboraAuth bambora = 3;
+
+    // BANKOFAMERICA = 8
+    BankOfAmericaAuth bankofamerica = 4;
+
+    // BILLWERK = 9
+    BillwerkAuth billwerk = 5;
+
+    // BLUESNAP = 11
+    BluesnapAuth bluesnap = 6;
+
+    // BRAINTREE = 13
+    BraintreeAuth braintree = 7;
+
+    // CASHTOCODE = 14
+    CashtocodeAuth cashtocode = 8;
+
+    // CRYPTOPAY = 19
+    CryptopayAuth cryptopay = 9;
+
+    // CYBERSOURCE = 22
+    CybersourceAuth cybersource = 10;
+
+    // DATATRANS = 23
+    DatatransAuth datatrans = 11;
+
+    // DLOCAL = 26
+    DlocalAuth dlocal = 12;
+
+    // ELAVON = 28
+    ElavonAuth elavon = 13;
+
+    // FISERV = 29
+    FiservAuth fiserv = 14;
+
+    // FISERVEMEA = 30
+    FiservemeaAuth fiservemea = 15;
+
+    // FORTE = 32
+    ForteAuth forte = 16;
+
+    // GETNET = 33
+    GetnetAuth getnet = 17;
+
+    // GLOBALPAY = 34
+    GlobalpayAuth globalpay = 18;
+
+    // HIPAY = 38
+    HipayAuth hipay = 19;
+
+    // HELCIM = 39
+    HelcimAuth helcim = 20;
+
+    // IATAPAY = 41
+    IatapayAuth iatapay = 21;
+
+    // JPMORGAN = 43
+    JpmorganAuth jpmorgan = 22;
+
+    // MIFINITY = 46
+    MifinityAuth mifinity = 23;
+
+    // MOLLIE = 47
+    MollieAuth mollie = 24;
+
+    // MULTISAFEPAY = 49
+    MultisafepayAuth multisafepay = 25;
+
+    // NEXINETS = 51
+    NexinetsAuth nexinets = 26;
+
+    // NEXIXPAY = 52
+    NexixpayAuth nexixpay = 27;
+
+    // NMI = 53
+    NmiAuth nmi = 28;
+
+    // NOON = 55
+    NoonAuth noon = 29;
+
+    // NOVALNET = 56
+    NovalnetAuth novalnet = 30;
+
+    // NUVEI = 57
+    NuveiAuth nuvei = 31;
+
+    // PAYBOX = 59
+    PayboxAuth paybox = 32;
+
+    // PAYME = 60
+    PaymeAuth payme = 33;
+
+    // PAYU = 64
+    PayuAuth payu = 34;
+
+    // POWERTRANZ = 66
+    PowertranzAuth powertranz = 35;
+
+    // RAPYD = 68
+    RapydAuth rapyd = 36;
+
+    // REDSYS = 71
+    RedsysAuth redsys = 37;
+
+    // SHIFT4 = 72
+    Shift4Auth shift4 = 38;
+
+    // STAX = 74
+    StaxAuth stax = 39;
+
+    // STRIPE = 75
+    StripeAuth stripe = 40;
+
+    // TRUSTPAY = 78
+    TrustpayAuth trustpay = 41;
+
+    // TSYS = 79
+    TsysAuth tsys = 42;
+
+    // VOLT = 80
+    VoltAuth volt = 43;
+
+    // WELLSFARGO = 81
+    WellsfargoAuth wellsfargo = 44;
+
+    // WORLDPAY = 84
+    WorldpayAuth worldpay = 45;
+
+    // WORLDPAYVANTIV = 85
+    WorldpayvantivAuth worldpayvantiv = 46;
+
+    // XENDIT = 89
+    XenditAuth xendit = 47;
+
+    // PHONEPE = 92
+    PhonepeAuth phonepe = 48;
+
+    // CASHFREE = 93
+    CashfreeAuth cashfree = 49;
+
+    // PAYTM = 94
+    PaytmAuth paytm = 50;
+
+    // CALIDA = 95
+    CalidaAuth calida = 51;
+
+    // PAYLOAD = 96
+    PayloadAuth payload = 52;
+
+    // AUTHIPAY = 97
+    AuthipayAuth authipay = 53;
+
+    // SILVERFLOW = 98
+    SilverflowAuth silverflow = 54;
+
+    // CELERO = 99
+    CeleroAuth celero = 55;
+
+    // TRUSTPAYMENTS = 100
+    TrustpaymentsAuth trustpayments = 56;
+
+    // PAYSAFE = 101
+    PaysafeAuth paysafe = 57;
+
+    // BARCLAYCARD = 102
+    BarclaycardAuth barclaycard = 58;
+
+    // WORLDPAYXML = 103
+    WorldpayxmlAuth worldpayxml = 59;
+
+    // REVOLUT = 104
+    RevolutAuth revolut = 60;
+
+    // LOONIO = 105
+    LoonioAuth loonio = 61;
+
+    // GIGADAT = 106
+    GigadatAuth gigadat = 62;
+
+    // HYPERPG = 107
+    HyperpgAuth hyperpg = 63;
+
+    // ZIFT = 108
+    ZiftAuth zift = 64;
+
+    // SCREENSTREAM (not in enum, added at end)
+    ScreenstreamAuth screenstream = 65;
+
+    // EBANX = 27
+    EbanxAuth ebanx = 66;
+
+    // FIUU = 31
+    FiuuAuth fiuu = 67;
+
+    // GLOBEPAY = 35
+    GlobepayAuth globepay = 68;
+
+    // COINBASE = 17
+    CoinbaseAuth coinbase = 69;
+
+    // COINGATE = 18
+    CoingateAuth coingate = 70;
+
+    // REVOLV3 = 109
+    Revolv3Auth revolv3 = 71;
+
+    // AUTHORIZEDOTNET = 5
+    AuthorizedotnetAuth authorizedotnet = 72;
+  }
 }

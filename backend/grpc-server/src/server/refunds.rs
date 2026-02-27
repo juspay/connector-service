@@ -7,7 +7,7 @@ use domain_types::{
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
@@ -191,7 +191,7 @@ async fn get_refunds_webhook_content(
     connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
+    connector_auth_details: Option<ConnectorSpecificAuth>,
 ) -> CustomResult<WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector

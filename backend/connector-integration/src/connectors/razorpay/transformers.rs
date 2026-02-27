@@ -12,7 +12,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -226,23 +226,20 @@ impl RazorpayAuthType {
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for RazorpayAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for RazorpayAuthType {
     type Error = errors::ConnectorError;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self::AuthToken(api_key.to_owned())),
-            ConnectorAuthType::SignatureKey {
+            ConnectorSpecificAuth::Razorpay {
                 api_key,
                 api_secret,
-                ..
-            } => Ok(Self::ApiKeySecret {
-                api_key: api_key.to_owned(),
-                api_secret: api_secret.to_owned(),
-            }),
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::ApiKeySecret {
-                api_key: api_key.to_owned(),
-                api_secret: key1.to_owned(),
-            }),
+            } => match api_secret {
+                None => Ok(Self::AuthToken(api_key.to_owned())),
+                Some(secret) => Ok(Self::ApiKeySecret {
+                    api_key: api_key.to_owned(),
+                    api_secret: secret.to_owned(),
+                }),
+            },
             _ => Err(errors::ConnectorError::FailedToObtainAuthType),
         }
     }

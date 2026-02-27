@@ -23,7 +23,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types,
 };
@@ -255,19 +255,19 @@ where
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for RedsysAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for RedsysAuthType {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::SignatureKey {
-            api_key,
-            key1,
-            api_secret,
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Redsys {
+            merchant_id,
+            terminal_id,
+            sha256_pwd,
         } = auth_type
         {
             Ok(Self {
-                merchant_id: api_key.to_owned(),
-                terminal_id: key1.to_owned(),
-                sha256_pwd: api_secret.to_owned(),
+                merchant_id: merchant_id.to_owned(),
+                terminal_id: terminal_id.to_owned(),
+                sha256_pwd: sha256_pwd.to_owned(),
             })
         } else {
             Err(errors::ConnectorError::FailedToObtainAuthType)?

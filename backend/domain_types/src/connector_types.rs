@@ -41,7 +41,7 @@ use crate::{
 use url::Url;
 
 // snake case for enum variants
-#[derive(Clone, Copy, Debug, Display, EnumString)]
+#[derive(Clone, Copy, Debug, Display, EnumString, Eq, Hash, PartialEq, Serialize)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -117,6 +117,7 @@ pub enum ConnectorEnum {
     Wellsfargo,
     Hyperpg,
     Zift,
+    Revolv3,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -196,6 +197,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Wellsfargo => Ok(Self::Wellsfargo),
             grpc_api_types::payments::Connector::Hyperpg => Ok(Self::Hyperpg),
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
+            grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -2550,6 +2552,43 @@ impl ConnectorResponseHeaders for DisputeFlowData {
 }
 
 #[derive(Debug, Clone)]
+pub struct VerifyWebhookSourceFlowData {
+    pub connectors: Connectors,
+    pub connector_request_reference_id: String,
+    pub raw_connector_response: Option<Secret<String>>,
+    pub raw_connector_request: Option<Secret<String>>,
+    pub connector_response_headers: Option<http::HeaderMap>,
+}
+
+impl RawConnectorRequestResponse for VerifyWebhookSourceFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
+        self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
+        self.raw_connector_response.clone()
+    }
+
+    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
+        self.raw_connector_request.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
+        self.raw_connector_request = request;
+    }
+}
+
+impl ConnectorResponseHeaders for VerifyWebhookSourceFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct DisputeResponseData {
     pub connector_dispute_id: String,
     pub dispute_status: DisputeStatus,
@@ -2773,6 +2812,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::BankDebitData::SepaBankDebit { .. } => Self::SepaBankDebit,
                 payment_method_data::BankDebitData::BecsBankDebit { .. } => Self::BecsBankDebit,
                 payment_method_data::BankDebitData::BacsBankDebit { .. } => Self::BacsBankDebit,
+                payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                    Self::SepaGuaranteedBankDebit
+                }
             },
             PaymentMethodData::BankTransfer(bank_transfer_data) => match *bank_transfer_data {
                 payment_method_data::BankTransferData::AchBankTransfer { .. } => {
@@ -2821,6 +2863,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 }
                 payment_method_data::BankTransferData::InstantBankTransferPoland { .. } => {
                     Self::InstantBankTransferPoland
+                }
+                payment_method_data::BankTransferData::IndonesianBankTransfer { .. } => {
+                    Self::IndonesianBankTransfer
                 }
             },
             PaymentMethodData::Crypto(_) => Self::Crypto,

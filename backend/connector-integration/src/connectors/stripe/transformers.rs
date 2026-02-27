@@ -31,7 +31,7 @@ use domain_types::{
         WalletData,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
         ExtendedAuthorizationResponseData,
     },
     router_data_v2::RouterDataV2,
@@ -97,15 +97,14 @@ pub struct StripeAuthType {
     pub(super) api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for StripeAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for StripeAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::HeaderKey { api_key } = item {
-            Ok(Self {
+    fn try_from(item: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        match item {
+            ConnectorSpecificAuth::Stripe { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
-            })
-        } else {
-            Err(ConnectorError::FailedToObtainAuthType.into())
+            }),
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
@@ -637,7 +636,7 @@ pub enum BankDebitData {
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct StripeBankDebitData {
     #[serde(flatten)]
-    pub bank_specific_data: BankDebitData,
+    pub bank_specific_data: Option<BankDebitData>,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -838,6 +837,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::UpiQr
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
+            | common_enums::PaymentMethodType::SepaGuaranteedDebit
             | common_enums::PaymentMethodType::Oxxo => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
@@ -906,6 +906,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::InstantBankTransferFinland
             | common_enums::PaymentMethodType::InstantBankTransferPoland
             | common_enums::PaymentMethodType::SepaBankTransfer
+            | common_enums::PaymentMethodType::IndonesianBankTransfer
             | common_enums::PaymentMethodType::Walley
             | common_enums::PaymentMethodType::Fps
             | common_enums::PaymentMethodType::DuitNow
@@ -1201,20 +1202,26 @@ fn get_stripe_payment_method_type_from_wallet_data(
     }
 }
 
-impl From<&payment_method_data::BankDebitData> for StripePaymentMethodType {
-    fn from(bank_debit_data: &payment_method_data::BankDebitData) -> Self {
+impl TryFrom<&payment_method_data::BankDebitData> for StripePaymentMethodType {
+    type Error = ConnectorError;
+    fn try_from(bank_debit_data: &payment_method_data::BankDebitData) -> Result<Self, Self::Error> {
         match bank_debit_data {
-            payment_method_data::BankDebitData::AchBankDebit { .. } => Self::Ach,
-            payment_method_data::BankDebitData::SepaBankDebit { .. } => Self::Sepa,
-            payment_method_data::BankDebitData::BecsBankDebit { .. } => Self::Becs,
-            payment_method_data::BankDebitData::BacsBankDebit { .. } => Self::Bacs,
+            payment_method_data::BankDebitData::AchBankDebit { .. } => Ok(Self::Ach),
+            payment_method_data::BankDebitData::SepaBankDebit { .. } => Ok(Self::Sepa),
+            payment_method_data::BankDebitData::BecsBankDebit { .. } => Ok(Self::Becs),
+            payment_method_data::BankDebitData::BacsBankDebit { .. } => Ok(Self::Bacs),
+            payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                Err(ConnectorError::NotImplemented(
+                    get_unimplemented_payment_method_error_message("stripe"),
+                ))
+            }
         }
     }
 }
 
 fn get_bank_debit_data(
     bank_debit_data: &payment_method_data::BankDebitData,
-) -> (StripePaymentMethodType, BankDebitData) {
+) -> Result<(Option<StripePaymentMethodType>, Option<BankDebitData>), ConnectorError> {
     match bank_debit_data {
         payment_method_data::BankDebitData::AchBankDebit {
             account_number,
@@ -1226,13 +1233,13 @@ fn get_bank_debit_data(
                 account_number: account_number.to_owned(),
                 routing_number: routing_number.to_owned(),
             };
-            (StripePaymentMethodType::Ach, ach_data)
+            Ok((Some(StripePaymentMethodType::Ach), Some(ach_data)))
         }
         payment_method_data::BankDebitData::SepaBankDebit { iban, .. } => {
             let sepa_data: BankDebitData = BankDebitData::Sepa {
                 iban: iban.to_owned(),
             };
-            (StripePaymentMethodType::Sepa, sepa_data)
+            Ok((Some(StripePaymentMethodType::Sepa), Some(sepa_data)))
         }
         payment_method_data::BankDebitData::BecsBankDebit {
             account_number,
@@ -1243,7 +1250,7 @@ fn get_bank_debit_data(
                 account_number: account_number.to_owned(),
                 bsb_number: bsb_number.to_owned(),
             };
-            (StripePaymentMethodType::Becs, becs_data)
+            Ok((Some(StripePaymentMethodType::Becs), Some(becs_data)))
         }
         payment_method_data::BankDebitData::BacsBankDebit {
             account_number,
@@ -1254,7 +1261,12 @@ fn get_bank_debit_data(
                 account_number: account_number.to_owned(),
                 sort_code: Secret::new(sort_code.clone().expose().replace('-', "")),
             };
-            (StripePaymentMethodType::Bacs, bacs_data)
+            Ok((Some(StripePaymentMethodType::Bacs), Some(bacs_data)))
+        }
+        payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
+            Err(ConnectorError::NotImplemented(
+                get_unimplemented_payment_method_error_message("stripe"),
+            ))
         }
     }
 }
@@ -1339,17 +1351,13 @@ fn create_stripe_payment_method<
             ))
         }
         PaymentMethodData::BankDebit(bank_debit_data) => {
-            let (pm_type, bank_debit_data) = get_bank_debit_data(bank_debit_data);
+            let (pm_type, bank_debit_data) = get_bank_debit_data(bank_debit_data)?;
 
             let pm_data = StripePaymentMethodData::BankDebit(StripeBankDebitData {
                 bank_specific_data: bank_debit_data,
             });
 
-            Ok((
-                pm_data,
-                Some(pm_type),
-                payment_request_details.billing_address,
-            ))
+            Ok((pm_data, pm_type, payment_request_details.billing_address))
         }
         PaymentMethodData::BankTransfer(bank_transfer_data) => match bank_transfer_data.deref() {
             payment_method_data::BankTransferData::AchBankTransfer {} => Ok((
@@ -1421,6 +1429,7 @@ fn create_stripe_payment_method<
             | payment_method_data::BankTransferData::InstantBankTransfer {}
             | payment_method_data::BankTransferData::InstantBankTransferFinland { .. }
             | payment_method_data::BankTransferData::InstantBankTransferPoland { .. }
+            | payment_method_data::BankTransferData::IndonesianBankTransfer { .. }
             | payment_method_data::BankTransferData::PermataBankTransfer { .. }
             | payment_method_data::BankTransferData::BcaBankTransfer { .. }
             | payment_method_data::BankTransferData::BniVaBankTransfer { .. }
@@ -4480,7 +4489,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
             PaymentMethodData::Wallet(ref wallet_data) => Ok(Self::try_from((wallet_data, None))?),
             PaymentMethodData::BankDebit(bank_debit_data) => {
-                let (_pm_type, bank_data) = get_bank_debit_data(bank_debit_data);
+                let (_pm_type, bank_data) = get_bank_debit_data(bank_debit_data)?;
 
                 Ok(Self::BankDebit(StripeBankDebitData {
                     bank_specific_data: bank_data,
@@ -4543,6 +4552,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 | payment_method_data::BankTransferData::InstantBankTransfer {}
                 | payment_method_data::BankTransferData::InstantBankTransferFinland {}
                 | payment_method_data::BankTransferData::InstantBankTransferPoland {}
+                | payment_method_data::BankTransferData::IndonesianBankTransfer { .. }
                 | payment_method_data::BankTransferData::MandiriVaBankTransfer { .. } => {
                     Err(ConnectorError::NotImplemented(
                         get_unimplemented_payment_method_error_message("stripe"),

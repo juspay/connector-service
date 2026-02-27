@@ -28,7 +28,8 @@ use domain_types::{
         RawCardNumber, VoucherData, VoucherNextStepData, WalletData,
     },
     router_data::{
-        ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
+        ConnectorResponseData, ConnectorSpecificAuth, ErrorResponse,
+        ExtendedAuthorizationResponseData,
     },
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
@@ -1265,23 +1266,18 @@ pub struct AdyenAuthType {
     pub(super) review_key: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorAuthType> for AdyenAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for AdyenAuthType {
     type Error = errors::ConnectorError;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                api_key: api_key.to_owned(),
-                merchant_account: key1.to_owned(),
-                review_key: None,
-            }),
-            ConnectorAuthType::SignatureKey {
+            ConnectorSpecificAuth::Adyen {
                 api_key,
-                key1,
-                api_secret,
+                merchant_account,
+                review_key,
             } => Ok(Self {
                 api_key: api_key.to_owned(),
-                merchant_account: key1.to_owned(),
-                review_key: Some(api_secret.to_owned()),
+                merchant_account: merchant_account.to_owned(),
+                review_key: review_key.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType),
         }
@@ -1710,6 +1706,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | BankTransferData::Pse {}
             | BankTransferData::LocalBankTransfer { .. }
             | BankTransferData::InstantBankTransfer {}
+            | BankTransferData::IndonesianBankTransfer { .. }
             | BankTransferData::InstantBankTransferFinland {}
             | BankTransferData::InstantBankTransferPoland {} => {
                 Err(errors::ConnectorError::NotImplemented(
@@ -1790,10 +1787,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .unwrap_or(item.resource_common_data.get_billing_full_name()?),
                 })))
             }
-            BankDebitData::BecsBankDebit { .. } => Err(errors::ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Adyen"),
-            )
-            .into()),
+            BankDebitData::BecsBankDebit { .. } | BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                Err(errors::ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Adyen"),
+                )
+                .into())
+            }
         }
     }
 }
@@ -2391,6 +2390,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }),
             BankDebitData::SepaBankDebit { .. }
             | BankDebitData::BacsBankDebit { .. }
+            | BankDebitData::SepaGuaranteedBankDebit { .. }
             | BankDebitData::BecsBankDebit { .. } => billing_address,
         };
 

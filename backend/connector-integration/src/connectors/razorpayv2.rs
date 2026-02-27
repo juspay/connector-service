@@ -91,7 +91,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn get_auth_header(
         &self,
-        auth_type: &domain_types::router_data::ConnectorAuthType,
+        auth_type: &domain_types::router_data::ConnectorSpecificAuth,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = razorpayv2::RazorpayV2AuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;

@@ -254,8 +254,8 @@ use crate::{
         VaultTokenHolder,
     },
     router_data::{
-        self, AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
-        RecurringMandatePaymentData,
+        self, AdditionalPaymentMethodConnectorResponse, ConnectorResponseData,
+        ConnectorSpecificAuth, RecurringMandatePaymentData,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
@@ -348,6 +348,7 @@ pub struct Connectors {
     pub wellsfargo: ConnectorParams,
     pub hyperpg: ConnectorParams,
     pub zift: ConnectorParams,
+    pub revolv3: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -1042,6 +1043,23 @@ impl<
                         payment_method_data::BankRedirectData::OpenBanking {},
                     ))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::LocalBankRedirect(_) => {
+                    Ok(PaymentMethodData::BankRedirect(
+                        payment_method_data::BankRedirectData::LocalBankRedirect {},
+                    ))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Bizum(_) => {
+                    Ok(PaymentMethodData::BankRedirect(
+                        payment_method_data::BankRedirectData::Bizum {},
+                    ))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Eft(eft) => {
+                    Ok(PaymentMethodData::BankRedirect(
+                        payment_method_data::BankRedirectData::Eft {
+                            provider: eft.provider,
+                        },
+                    ))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingFpx(fpx) => {
                     Ok(Self::BankRedirect(
                         payment_method_data::BankRedirectData::OnlineBankingFpx {
@@ -1136,6 +1154,43 @@ impl<
                             ),
                             None => None,
                         },
+                    }),
+                ),
+                grpc_payment_types::payment_method::PaymentMethod::OnlineBankingThailand(online_banking_thailand) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::OnlineBankingThailand {
+                        issuer: common_enums::BankNames::foreign_try_from(online_banking_thailand.issuer())?,
+                    }),
+                ),
+                grpc_payment_types::payment_method::PaymentMethod::OnlineBankingCzechRepublic(online_banking_czech_republic) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::OnlineBankingCzechRepublic {
+                        issuer: common_enums::BankNames::foreign_try_from(online_banking_czech_republic.issuer())?,
+                    }),
+                ),
+                grpc_payment_types::payment_method::PaymentMethod::OnlineBankingPoland(online_banking_poland) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::OnlineBankingPoland {
+                        issuer: common_enums::BankNames::foreign_try_from(online_banking_poland.issuer())?,
+                    }),
+                ),
+                grpc_payment_types::payment_method::PaymentMethod::OnlineBankingSlovakia(online_banking_slovakia) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::OnlineBankingSlovakia {
+                        issuer: common_enums::BankNames::foreign_try_from(online_banking_slovakia.issuer())?,
+                    }),
+                ),
+                grpc_payment_types::payment_method::PaymentMethod::OnlineBankingFinland(online_banking_finland) => Ok(
+                    Self::BankRedirect(payment_method_data::BankRedirectData::OnlineBankingFinland {
+                        email: match online_banking_finland.email {
+                                Some(ref email_str) => Some(
+                                    Email::try_from(email_str.clone().expose()).change_context(
+                                        ApplicationErrorResponse::BadRequest(ApiError {
+                                            sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                                            error_identifier: 400,
+                                            error_message: "Invalid email".to_owned(),
+                                            error_object: None,
+                                        }),
+                                    )?,
+                                ),
+                                None => None,
+                            },
                     }),
                 ),
                 // ============================================================================
@@ -1250,6 +1305,19 @@ impl<
                             },
                         ))?,
                         bank_account_holder_name: becs.bank_account_holder_name,
+                    }),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(sepa_guaranteed_bank_debit) => Ok(
+                    Self::BankDebit(payment_method_data::BankDebitData::SepaGuaranteedBankDebit {
+                        iban: sepa_guaranteed_bank_debit
+                            .iban
+                            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "MISSING_SEPA_guaranteed_IBAN".to_owned(),
+                                error_identifier: 400,
+                                error_message: "SEPA guaranteed IBAN is required".to_owned(),
+                                error_object: None,
+                            }))?,
+                        bank_account_holder_name: sepa_guaranteed_bank_debit.bank_account_holder_name,
                     }),
                 ),
                 // ============================================================================
@@ -1418,6 +1486,30 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::MandiriVaBankTransfer(_) => {
                     Ok(Self::BankTransfer(Box::new(
                         payment_method_data::BankTransferData::MandiriVaBankTransfer {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Pse(_) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::Pse {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::LocalBankTransfer(local_bank_transfer) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::LocalBankTransfer {
+                            bank_code: local_bank_transfer.bank_code,
+                        },
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::IndonesianBankTransfer(indonesian_bank_transfer) => {
+                    Ok(Self::BankTransfer(Box::new(
+                        payment_method_data::BankTransferData::IndonesianBankTransfer {
+                            bank_name: match indonesian_bank_transfer.bank_name() {
+                                grpc_payment_types::BankNames::Unspecified => None,
+                                _ => Some(common_enums::BankNames::foreign_try_from(
+                                    indonesian_bank_transfer.bank_name(),
+                                )?),
+                            },
+                        },
                     )))
                 }
 
@@ -1669,7 +1761,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     Ok(Some(PaymentMethodType::Card))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(card_redirect) => {
-    match card_redirect.r#type() {
+                match card_redirect.r#type() {
                         grpc_api_types::payments::card_redirect::CardRedirectType::Knet => {
                             Ok(Some(PaymentMethodType::Knet))
                         }
@@ -1734,6 +1826,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::MultibancoBankTransfer(_) => Ok(Some(PaymentMethodType::Multibanco)),
                 grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferFinland(_) => Ok(Some(PaymentMethodType::InstantBankTransferFinland)),
                 grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransferPoland(_) => Ok(Some(PaymentMethodType::InstantBankTransferPoland)),
+                grpc_api_types::payments::payment_method::PaymentMethod::LocalBankTransfer(_) => Ok(Some(PaymentMethodType::LocalBankTransfer)),
+                grpc_api_types::payments::payment_method::PaymentMethod::IndonesianBankTransfer(_) => Ok(Some(PaymentMethodType::IndonesianBankTransfer)),
                 // ============================================================================
                 // ONLINE BANKING - PaymentMethodType mappings
                 // ============================================================================
@@ -1747,12 +1841,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::BancontactCard(_) => Ok(Some(PaymentMethodType::BancontactCard)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Blik(_) => Ok(Some(PaymentMethodType::Blik)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_) => Ok(Some(PaymentMethodType::Sofort)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Bizum(_) => Ok(Some(PaymentMethodType::Bizum)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Eft(_) => Ok(Some(PaymentMethodType::Eft)),
                 // ============================================================================
                 // MOBILE & CRYPTO PAYMENTS - PaymentMethodType mappings
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::DuitNow(_) => Ok(Some(PaymentMethodType::DuitNow)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Crypto(_) => Ok(Some(PaymentMethodType::CryptoCurrency)),
-                                // ============================================================================
+                // ============================================================================
                 // BUY NOW, PAY LATER - PaymentMethodType mappings
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::Affirm(_) => Ok(Some(PaymentMethodType::Affirm)),
@@ -1765,6 +1861,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Sepa(_) => Ok(Some(PaymentMethodType::Sepa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Bacs(_) => Ok(Some(PaymentMethodType::Bacs)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Becs(_) => Ok(Some(PaymentMethodType::Becs)),
+                grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(_) => Ok(Some(PaymentMethodType::SepaGuaranteedDebit)),
                 // ============================================================================
                 // NETWORK TRANSACTION METHODS - recurring payments
                 // ============================================================================
@@ -1825,74 +1922,34 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     Ok(Some(PaymentMethodType::PayEasy))
                 }
                 // ============================================================================
-                // UNSUPPORTED ONLINE BANKING - Direct error generation
+                // ONLINE BANKING PAYMENT METHODS
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingThailand(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Thai online banking is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::OnlineBankingThailand))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingCzechRepublic(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Czech online banking is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::OnlineBankingCzechRepublic))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingFinland(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Finnish online banking is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::OnlineBankingFinland))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingPoland(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Polish online banking is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::OnlineBankingPoland))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingSlovakia(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Slovak online banking is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::OnlineBankingSlovakia))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::OpenBankingPis(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Open Banking PIS is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::OpenBankingPIS))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::LocalBankRedirect(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Local bank redirect is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::LocalBankRedirect))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Trustly(_) => {
                     Ok(Some(PaymentMethodType::Trustly))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Pse(_) => {
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                        error_identifier: 400,
-                        error_message: "PSE is not yet supported".to_owned(),
-                        error_object: None,
-                    })))
+                    Ok(Some(PaymentMethodType::Pse))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Interac(_) => {
                     Ok(Some(PaymentMethodType::Interac))
@@ -4321,6 +4378,62 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::BankTransfer),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::AchBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::BacsBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::MultibancoBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::PermataBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::BcaBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::BniVaBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::BriVaBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::CimbVaBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::DanamonVaBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::MandiriVaBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Pix(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Pse(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::LocalBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::IndonesianBankTransfer(_)),
+            } => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Ideal(_)),
             } => Ok(Self::BankRedirect),
             grpc_api_types::payments::PaymentMethod {
@@ -4334,6 +4447,70 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Sofort(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::BancontactCard(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Bizum(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Giropay(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Interac(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingCzechRepublic(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingFinland(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingPoland(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingSlovakia(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OpenBankingUk(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Przelewy24(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Trustly(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingFpx(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OnlineBankingThailand(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::LocalBankRedirect(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Eft(_)),
+            } => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OpenBanking(_)),
             } => Ok(Self::BankRedirect),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
@@ -4419,6 +4596,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Becs(_)),
+            } => Ok(Self::BankDebit),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(_)),
             } => Ok(Self::BankDebit),
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
@@ -8106,6 +8287,8 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
+    SepaGuaranteedBankDebit,
+    IndonesianBankTransfer,
 }
 
 impl ForeignTryFrom<String> for Secret<time::Date> {
@@ -8201,11 +8384,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateAccessTokenReq
 }
 
 // Generic implementation for access token request from connector auth
-impl ForeignTryFrom<&ConnectorAuthType> for AccessTokenRequestData {
+impl ForeignTryFrom<&ConnectorSpecificAuth> for AccessTokenRequestData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        _auth_type: &ConnectorAuthType,
+        _auth_type: &ConnectorSpecificAuth,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Default to client_credentials grant type for OAuth
         // Connectors can override this with their own specific implementations
@@ -8481,7 +8664,7 @@ impl
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            connector_customer: None,
+            connector_customer: value.connector_customer_id,
             description: None,
             return_url: value.return_url,
             connector_meta_data: None,
