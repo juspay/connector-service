@@ -2503,6 +2503,16 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
     pub fn get_optional_email(&self) -> Option<Email> {
         self.email.clone()
     }
+
+    pub fn get_network_mandate_id(&self) -> Option<String> {
+        match &self.mandate_reference {
+            MandateReferenceId::NetworkMandateId(network_mandate_id) => {
+                Some(network_mandate_id.to_string())
+            }
+            MandateReferenceId::ConnectorMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
