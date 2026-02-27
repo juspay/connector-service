@@ -44,6 +44,7 @@ sha2 = "0.10"
 rand = "0.8"
 jsonwebtoken = "9.2"
 html-escape = "0.2"
+josekit = "0.8.7"
 async-trait = "0.1.88"
 
 [lints]
