@@ -7647,31 +7647,28 @@ impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::Fut
 impl ForeignTryFrom<(&grpc_api_types::payments::L2l3Data, &PaymentAddress)> for L2L3Data {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
-        value: (&grpc_api_types::payments::L2l3Data, &PaymentAddress),
+        (l2l3_data, payment_address): (&grpc_api_types::payments::L2l3Data, &PaymentAddress),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let order_info = value
-            .0
+        let order_info = l2l3_data
             .order_info
             .as_ref()
             .map(OrderInfo::foreign_try_from)
             .transpose()?;
 
-        let tax_info = value
-            .0
+        let tax_info = l2l3_data
             .tax_info
             .as_ref()
             .map(TaxInfo::foreign_try_from)
             .transpose()?;
 
-        let customer_info = value
-            .0
+        let customer_info = l2l3_data
             .customer_info
             .as_ref()
             .map(CustomerInfo::foreign_try_from)
             .transpose()?;
 
-        let shipping_address = value.1.get_shipping();
-        let billing_address = value.1.get_payment_billing();
+        let shipping_address = payment_address.get_shipping();
+        let billing_address = payment_address.get_payment_billing();
 
         Ok(Self {
             order_info,

@@ -1352,7 +1352,7 @@ message L2L3Data {
   optional TaxInfo tax_info = 2;
 
   // Customer information for the order
-  optional Customer customer_info = 3;
+  optional Customer customer_info = 3; // TODO: Remove this field once Customer Object is added at top level request
 }
 
 // ============================================================================
