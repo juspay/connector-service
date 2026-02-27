@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -263,12 +263,12 @@ pub struct MifinityAuthType {
     pub(super) key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for MifinityAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for MifinityAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
-                key: api_key.to_owned(),
+            ConnectorSpecificAuth::Mifinity { key } => Ok(Self {
+                key: key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
