@@ -1032,8 +1032,12 @@ dependencies = [
  "connector-integration",
  "domain_types",
  "grpc-api-types",
+ "masking",
+ "prost",
+ "prost-types",
  "tonic 0.13.1",
  "ucs_common_enums",
+ "ucs_common_utils",
 ]
 
 [[package]]
@@ -1086,6 +1090,7 @@ name = "connector-integration"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "async-trait",
  "base64 0.21.7",
  "bytes",
  "cbc",
@@ -2791,6 +2796,7 @@ dependencies = [
  "base64 0.21.7",
  "build_info",
  "chrono",
+ "composite-service",
  "config",
  "config_patch_derive",
  "connector-integration",
@@ -5547,6 +5553,7 @@ version = "1.0.143"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d401abef1d108fbd9cbaebc3e46611f4b1021f714a0597a71f41ee463f5f4a5a"
 dependencies = [
+ "indexmap 2.11.1",
  "itoa",
  "memchr",
  "ryu",

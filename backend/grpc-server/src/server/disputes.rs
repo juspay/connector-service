@@ -14,7 +14,7 @@ use domain_types::{
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
         generate_accept_dispute_response, generate_defend_dispute_response,
@@ -441,24 +441,27 @@ impl DisputeService for Disputes {
             |request_data| {
                 async move {
                     let connector = request_data.extracted_metadata.connector;
-                    let connector_auth_details = request_data.extracted_metadata.connector_auth_type;
+                    let connector_auth_details =
+                        request_data.extracted_metadata.connector_auth_type;
                     let payload = request_data.payload;
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)
                         .ok_or_else(|| {
-                            tonic::Status::invalid_argument("missing request_details in the payload")
+                            tonic::Status::invalid_argument(
+                                "missing request_details in the payload",
+                            )
                         })?
                         .map_err(|e| e.into_grpc_status())?;
                     let webhook_secrets = payload
-                        .webhook_secrets
-                        .map(|details| {
-                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                                details,
-                            )
-                            .map_err(|e| e.into_grpc_status())
-                        })
-                        .transpose()?;
+                    .webhook_secrets
+                    .map(|details| {
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                            details,
+                        )
+                        .map_err(|e| e.into_grpc_status())
+                    })
+                    .transpose()?;
                     // Get connector data
                     let connector_data = ConnectorData::get_connector_by_name(&connector);
                     let source_verified = connector_data
@@ -497,7 +500,7 @@ async fn get_disputes_webhook_content(
     connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
+    connector_auth_details: Option<ConnectorSpecificAuth>,
 ) -> CustomResult<WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector

@@ -14,7 +14,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils,
 };
@@ -246,24 +246,23 @@ pub struct FiservAuthType {
     pub api_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for FiservAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for FiservAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
+            ConnectorSpecificAuth::Fiserv {
                 api_key,
-                key1,
+                merchant_account,
                 api_secret,
             } => Ok(Self {
                 api_key: api_key.to_owned(),
-                merchant_account: key1.to_owned(),
+                merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
             _ => Err(report!(ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
-
 #[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservErrorResponse {

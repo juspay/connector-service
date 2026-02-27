@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -33,19 +33,19 @@ pub struct WorldpayxmlAuthType {
     pub merchant_code: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for WorldpayxmlAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for WorldpayxmlAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
+            ConnectorSpecificAuth::Worldpayxml {
+                api_username,
+                api_password,
+                merchant_code,
             } => Ok(Self {
-                api_username: api_key.to_owned(),
-                api_password: key1.to_owned(),
-                merchant_code: api_secret.to_owned(),
+                api_username: api_username.to_owned(),
+                api_password: api_password.to_owned(),
+                merchant_code: merchant_code.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
