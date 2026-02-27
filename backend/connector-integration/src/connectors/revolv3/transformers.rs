@@ -171,15 +171,22 @@ pub struct Revolv3CreditCardData<T: PaymentMethodDataTypes> {
 
 impl Revolv3BillingAddress {
     fn try_from_payment_flow_data(common_data: &PaymentFlowData) -> Option<Self> {
-        Self {
+        let email = common_data.get_optional_billing_email();
+        let phone_number = common_data.get_optional_billing_phone_number();
+         
+        if common_data.get_optional_billing().is_some() || email.is_some() || phone_number.is_some() {
+            Some(   Self {
             address_line1: common_data.get_optional_billing_line1(),
             address_line2: common_data.get_optional_billing_line2(),
             city: common_data.get_optional_billing_city(),
             state: common_data.get_optional_billing_state(),
-            postal_code: common_data.get_optional_billing_postal_code(),
+            postal_code: common_data.get_optional_billing_zip(),
             phone_number: common_data.get_optional_billing_phone_number(),
             email: common_data.get_optional_billing_email(),
             country: common_data.get_optional_billing_country(),
+        })
+        } else {
+            None
         }
     }
 }
