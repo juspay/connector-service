@@ -173,18 +173,19 @@ impl Revolv3BillingAddress {
     fn try_from_payment_flow_data(common_data: &PaymentFlowData) -> Option<Self> {
         let email = common_data.get_optional_billing_email();
         let phone_number = common_data.get_optional_billing_phone_number();
-         
-        if common_data.get_optional_billing().is_some() || email.is_some() || phone_number.is_some() {
-            Some(   Self {
-            address_line1: common_data.get_optional_billing_line1(),
-            address_line2: common_data.get_optional_billing_line2(),
-            city: common_data.get_optional_billing_city(),
-            state: common_data.get_optional_billing_state(),
-            postal_code: common_data.get_optional_billing_zip(),
-            phone_number: common_data.get_optional_billing_phone_number(),
-            email: common_data.get_optional_billing_email(),
-            country: common_data.get_optional_billing_country(),
-        })
+
+        if common_data.get_optional_billing().is_some() || email.is_some() || phone_number.is_some()
+        {
+            Some(Self {
+                address_line1: common_data.get_optional_billing_line1(),
+                address_line2: common_data.get_optional_billing_line2(),
+                city: common_data.get_optional_billing_city(),
+                state: common_data.get_optional_billing_state(),
+                postal_code: common_data.get_optional_billing_zip(),
+                phone_number: common_data.get_optional_billing_phone_number(),
+                email: common_data.get_optional_billing_email(),
+                country: common_data.get_optional_billing_country(),
+            })
         } else {
             None
         }
@@ -437,7 +438,7 @@ impl Revolv3SaleResponse {
                 resource_id: ResponseId::ConnectorTransactionId(self.invoice_id.to_string()),
                 redirection_data: None,
                 mandate_reference: mandate_reference.map(Box::new),
-                connector_metadata:  Some(serde_json::json!(Revolv3OperationMetadata::PsyncAllowed)),
+                connector_metadata: Some(serde_json::json!(Revolv3OperationMetadata::PsyncAllowed)),
                 network_txn_id: self.network_transaction_id.clone(),
                 connector_response_reference_id: self.merchant_invoice_ref_id.clone(),
                 incremental_authorization_allowed: None,
@@ -1246,7 +1247,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .billing_descriptor
-           .clone()
+            .clone()
             .map(Revolv3DynamicDescriptor::from);
 
         Ok(Self {
@@ -1314,12 +1315,11 @@ pub fn validate_psync(
             connector: "revolv3",
         })?;
 
-    let operation_metadata: Revolv3OperationMetadata =
-        serde_json::from_value(metadata.clone())
-            .map_err(|_| errors::ConnectorError::NotSupported {
-                message: "Invalid connector metadata for PSync validation".to_string(),
-                connector: "revolv3",
-            })?;
+    let operation_metadata: Revolv3OperationMetadata = serde_json::from_value(metadata.clone())
+        .map_err(|_| errors::ConnectorError::NotSupported {
+            message: "Invalid connector metadata for PSync validation".to_string(),
+            connector: "revolv3",
+        })?;
 
     match operation_metadata {
         Revolv3OperationMetadata::PsyncAllowed => Ok(()),

@@ -24,11 +24,11 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as revolv3, Revolv3AuthReversalRequest, Revolv3AuthReversalResponse,
+    self as revolv3, validate_psync, Revolv3AuthReversalRequest, Revolv3AuthReversalResponse,
     Revolv3AuthorizeResponse, Revolv3CaptureRequest, Revolv3PaymentSyncResponse,
     Revolv3PaymentsRequest, Revolv3PaymentsResponse, Revolv3RefundRequest, Revolv3RefundResponse,
     Revolv3RefundSyncResponse, Revolv3RepeatPaymentRequest, Revolv3RepeatPaymentResponse,
-    Revolv3SaleResponse, Revolv3SetupMandateRequest, validate_psync
+    Revolv3SaleResponse, Revolv3SetupMandateRequest,
 };
 
 pub(crate) mod headers {
