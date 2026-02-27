@@ -59,9 +59,15 @@ mod uniffi_bindings_inner {
     }
 
     /// Helper to convert internal Request to FfiConnectorHttpRequest (Binary Safe)
-    fn build_ffi_request(request: &Request) -> FfiConnectorHttpRequest {
+    fn build_ffi_request(request: &Request) -> Result<FfiConnectorHttpRequest, UniffiError> {
         let mut headers = request.get_headers_map();
-        let (body, boundary) = request.body.as_ref().map_or((None, None), |b| b.get_body_bytes());
+        let (body, boundary) = request
+            .body
+            .as_ref()
+            .map(|b| b.get_body_bytes())
+            .transpose()
+            .map_err(|e| UniffiError::HandlerError { msg: e })?
+            .unwrap_or((None, None));
 
         // Sync the Content-Type header with the generated boundary if applicable
         if let Some(boundary) = boundary {
@@ -71,12 +77,12 @@ mod uniffi_bindings_inner {
             );
         }
 
-        FfiConnectorHttpRequest {
+        Ok(FfiConnectorHttpRequest {
             url: request.url.clone(),
             method: request.method.to_string(),
             headers,
             body,
-        }
+        })
     }
 
     /// Build the connector HTTP request.
@@ -111,7 +117,7 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        Ok(build_ffi_request(&connector_request))
+        build_ffi_request(&connector_request)
     }
 
     /// Process the connector HTTP response and produce a structured response.
@@ -201,7 +207,7 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        Ok(build_ffi_request(&connector_request))
+        build_ffi_request(&connector_request)
     }
 
     /// Process the connector HTTP response for capture operation.
@@ -291,7 +297,7 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        Ok(build_ffi_request(&connector_request))
+        build_ffi_request(&connector_request)
     }
 
     /// Process the connector HTTP response for void operation.
@@ -381,7 +387,7 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        Ok(build_ffi_request(&connector_request))
+        build_ffi_request(&connector_request)
     }
 
     /// Process the connector HTTP response for get operation.
@@ -475,7 +481,7 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        Ok(build_ffi_request(&connector_request))
+        build_ffi_request(&connector_request)
     }
 
     /// Process the connector HTTP response for create access token operation.
@@ -567,7 +573,7 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        Ok(build_ffi_request(&connector_request))
+        build_ffi_request(&connector_request)
     }
 
     /// Process the connector HTTP response for refund operation.

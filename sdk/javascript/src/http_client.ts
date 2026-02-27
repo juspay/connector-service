@@ -29,7 +29,6 @@ export interface HttpOptions {
   total_timeout_ms?: number; 
   connect_timeout_ms?: number; 
   response_timeout_ms?: number; 
-  
   keep_alive_timeout?: number;
   proxy?: {
     http_url?: string;
@@ -99,7 +98,7 @@ function getConnectionKey(proxyUrl: string | null, config: HttpOptions): string 
     uri: proxyUrl || TRANSPORT_DIRECT,
     connect_timeout_ms: config.connect_timeout_ms,
     response_timeout_ms: config.response_timeout_ms,
-    caLength: config.ca_cert?.length,
+    ca_length: config.ca_cert?.length,
   });
 }
 
@@ -167,9 +166,13 @@ export async function execute(
       dispatcher,
     });
 
+    const responseHeaders: Record<string, string> = {};
+    // Normalize response headers to lowercase for global parity
+    response.headers.forEach((v, k) => { responseHeaders[k.toLowerCase()] = v; });
+
     return {
       statusCode: response.status,
-      headers: Object.fromEntries(response.headers.entries()),
+      headers: responseHeaders,
       body: await response.text(),
       meta: { latencyMs: Date.now() - startTime }
     };

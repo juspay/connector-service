@@ -18,10 +18,11 @@ import ucs.v2.Payment.AuthenticationType
 
 fun buildRequest(): PaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.newBuilder().apply {
-        requestRefIdBuilder.id = "smoke_test_123"
-        amount = 1000
-        minorAmount = 1000
-        currency = Currency.USD
+        merchantTransactionIdBuilder.id = "smoke_test_123"
+        amountBuilder.apply {
+            minorAmount = 1000
+            currency = Currency.USD
+        }
         captureMethod = CaptureMethod.AUTOMATIC
         paymentMethodBuilder.cardBuilder.apply {
             cardNumberBuilder.value = "4111111111111111"
@@ -30,8 +31,10 @@ fun buildRequest(): PaymentServiceAuthorizeRequest =
             cardCvcBuilder.value = "123"
             cardHolderNameBuilder.value = "Test User"
         }
-        emailBuilder.value = "test@example.com"
-        customerName = "Test"
+        customerBuilder.apply {
+            emailBuilder.value = "test@example.com"
+            name = "Test"
+        }
         authType = AuthenticationType.NO_THREE_DS
         returnUrl = "https://example.com/return"
         webhookUrl = "https://example.com/webhook"
@@ -70,9 +73,10 @@ fun testLowLevelFfi() {
     val metadata = buildMetadata()
 
     try {
-        val json = JSONObject(authorizeReqTransformer(requestBytes, metadata))
-        val url = json.getString("url")
-        val method = json.getString("method")
+        // Now returns a native FfiConnectorHttpRequest object, no JSONObject needed!
+        val connectorRequest = authorizeReqTransformer(requestBytes, metadata)
+        val url = connectorRequest.url
+        val method = connectorRequest.method
 
         assert(url == "https://api.stripe.com/v1/payment_intents",
             "Expected Stripe payment_intents URL, got: $url")

@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
 use grpc_api_types::payments::{self, PaymentServiceAuthorizeRequest};
-use hyperswitch_payments_client::ConnectorClient;
+use hyperswitch_payments_client::{ConnectorClient, http_client::HttpOptions};
 
 #[tokio::main]
 async fn main() {
     let request = build_authorize_request();
     let metadata = build_metadata();
 
-    // Demo 1: Low-level - call authorize_req_handler directly, print connector request JSON
+    // Demo 1: Low-level - inspect what would be sent
     demo_low_level(&request, &metadata);
 
     // Demo 2: Full round-trip - use ConnectorClient to make actual HTTP call
@@ -138,23 +138,20 @@ fn demo_low_level(request: &PaymentServiceAuthorizeRequest, metadata: &HashMap<S
 
     match connector_service_ffi::handlers::payments::authorize_req_handler(ffi_request, None) {
         Ok(Some(connector_request)) => {
-            let raw_json =
-                external_services::service::extract_raw_connector_request(&connector_request);
+            let url = connector_request.url.clone();
+            let method = connector_request.method;
+            let headers: HashMap<String, String> = connector_request.get_headers_map();
+            let (body, _) = connector_request.body.as_ref().map_or((None, None), |b| b.get_body_bytes());
 
-            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_json) {
-                eprintln!("Connector HTTP request generated successfully:");
-                eprintln!("  URL:    {}", parsed["url"].as_str().unwrap_or("N/A"));
-                eprintln!("  Method: {}", parsed["method"].as_str().unwrap_or("N/A"));
-                if let Some(headers) = parsed["headers"].as_object() {
-                    let keys: Vec<&String> = headers.keys().collect();
-                    eprintln!("  Headers: {:?}", keys);
+            eprintln!("Connector HTTP request generated successfully:");
+            eprintln!("  URL:    {}", url);
+            eprintln!("  Method: {:?}", method);
+            eprintln!("  Headers: {:?}", headers.keys().collect::<Vec<_>>());
+            if let Some(b) = body {
+                eprintln!("  Body Length: {} bytes", b.len());
+                if let Ok(body_str) = String::from_utf8(b) {
+                    eprintln!("  Body (UTF-8):\n{}\n", body_str);
                 }
-                eprintln!(
-                    "\nFull request JSON:\n{}\n",
-                    serde_json::to_string_pretty(&parsed).unwrap_or(raw_json)
-                );
-            } else {
-                eprintln!("Connector Request (raw):\n{}\n", raw_json);
             }
         }
         Ok(None) => {
@@ -189,7 +186,9 @@ async fn demo_full_round_trip(
     eprintln!("Connector: Stripe");
     eprintln!("Sending authorize request...\n");
 
-    let client = ConnectorClient;
+    // Initialize with default http options (Pooling + Timeouts)
+    let client = ConnectorClient::new(HttpOptions::default());
+    
     match client.authorize(request, metadata).await {
         Ok(response) => {
             eprintln!("Authorize response received:");

@@ -110,7 +110,7 @@ impl MultipartData {
         });
     }
 
-    pub fn render_as_bytes(&self) -> (Vec<u8>, String) {
+    pub fn render_as_bytes(&self) -> Result<(Vec<u8>, String), String> {
         use std::io::Read;
         let mut builder = multipart::client::lazy::Multipart::new();
 
@@ -128,23 +128,22 @@ impl MultipartData {
                     } else {
                         None
                     };
-                    builder.add_stream(
-                        name,
-                        std::io::Cursor::new(bytes),
-                        Some(filename),
-                        mime,
-                    )
+                    builder.add_stream(name, std::io::Cursor::new(bytes), Some(filename), mime)
                 }
             };
         }
 
-        let mut prepared = builder.prepare().expect("Multipart rendering failed");
+        let mut prepared = builder
+            .prepare()
+            .map_err(|e| format!("Multipart rendering failed: {}", e))?;
         let boundary = prepared.boundary().to_string();
 
         let mut finished_bytes = Vec::new();
-        prepared.read_to_end(&mut finished_bytes).unwrap();
+        prepared
+            .read_to_end(&mut finished_bytes)
+            .map_err(|e| format!("Failed to read multipart stream: {}", e))?;
 
-        (finished_bytes, boundary)
+        Ok((finished_bytes, boundary))
     }
 }
 
@@ -160,16 +159,16 @@ impl RequestContent {
         }
     }
 
-    pub fn get_body_bytes(&self) -> (Option<Vec<u8>>, Option<String>) {
+    pub fn get_body_bytes(&self) -> Result<(Option<Vec<u8>>, Option<String>), String> {
         use hyperswitch_masking::ExposeInterface;
         match self {
-            Self::RawBytes(bytes) => (Some(bytes.clone()), None),
+            Self::RawBytes(bytes) => Ok((Some(bytes.clone()), None)),
             Self::Json(_) | Self::FormUrlEncoded(_) | Self::Xml(_) => {
-                (Some(self.get_inner_value().expose().into_bytes()), None)
+                Ok((Some(self.get_inner_value().expose().into_bytes()), None))
             }
             Self::FormData(data) => {
-                let (bytes, boundary) = data.render_as_bytes();
-                (Some(bytes), Some(boundary))
+                let (bytes, boundary) = data.render_as_bytes()?;
+                Ok((Some(bytes), Some(boundary)))
             }
         }
     }
@@ -196,7 +195,8 @@ impl Request {
                 Maskable::Masked(s) => s.peek().to_string(),
                 Maskable::Normal(s) => s.to_string(),
             };
-            map.insert(k.clone(), val);
+            // Standardize to lowercase for cross-language/FFI compatibility
+            map.insert(k.to_lowercase(), val);
         }
         map
     }

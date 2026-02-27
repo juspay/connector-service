@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 
+use crate::http_client::{HttpClient, HttpOptions, HttpRequest as ClientHttpRequest};
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
@@ -9,14 +10,21 @@ use grpc_api_types::payments::{PaymentServiceAuthorizeRequest, PaymentServiceAut
 
 /// A Rust-native connector client that calls handler functions directly
 /// without going through FFI or gRPC serialization boundaries.
-pub struct ConnectorClient;
+pub struct ConnectorClient {
+    http_client: HttpClient,
+}
 
 impl ConnectorClient {
+    pub fn new(options: HttpOptions) -> Self {
+        Self {
+            http_client: HttpClient::new(options),
+        }
+    }
+
     /// Authorize a payment by:
     /// 1. Building the connector HTTP request via `authorize_req_handler`
-    /// 2. Extracting the raw request JSON (url, method, headers, body)
-    /// 3. Making the HTTP call with reqwest
-    /// 4. Parsing the response via `authorize_res_handler`
+    /// 2. Making the HTTP call with specialized HttpClient
+    /// 3. Parsing the response via `authorize_res_handler`
     pub async fn authorize(
         &self,
         request: PaymentServiceAuthorizeRequest,
@@ -29,49 +37,32 @@ impl ConnectorClient {
             .map_err(|e| format!("authorize_req_handler failed: {:?}", e))?
             .ok_or("No connector request generated")?;
 
-        // Step 2: Extract data using native methods (Binary Safe)
-        let url = connector_request.url.clone();
-        let method = connector_request.method;
-        let mut headers = connector_request.get_headers_map();
+        // Step 2: Prepare and execute the HTTP request via our high-performance client
         let (body, boundary) = connector_request.body.as_ref().map_or((None, None), |b| b.get_body_bytes());
+        let mut headers = connector_request.get_headers_map();
 
         if let Some(boundary) = boundary {
             headers.insert("content-type".to_string(), format!("multipart/form-data; boundary={}", boundary));
         }
 
-        // Step 3: Make the HTTP call with reqwest
-        let client = reqwest::Client::new();
-        let mut req_builder = match method {
-            common_utils::request::Method::Get => client.get(url),
-            common_utils::request::Method::Post => client.post(url),
-            common_utils::request::Method::Put => client.put(url),
-            common_utils::request::Method::Delete => client.delete(url),
-            common_utils::request::Method::Patch => client.patch(url),
+        let http_req = ClientHttpRequest {
+            url: connector_request.url.clone(),
+            method: connector_request.method,
+            headers,
+            body,
         };
 
-        // Add headers
-        for (key, value) in headers {
-            req_builder = req_builder.header(key, value);
-        }
+        let http_response = self.http_client.execute(http_req).await?;
 
-        // Add body
-        if let Some(body_bytes) = body {
-            req_builder = req_builder.body(body_bytes);
-        }
-
-        let http_response = req_builder.send().await?;
-
-        // Step 4: Convert HTTP response to domain Response type
-        let status_code = http_response.status().as_u16();
+        // Step 3: Convert HTTP response to domain Response type
         let mut header_map = http::HeaderMap::new();
-        for (key, value) in http_response.headers() {
-            if let Ok(name) = http::header::HeaderName::from_bytes(key.as_str().as_bytes()) {
+        for (key, value) in &http_response.headers {
+            if let Ok(name) = http::header::HeaderName::from_bytes(key.as_bytes()) {
                 if let Ok(val) = http::header::HeaderValue::from_bytes(value.as_bytes()) {
                     header_map.insert(name, val);
                 }
             }
         }
-        let response_bytes: bytes::Bytes = http_response.bytes().await?;
 
         let response = Response {
             headers: if header_map.is_empty() {
@@ -79,11 +70,11 @@ impl ConnectorClient {
             } else {
                 Some(header_map)
             },
-            response: response_bytes,
-            status_code,
+            response: bytes::Bytes::from(http_response.body),
+            status_code: http_response.status_code,
         };
 
-        // Step 5: Parse response via authorize_res_handler
+        // Step 4: Parse response via authorize_res_handler
         let ffi_request_for_res = build_ffi_request(request, metadata)?;
         match authorize_res_handler(ffi_request_for_res, response, None) {
             Ok(auth_response) => Ok(auth_response),

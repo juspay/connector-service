@@ -46,7 +46,7 @@ export class ConnectorClient {
     // Now returns a native HttpRequest object, no JSON.parse needed!
     const connectorRequest: HttpRequest = this._uniffi.authorizeReq(requestBytes, metadata);
 
-    // 3. Execute the HTTP request via our high-performance transport layer
+    // 3. Execute the HTTP request
     const response = await execute(connectorRequest, this._options);
 
     // 4. Parse the connector response via FFI bridge

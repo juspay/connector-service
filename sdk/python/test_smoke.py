@@ -37,10 +37,9 @@ metadata = {
 
 # Build a protobuf request
 req = PaymentServiceAuthorizeRequest()
-req.request_ref_id.id = "test_pack_123"
-req.amount = 1000
-req.minor_amount = 1000
-req.currency = USD
+req.merchant_transaction_id.id = "test_pack_123"
+req.amount.minor_amount = 1000
+req.amount.currency = USD
 req.capture_method = AUTOMATIC
 card = req.payment_method.card
 card.card_number.value = "4111111111111111"
@@ -48,8 +47,8 @@ card.card_exp_month.value = "12"
 card.card_exp_year.value = "2050"
 card.card_cvc.value = "123"
 card.card_holder_name.value = "Test User"
-req.email.value = "test@example.com"
-req.customer_name = "Test"
+req.customer.email.value = "test@example.com"
+req.customer.name = "Test"
 req.auth_type = NO_THREE_DS
 req.return_url = "https://example.com/return"
 req.webhook_url = "https://example.com/webhook"
@@ -58,12 +57,12 @@ req.test_mode = True
 
 # --- Test 1: Low-level FFI ---
 print("\n=== Test 1: Low-level FFI (authorize_req_transformer) ===")
+# Now returns a native FfiConnectorHttpRequest object, no json.loads needed!
 result = authorize_req_transformer(req.SerializeToString(), metadata)
-parsed = json.loads(result)
-print(f"  URL:    {parsed['url']}")
-print(f"  Method: {parsed['method']}")
-assert parsed["url"] == "https://api.stripe.com/v1/payment_intents", "Unexpected URL"
-assert parsed["method"] == "POST", "Unexpected method"
+print(f"  URL:    {result.url}")
+print(f"  Method: {result.method}")
+assert result.url == "https://api.stripe.com/v1/payment_intents", f"Unexpected URL: {result.url}"
+assert result.method == "POST", "Unexpected method"
 print("  PASSED")
 
 # --- Test 2: Full round-trip via ConnectorClient ---
