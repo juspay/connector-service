@@ -76,8 +76,6 @@ pub struct AdyenApplePayDecryptData {
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
     brand: String,
-    #[serde(rename = "type")]
-    payment_type: PaymentType,
 }
 
 #[serde_with::skip_serializing_none]
@@ -88,8 +86,6 @@ pub struct AdyenGooglePayDecryptData {
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
     brand: String,
-    #[serde(rename = "type")]
-    payment_type: PaymentType,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -209,8 +205,10 @@ pub enum AdyenPaymentMethod<
     NetworkToken(Box<AdyenNetworkTokenData>),
     #[serde(rename = "googlepay")]
     Gpay(Box<AdyenGPay>),
+    #[serde(rename = "scheme")]
     GooglePayDecrypt(Box<AdyenGooglePayDecryptData>),
     ApplePay(Box<AdyenApplePay>),
+    #[serde(rename = "scheme")]
     ApplePayDecrypt(Box<AdyenApplePayDecryptData>),
     #[serde(rename = "scheme")]
     BancontactCard(Box<AdyenCard<DefaultPCIHolder>>),
@@ -1409,7 +1407,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             expiry_month,
                             expiry_year,
                             brand: GOOGLE_PAY_BRAND.to_string(),
-                            payment_type: PaymentType::Scheme,
                         };
 
                         Self::GooglePayDecrypt(Box::new(google_pay_decrypt_data))
@@ -1442,7 +1439,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             expiry_month: exp_month,
                             expiry_year: expiry_year_4_digit,
                             brand: data.payment_method.network.clone(),
-                            payment_type: PaymentType::Scheme,
                         };
 
                         Self::ApplePayDecrypt(Box::new(apple_pay_decrypt_data))
