@@ -477,7 +477,7 @@ message SamsungWallet {
       string version = 2;
       
       // Token data
-      string data = 3;
+      SecretString data = 3;
     }
     TokenData token_data = 6;
   }
