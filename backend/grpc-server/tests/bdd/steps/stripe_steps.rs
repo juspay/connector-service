@@ -205,20 +205,44 @@ fn set_manual_capture(world: &mut StripeWorld) {
 #[when("I authorize the payment")]
 async fn authorize_payment(world: &mut StripeWorld) {
     let request = create_authorize_request(world.capture_method);
+
+    // DEBUG: Print the request being sent
+    eprintln!("\n========== STRIPE REQUEST ==========");
+    eprintln!("Amount: {} cents", request.amount.as_ref().map(|m| m.minor_amount).unwrap_or(0));
+    eprintln!("Currency: {:?}", request.amount.as_ref().map(|m| m.currency));
+    eprintln!("Capture Method: {:?}", world.capture_method);
+    eprintln!("Connector: {}", world.connector_name);
+    eprintln!("Merchant ID: {}", world.merchant_id);
+
     let mut grpc_request = Request::new(request);
 
     // Add metadata
     world.add_metadata(&mut grpc_request);
 
+    eprintln!("\nSending gRPC authorize request...");
+    eprintln!("=====================================\n");
+
     match world.payment_client.authorize(grpc_request).await {
         Ok(response) => {
             let inner = response.into_inner();
 
+            // DEBUG: Print the response received
+            eprintln!("\n========== STRIPE RESPONSE ==========");
+            eprintln!("Status Code: {}", inner.status);
+            eprintln!("Status: {:?}", PaymentStatus::try_from(inner.status));
+            eprintln!("Transaction ID: {:?}", inner.connector_transaction_id);
+            eprintln!("Error: {:?}", inner.error);
+            eprintln!("Redirection Data: {:?}", inner.redirection_data);
+            eprintln!("======================================\n");
+
             // Capture error from response if present
             if let Some(ref error_info) = inner.error {
+                let (code, message) = error_info.connector_details.as_ref()
+                    .map(|d| (d.code.as_deref(), d.message.as_deref()))
+                    .unwrap_or((None, None));
                 world.error = Some(format!(
-                    "Payment error: {:?}",
-                    error_info
+                    "Payment error: code={:?}, message={:?}",
+                    code, message
                 ));
             }
 
@@ -238,6 +262,9 @@ async fn authorize_payment(world: &mut StripeWorld) {
             });
         }
         Err(e) => {
+            eprintln!("\n========== STRIPE ERROR ==========");
+            eprintln!("gRPC Error: {}", e);
+            eprintln!("===================================\n");
             world.error = Some(e.to_string());
         }
     }
