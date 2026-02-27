@@ -913,7 +913,8 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::DuitNow
             | common_enums::PaymentMethodType::PromptPay
             | common_enums::PaymentMethodType::VietQr
-            | common_enums::PaymentMethodType::Mifinity => Err(ConnectorError::NotImplemented(
+            | common_enums::PaymentMethodType::Mifinity
+            | common_enums::PaymentMethodType::WeChatPayRedirect => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),

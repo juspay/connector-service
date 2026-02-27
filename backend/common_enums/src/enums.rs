@@ -1034,6 +1034,7 @@ pub enum PaymentMethodType {
     Venmo,
     Walley,
     WeChatPay,
+    WeChatPayRedirect,
     SevenEleven,
     Lawson,
     MiniStop,

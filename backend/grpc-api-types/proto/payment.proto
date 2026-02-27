@@ -693,6 +693,7 @@ enum PaymentMethodType {
   VENMO = 85;
   WALLEY = 86;
   WE_CHAT_PAY = 87;
+  WE_CHAT_PAY_REDIRECT = 102;
   SEVEN_ELEVEN = 88;
   LAWSON = 89;
   MINI_STOP = 90;

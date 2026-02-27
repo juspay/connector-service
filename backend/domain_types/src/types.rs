@@ -782,6 +782,11 @@ impl<
                         Box::new(payment_method_data::WeChatPayQr {}),
                     )))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::WeChatPayRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::WeChatPayRedirect(
+                        Box::new(payment_method_data::WeChatPayRedirection {}),
+                    )))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(
                     mifinity_data,
                 ) => Ok(Self::Wallet(payment_method_data::WalletData::Mifinity(
@@ -1844,6 +1849,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CashappQr(_) => Ok(Some(PaymentMethodType::Cashapp)),
                 grpc_api_types::payments::payment_method::PaymentMethod::PaypalRedirect(_) => Ok(Some(PaymentMethodType::Paypal)),
                 grpc_api_types::payments::payment_method::PaymentMethod::WeChatPayQr(_) => Ok(Some(PaymentMethodType::WeChatPay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::WeChatPayRedirect(_) => Ok(Some(PaymentMethodType::WeChatPayRedirect)),
                 grpc_api_types::payments::payment_method::PaymentMethod::AliPayRedirect(_) => Ok(Some(PaymentMethodType::AliPay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::RevolutPay(_) => Ok(Some(PaymentMethodType::RevolutPay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(_) => Ok(Some(PaymentMethodType::Mifinity)),
@@ -4402,6 +4408,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::WeChatPayRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::AliPayRedirect(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
@@ -5529,6 +5539,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::AmazonPay => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::PayPal => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::WeChatPay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::WeChatPayRedirect => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::AliPay => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::Cashapp => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::RevolutPay => Ok(Self::Wallet),
