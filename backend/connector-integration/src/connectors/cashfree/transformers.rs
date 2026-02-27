@@ -7,7 +7,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::report;
@@ -26,22 +26,14 @@ pub struct CashfreeAuthType {
     pub secret_key: Secret<String>, // X-Client-Secret
 }
 
-impl TryFrom<&ConnectorAuthType> for CashfreeAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for CashfreeAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                app_id: key1.to_owned(),
-                secret_key: api_key.to_owned(),
-            }),
-            ConnectorAuthType::SignatureKey {
-                api_key: _,
-                key1,
-                api_secret,
-            } => Ok(Self {
-                app_id: key1.to_owned(),
-                secret_key: api_secret.to_owned(),
+            ConnectorSpecificAuth::Cashfree { app_id, secret_key } => Ok(Self {
+                app_id: app_id.to_owned(),
+                secret_key: secret_key.to_owned(),
             }),
             _ => Err(report!(ConnectorError::FailedToObtainAuthType)),
         }
