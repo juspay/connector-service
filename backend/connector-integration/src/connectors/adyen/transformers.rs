@@ -29,7 +29,8 @@ use domain_types::{
         WalletData,
     },
     router_data::{
-        ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
+        ConnectorResponseData, ConnectorSpecificAuth, ErrorResponse,
+        ExtendedAuthorizationResponseData,
     },
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
@@ -1292,23 +1293,18 @@ pub struct AdyenAuthType {
     pub(super) review_key: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorAuthType> for AdyenAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for AdyenAuthType {
     type Error = errors::ConnectorError;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                api_key: api_key.to_owned(),
-                merchant_account: key1.to_owned(),
-                review_key: None,
-            }),
-            ConnectorAuthType::SignatureKey {
+            ConnectorSpecificAuth::Adyen {
                 api_key,
-                key1,
-                api_secret,
+                merchant_account,
+                review_key,
             } => Ok(Self {
                 api_key: api_key.to_owned(),
-                merchant_account: key1.to_owned(),
-                review_key: Some(api_secret.to_owned()),
+                merchant_account: merchant_account.to_owned(),
+                review_key: review_key.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType),
         }

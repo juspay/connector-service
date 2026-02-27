@@ -12,7 +12,7 @@ use domain_types::{
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -31,19 +31,19 @@ pub struct IatapayAuthType {
     pub(super) client_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for IatapayAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for IatapayAuthType {
     type Error = Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
+            ConnectorSpecificAuth::Iatapay {
+                client_id,
+                merchant_id,
+                client_secret,
             } => Ok(Self {
-                client_id: api_key.to_owned(),
-                merchant_id: key1.to_owned(),
-                client_secret: api_secret.to_owned(),
+                client_id: client_id.to_owned(),
+                merchant_id: merchant_id.to_owned(),
+                client_secret: client_secret.to_owned(),
             }),
             _ => Err(Report::new(ConnectorError::FailedToObtainAuthType)),
         }

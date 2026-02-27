@@ -24,7 +24,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::*,
@@ -73,7 +73,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        _auth_type: &ConnectorAuthType,
+        _auth_type: &ConnectorSpecificAuth,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         // Paybox doesn't use auth headers - credentials go in request body
         Ok(vec![])
