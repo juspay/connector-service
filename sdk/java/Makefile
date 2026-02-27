@@ -15,6 +15,11 @@ NATIVE_DIR=$(SDK_ROOT)/src/main/resources/native
 ARTIFACTS_DIR=$(REPO_ROOT)/artifacts
 PACKAGE_DIR=$(ARTIFACTS_DIR)/sdk-java
 
+# Path to the uniffi-bindgen binary, respecting TARGET_TRIPLE when set.
+# With TARGET_TRIPLE=x86_64-unknown-linux-gnu, cargo writes to target/<triple>/release/
+# which shares the build cache with the main library build.
+BINDGEN := $(REPO_ROOT)/target/$(if $(TARGET_TRIPLE),$(TARGET_TRIPLE)/,)release/uniffi-bindgen
+
 # Detect OS for library extension
 UNAME := $(shell uname)
 ifeq ($(UNAME), Darwin)
@@ -62,12 +67,12 @@ generate-bindings: build-lib
 #              TARGET_TRIPLE=x86_64-unknown-linux-gnu
 generate-bindings-ci:
 	@[ -n "$(LIBRARY)" ] || (echo "Error: LIBRARY must be set (e.g. LIBRARY=target/.../libconnector_service_ffi.so)" && exit 1)
-	@echo "Generating UniFFI Kotlin bindings from pre-built library $(LIBRARY)..."
+	@echo "Building uniffi-bindgen binary..."
+	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi-cli \
+		--release $(if $(TARGET_TRIPLE),--target $(TARGET_TRIPLE),) --bin uniffi-bindgen
+	@echo "Generating UniFFI Kotlin bindings from $(LIBRARY)..."
 	@mkdir -p $(GENERATED_KOTLIN) $(NATIVE_DIR)
-	@cd $(FFI_CRATE) && cargo run --no-default-features --features uniffi-cli \
-		--bin uniffi-bindgen --release \
-		$(if $(TARGET_TRIPLE),--target $(TARGET_TRIPLE),) -- \
-		generate \
+	@$(BINDGEN) generate \
 		--library $(LIBRARY) \
 		--language kotlin \
 		--out-dir $(GENERATED_KOTLIN)
