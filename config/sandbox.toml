@@ -22,6 +22,7 @@ mitm_proxy_enabled = false
 
 [connectors]
 revolv3.base_url = "https://api-sandbox.revolv3.com"
+ppro.base_url = "https://api.sandbox.eu.ppro.com"
 mollie.base_url = "https://api.mollie.com/v2"
 mollie.secondary_base_url = "https://api.cc.mollie.com/v1/"
 gigadat.base_url = "https://interac.express-connect.com/"
