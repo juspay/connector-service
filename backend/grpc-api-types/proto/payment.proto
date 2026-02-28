@@ -601,6 +601,7 @@ enum Connector {
   HYPERPG = 107;
   ZIFT = 108;
   REVOLV3 = 109;
+  PPRO = 110;
 }
 
 // Payment method types.
