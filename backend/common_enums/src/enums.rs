@@ -1684,6 +1684,7 @@ pub enum RoutableConnectors {
     Worldpayxml,
     Xendit,
     Zen,
+    Ppro,
     Plaid,
     Zsl,
 }
