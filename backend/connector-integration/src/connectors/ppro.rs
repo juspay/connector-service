@@ -1,7 +1,7 @@
 pub mod transformers;
 
-use transformers::*;
 use super::macros;
+use transformers::*;
 
 use common_utils::{
     crypto::VerifySignature, errors::CustomResult, events, ext_traits::ByteSliceExt,
@@ -15,12 +15,13 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, EventType, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
@@ -40,22 +41,22 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, PeekInterface};
 use interfaces::{
-    api::ConnectorCommon, 
-    connector_integration_v2::ConnectorIntegrationV2, 
-    connector_types,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 
+use crate::{types::ResponseRouterData, with_error_response_body};
 use serde::Serialize;
 use std::fmt::Debug;
 use std::sync::LazyLock;
-use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon for Ppro<T> {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Ppro<T>
+{
     fn id(&self) -> &'static str {
         "ppro"
     }
@@ -75,17 +76,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificAuth,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
+    {
         match auth_type {
-            ConnectorSpecificAuth::Ppro { api_key, merchant_id } => Ok(vec![
+            ConnectorSpecificAuth::Ppro {
+                api_key,
+                merchant_id,
+            } => Ok(vec![
                 (
                     headers::AUTHORIZATION.to_string(),
                     format!("Bearer {}", api_key.peek()).into_masked(),
                 ),
-                (
-                    "Merchant-Id".to_string(),
-                    merchant_id.clone().into_masked(),
-                ),
+                ("Merchant-Id".to_string(), merchant_id.clone().into_masked()),
             ]),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -316,22 +318,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for Ppro<T>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Ppro<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        DefendDispute,
-        DisputeFlowData,
-        DisputeDefendData,
-        DisputeResponseData,
-    > for Ppro<T>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Ppro<T>
 {
 }
 
@@ -392,7 +386,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         match event.r#type.as_str() {
             "payment-charges.captured" => Ok(EventType::PaymentIntentCaptureSuccess),
             "payment-charges.failed" => Ok(EventType::PaymentIntentFailure),
-            "payment-charges.authorization-async" => Ok(EventType::PaymentIntentAuthorizationSuccess),
+            "payment-charges.authorization-async" => {
+                Ok(EventType::PaymentIntentAuthorizationSuccess)
+            }
             "payment-charges.refunded" => Ok(EventType::RefundSuccess),
             "payment-charges.refund-failed" => Ok(EventType::RefundFailure),
             _ => Ok(EventType::IncomingWebhookEventUnspecified),
@@ -411,7 +407,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
         let status = match event.data.status.as_str() {
-            "AUTHORIZATION_PROCESSING" | "CAPTURE_PROCESSING" => common_enums::AttemptStatus::Pending,
+            "AUTHORIZATION_PROCESSING" | "CAPTURE_PROCESSING" => {
+                common_enums::AttemptStatus::Pending
+            }
             "AUTHENTICATION_PENDING" => common_enums::AttemptStatus::AuthenticationPending,
             "AUTHORIZATION_ASYNC" | "CAPTURE_PENDING" => common_enums::AttemptStatus::Authorized,
             "CAPTURED" => common_enums::AttemptStatus::Charged,
@@ -424,7 +422,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             (
                 failure.failure_code.clone(),
                 Some(failure.failure_message.clone()),
-                Some(format!("{}: {}", failure.failure_type, failure.failure_code.as_deref().unwrap_or("UNKNOWN"))),
+                Some(format!(
+                    "{}: {}",
+                    failure.failure_type,
+                    failure.failure_code.as_deref().unwrap_or("UNKNOWN")
+                )),
             )
         } else {
             (None, None, None)
@@ -453,8 +455,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificAuth>,
-    ) -> Result<domain_types::connector_types::RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>>
-    {
+    ) -> Result<
+        domain_types::connector_types::RefundWebhookDetailsResponse,
+        error_stack::Report<errors::ConnectorError>,
+    > {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
@@ -477,16 +481,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             (None, None)
         };
 
-        Ok(domain_types::connector_types::RefundWebhookDetailsResponse {
-            connector_refund_id: Some(event.data.id.clone()),
-            status,
-            connector_response_reference_id: Some(event.data.id),
-            error_code,
-            error_message,
-            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
-            status_code: 200,
-            response_headers: None,
-        })
+        Ok(
+            domain_types::connector_types::RefundWebhookDetailsResponse {
+                connector_refund_id: Some(event.data.id.clone()),
+                status,
+                connector_response_reference_id: Some(event.data.id),
+                error_code,
+                error_message,
+                raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
+                status_code: 200,
+                response_headers: None,
+            },
+        )
     }
 
     fn process_dispute_webhook(
@@ -494,8 +500,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificAuth>,
-    ) -> Result<domain_types::connector_types::DisputeWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>>
-    {
+    ) -> Result<
+        domain_types::connector_types::DisputeWebhookDetailsResponse,
+        error_stack::Report<errors::ConnectorError>,
+    > {
         Err(errors::ConnectorError::NotImplemented("process_dispute_webhook".to_string()).into())
     }
 
@@ -531,7 +539,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_webhook_resource_object(
         &self,
         request: RequestDetails,
-    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<errors::ConnectorError>,
+    > {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
@@ -642,8 +653,10 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
     ppro_supported_payment_methods
 });
 
-static PPRO_SUPPORTED_WEBHOOK_FLOWS: &[common_enums::EventClass] =
-    &[common_enums::EventClass::Payments, common_enums::EventClass::Refunds];
+static PPRO_SUPPORTED_WEBHOOK_FLOWS: &[common_enums::EventClass] = &[
+    common_enums::EventClass::Payments,
+    common_enums::EventClass::Refunds,
+];
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
     for Ppro<T>
@@ -679,7 +692,7 @@ macros::create_all_prerequisites!(
         (
             flow: Capture,
             request_body: PproCaptureRequest,
-            response_body: PproCaptureResponse, 
+            response_body: PproCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
@@ -893,4 +906,3 @@ macros::macro_connector_implementation!(
 
 #[cfg(test)]
 mod test;
-
