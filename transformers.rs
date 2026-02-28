@@ -11,29 +11,13 @@ use domain_types::{
         RefundsResponseData, ResponseId
     },
     errors,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
 };
 use crate::types::ResponseRouterData;
 use super::PproRouterData;
 
-pub struct PproAuthType {
-    pub(super) api_key: Secret<String>,
-    pub(super) merchant_id: Secret<String>,
-}
 
-impl TryFrom<&ConnectorAuthType> for PproAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                api_key: api_key.to_owned(),
-                merchant_id: key1.to_owned(),
-            }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
-        }
-    }
-}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
