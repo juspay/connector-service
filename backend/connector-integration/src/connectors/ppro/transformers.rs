@@ -302,7 +302,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, RouterDataV2<F, Pa
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<PproPaymentsResponse, RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>>,
+        item: ResponseRouterData<PproPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = match item.response.status.as_str() {
             "AUTHORIZATION_PROCESSING" | "CAPTURE_PROCESSING" => common_enums::AttemptStatus::Pending,
@@ -431,7 +431,7 @@ impl<F, Req, T> TryFrom<ResponseRouterData<PproPaymentsResponse, RouterDataV2<F,
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<PproPaymentsResponse, RouterDataV2<F, Req, T, RefundsResponseData>>,
+        item: ResponseRouterData<PproPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = match item.response.status.as_str() {
             "CAPTURED" | "REFUND_SETTLED" | "SUCCESS" | "REFUNDED" => common_enums::RefundStatus::Success,
