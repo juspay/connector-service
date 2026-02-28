@@ -341,8 +341,7 @@ pub struct PproWebhookData {
     pub failure: Option<PproFailure>,
 }
 
-impl<F, Req>
-    TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
+impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -494,8 +493,7 @@ impl<F, Req>
     }
 }
 
-impl<F, Req, T>
-    TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
+impl<F, Req, T> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
     for RouterDataV2<F, Req, T, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
