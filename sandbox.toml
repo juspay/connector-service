@@ -1,0 +1,124 @@
+[common]
+environment = "sandbox"
+
+[log.console]
+enabled = true
+level = "TRACE"
+log_format = "default"
+
+[server]
+host = "0.0.0.0"
+port = 8000
+type = "grpc"
+
+[metrics]
+host = "0.0.0.0"
+port = 8080
+
+[proxy]
+idle_pool_connection_timeout = 90               # Timeout for idle pool connections (defaults to 90s)
+bypass_proxy_urls = ["localhost", "local"]
+mitm_proxy_enabled = false
+
+[connectors]
+revolv3.base_url = "https://api-sandbox.revolv3.com"
+ppro.base_url = "https://api.sandbox.eu.ppro.com"
+mollie.base_url = "https://api.mollie.com/v2"
+mollie.secondary_base_url = "https://api.cc.mollie.com/v1/"
+gigadat.base_url = "https://interac.express-connect.com/"
+paybox.base_url = "https://preprod-ppps.paybox.com/PPPS.php"
+loonio.base_url = "https://integration.loonio.ca/"
+getnet.base_url = "https://api-sbx.pre.globalgetnet.com"
+payme.base_url = "https://sandbox.payme.io/api/"
+hyperpg.base_url = "https://sandbox.hyperpg.in"
+barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
+airwallex.base_url = "https://api-demo.airwallex.com/api/v1"
+bambora.base_url = "https://api.na.bambora.com/v1"
+shift4.base_url = "https://api.shift4.com"
+bluesnap.base_url = "https://sandbox.bluesnap.com"
+bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
+multisafepay.base_url = "https://testapi.multisafepay.com/v1/json"
+iatapay.base_url = "https://sandbox.iata-pay.iata.org/api/v1"
+jpmorgan.base_url = "https://api-mock.payments.jpmorgan.com/api/v2"
+jpmorgan.secondary_base_url = "https://id.payments.jpmorgan.com"
+nmi.base_url = "https://sandbox.nmi.com"
+nexixpay.base_url = "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1"
+authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
+stax.base_url = "https://apiprod.fattlabs.com"
+trustpayments.base_url = "https://webservices.securetrading.net"
+fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
+datatrans.base_url = "https://api.sandbox.datatrans.com"
+silverflow.base_url = "https://api-sbx.silverflow.co/v1"
+celero.base_url = "https://sandbox.gotnpgateway.com"
+hipay.base_url = "https://stage-secure-gateway.hipay-tpp.com/rest/"
+hipay.secondary_base_url = "https://stage-secure2-vault.hipay-tpp.com/rest/v2/token"
+hipay.third_base_url = "https://stage-api-gateway.hipay.com/"
+globalpay.base_url = "https://apis.sandbox.globalpay.com/ucp"
+adyen.base_url = "https://checkout-test.adyen.com/"
+adyen.dispute_base_url = "https://ca-test.adyen.com/"
+razorpay.base_url = "https://api.razorpay.com/"
+razorpayv2.base_url = "https://api.razorpay.com/"
+fiserv.base_url = "https://cert.api.fiservapps.com/"
+elavon.base_url = "https://api.demo.convergepay.com/VirtualMerchantDemo/"
+xendit.base_url = "https://api.xendit.co/"
+checkout.base_url = "https://api.sandbox.checkout.com/"
+authorizedotnet.base_url = "https://apitest.authorize.net/xml/v1/request.api"
+phonepe.base_url = "https://api-preprod.phonepe.com/apis/hermes/"
+cashfree.base_url = "https://sandbox.cashfree.com/"
+fiuu.base_url = "https://sandbox.merchant.razer.com/"
+fiuu.secondary_base_url = "https://sandbox.merchant.razer.com/"
+fiuu.third_base_url = "https://api.merchant.razer.com/"
+payload.base_url = "https://api.payload.com"
+forte.base_url = "https://sandbox.forte.net/api/v3"
+payu.base_url = "https://test.payu.in/"
+paytm.base_url = "https://securestage.paytmpayments.com/"
+cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
+novalnet.base_url = "https://payport.novalnet.de/v2"
+nexinets.base_url = "https://apitest.payengine.de/v1"
+noon.base_url = "https://api-test.noonpayments.com/"
+mifinity.base_url = "https://demo.mifinity.com/"
+braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
+volt.base_url = "https://gateway.sandbox.volt.io"
+volt.secondary_base_url = "https://api.sandbox.volt.io"
+calida.base_url = "https://dev.eorder.reloadhero.com/"
+cryptopay.base_url = "https://business-sandbox.cryptopay.me"
+helcim.base_url = "https://api.helcim.com/"
+dlocal.base_url = "https://sandbox.dlocal.com/"
+placetopay.base_url = "https://test.placetopay.com/rest/gateway"
+rapyd.base_url = "https://sandboxapi.rapyd.net"
+redsys.base_url = "https://sis-t.redsys.es:25443"
+aci.base_url = "https://eu-test.oppwa.com/"
+trustpay.base_url = "https://test-tpgw.trustpay.eu/"
+trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
+stripe.base_url = "https://api.stripe.com/"
+cybersource.base_url = "https://apitest.cybersource.com/"
+worldpay.base_url = "https://try.access.worldpay.com/"
+worldpayvantiv.base_url = "https://transact.vantivprelive.com/vap/communicator/online"
+worldpayvantiv.secondary_base_url = "https://onlinessr.vantivprelive.com"
+paypal.base_url = "https://api-m.sandbox.paypal.com/"
+paysafe.base_url = "https://api.test.paysafe.com/paymenthub/"
+billwerk.base_url = "https://api.reepay.com/"
+billwerk.secondary_base_url = "https://card.reepay.com/"
+nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
+bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
+worldpayxml.base_url = "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp"
+tsys.base_url = "https://stagegw.transnox.com/"
+bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
+powertranz.base_url = "https://staging.ptranz.com/api"
+revolut.base_url = "https://sandbox-oba-auth.revolut.com/"
+wellsfargo.base_url = "https://apitest.cybersource.com/"
+zift.base_url = "https://sandbox-secure.zift.io/"
+
+# Generic Events Configuration
+[events]
+enabled = false
+brokers = ["localhost:9092"]
+topic = "audit-trail-events"
+partition_key_field = "request_id"
+
+[unmasked_headers]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id","x-shadow-mode"]
+
+# Connectors that require an external API call for webhook source verification
+[webhook_source_verification_call] # comma-separated list of connector names (case-insensitive)
+connectors_with_webhook_source_verification_call = "paypal" 
