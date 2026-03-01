@@ -170,56 +170,56 @@ jobs:
           path: |
             target/${{ matrix.target }}/release/libconnector_service_ffi.*
 
-      # All code generation runs once from x86_64-linux. generate-all combines
-      # UniFFI bindings + proto stubs in a single make step per SDK.
+      # All code generation runs once from aarch64-apple-darwin (macOS ARM).
+      # generate-all combines UniFFI bindings + proto stubs in a single make step per SDK.
       # Java uploads two separate artifacts (one per output directory) so that
       # download-artifact can restore each to its exact path without relying on
       # upload-artifact's multi-path common-prefix computation.
 
       - name: Verify FFI library has UniFFI scaffolding
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-apple-darwin'
         run: |
-          count=$(nm -D target/${{ matrix.target }}/release/libconnector_service_ffi.so \
-                  2>/dev/null | grep -c "uniffi_" || echo 0)
+          count=$(nm target/${{ matrix.target }}/release/libconnector_service_ffi.dylib \
+                  2>/dev/null | grep -c "_uniffi_" || echo 0)
           echo "uniffi_ symbols in library: $count"
           [ "$count" -gt 0 ] || \
             (echo "ERROR: library missing uniffi scaffolding — was it built with --features uniffi?" && exit 1)
 
       - name: Generate Java SDK (UniFFI Kotlin bindings + Java proto stubs)
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-apple-darwin'
         run: make -C sdk/java generate-all
 
       - name: Upload UniFFI Kotlin bindings
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-apple-darwin'
         uses: actions/upload-artifact@v4
         with:
           name: generated-kotlin
           path: sdk/java/src/main/kotlin/generated/
 
       - name: Upload Java proto stubs
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-apple-darwin'
         uses: actions/upload-artifact@v4
         with:
           name: generated-java-proto
           path: sdk/java/src/main/java/generated/
 
       - name: Generate Python SDK (UniFFI Python bindings + Python proto stubs)
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-apple-darwin'
         run: make -C sdk/python generate-all
 
       - name: Upload Python SDK generated files
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-apple-darwin'
         uses: actions/upload-artifact@v4
         with:
           name: generated-python
           path: sdk/python/src/payments/generated/
 
       - name: Generate JavaScript SDK (JS proto stubs + native lib)
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-apple-darwin'
         run: make -C sdk/javascript generate-all
 
       - name: Upload JavaScript SDK generated files
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-apple-darwin'
         uses: actions/upload-artifact@v4
         with:
           name: generated-javascript
