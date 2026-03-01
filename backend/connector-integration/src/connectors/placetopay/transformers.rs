@@ -7,7 +7,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     utils,
@@ -113,7 +113,10 @@ pub struct PlacetopayAmount {
 pub struct PlacetopayInstrument<
     T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
-    card: PlacetopayCard<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    card: Option<PlacetopayCard<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    account: Option<PlacetopayAch>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -122,6 +125,39 @@ pub struct PlacetopayCard<T: PaymentMethodDataTypes + Debug + Sync + Send + 'sta
     number: RawCardNumber<T>,
     expiration: Secret<String>,
     cvv: Secret<String>,
+}
+
+// ACH Bank Account Type for Placetopay
+// Maps to account_type field in the API
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum PlacetopayAccountType {
+    /// Checking account (maps from BankType::Checking)
+    Dda,
+    /// Savings account (maps from BankType::Savings)
+    Sav,
+}
+
+impl From<common_enums::BankType> for PlacetopayAccountType {
+    fn from(bank_type: common_enums::BankType) -> Self {
+        match bank_type {
+            common_enums::BankType::Checking => Self::Dda,
+            common_enums::BankType::Savings => Self::Sav,
+        }
+    }
+}
+
+/// ACH Bank Debit data structure for Placetopay
+/// Used for processing ACH (Automated Clearing House) bank debit payments
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacetopayAch {
+    /// Bank routing number (max 17 chars)
+    bank_code: Secret<String>,
+    /// Account type: SAV (Savings), DDA (Checking), or CCD (Corporate)
+    account_type: PlacetopayAccountType,
+    /// Bank account number (max 17 chars)
+    account_number: Secret<String>,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -181,15 +217,59 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     auth,
                     payment,
                     instrument: PlacetopayInstrument {
-                        card: card.to_owned(),
+                        card: Some(card),
+                        account: None,
                     },
                 })
             }
+            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_type,
+                ..
+            }) => {
+                // Map bank_type to Placetopay account type
+                // bank_type is required for ACH payments
+                let account_type = match bank_type {
+                    Some(bt) => PlacetopayAccountType::from(bt),
+                    None => {
+                        return Err(ConnectorError::MissingRequiredField {
+                            field_name: "bank_type",
+                        }
+                        .into());
+                    }
+                };
+
+                let ach = PlacetopayAch {
+                    bank_code: routing_number.clone(),
+                    account_type,
+                    account_number: account_number.clone(),
+                };
+
+                Ok(Self {
+                    ip_address,
+                    user_agent,
+                    auth,
+                    payment,
+                    instrument: PlacetopayInstrument {
+                        card: None,
+                        account: Some(ach),
+                    },
+                })
+            }
+            PaymentMethodData::BankDebit(
+                BankDebitData::SepaBankDebit { .. }
+                | BankDebitData::BecsBankDebit { .. }
+                | BankDebitData::BacsBankDebit { .. }
+                | BankDebitData::SepaGuaranteedBankDebit { .. },
+            ) => Err(ConnectorError::NotImplemented(
+                "Only ACH BankDebit is supported for Placetopay".to_string(),
+            )
+            .into()),
             PaymentMethodData::Wallet(_)
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
             | PaymentMethodData::BankTransfer(_)
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::MandatePayment
