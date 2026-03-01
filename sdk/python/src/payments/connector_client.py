@@ -15,12 +15,13 @@ import requests as http_requests
 
 from payments.generated.connector_service_ffi import authorize_req_transformer, authorize_res_transformer
 from payments.generated.payment_pb2 import PaymentServiceAuthorizeResponse
+from payments.generated.sdk_options_pb2 import Options, FfiOptions
 
 
 class ConnectorClient:
     """High-level client for connector payment operations via UniFFI FFI."""
 
-    def authorize(self, request, metadata: dict) -> PaymentServiceAuthorizeResponse:
+    def authorize(self, request, metadata: dict, options: Options = None) -> PaymentServiceAuthorizeResponse:
         """Execute a full authorize round-trip: FFI request build -> HTTP -> FFI response parse.
 
         Args:
@@ -29,6 +30,7 @@ class ConnectorClient:
                 - "connector": connector name (e.g. "Stripe")
                 - "connector_auth_type": JSON string of auth config
                 - x-* headers for masked metadata
+            options: Optional Options protobuf message with ffi and http configuration.
 
         Returns:
             PaymentServiceAuthorizeResponse protobuf message.
@@ -36,8 +38,15 @@ class ConnectorClient:
         # Step 1: Serialize the protobuf request to bytes
         request_bytes = request.SerializeToString()
 
+        # Extract FfiOptions from options if provided
+        options_bytes = None
+        if options is not None and options.HasField('ffi'):
+            ffi_options = FfiOptions()
+            ffi_options.CopyFrom(options.ffi)
+            options_bytes = ffi_options.SerializeToString()
+
         # Step 2: Build the connector HTTP request via FFI
-        connector_request_json = authorize_req_transformer(request_bytes, metadata)
+        connector_request_json = authorize_req_transformer(request_bytes, metadata, options_bytes)
         connector_request = json.loads(connector_request_json)
 
         url = connector_request["url"]
@@ -61,6 +70,7 @@ class ConnectorClient:
             response_headers,
             request_bytes,
             metadata,
+            options_bytes,
         )
 
         # Step 5: Deserialize the protobuf response

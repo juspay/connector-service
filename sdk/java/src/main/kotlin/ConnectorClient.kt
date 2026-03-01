@@ -20,6 +20,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import ucs.v2.Payment.PaymentServiceAuthorizeRequest
 import ucs.v2.Payment.PaymentServiceAuthorizeResponse
+import ucs.v2.Options
+import ucs.v2.FfiOptions
 
 class ConnectorClient {
 
@@ -30,17 +32,26 @@ class ConnectorClient {
      *
      * @param request A PaymentServiceAuthorizeRequest protobuf message.
      * @param metadata Map with connector routing and auth info.
+     * @param options Optional Options protobuf message with ffi and http configuration.
      * @return PaymentServiceAuthorizeResponse protobuf message.
      */
     fun authorize(
         request: PaymentServiceAuthorizeRequest,
         metadata: Map<String, String>,
+        options: Options? = null,
     ): PaymentServiceAuthorizeResponse {
         // Step 1: Serialize the protobuf request to bytes
         val requestBytes = request.toByteArray()
 
+        // Extract FfiOptions from options if provided
+        val optionsBytes: ByteArray? = options?.let {
+            if (it.hasFfi()) {
+                it.ffi.toByteArray()
+            } else null
+        }
+
         // Step 2: Build the connector HTTP request via FFI
-        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata)
+        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata, optionsBytes)
         val connectorRequest = JSONObject(connectorRequestJson)
 
         val url = connectorRequest.getString("url")
@@ -80,6 +91,7 @@ class ConnectorClient {
             responseHeaders,
             requestBytes,
             metadata,
+            optionsBytes,
         )
 
         // Step 5: Deserialize the protobuf response
