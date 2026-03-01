@@ -46,7 +46,7 @@ required-features = ["uniffi-cli"]
 [features]
 default = ["uniffi"]
 uniffi = ["dep:uniffi"]
-uniffi-cli = ["dep:uniffi", "uniffi/cli"]
+uniffi-cli = ["uniffi", "uniffi/cli"]
 c-ffi = []
 
 [lints]

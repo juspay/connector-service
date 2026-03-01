@@ -42,12 +42,7 @@ endif
 # Pre-built FFI library for the current platform (output of build-ffi-lib).
 LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/release/libconnector_service_ffi.$(LIB_EXT)
 
-# uniffi-bindgen is compiled into an ISOLATED target directory so that cargo
-# never overwrites the pre-built library as a side-effect of feature-set changes
-# (uniffi-cli vs uniffi). Using a separate --target-dir guarantees LIBRARY
-# always points to the original artifact produced by build-ffi-lib.
-UNIFFI_CLI_DIR := $(REPO_ROOT)/target-uniffi-cli
-BINDGEN        := $(UNIFFI_CLI_DIR)/$(PLATFORM)/release/uniffi-bindgen
+BINDGEN := $(REPO_ROOT)/target/$(PLATFORM)/release/uniffi-bindgen
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -79,21 +74,15 @@ build-ffi-lib:
 
 # ---------------------------------------------------------------------------
 # generate-bindings
-# Builds the uniffi-bindgen binary (into $(UNIFFI_CLI_DIR)) then rebuilds the
-# FFI library with --features uniffi to guarantee scaffolding symbols are
-# present before running uniffi-bindgen generate. Building uniffi-bindgen uses
-# --features uniffi-cli which can overwrite the cdylib in target/ despite
-# --target-dir; the trailing build-ffi-lib call corrects that.
+# Builds the uniffi-bindgen binary then runs uniffi-bindgen generate.
+# uniffi-cli implies uniffi (scaffolding), so no second build-ffi-lib call is
+# needed. All deps compiled by build-ffi-lib are reused from the shared
+# target/ directory — only ffi itself and uniffi/cli need recompiling.
 # ---------------------------------------------------------------------------
 generate-bindings:
-	@echo "Building uniffi-bindgen (isolated dir: $(UNIFFI_CLI_DIR))..."
+	@echo "Building uniffi-bindgen..."
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi-cli \
-		--release --target $(PLATFORM) --bin uniffi-bindgen \
-		--target-dir $(UNIFFI_CLI_DIR)
-	@# The uniffi-cli build can overwrite the library in target/ (Cargo builds all declared
-	@# crate-types: cdylib, rlib, staticlib). Rebuild with --features uniffi to ensure the
-	@# scaffolding symbols are present before uniffi-bindgen generate reads the library.
-	@$(MAKE) build-ffi-lib
+		--release --target $(PLATFORM) --bin uniffi-bindgen
 	@echo "Generating UniFFI Kotlin bindings from $(LIBRARY)..."
 	@mkdir -p $(GENERATED_KOTLIN) $(NATIVE_DIR)
 	@cp -f $(LIBRARY) $(NATIVE_DIR)/
