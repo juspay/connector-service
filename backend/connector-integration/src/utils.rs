@@ -31,6 +31,31 @@ type Error = Report<errors::ConnectorError>;
 use common_enums::enums;
 use serde::{Deserialize, Serialize};
 
+pub fn build_form_from_struct<T: Serialize>(
+    data: T,
+) -> Result<common_utils::request::MultipartData, errors::ParsingError> {
+    use common_utils::request::MultipartData;
+    let mut form = MultipartData::new();
+    let serialized =
+        serde_json::to_value(&data).map_err(|_| errors::ParsingError::EncodeError("json-value"))?;
+    let serialized_object = serialized
+        .as_object()
+        .ok_or(errors::ParsingError::EncodeError("Expected object"))?;
+    for (key, values) in serialized_object {
+        let value = match values {
+            Value::String(s) => s.clone(),
+            Value::Number(n) => n.to_string(),
+            Value::Bool(b) => b.to_string(),
+            Value::Array(_) | Value::Object(_) | Value::Null => {
+                tracing::warn!(field = %key, "Form construction encountered a non-primitive type. Skipping field or using empty string.");
+                "".to_string()
+            }
+        };
+        form.add_text(key.clone(), value.clone());
+    }
+    Ok(form)
+}
+
 #[macro_export]
 macro_rules! with_error_response_body {
     ($event_builder:ident, $response:ident) => {

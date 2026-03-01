@@ -8,7 +8,7 @@ use common_utils::{
     errors::CustomResult,
     ext_traits::Encode,
     pii::Email,
-    request::Method,
+    request::{Method, MultipartData},
     types::StringMajorUnit,
 };
 use domain_types::{
@@ -40,7 +40,10 @@ use url::Url;
 use crate::{
     connectors::{fiuu::FiuuRouterData, macros::GetFormData},
     types::ResponseRouterData,
-    utils::qr_code::{QrCodeInformation, QrImage},
+    utils::{
+        build_form_from_struct,
+        qr_code::{QrCodeInformation, QrImage},
+    },
 };
 
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
@@ -2339,13 +2342,13 @@ pub enum FiuuPaymentsRequest<
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> GetFormData
     for FiuuPaymentsRequest<T>
 {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
+    fn get_form_data(&self) -> MultipartData {
         match self {
             Self::FiuuPaymentRequest(req) => {
-                build_form_from_struct(req).unwrap_or_else(|_| reqwest::multipart::Form::new())
+                build_form_from_struct(req).unwrap_or_else(|_| MultipartData::new())
             }
             Self::FiuuMandateRequest(req) => {
-                build_form_from_struct(req).unwrap_or_else(|_| reqwest::multipart::Form::new())
+                build_form_from_struct(req).unwrap_or_else(|_| MultipartData::new())
             }
         }
     }
@@ -2353,55 +2356,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> GetFormData
     for FiuuPaymentRequest<T>
 {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for FiuuPaymentSyncRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for PaymentCaptureRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for FiuuPaymentCancelRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for FiuuRefundRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for FiuuRefundSyncRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
-}
-
-pub fn build_form_from_struct<T: Serialize>(
-    data: T,
-) -> Result<reqwest::multipart::Form, errors::ParsingError> {
-    let mut form = reqwest::multipart::Form::new();
-    let serialized =
-        serde_json::to_value(&data).map_err(|_| errors::ParsingError::EncodeError("json-value"))?;
-    let serialized_object = serialized
-        .as_object()
-        .ok_or(errors::ParsingError::EncodeError("Expected object"))?;
-    for (key, values) in serialized_object {
-        let value = match values {
-            Value::String(s) => s.clone(),
-            Value::Number(n) => n.to_string(),
-            Value::Bool(b) => b.to_string(),
-            Value::Array(_) | Value::Object(_) | Value::Null => "".to_string(),
-        };
-        form = form.text(key.clone(), value.clone());
-    }
-    Ok(form)
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
