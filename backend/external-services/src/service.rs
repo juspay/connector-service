@@ -677,7 +677,15 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::FormData(data)) => {
+                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
+                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
+                        })?;
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
+                    }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -698,7 +706,15 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::FormData(data)) => {
+                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
+                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
+                        })?;
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
+                    }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -719,7 +735,15 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::FormData(data)) => {
+                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
+                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
+                        })?;
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
+                    }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -740,7 +764,15 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::FormData(data)) => {
+                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
+                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
+                        })?;
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
+                    }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -866,7 +898,7 @@ fn get_base_client(
     should_bypass_proxy: bool,
     test_mode: bool,
 ) -> CustomResult<Client, ApiClientError> {
-    // Check if proxy configuration is provided using cache_key method
+    // Check if proxy configuration is provided using cache_key
     if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy) {
         tracing::debug!(
             "Using proxy-specific client cache with key: {:?}",
