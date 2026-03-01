@@ -2,7 +2,8 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
-use grpc_server::{app, configs};
+use grpc_server::app;
+use ucs_env::configs;
 mod common;
 mod utils;
 
@@ -119,18 +120,25 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         shipping_address: None,
     };
     PaymentServiceAuthorizeRequest {
-        amount: TEST_AMOUNT,
-        minor_amount: TEST_AMOUNT,
-        currency: i32::from(Currency::Usd),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some("https://hyperswitch.io/".to_string()),
         webhook_url: Some("https://hyperswitch.io/".to_string()),
-        email: Some(TEST_EMAIL.to_string().into()),
+        customer: Some(grpc_api_types::payments::Customer {
+            email: Some(TEST_EMAIL.to_string().into()),
+            name: None,
+            id: None,
+            connector_id: None,
+            phone_number: None,
+        }),
         address: Some(address),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        request_ref_id: Some(Identifier {
+        merchant_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("novalnet_test"))),
         }),
         enrolled_for_3ds: Some(false),

@@ -107,6 +107,15 @@ impl std::fmt::Debug for MaskedMetadata {
     }
 }
 
+impl Default for MaskedMetadata {
+    fn default() -> Self {
+        Self {
+            raw_metadata: tonic::metadata::MetadataMap::new(),
+            masking_config: HeaderMaskingConfig::default(),
+        }
+    }
+}
+
 impl MaskedMetadata {
     pub fn new(
         raw_metadata: tonic::metadata::MetadataMap,

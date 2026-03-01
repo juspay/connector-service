@@ -1,22 +1,21 @@
+use crate::http::handlers::macros::http_handler;
+use crate::http::{
+    error::HttpError, http_headers_to_grpc_metadata, state::AppState,
+    transfer_config_to_grpc_request, utils::ValidatedJson,
+};
 use axum::{
     extract::{Extension, State},
     http::{HeaderMap, StatusCode},
     Json,
 };
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, AcceptDisputeRequest, AcceptDisputeResponse,
-    DisputeDefendRequest, DisputeDefendResponse, DisputeResponse, DisputeServiceGetRequest,
-    DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,
-    DisputeServiceTransformRequest, DisputeServiceTransformResponse,
+    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
+    DisputeServiceSubmitEvidenceResponse, EventServiceHandleRequest, EventServiceHandleResponse,
 };
 use std::sync::Arc;
-
-use crate::configs::Config;
-use crate::http::handlers::macros::http_handler;
-use crate::http::{
-    error::HttpError, http_headers_to_grpc_metadata, state::AppState,
-    transfer_config_to_grpc_request, utils::ValidatedJson,
-};
+use ucs_env::configs::Config;
 
 http_handler!(
     submit_evidence,
@@ -36,24 +35,24 @@ http_handler!(
 
 http_handler!(
     defend_dispute,
-    DisputeDefendRequest,
-    DisputeDefendResponse,
+    DisputeServiceDefendRequest,
+    DisputeServiceDefendResponse,
     defend,
     disputes_service
 );
 
 http_handler!(
     accept_dispute,
-    AcceptDisputeRequest,
-    AcceptDisputeResponse,
+    DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse,
     accept,
     disputes_service
 );
 
 http_handler!(
     transform_dispute,
-    DisputeServiceTransformRequest,
-    DisputeServiceTransformResponse,
-    transform,
+    EventServiceHandleRequest,
+    EventServiceHandleResponse,
+    handle_event,
     disputes_service
 );

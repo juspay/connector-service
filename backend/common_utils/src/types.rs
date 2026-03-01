@@ -412,6 +412,15 @@ impl StringMajorUnit {
     }
 }
 
+#[derive(
+    Default, Debug, serde::Deserialize, serde::Serialize, Clone, PartialEq, Eq, Hash, ToSchema,
+)]
+
+pub struct Money {
+    pub amount: MinorUnit,
+    pub currency: enums::Currency,
+}
+
 /// A type representing a range of time for filtering, including a mandatory start time and an optional end time.
 #[derive(
     Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash, ToSchema,

@@ -1,0 +1,22 @@
+{
+  "name": "hyperswitch-payments",
+  "version": "0.1.0",
+  "description": "Hyperswitch Payments SDK — Node.js client for connector integrations via UniFFI FFI",
+  "main": "src/payments/index.js",
+  "files": [
+    "src/payments/**/*.js",
+    "src/payments/**/*.d.ts",
+    "src/payments/generated/libconnector_service_ffi.*"
+  ],
+  "scripts": {
+    "start": "node examples/example.js",
+    "test": "node examples/example.js"
+  },
+  "dependencies": {
+    "koffi": "^2.9.0",
+    "protobufjs": "^7.4.0"
+  },
+  "devDependencies": {
+    "protobufjs-cli": "^1.1.3"
+  }
+}

@@ -13,7 +13,10 @@ members = [
   "backend/domain_types",
   "backend/tracing-kafka",
   "backend/cards",
-  "backend/composite-service"
+  "sdk/rust",
+  "backend/composite-service",
+  "backend/ucs_env",
+  "backend/ffi"
 ]
 exclude = [
   "examples/example-rs",
@@ -24,7 +27,7 @@ exclude = [
 
 [profile.release]
 strip = true
-lto = true
+lto = "thin"
 codegen-units = 1
 
 

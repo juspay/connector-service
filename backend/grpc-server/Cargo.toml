@@ -18,6 +18,8 @@ config_patch_derive = { path = "../config_patch_derive" }
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking" }
 injector = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0" }
 tracing-kafka = { path = "../tracing-kafka", optional = true }
+ucs_env = { path = "../ucs_env" }
+ffi = { path = "../ffi", package = "ffi"}
 
 # Third-party dependencies
 config = "0.14.0"

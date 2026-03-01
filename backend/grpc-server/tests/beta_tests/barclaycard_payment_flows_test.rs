@@ -5,7 +5,8 @@
 // NOTE: These tests use #[serial] attribute to run sequentially
 // This stops tests from failing due to parallel run
 
-use grpc_server::{app, configs};
+use grpc_server::app;
+use ucs_env::configs;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serial_test::serial;
 mod common;

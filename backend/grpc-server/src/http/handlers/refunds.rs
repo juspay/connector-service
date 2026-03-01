@@ -4,17 +4,17 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,
-    RefundServiceTransformRequest, RefundServiceTransformResponse,
+    refund_service_server::RefundService, EventServiceHandleRequest, EventServiceHandleResponse,
+    RefundResponse, RefundServiceGetRequest,
 };
 use std::sync::Arc;
 
-use crate::configs::Config;
 use crate::http::handlers::macros::http_handler;
 use crate::http::{
     error::HttpError, http_headers_to_grpc_metadata, state::AppState,
     transfer_config_to_grpc_request, utils::ValidatedJson,
 };
+use ucs_env::configs::Config;
 
 http_handler!(
     get_refund,
@@ -26,8 +26,8 @@ http_handler!(
 
 http_handler!(
     transform_refund,
-    RefundServiceTransformRequest,
-    RefundServiceTransformResponse,
-    transform,
+    EventServiceHandleRequest,
+    EventServiceHandleResponse,
+    handle_event,
     refunds_service
 );

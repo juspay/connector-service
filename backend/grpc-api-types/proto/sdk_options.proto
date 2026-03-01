@@ -1,0 +1,86 @@
+// Copyright (c) Juspay Technologies. All rights reserved.
+//
+// Package: ucs.v2
+// File: sdk_options.proto
+//
+// Overview:
+//   Configuration options for the Connector SDK.
+//   - HttpOptions: Used by SDK to control HTTP request behavior
+//   - EnvOptions, VaultOptions: Used by UniFFI Bindings for runtime behavior
+
+syntax = "proto3";
+
+package ucs.v2;
+
+option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
+
+// ============================================================
+// HTTP Options (SDK-side)
+// ============================================================
+
+// HTTP client configuration options
+message HttpOptions {
+  // Total timeout for entire request (milliseconds)
+  optional uint32 total_timeout_ms = 1;
+
+  // Connection timeout (milliseconds)
+  optional uint32 connect_timeout_ms = 2;
+
+  // Response timeout (milliseconds)
+  optional uint32 response_timeout_ms = 3;
+
+  // Keep-alive timeout (milliseconds)
+  optional uint32 keep_alive_timeout_ms = 4;
+
+  // Proxy configuration
+  optional ProxyOptions proxy = 5;
+
+  // CA certificate (DER-encoded)
+  optional bytes ca_cert = 6;
+}
+
+// Proxy configuration
+message ProxyOptions {
+  // HTTP proxy URL
+  optional string http_url = 1;
+
+  // HTTPS proxy URL
+  optional string https_url = 2;
+
+  // URLs that should bypass proxy
+  repeated string bypass_urls = 3;
+}
+
+// ============================================================
+// FFI Options (Bindings-side)
+// ============================================================
+
+// Environment configuration options
+message EnvOptions {
+  // Whether to use sandbox/prod mode
+  bool test_mode = 1;
+}
+
+// Vault configuration options (placeholder for future)
+message VaultOptions {
+  // Reserved for future vault/secrets integration
+}
+
+// Combined FFI options for UniFFI bindings
+message FfiOptions {
+  optional EnvOptions env = 1;
+  optional VaultOptions vault = 2;
+}
+
+// ============================================================
+// Combined SDK Options
+// ============================================================
+
+// Unified SDK configuration options
+message Options {
+  // HTTP client configuration (SDK-side)
+  optional HttpOptions http = 1;
+
+  // FFI/Bindings configuration (Bindings-side)
+  optional FfiOptions ffi = 2;
+}

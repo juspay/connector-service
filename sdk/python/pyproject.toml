@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperswitch-payments"
+version = "0.1.0"
+description = "Hyperswitch Payments SDK — Python client for connector integrations via UniFFI FFI"
+requires-python = ">=3.8"
+dependencies = ["requests>=2.28.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+payments = ["generated/*.dylib", "generated/*.so"]

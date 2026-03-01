@@ -12,11 +12,12 @@ use grpc_api_types::payments::{
     AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, Currency, Identifier,
     PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
 };
-use grpc_server::{app, configs};
+use grpc_server::app;
 use hyperswitch_masking::Secret;
 use serde_json::json;
 use std::str::FromStr;
 use tonic::{transport::Channel, Request};
+use ucs_env::configs;
 mod common;
 
 #[tokio::test]
@@ -27,10 +28,17 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
         // .unwrap();
         // Create a request with configuration override
         let mut request = Request::new(PaymentServiceAuthorizeRequest {
-            amount: 1000,
-            minor_amount: 1000,
-            currency: Currency::Inr as i32,
-            email: Some(Secret::new("example@gmail.com".to_string())),
+            amount: Some(grpc_api_types::payments::Money {
+                minor_amount: 1000,
+                currency: Currency::Inr as i32,
+            }),
+            customer: Some(grpc_api_types::payments::Customer {
+                email: Some(Secret::new("example@gmail.com".to_string())),
+                name: None,
+                id: None,
+                connector_id: None,
+                phone_number: None,
+            }),
             payment_method: Some(PaymentMethod {
                 payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
                     card_number: Some(CardNumber::from_str("5123456789012346").unwrap()),
@@ -62,7 +70,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
                 java_enabled: Some(false),
                 ..Default::default()
             }),
-            request_ref_id: Some(Identifier {
+            merchant_transaction_id: Some(Identifier {
                 id_type: Some(IdType::Id("payment_9089".to_string())),
             }),
             return_url: Some("www.google.com".to_string()),
@@ -126,15 +134,15 @@ mod unit {
     use base64::{engine::general_purpose, Engine as _};
     use common_utils::{config_patch::Patch, consts, metadata::MaskedMetadata};
     use config_patch_derive::Patch as PatchDerive;
-    use grpc_server::configs;
-    use grpc_server::configs::Config;
-    use grpc_server::logger::config::{LogFormat, LogKafka};
     use grpc_server::utils::merge_config_with_override;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use std::fmt::Debug;
     use std::sync::Arc;
     use tonic::metadata::MetadataMap;
+    use ucs_env::configs;
+    use ucs_env::configs::Config;
+    use ucs_env::logger::config::{LogFormat, LogKafka};
 
     fn base_config() -> Config {
         Config::new().expect("default config should load")
