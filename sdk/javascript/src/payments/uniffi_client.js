@@ -36,17 +36,17 @@ function loadLib(libPath) {
 
   const lib = koffi.load(libPath);
 
-  return {
-    authorize_req: lib.func(
-      "uniffi_connector_service_ffi_fn_func_authorize_req_transformer",
-      RustBuffer,
-      [RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
-    ),
-    authorize_res: lib.func(
-      "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
-      RustBuffer,
-      [RustBuffer, "uint16", RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
-    ),
+    return {
+        authorize_req: lib.func(
+            "uniffi_connector_service_ffi_fn_func_authorize_req_transformer",
+            RustBuffer,
+            [RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
+        ),
+        authorize_res: lib.func(
+            "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
+            RustBuffer,
+            [RustBuffer, "uint16", RustBuffer, RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
+        ),
     alloc: lib.func(
       "ffi_connector_service_ffi_rustbuffer_alloc",
       RustBuffer,
@@ -195,14 +195,16 @@ class UniffiClient {
    * Build the connector HTTP request.
    * @param {Buffer|Uint8Array} requestBytes - protobuf-encoded PaymentServiceAuthorizeRequest
    * @param {Object<string,string>} metadata - connector routing + auth metadata
+   * @param {Buffer|Uint8Array} [optionsBytes] - optional protobuf-encoded FfiOptions
    * @returns {string} JSON string: {url, method, headers, body}
    */
-  authorizeReq(requestBytes, metadata) {
+  authorizeReq(requestBytes, metadata, optionsBytes = null) {
     const status = makeCallStatus();
     const rbRequest = lowerBytes(this._ffi, requestBytes);
     const rbMetadata = lowerMap(this._ffi, metadata);
+    const rbOptions = optionsBytes ? lowerBytes(this._ffi, optionsBytes) : lowerBytes(this._ffi, Buffer.alloc(0));
 
-    const result = this._ffi.authorize_req(rbRequest, rbMetadata, status);
+    const result = this._ffi.authorize_req(rbRequest, rbMetadata, rbOptions, status);
 
     try {
       checkCallStatus(this._ffi, status);
@@ -220,14 +222,16 @@ class UniffiClient {
    * @param {Object<string,string>} responseHeaders - HTTP response headers
    * @param {Buffer|Uint8Array} requestBytes - original protobuf request bytes
    * @param {Object<string,string>} metadata - original metadata
+   * @param {Buffer|Uint8Array} [optionsBytes] - optional protobuf-encoded FfiOptions
    * @returns {Buffer} protobuf-encoded PaymentServiceAuthorizeResponse
    */
-  authorizeRes(responseBody, statusCode, responseHeaders, requestBytes, metadata) {
+  authorizeRes(responseBody, statusCode, responseHeaders, requestBytes, metadata, optionsBytes = null) {
     const status = makeCallStatus();
     const rbResponseBody = lowerBytes(this._ffi, responseBody);
     const rbResponseHeaders = lowerMap(this._ffi, responseHeaders);
     const rbRequestBytes = lowerBytes(this._ffi, requestBytes);
     const rbMetadata = lowerMap(this._ffi, metadata);
+    const rbOptions = optionsBytes ? lowerBytes(this._ffi, optionsBytes) : lowerBytes(this._ffi, Buffer.alloc(0));
 
     const result = this._ffi.authorize_res(
       rbResponseBody,
@@ -235,6 +239,7 @@ class UniffiClient {
       rbResponseHeaders,
       rbRequestBytes,
       rbMetadata,
+      rbOptions,
       status
     );
 

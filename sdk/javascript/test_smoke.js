@@ -16,6 +16,10 @@ const PaymentServiceAuthorizeRequest = ucs.v2.PaymentServiceAuthorizeRequest;
 const Currency = ucs.v2.Currency;
 const CaptureMethod = ucs.v2.CaptureMethod;
 const AuthenticationType = ucs.v2.AuthenticationType;
+const Options = ucs.v2.Options;
+const HttpOptions = ucs.v2.HttpOptions;
+const FfiOptions = ucs.v2.FfiOptions;
+const EnvOptions = ucs.v2.EnvOptions;
 
 console.log("Loaded hyperswitch-payments from node_modules");
 console.log(`  ConnectorClient: ${typeof ConnectorClient}`);
@@ -32,6 +36,19 @@ const metadata = {
   "x-auth": "body-key",
   "x-api-key": apiKey,
 };
+
+// Create options with both HttpOptions and FfiOptions
+const options = Options.create({
+  http: HttpOptions.create({
+    totalTimeoutMs: 30000,
+    connectTimeoutMs: 10000,
+    responseTimeoutMs: 20000,
+    keepAliveTimeoutMs: 5000,
+  }),
+  ffi: FfiOptions.create({
+    env: EnvOptions.create({ testMode: true })
+  })
+});
 
 const requestMsg = PaymentServiceAuthorizeRequest.create({
   requestRefId: { id: "test_pack_123" },
@@ -64,10 +81,13 @@ const requestBytes = Buffer.from(
   PaymentServiceAuthorizeRequest.encode(requestMsg).finish()
 );
 
+// Serialize options to bytes for low-level FFI test
+const optionsBytes = Buffer.from(Options.encode(options).finish());
+
 // --- Test 1: Low-level FFI ---
 console.log("\n=== Test 1: Low-level FFI (UniffiClient.authorizeReq) ===");
 const uniffi = new UniffiClient();
-const result = uniffi.authorizeReq(requestBytes, metadata);
+const result = uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
 const parsed = JSON.parse(result);
 console.log(`  URL:    ${parsed.url}`);
 console.log(`  Method: ${parsed.method}`);
@@ -85,7 +105,7 @@ async function testRoundTrip() {
 
   const client = new ConnectorClient();
   try {
-    const response = await client.authorize(requestMsg, metadata);
+    const response = await client.authorize(requestMsg, metadata, options);
     console.log(`  Response type: ${typeof response}`);
     console.log(`  Response keys: ${Object.keys(response)}`);
     console.log("  PASSED");

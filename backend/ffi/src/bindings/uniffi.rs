@@ -14,9 +14,9 @@ mod uniffi_bindings_inner {
     use domain_types::router_response_types::Response;
     use external_services::service::extract_raw_connector_request;
     use grpc_api_types::payments::{
-        MerchantAuthenticationServiceCreateAccessTokenRequest, PaymentServiceAuthorizeRequest,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceVoidRequest,
+        FfiOptions, MerchantAuthenticationServiceCreateAccessTokenRequest,
+        PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest,
     };
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
@@ -58,11 +58,28 @@ mod uniffi_bindings_inner {
             .map_err(|e| UniffiError::MetadataParseError { msg: e.to_string() })
     }
 
+    /// Parse FfiOptions from optional bytes and extract test_mode.
+    ///
+    /// # Arguments
+    /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional, can be empty)
+    ///
+    /// # Returns
+    /// `Some(test_mode)` if FfiOptions is provided and parseable, `None` otherwise
+    fn parse_ffi_options(options_bytes: Vec<u8>) -> Option<bool> {
+        if options_bytes.is_empty() {
+            return None;
+        }
+        let ffi_options = FfiOptions::decode(Bytes::from(options_bytes)).ok()?;
+        // Extract test_mode from EnvOptions
+        ffi_options.env.as_ref().map(|env| env.test_mode)
+    }
+
     /// Build the connector HTTP request.
     ///
     /// # Arguments
     /// - `request_bytes`: protobuf-encoded `PaymentServiceAuthorizeRequest`
     /// - `metadata`: flat map with keys `connector` and `connector_auth_type`
+    /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
     ///
     /// # Returns
     /// JSON string: `{"url":"...","method":"POST","headers":{...},"body":{...}}`
@@ -70,6 +87,7 @@ mod uniffi_bindings_inner {
     pub fn authorize_req_transformer(
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
+        options_bytes: Vec<u8>,
     ) -> Result<String, UniffiError> {
         let payload = PaymentServiceAuthorizeRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
@@ -83,8 +101,10 @@ mod uniffi_bindings_inner {
             masked_metadata: Some(masked_metadata),
         };
 
+        let ffi_options = parse_ffi_options(options_bytes);
+
         let result =
-            authorize_req_handler(request, None).map_err(|e| UniffiError::HandlerError {
+            authorize_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
                 msg: format!("{e:?}"),
             })?;
 

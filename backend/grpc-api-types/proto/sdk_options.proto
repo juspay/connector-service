@@ -71,3 +71,16 @@ message FfiOptions {
   optional EnvOptions env = 1;
   optional VaultOptions vault = 2;
 }
+
+// ============================================================
+// Combined SDK Options
+// ============================================================
+
+// Unified SDK configuration options
+message Options {
+  // HTTP client configuration (SDK-side)
+  optional HttpOptions http = 1;
+
+  // FFI/Bindings configuration (Bindings-side)
+  optional FfiOptions ffi = 2;
+}
