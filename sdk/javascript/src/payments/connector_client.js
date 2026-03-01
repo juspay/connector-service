@@ -32,20 +32,20 @@ class ConnectorClient {
    * Execute a full authorize round-trip.
    * @param {Object} requestMsg - PaymentServiceAuthorizeRequest message (plain object or Message instance)
    * @param {Object<string,string>} metadata - connector routing + auth metadata
-   * @param {Object} [options] - optional Options message with ffi and http configuration
+   * @param {Object} [ffiOptions] - optional FfiOptions message with ffi configuration
    * @returns {Promise<Object>} decoded PaymentServiceAuthorizeResponse message
    */
-  async authorize(requestMsg, metadata, options = null) {
+  async authorize(requestMsg, metadata, ffiOptions = null) {
     // Step 1: Serialize protobuf request to bytes
     const requestBytes = Buffer.from(
       PaymentServiceAuthorizeRequest.encode(requestMsg).finish()
     );
 
-    // Extract FfiOptions from options if provided
-    let optionsBytes = null;
-    if (options && options.ffi) {
-      const ffiOptions = FfiOptions.create(options.ffi);
-      optionsBytes = Buffer.from(FfiOptions.encode(ffiOptions).finish());
+    // Serialize FfiOptions to bytes if provided
+    let optionsBytes = Buffer.from([]);
+    if (ffiOptions) {
+      const ffi = FfiOptions.create(ffiOptions);
+      optionsBytes = Buffer.from(FfiOptions.encode(ffi).finish());
     }
 
     // Step 2: Build the connector HTTP request via FFI

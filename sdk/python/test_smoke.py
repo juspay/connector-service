@@ -18,7 +18,7 @@ from payments.generated.payment_pb2 import (
     AUTOMATIC,
     NO_THREE_DS,
 )
-from payments.generated.sdk_options_pb2 import Options, HttpOptions, FfiOptions, EnvOptions
+from payments.generated.sdk_options_pb2 import FfiOptions, EnvOptions
 
 print(f"Loaded payments package from: {__file__}")
 print(f"  ConnectorClient: {ConnectorClient}")
@@ -40,13 +40,10 @@ metadata = {
     "x-api-key": api_key,
 }
 
-# Create options with both HttpOptions and FfiOptions
-options = Options()
-options.http.total_timeout_ms = 30000
-options.http.connect_timeout_ms = 10000
-options.http.response_timeout_ms = 20000
-options.http.keep_alive_timeout_ms = 5000
-options.ffi.env.test_mode = True
+# Create FfiOptions with test_mode
+options = FfiOptions()
+options.env.test_mode = True
+options_bytes = options.SerializeToString()
 
 # Build a protobuf request
 req = PaymentServiceAuthorizeRequest()
@@ -70,7 +67,7 @@ req.test_mode = True
 
 # --- Test 1: Low-level FFI ---
 print("\n=== Test 1: Low-level FFI (authorize_req_transformer) ===")
-result = authorize_req_transformer(req.SerializeToString(), metadata, options.SerializeToString())
+result = authorize_req_transformer(req.SerializeToString(), metadata, options_bytes)
 parsed = json.loads(result)
 print(f"  URL:    {parsed['url']}")
 print(f"  Method: {parsed['method']}")

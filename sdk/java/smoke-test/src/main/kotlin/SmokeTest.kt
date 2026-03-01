@@ -15,8 +15,6 @@ import ucs.v2.Payment.PaymentAddress
 import ucs.v2.Payment.Currency
 import ucs.v2.Payment.CaptureMethod
 import ucs.v2.Payment.AuthenticationType
-import ucs.v2.Options
-import ucs.v2.HttpOptions
 import ucs.v2.FfiOptions
 import ucs.v2.EnvOptions
 
@@ -64,18 +62,10 @@ fun buildMetadata(): Map<String, String> {
     )
 }
 
-fun buildOptions(): Options {
-    return Options.newBuilder()
-        .setHttp(HttpOptions.newBuilder()
-            .setTotalTimeoutMs(30000)
-            .setConnectTimeoutMs(10000)
-            .setResponseTimeoutMs(20000)
-            .setKeepAliveTimeoutMs(5000)
-            .build())
-        .setFfi(FfiOptions.newBuilder()
-            .setEnv(EnvOptions.newBuilder()
-                .setTestMode(true)
-                .build())
+fun buildOptions(): FfiOptions {
+    return FfiOptions.newBuilder()
+        .setEnv(EnvOptions.newBuilder()
+            .setTestMode(true)
             .build())
         .build()
 }
