@@ -12,7 +12,7 @@ use domain_types::{
     },
     connector_types::{
         self, AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse,
-        ApplepaySessionTokenResponse, GooglePaySessionResponse, GpayMerchantInfo,
+        ApplepaySessionTokenResponse, EventType, GooglePaySessionResponse, GpayMerchantInfo,
         GpaySessionTokenData, GpaySessionTokenResponse, GpayShippingAddressParameters,
         GpayTransactionInfo, MandateReference, NextActionCall, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentRequestMetadata,
@@ -2437,18 +2437,82 @@ fn validate_currency(
     Ok(())
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct BraintreeWebhookResponse {
     pub bt_signature: String,
     pub bt_payload: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct Notification {
-    pub kind: String, // xml parse only string to fields
+#[serde(rename = "notification")]
+pub struct BraintreeWebhookDetails {
+    pub kind: BraintreeWebhookKind,
     pub timestamp: String,
+    pub subject: BraintreeSubject,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BraintreeSubject {
+    pub check: Option<bool>,
+    pub transaction: Option<BraintreeTransactionData>,
+    pub disbursement: Option<BraintreeDisbursementData>,
     pub dispute: Option<BraintreeDisputeData>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct BraintreeDisbursementData {
+    pub id: String,
+    pub success: bool,
+    pub amount: StringMajorUnit,
+    pub disbursement_date: String,
+    pub transaction_ids: BraintreeTransactionIds,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BraintreeTransactionIds {
+    #[serde(rename = "item")]
+    pub ids: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum BraintreeWebhookKind {
+    TransactionSettled,
+    TransactionSettlementDeclined,
+    Disbursement,
+    TransactionDisbursed,
+    DisputeOpened,
+    DisputeWon,
+    DisputeLost,
+    DisputeAccepted,
+    DisputeAutoAccepted,
+    DisputeExpired,
+    DisputeDisputed,
+    SubscriptionChargedSuccessfully,
+    SubscriptionChargedUnsuccessfully,
+    SubscriptionWentActive,
+    SubscriptionWentPastDue,
+    SubscriptionCanceled,
+    SubscriptionExpired,
+    AccountUpdaterDailyReport,
+    Check,
+    LocalPaymentCompleted,
+    SubMerchantAccountApproved,
+    LocalPaymentFunded,
+    LocalPaymentReversed,
+    LocalPaymentExpired,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub struct BraintreeTransactionData {
+    pub id: String,
+    pub status: BraintreePaymentStatus,
+    pub amount: StringMajorUnit,
+    pub currency_iso_code: enums::Currency,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -2706,5 +2770,36 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
         }
+    }
+}
+
+pub fn get_braintree_webhook_event_type(kind: BraintreeWebhookKind) -> EventType {
+    match kind {
+        BraintreeWebhookKind::TransactionSettled => EventType::PaymentIntentSuccess,
+        BraintreeWebhookKind::TransactionSettlementDeclined => EventType::PaymentIntentFailure,
+        BraintreeWebhookKind::Disbursement => EventType::PayoutSuccess,
+        BraintreeWebhookKind::TransactionDisbursed => EventType::PaymentIntentSuccess,
+        BraintreeWebhookKind::DisputeOpened => EventType::DisputeOpened,
+        BraintreeWebhookKind::DisputeWon => EventType::DisputeWon,
+        BraintreeWebhookKind::DisputeLost => EventType::DisputeLost,
+        BraintreeWebhookKind::DisputeAccepted | BraintreeWebhookKind::DisputeAutoAccepted => {
+            EventType::DisputeAccepted
+        }
+        BraintreeWebhookKind::DisputeExpired => EventType::DisputeExpired,
+        BraintreeWebhookKind::DisputeDisputed => EventType::DisputeChallenged,
+        BraintreeWebhookKind::SubscriptionChargedSuccessfully
+        | BraintreeWebhookKind::SubscriptionWentActive => EventType::PaymentIntentSuccess,
+        BraintreeWebhookKind::SubscriptionChargedUnsuccessfully
+        | BraintreeWebhookKind::SubscriptionWentPastDue => EventType::PaymentIntentFailure,
+        BraintreeWebhookKind::SubscriptionCanceled => EventType::PaymentIntentCancelled,
+        BraintreeWebhookKind::SubscriptionExpired => EventType::PaymentIntentExpired,
+        BraintreeWebhookKind::LocalPaymentCompleted => EventType::PaymentIntentSuccess,
+        BraintreeWebhookKind::LocalPaymentFunded => EventType::PaymentIntentProcessing,
+        BraintreeWebhookKind::LocalPaymentReversed => EventType::RefundSuccess,
+        BraintreeWebhookKind::LocalPaymentExpired => EventType::PaymentIntentExpired,
+        BraintreeWebhookKind::AccountUpdaterDailyReport
+        | BraintreeWebhookKind::SubMerchantAccountApproved
+        | BraintreeWebhookKind::Check => EventType::EndpointVerification,
+        _ => EventType::IncomingWebhookEventUnspecified,
     }
 }

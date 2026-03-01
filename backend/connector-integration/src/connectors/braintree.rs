@@ -5,6 +5,7 @@ use base64::Engine;
 use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    crypto::VerifySignature,
     errors::CustomResult,
     events,
     ext_traits::ByteSliceExt,
@@ -20,15 +21,17 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -267,10 +270,225 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::DisputeDefend for Braintree<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Braintree<T>
 {
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        connector_webhook_secrets: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, Report<errors::ConnectorError>> {
+        let notif_item = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        let signature_pairs: Vec<(&str, &str)> = notif_item
+            .bt_signature
+            .split('&')
+            .collect::<Vec<&str>>()
+            .into_iter()
+            .map(|pair| pair.split_once('|').unwrap_or(("", "")))
+            .collect::<Vec<(_, _)>>();
+
+        let merchant_secret = connector_webhook_secrets
+            .additional_secret //public key
+            .clone()
+            .ok_or(errors::ConnectorError::WebhookVerificationSecretNotFound)?;
+
+        let signature = get_matching_webhook_signature(signature_pairs, merchant_secret.peek())
+            .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
+        Ok(signature.as_bytes().to_vec())
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secrets: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, Report<errors::ConnectorError>> {
+        let resource: transformers::BraintreeWebhookResponse =
+            serde_urlencoded::from_bytes(&request.body)
+                .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
+                .attach_printable("Could not find bt_payload in form-encoded body")?;
+
+        Ok(resource.bt_payload.into_bytes())
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, Report<errors::ConnectorError>> {
+        let connector_webhook_secrets = connector_webhook_secret
+            .ok_or(errors::ConnectorError::WebhookVerificationSecretNotFound)?;
+
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+
+        let algorithm = common_utils::crypto::HmacSha256;
+
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Braintree webhook signature verification failed")
+    }
+
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<EventType, Report<errors::ConnectorError>> {
+        let resource: transformers::BraintreeWebhookResponse =
+            serde_urlencoded::from_bytes(&request.body)
+                .change_context(errors::ConnectorError::WebhookSignatureNotFound)
+                .attach_printable("Failed to parse Braintree webhook form body")?;
+
+        let notification = decode_webhook_payload(&resource.bt_payload)
+            .attach_printable("Failed to decode and parse Braintree payload")?;
+
+        let event_type = transformers::get_braintree_webhook_event_type(notification.kind);
+
+        match event_type {
+            EventType::IncomingWebhookEventUnspecified => {
+                tracing::warn!(
+                    target: "braintree_webhook",
+                    "Received unmapped or informational webhook kind: {:?}", notification.kind
+                );
+                Ok(EventType::IncomingWebhookEventUnspecified)
+            }
+            _ => Ok(event_type),
+        }
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: RequestDetails,
+    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, errors::ConnectorError>
+    {
+        let notif = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let response = decode_webhook_payload(&notif.bt_payload)?;
+
+        Ok(Box::new(response))
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _secret: Option<ConnectorWebhookSecrets>,
+        _account: Option<ConnectorAuthType>,
+    ) -> Result<WebhookDetailsResponse, Report<errors::ConnectorError>> {
+        let request_body_copy = request.body.clone();
+        let wrapper: transformers::BraintreeWebhookResponse =
+            serde_urlencoded::from_bytes(&request.body)
+                .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
+                .attach_printable("Failed to parse Braintree webhook form body")?;
+
+        let notification = decode_webhook_payload(&wrapper.bt_payload)
+            .attach_printable("Failed to sanitize and decode Braintree bt_payload")?;
+
+        let (resource_id, status, error_message) = match notification.kind {
+            transformers::BraintreeWebhookKind::TransactionSettled => {
+                let txn = notification
+                    .subject
+                    .transaction
+                    .ok_or(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+                (
+                    Some(ResponseId::ConnectorTransactionId(txn.id.clone())),
+                    common_enums::AttemptStatus::Charged,
+                    None,
+                )
+            }
+            transformers::BraintreeWebhookKind::Disbursement => {
+                let disbursement = notification
+                    .subject
+                    .disbursement
+                    .ok_or(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+                (
+                    Some(ResponseId::ConnectorTransactionId(disbursement.id.clone())),
+                    common_enums::AttemptStatus::Charged,
+                    None,
+                )
+            }
+            transformers::BraintreeWebhookKind::TransactionSettlementDeclined => {
+                let txn = notification
+                    .subject
+                    .transaction
+                    .ok_or(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+                (
+                    Some(ResponseId::ConnectorTransactionId(txn.id.clone())),
+                    common_enums::AttemptStatus::Failure,
+                    Some("Settlement declined".to_string()),
+                )
+            }
+            _ => (None, common_enums::AttemptStatus::Pending, None),
+        };
+
+        Ok(WebhookDetailsResponse {
+            resource_id: resource_id.clone(),
+            status,
+            connector_response_reference_id: None,
+            mandate_reference: None,
+            error_code: None,
+            error_message,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
+            response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            minor_amount_captured: None,
+            amount_captured: None,
+            error_reason: None,
+            network_txn_id: None,
+        })
+    }
 }
+
+fn get_matching_webhook_signature(
+    signature_pairs: Vec<(&str, &str)>,
+    secret: &str,
+) -> Option<String> {
+    for (public_key, signature) in signature_pairs {
+        if public_key == secret {
+            return Some(signature.to_string());
+        }
+    }
+    None
+}
+
+fn get_webhook_object_from_body(
+    body: &[u8],
+) -> CustomResult<transformers::BraintreeWebhookResponse, ParsingError> {
+    serde_urlencoded::from_bytes::<transformers::BraintreeWebhookResponse>(body)
+        .change_context(ParsingError::StructParseFailure("BraintreeWebhookResponse"))
+}
+
+fn decode_webhook_payload(
+    payload: &str,
+) -> CustomResult<transformers::BraintreeWebhookDetails, errors::ConnectorError> {
+    let url_decoded = urlencoding::decode(payload)
+        .map_err(|_| errors::ConnectorError::WebhookBodyDecodingFailed)
+        .attach_printable("Failed to URL-decode Braintree payload")?;
+
+    let sanitized_payload = url_decoded.replace(char::is_whitespace, "");
+
+    let decoded_bytes = BASE64_ENGINE
+        .decode(sanitized_payload.as_bytes())
+        .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
+        .attach_printable("Failed to Base64 decode Braintree bt_payload")?;
+
+    let details: transformers::BraintreeWebhookDetails =
+        quick_xml::de::from_reader(decoded_bytes.as_slice())
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
+            .attach_printable("Failed to parse Braintree XML")?;
+
+    Ok(details)
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyRedirectResponse for Braintree<T>
 {
