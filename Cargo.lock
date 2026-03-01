@@ -1656,6 +1656,7 @@ dependencies = [
  "ucs_common_enums",
  "ucs_common_utils",
  "ucs_env",
+ "ucs_interface_common",
  "uniffi",
 ]
 
@@ -2803,7 +2804,6 @@ dependencies = [
  "domain_types",
  "error-stack 0.4.1",
  "external-services",
- "ffi",
  "gethostname 0.5.0",
  "grpc-api-types",
  "http 1.3.1",
@@ -2841,6 +2841,7 @@ dependencies = [
  "ucs_common_enums",
  "ucs_common_utils",
  "ucs_env",
+ "ucs_interface_common",
  "uuid",
 ]
 
@@ -6729,6 +6730,26 @@ dependencies = [
  "ucs_cards",
  "ucs_common_enums",
  "ucs_common_utils",
+]
+
+[[package]]
+name = "ucs_interface_common"
+version = "0.1.0"
+dependencies = [
+ "base64 0.21.7",
+ "domain_types",
+ "error-stack 0.4.1",
+ "grpc-api-types",
+ "http 1.3.1",
+ "masking",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tonic 0.13.1",
+ "tracing",
+ "ucs_common_enums",
+ "ucs_common_utils",
+ "ucs_env",
 ]
 
 [[package]]
