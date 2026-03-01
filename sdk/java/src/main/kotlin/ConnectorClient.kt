@@ -45,7 +45,7 @@ class ConnectorClient {
         val opts = optionsBytes ?: ByteArray(0)
 
         // Step 2: Build the connector HTTP request via FFI
-        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata, optionsBytes)
+        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata, opts)
         val connectorRequest = JSONObject(connectorRequestJson)
 
         val url = connectorRequest.getString("url")
@@ -85,7 +85,7 @@ class ConnectorClient {
             responseHeaders,
             requestBytes,
             metadata,
-            optionsBytes,
+            opts,
         )
 
         // Step 5: Deserialize the protobuf response

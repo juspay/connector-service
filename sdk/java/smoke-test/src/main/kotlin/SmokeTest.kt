@@ -15,9 +15,9 @@ import ucs.v2.Payment.PaymentAddress
 import ucs.v2.Payment.Currency
 import ucs.v2.Payment.CaptureMethod
 import ucs.v2.Payment.AuthenticationType
-import ucs.v2.FfiOptions
-import ucs.v2.EnvOptions
-import ucs.v2.Options
+import ucs.v2.SdkOptions.FfiOptions
+import ucs.v2.SdkOptions.EnvOptions
+import ucs.v2.SdkOptions.Options
 
 fun buildRequest(): PaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.newBuilder().apply {
