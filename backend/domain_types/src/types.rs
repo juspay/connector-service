@@ -254,8 +254,8 @@ use crate::{
         VaultTokenHolder,
     },
     router_data::{
-        self, AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
-        RecurringMandatePaymentData,
+        self, AdditionalPaymentMethodConnectorResponse, ConnectorResponseData,
+        ConnectorSpecificAuth, RecurringMandatePaymentData,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
@@ -1762,7 +1762,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     Ok(Some(PaymentMethodType::Card))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(card_redirect) => {
-    match card_redirect.r#type() {
+                match card_redirect.r#type() {
                         grpc_api_types::payments::card_redirect::CardRedirectType::Knet => {
                             Ok(Some(PaymentMethodType::Knet))
                         }
@@ -8385,11 +8385,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateAccessTokenReq
 }
 
 // Generic implementation for access token request from connector auth
-impl ForeignTryFrom<&ConnectorAuthType> for AccessTokenRequestData {
+impl ForeignTryFrom<&ConnectorSpecificAuth> for AccessTokenRequestData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        _auth_type: &ConnectorAuthType,
+        _auth_type: &ConnectorSpecificAuth,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Default to client_credentials grant type for OAuth
         // Connectors can override this with their own specific implementations

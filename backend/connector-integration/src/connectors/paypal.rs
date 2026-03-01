@@ -31,7 +31,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::{Response, VerifyWebhookSourceResponseData},
@@ -166,7 +166,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         _request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<bool, error_stack::Report<ConnectorError>> {
         // This is a fallback for connectors that don't require external verification
         // For PayPal, this should never be called due to requires_external_verification check
@@ -182,7 +182,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<domain_types::connector_types::EventType, error_stack::Report<ConnectorError>> {
         let payload: paypal::PaypalWebooksEventType = request
             .body
@@ -207,7 +207,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
         error_stack::Report<ConnectorError>,
@@ -255,7 +255,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
         error_stack::Report<ConnectorError>,
@@ -298,7 +298,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<
         domain_types::connector_types::DisputeWebhookDetailsResponse,
         error_stack::Report<ConnectorError>,
@@ -543,7 +543,7 @@ macros::create_all_prerequisites!(
             &self,
             access_token: &str,
             connector_request_reference_id: &str,
-            connector_auth_type: &ConnectorAuthType,
+            connector_auth_type: &ConnectorSpecificAuth,
             connector_metadata: Option<&serde_json::Value>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let auth = paypal::PaypalAuthType::try_from(connector_auth_type)?;
@@ -1723,7 +1723,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorAuthType,
+        auth_type: &ConnectorSpecificAuth,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         let auth = paypal::PaypalAuthType::try_from(auth_type)?;
         let credentials = auth.get_credentials()?;

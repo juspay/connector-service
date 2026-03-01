@@ -16,7 +16,7 @@ use domain_types::{
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
         ErrorResponse,
     },
     router_data_v2::RouterDataV2,
@@ -62,48 +62,41 @@ pub struct PayloadAuthType {
     pub auths: HashMap<enums::Currency, PayloadAuth>,
 }
 
-impl TryFrom<(&ConnectorAuthType, enums::Currency)> for PayloadAuth {
+impl TryFrom<(&ConnectorSpecificAuth, enums::Currency)> for PayloadAuth {
     type Error = Error;
-    fn try_from(value: (&ConnectorAuthType, enums::Currency)) -> Result<Self, Self::Error> {
+    fn try_from(value: (&ConnectorSpecificAuth, enums::Currency)) -> Result<Self, Self::Error> {
         let (auth_type, currency) = value;
         match auth_type {
-            ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
-                let auth_key = auth_key_map.get(&currency).ok_or(
-                    errors::ConnectorError::CurrencyNotSupported {
-                        message: currency.to_string(),
-                        connector: "Payload",
-                    },
-                )?;
-
-                auth_key
-                    .to_owned()
-                    .parse_value("PayloadAuth")
-                    .change_context(errors::ConnectorError::FailedToObtainAuthType)
-            }
+            ConnectorSpecificAuth::Payload { auth_key_map } => auth_key_map
+                .get(&currency)
+                .ok_or(errors::ConnectorError::CurrencyNotSupported {
+                    message: currency.to_string(),
+                    connector: "Payload",
+                })?
+                .to_owned()
+                .parse_value::<Self>("PayloadAuth")
+                .change_context(errors::ConnectorError::FailedToObtainAuthType),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for PayloadAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for PayloadAuthType {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
-                let auths = auth_key_map
+            ConnectorSpecificAuth::Payload { auth_key_map } => Ok(Self {
+                auths: auth_key_map
                     .iter()
-                    .map(|(currency, auth_key)| {
-                        let auth: PayloadAuth = auth_key
+                    .map(|(currency, auth_value)| {
+                        let auth = auth_value
                             .to_owned()
-                            .parse_value("PayloadAuth")
-                            .change_context(errors::ConnectorError::InvalidDataFormat {
-                                field_name: "auth_key_map",
-                            })?;
+                            .parse_value::<PayloadAuth>("PayloadAuth")
+                            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                         Ok((*currency, auth))
                     })
-                    .collect::<Result<_, Self::Error>>()?;
-                Ok(Self { auths })
-            }
+                    .collect::<Result<_, Self::Error>>()?,
+            }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
@@ -112,7 +105,7 @@ impl TryFrom<&ConnectorAuthType> for PayloadAuthType {
 // Helper function to build card request data
 fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
-    connector_auth_type: &ConnectorAuthType,
+    connector_auth_type: &ConnectorSpecificAuth,
     currency: enums::Currency,
     amount: FloatMajorUnit,
     resource_common_data: &PaymentFlowData,

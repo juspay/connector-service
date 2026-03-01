@@ -9,7 +9,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils::is_payment_failure,
@@ -57,13 +57,16 @@ pub struct ErrorDetails {
     pub reason: Option<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for TruelayerAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for TruelayerAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                client_id: api_key.to_owned(),
-                client_secret: key1.to_owned(),
+            ConnectorSpecificAuth::Truelayer {
+                client_id,
+                client_secret,
+            } => Ok(Self {
+                client_id: client_id.to_owned(),
+                client_secret: client_secret.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
