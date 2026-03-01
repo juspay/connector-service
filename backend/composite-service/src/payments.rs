@@ -109,7 +109,7 @@ where
                 && payload
                     .customer
                     .as_ref()
-                    .and_then(|c| c.connector_id.as_ref())
+                    .and_then(|c| c.connector_customer_id.as_ref())
                     .is_none();
 
         let create_customer_response = match should_create_connector_customer {

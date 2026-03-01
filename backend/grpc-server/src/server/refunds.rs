@@ -7,7 +7,7 @@ use domain_types::{
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
@@ -109,7 +109,7 @@ impl RefundService for Refunds {
             flow = DomainFlowName::IncomingWebhook.to_string(),
         )
     )]
-    async fn transform(
+    async fn handle_event(
         &self,
         request: tonic::Request<EventServiceHandleRequest>,
     ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
@@ -188,7 +188,7 @@ async fn get_refunds_webhook_content(
     connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
+    connector_auth_details: Option<ConnectorSpecificAuth>,
 ) -> CustomResult<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector

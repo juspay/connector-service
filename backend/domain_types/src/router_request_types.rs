@@ -10,6 +10,7 @@ use crate::utils::ForeignFrom;
 use grpc_api_types::payments;
 
 use crate::{
+    connector_types::ConnectorWebhookSecrets,
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     utils,
@@ -465,4 +466,16 @@ pub struct IncrementalAuthorizationIntegrityObject {}
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MandateRevokeIntegrityObject {
     pub mandate_id: Secret<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct VerifyWebhookSourceRequestData {
+    pub webhook_headers: std::collections::HashMap<String, String>,
+    pub webhook_body: Vec<u8>,
+    pub merchant_secret: ConnectorWebhookSecrets,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VerifyWebhookSourceIntegrityObject {
+    pub webhook_id: String,
 }

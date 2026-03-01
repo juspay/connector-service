@@ -26,7 +26,11 @@ print(f"  authorize_req_transformer: {authorize_req_transformer}")
 api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
 metadata = {
     "connector": "Stripe",
-    "connector_auth_type": json.dumps({"auth_type": "HeaderKey", "api_key": api_key}),
+    "connector_auth_type": json.dumps({
+        "Stripe": {
+            "api_key": api_key
+        }
+    }),
     "x-connector": "Stripe",
     "x-merchant-id": "test_merchant_123",
     "x-request-id": "test-pack-001",
@@ -37,10 +41,9 @@ metadata = {
 
 # Build a protobuf request
 req = PaymentServiceAuthorizeRequest()
-req.request_ref_id.id = "test_pack_123"
-req.amount = 1000
-req.minor_amount = 1000
-req.currency = USD
+req.merchant_transaction_id.id = "test_pack_123"
+req.amount.minor_amount = 1000
+req.amount.currency = USD
 req.capture_method = AUTOMATIC
 card = req.payment_method.card
 card.card_number.value = "4111111111111111"
@@ -48,8 +51,8 @@ card.card_exp_month.value = "12"
 card.card_exp_year.value = "2050"
 card.card_cvc.value = "123"
 card.card_holder_name.value = "Test User"
-req.email.value = "test@example.com"
-req.customer_name = "Test"
+req.customer.email.value = "test@example.com"
+req.customer.name = "Test"
 req.auth_type = NO_THREE_DS
 req.return_url = "https://example.com/return"
 req.webhook_url = "https://example.com/webhook"

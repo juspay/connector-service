@@ -9,7 +9,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
@@ -36,18 +36,18 @@ pub struct BarclaycardAuthType {
     pub api_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for BarclaycardAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for BarclaycardAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
+            ConnectorSpecificAuth::Barclaycard {
                 api_key,
-                key1,
+                merchant_account,
                 api_secret,
             } => Ok(Self {
                 api_key: api_key.to_owned(),
-                merchant_account: key1.to_owned(),
+                merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),

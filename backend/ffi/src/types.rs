@@ -1,10 +1,10 @@
 use common_utils::metadata::MaskedMetadata;
-use domain_types::{connector_types::ConnectorEnum, router_data::ConnectorAuthType};
+use domain_types::{connector_types::ConnectorEnum, router_data::ConnectorSpecificAuth};
 use std::collections::HashMap;
 #[derive(Clone, Debug, serde::Deserialize)]
 pub struct FfiMetadataPayload {
     pub connector: ConnectorEnum,
-    pub connector_auth_type: ConnectorAuthType,
+    pub connector_auth_type: ConnectorSpecificAuth,
 }
 
 #[derive(Debug, serde::Deserialize)]

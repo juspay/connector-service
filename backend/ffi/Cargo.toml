@@ -5,7 +5,7 @@ edition = "2021"
 
 [lib]
 name = "connector_service_ffi"
-crate-type = ["cdylib", "rlib", "staticlib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # First-party dependencies

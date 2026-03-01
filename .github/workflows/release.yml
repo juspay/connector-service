@@ -159,12 +159,9 @@ jobs:
       #     sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build binary (${{ matrix.target }})
-        run: |
-          if [ "${{ matrix.os }}" = "linux" ]; then
-            make -C sdk build-linux-${{ matrix.arch }}
-          else
-            make -C sdk build-macos-${{ matrix.arch }}
-          fi
+        # build-ffi-lib auto-detects the platform and always writes to
+        # target/<PLATFORM>/release/ — identical layout on local and CI.
+        run: make -C sdk/java build-ffi-lib
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
@@ -173,15 +170,66 @@ jobs:
           path: |
             target/${{ matrix.target }}/release/libconnector_service_ffi.*
 
-      - name: Generate UniFFI Kotlin bindings
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: make -C sdk/java generate-bindings-ci LIBRARY=$(pwd)/target/${{ matrix.target }}/release/libconnector_service_ffi.so TARGET_TRIPLE=${{ matrix.target }}
+      # All code generation runs once from aarch64-apple-darwin (macOS ARM).
+      # generate-all combines UniFFI bindings + proto stubs in a single make step per SDK.
+      # Java uploads two separate artifacts (one per output directory) so that
+      # download-artifact can restore each to its exact path without relying on
+      # upload-artifact's multi-path common-prefix computation.
+
+      - name: Verify FFI library has UniFFI scaffolding
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: |
+          count=$(nm target/${{ matrix.target }}/release/libconnector_service_ffi.dylib \
+                  2>/dev/null | grep -c "_uniffi_" || echo 0)
+          echo "uniffi_ symbols in library: $count"
+          [ "$count" -gt 0 ] || \
+            (echo "ERROR: library missing uniffi scaffolding — was it built with --features uniffi?" && exit 1)
+
+      - name: Generate Java SDK (UniFFI Kotlin bindings + Java proto stubs)
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: make -C sdk/java generate-all
+
       - name: Upload UniFFI Kotlin bindings
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-apple-darwin'
         uses: actions/upload-artifact@v4
         with:
-          name: uniffi-kotlin-bindings
+          name: generated-kotlin
           path: sdk/java/src/main/kotlin/generated/
+
+      - name: Upload Java proto stubs
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-java-proto
+          path: sdk/java/src/main/java/generated/
+
+      - name: Set up Python (for Python SDK generation)
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate Python SDK (UniFFI Python bindings + Python proto stubs)
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: make -C sdk/python generate-all
+
+      - name: Upload Python SDK generated files
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-python
+          path: sdk/python/src/payments/generated/
+
+      - name: Generate JavaScript SDK (JS proto stubs + native lib)
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: make -C sdk/javascript generate-all
+
+      - name: Upload JavaScript SDK generated files
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-javascript
+          path: sdk/javascript/src/payments/generated/
 
   # Job 3: Build universal macOS binary (temporarily disabled)
   # build-macos-universal:
@@ -223,9 +271,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download binaries
         uses: actions/download-artifact@v4
         with:
@@ -243,8 +288,13 @@ jobs:
       - name: Download UniFFI Kotlin bindings
         uses: actions/download-artifact@v4
         with:
-          name: uniffi-kotlin-bindings
+          name: generated-kotlin
           path: sdk/java/src/main/kotlin/generated/
+      - name: Download Java proto stubs
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-java-proto
+          path: sdk/java/src/main/java/generated/
       - name: Package Java SDK
         run: make -C sdk/java dist
       - name: Upload Java SDK artifact
@@ -263,12 +313,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
-      - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install Python dependencies
-        run: pip install grpcio grpcio-tools requests
       - name: Download binaries
         uses: actions/download-artifact@v4
         with:
@@ -283,6 +327,11 @@ jobs:
               cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
             fi
           done
+      - name: Download Python SDK generated files
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-python
+          path: sdk/python/src/payments/generated/
       - name: Package Python SDK
         run: make -C sdk/python dist
       - name: Upload Python SDK artifact
@@ -301,13 +350,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: sdk/javascript/package-lock.json
-      - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install Node.js dependencies
-        run: cd sdk/javascript && npm ci && cd ../..
       - name: Download binaries
         uses: actions/download-artifact@v4
         with:
@@ -322,6 +364,11 @@ jobs:
               cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
             fi
           done
+      - name: Download JavaScript SDK generated files
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-javascript
+          path: sdk/javascript/src/payments/generated/
       - name: Package JavaScript SDK
         run: make -C sdk/javascript dist
       - name: Upload JavaScript SDK artifact

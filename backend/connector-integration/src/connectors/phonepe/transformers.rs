@@ -12,7 +12,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, UpiSource},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
@@ -672,19 +672,19 @@ pub struct PhonepeAuthType {
     pub key_index: String,
 }
 
-impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for PhonepeAuthType {
     type Error = Error;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
+            ConnectorSpecificAuth::Phonepe {
+                merchant_id,
+                salt_key,
+                salt_index,
             } => Ok(Self {
-                merchant_id: api_key.clone(),
-                salt_key: key1.clone(),
-                key_index: api_secret.peek().clone(), // Use api_secret for key index
+                merchant_id: merchant_id.clone(),
+                salt_key: salt_key.clone(),
+                key_index: salt_index.peek().clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }

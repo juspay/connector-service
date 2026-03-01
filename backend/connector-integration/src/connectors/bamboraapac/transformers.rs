@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -123,19 +123,19 @@ pub struct BamboraapacAuthType {
     pub account_number: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for BamboraapacAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for BamboraapacAuthType {
     type Error = ConnectorError;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                api_secret,
-                key1,
+            ConnectorSpecificAuth::Bamboraapac {
+                username,
+                password,
+                account_number,
             } => Ok(Self {
-                username: api_key.clone(),
-                password: api_secret.clone(),
-                account_number: key1.clone(),
+                username: username.clone(),
+                password: password.clone(),
+                account_number: account_number.clone(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType),
         }
