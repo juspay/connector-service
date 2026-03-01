@@ -62,7 +62,7 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
             )),
             name: Some("Test Customer".to_string()),
             id: None,
-            connector_id: None,
+            connector_customer_id: None,
             phone_number: None,
         }),
 
@@ -190,7 +190,8 @@ async fn demo_full_round_trip(
     eprintln!("Sending authorize request...\n");
 
     let client = ConnectorClient;
-    match client.authorize(request, metadata).await {
+    // Pass test_mode = true for the demo
+    match client.authorize(request, metadata, Some(true)).await {
         Ok(response) => {
             eprintln!("Authorize response received:");
             eprintln!(

@@ -17,15 +17,22 @@ impl ConnectorClient {
     /// 2. Extracting the raw request JSON (url, method, headers, body)
     /// 3. Making the HTTP call with reqwest
     /// 4. Parsing the response via `authorize_res_handler`
+    ///
+    /// # Arguments
+    /// * `request` - The PaymentServiceAuthorizeRequest
+    /// * `metadata` - Metadata containing connector info and auth
+    /// * `test_mode` - Optional test mode flag. When Some(true), uses development config;
+    ///                 when Some(false), uses production config; when None, defaults to test mode.
     pub async fn authorize(
         &self,
         request: PaymentServiceAuthorizeRequest,
         metadata: &HashMap<String, String>,
+        test_mode: Option<bool>,
     ) -> Result<PaymentServiceAuthorizeResponse, Box<dyn Error>> {
         let ffi_request = build_ffi_request(request.clone(), metadata)?;
 
         // Step 1: Build the connector HTTP request
-        let connector_request = authorize_req_handler(ffi_request, None)
+        let connector_request = authorize_req_handler(ffi_request, test_mode)
             .map_err(|e| format!("authorize_req_handler failed: {:?}", e))?
             .ok_or("No connector request generated")?;
 
@@ -97,7 +104,7 @@ impl ConnectorClient {
 
         // Step 5: Parse response via authorize_res_handler
         let ffi_request_for_res = build_ffi_request(request, metadata)?;
-        match authorize_res_handler(ffi_request_for_res, response, None) {
+        match authorize_res_handler(ffi_request_for_res, response, test_mode) {
             Ok(auth_response) => Ok(auth_response),
             Err(error_response) => {
                 Err(format!("Authorization failed: {:?}", error_response).into())

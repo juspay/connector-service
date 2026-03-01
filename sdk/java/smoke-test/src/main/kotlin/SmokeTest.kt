@@ -17,6 +17,7 @@ import ucs.v2.Payment.CaptureMethod
 import ucs.v2.Payment.AuthenticationType
 import ucs.v2.FfiOptions
 import ucs.v2.EnvOptions
+import ucs.v2.Options
 
 fun buildRequest(): PaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.newBuilder().apply {
@@ -62,12 +63,18 @@ fun buildMetadata(): Map<String, String> {
     )
 }
 
-fun buildOptions(): FfiOptions {
-    return FfiOptions.newBuilder()
-        .setEnv(EnvOptions.newBuilder()
-            .setTestMode(true)
-            .build())
+fun buildOptions(): ByteArray {
+    // Build EnvOptions and wrap in FfiOptions, then wrap in Options
+    val envOptions = EnvOptions.newBuilder()
+        .setTestMode(true)
         .build()
+    val ffiOptions = FfiOptions.newBuilder()
+        .setEnv(envOptions)
+        .build()
+    val options = Options.newBuilder()
+        .setFfi(ffiOptions)
+        .build()
+    return options.toByteArray()
 }
 
 fun assert(condition: Boolean, message: String) {
@@ -82,7 +89,7 @@ fun testLowLevelFfi() {
 
     val requestBytes = buildRequest().toByteArray()
     val metadata = buildMetadata()
-    val optionsBytes = buildOptions().toByteArray()
+    val optionsBytes = buildOptions()
 
     try {
         val json = JSONObject(authorizeReqTransformer(requestBytes, metadata, optionsBytes))
@@ -104,7 +111,7 @@ fun testLowLevelFfi() {
     }
 }
 
-fun testFullRoundTrip() {
+fun testFullRoundTrip(optionsBytes: ByteArray) {
     println("\n=== Test 2: Full round-trip (ConnectorClient) ===")
 
     val apiKey = System.getenv("STRIPE_API_KEY") ?: ""
@@ -115,7 +122,7 @@ fun testFullRoundTrip() {
 
     val client = ConnectorClient()
     try {
-        val response = client.authorize(buildRequest(), buildMetadata())
+        val response = client.authorize(buildRequest(), buildMetadata(), optionsBytes)
         println("  Response status: ${response.status}")
         println("  PASSED")
     } catch (e: UniffiException) {
@@ -129,7 +136,8 @@ fun testFullRoundTrip() {
 }
 
 fun main() {
+    val optionsBytes = buildOptions()
     testLowLevelFfi()
-    testFullRoundTrip()
+    testFullRoundTrip(optionsBytes)
     println("\nAll checks passed.")
 }
