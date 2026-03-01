@@ -16,6 +16,7 @@ members = [
   "sdk/rust",
   "backend/composite-service",
   "backend/ucs_env",
+  "backend/ucs_interface_common",
   "backend/ffi"
 ]
 exclude = [
