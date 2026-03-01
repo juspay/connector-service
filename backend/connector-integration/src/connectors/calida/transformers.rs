@@ -180,16 +180,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     &item.router_data.resource_common_data.get_connector_meta()?,
                 )?;
 
+                // Derive payment_id by removing trailing "_1" from connector_request_reference_id
+                let connector_request_reference_id = item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone();
+
+                let payment_id = if connector_request_reference_id.ends_with("_1") {
+                    connector_request_reference_id
+                        .strip_suffix("_1")
+                        .unwrap_or(&connector_request_reference_id)
+                        .to_string()
+                } else {
+                    connector_request_reference_id.clone()
+                };
+
                 Ok(Self {
                     amount,
                     currency: item.router_data.request.currency,
                     payment_provider: "bluecode_payment".to_string(),
                     shop_name: calida_mca_metadata.shop_name.clone(),
-                    reference: item
-                        .router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
+                    reference: payment_id,
                     ip_address: item.router_data.request.get_ip_address_as_optional(),
                     first_name: item
                         .router_data
