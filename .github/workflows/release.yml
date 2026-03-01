@@ -203,6 +203,12 @@ jobs:
           name: generated-java-proto
           path: sdk/java/src/main/java/generated/
 
+      - name: Set up Python (for Python SDK generation)
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Generate Python SDK (UniFFI Python bindings + Python proto stubs)
         if: matrix.target == 'aarch64-apple-darwin'
         run: make -C sdk/python generate-all
