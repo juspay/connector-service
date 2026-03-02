@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -55,19 +55,19 @@ pub struct GigadatAuthType {
     pub security_token: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for GigadatAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for GigadatAuthType {
     type Error = Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
+            ConnectorSpecificAuth::Gigadat {
+                campaign_id,
+                access_token,
+                security_token,
             } => Ok(Self {
-                security_token: api_secret.to_owned(),
-                access_token: api_key.to_owned(),
-                campaign_id: key1.to_owned(),
+                security_token: security_token.to_owned(),
+                access_token: access_token.to_owned(),
+                campaign_id: campaign_id.to_owned(),
             }),
             _ => Err(Report::new(ConnectorError::FailedToObtainAuthType)),
         }

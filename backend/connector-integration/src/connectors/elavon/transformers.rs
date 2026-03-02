@@ -18,7 +18,7 @@ use domain_types::{
     errors::{self},
     payment_address::PaymentAddress,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken},
+    router_data::{ConnectorSpecificAuth, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::{report, ResultExt};
@@ -39,24 +39,23 @@ pub struct ElavonAuthType {
     pub(super) ssl_pin: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for ElavonAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for ElavonAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
+            ConnectorSpecificAuth::Elavon {
+                ssl_merchant_id,
+                ssl_user_id,
+                ssl_pin,
             } => Ok(Self {
-                ssl_merchant_id: api_key.clone(),
-                ssl_user_id: key1.clone(),
-                ssl_pin: api_secret.clone(),
+                ssl_merchant_id: ssl_merchant_id.clone(),
+                ssl_user_id: ssl_user_id.clone(),
+                ssl_pin: ssl_pin.clone(),
             }),
             _ => Err(report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
-
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum TransactionType {

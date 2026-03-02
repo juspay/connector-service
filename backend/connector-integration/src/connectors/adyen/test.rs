@@ -15,7 +15,7 @@ mod tests {
                 ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
             },
             payment_method_data::{DefaultPCIHolder, PaymentMethodData, RawCardNumber},
-            router_data::{ConnectorAuthType, ErrorResponse},
+            router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -82,9 +82,10 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_auth_type: ConnectorSpecificAuth::Adyen {
                     api_key: Secret::new(api_key),
-                    key1: Secret::new(key1),
+                    merchant_account: Secret::new(key1),
+                    review_key: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -273,9 +274,10 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_auth_type: ConnectorSpecificAuth::Adyen {
                     api_key: Secret::new(api_key),
-                    key1: Secret::new(key1),
+                    merchant_account: Secret::new(key1),
+                    review_key: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -397,7 +399,7 @@ mod tests {
         //             },
         //             external_latency: None,
         //         },
-        //         connector_auth_type: ConnectorAuthType::BodyKey {
+        //         connector_auth_type: ConnectorSpecificAuth::BodyKey {
         //             api_key: Secret::new(api_key.into()),
         //             key1: Secret::new(key1.into()),
         //         },

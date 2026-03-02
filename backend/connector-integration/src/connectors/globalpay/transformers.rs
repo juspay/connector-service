@@ -16,7 +16,7 @@ use domain_types::{
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -63,14 +63,14 @@ pub struct GlobalpayAuthType {
     pub app_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for GlobalpayAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for GlobalpayAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { key1, api_key } => Ok(Self {
-                app_id: key1.to_owned(),
-                app_key: api_key.to_owned(),
+            ConnectorSpecificAuth::Globalpay { app_id, app_key } => Ok(Self {
+                app_id: app_id.to_owned(),
+                app_key: app_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
@@ -192,7 +192,7 @@ impl
             AccessTokenResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::BodyKey { key1, api_key } = &item.connector_auth_type {
+        if let ConnectorSpecificAuth::Globalpay { app_id, app_key } = &item.connector_auth_type {
             use sha2::{Digest, Sha512};
 
             // Generate random alphanumeric nonce (matching Hyperswitch implementation)
@@ -200,7 +200,7 @@ impl
                 rand::distributions::Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
 
             // Create secret: SHA512(nonce + app_key)
-            let secret_input = format!("{}{}", nonce, api_key.peek());
+            let secret_input = format!("{}{}", nonce, app_key.peek());
 
             // Generate SHA-512 hash
             let mut hasher = Sha512::new();
@@ -209,7 +209,7 @@ impl
             let secret_hex = hex::encode(result);
 
             Ok(Self {
-                app_id: key1.clone(),
+                app_id: app_id.clone(),
                 nonce: Secret::new(nonce),
                 secret: Secret::new(secret_hex),
                 grant_type: item.request.grant_type.clone(),

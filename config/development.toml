@@ -42,7 +42,12 @@ mock_server_url = "http://localhost:3000/mockGateway"
 [api_tags.tags]
 psync = "GW_TXN_SYNC"
 
+# Connectors that require an external API call for webhook source verification
+[webhook_source_verification_call] # comma-separated list of connector names (case-insensitive)
+connectors_with_webhook_source_verification_call = "paypal"
+
 [connectors]
+revolv3.base_url = "https://api-sandbox.revolv3.com"
 gigadat.base_url = "https://interac.express-connect.com/"
 paybox.base_url = "https://preprod-ppps.paybox.com/PPPS.php"
 loonio.base_url = "https://integration.loonio.ca/"

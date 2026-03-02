@@ -12,7 +12,7 @@ use domain_types::{
     connector_types::*,
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -60,7 +60,7 @@ macros::create_all_prerequisites!(
     member_functions: {
         pub fn get_auth_header(
             &self,
-            auth_type: &ConnectorAuthType,
+            auth_type: &ConnectorSpecificAuth,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             use transformers::LoonioAuthType;
             let auth = LoonioAuthType::try_from(auth_type)
@@ -514,7 +514,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorAuthType,
+        auth_type: &ConnectorSpecificAuth,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         self.get_auth_header(auth_type)
     }
