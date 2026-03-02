@@ -1100,11 +1100,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 payment_method,
                 network_processing,
                 invoice: Revolv3InvoiceData {
-                    merchant_invoice_ref_id: item
-                        .router_data
-                        .request
-                        .merchant_order_id
-                        .clone(),
+                    merchant_invoice_ref_id: item.router_data.request.merchant_order_id.clone(),
                     amount,
                     order_processing_channel: None,
                 },
