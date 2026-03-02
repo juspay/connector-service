@@ -918,7 +918,7 @@ message EventServiceHandleResponse {
   bool source_verified = 3;
 
   // Reference
-  optional Identifier response_ref_id = 4;
+  optional Identifier merchant_event_id = 4;
 
   // Event Status
   WebhookEventStatus event_status = 5;
@@ -1288,9 +1288,8 @@ message PaymentServiceAuthorizeRequest {
   optional bool enrolled_for_3ds = 10;
   optional AuthenticationData authentication_data = 11;
 
-  // Metadata
   optional SecretString metadata = 12; // Additional metadata for the connector
-  optional SecretString feature_data = 13; // Connector-specific feature data for the transaction
+  optional SecretString connector_feature_data = 13; // Connector-specific feature data for the transaction
 
   // URLs for Redirection and Webhooks
   optional string return_url = 14;
@@ -1389,7 +1388,7 @@ message PaymentServiceAuthorizeResponse {
   // Mandate and Connector Response
   optional MandateReference mandate_reference = 16;
   optional ConnectorResponseData connector_response = 17;
-  optional SecretString feature_data = 18; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 18; // Connector-specific metadata for the transaction
 }
 
 // Request message for synchronizing payment status
@@ -1413,9 +1412,8 @@ message PaymentServiceGetRequest {
   // State Information
   optional ConnectorState state = 8;
 
-    // Metadata
   optional SecretString metadata = 9; // Additional metadata for the connector
-  optional SecretString feature_data = 10; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 10; // Connector-specific metadata for the transaction
 
   // Sync Type
   optional SyncRequestType sync_type = 11;
@@ -1461,7 +1459,7 @@ message PaymentServiceGetResponse {
   optional string customer_name = 17;
   optional string email = 18;
   optional string connector_customer_id = 19;
-  optional string merchant_order_reference_id = 20;
+  optional string merchant_order_id = 20;
   optional SecretString metadata = 21; // Additional metadata from the connector
   optional ConnectorResponseData connector_response = 22;
 
@@ -1482,7 +1480,7 @@ message PaymentServiceGetResponse {
 // Request message for voiding a payment
 message PaymentServiceVoidRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_void_id = 1;
   Identifier connector_transaction_id = 2;
 
   // Void Details
@@ -1494,9 +1492,8 @@ message PaymentServiceVoidRequest {
   // Amount Information
   optional Money amount = 6;
 
-  // Metadata
   optional SecretString metadata = 7; // Additional metadata for the connector
-  optional SecretString feature_data = 8; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 8; // Connector-specific metadata for the transaction
 
   // State Information
   optional ConnectorState state = 9;
@@ -1504,7 +1501,7 @@ message PaymentServiceVoidRequest {
   // Environment Configuration
   optional bool test_mode = 10;
   // Additional Context
-  optional string merchant_order_reference_id = 11;
+  optional string merchant_order_id = 11;
 }
 
 // Response message for a payment void operation
@@ -1532,13 +1529,13 @@ message PaymentServiceVoidResponse {
   // Authorization Details
   optional bool incremental_authorization_allowed = 10;
 
-  optional SecretString feature_data = 11; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 11; // Connector-specific metadata for the transaction
 }
 
 // Request message for reversing a captured payment if not yet settled (similar to void but for post-capture transactions)
 message PaymentServiceReverseRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_reverse_id = 1;
   Identifier connector_transaction_id = 2;
 
   // Reverse Details
@@ -1548,9 +1545,8 @@ message PaymentServiceReverseRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5;
 
-    // Metadata
   optional SecretString metadata = 6; // Additional metadata for the connector
-  optional SecretString feature_data = 7; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 7; // Connector-specific metadata for the transaction
 }
 
 // Response message for reversing a captured payment if not yet settled (similar to void but for post-capture transactions)
@@ -1565,20 +1561,20 @@ message PaymentServiceReverseResponse {
   map<string, string> response_headers = 5;
 
   // Reference
-  optional Identifier response_ref_id = 6;
+  optional Identifier merchant_reverse_id = 6;
 }
 
 
 // Request message for creating an access token
 message MerchantAuthenticationServiceCreateAccessTokenRequest {
-  Identifier request_ref_id = 1;
+  Identifier merchant_access_token_id = 1;
   Connector connector = 2; // The connector to create the access token for
-  // Metadata
-  optional SecretString metadata = 4; // Additional metadata for the connector
-  optional SecretString feature_data = 5; // Connector-specific metadata for the transaction
+
+  optional SecretString metadata = 3; // Additional metadata for the connector
+  optional SecretString connector_feature_data = 4; // Connector-specific metadata for the transaction
   
   // Environment Configuration
-  optional bool test_mode = 6; // A boolean value to indicate if the connector is in Test mode
+  optional bool test_mode = 5; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for creating an access token
@@ -1589,20 +1585,20 @@ message MerchantAuthenticationServiceCreateAccessTokenResponse {
   OperationStatus status = 4;// Status of the access token creation attempt
   optional ErrorInfo error = 5;
   uint32 status_code = 6;// HTTP status code from the connector
-  optional Identifier response_ref_id = 7;
+  optional Identifier merchant_access_token_id = 7;
 }
 
 // Request message for creating a session token
 message MerchantAuthenticationServiceCreateSessionTokenRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_session_id = 1;
 
   // Amount Information
   Money amount = 2;
 
   // Optional metadata for the connector
   optional SecretString metadata = 3; // Additional metadata for the connector
-  optional SecretString feature_data = 4; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 4; // Connector-specific metadata for the transaction
 
   // State Information
   optional ConnectorState state = 5;
@@ -1625,7 +1621,7 @@ message MerchantAuthenticationServiceCreateSessionTokenResponse {
 // Request message for SDK session token
 message MerchantAuthenticationServiceCreateSdkSessionTokenRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_sdk_session_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -1640,9 +1636,8 @@ message MerchantAuthenticationServiceCreateSdkSessionTokenRequest {
   // Customer Information
   optional Customer customer = 7;
 
-    // Metadata
   optional SecretString metadata = 8; // Additional metadata for the connector
-  optional SecretString feature_data = 9; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 9; // Connector-specific metadata for the transaction
 }
 
 // Response message for SDK session token
@@ -1663,9 +1658,8 @@ message PaymentServiceCaptureRequest {
   // Capture Details
   Money amount_to_capture = 3;
 
-  // Metadata
   optional SecretString metadata = 4; // Additional metadata for the connector
-  optional SecretString feature_data = 5; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 5; // Connector-specific metadata for the transaction
 
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6;
@@ -1682,7 +1676,7 @@ message PaymentServiceCaptureRequest {
   optional bool test_mode = 10;
 
   // Additional Context
-  optional string merchant_order_reference_id = 11;
+  optional string merchant_order_id = 11;
 }
 
 // Response message for a payment capture operation
@@ -1714,14 +1708,14 @@ message PaymentServiceCaptureResponse {
   // Authorization Details
   optional bool incremental_authorization_allowed = 11;
 
-  optional SecretString feature_data = 12; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 12; // Connector-specific metadata for the transaction
   
 }
 
 // Request message for creating an order
 message PaymentServiceCreateOrderRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -1729,9 +1723,8 @@ message PaymentServiceCreateOrderRequest {
   // URLs for Redirection and Webhooks
   optional string webhook_url = 3;
 
-  // Metadata
   optional SecretString metadata = 4; // Additional metadata for the connector
-  optional SecretString feature_data = 5; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 5; // Connector-specific metadata for the transaction
 
   // State Information
   optional ConnectorState state = 6;
@@ -1746,7 +1739,7 @@ message PaymentServiceCreateOrderRequest {
 // Response message for create order operation
 message PaymentServiceCreateOrderResponse {
   // Identification
-  Identifier order_id = 1; // Identifier for the create order response
+  Identifier connector_order_id = 1; // Identifier for the create order response
 
   // Status Information
   PaymentStatus status = 2;// Status of the order creation attempt
@@ -1755,7 +1748,7 @@ message PaymentServiceCreateOrderResponse {
   map<string, string> response_headers = 5;
 
   // Reference
-  optional Identifier response_ref_id = 6;
+  optional Identifier merchant_order_id = 6;
 
   // Raw Request/Response for debugging
   optional SecretString raw_connector_request = 7;
@@ -1781,11 +1774,9 @@ message PaymentServiceRefundRequest {
   optional string merchant_account_id = 7;// Merchant account ID for the refund
   optional CaptureMethod capture_method = 8;// Capture method related to the original payment
 
-  // Metadata
-    // Metadata
   optional SecretString metadata = 9; // Metadata specific to the connector
   optional SecretString refund_metadata = 10; // Metadata specific to the refund
-  optional SecretString feature_data = 11; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 11; // Connector-specific metadata for the transaction
 
   // Browser Information
   optional BrowserInformation browser_info = 12; // Browser information, if relevant  
@@ -1825,7 +1816,7 @@ message RefundResponse {
   // Additional Context
   optional string customer_name = 13; // Name of the customer
   optional SecretString email = 14; // Email address of the customer
-  optional string merchant_order_reference_id = 15;
+  optional string merchant_order_id = 15;
   optional SecretString metadata = 16;
   optional SecretString refund_metadata = 17; // Refund-specific metadata from the connector
   optional Identifier connector_transaction_id = 18;
@@ -1841,7 +1832,7 @@ message RefundResponse {
 // Request message for creating a dispute
 message PaymentServiceDisputeRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_dispute_id = 1;
   Identifier connector_transaction_id = 2; // Transaction ID to raise the dispute for
 
   // State Information
@@ -1851,7 +1842,7 @@ message PaymentServiceDisputeRequest {
 // Response message for dispute operations (unified for both Create and Get)
 message DisputeResponse {
   // Identification
-  optional string dispute_id = 1;  // Connector's unique identifier for the dispute
+  optional string connector_dispute_id = 1;  // Connector's unique identifier for the dispute
   optional Identifier connector_transaction_id = 2; // Transaction ID associated with the dispute
 
   // Status Information
@@ -1877,16 +1868,16 @@ message DisputeResponse {
   optional string dispute_message = 16;
 
   // Reference
-  optional Identifier response_ref_id = 17;
+  optional Identifier merchant_dispute_id = 17;
 
   // Raw Request for debugging
   optional SecretString raw_connector_request = 18;
 }
 
 // Request message for setting up a mandate
-message PaymentServiceRegisterAutoDebitRequest {
+message PaymentServiceSetupRecurringRequest {
   // Identification
-  Identifier merchant_registration_id = 1;
+  Identifier merchant_recurring_payment_id = 1;
 
   // Mandate Details
   Money amount = 2;
@@ -1901,9 +1892,8 @@ message PaymentServiceRegisterAutoDebitRequest {
   bool enrolled_for_3ds = 7; // Indicates if the customer is enrolled for 3D Secure
   optional AuthenticationData authentication_data = 8; // Additional authentication data
 
-  // Metadata
   optional SecretString metadata = 9; // Additional metadata for the connector
-  optional SecretString feature_data = 10; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 10; // Connector-specific metadata for the transaction
 
   // URLs for Redirection and Webhooks
   optional string return_url = 11; // URL to redirect after setup
@@ -1916,7 +1906,7 @@ message PaymentServiceRegisterAutoDebitRequest {
   // Order Details
   optional int64 order_tax_amount = 15; // Tax amount, if an initial payment is part of setup
   optional string order_category = 16; // Category of the order/service related to the mandate
-  optional string merchant_order_reference_id = 17; // Merchant's internal reference ID
+  optional string merchant_order_id = 17; // Merchant's internal reference ID
   optional int64 shipping_cost = 18; // Shipping cost, if an initial payment is part of setup
 
   // Behavioral Flags and Preferences
@@ -1950,7 +1940,7 @@ message PaymentServiceRegisterAutoDebitRequest {
 }
 
 // Response message for a mandate setup operation
-message PaymentServiceRegisterAutoDebitResponse {
+message PaymentServiceSetupRecurringResponse {
   // Identification
   Identifier connector_registration_id = 1; // Identifier for the mandate registration
 
@@ -1966,7 +1956,7 @@ message PaymentServiceRegisterAutoDebitResponse {
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 7; // Data for redirecting the customer's browser
   optional string network_transaction_id = 8; // Renamed from network_transaction_id
-  optional Identifier merchant_registration_id = 9;
+  optional Identifier merchant_recurring_payment_id = 9;
   optional ConnectorResponseData connector_response = 10; // Various data regarding the response from connector
 
   // Authorization Details
@@ -1980,13 +1970,13 @@ message PaymentServiceRegisterAutoDebitResponse {
 
   // Raw Request for debugging
   optional SecretString raw_connector_request = 14; // Raw request to the connector for debugging
-  optional SecretString feature_data = 15; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 15; // Connector-specific metadata for the transaction
 }
 
 // Request message for repeat payment (MIT - Merchant Initiated Transaction)
 message RecurringPaymentServiceChargeRequest {
   // Identification
-  Identifier request_ref_id = 1; // Reference ID for tracking
+  Identifier merchant_charge_id = 1; // Reference ID for tracking
 
   // Mandate Information (for MIT)
   optional MandateReference mandate_reference_id = 2; // Reference to existing mandate
@@ -1998,9 +1988,9 @@ message RecurringPaymentServiceChargeRequest {
   optional PaymentMethod payment_method = 4;
 
   // Optional fields
-  optional string merchant_order_reference_id = 5;
+  optional string merchant_order_id = 5;
   optional SecretString metadata = 6; // Additional metadata for the connector
-  optional SecretString feature_data = 7; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 7; // Connector-specific metadata for the transaction
   optional string webhook_url = 8;
   optional string return_url = 9;
   optional string description = 10;
@@ -2064,12 +2054,11 @@ message RecurringPaymentServiceChargeResponse {
   uint32 status_code = 4;
   map<string, string> response_headers = 5;
 
-  // Metadata
-  optional SecretString feature_data = 6;
+  optional SecretString connector_feature_data = 6;
 
   // Transaction Details
   optional string network_transaction_id = 7;
-  optional Identifier response_ref_id = 8;
+  optional Identifier merchant_charge_id = 8;
   optional MandateReference mandate_reference = 9;
 
   // State Information
@@ -2090,7 +2079,7 @@ message RecurringPaymentServiceChargeResponse {
 // Request message for a mandate revoke operation
 message RecurringPaymentServiceRevokeRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_revoke_id = 1;
 
   // Mandate Details
   string mandate_id = 2;
@@ -2107,7 +2096,7 @@ message RecurringPaymentServiceRevokeResponse {
 
   // Transaction Details
   optional string network_transaction_id = 5;
-  optional Identifier response_ref_id = 6;
+  optional Identifier merchant_revoke_id = 6;
 
   // Raw Response/Request for debugging
   optional SecretString raw_connector_response = 7;
@@ -2121,7 +2110,7 @@ message RecurringPaymentServiceRevokeResponse {
 // Request message for pre-authentication step
 message PaymentMethodAuthenticationServicePreAuthenticateRequest {
   // Payment Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -2137,10 +2126,8 @@ message PaymentMethodAuthenticationServicePreAuthenticateRequest {
   // Authentication Details
   bool enrolled_for_3ds = 6;
 
-  // Metadata
-    // Metadata
   optional SecretString metadata = 7; // Additional metadata for the connector
-  optional SecretString feature_data = 8; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 8; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
   optional string return_url = 9;
@@ -2171,10 +2158,9 @@ message PaymentMethodAuthenticationServicePreAuthenticateResponse {
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 6;
   optional string network_transaction_id = 7;
-  optional Identifier response_ref_id = 8;
+  optional Identifier merchant_order_id = 8;
 
-  // Metadata
-  optional SecretString feature_data = 9; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 9; // Connector-specific metadata for the transaction
 
   // State Information
   optional ConnectorState state = 10;
@@ -2188,7 +2174,7 @@ message PaymentMethodAuthenticationServicePreAuthenticateResponse {
 // Request message for authentication step
 message PaymentMethodAuthenticationServiceAuthenticateRequest {
   // Payment Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -2205,9 +2191,8 @@ message PaymentMethodAuthenticationServiceAuthenticateRequest {
   // Authentication Details
   optional AuthenticationData authentication_data = 6;
 
-  // Metadata
   optional SecretString metadata = 7; // Additional metadata for the connector
-  optional SecretString feature_data = 8; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 8; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
   optional string return_url = 9;
@@ -2240,13 +2225,12 @@ message PaymentMethodAuthenticationServiceAuthenticateResponse {
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 6;
   optional string network_transaction_id = 7;
-  optional Identifier response_ref_id = 8;
+  optional Identifier merchant_order_id = 8;
 
   // Authentication Results
   optional AuthenticationData authentication_data = 9;
 
-  // Metadata
-  optional SecretString feature_data = 10;
+  optional SecretString connector_feature_data = 10;
 
   // State Information
   optional ConnectorState state = 11;
@@ -2258,7 +2242,7 @@ message PaymentMethodAuthenticationServiceAuthenticateResponse {
 // Request message for post-authentication step
 message PaymentMethodAuthenticationServicePostAuthenticateRequest {
   // Payment Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -2274,9 +2258,9 @@ message PaymentMethodAuthenticationServicePostAuthenticateRequest {
   // Authentication Details
   optional AuthenticationData authentication_data = 6;
   optional string connector_order_reference_id = 7;
-  // Metadata
+
   optional SecretString metadata = 8;
-  optional SecretString feature_data = 9; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 9; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
   optional string return_url = 10;
@@ -2304,7 +2288,7 @@ message PaymentMethodAuthenticationServicePostAuthenticateResponse {
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 6;
   optional string network_transaction_id = 7;
-  optional Identifier response_ref_id = 8;
+  optional Identifier merchant_order_id = 8;
 
   // Authentication Results
   optional AuthenticationData authentication_data = 9;
@@ -2312,8 +2296,7 @@ message PaymentMethodAuthenticationServicePostAuthenticateResponse {
   // Authorization Details
   optional bool incremental_authorization_allowed = 10;
 
-  // Metadata
-  optional SecretString feature_data = 11;
+  optional SecretString connector_feature_data = 11;
 
   // State Information
   optional ConnectorState state = 12;
@@ -2325,7 +2308,7 @@ message PaymentMethodAuthenticationServicePostAuthenticateResponse {
 // Request message for incremental authorization
 message PaymentServiceIncrementalAuthorizationRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_authorization_id = 1;
   Identifier connector_transaction_id = 2;
 
   // Amount Information
@@ -2334,8 +2317,7 @@ message PaymentServiceIncrementalAuthorizationRequest {
   // Optional Fields
   optional string reason = 4;
 
-  // Metadata
-  optional SecretString feature_data = 5;
+  optional SecretString connector_feature_data = 5;
 
   // State Information
   optional ConnectorState state = 6;
@@ -2359,7 +2341,7 @@ message PaymentServiceIncrementalAuthorizationResponse {
 // Request message for EventService.HandleEvent RPC
 message EventServiceHandleRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_event_id = 1;
 
   // Request Details
   RequestDetails request_details = 2;
@@ -2381,7 +2363,7 @@ enum WebhookEventStatus {
 // Request message for VerifyRedirectResponse
 message PaymentServiceVerifyRedirectResponseRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_order_id = 1;
 
   // Request Details
   RequestDetails request_details = 2;
@@ -2402,7 +2384,7 @@ message PaymentServiceVerifyRedirectResponseResponse {
   optional Money response_amount = 3;
 
   // Reference
-  optional Identifier response_ref_id = 4;
+  optional Identifier merchant_order_id = 4;
 
   // Status Information
   optional PaymentStatus status = 5;
@@ -2419,7 +2401,7 @@ message PaymentServiceVerifyRedirectResponseResponse {
 // Request message for synchronizing refund status
 message RefundServiceGetRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_refund_id = 1;
   Identifier connector_transaction_id = 2;
   string refund_id = 3;
 
@@ -2429,7 +2411,6 @@ message RefundServiceGetRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5;
 
-  // Metadata
   optional SecretString refund_metadata = 6; // Metadata specific to the refund sync
 
   // State Information
@@ -2440,7 +2421,7 @@ message RefundServiceGetRequest {
   // Payment Method Type
   optional PaymentMethodType payment_method_type = 9;
   
-  optional SecretString feature_data = 10;
+  optional SecretString connector_feature_data = 10;
 }
 
 // ============================================================================
@@ -2450,7 +2431,7 @@ message RefundServiceGetRequest {
 // Request message for submitting evidence for a dispute
 message DisputeServiceSubmitEvidenceRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_dispute_id = 1;
   optional Identifier connector_transaction_id = 2;
   string dispute_id = 3;
 
@@ -2476,7 +2457,7 @@ message DisputeServiceSubmitEvidenceResponse {
   map<string, string> response_headers = 7;
 
   // Reference
-  optional Identifier response_ref_id = 8;
+  optional Identifier merchant_dispute_id = 8;
 
   // Raw Request for debugging
   optional SecretString raw_connector_request = 9;
@@ -2485,7 +2466,7 @@ message DisputeServiceSubmitEvidenceResponse {
 // Request message for retrieving dispute information
 message DisputeServiceGetRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_dispute_id = 1;
   optional string dispute_id = 2;
   string connector_dispute_id = 3;
 }
@@ -2493,7 +2474,7 @@ message DisputeServiceGetRequest {
 // Request message for defending a dispute
 message DisputeServiceDefendRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_dispute_id = 1;
   Identifier connector_transaction_id = 2;
   string dispute_id = 3;
 
@@ -2514,7 +2495,7 @@ message DisputeServiceDefendResponse {
   map<string, string> response_headers = 6;
 
   // Reference
-  optional Identifier response_ref_id = 7;
+  optional Identifier merchant_dispute_id = 7;
 
   // Raw Request for debugging
   optional SecretString raw_connector_request = 8;
@@ -2523,7 +2504,7 @@ message DisputeServiceDefendResponse {
 // Request message for accepting a dispute
 message DisputeServiceAcceptRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_dispute_id = 1;
   Identifier connector_transaction_id = 2;
   string dispute_id = 3;
 }
@@ -2541,7 +2522,7 @@ message DisputeServiceAcceptResponse {
   map<string, string> response_headers = 6;
 
   // Reference
-  optional Identifier response_ref_id = 7;
+  optional Identifier merchant_dispute_id = 7;
 
   // Raw Request for debugging
   optional SecretString raw_connector_request = 8;
@@ -2558,7 +2539,7 @@ message DisputeServiceAcceptResponse {
 // Request message for tokenizing a payment method
 message PaymentMethodServiceTokenizeRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_payment_method_id = 1;
 
   // Payment Information
   Money amount = 2;
@@ -2570,9 +2551,8 @@ message PaymentMethodServiceTokenizeRequest {
   // Address Information
   optional PaymentAddress address = 5;
 
-  // Metadata
   optional SecretString metadata = 6;
-  optional SecretString feature_data = 7; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 7; // Connector-specific metadata for the transaction
 
   // URLs for Redirection
   optional string return_url = 8;
@@ -2592,7 +2572,7 @@ message PaymentMethodServiceTokenizeResponse {
   map<string, string> response_headers = 4;
 
   // Reference
-  optional Identifier response_ref_id = 5;
+  optional Identifier merchant_payment_method_id = 5;
 
   // State Information
   optional ConnectorState state = 6;
@@ -2601,8 +2581,7 @@ message PaymentMethodServiceTokenizeResponse {
 // Request message for getting a payment method
 message PaymentMethodServiceGetRequest {
   // Identification
-  Identifier request_ref_id = 1;
-
+  Identifier merchant_payment_method_id = 1;
   // Payment Method Information
   string payment_method_token = 2;
 
@@ -2624,7 +2603,7 @@ message PaymentMethodServiceGetResponse {
   map<string, string> response_headers = 5;
 
   // Reference
-  optional Identifier response_ref_id = 6;
+  optional Identifier merchant_payment_method_id = 6;
 }
 
 // ============================================================================
@@ -2644,10 +2623,9 @@ message CustomerServiceCreateRequest {
   // Address Information
   optional PaymentAddress address = 5;
 
-  // Metadata
   // Additional Metadata
   optional SecretString metadata = 6; // Additional metadata for the connector
-  optional SecretString feature_data = 7; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 7; // Connector-specific metadata for the transaction
 
   // Environment Configuration
   optional bool test_mode = 8;
@@ -2670,7 +2648,7 @@ message CustomerServiceCreateResponse {
 // Request message for getting a customer
 message CustomerServiceGetRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_customer_id = 1;
 
   // Customer Information
   string connector_customer_id = 2;
@@ -2687,13 +2665,13 @@ message CustomerServiceGetResponse {
   map<string, string> response_headers = 4;
 
   // Reference
-  optional Identifier response_ref_id = 5;
+  optional Identifier merchant_customer_id = 5;
 }
 
 // Request message for updating a customer
 message CustomerServiceUpdateRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_customer_id = 1;
 
   // Customer Information
   string connector_customer_id = 2;
@@ -2704,9 +2682,8 @@ message CustomerServiceUpdateRequest {
   // Address Information
   optional PaymentAddress address = 6;
 
-  // Metadata
   optional SecretString metadata = 7; // Additional metadata for the connector
-  optional SecretString feature_data = 8; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 8; // Connector-specific metadata for the transaction
 }
 
 // Response message for updating a customer
@@ -2720,13 +2697,13 @@ message CustomerServiceUpdateResponse {
   map<string, string> response_headers = 4;
 
   // Reference
-  optional Identifier response_ref_id = 5;
+  optional Identifier merchant_customer_id = 5;
 }
 
 // Request message for deleting a customer
 message CustomerServiceDeleteRequest {
   // Identification
-  Identifier request_ref_id = 1;
+  Identifier merchant_customer_id = 1;
 
   // Customer Information
   string connector_customer_id = 2;
@@ -2740,7 +2717,7 @@ message CustomerServiceDeleteResponse {
   map<string, string> response_headers = 3;
 
   // Reference
-  optional Identifier response_ref_id = 4;
+  optional Identifier merchant_customer_id = 4;
 }
 
 

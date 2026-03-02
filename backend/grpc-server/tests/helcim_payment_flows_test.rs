@@ -105,7 +105,7 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
             Some(IdType::EncodedData(id)) => id.clone(),
             Some(IdType::NoResponseIdMarker(_)) => {
                 // For manual capture, extract the transaction ID from connector metadata
-                if let Some(connector_meta) = &response.feature_data {
+                if let Some(connector_meta) = &response.connector_feature_data {
                     if let Ok(meta_map) = serde_json::from_str::<HashMap<String, String>>(
                         connector_meta.as_ref().expose(),
                     ) {
@@ -282,7 +282,7 @@ fn create_payment_sync_request(
         }),
         state: None,
         metadata: None,
-        feature_data: None,
+        connector_feature_data: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
@@ -317,7 +317,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         cancellation_reason: None,
-        request_ref_id: Some(Identifier {
+        merchant_void_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
         }),
         all_keys_required: None,

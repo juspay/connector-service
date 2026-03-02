@@ -15,10 +15,10 @@ impl ForeignFrom<(&CompositeAuthorizeRequest, &ConnectorEnum)>
 {
     fn foreign_from((item, connector): (&CompositeAuthorizeRequest, &ConnectorEnum)) -> Self {
         Self {
-            request_ref_id: item.merchant_transaction_id.clone(),
+            merchant_access_token_id: item.merchant_transaction_id.clone(),
             connector: grpc_connector_from_connector_enum(connector),
             metadata: item.metadata.clone(),
-            feature_data: item.feature_data.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
             test_mode: item.test_mode,
         }
     }
@@ -38,7 +38,7 @@ impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
             phone_number: customer.and_then(|c| c.phone_number.clone()),
             address: item.address.clone(),
             metadata: item.metadata.clone(),
-            feature_data: item.feature_data.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
             test_mode: item.test_mode,
         }
     }
@@ -102,7 +102,7 @@ impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
 //             complete_authorize_url: item.complete_authorize_url.clone(),
 //             session_token: item.session_token.clone(),
 //             order_category: item.order_category.clone(),
-//             merchant_order_reference_id: item.merchant_order_reference_id.clone(),
+//             merchant_order_id: item.merchant_order_id.clone(),
 //             setup_future_usage: item.setup_future_usage,
 //             off_session: item.off_session,
 //             request_incremental_authorization: item.request_incremental_authorization,

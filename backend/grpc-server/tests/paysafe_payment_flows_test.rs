@@ -255,7 +255,7 @@ fn create_payment_authorize_request(
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
-        feature_data: Some(Secret::new(merchant_account_metadata_json)),
+        connector_feature_data: Some(Secret::new(merchant_account_metadata_json)),
         ..Default::default()
     }
 }
@@ -274,7 +274,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         }),
         state: None,
         metadata: None,
-        feature_data: None,
+        connector_feature_data: None,
         setup_future_usage: None,
         encoded_data: None,
         sync_type: None,
@@ -342,14 +342,14 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         }),
         refund_id: refund_id.to_string(),
         refund_reason: None,
-        request_ref_id: Some(Identifier {
+        merchant_refund_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp_micros()))),
         }),
         browser_info: None,
         test_mode: Some(true),
         refund_metadata: Some(Secret::new(refund_metadata_json)),
         state: None,
-        feature_data: None,
+        connector_feature_data: None,
         payment_method_type: None,
     }
 }
@@ -361,7 +361,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         cancellation_reason: None,
-        request_ref_id: Some(Identifier {
+        merchant_void_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp_micros()))),
         }),
         all_keys_required: None,

@@ -173,7 +173,7 @@ impl RefundService for Refunds {
                     event_type: WebhookEventType::WebhookRefundSuccess.into(),
                     event_response: Some(content),
                     source_verified,
-                    response_ref_id: None,
+                    merchant_event_id: None,
                     event_status: grpc_api_types::payments::WebhookEventStatus::Complete.into(),
                 };
 

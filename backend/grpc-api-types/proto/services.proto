@@ -116,7 +116,7 @@ service PaymentService {
 
   // Setup a recurring payment instruction for future payments/ debits. This could be
   // for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
-  rpc Register(PaymentServiceRegisterAutoDebitRequest) returns (PaymentServiceRegisterAutoDebitResponse);
+  rpc SetupRecurring(PaymentServiceSetupRecurringRequest) returns (PaymentServiceSetupRecurringResponse);
 
   // Handle incoming webhooks from payment processors.
   // This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type.

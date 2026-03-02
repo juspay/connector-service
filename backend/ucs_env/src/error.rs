@@ -321,7 +321,7 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             }),
             status_code: error.status_code.unwrap_or(500),
             response_headers: std::collections::HashMap::new(),
-            feature_data: None,
+            connector_feature_data: None,
             raw_connector_response: None,
             raw_connector_request: None,
             state: None,
