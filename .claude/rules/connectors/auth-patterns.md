@@ -88,6 +88,29 @@ impl TryFrom<&RouterDataV2<...>> for ConnectorRequest {
 
 ---
 
+## gRPC Transport: How Auth Reaches the Server
+
+Connector credentials are passed via **gRPC metadata headers only** (not in the request payload).
+
+### Typed path (preferred)
+```
+x-connector-auth: {"auth_type":{"Stripe":{"api_key":"sk_test_..."}}}
+```
+JSON-serialized `ConnectorAuth` proto message. Uses PascalCase variant names. Parsed by `extract_connector_auth_from_header()` in `utils.rs`.
+
+### Legacy path (fallback)
+```
+x-auth: header-key
+x-api-key: sk_test_...
+```
+Generic headers parsed by `auth_from_metadata()`. Used when `x-connector-auth` is absent.
+
+Both paths produce `ConnectorSpecificAuth`, which connector code consumes via `TryFrom<&ConnectorSpecificAuth>`.
+
+> **Note**: The `connector_auth` field was removed from all proto request messages. Auth is never in the payload.
+
+---
+
 ## Quick Reference
 
 | Auth Type | CreateAccessToken | Token in Header | Credentials Location |

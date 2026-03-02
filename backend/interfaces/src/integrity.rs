@@ -16,6 +16,7 @@ use domain_types::connector_types::{
     PaymentsSyncData, PaymentsUpdateMetadataData, RefundSyncData, RefundsData, RepeatPaymentData,
     SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
 };
+use domain_types::router_request_types::VerifyWebhookSourceRequestData;
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::{
@@ -28,6 +29,7 @@ use domain_types::{
         PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
         RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
         SubmitEvidenceIntegrityObject, UpdateMetadataIntegrityObject,
+        VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -171,6 +173,7 @@ impl_check_integrity!(ConnectorCustomerData);
 impl_check_integrity!(PaymentsSdkSessionTokenData);
 impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
+impl_check_integrity!(VerifyWebhookSourceRequestData);
 impl_check_integrity!(PaymentsUpdateMetadataData<S>);
 
 // ========================================================================
@@ -371,6 +374,19 @@ impl GetIntegrityObject<MandateRevokeIntegrityObject> for MandateRevokeRequestDa
         MandateRevokeIntegrityObject {
             mandate_id: self.mandate_id.clone(),
         }
+    }
+}
+
+impl GetIntegrityObject<VerifyWebhookSourceIntegrityObject> for VerifyWebhookSourceRequestData {
+    fn get_response_integrity_object(&self) -> Option<VerifyWebhookSourceIntegrityObject> {
+        None // Webhook verification responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> VerifyWebhookSourceIntegrityObject {
+        // Extract webhook_id from merchant_secret (for PayPal, webhook_id is stored in secret)
+        let webhook_id =
+            String::from_utf8(self.merchant_secret.secret.to_vec()).unwrap_or_default();
+        VerifyWebhookSourceIntegrityObject { webhook_id }
     }
 }
 
@@ -907,6 +923,28 @@ impl FlowIntegrity for MandateRevokeIntegrityObject {
                 "mandate_id",
                 &req_integrity_object.mandate_id.expose(),
                 &res_integrity_object.mandate_id.expose(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for VerifyWebhookSourceIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.webhook_id != res_integrity_object.webhook_id {
+            mismatched_fields.push(format_mismatch(
+                "webhook_id",
+                &req_integrity_object.webhook_id,
+                &res_integrity_object.webhook_id,
             ));
         }
 

@@ -38,6 +38,18 @@ impl ConnectorRequestReference for domain_types::connector_types::PaymentFlowDat
     }
 }
 
+impl ConnectorRequestReference for domain_types::connector_types::VerifyWebhookSourceFlowData {
+    fn get_connector_request_reference_id(&self) -> &str {
+        &self.connector_request_reference_id
+    }
+}
+
+impl AdditionalHeaders for domain_types::connector_types::VerifyWebhookSourceFlowData {
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        None
+    }
+}
+
 impl AdditionalHeaders for domain_types::connector_types::PaymentFlowData {
     fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
         self.vault_headers.as_ref()

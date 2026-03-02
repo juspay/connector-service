@@ -9,7 +9,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -28,13 +28,16 @@ pub struct JpmorganAuthType {
     pub client_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for JpmorganAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for JpmorganAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                client_id: api_key.clone(),
-                client_secret: key1.clone(),
+            ConnectorSpecificAuth::Jpmorgan {
+                client_id,
+                client_secret,
+            } => Ok(Self {
+                client_id: client_id.clone(),
+                client_secret: client_secret.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }

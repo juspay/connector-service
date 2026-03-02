@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
 };
@@ -39,11 +39,11 @@ pub struct HelcimAuthType {
     pub(super) api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for HelcimAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for HelcimAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
+            ConnectorSpecificAuth::Helcim { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
