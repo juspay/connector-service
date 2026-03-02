@@ -6034,7 +6034,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     fn foreign_try_from(
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let amount = Some(common_utils::types::MinorUnit::new(value.amount()));
+        let amount = value.amount.map(common_utils::types::MinorUnit::new);
         // If currency is unspecified, send None, otherwise try to convert it
         let currency = if value.currency() == grpc_api_types::payments::Currency::Unspecified {
             None
@@ -7340,7 +7340,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
         Ok(Self {
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             payment_method_data: PaymentMethodData::foreign_try_from(
-                value.payment_method.ok_or_else(|| {
+                value.payment_method.clone().ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
                         error_identifier: 400,
@@ -7349,7 +7349,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                     })
                 })?,
             )?,
-            amount: Some(0),
+            amount: Some(value.minor_amount.unwrap_or(0)),
             confirm: true,
             customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
                 customer_acceptance.clone(),
@@ -7367,9 +7367,14 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             email,
-            customer_name: None,
+            customer_name: value.customer_name.clone(),
             return_url: value.return_url.clone(),
-            payment_method_type: None,
+            payment_method_type: value
+                .payment_method
+                .clone()
+                .map(<Option<common_enums::PaymentMethodType>>::foreign_try_from)
+                .transpose()?
+                .flatten(),
             request_incremental_authorization: false,
             metadata: value
                 .metadata
@@ -7378,7 +7383,9 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             complete_authorize_url: None,
             capture_method: None,
             integrity_object: None,
-            minor_amount: Some(common_utils::types::MinorUnit::new(0)),
+            minor_amount: Some(common_utils::types::MinorUnit::new(
+                value.minor_amount.unwrap_or(0),
+            )),
             shipping_cost: None,
             customer_id: value
                 .customer_id
