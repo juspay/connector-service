@@ -2,7 +2,10 @@ use std::{collections::HashMap, str::FromStr, sync::RwLock, time::Duration};
 
 use common_enums::ApiClientError;
 #[cfg(feature = "injector-client")]
-use common_utils::{consts::{X_API_TAG, X_API_URL, X_SESSION_ID}, events::{EventStage, MaskedSerdeValue}};
+use common_utils::{
+    consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
+    events::{EventStage, MaskedSerdeValue},
+};
 use common_utils::{
     ext_traits::AsyncExt,
     lineage,
@@ -83,23 +86,19 @@ impl AdditionalHeaders for domain_types::connector_types::DisputeFlowData {
         None
     }
 }
-use common_utils::{
-    events::{Event, EventConfig, FlowName},
-};
-use error_stack::{report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, Maskable};
-#[cfg(feature = "injector-client")]
-use hyperswitch_masking::{ErasedMaskSerialize};
+use common_utils::events::{Event, EventConfig, FlowName};
 #[cfg(feature = "injector-client")]
 // TokenData is now imported from hyperswitch_injector
-use common_utils::{consts,emit_event_with_config};
+use common_utils::{consts, emit_event_with_config};
+use error_stack::{report, ResultExt};
+#[cfg(feature = "injector-client")]
+use hyperswitch_masking::ErasedMaskSerialize;
+use hyperswitch_masking::{ExposeInterface, Maskable};
 #[cfg(feature = "injector-client")]
 use injector::{injector_core, HttpMethod, TokenData};
+use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 #[cfg(feature = "injector-client")]
 use interfaces::integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject};
-use interfaces::{
-    connector_integration_v2::BoxedConnectorIntegrationV2,
-};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
