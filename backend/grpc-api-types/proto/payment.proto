@@ -3491,7 +3491,8 @@ message NexixpayAuth {
 }
 
 message RevolutAuth {
-  SecretString api_key = 1;
+  SecretString secret_api_key = 1;
+  optional SecretString signing_secret = 2;
 }
 
 message Revolv3Auth {

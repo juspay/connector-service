@@ -167,7 +167,8 @@ pub enum ConnectorSpecificAuth {
         api_key: Secret<String>,
     },
     Revolut {
-        api_key: Secret<String>,
+        secret_api_key: Secret<String>,
+        signing_secret: Option<Secret<String>>,
     },
     Shift4 {
         api_key: Secret<String>,
@@ -758,7 +759,8 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
                 merchant_code: worldpayxml.merchant_code.ok_or_else(err)?,
             }),
             AuthType::Revolut(revolut) => Ok(Self::Revolut {
-                api_key: revolut.api_key.ok_or_else(err)?,
+                secret_api_key: revolut.secret_api_key.ok_or_else(err)?,
+                signing_secret: revolut.signing_secret,
             }),
             AuthType::Loonio(loonio) => Ok(Self::Loonio {
                 merchant_id: loonio.merchant_id.ok_or_else(err)?,
@@ -868,7 +870,8 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
             },
             ConnectorEnum::Revolut => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Revolut {
-                    api_key: api_key.clone(),
+                    secret_api_key: api_key.clone(),
+                    signing_secret: None,
                 }),
                 _ => Err(err().into()),
             },
