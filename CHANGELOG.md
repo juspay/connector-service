@@ -4,6 +4,23 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.03.02.0
+
+### Features
+
+- **connector:** [revolv3] add recurring support for non-3ds card payments ([#554](https://github.com/juspay/connector-service/pull/554)) ([`6a85fd4`](https://github.com/juspay/connector-service/commit/6a85fd47eeaacc6fa40fd38c91930c373eb7a476))
+- Webhook support for paypal ([#440](https://github.com/juspay/connector-service/pull/440)) ([`7e9496f`](https://github.com/juspay/connector-service/commit/7e9496f2b0d261c0092241efc8875d23b4e6161d))
+- [NOVALNET] ACH BankDebit ([#563](https://github.com/juspay/connector-service/pull/563)) ([`c4f52ae`](https://github.com/juspay/connector-service/commit/c4f52ae0a89ba63a87efca7b3cdd53413da1647a))
+- Typed ConnectorSpecificAuth with header-based auth resolution via X-Connector-Auth ([#555](https://github.com/juspay/connector-service/pull/555)) ([`23fb46a`](https://github.com/juspay/connector-service/commit/23fb46a5c6e36b3454124b413e6db585ebcd0cac))
+
+### Miscellaneous Tasks
+
+- **connector:** Add warning comment about dtd validation to redsys soap api ([#560](https://github.com/juspay/connector-service/pull/560)) ([`a941b53`](https://github.com/juspay/connector-service/commit/a941b531eacc40684ed8800a93c373f84201f20e))
+
+**Full Changelog:** [`2026.02.26.0...2026.03.02.0`](https://github.com/juspay/connector-service/compare/2026.02.26.0...2026.03.02.0)
+
+- - -
+
 ## 2026.02.26.0
 
 ### Features
