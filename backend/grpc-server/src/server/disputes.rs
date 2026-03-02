@@ -486,7 +486,7 @@ impl DisputeService for Disputes {
                         event_type: WebhookEventType::WebhookDisputeOpened.into(),
                         event_response: Some(content),
                         source_verified,
-                        response_ref_id: None,
+                        merchant_event_id: None,
                         event_status: grpc_api_types::payments::WebhookEventStatus::Complete.into(),
                     };
                     Ok(tonic::Response::new(response))

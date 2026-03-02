@@ -73,8 +73,8 @@ use grpc_api_types::payments::{
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
     PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
     PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRefundRequest,
-    PaymentServiceRegisterAutoDebitRequest, PaymentServiceRegisterAutoDebitResponse,
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
+    PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
@@ -408,7 +408,7 @@ impl Customer {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorSpecificAuth,
-        payload: &PaymentServiceRegisterAutoDebitRequest,
+        payload: &PaymentServiceSetupRecurringRequest,
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
@@ -1264,7 +1264,7 @@ impl Payments {
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorSpecificAuth,
         event_params: EventParams<'_>,
-        payload: &PaymentServiceRegisterAutoDebitRequest,
+        payload: &PaymentServiceSetupRecurringRequest,
         connector_name: &str,
         service_name: &str,
     ) -> Result<String, tonic::Status> {
@@ -2256,7 +2256,7 @@ impl PaymentService for Payments {
                         event_type: api_event_type.into(),
                         event_response: Some(content),
                         source_verified,
-                        response_ref_id: None,
+                        merchant_event_id: None,
                         event_status: webhook_transformation_status.into(),
                     };
 
@@ -2548,7 +2548,7 @@ impl PaymentService for Payments {
     }
 
     #[tracing::instrument(
-        name = "register",
+        name = "setup_recurring",
         fields(
             name = common_utils::consts::NAME,
             service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
@@ -2568,11 +2568,11 @@ impl PaymentService for Payments {
         )
         skip(self, request)
     )]
-    async fn register(
+    async fn setup_recurring(
         &self,
-        request: tonic::Request<PaymentServiceRegisterAutoDebitRequest>,
-    ) -> Result<tonic::Response<PaymentServiceRegisterAutoDebitResponse>, tonic::Status> {
-        info!("REGISTER_FLOW: initiated");
+        request: tonic::Request<PaymentServiceSetupRecurringRequest>,
+    ) -> Result<tonic::Response<PaymentServiceSetupRecurringResponse>, tonic::Status> {
+        info!("SETUP_RECURRING_FLOW: initiated");
         let service_name = request
             .extensions()
             .get::<String>()
@@ -3590,7 +3590,7 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                             status: i32::from(grpc_api_types::payments::OperationStatus::Success),
                             error: None,
                             status_code: 200,
-                            response_ref_id: None,
+                            merchant_access_token_id: None,
                         };
 
                     Ok(tonic::Response::new(create_access_token_response))
@@ -4341,8 +4341,8 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                         }))?,
                     })
                     .transpose()?,
-                feature_data: None,
-                response_ref_id: connector_response_reference_id.map(|id| {
+                connector_feature_data: None,
+                merchant_order_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
@@ -4379,7 +4379,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 }),
                 redirection_data: None,
                 network_transaction_id: None,
-                response_ref_id: None,
+                merchant_order_id: None,
                 status: status.into(),
                 error: Some(grpc_api_types::payments::ErrorInfo {
                     unified_details: None,
@@ -4401,7 +4401,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
-                feature_data: None,
+                connector_feature_data: None,
                 state: None,
                 authentication_data: None,
             }
@@ -4441,21 +4441,21 @@ pub fn generate_create_order_response(
                 .transpose()?;
 
             PaymentServiceCreateOrderResponse {
-                order_id: Some(grpc_api_types::payments::Identifier {
+                connector_order_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(grpc_api_types::payments::identifier::IdType::Id(order_id)),
                 }),
                 status: grpc_status.into(),
                 error: None,
                 status_code: 200,
                 response_headers,
-                response_ref_id: None,
+                merchant_order_id: None,
                 raw_connector_request,
                 raw_connector_response,
                 session_token: grpc_session_token,
             }
         }
         Err(err) => PaymentServiceCreateOrderResponse {
-            order_id: Some(grpc_api_types::payments::Identifier {
+            connector_order_id: Some(grpc_api_types::payments::Identifier {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(())),
             }),
             status: err
@@ -4474,7 +4474,7 @@ pub fn generate_create_order_response(
             }),
             status_code: err.status_code.into(),
             response_headers,
-            response_ref_id: None,
+            merchant_order_id: None,
             raw_connector_request,
             raw_connector_response,
             session_token: None,
@@ -4513,7 +4513,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 connector_response_reference_id,
                 status_code,
             } => PaymentMethodAuthenticationServiceAuthenticateResponse {
-                response_ref_id: connector_response_reference_id.map(|id| {
+                merchant_order_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
@@ -4602,7 +4602,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                         }))?,
                     })
                     .transpose()?,
-                feature_data: None,
+                connector_feature_data: None,
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
                 status: grpc_status.into(),
                 error: None,
@@ -4635,7 +4635,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 }),
                 redirection_data: None,
                 network_transaction_id: None,
-                response_ref_id: None,
+                merchant_order_id: None,
                 authentication_data: None,
                 status: status.into(),
                 error: Some(grpc_api_types::payments::ErrorInfo {
@@ -4658,7 +4658,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code.into(),
                 raw_connector_response,
                 response_headers,
-                feature_data: None,
+                connector_feature_data: None,
                 state: None,
             }
         }
@@ -4696,9 +4696,9 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
             } => PaymentMethodAuthenticationServicePostAuthenticateResponse {
                 connector_transaction_id: None,
                 redirection_data: None,
-                feature_data: None,
+                connector_feature_data: None,
                 network_transaction_id: None,
-                response_ref_id: connector_response_reference_id.map(|id| {
+                merchant_order_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
@@ -4735,7 +4735,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 }),
                 redirection_data: None,
                 network_transaction_id: None,
-                response_ref_id: None,
+                merchant_order_id: None,
                 authentication_data: None,
                 incremental_authorization_allowed: None,
                 status: status.into(),
@@ -4759,7 +4759,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
-                feature_data: None,
+                connector_feature_data: None,
                 state: None,
             }
         }
@@ -4806,7 +4806,7 @@ pub fn generate_mandate_revoke_response(
             status_code: response.status_code.into(),
             response_headers,
             network_transaction_id: None,
-            response_ref_id: None,
+            merchant_revoke_id: None,
             raw_connector_response,
             raw_connector_request,
         }),
@@ -4824,7 +4824,7 @@ pub fn generate_mandate_revoke_response(
             status_code: e.status_code.into(),
             response_headers,
             network_transaction_id: None,
-            response_ref_id: e.connector_transaction_id.map(|id| {
+            merchant_revoke_id: e.connector_transaction_id.map(|id| {
                 grpc_api_types::payments::Identifier {
                     id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                 }

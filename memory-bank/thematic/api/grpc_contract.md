@@ -62,7 +62,7 @@ message PaymentsAuthorizeRequest {
   optional AuthenticationData authentication_data = 29;
   optional bool request_extended_authorization = 30;
   int64 minor_amount = 31;
-  optional string merchant_order_reference_id = 32;
+  optional string merchant_order_id = 32;
   optional int64 shipping_cost = 33;
 }
 ```
@@ -379,7 +379,7 @@ message SetupMandateRequest {
   optional AuthenticationData authentication_data = 29;
   optional bool request_extended_authorization = 30;
   int64 minor_amount = 31;
-  optional string merchant_order_reference_id = 32;
+  optional string merchant_order_id = 32;
   optional int64 shipping_cost = 33;
 }
 ```

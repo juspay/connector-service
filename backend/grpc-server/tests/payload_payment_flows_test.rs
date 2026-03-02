@@ -24,7 +24,7 @@ use grpc_api_types::{
         Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterAutoDebitRequest, PaymentServiceVoidRequest, PaymentStatus,
+        PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest, PaymentStatus,
         RecurringPaymentServiceChargeRequest, RefundStatus,
     },
 };
@@ -176,7 +176,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         }),
         state: None,
         metadata: None,
-        feature_data: None,
+        connector_feature_data: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
@@ -209,7 +209,7 @@ fn create_payment_void_request(transaction_id: &str, amount: i64) -> PaymentServ
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         cancellation_reason: None,
-        request_ref_id: Some(Identifier {
+        merchant_void_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("payload_void"))),
         }),
         all_keys_required: None,
@@ -277,7 +277,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
     let metadata_json = serde_json::to_string(&metadata_map).unwrap();
 
     RecurringPaymentServiceChargeRequest {
-        request_ref_id: Some(Identifier {
+        merchant_charge_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("repeat"))),
         }),
         mandate_reference_id: Some(mandate_reference),
@@ -285,7 +285,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
             minor_amount: unique_amount,
             currency: i32::from(Currency::Usd),
         }),
-        merchant_order_reference_id: Some(generate_unique_id("repeat_order")),
+        merchant_order_id: Some(generate_unique_id("repeat_order")),
         metadata: Some(Secret::new(metadata_json)),
         webhook_url: None,
         capture_method: None,
@@ -298,11 +298,11 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
     }
 }
 
-fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
+fn create_register_request() -> PaymentServiceSetupRecurringRequest {
     create_register_request_with_prefix("payload_mandate")
 }
 
-fn create_register_request_with_prefix(_prefix: &str) -> PaymentServiceRegisterAutoDebitRequest {
+fn create_register_request_with_prefix(_prefix: &str) -> PaymentServiceSetupRecurringRequest {
     let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
@@ -325,7 +325,7 @@ fn create_register_request_with_prefix(_prefix: &str) -> PaymentServiceRegisterA
     let unique_email = format!("customer{random_id}@example.com");
     let unique_first_name = format!("John{random_id}");
 
-    PaymentServiceRegisterAutoDebitRequest {
+    PaymentServiceSetupRecurringRequest {
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: 0, // Setup mandate with 0 amount
             currency: i32::from(Currency::Usd),
@@ -526,7 +526,7 @@ async fn test_authorize_capture_refund_rsync() {
             amount,
             state: None,
             metadata: None,
-            feature_data: None,
+            connector_feature_data: None,
             setup_future_usage: None,
             sync_type: None,
             connector_order_reference_id: None,
@@ -561,9 +561,9 @@ async fn test_setup_mandate() {
         add_payload_metadata(&mut grpc_request);
 
         let response = client
-            .register(grpc_request)
+            .setup_recurring(grpc_request)
             .await
-            .expect("gRPC register call failed")
+            .expect("gRPC setup_recurring call failed")
             .into_inner();
 
         // Verify we got a mandate reference
@@ -613,9 +613,9 @@ async fn test_repeat_payment() {
         add_payload_metadata(&mut register_grpc_request);
 
         let register_response = client
-            .register(register_grpc_request)
+            .setup_recurring(register_grpc_request)
             .await
-            .expect("gRPC register call failed")
+            .expect("gRPC setup_recurring call failed")
             .into_inner();
 
         if register_response.mandate_reference.is_none() {
