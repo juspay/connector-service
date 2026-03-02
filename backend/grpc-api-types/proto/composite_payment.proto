@@ -14,7 +14,7 @@ message CompositeAuthorizeRequest {
 
   // Metadata
   optional SecretString metadata = 2; // Additional metadata for the connector
-  optional SecretString feature_data = 3; // Connector-specific metadata for the transaction
+  optional SecretString connector_feature_data = 3; // Connector-specific metadata for the transaction
 
   // Environment Configuration
   optional bool test_mode = 4; // A boolean value to indicate if the connector is in Test mode

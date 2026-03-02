@@ -178,7 +178,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 merchant_invoice_ref_id: item
                     .router_data
                     .request
-                    .merchant_order_reference_id
+                    .merchant_order_id
                     .clone(),
                 amount,
             };
@@ -666,7 +666,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let invoice = Revolv3InvoiceData {
-            merchant_invoice_ref_id: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_invoice_ref_id: item.router_data.request.merchant_order_id.clone(),
             amount: Revolv3AmountData {
                 value: item
                     .connector

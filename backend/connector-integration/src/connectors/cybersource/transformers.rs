@@ -1298,7 +1298,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let consumer_authentication_information = item
@@ -1386,7 +1386,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -1498,7 +1498,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -1592,7 +1592,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
         let ucaf_collection_indicator = match apple_pay_wallet_data
             .payment_method
@@ -1701,7 +1701,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -1796,7 +1796,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let ucaf_collection_indicator =
@@ -1890,7 +1890,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -2034,7 +2034,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .metadata
                                     .clone()
                                     .map(|metadata| metadata.expose()),
-                                item.router_data.request.merchant_order_reference_id.clone(),
+                                item.router_data.request.merchant_order_id.clone(),
                             );
                         let ucaf_collection_indicator = match apple_pay_data
                             .payment_method
@@ -2303,7 +2303,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let is_final = matches!(
@@ -2395,7 +2395,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             value
                 .router_data
                 .request
-                .merchant_order_reference_id
+                .merchant_order_id
                 .clone(),
         );
 
@@ -4339,7 +4339,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -4419,7 +4419,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let consumer_authentication_information = item
@@ -4507,7 +4507,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let consumer_authentication_information = item
@@ -4895,7 +4895,7 @@ fn get_commerce_indicator_for_external_authentication(
 
 fn convert_metadata_to_merchant_defined_info(
     metadata: Option<serde_json::Value>,
-    merchant_order_reference_id: Option<String>,
+    merchant_order_id: Option<String>,
 ) -> Option<Vec<utils::MerchantDefinedInformation>> {
     let mut iter = 1;
 
@@ -4915,10 +4915,10 @@ fn convert_metadata_to_merchant_defined_info(
         })
         .unwrap_or_default();
 
-    if let Some(merchant_ref_id) = merchant_order_reference_id {
+    if let Some(merchant_ref_id) = merchant_order_id {
         result.push(utils::MerchantDefinedInformation {
             key: iter,
-            value: format!("merchant_order_reference_id={merchant_ref_id}"),
+            value: format!("merchant_order_id={merchant_ref_id}"),
         });
     }
 

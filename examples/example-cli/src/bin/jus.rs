@@ -236,7 +236,7 @@ struct PayArgs {
 
     /// Merchant order reference ID
     #[arg(long)]
-    merchant_order_reference_id: Option<String>,
+    merchant_order_id: Option<String>,
 
     /// Shipping cost
     #[arg(long)]
@@ -667,7 +667,7 @@ async fn handle_pay(mut args: PayArgs) -> Result<()> {
         }),
         request_incremental_authorization: args.request_incremental_authorization.unwrap_or(false),
         request_extended_authorization: args.request_extended_authorization.unwrap_or(false),
-        merchant_order_reference_id: args.merchant_order_reference_id,
+        merchant_order_id: args.merchant_order_id,
         shipping_cost: args.shipping_cost,
         setup_future_usage: args.future_usage.map(|fu| {
             match fu.to_lowercase().as_str() {

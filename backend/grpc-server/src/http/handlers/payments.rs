@@ -23,8 +23,8 @@ use grpc_api_types::payments::{
     PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
-    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceRegisterAutoDebitRequest,
-    PaymentServiceRegisterAutoDebitResponse, PaymentServiceReverseRequest,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceSetupRecurringRequest,
+    PaymentServiceSetupRecurringResponse, PaymentServiceReverseRequest,
     PaymentServiceReverseResponse, PaymentServiceVerifyRedirectResponseRequest,
     PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
@@ -110,16 +110,16 @@ http_handler!(
     payment_method_service
 );
 http_handler!(
-    register,
-    PaymentServiceRegisterAutoDebitRequest,
-    PaymentServiceRegisterAutoDebitResponse,
-    register,
+    setup_recurring,
+    PaymentServiceSetupRecurringRequest,
+    PaymentServiceSetupRecurringResponse,
+    setup_recurring,
     payments_service
 );
 // http_handler!(
 //     register_only,
-//     PaymentServiceRegisterAutoDebitRequest,
-//     PaymentServiceRegisterAutoDebitResponse,
+//     PaymentServiceSetupRecurringRequest,
+//     PaymentServiceSetupRecurringResponse,
 //     register_only,
 //     payments_service
 // );
