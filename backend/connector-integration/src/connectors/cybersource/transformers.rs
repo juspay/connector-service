@@ -1912,7 +1912,7 @@ fn get_samsung_pay_payment_information<
 ) -> Result<PaymentInformation<T>, error_stack::Report<ConnectorError>> {
     let samsung_pay_fluid_data_value =
         get_samsung_pay_fluid_data_value(&samsung_pay_data.payment_credential.token_data)?;
-    
+
     let samsung_pay_fluid_data_str = serde_json::to_string(&samsung_pay_fluid_data_value)
         .change_context(ConnectorError::RequestEncodingFailed)
         .attach_printable("Failed to serialize samsung pay fluid data")?;
@@ -1927,7 +1927,7 @@ fn get_samsung_pay_payment_information<
                 transaction_type: TransactionType::InApp,
             },
         }));
-        
+
     Ok(payment_information)
 }
 
