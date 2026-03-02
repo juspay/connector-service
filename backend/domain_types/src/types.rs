@@ -601,20 +601,9 @@ impl ForeignTryFrom<
                 error_object: None,
             }).into());
         }
-        use grpc_api_types::payments::samsung_wallet::payment_credential::CardBrand as ProtoCardBrand;
-
-        let proto_card_brand = ProtoCardBrand::try_from(credential.card_brand)
-            .map_err(|_| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CARD_BRAND".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Unsupported Samsung Pay card brand".to_owned(),
-                    error_object: None,
-                })
-            })?;
-
+        
         let card_brand =
-            SamsungPayCardBrand::foreign_try_from(proto_card_brand)?;
+            SamsungPayCardBrand::foreign_try_from(credential.card_brand())?;
         Ok(Self {
             method: credential.method,
             recurring_payment: credential.recurring_payment,
