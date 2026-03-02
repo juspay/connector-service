@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use grpc_api_types::payments::{
-    self, EnvOptions, FfiOptions, HttpOptions, Options, PaymentServiceAuthorizeRequest,
-};
+use grpc_api_types::payments::{self, PaymentServiceAuthorizeRequest};
 use hyperswitch_payments_client::ConnectorClient;
 
 #[tokio::main]
