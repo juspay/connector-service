@@ -68,11 +68,11 @@ impl ConnectorClient {
     /// # Arguments
     /// * `request` - The PaymentServiceAuthorizeRequest protobuf message.
     /// * `metadata` - Metadata map containing connector routing and auth info.
-    ///                Must contain:
-    ///                - `"connector"`: connector name (e.g. `"Stripe"`)
-    ///                - `"connector_auth_type"`: JSON string of the auth config
-    ///                  (e.g. `{"auth_type":"HeaderKey","api_key":"sk_test_xxx"}`)
-    ///                - `x-*` headers for MaskedMetadata
+    ///   Must contain:
+    ///   - `"connector"`: connector name (e.g. `"Stripe"`)
+    ///   - `"connector_auth_type"`: JSON string of the auth config
+    ///     (e.g. `{"auth_type":"HeaderKey","api_key":"sk_test_xxx"}`)
+    ///   - `x-*` headers for MaskedMetadata
     /// * `ffi_options` - Optional FfiOptions message override for this specific call.
     pub async fn authorize(
         &self,
@@ -83,7 +83,7 @@ impl ConnectorClient {
         let ffi_request = build_ffi_request(request.clone(), metadata)?;
 
         // Resolve FFI options (prefer call-specific override)
-        let ffi = ffi_options.or_else(|| self.options.ffi.clone());
+        let ffi = ffi_options.or(self.options.ffi);
         let test_mode = ffi
             .as_ref()
             .and_then(|f| f.env.as_ref())

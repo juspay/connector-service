@@ -109,7 +109,12 @@ mod uniffi_bindings_inner {
                 Some(header_map)
             },
             response: Bytes::from(response.body),
-            status_code: response.status_code as u16,
+            status_code: response
+                .status_code
+                .try_into()
+                .map_err(|e| UniffiError::DecodeError {
+                    msg: format!("Invalid HTTP status code: {e}"),
+                })?,
         })
     }
 
