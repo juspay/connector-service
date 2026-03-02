@@ -10,8 +10,9 @@ Mirrors the Node.js client at sdk/node-ffi-client/src/client.js.
 
 import json
 from . import http_client
-from .generated.connector_service_ffi import authorize_req_transformer, authorize_res_transformer
-from .generated.payment_pb2 import PaymentServiceAuthorizeResponse
+from payments.generated.connector_service_ffi import authorize_req_transformer, authorize_res_transformer
+from payments.generated.payment_pb2 import PaymentServiceAuthorizeResponse
+from payments.generated.sdk_options_pb2 import FfiOptions
 
 
 class ConnectorClient:
@@ -20,7 +21,7 @@ class ConnectorClient:
     def __init__(self, options=None):
         self.options = options or {}
 
-    def authorize(self, request, metadata: dict) -> PaymentServiceAuthorizeResponse:
+    def authorize(self, request, metadata: dict, options: FfiOptions = None) -> PaymentServiceAuthorizeResponse:
         """Execute a full authorize round-trip: FFI request build -> HTTP -> FFI response parse.
 
         Args:
@@ -29,6 +30,7 @@ class ConnectorClient:
                 - "connector": connector name (e.g. "Stripe")
                 - "connector_auth_type": JSON string of auth config
                 - x-* headers for masked metadata
+            options: Optional FfiOptions protobuf message with ffi configuration.
 
         Returns:
             PaymentServiceAuthorizeResponse protobuf message.
@@ -36,8 +38,11 @@ class ConnectorClient:
         # Step 1: Serialize the protobuf request to bytes
         request_bytes = request.SerializeToString()
 
+        # Serialize FfiOptions to bytes if provided, otherwise use empty bytes
+        options_bytes = b'' if options is None else options.SerializeToString()
+
         # Step 2: Build the connector HTTP request via FFI
-        connector_request = authorize_req_transformer(request_bytes, metadata)
+        connector_request = authorize_req_transformer(request_bytes, metadata, options_bytes)
 
         # Step 3: Execute the HTTP request
         http_req = http_client.HttpRequest(
@@ -56,6 +61,7 @@ class ConnectorClient:
             http_response.headers,
             request_bytes,
             metadata,
+            options_bytes,
         )
 
         # Step 5: Deserialize the protobuf response

@@ -15,9 +15,17 @@ import ucs.v2.Payment.PaymentAddress
 import ucs.v2.Payment.Currency
 import ucs.v2.Payment.CaptureMethod
 import ucs.v2.Payment.AuthenticationType
+import ucs.v2.SdkOptions.FfiOptions
+import ucs.v2.SdkOptions.EnvOptions
+import ucs.v2.SdkOptions.Options
 
 fun buildRequest(): PaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.newBuilder().apply {
+        merchantTransactionIdBuilder.id = "smoke_test_123"
+        amountBuilder.apply {
+            minorAmount = 1000
+            currency = Currency.USD
+        }
         merchantTransactionIdBuilder.id = "smoke_test_123"
         amountBuilder.apply {
             minorAmount = 1000
@@ -35,6 +43,10 @@ fun buildRequest(): PaymentServiceAuthorizeRequest =
             emailBuilder.value = "test@example.com"
             name = "Test"
         }
+        customerBuilder.apply {
+            emailBuilder.value = "test@example.com"
+            name = "Test"
+        }
         authType = AuthenticationType.NO_THREE_DS
         returnUrl = "https://example.com/return"
         webhookUrl = "https://example.com/webhook"
@@ -47,8 +59,9 @@ fun buildMetadata(): Map<String, String> {
     return mapOf(
         "connector" to "Stripe",
         "connector_auth_type" to JSONObject(mapOf(
-            "auth_type" to "HeaderKey",
-            "api_key" to apiKey,
+            "Stripe" to mapOf(
+                "api_key" to apiKey
+            )
         )).toString(),
         "x-connector" to "Stripe",
         "x-merchant-id" to "test_merchant_123",
@@ -57,6 +70,20 @@ fun buildMetadata(): Map<String, String> {
         "x-auth" to "body-key",
         "x-api-key" to apiKey,
     )
+}
+
+fun buildOptions(): ByteArray {
+    // Build EnvOptions and wrap in FfiOptions, then wrap in Options
+    val envOptions = EnvOptions.newBuilder()
+        .setTestMode(true)
+        .build()
+    val ffiOptions = FfiOptions.newBuilder()
+        .setEnv(envOptions)
+        .build()
+    val options = Options.newBuilder()
+        .setFfi(ffiOptions)
+        .build()
+    return options.toByteArray()
 }
 
 fun assert(condition: Boolean, message: String) {
@@ -71,10 +98,11 @@ fun testLowLevelFfi() {
 
     val requestBytes = buildRequest().toByteArray()
     val metadata = buildMetadata()
+    val optionsBytes = buildOptions()
 
     try {
         // Now returns a native FfiConnectorHttpRequest object, no JSONObject needed!
-        val connectorRequest = authorizeReqTransformer(requestBytes, metadata)
+        val connectorRequest = authorizeReqTransformer(requestBytes, metadata, optionsBytes)
         val url = connectorRequest.url
         val method = connectorRequest.method
 
@@ -93,7 +121,7 @@ fun testLowLevelFfi() {
     }
 }
 
-fun testFullRoundTrip() {
+fun testFullRoundTrip(optionsBytes: ByteArray) {
     println("\n=== Test 2: Full round-trip (ConnectorClient) ===")
 
     val apiKey = System.getenv("STRIPE_API_KEY") ?: ""
@@ -104,7 +132,7 @@ fun testFullRoundTrip() {
 
     val client = ConnectorClient()
     try {
-        val response = client.authorize(buildRequest(), buildMetadata())
+        val response = client.authorize(buildRequest(), buildMetadata(), optionsBytes)
         println("  Response status: ${response.status}")
         println("  PASSED")
     } catch (e: UniffiException) {
@@ -118,7 +146,8 @@ fun testFullRoundTrip() {
 }
 
 fun main() {
+    val optionsBytes = buildOptions()
     testLowLevelFfi()
-    testFullRoundTrip()
+    testFullRoundTrip(optionsBytes)
     println("\nAll checks passed.")
 }

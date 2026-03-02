@@ -17,7 +17,7 @@ use domain_types::{
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -119,12 +119,12 @@ pub struct StaxAuthType {
     pub api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for StaxAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for StaxAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
+            ConnectorSpecificAuth::Stax { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(

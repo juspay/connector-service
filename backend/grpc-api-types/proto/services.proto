@@ -4,36 +4,56 @@
 // File: services.proto
 //
 // Overview:
-//   This file defines the gRPC service interfaces for the Unified Connector
-//   Service (UCS) v2 API. It is the primary entry point for API consumers.
+//   This file exposes the gRPC service interfaces that serve as the primary entry
+//   point for consuming the Unified Connector Service (UCS) API. You interact with
+//   these services to process payments, manage refunds, handle disputes, and
+//   authenticate payment methods across 50+ payment connectors.
 //
-//   All request/response message types and shared enumerations are defined in
-//   payment.proto, which this file imports.
+//   You import payment.proto for all shared message types and enumerations.
+//
+// Handling Multi-Step Flows:
+//   You can handle complex operations like 3DS and DDC through multiple RPCs to handle
+//   external redirects and asynchronous device data collection. You pass the
+//   ConnectorState from each response to the next request to maintain session
+//   continuity across the entire workflow.
+//
+// Handling Webhook Flows:
+//   Process inbound webhook notifications from connectors through EventService.Handle.
+//   Pass the raw HTTP request details to receive verified, unified typed responses that
+//   reflect the latest payment states without polling connector APIs.
 //
 // Services:
-//   - PaymentService                 — Full payment lifecycle: authorize, capture, void, refund,
-//                                      incremental authorization, redirect verification, and webhooks.
-//   - RecurringPaymentService        — Recurring payment operations: charge and revoke.
-//   - RefundService                  — Refund status synchronization.
-//   - DisputeService                 — Dispute management: evidence submission, defense, acceptance,
-//                                      and status sync.
-//   - EventService                   — Common event handler for all services.
-//   - PaymentMethodService           — Tokenize payment method, get payment method.
-//   - CustomerService                — Create customer, get customer, update customer, delete customer.
-//   - MerchantAuthenticationService  — Authentication and session token management: access tokens,
-//                                      session tokens, and SDK session tokens for wallet integrations.
-//   - PaymentMethodAuthenticationService — 3D Secure authentication workflow: pre-authentication,
-//                                          authentication/challenge handling, and post-authentication validation.
+//   ┌──────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────┐
+//   │ Service                              │ Purpose                                                                     │
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ PaymentService                       │ Process payments from authorization to settlement. Authorize funds, capture │
+//   │                                      │ payments, issue refunds, and void transactions through a single interface.  │
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ RecurringPaymentService              │ Charge and revoke recurring payments. Process subscription billing and      │
+//   │                                      │ cancel mandates when customers end their recurring agreements.              │
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ RefundService                        │ Retrieve and synchronize refund statuses. Track refund progress across      │
+//   │                                      │ payment processors to ensure accurate settlement of customer refunds.       │
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ DisputeService                       │ Manage chargeback disputes. Submit evidence, defend claims, and accept      │
+//   │                                      │ liability to protect revenue and maintain compliance with card networks.    │
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ EventService                         │ Process asynchronous webhook events from payment processors. Receive        │
+//   │                                      │ real-time updates about payment state changes without polling APIs.         │
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ PaymentMethodService                 │ Tokenize and retrieve payment methods. Vault sensitive card data to enable  │
+//   │                                      │ one-click payments and recurring billing without PCI exposure.              │
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ CustomerService                      │ Create and manage customer profiles. Store payer information at the         │
+//   │                                      │ connector to streamline future transactions and improve authorization rates.│
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ MerchantAuthenticationService        │ Generate access tokens and session credentials. Authenticate your           │
+//   │                                      │ application and initialize SDK sessions for wallet payments like Apple Pay. │
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ PaymentMethodAuthenticationService   │ Execute 3D Secure authentication flows. Verify cardholder identity through  │
+//   │                                      │ frictionless or challenge-based checks to reduce fraud liability.           │
+//   └──────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────┘
 //
-// Webhook Flows:
-//   The EventService exposes a Handle RPC for processing inbound connector
-//   webhooks. The caller passes the raw HTTP request details; the service
-//   verifies the source and translates the payload into a typed response.
-//
-// Multi-Step Flows:
-//   Some operations (e.g., 3DS, DDC) span multiple RPCs. The ConnectorState
-//   returned by one call must be forwarded in the next call to preserve
-//   session context across steps.
 //
 // Related Files:
 //   - payment.proto         — All shared message and enum definitions
@@ -58,61 +78,62 @@ option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/
 
 // Unified service definition for all payment related operations.
 service PaymentService {
-  // Authorizes a payment amount on a payment method. This reserves funds
+  // Authorize a payment amount on a payment method. This reserves funds
   // without capturing them, essential for verifying availability before finalizing.
   rpc Authorize(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
 
-  // Retrieves current payment status from the connector. Enables synchronization
+  // Retrieve current payment status from the payment processor. Enables synchronization
   // between your system and payment processors for accurate state tracking.
   rpc Get(PaymentServiceGetRequest) returns (PaymentServiceGetResponse);
 
-  // Cancels an authorized payment before capture. Releases held funds back to
+  // Cancel an authorized payment before capture. Releases held funds back to
   // customer, typically used when orders are cancelled or abandoned.
   rpc Void(PaymentServiceVoidRequest) returns (PaymentServiceVoidResponse);
 
-  // Reverses a captured payment before settlement. Recovers funds after capture
+  // Reverse a captured payment before settlement. Recovers funds after capture
   // but before bank settlement, used for corrections or cancellations.
   rpc Reverse(PaymentServiceReverseRequest) returns (PaymentServiceReverseResponse);
 
-  // Finalizes an authorized payment transaction. Transfers reserved funds from
+  // Finalize an authorized payment transaction. Transfers reserved funds from
   // customer to merchant account, completing the payment lifecycle.
   rpc Capture(PaymentServiceCaptureRequest) returns (PaymentServiceCaptureResponse);
 
-  // Initializes an order in the connector system. Sets up payment context
+  // Initialize an order in the payment processor system. Sets up payment context
   // before customer enters card details for improved authorization rates.
   rpc CreateOrder(PaymentServiceCreateOrderRequest) returns (PaymentServiceCreateOrderResponse);
 
-  // Initiates a refund to customer's payment method. Returns funds for
+  // Initiate a refund to customer's payment method. Returns funds for
   // returns, cancellations, or service adjustments after original payment.
   rpc Refund(PaymentServiceRefundRequest) returns (RefundResponse);
 
-  // Increases authorized amount if still in authorized state. Allows adding
+  // Increase authorized amount if still in authorized state. Allows adding
   // charges to existing authorization for hospitality, tips, or incremental services.
   rpc IncrementalAuthorization(PaymentServiceIncrementalAuthorizationRequest) returns (PaymentServiceIncrementalAuthorizationResponse);
 
-  // Validates redirect-based payment responses. Confirms authenticity of
+  // Validate redirect-based payment responses. Confirms authenticity of
   // redirect-based payment completions to prevent fraud and tampering.
   rpc VerifyRedirectResponse(PaymentServiceVerifyRedirectResponseRequest) returns (PaymentServiceVerifyRedirectResponseResponse);
 
-  // Sets up a mandate for future payments.
+  // Setup a recurring payment instruction for future payments/ debits. This could be
+  // for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
   rpc Register(PaymentServiceRegisterAutoDebitRequest) returns (PaymentServiceRegisterAutoDebitResponse);
 
-  // Handles incoming webhooks from connectors.
-  // This will delegate to the appropriate service transform based on the event type.
-  rpc Transform(EventServiceHandleRequest) returns (EventServiceHandleResponse);
+  // Handle incoming webhooks from payment processors.
+  // This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type.
+  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
-// ============================================================================
-// RECURRING PAYMENT SERVICE — Manages recurring payment operations including
+// ======================================================================================
+// RECURRING PAYMENT SERVICE — Manages recurring payment management operations including
 //                              charging and revoking mandates.
-// ============================================================================
+// ======================================================================================
 
 service RecurringPaymentService {
-  // Charges using an existing stored mandate. Processes repeat payments for
+  // Charge using an existing stored recurring payment instruction. Processes repeat payments for
   // subscriptions or recurring billing without collecting payment details.
   rpc Charge(RecurringPaymentServiceChargeRequest) returns (RecurringPaymentServiceChargeResponse);
 
-  // Cancels an existing recurring payment mandate. Stops future automatic
+  // Cancel an existing recurring payment mandate. Stops future automatic
   // charges on customer's stored consent for subscription cancellations.
   rpc Revoke(RecurringPaymentServiceRevokeRequest) returns (RecurringPaymentServiceRevokeResponse);
 }
@@ -123,12 +144,12 @@ service RecurringPaymentService {
 
 // Service for refund-specific operations.
 service RefundService {
-  // Retrieves refund status from the connector. Tracks refund progress
+  // Retrieve refund status from the payment processor. Tracks refund progress
   // through processor settlement for accurate customer communication.
   rpc Get(RefundServiceGetRequest) returns (RefundResponse);
 
-  // Handles incoming webhooks from connectors.
-  rpc Transform(EventServiceHandleRequest) returns (EventServiceHandleResponse);
+  // Handle incoming webhooks from payment processor.
+  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 
 }
 
@@ -139,24 +160,24 @@ service RefundService {
 
 // Service for dispute-specific operations.
 service DisputeService {
-  // Uploads evidence to dispute customer chargeback. Provides documentation
+  // Upload evidence to dispute customer chargeback. Provides documentation
   // like receipts and delivery proof to contest fraudulent transaction claims.
   rpc SubmitEvidence(DisputeServiceSubmitEvidenceRequest) returns (DisputeServiceSubmitEvidenceResponse);
 
-  // Retrieves dispute status and evidence submission state. Tracks dispute
+  // Retrieve dispute status and evidence submission state. Tracks dispute
   // progress through bank review process for informed decision-making.
   rpc Get(DisputeServiceGetRequest) returns (DisputeResponse);
 
-  // Submits defense with reason code for dispute. Presents formal argument
+  // Submit defense with reason code for dispute. Presents formal argument
   // against customer's chargeback claim with supporting documentation.
   rpc Defend(DisputeServiceDefendRequest) returns (DisputeServiceDefendResponse);
 
-  // Concedes dispute and accepts chargeback loss. Acknowledges liability
+  // Concede dispute and accepts chargeback loss. Acknowledges liability
   // and stops dispute defense process when evidence is insufficient.
   rpc Accept(DisputeServiceAcceptRequest) returns (DisputeServiceAcceptResponse);
 
-  // Handles incoming webhooks from connectors.
-  rpc Transform(EventServiceHandleRequest) returns (EventServiceHandleResponse);
+  // Handle incoming webhooks from connectors.
+  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
 // ============================================================================
@@ -165,7 +186,7 @@ service DisputeService {
 // ============================================================================
 
 service EventService {
-  // Processes webhook notifications from connectors. Translates connector events
+  // Process webhook notifications from connectors. Translates connector events
   // into standardized responses for asynchronous payment state updates.
   rpc Handle(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
@@ -175,11 +196,11 @@ service EventService {
 // ============================================================================
 
 service PaymentMethodService {
-  // Tokenizes payment method for secure storage. Replaces raw card details
+  // Tokenize payment method for secure storage. Replaces raw card details
   // with secure token for one-click payments and recurring billing.
   rpc Tokenize(PaymentMethodServiceTokenizeRequest) returns (PaymentMethodServiceTokenizeResponse);
 
-  // // Retrieves payment method details from the connector.
+  // // Retrieves payment method details from the payment processor or vault.
   // rpc Get(PaymentMethodServiceGetRequest) returns (PaymentMethodServiceGetResponse);
 }
 
@@ -188,35 +209,35 @@ service PaymentMethodService {
 // ============================================================================
 
 service CustomerService {
-  // Creates customer record in the connector system. Stores customer details
+  // Create customer record in the payment processor system. Stores customer details
   // for future payment operations without re-sending personal information.
   rpc Create(CustomerServiceCreateRequest) returns (CustomerServiceCreateResponse);
 
-  // // Retrieves customer details from the connector.
+  // // Retrieves customer details from the payment processor.
   // rpc Get(CustomerServiceGetRequest) returns (CustomerServiceGetResponse);
 
-  // // Updates customer record in the connector system.
+  // // Updates customer record in the payment processor system.
   // rpc Update(CustomerServiceUpdateRequest) returns (CustomerServiceUpdateResponse);
 
-  // // Deletes customer record from the connector system.
+  // // Deletes customer record from the payment processor system.
   // rpc Delete(CustomerServiceDeleteRequest) returns (CustomerServiceDeleteResponse);
 }
 
 // ============================================================================
 // MERCHANT AUTHENTICATION SERVICE — Manages access tokens and session initialization
-//                                    for secure payment processing and SDK integration.
+//                 for secure payment processing and SDK initiation.
 // ============================================================================
 
 service MerchantAuthenticationService {
-  // Generates short-lived connector authentication token. Provides secure
+  // Generate short-lived connector authentication token. Provides secure
   // credentials for connector API access without storing secrets client-side.
   rpc CreateAccessToken(MerchantAuthenticationServiceCreateAccessTokenRequest) returns (MerchantAuthenticationServiceCreateAccessTokenResponse);
 
-  // Creates session token for payment processing. Maintains session state
+  // Create session token for payment processing. Maintains session state
   // across multiple payment operations for improved security and tracking.
   rpc CreateSessionToken(MerchantAuthenticationServiceCreateSessionTokenRequest) returns (MerchantAuthenticationServiceCreateSessionTokenResponse);
 
-  // Initializes wallet payment sessions for Apple Pay, Google Pay, etc.
+  // Initialize wallet payment sessions for Apple Pay, Google Pay, etc.
   // Sets up secure context for tokenized wallet payments with device verification.
   rpc CreateSdkSessionToken(MerchantAuthenticationServiceCreateSdkSessionTokenRequest) returns (MerchantAuthenticationServiceCreateSdkSessionTokenResponse);
 }
@@ -228,15 +249,15 @@ service MerchantAuthenticationService {
 // ============================================================================
 
 service PaymentMethodAuthenticationService {
-  // Initiates 3DS flow before payment authorization. Collects device data and
+  // Initiate 3DS flow before payment authorization. Collects device data and
   // prepares authentication context for frictionless or challenge-based verification.
   rpc PreAuthenticate(PaymentMethodAuthenticationServicePreAuthenticateRequest) returns (PaymentMethodAuthenticationServicePreAuthenticateResponse);
 
-  // Executes 3DS challenge or frictionless verification. Authenticates customer
+  // Execute 3DS challenge or frictionless verification. Authenticates customer
   // via bank challenge or behind-the-scenes verification for fraud prevention.
   rpc Authenticate(PaymentMethodAuthenticationServiceAuthenticateRequest) returns (PaymentMethodAuthenticationServiceAuthenticateResponse);
 
-  // Validates authentication results from issuing bank. Processes bank's
+  // Validate authentication results with the issuing bank. Processes bank's
   // authentication decision to determine if payment can proceed.
   rpc PostAuthenticate(PaymentMethodAuthenticationServicePostAuthenticateRequest) returns (PaymentMethodAuthenticationServicePostAuthenticateResponse);
 }

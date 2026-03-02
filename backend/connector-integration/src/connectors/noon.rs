@@ -32,7 +32,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -207,7 +207,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
         let details: noon::NoonWebhookEvent = request
             .body
@@ -234,7 +234,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let algorithm = crypto::HmacSha512;
 
@@ -259,7 +259,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
@@ -428,7 +428,7 @@ macros::create_all_prerequisites!(
 
         pub fn get_auth_header(
             &self,
-            auth_type: &ConnectorAuthType,
+            auth_type: &ConnectorSpecificAuth,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let auth = NoonAuthType::try_from(auth_type)?;
 

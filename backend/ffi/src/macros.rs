@@ -103,7 +103,7 @@ macro_rules! req_transformer {
             payload: $request_type,
             config: &std::sync::Arc<ucs_env::configs::Config>,
             connector: domain_types::connector_types::ConnectorEnum,
-            connector_auth_details: domain_types::router_data::ConnectorAuthType,
+            connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
             metadata: &common_utils::metadata::MaskedMetadata,
         ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
             let (connector_integration, router_data) = crate::build_router_data!(
@@ -168,7 +168,7 @@ macro_rules! res_transformer {
             payload: $request_type,
             config: &std::sync::Arc<ucs_env::configs::Config>,
             connector: domain_types::connector_types::ConnectorEnum,
-            connector_auth_details: domain_types::router_data::ConnectorAuthType,
+            connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
             metadata: &common_utils::metadata::MaskedMetadata,
             response: domain_types::router_response_types::Response,
         ) -> Result<$response_type, FfiPaymentError> {

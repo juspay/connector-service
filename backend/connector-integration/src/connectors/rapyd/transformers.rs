@@ -7,7 +7,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -121,13 +121,16 @@ pub struct RapydAuthType {
     pub(super) secret_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for RapydAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for RapydAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                access_key: api_key.to_owned(),
-                secret_key: key1.to_owned(),
+            ConnectorSpecificAuth::Rapyd {
+                access_key,
+                secret_key,
+            } => Ok(Self {
+                access_key: access_key.to_owned(),
+                secret_key: secret_key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType)?,
         }

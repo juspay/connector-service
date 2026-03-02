@@ -16,6 +16,8 @@ const PaymentServiceAuthorizeRequest = ucs.v2.PaymentServiceAuthorizeRequest;
 const Currency = ucs.v2.Currency;
 const CaptureMethod = ucs.v2.CaptureMethod;
 const AuthenticationType = ucs.v2.AuthenticationType;
+const FfiOptions = ucs.v2.FfiOptions;
+const EnvOptions = ucs.v2.EnvOptions;
 
 console.log("Loaded hyperswitch-payments from node_modules");
 console.log(`  ConnectorClient: ${typeof ConnectorClient}`);
@@ -24,7 +26,7 @@ console.log(`  UniffiClient: ${typeof UniffiClient}`);
 const apiKey = process.env.STRIPE_API_KEY || "sk_test_placeholder";
 const metadata = {
   connector: "Stripe",
-  connector_auth_type: JSON.stringify({ auth_type: "HeaderKey", api_key: apiKey }),
+  connector_auth_type: JSON.stringify({ Stripe: { api_key: apiKey } }),
   "x-connector": "Stripe",
   "x-merchant-id": "test_merchant_123",
   "x-request-id": "test-pack-001",
@@ -32,6 +34,12 @@ const metadata = {
   "x-auth": "body-key",
   "x-api-key": apiKey,
 };
+
+// Create FfiOptions with testMode
+const ffiOptions = FfiOptions.create({
+  env: EnvOptions.create({ testMode: true })
+});
+const optionsBytes = Buffer.from(FfiOptions.encode(ffiOptions).finish());
 
 const requestMsg = PaymentServiceAuthorizeRequest.create({
   merchantTransactionId: { id: "test_pack_123" },
@@ -85,7 +93,7 @@ async function testRoundTrip() {
 
   const client = new ConnectorClient();
   try {
-    const response = await client.authorize(requestMsg, metadata);
+    const response = await client.authorize(requestMsg, metadata, ffiOptions);
     console.log(`  Response type: ${typeof response}`);
     console.log(`  Response keys: ${Object.keys(response)}`);
     console.log("  PASSED");

@@ -41,7 +41,7 @@ use crate::{
 use url::Url;
 
 // snake case for enum variants
-#[derive(Clone, Copy, Debug, Display, EnumString, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -311,9 +311,9 @@ pub struct NetworkTokenWithNTIRef {
 
 #[derive(Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub enum MandateReferenceId {
-    ConnectorMandateId(ConnectorMandateReferenceId), // mandate_id send by connector
-    NetworkMandateId(String), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with card data
-    NetworkTokenWithNTI(NetworkTokenWithNTIRef), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with network token data
+    ConnectorMandateId(ConnectorMandateReferenceId), // mandate_id sent by connector
+    NetworkMandateId(String), // network_txns_id sent by Issuer to connector, Used for PG agnostic mandate txns along with card data
+    NetworkTokenWithNTI(NetworkTokenWithNTIRef), // network_txns_id sent by Issuer to connector, Used for PG agnostic mandate txns along with network token data
 }
 
 #[derive(Default, Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
@@ -2538,6 +2538,43 @@ impl RawConnectorRequestResponse for DisputeFlowData {
 }
 
 impl ConnectorResponseHeaders for DisputeFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VerifyWebhookSourceFlowData {
+    pub connectors: Connectors,
+    pub connector_request_reference_id: String,
+    pub raw_connector_response: Option<Secret<String>>,
+    pub raw_connector_request: Option<Secret<String>>,
+    pub connector_response_headers: Option<http::HeaderMap>,
+}
+
+impl RawConnectorRequestResponse for VerifyWebhookSourceFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
+        self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
+        self.raw_connector_response.clone()
+    }
+
+    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
+        self.raw_connector_request.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
+        self.raw_connector_request = request;
+    }
+}
+
+impl ConnectorResponseHeaders for VerifyWebhookSourceFlowData {
     fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
         self.connector_response_headers = headers;
     }

@@ -22,7 +22,7 @@ impl<T> RequestData<T> {
     ) -> Result<Self, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        // Construct MetadataPayload from raw metadata (existing functions need it)
+        // Construct MetadataPayload from raw metadata (auth resolved from headers)
         let metadata_payload =
             get_metadata_payload(&metadata, config.clone()).into_grpc_status()?;
 

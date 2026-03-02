@@ -12,7 +12,7 @@ use domain_types::{
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -29,12 +29,12 @@ pub struct Shift4AuthType {
     pub api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for Shift4AuthType {
+impl TryFrom<&ConnectorSpecificAuth> for Shift4AuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
+            ConnectorSpecificAuth::Shift4 { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(

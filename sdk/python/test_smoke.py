@@ -18,6 +18,7 @@ from payments.generated.payment_pb2 import (
     AUTOMATIC,
     NO_THREE_DS,
 )
+from payments.generated.sdk_options_pb2 import FfiOptions, EnvOptions
 
 print(f"Loaded payments package from: {__file__}")
 print(f"  ConnectorClient: {ConnectorClient}")
@@ -26,7 +27,11 @@ print(f"  authorize_req_transformer: {authorize_req_transformer}")
 api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
 metadata = {
     "connector": "Stripe",
-    "connector_auth_type": json.dumps({"auth_type": "HeaderKey", "api_key": api_key}),
+    "connector_auth_type": json.dumps({
+        "Stripe": {
+            "api_key": api_key
+        }
+    }),
     "x-connector": "Stripe",
     "x-merchant-id": "test_merchant_123",
     "x-request-id": "test-pack-001",
@@ -34,6 +39,11 @@ metadata = {
     "x-auth": "body-key",
     "x-api-key": api_key,
 }
+
+# Create FfiOptions with test_mode
+options = FfiOptions()
+options.env.test_mode = True
+options_bytes = options.SerializeToString()
 
 # Build a protobuf request
 req = PaymentServiceAuthorizeRequest()
@@ -57,12 +67,12 @@ req.test_mode = True
 
 # --- Test 1: Low-level FFI ---
 print("\n=== Test 1: Low-level FFI (authorize_req_transformer) ===")
-# Now returns a native FfiConnectorHttpRequest object, no json.loads needed!
-result = authorize_req_transformer(req.SerializeToString(), metadata)
-print(f"  URL:    {result.url}")
-print(f"  Method: {result.method}")
-assert result.url == "https://api.stripe.com/v1/payment_intents", f"Unexpected URL: {result.url}"
-assert result.method == "POST", "Unexpected method"
+result = authorize_req_transformer(req.SerializeToString(), metadata, options_bytes)
+parsed = json.loads(result)
+print(f"  URL:    {parsed['url']}")
+print(f"  Method: {parsed['method']}")
+assert parsed["url"] == "https://api.stripe.com/v1/payment_intents", "Unexpected URL"
+assert parsed["method"] == "POST", "Unexpected method"
 print("  PASSED")
 
 # --- Test 2: Full round-trip via ConnectorClient ---
