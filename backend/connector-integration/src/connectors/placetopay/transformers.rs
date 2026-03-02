@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     utils,
 };
@@ -26,13 +26,13 @@ pub struct PlacetopayAuthType {
     pub(super) tran_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for PlacetopayAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for PlacetopayAuthType {
     type Error = ConnectorError;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                login: api_key.to_owned(),
-                tran_key: key1.to_owned(),
+            ConnectorSpecificAuth::Placetopay { login, tran_key } => Ok(Self {
+                login: login.to_owned(),
+                tran_key: tran_key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType),
         }
@@ -48,9 +48,9 @@ pub struct PlacetopayAuth {
     seed: String,
 }
 
-impl TryFrom<&ConnectorAuthType> for PlacetopayAuth {
+impl TryFrom<&ConnectorSpecificAuth> for PlacetopayAuth {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         let placetopay_auth = PlacetopayAuthType::try_from(auth_type)?;
 
         let nonce_bytes = utils::generate_random_bytes(16);

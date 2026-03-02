@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -68,12 +68,12 @@ pub struct CeleroAuthType {
     pub api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for CeleroAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for CeleroAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
+            ConnectorSpecificAuth::Celero { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
