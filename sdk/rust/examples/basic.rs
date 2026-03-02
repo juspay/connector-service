@@ -207,11 +207,10 @@ async fn demo_full_round_trip(
         }),
     };
 
-    let client = ConnectorClient::new(client_options);
+    let client = ConnectorClient::new(client_options).expect("Failed to create ConnectorClient");
 
     // Call authorize with None for ffi_options override
     match client.authorize(request, metadata, None).await {
-
         Ok(response) => {
             eprintln!("Authorize response received:");
             eprintln!(

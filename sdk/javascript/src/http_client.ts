@@ -57,14 +57,10 @@ export class ConnectorError extends Error {
   }
 }
 
-const DISPATCHER_CACHE = new Map<string, Dispatcher>();
-const TRANSPORT_DIRECT = "TRANSPORT_DIRECT";
-const MAX_CACHE_SIZE = 100;
-
 /**
  * Resolve proxy URL, honoring bypass rules.
  */
-function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): string | null {
+export function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): string | null {
   if (!proxy) return null;
   const shouldBypass = Array.isArray(proxy.bypassUrls) && proxy.bypassUrls.includes(url);
   if (shouldBypass) return null;
@@ -72,21 +68,10 @@ function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): string | nu
 }
 
 /**
- * Generates a stable key to identify a unique connection pool configuration.
- */
-function getConnectionKey(proxyUrl: string | null, config: HttpOptions): string {
-  return JSON.stringify({
-    uri: proxyUrl || TRANSPORT_DIRECT,
-    connect: config.connectTimeoutMs,
-    res: config.responseTimeoutMs,
-    caLength: config.caCert instanceof Uint8Array ? config.caCert.length : (config.caCert as any)?.length,
-  });
-}
-
-/**
  * Creates a high-performance dispatcher with specialized fintech timeouts.
+ * (The instance-level connection pool)
  */
-function createDispatcher(proxyUrl: string | null, config: HttpOptions): Dispatcher {
+export function createDispatcher(config: HttpOptions): Dispatcher {
   const dispatcherOptions: any = {
     connect: {
       timeout: config.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS,
@@ -98,6 +83,7 @@ function createDispatcher(proxyUrl: string | null, config: HttpOptions): Dispatc
   };
 
   try {
+    const proxyUrl = config.proxy?.httpsUrl || config.proxy?.httpUrl;
     return proxyUrl 
       ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
       : new Agent(dispatcherOptions);
@@ -115,26 +101,12 @@ function createDispatcher(proxyUrl: string | null, config: HttpOptions): Dispatc
  */
 export async function execute(
   request: HttpRequest,
-  options: HttpOptions = {}
+  options: HttpOptions = {},
+  dispatcher?: Dispatcher // Pass the instance-owned pool here
 ): Promise<HttpResponse> {
   const { url, method, headers, body } = request;
 
-  // 1. Connection Management
-  const proxyUrl = resolveProxyUrl(url, options.proxy);
-  const connectionKey = getConnectionKey(proxyUrl, options);
-  
-  let dispatcher = DISPATCHER_CACHE.get(connectionKey);
-  if (!dispatcher) {
-    // Eviction strategy: Remove oldest dispatcher if cache is full (FIFO)
-    if (DISPATCHER_CACHE.size >= MAX_CACHE_SIZE) {
-      const oldestKey = DISPATCHER_CACHE.keys().next().value;
-      if (oldestKey) DISPATCHER_CACHE.delete(oldestKey);
-    }
-    dispatcher = createDispatcher(proxyUrl, options);
-    DISPATCHER_CACHE.set(connectionKey, dispatcher);
-  }
-
-  // 2. Lifecycle Management
+  // Lifecycle Management
   const totalTimeout = options.totalTimeoutMs ?? Defaults.TOTAL_TIMEOUT_MS;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), totalTimeout);

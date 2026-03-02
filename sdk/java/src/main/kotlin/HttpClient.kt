@@ -5,7 +5,6 @@ import okhttp3.Headers.Companion.toHeaders
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.net.SocketTimeoutException
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import ucs.v2.SdkOptions.SdkDefault
 
@@ -25,7 +24,6 @@ data class HttpResponse(
 
 /**
  * Native configuration options for the network transport layer.
- * Decoupled from Protobuf for reuse and portability.
  */
 data class HttpOptions(
     val totalTimeoutMs: Long? = null,
@@ -49,26 +47,10 @@ class ConnectorError(
 ) : Exception(message)
 
 object HttpClient {
-    private val clientCache = ConcurrentHashMap<String, OkHttpClient>()
-    private const val MAX_CACHE_SIZE = 100
-
     /**
-     * Resolve proxy URL, honoring bypass rules.
+     * Creates a high-performance OkHttpClient. (The instance-level connection pool)
      */
-    fun resolveProxyUrl(url: String, proxy: ProxyConfig?): String? {
-        if (proxy == null) return null
-        if (proxy.bypassUrls.contains(url)) return null
-        return proxy.httpsUrl ?: proxy.httpUrl
-    }
-
-    /**
-     * Generates a stable key to identify a unique connection pool configuration.
-     */
-    private fun getClientKey(proxyUrl: String?, options: HttpOptions): String {
-        return "proxy=$proxyUrl;connect=${options.connectTimeoutMs};response=${options.responseTimeoutMs};ca=${options.caCert?.size}"
-    }
-
-    private fun createClient(proxyUrl: String?, options: HttpOptions): OkHttpClient {
+    fun createClient(options: HttpOptions): OkHttpClient {
         try {
             val builder = OkHttpClient.Builder()
                 .connectTimeout(
@@ -90,12 +72,11 @@ object HttpClient {
                 .followRedirects(false)
                 .followSslRedirects(false)
 
+            val proxyUrl = options.proxy?.let { if (it.httpsUrl != null) it.httpsUrl else it.httpUrl }
             if (proxyUrl != null) {
                 val url = HttpUrl.parse(proxyUrl)
                 if (url != null) {
                     builder.proxy(java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host(), url.port())))
-                } else {
-                    throw Exception("Invalid Proxy URL: $proxyUrl")
                 }
             }
             return builder.build()
@@ -104,20 +85,7 @@ object HttpClient {
         }
     }
 
-    fun execute(request: HttpRequest, options: HttpOptions = HttpOptions()): HttpResponse {
-        val proxyUrl = resolveProxyUrl(request.url, options.proxy)
-        val clientKey = getClientKey(proxyUrl, options)
-        
-        if (!clientCache.containsKey(clientKey)) {
-            // Eviction strategy: Remove oldest if cache is full (FIFO attempt)
-            if (clientCache.size >= MAX_CACHE_SIZE) {
-                val oldestKey = clientCache.keys().nextElement()
-                if (oldestKey != null) clientCache.remove(oldestKey)
-            }
-            clientCache[clientKey] = createClient(proxyUrl, options)
-        }
-        
-        val client = clientCache[clientKey]!!
+    fun execute(request: HttpRequest, options: HttpOptions, client: OkHttpClient): HttpResponse {
         val okHeaders = request.headers?.toHeaders() ?: Headers.Builder().build()
         val mediaType = okHeaders["Content-Type"]?.let { MediaType.parse(it) }
         val requestBody = request.body?.toRequestBody(mediaType)

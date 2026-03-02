@@ -108,6 +108,7 @@ function liftError(buf: RustBuffer): string {
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
   let offset = 0;
 
+  // UniFFI Error layout: [i32 variant] + [i32 len] + [bytes]
   const variant = raw.readInt32BE(offset); offset += 4;
   const variantNames: Record<number, string> = {
     1: "DecodeError",
@@ -125,7 +126,7 @@ function liftError(buf: RustBuffer): string {
 }
 
 /**
- * UniFFI Strings are serialized as raw UTF8 bytes when top-level.
+ * UniFFI Strings are serialized as raw UTF8 bytes when top-level in RustBuffer.
  */
 function liftString(buf: RustBuffer): string {
   if (!buf.data || buf.len === 0n) return "";
@@ -134,12 +135,13 @@ function liftString(buf: RustBuffer): string {
 }
 
 /**
- * UniFFI Vec<u8> are serialized as [i32 len] + [bytes]
+ * UniFFI Vec<u8> (Bytes) as return values are serialized as [i32 length] + [raw bytes]
  */
 function liftBytes(buf: RustBuffer): Buffer {
   if (!buf.data || buf.len === 0n) return Buffer.alloc(0);
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
-  // Bytes are serialized as: i32 length + raw bytes
+  
+  // UniFFI protocol for return values: first 4 bytes are the length of the actual payload
   const len = raw.readInt32BE(0);
   return raw.subarray(4, 4 + len);
 }
@@ -161,11 +163,10 @@ function allocRustBuffer(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuff
 }
 
 /**
- * Lowers raw data into a UniFFI-compliant RustBuffer.
- * For top-level parameters, UniFFI EXPECTS a 4-byte length prefix inside the buffer.
+ * Lowers raw bytes into a UniFFI-compliant buffer for top-level arguments.
+ * Protocol: [i32 length prefix] + [raw bytes]
  */
 function lowerBytes(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuffer {
-  // UniFFI bytes format: i32 length prefix + raw bytes
   const buf = Buffer.alloc(4 + data.length);
   buf.writeInt32BE(data.length, 0);
   Buffer.from(data).copy(buf, 4);
@@ -173,10 +174,10 @@ function lowerBytes(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuffer {
 }
 
 /**
- * Lowers a Map into a UniFFI-compliant RustBuffer for top-level parameters.
+ * Lowers a Map into a UniFFI-compliant serialized buffer.
+ * Protocol: [i32 count] + [ [i32 key_len]+[key_bytes] + [i32 val_len]+[val_bytes] ] * count
  */
 function lowerMap(ffi: FfiFunctions, map: Record<string, string>): RustBuffer {
-  // Layout: [i32 count] + [ [i32 len]+[bytes] + [i32 len]+[bytes] ] * count
   const entries = Object.entries(map);
   let totalSize = 4; // count
   const encoded = entries.map(([k, v]) => {

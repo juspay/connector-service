@@ -9,38 +9,42 @@
  *   5. Deserialize protobuf response from bytes
  */
 
+import { Dispatcher } from "undici";
 import { UniffiClient } from "./uniffi_client";
-import { execute, HttpOptions, HttpRequest } from "../http_client";
+import { execute, createDispatcher, HttpOptions, HttpRequest } from "../http_client";
 // @ts-ignore - protobuf generated files might not have types yet
 import { ucs } from "./generated/proto";
 
 const v2 = ucs.v2;
 
 export class ConnectorClient {
-  private _uniffi: UniffiClient;
-  private _options: ucs.v2.IOptions;
+  private uniffi: UniffiClient;
+  private options: ucs.v2.IOptions;
+  private dispatcher: Dispatcher;
 
   /**
    * @param libPath - optional path to the UniFFI shared library
    * @param options - unified SDK configuration from Protobuf (Options message)
    */
   constructor(libPath?: string, options: ucs.v2.IOptions = {}) {
-    this._uniffi = new UniffiClient(libPath);
-    this._options = options;
+    this.uniffi = new UniffiClient(libPath);
+    this.options = options;
+    
+    // Instance-level cache: create the primary connection pool at startup
+    this.dispatcher = createDispatcher(this.getNativeHttpOptions(options.http));
   }
 
   /**
    * Internal helper to map Protobuf HttpOptions to Native HttpClient options.
    */
-  private _getNativeHttpOptions(): HttpOptions {
-    const proto = this._options.http;
+  private getNativeHttpOptions(proto?: ucs.v2.IHttpOptions | null): HttpOptions {
     if (!proto) return {};
 
     return {
       totalTimeoutMs: proto.totalTimeoutMs ?? undefined,
-      connectTimeoutMs: proto.connect_timeout_ms ?? undefined,
-      responseTimeoutMs: proto.response_timeout_ms ?? undefined,
-      keepAliveTimeoutMs: proto.keep_alive_timeout_ms ?? undefined,
+      connectTimeoutMs: proto.connectTimeoutMs ?? undefined,
+      responseTimeoutMs: proto.responseTimeoutMs ?? undefined,
+      keepAliveTimeoutMs: proto.keepAliveTimeoutMs ?? undefined,
       proxy: proto.proxy ? {
         httpUrl: proto.proxy.httpUrl ?? undefined,
         httpsUrl: proto.proxy.httpsUrl ?? undefined,
@@ -52,7 +56,8 @@ export class ConnectorClient {
 
   /**
    * Execute a full authorize round-trip.
-   * @param requestMsg - PaymentServiceAuthorizeRequest message
+   * 
+   * @param requestMsg - PaymentServiceAuthorizeRequest protobuf message
    * @param metadata - Dict with connector routing and auth info. Must include:
    *                 - "connector": connector name (e.g. "Stripe")
    *                 - "connector_auth_type": JSON string of auth config
@@ -65,19 +70,15 @@ export class ConnectorClient {
     metadata: Record<string, string>, 
     ffiOptions?: ucs.v2.IFfiOptions | null
   ): Promise<ucs.v2.PaymentServiceAuthorizeResponse> {
-    // 1. Serialize request to bytes
-    const requestBytes = Buffer.from(
-      v2.PaymentServiceAuthorizeRequest.encode(requestMsg).finish()
-    );
+    // 1. Serialize request
+    const requestBytes = Buffer.from(v2.PaymentServiceAuthorizeRequest.encode(requestMsg).finish());
 
-    // 2. Resolve FFI options (prefer call-specific, fallback to client-global)
-    const ffi = ffiOptions || this._options.ffi;
-    const optionsBytes = ffi 
-      ? Buffer.from(v2.FfiOptions.encode(ffi).finish()) 
-      : Buffer.alloc(0);
+    // 2. Resolve FFI options (prefer call-specific)
+    const ffi = ffiOptions || this.options.ffi;
+    const optionsBytes = ffi ? Buffer.from(v2.FfiOptions.encode(ffi).finish()) : Buffer.alloc(0);
 
-    // 3. Build the connector HTTP request via FFI bridge (returns Protobuf bytes)
-    const resultBytes = this._uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
+    // 3. Transform to connector request via FFI (returns Protobuf bytes)
+    const resultBytes = this.uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
     const connectorReq = v2.FfiConnectorHttpRequest.decode(resultBytes);
 
     const connectorRequest: HttpRequest = {
@@ -87,11 +88,14 @@ export class ConnectorClient {
       body: connectorReq.body ?? undefined
     };
 
-    // 4. Execute the HTTP request (uses Global HttpOptions mapped to Native)
-    const response = await execute(connectorRequest, this._getNativeHttpOptions());
+    // 4. Execute HTTP using the instance-owned connection pool
+    const response = await execute(
+      connectorRequest, 
+      this.getNativeHttpOptions(this.options.http), 
+      this.dispatcher
+    );
 
-    // 5. Parse the connector response via FFI bridge
-    // Serialize native response to FFI-internal Protobuf record (Safe)
+    // 5. Transform connector response via FFI
     const resProto = v2.FfiConnectorHttpResponse.create({
       statusCode: response.statusCode,
       headers: response.headers,
@@ -99,14 +103,9 @@ export class ConnectorClient {
     });
     const resBytes = Buffer.from(v2.FfiConnectorHttpResponse.encode(resProto).finish());
 
-    const resultBytesRes = this._uniffi.authorizeRes(
-      resBytes,
-      requestBytes,
-      metadata,
-      optionsBytes
-    );
+    const resultBytesRes = this.uniffi.authorizeRes(resBytes, requestBytes, metadata, optionsBytes);
 
-    // 6. Decode the protobuf response from bytes
+    // 6. Decode and return
     return v2.PaymentServiceAuthorizeResponse.decode(resultBytesRes);
   }
 }

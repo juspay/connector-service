@@ -11,6 +11,7 @@
 
 package payments
 
+import okhttp3.OkHttpClient
 import ucs.v2.Payments.PaymentServiceAuthorizeRequest
 import ucs.v2.Payments.PaymentServiceAuthorizeResponse
 import ucs.v2.SdkOptions.FfiOptions
@@ -21,19 +22,24 @@ class ConnectorClient(
     private val options: Options = Options.getDefaultInstance()
 ) {
     private val uniffi = UniffiClient(libPath)
+    private val httpClient: OkHttpClient
+
+    init {
+        // Instance-level connection pool (OkHttpClient)
+        this.httpClient = HttpClient.createClient(getNativeHttpOptions(options.http))
+    }
 
     /**
      * Internal helper to map Protobuf HttpOptions to Native HttpClient options.
      */
-    private fun getNativeHttpOptions(): HttpOptions {
-        if (!options.hasHttp()) return HttpOptions()
-        val proto = options.http
+    private fun getNativeHttpOptions(proto: ucs.v2.SdkOptions.HttpOptions?): HttpOptions {
+        if (proto == null) return HttpOptions()
 
         return HttpOptions(
             totalTimeoutMs = if (proto.hasTotalTimeoutMs()) proto.totalTimeoutMs.toLong() else null,
-            connectTimeoutMs = if (proto.hasConnectTimeoutMs()) proto.connectTimeoutMs.toLong() else null,
-            responseTimeoutMs = if (proto.hasResponseTimeoutMs()) proto.responseTimeoutMs.toLong() else null,
-            keepAliveTimeoutMs = if (proto.hasKeepAliveTimeoutMs()) proto.keepAliveTimeoutMs.toLong() else null,
+            connectTimeoutMs = if (proto.hasConnectTimeoutMs()) proto.connect_timeout_ms.toLong() else null,
+            responseTimeoutMs = if (proto.hasResponseTimeoutMs()) proto.response_timeout_ms.toLong() else null,
+            keepAliveTimeoutMs = if (proto.hasKeepAliveTimeoutMs()) proto.keep_alive_timeout_ms.toLong() else null,
             proxy = if (proto.hasProxy()) {
                 ProxyConfig(
                     httpUrl = if (proto.proxy.hasHttpUrl()) proto.proxy.httpUrl else null,
@@ -80,11 +86,10 @@ class ConnectorClient(
             body = if (connectorReq.hasBody()) connectorReq.body.toByteArray() else null
         )
 
-        // 4. Execute network call (uses native options mapped from proto)
-        val response = HttpClient.execute(connectorRequest, getNativeHttpOptions())
+        // 4. Execute network call (uses native options mapped from proto and owned client)
+        val response = HttpClient.execute(connectorRequest, getNativeHttpOptions(options.http), this.httpClient)
 
         // 5. Transform connector response via FFI
-        // New Step: Serialize native response to Protobuf bytes (Safe)
         val resProto = ucs.v2.SdkOptions.FfiConnectorHttpResponse.newBuilder()
             .setStatusCode(response.statusCode)
             .putAllHeaders(response.headers)

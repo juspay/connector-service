@@ -1,8 +1,8 @@
 import time
-import json
 import requests
 from typing import Optional, Dict, Union, Any
 from dataclasses import dataclass
+from urllib.parse import urlparse
 from .generated import sdk_options_pb2
 
 # Centralized defaults from Protobuf Single Source of Truth
@@ -28,57 +28,69 @@ class ConnectorError(Exception):
         self.status_code = status_code
         self.error_code = error_code
 
-SESSION_CACHE = {}
-MAX_CACHE_SIZE = 100
+def resolve_proxy_config(url: str, proxy_options: Optional[Any] = None) -> Optional[Dict[str, str]]:
+    """
+    Decides the proxy configuration for a specific URL.
+    
+    Returns:
+        - dict: Explicit proxy map (e.g. {'https': '...'}) or {} for explicit bypass.
+        - None: No proxy configured; use system/session defaults.
+    """
+    if not proxy_options:
+        return None
 
-def resolve_proxy_url(url: str, proxy: Optional[sdk_options_pb2.ProxyOptions]) -> Optional[str]:
-    """Helper to resolve proxy URL, honoring bypass rules."""
-    if not proxy: return None
-    should_bypass = url in proxy.bypass_urls
-    if should_bypass: return None
-    return proxy.https_url or proxy.http_url or None
+    # Hostname matching for bypass (Fintech Standard)
+    # Checks if the target hostname ends with any string in bypass_urls.
+    target_host = urlparse(url).hostname or ""
+    for bypass in getattr(proxy_options, 'bypass_urls', []):
+        if target_host.endswith(bypass):
+            return {} # Explicit bypass (direct connection)
 
-def get_connection_key(proxy_url: Optional[str], options: sdk_options_pb2.HttpOptions) -> str:
-    """Generates a stable key to identify a unique connection pool configuration."""
-    identity = {
-        "proxy": proxy_url,
-        "connect": options.connect_timeout_ms or Defaults.CONNECT_TIMEOUT_MS,
-        "response": options.response_timeout_ms or Defaults.RESPONSE_TIMEOUT_MS,
-        "ca_length": len(options.ca_cert) if options.ca_cert else None
-    }
-    return json.dumps(identity, sort_keys=True)
-
-def create_session(proxy_url: Optional[str], options: sdk_options_pb2.HttpOptions) -> requests.Session:
-    try:
-        session = requests.Session()
-        if proxy_url:
-            session.proxies = {"http": proxy_url, "https": proxy_url}
+    # Protocol-specific selection
+    proxies = {}
+    if url.startswith("https") and getattr(proxy_options, 'https_url', None):
+        proxies["https"] = proxy_options.https_url
+    elif getattr(proxy_options, 'http_url', None):
+        proxies["http"] = proxy_options.http_url
         
-        if options.ca_cert:
-            session.verify = options.ca_cert
-        return session
-    except Exception as e:
-        raise ConnectorError(f"Internal HTTP setup failed: {str(e)}", 500, "CLIENT_INITIALIZATION")
+    return proxies if proxies else None
 
-def execute(request: HttpRequest, options: Optional[sdk_options_pb2.HttpOptions] = None) -> HttpResponse:
-    """Standardized network execution engine for Unified Connector Service."""
-    if options is None: options = sdk_options_pb2.HttpOptions()
+def create_session(http_options: Optional[Any] = None) -> requests.Session:
+    """
+    Creates a high-performance connection pool (Session).
+    The ConnectorClient instance will own this.
+    """
+    session = requests.Session()
     
-    # Configuration & Proxy Resolution
-    total_timeout = (options.total_timeout_ms or Defaults.TOTAL_TIMEOUT_MS) / 1000.0
-    connect_timeout = (options.connect_timeout_ms or Defaults.CONNECT_TIMEOUT_MS) / 1000.0
-    response_timeout = (options.response_timeout_ms or Defaults.RESPONSE_TIMEOUT_MS) / 1000.0
-    
-    proxy_url = resolve_proxy_url(request.url, options.proxy)
-    
-    session_key = get_connection_key(proxy_url, options)
-    if session_key not in SESSION_CACHE:
-        if len(SESSION_CACHE) >= MAX_CACHE_SIZE:
-            # Simple FIFO eviction
-            SESSION_CACHE.pop(next(iter(SESSION_CACHE)))
-        SESSION_CACHE[session_key] = create_session(proxy_url, options)
-    
-    session = SESSION_CACHE[session_key]
+    if http_options:
+        # Set session-level default proxies if provided
+        proxies = {}
+        if http_options.proxy:
+            if getattr(http_options.proxy, 'http_url', None):
+                proxies["http"] = http_options.proxy.http_url
+            if getattr(http_options.proxy, 'https_url', None):
+                proxies["https"] = http_options.proxy.https_url
+        if proxies:
+            session.proxies = proxies
+
+        # Certificate Pinning / CA Bundle
+        if getattr(http_options, 'ca_cert', None):
+            session.verify = http_options.ca_cert
+
+    return session
+
+def execute(
+    request: HttpRequest, 
+    session: requests.Session,
+    connect_timeout_ms: float,
+    response_timeout_ms: float,
+    total_timeout_ms: float,
+    proxy_config: Optional[Dict[str, str]] = None
+) -> HttpResponse:
+    """
+    Standardized stateless execution engine. 
+    Accepts primitive types only to ensure decoupling from Business Protos.
+    """
     
     start_time = time.time()
     try:
@@ -87,12 +99,16 @@ def execute(request: HttpRequest, options: Optional[sdk_options_pb2.HttpOptions]
             url=request.url,
             headers=request.headers or {},
             data=request.body,
-            timeout=(connect_timeout, response_timeout),
+            # (Connect Timeout, Read Timeout)
+            timeout=(connect_timeout_ms / 1000.0, response_timeout_ms / 1000.0),
+            proxies=proxy_config, # Overrides session defaults if provided
             allow_redirects=False
         )
         
         latency = (time.time() - start_time) * 1000
-        if (time.time() - start_time) > total_timeout:
+        
+        # Post-call SLA enforcement (Hard Gate)
+        if (time.time() - start_time) * 1000 > total_timeout_ms:
             raise requests.exceptions.Timeout("Total request timeout exceeded")
 
         # Normalize headers to lowercase for global parity

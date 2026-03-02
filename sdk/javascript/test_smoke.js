@@ -24,8 +24,9 @@ const metadata = {
   "x-merchant-id": "test_merchant_123",
   "x-request-id": "test-pack-001",
   "x-tenant-id": "public",
-  "x-auth": "header-key",
-};
+  "x-auth": "body-key",
+  "x-api-key": apiKey,
+  };
 
 // Create FfiOptions with testMode
 const ffiOptions = FfiOptions.create({
@@ -73,7 +74,8 @@ const requestBytes = Buffer.from(
 // --- Test 1: Low-level FFI ---
 console.log("\n=== Test 1: Low-level FFI (UniffiClient.authorizeReq) ===");
 const uniffi = new UniffiClient();
-const result = uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
+const resultBytes = uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
+const result = ucs.v2.FfiConnectorHttpRequest.decode(resultBytes);
 console.log(`  URL:    ${result.url}`);
 console.log(`  Method: ${result.method}`);
 if (result.url !== "https://api.stripe.com/v1/payment_intents") throw new Error(`Unexpected URL: ${result.url}`);
