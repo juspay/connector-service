@@ -14,7 +14,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("SanityRunnerKt")
+    mainClass.set("SmokeTestKt")
 }
 
 tasks.named<JavaExec>("run") {

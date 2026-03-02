@@ -12,10 +12,8 @@ use common_utils::{
 use http::request::Request;
 use hyperswitch_masking;
 use serde_json::Value;
-use std::{collections::HashMap, str::FromStr, sync::Arc};
-use tonic::metadata;
-use ucs_env::configs::ConfigPatch;
-use ucs_env::{configs, error::ResultExtGrpc, logger};
+use std::{collections::HashMap, sync::Arc};
+use ucs_env::{configs, error::ResultExtGrpc};
 
 use crate::request::RequestData;
 
