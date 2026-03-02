@@ -1,6 +1,6 @@
 import { ProxyAgent, Agent, Dispatcher } from "undici";
 // @ts-ignore
-import { ucs } from "@generated/proto";
+import { ucs } from "./payments/generated/proto";
 
 const Defaults = ucs.v2.SdkDefault;
 
@@ -57,6 +57,18 @@ function resolveProxyUrl(url: string, proxy?: ucs.v2.IProxyOptions | null): stri
 }
 
 /**
+ * Generates a stable key to identify a unique connection pool configuration.
+ */
+function getConnectionKey(proxyUrl: string | null, config: ucs.v2.IHttpOptions): string {
+  return JSON.stringify({
+    uri: proxyUrl || TRANSPORT_DIRECT,
+    connect: config.connectTimeoutMs,
+    res: config.responseTimeoutMs,
+    ca: config.caCert?.length,
+  });
+}
+
+/**
  * Creates a high-performance dispatcher with specialized fintech timeouts.
  */
 function createDispatcher(proxyUrl: string | null, config: ucs.v2.IHttpOptions): Dispatcher {
@@ -94,15 +106,11 @@ export async function execute(
 
   // 1. Connection Management
   const proxyUrl = resolveProxyUrl(url, options.proxy);
-  const connectionKey = JSON.stringify({
-    uri: proxyUrl || TRANSPORT_DIRECT,
-    connect: options.connectTimeoutMs,
-    res: options.responseTimeoutMs,
-    ca: options.caCert?.length,
-  });
+  const connectionKey = getConnectionKey(proxyUrl, options);
   
   let dispatcher = DISPATCHER_CACHE.get(connectionKey);
   if (!dispatcher) {
+    // Eviction strategy: Remove oldest dispatcher if cache is full (FIFO)
     if (DISPATCHER_CACHE.size >= MAX_CACHE_SIZE) {
       const oldestKey = DISPATCHER_CACHE.keys().next().value;
       if (oldestKey) DISPATCHER_CACHE.delete(oldestKey);

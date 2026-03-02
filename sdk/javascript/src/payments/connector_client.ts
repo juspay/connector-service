@@ -12,7 +12,7 @@
 import { UniffiClient } from "./uniffi_client";
 import { execute, HttpRequest } from "../http_client";
 // @ts-ignore
-import { ucs } from "@generated/proto";
+import { ucs } from "./generated/proto";
 
 const v2 = ucs.v2;
 

@@ -50,7 +50,8 @@ class ConnectorClient(private val options: Options = Options.getDefaultInstance(
             headers = connectorRequest.headers,
             body = connectorRequest.body
         )
-        val httpResponse = HttpClient.execute(httpReq, if (options.hasHttp()) options.http else null ?: ucs.v2.SdkOptions.HttpOptions.getDefaultInstance())
+        val httpOptions = if (options.hasHttp()) options.http else ucs.v2.SdkOptions.HttpOptions.getDefaultInstance()
+        val httpResponse = HttpClient.execute(httpReq, httpOptions)
 
         // 3. Parse Response via FFI
         val ffiRes = FfiConnectorHttpResponse(

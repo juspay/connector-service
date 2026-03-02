@@ -18,15 +18,13 @@ console.log("Loaded hyperswitch-payments from node_modules");
 
 const apiKey = process.env.STRIPE_API_KEY || "sk_test_placeholder";
 const metadata = {
+  connector: "Stripe",
+  connector_auth_type: JSON.stringify({ Stripe: { api_key: apiKey } }),
   "x-connector": "Stripe",
   "x-merchant-id": "test_merchant_123",
   "x-request-id": "test-pack-001",
   "x-tenant-id": "public",
   "x-auth": "header-key",
-  // Unified typed auth standard
-  "x-connector-auth": JSON.stringify({ 
-    Stripe: { api_key: apiKey } 
-  }),
 };
 
 // Create FfiOptions with testMode
@@ -57,7 +55,14 @@ const requestMsg = PaymentServiceAuthorizeRequest.create({
   },
   authType: AuthenticationType.NO_THREE_DS,
   returnUrl: "https://example.com/return",
-  address: {},
+  address: {
+    billingAddress: {
+      addressLine1: "123 Test St",
+      city: "Test City",
+      country: "US",
+      zip: "12345"
+    }
+  },
   testMode: true,
 });
 
