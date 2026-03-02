@@ -99,6 +99,12 @@ pub enum FormDataPart {
     },
 }
 
+impl Default for MultipartData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MultipartData {
     pub fn new() -> Self {
         Self { parts: Vec::new() }

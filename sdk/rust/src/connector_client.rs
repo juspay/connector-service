@@ -45,11 +45,20 @@ impl ConnectorClient {
             .ok_or("No connector request generated")?;
 
         // Step 2: Prepare and execute the HTTP request via our high-performance client
-        let (body, boundary) = connector_request.body.as_ref().map_or((None, None), |b| b.get_body_bytes());
+        let (body, boundary) = connector_request
+            .body
+            .as_ref()
+            .map(|b| b.get_body_bytes())
+            .transpose()
+            .map_err(|e| format!("Body extraction failed: {e}"))?
+            .unwrap_or((None, None));
         let mut headers = connector_request.get_headers_map();
 
         if let Some(boundary) = boundary {
-            headers.insert("content-type".to_string(), format!("multipart/form-data; boundary={}", boundary));
+            headers.insert(
+                "content-type".to_string(),
+                format!("multipart/form-data; boundary={}", boundary),
+            );
         }
 
         let http_req = ClientHttpRequest {

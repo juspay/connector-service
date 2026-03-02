@@ -5,7 +5,7 @@ use common_utils::{
     consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
     ext_traits::AsyncExt,
     lineage,
-    request::{FormDataPart, Method, MultipartData, Request, RequestContent},
+    request::{Method, Request, RequestContent},
 };
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},

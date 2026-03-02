@@ -28,7 +28,7 @@ use serde_json::Value;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tonic::metadata;
 use ucs_env::configs::ConfigPatch;
-use ucs_env::{configs, logger, error::ResultExtGrpc};
+use ucs_env::{configs, error::ResultExtGrpc, logger};
 
 use crate::request::RequestData;
 

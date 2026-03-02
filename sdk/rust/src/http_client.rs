@@ -97,7 +97,11 @@ impl HttpClient {
         }
 
         if let Some(proxy_config) = &options.proxy {
-            if let Some(proxy_url) = proxy_config.https_url.as_ref().or(proxy_config.http_url.as_ref()) {
+            if let Some(proxy_url) = proxy_config
+                .https_url
+                .as_ref()
+                .or(proxy_config.http_url.as_ref())
+            {
                 if let Ok(mut proxy) = reqwest::Proxy::all(proxy_url) {
                     for bypass in &proxy_config.bypass_urls {
                         // NoProxy::from_string returns Option<NoProxy> in reqwest 0.11

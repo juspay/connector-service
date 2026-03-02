@@ -66,7 +66,7 @@ mod uniffi_bindings_inner {
             .as_ref()
             .map(|b| b.get_body_bytes())
             .transpose()
-            .map_err(|e| UniffiError::HandlerError { msg: e })?
+            .map_err(|e| UniffiError::HandlerError { msg: e.to_string() })?
             .unwrap_or((None, None));
 
         // Sync the Content-Type header with the generated boundary if applicable
@@ -228,9 +228,10 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let result = capture_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
-        })?;
+        let result =
+            capture_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
@@ -324,9 +325,10 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let result = void_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
-        })?;
+        let result =
+            void_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
@@ -420,9 +422,10 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let result = get_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
-        })?;
+        let result =
+            get_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
@@ -618,9 +621,10 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let result = refund_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
-        })?;
+        let result =
+            refund_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
