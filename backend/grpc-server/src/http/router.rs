@@ -40,7 +40,10 @@ pub fn create_router(state: AppState) -> Router {
             "/payments/create_payment_method_token",
             post(handlers::payments::create_payment_method_token),
         )
-        .route("/payments/register", post(handlers::payments::register))
+        .route(
+            "/payments/register",
+            post(handlers::payments::setup_recurring),
+        )
         // .route(
         //     "/payments/register_only",
         //     post(handlers::payments::register_only),

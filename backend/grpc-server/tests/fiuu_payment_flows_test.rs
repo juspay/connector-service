@@ -178,7 +178,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         }),
         state: None,
         metadata: None,
-        feature_data: None,
+        connector_feature_data: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
@@ -210,7 +210,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         cancellation_reason: None,
-        request_ref_id: Some(Identifier {
+        merchant_void_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("fiuu_void"))),
         }),
         all_keys_required: None,
@@ -253,12 +253,12 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         }),
         refund_id: refund_id.to_string(),
         refund_reason: None,
-        request_ref_id: None,
+        merchant_refund_id: None,
         browser_info: None,
         test_mode: Some(true),
         refund_metadata: None,
         state: None,
-        feature_data: None,
+        connector_feature_data: None,
         payment_method_type: None,
     }
 }
