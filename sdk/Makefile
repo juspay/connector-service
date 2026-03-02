@@ -2,7 +2,7 @@
 # Builds FFI binaries for all SDK platforms
 # This Makefile should be run from the repository root
 
-.PHONY: help build build-all build-macos build-linux clean check-cargo
+.PHONY: help build build-all build-macos build-linux clean check-cargo generate
 
 # Default target
 .DEFAULT_GOAL := help
@@ -85,6 +85,19 @@ build-all: ## Build for all supported platforms
 		$(MAKE) build-macos-x86_64 build-macos-aarch64 build-macos-universal build-linux-x86_64 build-linux-aarch64\
 	)
 	@echo "All builds complete!"
+
+generate: ## Auto-discover flows from services.proto + uniffi.rs and regenerate all SDK clients
+	@echo "Discovering flows from services.proto and bindings/uniffi.rs..."
+	@python3 codegen/generate.py
+	@echo "Generating Python protobuf stubs (_pb2.pyi)..."
+	@python3 -m grpc_tools.protoc \
+		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
+		--python_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
+		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
+		--plugin=protoc-gen-mypy=$(shell python3 -c "import sysconfig, os; dirs = [sysconfig.get_path('scripts', s) for s in (sysconfig.get_preferred_scheme('user'), 'posix_prefix')]; print(next(os.path.join(d, 'protoc-gen-mypy') for d in dirs if os.path.exists(os.path.join(d, 'protoc-gen-mypy'))))") \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_options.proto
 
 clean: ## Clean all build artifacts
 	@echo "Cleaning build artifacts..."

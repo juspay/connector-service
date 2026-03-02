@@ -1,51 +1,55 @@
 /**
  * ConnectorClient — high-level wrapper around UniFFI FFI bindings.
  *
- * Handles the full round-trip:
- *   1. Build connector HTTP request via authorize_req (FFI)
+ * Handles the full round-trip for any payment flow:
+ *   1. Build connector HTTP request via {flow}_req_transformer (FFI)
  *   2. Execute the HTTP request via OkHttp
- *   3. Parse the connector response via authorize_res (FFI)
+ *   3. Parse the connector response via {flow}_res_transformer (FFI)
  *
- * Mirrors the Node.js client at sdk/node-ffi-client/src/client.js
- * and the Python client at examples/example-uniffi-py/connector_client.py.
+ * Flow methods (authorize, capture, void, refund, …) are defined as Kotlin
+ * extension functions in GeneratedFlows.kt — no flow names are hardcoded here.
+ * To add a new flow: edit sdk/flows.yaml and run `make codegen`.
  */
 
-import uniffi.connector_service_ffi.authorizeReqTransformer
-import uniffi.connector_service_ffi.authorizeResTransformer
+import com.google.protobuf.MessageLite
+import com.google.protobuf.Parser
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import ucs.v2.Payment.PaymentServiceAuthorizeRequest
-import ucs.v2.Payment.PaymentServiceAuthorizeResponse
 
 class ConnectorClient {
 
     private val httpClient = OkHttpClient()
 
     /**
-     * Execute a full authorize round-trip: FFI request build -> HTTP -> FFI response parse.
+     * Execute a full round-trip for any payment flow.
      *
-     * @param request A PaymentServiceAuthorizeRequest protobuf message.
+     * @param flow Flow name matching the FFI transformer prefix (e.g. "authorize").
+     * @param requestBytes Serialized protobuf request bytes.
+     * @param responseParser Protobuf parser for the expected response type.
      * @param metadata Map with connector routing and auth info.
      * @param optionsBytes Optional FfiOptions serialized to bytes. Pass empty byte array or null for default.
-     * @return PaymentServiceAuthorizeResponse protobuf message.
+     * @return Parsed protobuf response.
      */
-    fun authorize(
-        request: PaymentServiceAuthorizeRequest,
+    fun <T : MessageLite> executeFlow(
+        flow: String,
+        requestBytes: ByteArray,
+        responseParser: Parser<T>,
         metadata: Map<String, String>,
         optionsBytes: ByteArray? = null,
-    ): PaymentServiceAuthorizeResponse {
-        // Step 1: Serialize the protobuf request to bytes
-        val requestBytes = request.toByteArray()
+    ): T {
+        val reqTransformer = FlowRegistry.reqTransformers[flow]
+            ?: error("Unknown flow: '$flow'. Add it to sdk/flows.yaml and run `make codegen`.")
+        val resTransformer = FlowRegistry.resTransformers[flow]
+            ?: error("Unknown flow: '$flow'. Add it to sdk/flows.yaml and run `make codegen`.")
 
         // Use provided bytes or default to empty byte array
         val opts = optionsBytes ?: ByteArray(0)
 
-        // Step 2: Build the connector HTTP request via FFI
-        val connectorRequestJson = authorizeReqTransformer(requestBytes, metadata, opts)
+        val connectorRequestJson = reqTransformer(requestBytes, metadata, opts)
         val connectorRequest = JSONObject(connectorRequestJson)
 
         val url = connectorRequest.getString("url")
@@ -58,11 +62,7 @@ class ConnectorClient {
         }
 
         val body = connectorRequest.opt("body")?.toString()
-
-        // Step 3: Execute the HTTP request via OkHttp
-        val requestBody = body?.toRequestBody(
-            headersMap["Content-Type"]?.toMediaTypeOrNull()
-        )
+        val requestBody = body?.toRequestBody(headersMap["Content-Type"]?.toMediaTypeOrNull())
 
         val httpRequest = Request.Builder()
             .url(url)
@@ -72,14 +72,13 @@ class ConnectorClient {
 
         val response = httpClient.newCall(httpRequest).execute()
 
-        // Step 4: Parse the connector response via FFI
         val responseBody = response.body?.string() ?: ""
         val responseHeaders = mutableMapOf<String, String>()
         for (name in response.headers.names()) {
             responseHeaders[name] = response.header(name) ?: ""
         }
 
-        val resultBytes = authorizeResTransformer(
+        val resultBytes = resTransformer(
             responseBody.toByteArray(Charsets.UTF_8),
             response.code.toUShort(),
             responseHeaders,
@@ -88,7 +87,6 @@ class ConnectorClient {
             opts,
         )
 
-        // Step 5: Deserialize the protobuf response
-        return PaymentServiceAuthorizeResponse.parseFrom(resultBytes)
+        return responseParser.parseFrom(resultBytes)
     }
 }

@@ -3,12 +3,16 @@
  *
  * Uses koffi to call the UniFFI C ABI directly, replacing NAPI entirely.
  * Handles RustBuffer serialization/deserialization for the UniFFI protocol.
+ *
+ * Flow functions are lazy-loaded on first call, so adding a new flow in
+ * flows.yaml requires no changes here.
  */
 
 "use strict";
 
 const koffi = require("koffi");
 const path = require("path");
+const { FLOWS } = require("./_generated_flows");
 
 // ── RustBuffer struct layout ────────────────────────────────────────────────
 // UniFFI uses RustBuffer { capacity: u64, len: u64, data: *u8 } for all
@@ -36,17 +40,11 @@ function loadLib(libPath) {
 
   const lib = koffi.load(libPath);
 
-    return {
-        authorize_req: lib.func(
-            "uniffi_connector_service_ffi_fn_func_authorize_req_transformer",
-            RustBuffer,
-            [RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
-        ),
-        authorize_res: lib.func(
-            "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
-            RustBuffer,
-            [RustBuffer, "uint16", RustBuffer, RustBuffer, RustBuffer, RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
-        ),
+  // Only the allocator/free helpers are pre-loaded.
+  // Flow-specific functions are lazy-loaded in _getFlowFn().
+  return {
+    _lib: lib,
+    _cache: {},
     alloc: lib.func(
       "ffi_connector_service_ffi_rustbuffer_alloc",
       RustBuffer,
@@ -58,6 +56,39 @@ function loadLib(libPath) {
       [RustBuffer, koffi.out(koffi.pointer(RustCallStatus))]
     ),
   };
+}
+
+// ── Lazy FFI function loader ────────────────────────────────────────────────
+// The UniFFI C ABI uses the naming convention:
+//   uniffi_connector_service_ffi_fn_func_{flow}_{req|res}_transformer
+//
+// req: (RustBuffer requestBytes, RustBuffer metadata) -> RustBuffer (JSON string)
+// res: (RustBuffer responseBody, uint16 statusCode, RustBuffer responseHeaders,
+//       RustBuffer requestBytes, RustBuffer metadata) -> RustBuffer (proto bytes)
+
+function getFlowFn(ffi, flow, type) {
+  const key = `${flow}_${type}`;
+  if (!ffi._cache[key]) {
+    const symbol = `uniffi_connector_service_ffi_fn_func_${flow}_${type}_transformer`;
+    ffi._cache[key] =
+      type === "req"
+        ? ffi._lib.func(symbol, RustBuffer, [
+            RustBuffer,
+            RustBuffer,
+            RustBuffer,
+            koffi.out(koffi.pointer(RustCallStatus)),
+          ])
+        : ffi._lib.func(symbol, RustBuffer, [
+            RustBuffer,
+            "uint16",
+            RustBuffer,
+            RustBuffer,
+            RustBuffer,
+            RustBuffer,
+            koffi.out(koffi.pointer(RustCallStatus)),
+          ]);
+  }
+  return ffi._cache[key];
 }
 
 // ── RustBuffer helpers ──────────────────────────────────────────────────────
@@ -189,43 +220,58 @@ function lowerMap(ffi, map) {
 class UniffiClient {
   constructor(libPath) {
     this._ffi = loadLib(libPath);
+
+    // Attach named per-flow methods: authorizeReq(), captureReq(), voidReq(), etc.
+    // These are thin wrappers over callReq()/callRes() for convenience and
+    // discoverability. The full list of flows lives in _generated_flows.js.
+    for (const flow of Object.keys(FLOWS)) {
+      // snake_case → camelCase: create_access_token → createAccessToken
+      const camel = flow.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      this[`${camel}Req`] = (requestBytes, metadata, optionsBytes) =>
+        this.callReq(flow, requestBytes, metadata, optionsBytes);
+      this[`${camel}Res`] = (responseBody, statusCode, responseHeaders, requestBytes, metadata, optionsBytes) =>
+        this.callRes(flow, responseBody, statusCode, responseHeaders, requestBytes, metadata, optionsBytes);
+    }
   }
 
   /**
-   * Build the connector HTTP request.
-   * @param {Buffer|Uint8Array} requestBytes - protobuf-encoded PaymentServiceAuthorizeRequest
+   * Build the connector HTTP request for any flow.
+   * @param {string} flow - flow name (e.g. "authorize", "capture")
+   * @param {Buffer|Uint8Array} requestBytes - protobuf-encoded request
    * @param {Object<string,string>} metadata - connector routing + auth metadata
    * @param {Buffer|Uint8Array} [optionsBytes] - optional protobuf-encoded FfiOptions
    * @returns {string} JSON string: {url, method, headers, body}
    */
-  authorizeReq(requestBytes, metadata, optionsBytes = null) {
+  callReq(flow, requestBytes, metadata, optionsBytes = null) {
+    const fn = getFlowFn(this._ffi, flow, "req");
     const status = makeCallStatus();
     const rbRequest = lowerBytes(this._ffi, requestBytes);
     const rbMetadata = lowerMap(this._ffi, metadata);
     const rbOptions = optionsBytes ? lowerBytes(this._ffi, optionsBytes) : lowerBytes(this._ffi, Buffer.alloc(0));
 
-    const result = this._ffi.authorize_req(rbRequest, rbMetadata, rbOptions, status);
+    const result = fn(rbRequest, rbMetadata, rbOptions, status);
 
     try {
       checkCallStatus(this._ffi, status);
-      const str = liftString(result);
-      return str;
+      return liftString(result);
     } finally {
       freeRustBuffer(this._ffi, result);
     }
   }
 
   /**
-   * Parse the connector HTTP response.
+   * Parse the connector HTTP response for any flow.
+   * @param {string} flow - flow name (e.g. "authorize", "capture")
    * @param {Buffer|Uint8Array} responseBody - raw response body bytes
    * @param {number} statusCode - HTTP status code
    * @param {Object<string,string>} responseHeaders - HTTP response headers
    * @param {Buffer|Uint8Array} requestBytes - original protobuf request bytes
    * @param {Object<string,string>} metadata - original metadata
    * @param {Buffer|Uint8Array} [optionsBytes] - optional protobuf-encoded FfiOptions
-   * @returns {Buffer} protobuf-encoded PaymentServiceAuthorizeResponse
+   * @returns {Buffer} protobuf-encoded response bytes
    */
-  authorizeRes(responseBody, statusCode, responseHeaders, requestBytes, metadata, optionsBytes = null) {
+  callRes(flow, responseBody, statusCode, responseHeaders, requestBytes, metadata, optionsBytes = null) {
+    const fn = getFlowFn(this._ffi, flow, "res");
     const status = makeCallStatus();
     const rbResponseBody = lowerBytes(this._ffi, responseBody);
     const rbResponseHeaders = lowerMap(this._ffi, responseHeaders);
@@ -233,7 +279,7 @@ class UniffiClient {
     const rbMetadata = lowerMap(this._ffi, metadata);
     const rbOptions = optionsBytes ? lowerBytes(this._ffi, optionsBytes) : lowerBytes(this._ffi, Buffer.alloc(0));
 
-    const result = this._ffi.authorize_res(
+    const result = fn(
       rbResponseBody,
       statusCode,
       rbResponseHeaders,
