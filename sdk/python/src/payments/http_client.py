@@ -45,14 +45,17 @@ def get_session_key(proxy_url: Optional[str], options: Dict[str, Any]) -> str:
     return json.dumps(identity, sort_keys=True)
 
 def create_session(proxy_url: Optional[str], options: Dict[str, Any]) -> requests.Session:
-    session = requests.Session()
-    if proxy_url:
-        session.proxies = {"http": proxy_url, "https": proxy_url}
-    
-    if options.get("ca_cert"):
-        # Note: requests supports file path for CA cert
-        session.verify = options["ca_cert"]
-    return session
+    try:
+        session = requests.Session()
+        if proxy_url:
+            session.proxies = {"http": proxy_url, "https": proxy_url}
+        
+        if options.get("ca_cert"):
+            # Note: requests supports file path for CA cert
+            session.verify = options["ca_cert"]
+        return session
+    except Exception as e:
+        raise ConnectorError(f"Invalid HTTP Configuration: {str(e)}", 500, "INVALID_CONFIGURATION")
 
 def execute(request: HttpRequest, options: Optional[Dict[str, Any]] = None) -> HttpResponse:
     if options is None: options = {}

@@ -55,21 +55,27 @@ object HttpClient {
     }
 
     private fun createClient(proxyUrl: String?, options: HttpOptions): OkHttpClient {
-        val builder = OkHttpClient.Builder()
-            .connectTimeout(options.connect_timeout_ms, TimeUnit.MILLISECONDS)
-            .readTimeout(options.response_timeout_ms, TimeUnit.MILLISECONDS)
-            .writeTimeout(options.response_timeout_ms, TimeUnit.MILLISECONDS)
-            .callTimeout(options.total_timeout_ms, TimeUnit.MILLISECONDS)
-            .followRedirects(false)
-            .followSslRedirects(false)
+        try {
+            val builder = OkHttpClient.Builder()
+                .connectTimeout(options.connect_timeout_ms, TimeUnit.MILLISECONDS)
+                .readTimeout(options.response_timeout_ms, TimeUnit.MILLISECONDS)
+                .writeTimeout(options.response_timeout_ms, TimeUnit.MILLISECONDS)
+                .callTimeout(options.total_timeout_ms, TimeUnit.MILLISECONDS)
+                .followRedirects(false)
+                .followSslRedirects(false)
 
-        if (proxyUrl != null) {
-            val url = HttpUrl.parse(proxyUrl)
-            if (url != null) {
-                builder.proxy(java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host(), url.port())))
+            if (proxyUrl != null) {
+                val url = HttpUrl.parse(proxyUrl)
+                if (url != null) {
+                    builder.proxy(java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host(), url.port())))
+                } else {
+                    throw Exception("Invalid Proxy URL: $proxyUrl")
+                }
             }
+            return builder.build()
+        } catch (e: Exception) {
+            throw ConnectorError("Invalid HTTP Configuration: ${e.message}", 500, "INVALID_CONFIGURATION")
         }
-        return builder.build()
     }
 
     fun execute(request: HttpRequest, options: HttpOptions = HttpOptions()): HttpResponse {

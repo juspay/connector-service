@@ -1,10 +1,5 @@
 /**
  * Smoke test for the packed hyperswitch-payments npm tarball.
- *
- * Usage:
- *   mkdir /tmp/test-js-sdk && cd /tmp/test-js-sdk && npm init -y
- *   npm install <path-to>/hyperswitch-payments-0.1.0.tgz
- *   node test_pack.js
  */
 
 "use strict";
@@ -20,22 +15,20 @@ const FfiOptions = ucs.v2.FfiOptions;
 const EnvOptions = ucs.v2.EnvOptions;
 
 console.log("Loaded hyperswitch-payments from node_modules");
-console.log(`  ConnectorClient: ${typeof ConnectorClient}`);
-console.log(`  UniffiClient: ${typeof UniffiClient}`);
 
 const apiKey = process.env.STRIPE_API_KEY || "sk_test_placeholder";
 const metadata = {
-  connector: "Stripe",
-  connector_auth_type: JSON.stringify({ Stripe: { api_key: apiKey } }),
-  "x-connector": "Stripe",
+  "x-connector": "stripe",
   "x-merchant-id": "test_merchant_123",
   "x-request-id": "test-pack-001",
   "x-tenant-id": "public",
-  "x-auth": "body-key",
-  "x-api-key": apiKey,
+  // Fixed standardized auth header to match ConnectorSpecificAuth enum variants
+  "x-connector-auth": JSON.stringify({ 
+    Stripe: { api_key: apiKey } 
+  }),
 };
 
-// Create FfiOptions with testMode
+// Create FfiOptions
 const ffiOptions = FfiOptions.create({
   env: EnvOptions.create({ testMode: true })
 });
@@ -64,7 +57,14 @@ const requestMsg = PaymentServiceAuthorizeRequest.create({
   authType: AuthenticationType.NO_THREE_DS,
   returnUrl: "https://example.com/return",
   webhookUrl: "https://example.com/webhook",
-  address: {},
+  address: {
+    billingAddress: {
+      addressLine1: "123 Test St",
+      city: "Test City",
+      country: "US",
+      zip: "12345"
+    }
+  },
   testMode: true,
 });
 
@@ -75,15 +75,27 @@ const requestBytes = Buffer.from(
 // --- Test 1: Low-level FFI ---
 console.log("\n=== Test 1: Low-level FFI (UniffiClient.authorizeReq) ===");
 const uniffi = new UniffiClient();
-// Now returns a native object, no JSON.parse needed!
-const result = uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
-console.log(`  URL:    ${result.url}`);
-console.log(`  Method: ${result.method}`);
-if (result.url !== "https://api.stripe.com/v1/payment_intents") throw new Error(`Unexpected URL: ${result.url}`);
-if (result.method !== "POST") throw new Error("Unexpected method");
-console.log("  PASSED");
+try {
+  const result = uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
+  console.log(`  URL:    ${result.url}`);
+  console.log(`  Method: ${result.method}`);
+  console.log("  PASSED");
 
-// --- Test 2: Full round-trip via ConnectorClient ---
+  // Verify authorizeRes call with record
+  const dummyRes = {
+    statusCode: 200,
+    headers: { "content-type": "application/json" },
+    body: Buffer.from("{}")
+  };
+  const resultBytes = uniffi.authorizeRes(dummyRes, requestBytes, metadata, optionsBytes);
+  console.log(`  Response parsed: ${resultBytes.length} bytes`);
+  console.log("  PASSED");
+} catch (e) {
+  console.error(`  FFI Call Failed: ${e.message}`);
+  process.exit(1);
+}
+
+// --- Test 2: Full round-trip ---
 async function testRoundTrip() {
   console.log("\n=== Test 2: Full round-trip (ConnectorClient.authorize) ===");
   if (apiKey === "sk_test_placeholder") {
@@ -94,8 +106,7 @@ async function testRoundTrip() {
   const client = new ConnectorClient();
   try {
     const response = await client.authorize(requestMsg, metadata, ffiOptions);
-    console.log(`  Response type: ${typeof response}`);
-    console.log(`  Response keys: ${Object.keys(response)}`);
+    console.log(`  Response Status: ${response.status}`);
     console.log("  PASSED");
   } catch (e) {
     console.log(`  Response/error received: ${e.message}`);

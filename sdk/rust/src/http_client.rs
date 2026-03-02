@@ -26,13 +26,15 @@ pub enum HttpClientError {
     TotalTimeout(String),
     #[error("Network Error: {0}")]
     NetworkFailure(String),
+    #[error("Invalid Configuration: {0}")]
+    InvalidConfiguration(String),
 }
 
 impl HttpClientError {
     pub fn status_code(&self) -> u16 {
         match self {
             Self::ConnectTimeout(_) | Self::ResponseTimeout(_) | Self::TotalTimeout(_) => 504,
-            Self::NetworkFailure(_) => 500,
+            Self::NetworkFailure(_) | Self::InvalidConfiguration(_) => 500,
         }
     }
 
@@ -42,6 +44,7 @@ impl HttpClientError {
             Self::ResponseTimeout(_) => "RESPONSE_TIMEOUT",
             Self::TotalTimeout(_) => "TOTAL_TIMEOUT",
             Self::NetworkFailure(_) => "NETWORK_FAILURE",
+            Self::InvalidConfiguration(_) => "INVALID_CONFIGURATION",
         }
     }
 }
@@ -82,7 +85,7 @@ pub struct HttpClient {
 }
 
 impl HttpClient {
-    pub fn new(options: HttpOptions) -> Self {
+    pub fn new(options: HttpOptions) -> Result<Self, HttpClientError> {
         let mut builder = reqwest::Client::builder()
             .connect_timeout(Duration::from_millis(options.connect_timeout_ms))
             .timeout(Duration::from_millis(options.total_timeout_ms))
@@ -91,9 +94,10 @@ impl HttpClient {
 
         // Add CA cert if provided
         if let Some(ca_cert_pem) = &options.ca_cert {
-            if let Ok(cert) = reqwest::Certificate::from_pem(ca_cert_pem.as_bytes()) {
-                builder = builder.add_root_certificate(cert);
-            }
+            let cert = reqwest::Certificate::from_pem(ca_cert_pem.as_bytes()).map_err(|e| {
+                HttpClientError::InvalidConfiguration(format!("Invalid CA Certificate: {}", e))
+            })?;
+            builder = builder.add_root_certificate(cert);
         }
 
         if let Some(proxy_config) = &options.proxy {
@@ -108,13 +112,20 @@ impl HttpClient {
                         proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
                     }
                     builder = builder.proxy(proxy);
+                } else {
+                    return Err(HttpClientError::InvalidConfiguration(format!(
+                        "Invalid Proxy URL: {:?}",
+                        proxy_url
+                    )));
                 }
             }
         }
 
-        let client = builder.build().unwrap_or_else(|_| reqwest::Client::new());
+        let client = builder.build().map_err(|e| {
+            HttpClientError::InvalidConfiguration(format!("Failed to build HTTP client: {}", e))
+        })?;
 
-        Self { client, options }
+        Ok(Self { client, options })
     }
 
     pub async fn execute(&self, request: HttpRequest) -> Result<HttpResponse, HttpClientError> {

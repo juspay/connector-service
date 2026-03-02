@@ -45,7 +45,7 @@ export class ConnectorError extends Error {
   constructor(
     public message: string,
     public statusCode?: number,
-    public errorCode?: string,
+    public errorCode?: 'CONNECT_TIMEOUT' | 'RESPONSE_TIMEOUT' | 'TOTAL_TIMEOUT' | 'NETWORK_FAILURE' | 'INVALID_CONFIGURATION' | string,
     public body?: string,
     public headers?: Record<string, string>
   ) {
@@ -118,9 +118,17 @@ function createDispatcher(proxyUrl: string | null, config: HttpOptions): Dispatc
     keepAliveTimeout: config.keep_alive_timeout,
   };
 
-  return proxyUrl 
-    ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
-    : new Agent(dispatcherOptions);
+  try {
+    return proxyUrl 
+      ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
+      : new Agent(dispatcherOptions);
+  } catch (error: any) {
+    throw new ConnectorError(
+      `Invalid HTTP Configuration: ${error.message}`,
+      500,
+      'INVALID_CONFIGURATION'
+    );
+  }
 }
 
 /**

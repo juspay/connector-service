@@ -67,12 +67,12 @@ req.test_mode = True
 
 # --- Test 1: Low-level FFI ---
 print("\n=== Test 1: Low-level FFI (authorize_req_transformer) ===")
+# Now returns a native FfiConnectorHttpRequest object, no json.loads needed!
 result = authorize_req_transformer(req.SerializeToString(), metadata, options_bytes)
-parsed = json.loads(result)
-print(f"  URL:    {parsed['url']}")
-print(f"  Method: {parsed['method']}")
-assert parsed["url"] == "https://api.stripe.com/v1/payment_intents", "Unexpected URL"
-assert parsed["method"] == "POST", "Unexpected method"
+print(f"  URL:    {result.url}")
+print(f"  Method: {result.method}")
+assert result.url == "https://api.stripe.com/v1/payment_intents", f"Unexpected URL: {result.url}"
+assert result.method == "POST", "Unexpected method"
 print("  PASSED")
 
 # --- Test 2: Full round-trip via ConnectorClient ---

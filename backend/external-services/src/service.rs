@@ -696,15 +696,7 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(data)) => {
-                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
-                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
-                        })?;
-                        client.body(bytes).header(
-                            "Content-Type",
-                            format!("multipart/form-data; boundary={}", boundary),
-                        )
-                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -725,15 +717,7 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(data)) => {
-                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
-                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
-                        })?;
-                        client.body(bytes).header(
-                            "Content-Type",
-                            format!("multipart/form-data; boundary={}", boundary),
-                        )
-                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -754,15 +738,7 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(data)) => {
-                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
-                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
-                        })?;
-                        client.body(bytes).header(
-                            "Content-Type",
-                            format!("multipart/form-data; boundary={}", boundary),
-                        )
-                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -783,15 +759,7 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(data)) => {
-                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
-                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
-                        })?;
-                        client.body(bytes).header(
-                            "Content-Type",
-                            format!("multipart/form-data; boundary={}", boundary),
-                        )
-                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }

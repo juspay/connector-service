@@ -2,12 +2,11 @@
  * UniFFI client for Node.js — calls the same shared library as Python/Kotlin.
  *
  * Uses koffi to call the UniFFI C ABI directly, replacing NAPI entirely.
- * Handles RustBuffer serialization/deserialization for the UniFFI protocol.
  */
 
 import koffi from "koffi";
 import path from "path";
-import { HttpRequest } from "../http_client";
+import { HttpRequest, HttpResponse } from "../http_client";
 
 // Standard Node.js __dirname
 declare const __dirname: string;
@@ -15,7 +14,7 @@ const _dirname = __dirname;
 
 // ── RustBuffer struct layout ────────────────────────────────────────────────
 // UniFFI uses RustBuffer { capacity: u64, len: u64, data: *u8 } for all
-// compound types (bytes, strings, maps). 
+// compound types.
 
 export interface RustBuffer {
   capacity: bigint;
@@ -43,11 +42,7 @@ const RustCallStatusStruct = koffi.struct("RustCallStatus", {
 
 interface FfiFunctions {
   authorize_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
-  capture_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
-  void_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
-  get_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
-  refund_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
-  authorize_res: (body: RustBuffer, code: number, headers: RustBuffer, req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
+  authorize_res: (res: RustBuffer, req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
   alloc: (len: bigint, status: any) => RustBuffer;
   free: (buf: RustBuffer, status: any) => void;
 }
@@ -66,30 +61,10 @@ function loadLib(libPath?: string): FfiFunctions {
       RustBufferStruct,
       [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
-    capture_req: lib.func(
-      "uniffi_connector_service_ffi_fn_func_capture_req_transformer",
-      RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
-    ),
-    void_req: lib.func(
-      "uniffi_connector_service_ffi_fn_func_void_req_transformer",
-      RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
-    ),
-    get_req: lib.func(
-      "uniffi_connector_service_ffi_fn_func_get_req_transformer",
-      RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
-    ),
-    refund_req: lib.func(
-      "uniffi_connector_service_ffi_fn_func_refund_req_transformer",
-      RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
-    ),
     authorize_res: lib.func(
       "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
       RustBufferStruct,
-      [RustBufferStruct, "uint16", RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     alloc: lib.func(
       "ffi_connector_service_ffi_rustbuffer_alloc",
@@ -118,11 +93,13 @@ function checkCallStatus(ffi: FfiFunctions, status: RustCallStatus): void {
     freeRustBuffer(ffi, status.error_buf);
     throw new Error(errMsg);
   }
+  
   if (status.error_buf.len > 0n) {
     const msg = liftString(status.error_buf);
     freeRustBuffer(ffi, status.error_buf);
     throw new Error(`Rust panic: ${msg}`);
   }
+  
   throw new Error("Unknown Rust panic");
 }
 
@@ -131,9 +108,7 @@ function liftError(buf: RustBuffer): string {
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
   let offset = 0;
 
-  const variant = raw.readInt32BE(offset);
-  offset += 4;
-
+  const variant = raw.readInt32BE(offset); offset += 4;
   const variantNames: Record<number, string> = {
     1: "DecodeError",
     2: "MissingMetadata",
@@ -144,8 +119,7 @@ function liftError(buf: RustBuffer): string {
 
   if (variant === 5) return "NoConnectorRequest";
 
-  const strLen = raw.readInt32BE(offset);
-  offset += 4;
+  const strLen = raw.readInt32BE(offset); offset += 4;
   const msg = raw.subarray(offset, offset + strLen).toString("utf-8");
   return `${variantNames[variant] || "UniffiError"}: ${msg}`;
 }
@@ -159,38 +133,31 @@ function liftString(buf: RustBuffer): string {
 function liftBytes(buf: RustBuffer): Buffer {
   if (!buf.data || buf.len === 0n) return Buffer.alloc(0);
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
+  // Bytes are serialized as: i32 length + raw bytes
   const len = raw.readInt32BE(0);
   return raw.subarray(4, 4 + len);
 }
 
-/**
- * Lifts a Record from a RustBuffer using the UniFFI binary layout.
- */
 function liftConnectorHttpRequest(buf: RustBuffer): HttpRequest {
-  if (!buf.data || buf.len === 0n) throw new Error("Empty buffer returned from FFI");
+  if (!buf.data || buf.len === 0n) throw new Error("Empty buffer");
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
   let offset = 0;
 
-  // 1. URL (String)
-  const urlLen = raw.readInt32BE(offset); offset += 4;
-  const url = raw.subarray(offset, offset + urlLen).toString("utf-8"); offset += urlLen;
+  const readStr = () => {
+    const len = raw.readInt32BE(offset); offset += 4;
+    const s = raw.subarray(offset, offset + len).toString("utf-8"); offset += len;
+    return s;
+  };
 
-  // 2. Method (String)
-  const methodLen = raw.readInt32BE(offset); offset += 4;
-  const method = raw.subarray(offset, offset + methodLen).toString("utf-8"); offset += methodLen;
+  const url = readStr();
+  const method = readStr();
 
-  // 3. Headers (HashMap<String, String>)
   const headersCount = raw.readInt32BE(offset); offset += 4;
   const headers: Record<string, string> = {};
   for (let i = 0; i < headersCount; i++) {
-    const keyLen = raw.readInt32BE(offset); offset += 4;
-    const key = raw.subarray(offset, offset + keyLen).toString("utf-8"); offset += keyLen;
-    const valLen = raw.readInt32BE(offset); offset += 4;
-    const val = raw.subarray(offset, offset + valLen).toString("utf-8"); offset += valLen;
-    headers[key] = val;
+    headers[readStr()] = readStr();
   }
 
-  // 4. Body (Option<Vec<u8>>)
   const hasBody = raw.readInt8(offset); offset += 1;
   let body: Uint8Array | undefined;
   if (hasBody === 1) {
@@ -203,8 +170,7 @@ function liftConnectorHttpRequest(buf: RustBuffer): HttpRequest {
 
 function freeRustBuffer(ffi: FfiFunctions, buf: RustBuffer): void {
   if (buf.data && buf.len > 0n) {
-    const status = makeCallStatus();
-    ffi.free(buf, status);
+    ffi.free(buf, makeCallStatus());
   }
 }
 
@@ -218,45 +184,85 @@ function allocRustBuffer(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuff
   return buf;
 }
 
-// ── Serialization (lower) ───────────────────────────────────────────────────
-function lowerBytes(ffi: FfiFunctions, bytes: Buffer | Uint8Array): RustBuffer {
-  const buf = Buffer.alloc(4 + bytes.length);
-  buf.writeInt32BE(bytes.length, 0);
-  Buffer.from(bytes).copy(buf, 4);
+/**
+ * Lowers raw data into a UniFFI-compliant RustBuffer.
+ * This is used for Top-level Vec<u8> parameters.
+ */
+function lowerBytes(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuffer {
+  const buf = Buffer.alloc(4 + data.length);
+  buf.writeInt32BE(data.length, 0);
+  Buffer.from(data).copy(buf, 4);
   return allocRustBuffer(ffi, buf);
 }
 
+/**
+ * Lowers a Map into a UniFFI-compliant RustBuffer.
+ * This is used for Top-level HashMap parameters.
+ */
 function lowerMap(ffi: FfiFunctions, map: Record<string, string>): RustBuffer {
   const entries = Object.entries(map);
-  let totalSize = 4;
+  let totalSize = 4; // count
   const encoded = entries.map(([k, v]) => {
-    const keyBuf = Buffer.from(k, "utf-8");
-    const valBuf = Buffer.from(v, "utf-8");
-    totalSize += 4 + keyBuf.length + 4 + valBuf.length;
-    return { keyBuf, valBuf };
+    const kBuf = Buffer.from(k, "utf-8");
+    const vBuf = Buffer.from(v, "utf-8");
+    totalSize += 4 + kBuf.length + 4 + vBuf.length;
+    return { kBuf, vBuf };
   });
 
   const buf = Buffer.alloc(totalSize);
   let offset = 0;
-  buf.writeInt32BE(entries.length, offset);
-  offset += 4;
+  buf.writeInt32BE(entries.length, offset); offset += 4;
 
-  for (const { keyBuf, valBuf } of encoded) {
-    buf.writeInt32BE(keyBuf.length, offset);
-    offset += 4;
-    keyBuf.copy(buf, offset);
-    offset += keyBuf.length;
-
-    buf.writeInt32BE(valBuf.length, offset);
-    offset += 4;
-    valBuf.copy(buf, offset);
-    offset += valBuf.length;
+  for (const { kBuf, vBuf } of encoded) {
+    buf.writeInt32BE(kBuf.length, offset); offset += 4;
+    kBuf.copy(buf, offset); offset += kBuf.length;
+    buf.writeInt32BE(vBuf.length, offset); offset += 4;
+    vBuf.copy(buf, offset); offset += vBuf.length;
   }
 
   return allocRustBuffer(ffi, buf);
 }
 
-// ── Public API ──────────────────────────────────────────────────────────────
+/**
+ * Lowers an HttpResponse into an FfiConnectorHttpResponse UniFFI record.
+ */
+function lowerConnectorHttpResponse(ffi: FfiFunctions, res: HttpResponse): RustBuffer {
+  // A Record is just the concatenation of its fields.
+  // 1. status_code (u16) -> 2 bytes
+  // 2. headers (HashMap) -> lowerMap layout
+  // 3. body (Vec<u8>)    -> lowerBytes layout
+  
+  const entries = Object.entries(res.headers);
+  let headersSize = 4;
+  const encodedHeaders = entries.map(([k, v]) => {
+    const kBuf = Buffer.from(k, "utf-8");
+    const vBuf = Buffer.from(v, "utf-8");
+    headersSize += 4 + kBuf.length + 4 + vBuf.length;
+    return { kBuf, vBuf };
+  });
+
+  const totalSize = 2 + headersSize + (4 + res.body.length);
+  const buf = Buffer.alloc(totalSize);
+  let offset = 0;
+  
+  // 1. status_code
+  buf.writeUInt16BE(res.statusCode, offset); offset += 2;
+
+  // 2. headers
+  buf.writeInt32BE(entries.length, offset); offset += 4;
+  for (const { kBuf, vBuf } of encodedHeaders) {
+    buf.writeInt32BE(kBuf.length, offset); offset += 4;
+    kBuf.copy(buf, offset); offset += kBuf.length;
+    buf.writeInt32BE(vBuf.length, offset); offset += 4;
+    vBuf.copy(buf, offset); offset += vBuf.length;
+  }
+
+  // 3. body
+  buf.writeInt32BE(res.body.length, offset); offset += 4;
+  Buffer.from(res.body).copy(buf, offset);
+
+  return allocRustBuffer(ffi, buf);
+}
 
 export class UniffiClient {
   private _ffi: FfiFunctions;
@@ -268,14 +274,14 @@ export class UniffiClient {
   authorizeReq(
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,
-    optionsBytes: Buffer | Uint8Array = Buffer.alloc(0)
+    optionsBytes: Buffer | Uint8Array
   ): HttpRequest {
+    const rbReq = lowerBytes(this._ffi, requestBytes);
+    const rbMeta = lowerMap(this._ffi, metadata);
+    const rbOpts = lowerBytes(this._ffi, optionsBytes);
     const status = makeCallStatus();
-    const rbRequest = lowerBytes(this._ffi, requestBytes);
-    const rbMetadata = lowerMap(this._ffi, metadata);
-    const rbOptions = lowerBytes(this._ffi, optionsBytes);
 
-    const result = this._ffi.authorize_req(rbRequest, rbMetadata, rbOptions, status);
+    const result = this._ffi.authorize_req(rbReq, rbMeta, rbOpts, status);
 
     try {
       checkCallStatus(this._ffi, status);
@@ -286,27 +292,22 @@ export class UniffiClient {
   }
 
   authorizeRes(
-    responseBody: Buffer | Uint8Array,
-    statusCode: number,
-    responseHeaders: Record<string, string>,
+    response: HttpResponse,
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
+    const rbRes = lowerConnectorHttpResponse(this._ffi, response);
+    const rbReq = lowerBytes(this._ffi, requestBytes);
+    const rbMeta = lowerMap(this._ffi, metadata);
+    const rbOpts = lowerBytes(this._ffi, optionsBytes);
     const status = makeCallStatus();
-    const rbResponseBody = lowerBytes(this._ffi, responseBody);
-    const rbResponseHeaders = lowerMap(this._ffi, responseHeaders);
-    const rbRequestBytes = lowerBytes(this._ffi, requestBytes);
-    const rbMetadata = lowerMap(this._ffi, metadata);
-    const rbOptions = lowerBytes(this._ffi, optionsBytes);
 
     const result = this._ffi.authorize_res(
-      rbResponseBody,
-      statusCode,
-      rbResponseHeaders,
-      rbRequestBytes,
-      rbMetadata,
-      rbOptions,
+      rbRes,
+      rbReq,
+      rbMeta,
+      rbOpts,
       status
     );
 

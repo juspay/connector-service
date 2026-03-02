@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use crate::http_client::{HttpClient, HttpOptions, HttpRequest as ClientHttpRequest};
+use crate::http_client::{
+    HttpClient, HttpClientError, HttpOptions, HttpRequest as ClientHttpRequest,
+};
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
@@ -15,10 +17,10 @@ pub struct ConnectorClient {
 }
 
 impl ConnectorClient {
-    pub fn new(options: HttpOptions) -> Self {
-        Self {
-            http_client: HttpClient::new(options),
-        }
+    pub fn new(options: HttpOptions) -> Result<Self, HttpClientError> {
+        Ok(Self {
+            http_client: HttpClient::new(options)?,
+        })
     }
 
     /// Authorize a payment by:

@@ -101,8 +101,9 @@ fn build_metadata() -> HashMap<String, String> {
     metadata.insert(
         "connector_auth_type".to_string(),
         serde_json::json!({
-            "auth_type": "HeaderKey",
-            "api_key": api_key,
+            "Stripe": {
+                "api_key": api_key,
+            }
         })
         .to_string(),
     );
@@ -193,9 +194,10 @@ async fn demo_full_round_trip(
     eprintln!("Sending authorize request...\n");
 
     // Initialize with default http options (Pooling + Timeouts)
-    let client = ConnectorClient::new(HttpOptions::default());
+    let client = ConnectorClient::new(HttpOptions::default()).unwrap();
 
     // Pass test_mode = true for the demo
+
     match client.authorize(request, metadata, Some(true)).await {
         Ok(response) => {
             eprintln!("Authorize response received:");
