@@ -4,6 +4,14 @@ use utoipa::ToSchema;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+#[derive(Debug, thiserror::Error)]
+pub enum RequestError {
+    #[error("Multipart rendering failed: {0}")]
+    MultipartRenderingFailed(String),
+    #[error("Failed to read multipart stream: {0}")]
+    MultipartReadFailed(String),
+}
+
 #[derive(
     Clone,
     Copy,
@@ -79,8 +87,16 @@ pub struct MultipartData {
 
 #[derive(Debug, Clone, Serialize)]
 pub enum FormDataPart {
-    Text { name: String, value: String },
-    File { name: String, filename: String, bytes: Vec<u8>, mime_type: String },
+    Text {
+        name: String,
+        value: String,
+    },
+    File {
+        name: String,
+        filename: String,
+        bytes: Vec<u8>,
+        mime_type: String,
+    },
 }
 
 impl MultipartData {
@@ -110,7 +126,7 @@ impl MultipartData {
         });
     }
 
-    pub fn render_as_bytes(&self) -> Result<(Vec<u8>, String), String> {
+    pub fn render_as_bytes(&self) -> Result<(Vec<u8>, String), RequestError> {
         use std::io::Read;
         let mut builder = multipart::client::lazy::Multipart::new();
 
@@ -135,13 +151,13 @@ impl MultipartData {
 
         let mut prepared = builder
             .prepare()
-            .map_err(|e| format!("Multipart rendering failed: {}", e))?;
+            .map_err(|e| RequestError::MultipartRenderingFailed(e.to_string()))?;
         let boundary = prepared.boundary().to_string();
 
         let mut finished_bytes = Vec::new();
         prepared
             .read_to_end(&mut finished_bytes)
-            .map_err(|e| format!("Failed to read multipart stream: {}", e))?;
+            .map_err(|e| RequestError::MultipartReadFailed(e.to_string()))?;
 
         Ok((finished_bytes, boundary))
     }
@@ -159,7 +175,7 @@ impl RequestContent {
         }
     }
 
-    pub fn get_body_bytes(&self) -> Result<(Option<Vec<u8>>, Option<String>), String> {
+    pub fn get_body_bytes(&self) -> Result<(Option<Vec<u8>>, Option<String>), RequestError> {
         use hyperswitch_masking::ExposeInterface;
         match self {
             Self::RawBytes(bytes) => Ok((Some(bytes.clone()), None)),

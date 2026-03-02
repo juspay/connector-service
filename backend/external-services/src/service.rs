@@ -17,35 +17,6 @@ use domain_types::{
 use hyperswitch_masking::Secret;
 use injector;
 
-fn build_reqwest_form(data: MultipartData) -> reqwest::multipart::Form {
-    let mut form = reqwest::multipart::Form::new();
-    for part in data.parts {
-        match part {
-            FormDataPart::Text { name, value } => {
-                form = form.text(name, value);
-            }
-            FormDataPart::File {
-                name,
-                filename,
-                bytes,
-                mime_type,
-            } => {
-                let part = reqwest::multipart::Part::bytes(bytes.clone()).file_name(filename.clone());
-                let part = if !mime_type.is_empty() {
-                    match part.mime_str(&mime_type) {
-                        Ok(p) => p,
-                        Err(_) => reqwest::multipart::Part::bytes(bytes).file_name(filename),
-                    }
-                } else {
-                    part
-                };
-                form = form.part(name, part);
-            }
-        }
-    }
-    form
-}
-
 /// Test context for mock server integration
 #[derive(Debug, Clone)]
 pub struct TestContext {
@@ -725,7 +696,15 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(data)) => client.multipart(build_reqwest_form(data)),
+                    Some(RequestContent::FormData(data)) => {
+                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
+                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
+                        })?;
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
+                    }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -746,7 +725,15 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(data)) => client.multipart(build_reqwest_form(data)),
+                    Some(RequestContent::FormData(data)) => {
+                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
+                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
+                        })?;
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
+                    }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -767,7 +754,15 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(data)) => client.multipart(build_reqwest_form(data)),
+                    Some(RequestContent::FormData(data)) => {
+                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
+                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
+                        })?;
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
+                    }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
@@ -788,7 +783,15 @@ pub async fn call_connector_api(
                         };
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
-                    Some(RequestContent::FormData(data)) => client.multipart(build_reqwest_form(data)),
+                    Some(RequestContent::FormData(data)) => {
+                        let (bytes, boundary) = data.render_as_bytes().map_err(|e| {
+                            report!(ApiClientError::BodySerializationFailed).attach_printable(e)
+                        })?;
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
+                    }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }

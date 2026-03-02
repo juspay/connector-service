@@ -1,6 +1,6 @@
+use common_utils::request::Method;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use common_utils::request::Method;
 
 pub struct HttpRequest {
     pub url: String,
@@ -16,6 +16,36 @@ pub struct HttpResponse {
     pub latency_ms: u128,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum HttpClientError {
+    #[error("Connection Timeout: {0}")]
+    ConnectTimeout(String),
+    #[error("Response Timeout: {0}")]
+    ResponseTimeout(String),
+    #[error("Total Request Timeout: {0}")]
+    TotalTimeout(String),
+    #[error("Network Error: {0}")]
+    NetworkFailure(String),
+}
+
+impl HttpClientError {
+    pub fn status_code(&self) -> u16 {
+        match self {
+            Self::ConnectTimeout(_) | Self::ResponseTimeout(_) | Self::TotalTimeout(_) => 504,
+            Self::NetworkFailure(_) => 500,
+        }
+    }
+
+    pub fn error_code(&self) -> &'static str {
+        match self {
+            Self::ConnectTimeout(_) => "CONNECT_TIMEOUT",
+            Self::ResponseTimeout(_) => "RESPONSE_TIMEOUT",
+            Self::TotalTimeout(_) => "TOTAL_TIMEOUT",
+            Self::NetworkFailure(_) => "NETWORK_FAILURE",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ProxyConfig {
     pub http_url: Option<String>,
@@ -23,7 +53,7 @@ pub struct ProxyConfig {
     pub bypass_urls: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HttpOptions {
     pub total_timeout_ms: u64,
     pub connect_timeout_ms: u64,
@@ -48,6 +78,7 @@ impl Default for HttpOptions {
 
 pub struct HttpClient {
     client: reqwest::Client,
+    options: HttpOptions,
 }
 
 impl HttpClient {
@@ -59,19 +90,18 @@ impl HttpClient {
             .redirect(reqwest::redirect::Policy::none());
 
         // Add CA cert if provided
-        if let Some(ca_cert_pem) = options.ca_cert {
+        if let Some(ca_cert_pem) = &options.ca_cert {
             if let Ok(cert) = reqwest::Certificate::from_pem(ca_cert_pem.as_bytes()) {
                 builder = builder.add_root_certificate(cert);
             }
         }
 
-        // We handle proxy at the client level for now to mirror the JS SDK's Dispatcher behavior
-        if let Some(proxy_config) = options.proxy {
-            if let Some(proxy_url) = proxy_config.https_url.or(proxy_config.http_url) {
-                if let Ok(proxy) = reqwest::Proxy::all(proxy_url) {
-                    let mut proxy = proxy;
-                    for bypass in proxy_config.bypass_urls {
-                        proxy = proxy.no_proxy(reqwest::header::HeaderValue::from_str(&bypass).unwrap_or(reqwest::header::HeaderValue::from_static("")));
+        if let Some(proxy_config) = &options.proxy {
+            if let Some(proxy_url) = proxy_config.https_url.as_ref().or(proxy_config.http_url.as_ref()) {
+                if let Ok(mut proxy) = reqwest::Proxy::all(proxy_url) {
+                    for bypass in &proxy_config.bypass_urls {
+                        // NoProxy::from_string returns Option<NoProxy> in reqwest 0.11
+                        proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
                     }
                     builder = builder.proxy(proxy);
                 }
@@ -80,12 +110,12 @@ impl HttpClient {
 
         let client = builder.build().unwrap_or_else(|_| reqwest::Client::new());
 
-        Self { client }
+        Self { client, options }
     }
 
-    pub async fn execute(&self, request: HttpRequest) -> Result<HttpResponse, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn execute(&self, request: HttpRequest) -> Result<HttpResponse, HttpClientError> {
         let start_time = Instant::now();
-        
+
         let mut req_builder = match request.method {
             Method::Get => self.client.get(&request.url),
             Method::Post => self.client.post(&request.url),
@@ -104,17 +134,45 @@ impl HttpClient {
             req_builder = req_builder.body(body_bytes);
         }
 
-        let response = req_builder.send().await?;
+        let response = req_builder.send().await.map_err(|e| {
+            let elapsed = start_time.elapsed().as_millis() as u64;
+            if e.is_timeout() {
+                if e.is_connect() {
+                    HttpClientError::ConnectTimeout(request.url.clone())
+                } else if elapsed >= self.options.total_timeout_ms {
+                    HttpClientError::TotalTimeout(request.url.clone())
+                } else {
+                    HttpClientError::ResponseTimeout(request.url.clone())
+                }
+            } else {
+                HttpClientError::NetworkFailure(e.to_string())
+            }
+        })?;
+
         let latency = start_time.elapsed().as_millis();
 
         let status_code = response.status().as_u16();
         let mut response_headers = HashMap::new();
         for (key, value) in response.headers() {
             // Normalize to lowercase for global parity
-            response_headers.insert(key.to_string().to_lowercase(), value.to_str().unwrap_or("").to_string());
+            response_headers.insert(
+                key.to_string().to_lowercase(),
+                value.to_str().unwrap_or("").to_string(),
+            );
         }
 
-        let body = response.bytes().await?.to_vec();
+        let body = response
+            .bytes()
+            .await
+            .map_err(|e| {
+                let elapsed = start_time.elapsed().as_millis() as u64;
+                if e.is_timeout() && elapsed >= self.options.total_timeout_ms {
+                    HttpClientError::TotalTimeout(request.url.clone())
+                } else {
+                    HttpClientError::NetworkFailure(e.to_string())
+                }
+            })?
+            .to_vec();
 
         Ok(HttpResponse {
             status_code,

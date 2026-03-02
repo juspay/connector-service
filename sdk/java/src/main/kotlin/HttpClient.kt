@@ -4,6 +4,7 @@ import okhttp3.*
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -109,11 +110,26 @@ object HttpClient {
                 )
             }
         } catch (e: IOException) {
-            val msg = e.message ?: ""
-            if (msg.contains("timeout", ignoreCase = true)) {
-                throw ConnectorError("Timeout calling ${request.url}", 504, "TIMEOUT")
+            val msg = e.message?.lowercase() ?: ""
+            val latency = System.currentTimeMillis() - startTime
+
+            when {
+                // Total call timeout (set via .callTimeout)
+                msg.contains("timeout") && latency >= options.total_timeout_ms -> {
+                    throw ConnectorError("Total Request Timeout: ${request.url} exceeded ${options.total_timeout_ms}ms", 504, "TOTAL_TIMEOUT")
+                }
+                // Specific connect timeout
+                msg.contains("connect") -> {
+                    throw ConnectorError("Connection Timeout: Failed to connect to ${request.url}", 504, "CONNECT_TIMEOUT")
+                }
+                // Specific read/response timeout
+                msg.contains("read") || msg.contains("write") || e is SocketTimeoutException -> {
+                    throw ConnectorError("Response Timeout: Gateway ${request.url} accepted connection but failed to respond", 504, "RESPONSE_TIMEOUT")
+                }
+                else -> {
+                    throw ConnectorError("Network Error: ${e.message}", 500, "NETWORK_FAILURE")
+                }
             }
-            throw ConnectorError("Network Error: ${e.message}", 500, "NETWORK_FAILURE")
         }
     }
 }

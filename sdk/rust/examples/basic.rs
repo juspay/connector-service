@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use grpc_api_types::payments::{self, PaymentServiceAuthorizeRequest};
-use hyperswitch_payments_client::{ConnectorClient, http_client::HttpOptions};
+use hyperswitch_payments_client::{http_client::HttpOptions, ConnectorClient};
 
 #[tokio::main]
 async fn main() {
@@ -141,7 +141,13 @@ fn demo_low_level(request: &PaymentServiceAuthorizeRequest, metadata: &HashMap<S
             let url = connector_request.url.clone();
             let method = connector_request.method;
             let headers: HashMap<String, String> = connector_request.get_headers_map();
-            let (body, _) = connector_request.body.as_ref().map_or((None, None), |b| b.get_body_bytes());
+            let (body, _) = connector_request
+                .body
+                .as_ref()
+                .map(|b| b.get_body_bytes())
+                .transpose()
+                .unwrap_or_default()
+                .unwrap_or((None, None));
 
             eprintln!("Connector HTTP request generated successfully:");
             eprintln!("  URL:    {}", url);

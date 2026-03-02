@@ -42,12 +42,12 @@ const RustCallStatusStruct = koffi.struct("RustCallStatus", {
 // ── Shared Library Interface ─────────────────────────────────────────────────
 
 interface FfiFunctions {
-  authorize_req: (req: RustBuffer, meta: RustBuffer, status: any) => RustBuffer;
-  capture_req: (req: RustBuffer, meta: RustBuffer, status: any) => RustBuffer;
-  void_req: (req: RustBuffer, meta: RustBuffer, status: any) => RustBuffer;
-  get_req: (req: RustBuffer, meta: RustBuffer, status: any) => RustBuffer;
-  refund_req: (req: RustBuffer, meta: RustBuffer, status: any) => RustBuffer;
-  authorize_res: (body: RustBuffer, code: number, headers: RustBuffer, req: RustBuffer, meta: RustBuffer, status: any) => RustBuffer;
+  authorize_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
+  capture_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
+  void_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
+  get_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
+  refund_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
+  authorize_res: (body: RustBuffer, code: number, headers: RustBuffer, req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
   alloc: (len: bigint, status: any) => RustBuffer;
   free: (buf: RustBuffer, status: any) => void;
 }
@@ -64,32 +64,32 @@ function loadLib(libPath?: string): FfiFunctions {
     authorize_req: lib.func(
       "uniffi_connector_service_ffi_fn_func_authorize_req_transformer",
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     capture_req: lib.func(
       "uniffi_connector_service_ffi_fn_func_capture_req_transformer",
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     void_req: lib.func(
       "uniffi_connector_service_ffi_fn_func_void_req_transformer",
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     get_req: lib.func(
       "uniffi_connector_service_ffi_fn_func_get_req_transformer",
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     refund_req: lib.func(
       "uniffi_connector_service_ffi_fn_func_refund_req_transformer",
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     authorize_res: lib.func(
       "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
       RustBufferStruct,
-      [RustBufferStruct, "uint16", RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, "uint16", RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
     alloc: lib.func(
       "ffi_connector_service_ffi_rustbuffer_alloc",
@@ -265,12 +265,17 @@ export class UniffiClient {
     this._ffi = loadLib(libPath);
   }
 
-  authorizeReq(requestBytes: Buffer | Uint8Array, metadata: Record<string, string>): HttpRequest {
+  authorizeReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array = Buffer.alloc(0)
+  ): HttpRequest {
     const status = makeCallStatus();
     const rbRequest = lowerBytes(this._ffi, requestBytes);
     const rbMetadata = lowerMap(this._ffi, metadata);
+    const rbOptions = lowerBytes(this._ffi, optionsBytes);
 
-    const result = this._ffi.authorize_req(rbRequest, rbMetadata, status);
+    const result = this._ffi.authorize_req(rbRequest, rbMetadata, rbOptions, status);
 
     try {
       checkCallStatus(this._ffi, status);
@@ -285,13 +290,15 @@ export class UniffiClient {
     statusCode: number,
     responseHeaders: Record<string, string>,
     requestBytes: Buffer | Uint8Array,
-    metadata: Record<string, string>
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
   ): Buffer {
     const status = makeCallStatus();
     const rbResponseBody = lowerBytes(this._ffi, responseBody);
     const rbResponseHeaders = lowerMap(this._ffi, responseHeaders);
     const rbRequestBytes = lowerBytes(this._ffi, requestBytes);
     const rbMetadata = lowerMap(this._ffi, metadata);
+    const rbOptions = lowerBytes(this._ffi, optionsBytes);
 
     const result = this._ffi.authorize_res(
       rbResponseBody,
@@ -299,6 +306,7 @@ export class UniffiClient {
       rbResponseHeaders,
       rbRequestBytes,
       rbMetadata,
+      rbOptions,
       status
     );
 

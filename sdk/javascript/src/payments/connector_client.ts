@@ -16,6 +16,7 @@ import { ucs } from "./generated/proto";
 
 const PaymentServiceAuthorizeRequest = ucs.v2.PaymentServiceAuthorizeRequest;
 const PaymentServiceAuthorizeResponse = ucs.v2.PaymentServiceAuthorizeResponse;
+const FfiOptions = ucs.v2.FfiOptions;
 
 export class ConnectorClient {
   private _uniffi: UniffiClient;
@@ -34,17 +35,25 @@ export class ConnectorClient {
    * Execute a full authorize round-trip.
    * @param requestMsg - PaymentServiceAuthorizeRequest message
    * @param metadata - connector routing + auth metadata
+   * @param ffiOptions - optional FfiOptions object
    * @returns decoded PaymentServiceAuthorizeResponse message
    */
-  async authorize(requestMsg: any, metadata: Record<string, string>): Promise<any> {
+  async authorize(requestMsg: any, metadata: Record<string, string>, ffiOptions: any = null): Promise<any> {
     // 1. Serialize protobuf request to bytes
     const requestBytes = Buffer.from(
       PaymentServiceAuthorizeRequest.encode(requestMsg).finish()
     );
 
+    // Serialize FfiOptions to bytes if provided
+    let optionsBytes = Buffer.alloc(0);
+    if (ffiOptions) {
+      const ffi = FfiOptions.create(ffiOptions);
+      optionsBytes = Buffer.from(FfiOptions.encode(ffi).finish());
+    }
+
     // 2. Build the connector HTTP request via FFI bridge
     // Now returns a native HttpRequest object, no JSON.parse needed!
-    const connectorRequest: HttpRequest = this._uniffi.authorizeReq(requestBytes, metadata);
+    const connectorRequest: HttpRequest = this._uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
 
     // 3. Execute the HTTP request
     const response = await execute(connectorRequest, this._options);
@@ -55,7 +64,8 @@ export class ConnectorClient {
       response.statusCode,
       response.headers,
       requestBytes,
-      metadata
+      metadata,
+      optionsBytes
     );
 
     // 5. Decode the protobuf response from bytes

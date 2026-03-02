@@ -76,7 +76,7 @@ const requestBytes = Buffer.from(
 console.log("\n=== Test 1: Low-level FFI (UniffiClient.authorizeReq) ===");
 const uniffi = new UniffiClient();
 // Now returns a native object, no JSON.parse needed!
-const result = uniffi.authorizeReq(requestBytes, metadata);
+const result = uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
 console.log(`  URL:    ${result.url}`);
 console.log(`  Method: ${result.method}`);
 if (result.url !== "https://api.stripe.com/v1/payment_intents") throw new Error(`Unexpected URL: ${result.url}`);

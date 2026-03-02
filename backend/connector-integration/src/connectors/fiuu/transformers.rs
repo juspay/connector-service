@@ -40,7 +40,10 @@ use url::Url;
 use crate::{
     connectors::{fiuu::FiuuRouterData, macros::GetFormData},
     types::ResponseRouterData,
-    utils::{build_form_from_struct, qr_code::{QrCodeInformation, QrImage}},
+    utils::{
+        build_form_from_struct,
+        qr_code::{QrCodeInformation, QrImage},
+    },
 };
 
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change

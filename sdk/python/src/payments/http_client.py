@@ -35,11 +35,12 @@ DEFAULT_CONFIG = {
 }
 
 def get_session_key(proxy_url: Optional[str], options: Dict[str, Any]) -> str:
+    ca_cert = options.get("ca_cert")
     identity = {
         "proxy": proxy_url,
         "connect_timeout": options.get("connect_timeout_ms", DEFAULT_CONFIG["connect_timeout_ms"]),
         "response_timeout": options.get("response_timeout_ms", DEFAULT_CONFIG["response_timeout_ms"]),
-        "ca_length": len(options.get("ca_cert")) if options.get("ca_cert") else None
+        "ca_length": len(ca_cert) if ca_cert is not None else None
     }
     return json.dumps(identity, sort_keys=True)
 

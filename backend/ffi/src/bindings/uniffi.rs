@@ -26,7 +26,7 @@ mod uniffi_bindings_inner {
     ///
     /// Expected keys:
     ///   "connector"           — connector name, e.g. "stripe"
-    ///   "connector_auth_type" — JSON-encoded ConnectorAuthType, e.g.
+    ///   "connector_auth_type" — JSON-encoded ConnectorSpecificAuth, e.g.
     ///                           '{"HeaderKey":{"api_key":"sk_test_..."}}'
     fn parse_metadata(
         metadata: &HashMap<String, String>,
