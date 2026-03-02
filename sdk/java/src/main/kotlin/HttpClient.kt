@@ -7,6 +7,8 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import ucs.v2.SdkOptions.HttpOptions
+import ucs.v2.SdkOptions.SdkDefault
 
 data class HttpRequest(
     val url: String,
@@ -22,24 +24,6 @@ data class HttpResponse(
     val latencyMs: Long
 )
 
-/**
- * Global HTTP Options matching the unified SDK standard.
- */
-data class HttpOptions(
-    val total_timeout_ms: Long = 45000L,
-    val connect_timeout_ms: Long = 10000L,
-    val response_timeout_ms: Long = 30000L,
-    val keep_alive_timeout: Long = 60000L,
-    val proxy: ProxyConfig? = null,
-    val ca_cert: String? = null
-)
-
-data class ProxyConfig(
-    val http_url: String? = null,
-    val https_url: String? = null,
-    val bypass_urls: List<String> = emptyList()
-)
-
 class ConnectorError(
     message: String,
     val statusCode: Int? = null,
@@ -51,16 +35,28 @@ object HttpClient {
     private const val MAX_CACHE_SIZE = 100
 
     private fun getClientKey(proxyUrl: String?, options: HttpOptions): String {
-        return "proxy=$proxyUrl;connect=${options.connect_timeout_ms};response=${options.response_timeout_ms};ca=${options.ca_cert?.length}"
+        return "proxy=$proxyUrl;connect=${options.connectTimeoutMs};response=${options.responseTimeoutMs};ca=${options.caCert?.size()}"
     }
 
     private fun createClient(proxyUrl: String?, options: HttpOptions): OkHttpClient {
         try {
             val builder = OkHttpClient.Builder()
-                .connectTimeout(options.connect_timeout_ms, TimeUnit.MILLISECONDS)
-                .readTimeout(options.response_timeout_ms, TimeUnit.MILLISECONDS)
-                .writeTimeout(options.response_timeout_ms, TimeUnit.MILLISECONDS)
-                .callTimeout(options.total_timeout_ms, TimeUnit.MILLISECONDS)
+                .connectTimeout(
+                    (if (options.hasConnectTimeoutMs()) options.connectTimeoutMs else SdkDefault.CONNECT_TIMEOUT_MS_VALUE).toLong(), 
+                    TimeUnit.MILLISECONDS
+                )
+                .readTimeout(
+                    (if (options.hasResponseTimeoutMs()) options.responseTimeoutMs else SdkDefault.RESPONSE_TIMEOUT_MS_VALUE).toLong(), 
+                    TimeUnit.MILLISECONDS
+                )
+                .writeTimeout(
+                    (if (options.hasResponseTimeoutMs()) options.responseTimeoutMs else SdkDefault.RESPONSE_TIMEOUT_MS_VALUE).toLong(), 
+                    TimeUnit.MILLISECONDS
+                )
+                .callTimeout(
+                    (if (options.hasTotalTimeoutMs()) options.totalTimeoutMs else SdkDefault.TOTAL_TIMEOUT_MS_VALUE).toLong(), 
+                    TimeUnit.MILLISECONDS
+                )
                 .followRedirects(false)
                 .followSslRedirects(false)
 
@@ -78,10 +74,10 @@ object HttpClient {
         }
     }
 
-    fun execute(request: HttpRequest, options: HttpOptions = HttpOptions()): HttpResponse {
-        val shouldBypass = options.proxy?.bypass_urls?.contains(request.url) ?: false
-        val proxyUrl = if (options.proxy == null || shouldBypass) null 
-                       else (options.proxy.https_url ?: options.proxy.http_url)
+    fun execute(request: HttpRequest, options: HttpOptions = HttpOptions.getDefaultInstance()): HttpResponse {
+        val shouldBypass = options.proxy?.bypassUrlsList?.contains(request.url) ?: false
+        val proxyUrl = if (!options.hasProxy() || shouldBypass) null 
+                       else (if (options.proxy.hasHttpsUrl()) options.proxy.httpsUrl else options.proxy.httpUrl)
 
         val clientKey = getClientKey(proxyUrl, options)
         if (!clientCache.containsKey(clientKey)) {
@@ -118,17 +114,15 @@ object HttpClient {
         } catch (e: IOException) {
             val msg = e.message?.lowercase() ?: ""
             val latency = System.currentTimeMillis() - startTime
+            val totalTimeout = (if (options.hasTotalTimeoutMs()) options.totalTimeoutMs else SdkDefault.TOTAL_TIMEOUT_MS_VALUE).toLong()
 
             when {
-                // Total call timeout (set via .callTimeout)
-                msg.contains("timeout") && latency >= options.total_timeout_ms -> {
-                    throw ConnectorError("Total Request Timeout: ${request.url} exceeded ${options.total_timeout_ms}ms", 504, "TOTAL_TIMEOUT")
+                msg.contains("timeout") && latency >= totalTimeout -> {
+                    throw ConnectorError("Total Request Timeout: ${request.url} exceeded ${totalTimeout}ms", 504, "TOTAL_TIMEOUT")
                 }
-                // Specific connect timeout
                 msg.contains("connect") -> {
                     throw ConnectorError("Connection Timeout: Failed to connect to ${request.url}", 504, "CONNECT_TIMEOUT")
                 }
-                // Specific read/response timeout
                 msg.contains("read") || msg.contains("write") || e is SocketTimeoutException -> {
                     throw ConnectorError("Response Timeout: Gateway ${request.url} accepted connection but failed to respond", 504, "RESPONSE_TIMEOUT")
                 }

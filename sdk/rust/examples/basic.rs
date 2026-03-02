@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
-use grpc_api_types::payments::{self, PaymentServiceAuthorizeRequest};
-use hyperswitch_payments_client::{http_client::HttpOptions, ConnectorClient};
+use grpc_api_types::payments::{
+    self, EnvOptions, FfiOptions, HttpOptions, Options, PaymentServiceAuthorizeRequest,
+};
+use hyperswitch_payments_client::ConnectorClient;
 
 #[tokio::main]
 async fn main() {
@@ -193,12 +195,22 @@ async fn demo_full_round_trip(
     eprintln!("Connector: Stripe");
     eprintln!("Sending authorize request...\n");
 
-    // Initialize with default http options (Pooling + Timeouts)
-    let client = ConnectorClient::new(HttpOptions::default()).unwrap();
+    // Initialize with Unified Options structure
+    let client_options = grpc_api_types::payments::Options {
+        http: Some(grpc_api_types::payments::HttpOptions {
+            total_timeout_ms: Some(15000),
+            ..Default::default()
+        }),
+        ffi: Some(grpc_api_types::payments::FfiOptions {
+            env: Some(grpc_api_types::payments::EnvOptions { test_mode: true }),
+            ..Default::default()
+        }),
+    };
 
-    // Pass test_mode = true for the demo
+    let client = ConnectorClient::new(client_options).unwrap();
 
-    match client.authorize(request, metadata, Some(true)).await {
+    // Call authorize with None for ffi_options override
+    match client.authorize(request, metadata, None).await {
         Ok(response) => {
             eprintln!("Authorize response received:");
             eprintln!(

@@ -1,4 +1,5 @@
 use common_utils::request::Method;
+use grpc_api_types::payments::{HttpOptions, SdkDefault};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -49,36 +50,6 @@ impl HttpClientError {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ProxyConfig {
-    pub http_url: Option<String>,
-    pub https_url: Option<String>,
-    pub bypass_urls: Vec<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct HttpOptions {
-    pub total_timeout_ms: u64,
-    pub connect_timeout_ms: u64,
-    pub response_timeout_ms: u64,
-    pub keep_alive_timeout: u64,
-    pub proxy: Option<ProxyConfig>,
-    pub ca_cert: Option<String>,
-}
-
-impl Default for HttpOptions {
-    fn default() -> Self {
-        Self {
-            total_timeout_ms: 45_000,
-            connect_timeout_ms: 10_000,
-            response_timeout_ms: 30_000,
-            keep_alive_timeout: 60_000,
-            proxy: None,
-            ca_cert: None,
-        }
-    }
-}
-
 pub struct HttpClient {
     client: reqwest::Client,
     options: HttpOptions,
@@ -86,15 +57,25 @@ pub struct HttpClient {
 
 impl HttpClient {
     pub fn new(options: HttpOptions) -> Result<Self, HttpClientError> {
+        let connect_timeout = options
+            .connect_timeout_ms
+            .unwrap_or(SdkDefault::ConnectTimeoutMs as u32);
+        let total_timeout = options
+            .total_timeout_ms
+            .unwrap_or(SdkDefault::TotalTimeoutMs as u32);
+        let keep_alive_timeout = options
+            .keep_alive_timeout_ms
+            .unwrap_or(SdkDefault::KeepAliveTimeoutMs as u32);
+
         let mut builder = reqwest::Client::builder()
-            .connect_timeout(Duration::from_millis(options.connect_timeout_ms))
-            .timeout(Duration::from_millis(options.total_timeout_ms))
-            .pool_idle_timeout(Duration::from_millis(options.keep_alive_timeout))
+            .connect_timeout(Duration::from_millis(connect_timeout as u64))
+            .timeout(Duration::from_millis(total_timeout as u64))
+            .pool_idle_timeout(Duration::from_millis(keep_alive_timeout as u64))
             .redirect(reqwest::redirect::Policy::none());
 
         // Add CA cert if provided
-        if let Some(ca_cert_pem) = &options.ca_cert {
-            let cert = reqwest::Certificate::from_pem(ca_cert_pem.as_bytes()).map_err(|e| {
+        if let Some(ca_cert_bytes) = &options.ca_cert {
+            let cert = reqwest::Certificate::from_pem(ca_cert_bytes).map_err(|e| {
                 HttpClientError::InvalidConfiguration(format!("Invalid CA Certificate: {}", e))
             })?;
             builder = builder.add_root_certificate(cert);
@@ -108,7 +89,6 @@ impl HttpClient {
             {
                 if let Ok(mut proxy) = reqwest::Proxy::all(proxy_url) {
                     for bypass in &proxy_config.bypass_urls {
-                        // NoProxy::from_string returns Option<NoProxy> in reqwest 0.11
                         proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
                     }
                     builder = builder.proxy(proxy);
@@ -139,22 +119,24 @@ impl HttpClient {
             Method::Patch => self.client.patch(&request.url),
         };
 
-        // Add headers
         for (key, value) in &request.headers {
             req_builder = req_builder.header(key, value);
         }
 
-        // Add body
         if let Some(body_bytes) = request.body {
             req_builder = req_builder.body(body_bytes);
         }
 
         let response = req_builder.send().await.map_err(|e| {
             let elapsed = start_time.elapsed().as_millis() as u64;
+            let total_timeout =
+                self.options
+                    .total_timeout_ms
+                    .unwrap_or(SdkDefault::TotalTimeoutMs as u32) as u64;
             if e.is_timeout() {
                 if e.is_connect() {
                     HttpClientError::ConnectTimeout(request.url.clone())
-                } else if elapsed >= self.options.total_timeout_ms {
+                } else if elapsed >= total_timeout {
                     HttpClientError::TotalTimeout(request.url.clone())
                 } else {
                     HttpClientError::ResponseTimeout(request.url.clone())
@@ -165,11 +147,9 @@ impl HttpClient {
         })?;
 
         let latency = start_time.elapsed().as_millis();
-
         let status_code = response.status().as_u16();
         let mut response_headers = HashMap::new();
         for (key, value) in response.headers() {
-            // Normalize to lowercase for global parity
             response_headers.insert(
                 key.to_string().to_lowercase(),
                 value.to_str().unwrap_or("").to_string(),
@@ -181,7 +161,11 @@ impl HttpClient {
             .await
             .map_err(|e| {
                 let elapsed = start_time.elapsed().as_millis() as u64;
-                if e.is_timeout() && elapsed >= self.options.total_timeout_ms {
+                let total_timeout =
+                    self.options
+                        .total_timeout_ms
+                        .unwrap_or(SdkDefault::TotalTimeoutMs as u32) as u64;
+                if e.is_timeout() && elapsed >= total_timeout {
                     HttpClientError::TotalTimeout(request.url.clone())
                 } else {
                     HttpClientError::NetworkFailure(e.to_string())

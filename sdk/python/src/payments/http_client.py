@@ -1,8 +1,12 @@
 import time
 import json
 import requests
-from typing import Optional, Dict, List, Union, Any
+from typing import Optional, Dict, Union, Any
 from dataclasses import dataclass
+from .generated import sdk_options_pb2
+
+# Centralized defaults from Protobuf Single Source of Truth
+Defaults = sdk_options_pb2.SdkDefault
 
 @dataclass
 class HttpRequest:
@@ -27,47 +31,39 @@ class ConnectorError(Exception):
 SESSION_CACHE = {}
 MAX_CACHE_SIZE = 100
 
-DEFAULT_CONFIG = {
-    "total_timeout_ms": 45000,
-    "connect_timeout_ms": 10000,
-    "response_timeout_ms": 30000,
-    "keep_alive_timeout": 60000,
-}
-
-def get_session_key(proxy_url: Optional[str], options: Dict[str, Any]) -> str:
-    ca_cert = options.get("ca_cert")
+def get_session_key(proxy_url: Optional[str], options: sdk_options_pb2.HttpOptions) -> str:
     identity = {
         "proxy": proxy_url,
-        "connect_timeout": options.get("connect_timeout_ms", DEFAULT_CONFIG["connect_timeout_ms"]),
-        "response_timeout": options.get("response_timeout_ms", DEFAULT_CONFIG["response_timeout_ms"]),
-        "ca_length": len(ca_cert) if ca_cert is not None else None
+        "connect": options.connect_timeout_ms or Defaults.CONNECT_TIMEOUT_MS,
+        "response": options.response_timeout_ms or Defaults.RESPONSE_TIMEOUT_MS,
+        "ca_length": len(options.ca_cert) if options.ca_cert else None
     }
     return json.dumps(identity, sort_keys=True)
 
-def create_session(proxy_url: Optional[str], options: Dict[str, Any]) -> requests.Session:
+def create_session(proxy_url: Optional[str], options: sdk_options_pb2.HttpOptions) -> requests.Session:
     try:
         session = requests.Session()
         if proxy_url:
             session.proxies = {"http": proxy_url, "https": proxy_url}
         
-        if options.get("ca_cert"):
-            # Note: requests supports file path for CA cert
-            session.verify = options["ca_cert"]
+        if options.ca_cert:
+            session.verify = options.ca_cert
         return session
     except Exception as e:
         raise ConnectorError(f"Invalid HTTP Configuration: {str(e)}", 500, "INVALID_CONFIGURATION")
 
-def execute(request: HttpRequest, options: Optional[Dict[str, Any]] = None) -> HttpResponse:
-    if options is None: options = {}
+def execute(request: HttpRequest, options: Optional[sdk_options_pb2.HttpOptions] = None) -> HttpResponse:
+    """Standardized network execution engine for Unified Connector Service."""
+    if options is None: options = sdk_options_pb2.HttpOptions()
     
-    # Configuration & Proxy Resolution
-    total_timeout = (options.get("total_timeout_ms") or DEFAULT_CONFIG["total_timeout_ms"]) / 1000.0
-    connect_timeout = (options.get("connect_timeout_ms") or DEFAULT_CONFIG["connect_timeout_ms"]) / 1000.0
-    response_timeout = (options.get("response_timeout_ms") or DEFAULT_CONFIG["response_timeout_ms"]) / 1000.0
+    # Configuration & Proxy Resolution (using Protobuf field names)
+    total_timeout = (options.total_timeout_ms or Defaults.TOTAL_TIMEOUT_MS) / 1000.0
+    connect_timeout = (options.connect_timeout_ms or Defaults.CONNECT_TIMEOUT_MS) / 1000.0
+    response_timeout = (options.response_timeout_ms or Defaults.RESPONSE_TIMEOUT_MS) / 1000.0
     
-    proxy = options.get("proxy", {})
-    should_bypass = request.url in proxy.get("bypass_urls", [])
-    proxy_url = None if (not proxy or should_bypass) else (proxy.get("https_url") or proxy.get("http_url"))
+    proxy = options.proxy
+    should_bypass = request.url in (proxy.bypass_urls if proxy else [])
+    proxy_url = None if (not proxy or should_bypass) else (proxy.https_url or proxy.http_url)
     
     session_key = get_session_key(proxy_url, options)
     if session_key not in SESSION_CACHE:

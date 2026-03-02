@@ -84,3 +84,17 @@ message Options {
   // FFI/Bindings configuration (Bindings-side)
   optional FfiOptions ffi = 2;
 }
+
+// ============================================================
+// SDK Constants (Global Defaults)
+// ============================================================
+
+enum SdkDefault {
+  SDK_DEFAULT_UNSPECIFIED = 0;
+  
+  // Timeouts in milliseconds
+  TOTAL_TIMEOUT_MS = 45000;
+  CONNECT_TIMEOUT_MS = 10000;
+  RESPONSE_TIMEOUT_MS = 30000;
+  KEEP_ALIVE_TIMEOUT_MS = 60000;
+}

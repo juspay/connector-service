@@ -1,25 +1,31 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use crate::http_client::{
-    HttpClient, HttpClientError, HttpOptions, HttpRequest as ClientHttpRequest,
-};
+use crate::http_client::{HttpClient, HttpClientError, HttpRequest as ClientHttpRequest};
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
 use domain_types::router_response_types::Response;
-use grpc_api_types::payments::{PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse};
+use grpc_api_types::payments::{
+    FfiOptions, HttpOptions, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+};
 
 /// A Rust-native connector client that calls handler functions directly
 /// without going through FFI or gRPC serialization boundaries.
 pub struct ConnectorClient {
     http_client: HttpClient,
+    options: grpc_api_types::payments::Options,
 }
 
 impl ConnectorClient {
-    pub fn new(options: HttpOptions) -> Result<Self, HttpClientError> {
+    /**
+     * @param options - unified SDK configuration (http, ffi)
+     */
+    pub fn new(options: grpc_api_types::payments::Options) -> Result<Self, HttpClientError> {
+        let http_options = options.http.clone().unwrap_or_else(HttpOptions::default);
         Ok(Self {
-            http_client: HttpClient::new(options)?,
+            http_client: HttpClient::new(http_options)?,
+            options,
         })
     }
 
@@ -29,17 +35,28 @@ impl ConnectorClient {
     /// 3. Parsing the response via `authorize_res_handler`
     ///
     /// # Arguments
-    /// * `request` - The PaymentServiceAuthorizeRequest
-    /// * `metadata` - Metadata containing connector info and auth
-    /// * `test_mode` - Optional test mode flag. When Some(true), uses development config;
-    ///   when Some(false), uses production config; when None, defaults to test mode.
+    /// * `request` - The PaymentServiceAuthorizeRequest protobuf message.
+    /// * `metadata` - Metadata map containing connector routing and auth info.
+    ///                Must contain:
+    ///                - `"connector"`: connector name (e.g. `"Stripe"`)
+    ///                - `"connector_auth_type"`: JSON string of the auth config
+    ///                  (e.g. `{"auth_type":"HeaderKey","api_key":"sk_test_xxx"}`)
+    ///                - `x-*` headers for MaskedMetadata
+    /// * `ffi_options` - Optional FfiOptions message override for this specific call.
     pub async fn authorize(
         &self,
         request: PaymentServiceAuthorizeRequest,
         metadata: &HashMap<String, String>,
-        test_mode: Option<bool>,
+        ffi_options: Option<FfiOptions>,
     ) -> Result<PaymentServiceAuthorizeResponse, Box<dyn Error>> {
         let ffi_request = build_ffi_request(request.clone(), metadata)?;
+
+        // Resolve FFI options (prefer call-specific, fallback to client-global)
+        let ffi = ffi_options.or_else(|| self.options.ffi.clone());
+        let test_mode = ffi
+            .as_ref()
+            .and_then(|f| f.env.as_ref())
+            .map(|e| e.test_mode);
 
         // Step 1: Build the connector HTTP request
         let connector_request = authorize_req_handler(ffi_request, test_mode)
