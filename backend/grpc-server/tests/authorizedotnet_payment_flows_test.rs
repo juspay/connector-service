@@ -21,15 +21,15 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, mandate_reference_id::MandateIdType, payment_method,
+        identifier::IdType, mandate_reference::MandateIdType, payment_method,
         payment_service_client::PaymentServiceClient,
         recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
         AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
         ConnectorMandateReferenceId, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage,
-        Identifier, MandateReferenceId, PaymentAddress, PaymentMethod, PaymentMethodType,
+        Identifier, MandateReference, PaymentAddress, PaymentMethod, PaymentMethodType,
         PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterAutoDebitRequest, PaymentServiceVoidRequest, PaymentStatus,
+        PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest, PaymentStatus,
         RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse,
         RefundServiceGetRequest, RefundStatus,
     },
@@ -182,7 +182,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
         id_type: Some(IdType::Id(generate_unique_request_ref_id("repeat_req"))),
     };
 
-    let mandate_reference = MandateReferenceId {
+    let mandate_reference = MandateReference {
         mandate_id_type: Some(MandateIdType::ConnectorMandateId(
             ConnectorMandateReferenceId {
                 connector_mandate_request_reference_id: None,
@@ -203,13 +203,13 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
     let metadata_json = serde_json::to_string(&metadata_map).unwrap();
 
     RecurringPaymentServiceChargeRequest {
-        request_ref_id: Some(request_ref_id),
+        merchant_charge_id: Some(request_ref_id),
         mandate_reference_id: Some(mandate_reference),
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: REPEAT_AMOUNT,
             currency: i32::from(Currency::Usd),
         }),
-        merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
+        merchant_order_id: Some(format!("repeat_order_{}", get_timestamp())),
         metadata: Some(Secret::new(metadata_json)),
         webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
         capture_method: None,
@@ -237,9 +237,9 @@ async fn test_repeat_everything() {
         add_authorizenet_metadata(&mut register_grpc_request);
 
         let register_response = client
-            .register(register_grpc_request)
+            .setup_recurring(register_grpc_request)
             .await
-            .expect("gRPC register call failed")
+            .expect("gRPC setup_recurring call failed")
             .into_inner();
 
         // Verify we got a mandate reference
@@ -333,7 +333,7 @@ fn create_payment_authorize_request(
         email: Some(generate_unique_email().into()),
         name: None,
         id: Some("TEST_CONNECTOR".to_string()),
-        connector_id: Some("TEST_CONNECTOR".to_string()),
+        connector_customer_id: Some("TEST_CONNECTOR".to_string()),
         phone_number: None,
     });
     // Generate random names for billing to prevent duplicate transaction errors
@@ -422,7 +422,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         }),
         state: None,
         metadata: None,
-        feature_data: None,
+        connector_feature_data: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
@@ -450,12 +450,12 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         }),
         multiple_capture_data: None,
         metadata: None,
-        feature_data: None,
+        connector_feature_data: None,
         browser_info: None,
         capture_method: None,
         state: None,
         test_mode: None,
-        merchant_order_reference_id: None,
+        merchant_order_id: None,
     }
 }
 
@@ -471,7 +471,7 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
 
     PaymentServiceVoidRequest {
         connector_transaction_id: Some(transaction_id_obj),
-        request_ref_id: Some(request_ref_id),
+        merchant_void_id: Some(request_ref_id),
         cancellation_reason: None,
         all_keys_required: None,
         browser_info: None,
@@ -519,7 +519,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         metadata: None,
-        feature_data: None,
+        connector_feature_data: None,
         refund_metadata: Some(Secret::new(refund_metadata_json)),
         browser_info: None,
         test_mode: Some(true),
@@ -540,7 +540,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
     };
 
     RefundServiceGetRequest {
-        request_ref_id: Some(request_ref_id),
+        merchant_refund_id: Some(request_ref_id),
         connector_transaction_id: Some(transaction_id_obj),
         refund_id: refund_id.to_string(),
         browser_info: None,
@@ -548,15 +548,15 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         test_mode: Some(true),
         refund_metadata: None,
         state: None,
-        feature_data: None,
+        connector_feature_data: None,
         payment_method_type: None,
     }
 }
 
 // Helper function to create a register (setup mandate) request (matching your JSON format)
 #[allow(clippy::field_reassign_with_default)]
-fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
-    let mut request = PaymentServiceRegisterAutoDebitRequest::default();
+fn create_register_request() -> PaymentServiceSetupRecurringRequest {
+    let mut request = PaymentServiceSetupRecurringRequest::default();
 
     // Set amounts matching your JSON (3000 minor units)
     request.amount = Some(grpc_api_types::payments::Money {
@@ -588,7 +588,7 @@ fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
         email: Some(generate_unique_email().into()),
         name: Some(TEST_CARD_HOLDER.to_string()),
         id: None,
-        connector_id: None,
+        connector_customer_id: None,
         phone_number: None,
     });
 
@@ -628,7 +628,7 @@ fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
     request.enrolled_for_3ds = false;
 
     // Set request reference ID with unique UUID (this will be unique every time)
-    request.merchant_registration_id = Some(Identifier {
+    request.merchant_recurring_payment_id = Some(Identifier {
         id_type: Some(IdType::Id(generate_unique_request_ref_id("mandate"))),
     });
 
@@ -1033,9 +1033,9 @@ async fn test_register() {
 
         // Send the request
         let response = client
-            .register(grpc_request)
+            .setup_recurring(grpc_request)
             .await
-            .expect("gRPC register call failed")
+            .expect("gRPC setup_recurring call failed")
             .into_inner();
 
         // Verify the response

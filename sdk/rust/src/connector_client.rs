@@ -22,7 +22,7 @@ impl ConnectorClient {
     /// * `request` - The PaymentServiceAuthorizeRequest
     /// * `metadata` - Metadata containing connector info and auth
     /// * `test_mode` - Optional test mode flag. When Some(true), uses development config;
-    ///                 when Some(false), uses production config; when None, defaults to test mode.
+    ///   when Some(false), uses production config; when None, defaults to test mode.
     pub async fn authorize(
         &self,
         request: PaymentServiceAuthorizeRequest,

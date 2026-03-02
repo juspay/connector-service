@@ -93,7 +93,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             email: Some(TEST_EMAIL.to_string().into()),
             name: None,
             id: Some("cust_1233".to_string()),
-            connector_id: Some("cust_1233".to_string()),
+            connector_customer_id: Some("cust_1233".to_string()),
             phone_number: None,
         }),
         return_url: Some("https://hyperswitch.io/connector-service".to_string()),

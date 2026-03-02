@@ -147,7 +147,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             email: Some(TEST_EMAIL.to_string().into()),
             name: None,
             id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
-            connector_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
+            connector_customer_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
             phone_number: None,
         }),
         // browser_info: TODO - BrowserInfo type not available in grpc_api_types
@@ -172,7 +172,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         }),
         state: None,
         metadata: None,
-        feature_data: None,
+        connector_feature_data: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
@@ -228,12 +228,12 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         }),
         refund_id: refund_id.to_string(),
         refund_reason: None,
-        request_ref_id: None,
+        merchant_refund_id: None,
         browser_info: None,
         test_mode: Some(true),
         refund_metadata: None,
         state: None,
-        feature_data: None,
+        connector_feature_data: None,
         payment_method_type: None,
     }
 }

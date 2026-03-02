@@ -149,7 +149,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             email: Some(TEST_EMAIL.to_string().into()),
             name: None,
             id: Some("cus_TE8065JzRWlLQf".to_string()),
-            connector_id: Some("cus_TE8065JzRWlLQf".to_string()),
+            connector_customer_id: Some("cus_TE8065JzRWlLQf".to_string()),
             phone_number: None,
         }),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
@@ -180,7 +180,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         }),
         state: None,
         metadata: None,
-        feature_data: None,
+        connector_feature_data: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
@@ -212,7 +212,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         cancellation_reason: None,
-        request_ref_id: Some(Identifier {
+        merchant_void_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("stripe_void"))),
         }),
         all_keys_required: None,
@@ -255,7 +255,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         }),
         refund_id: refund_id.to_string(),
         refund_reason: None,
-        request_ref_id: None,
+        merchant_refund_id: None,
         ..Default::default()
     }
 }

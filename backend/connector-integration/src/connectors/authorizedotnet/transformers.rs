@@ -131,8 +131,8 @@ fn get_random_string() -> String {
 }
 
 /// Returns invoice number if length <= MAX_ID_LENGTH, otherwise random string
-fn get_invoice_number_or_random(merchant_order_reference_id: Option<String>) -> String {
-    match merchant_order_reference_id {
+fn get_invoice_number_or_random(merchant_order_id: Option<String>) -> String {
+    match merchant_order_id {
         Some(num) if num.len() <= MAX_ID_LENGTH => num,
         None | Some(_) => get_random_string(),
     }
@@ -608,7 +608,7 @@ fn create_regular_transaction_request<
 
     // Get invoice number (random string if > MAX_ID_LENGTH or None)
     let invoice_number =
-        get_invoice_number_or_random(item.router_data.request.merchant_order_reference_id.clone());
+        get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
 
     let order = Order {
         invoice_number,
@@ -847,9 +847,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Get invoice number (random string if > MAX_ID_LENGTH or None)
-        let invoice_number = get_invoice_number_or_random(
-            item.router_data.request.merchant_order_reference_id.clone(),
-        );
+        let invoice_number =
+            get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
 
         let order = Order {
             invoice_number,

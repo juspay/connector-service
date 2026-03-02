@@ -194,9 +194,10 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let result = capture_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
-        })?;
+        let result =
+            capture_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
@@ -273,9 +274,10 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let result = void_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
-        })?;
+        let result =
+            void_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
@@ -352,9 +354,10 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let result = get_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
-        })?;
+        let result =
+            get_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
@@ -516,9 +519,10 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let result = refund_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
-        })?;
+        let result =
+            refund_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 

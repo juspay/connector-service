@@ -41,7 +41,9 @@ use crate::{
 use url::Url;
 
 // snake case for enum variants
-#[derive(Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -977,7 +979,7 @@ pub struct PaymentVoidData {
     pub currency: Option<Currency>,
     pub connector_metadata: Option<SecretSerdeValue>,
     pub metadata: Option<SecretSerdeValue>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
 }
 
 impl PaymentVoidData {
@@ -1084,7 +1086,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     /// Merchant's identifier for the payment/invoice. This will be sent to the connector
     /// if the connector provides support to accept multiple reference ids.
     /// In case the connector supports only one reference id, Hyperswitch's Payment ID will be sent as reference.
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
     pub integrity_object: Option<AuthoriseIntegrityObject>,
@@ -2292,7 +2294,7 @@ pub struct PaymentsCaptureData {
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub metadata: Option<SecretSerdeValue>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
 }
 
 impl PaymentsCaptureData {
@@ -2351,7 +2353,7 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub metadata: Option<SecretSerdeValue>,
     pub complete_authorize_url: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<CustomerId>,
@@ -2413,7 +2415,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub amount: i64,
     pub minor_amount: MinorUnit,
     pub currency: Currency,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<RepeatPaymentIntegrityObject>,
@@ -2498,6 +2500,16 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
     }
     pub fn get_optional_email(&self) -> Option<Email> {
         self.email.clone()
+    }
+
+    pub fn get_network_mandate_id(&self) -> Option<String> {
+        match &self.mandate_reference {
+            MandateReferenceId::NetworkMandateId(network_mandate_id) => {
+                Some(network_mandate_id.to_string())
+            }
+            MandateReferenceId::ConnectorMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => None,
+        }
     }
 }
 
