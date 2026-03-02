@@ -10,7 +10,7 @@ async fn main() {
     let request = build_authorize_request();
     let metadata = build_metadata();
 
-    // Demo 1: Low-level - inspect what would be sent
+    // Demo 1: Low-level - call authorize_req_handler directly, print connector request JSON
     demo_low_level(&request, &metadata);
 
     // Demo 2: Full round-trip - use ConnectorClient to make actual HTTP call
@@ -207,10 +207,11 @@ async fn demo_full_round_trip(
         }),
     };
 
-    let client = ConnectorClient::new(client_options).unwrap();
+    let client = ConnectorClient::new(client_options);
 
     // Call authorize with None for ffi_options override
     match client.authorize(request, metadata, None).await {
+
         Ok(response) => {
             eprintln!("Authorize response received:");
             eprintln!(

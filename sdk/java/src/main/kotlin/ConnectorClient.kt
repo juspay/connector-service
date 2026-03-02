@@ -11,12 +11,40 @@
 
 package payments
 
-import uniffi.connector_service_ffi.*
-import ucs.v2.Payment.*
-import ucs.v2.SdkOptions.Options
+import ucs.v2.Payments.PaymentServiceAuthorizeRequest
+import ucs.v2.Payments.PaymentServiceAuthorizeResponse
 import ucs.v2.SdkOptions.FfiOptions
+import ucs.v2.SdkOptions.Options
 
-class ConnectorClient(private val options: Options = Options.getDefaultInstance()) {
+class ConnectorClient(
+    libPath: String? = null,
+    private val options: Options = Options.getDefaultInstance()
+) {
+    private val uniffi = UniffiClient(libPath)
+
+    /**
+     * Internal helper to map Protobuf HttpOptions to Native HttpClient options.
+     */
+    private fun getNativeHttpOptions(): HttpOptions {
+        if (!options.hasHttp()) return HttpOptions()
+        val proto = options.http
+
+        return HttpOptions(
+            totalTimeoutMs = if (proto.hasTotalTimeoutMs()) proto.totalTimeoutMs.toLong() else null,
+            connectTimeoutMs = if (proto.hasConnectTimeoutMs()) proto.connectTimeoutMs.toLong() else null,
+            responseTimeoutMs = if (proto.hasResponseTimeoutMs()) proto.responseTimeoutMs.toLong() else null,
+            keepAliveTimeoutMs = if (proto.hasKeepAliveTimeoutMs()) proto.keepAliveTimeoutMs.toLong() else null,
+            proxy = if (proto.hasProxy()) {
+                ProxyConfig(
+                    httpUrl = if (proto.proxy.hasHttpUrl()) proto.proxy.httpUrl else null,
+                    httpsUrl = if (proto.proxy.hasHttpsUrl()) proto.proxy.httpsUrl else null,
+                    bypassUrls = proto.proxy.bypassUrlsList ?: emptyList()
+                )
+            } else null,
+            caCert = if (proto.hasCaCert()) proto.caCert.toByteArray() else null
+        )
+    }
+
 
     /**
      * Execute a full authorize round-trip.
@@ -32,42 +60,41 @@ class ConnectorClient(private val options: Options = Options.getDefaultInstance(
     fun authorize(
         request: PaymentServiceAuthorizeRequest,
         metadata: Map<String, String>,
-        ffiOptions: FfiOptions? = null,
+        ffiOptions: FfiOptions? = null
     ): PaymentServiceAuthorizeResponse {
+        // 1. Serialize request
         val requestBytes = request.toByteArray()
-        
-        // Resolve FFI options (prefer call-specific, fallback to client-global)
+
+        // 2. Resolve FFI options (prefer call-specific override)
         val ffi = ffiOptions ?: (if (options.hasFfi()) options.ffi else null)
-        val opts = ffi?.toByteArray() ?: ByteArray(0)
+        val optionsBytes = ffi?.toByteArray() ?: byteArrayOf()
 
-        // 1. Build Request via FFI
-        val connectorRequest = authorizeReqTransformer(requestBytes, metadata, opts)
+        // 3. Transform to connector request via FFI (returns Protobuf bytes)
+        val resultBytes = uniffi.authorizeReq(requestBytes, metadata, optionsBytes)
+        val connectorReq = ucs.v2.SdkOptions.FfiConnectorHttpRequest.parseFrom(resultBytes)
 
-        // 2. Execute HTTP (uses Global HttpOptions)
-        val httpReq = HttpRequest(
-            url = connectorRequest.url,
-            method = connectorRequest.method,
-            headers = connectorRequest.headers,
-            body = connectorRequest.body
-        )
-        val httpOptions = if (options.hasHttp()) options.http else ucs.v2.SdkOptions.HttpOptions.getDefaultInstance()
-        val httpResponse = HttpClient.execute(httpReq, httpOptions)
-
-        // 3. Parse Response via FFI
-        val ffiRes = FfiConnectorHttpResponse(
-            statusCode = httpResponse.statusCode.toUShort(),
-            headers = httpResponse.headers,
-            body = httpResponse.body
+        val connectorRequest = HttpRequest(
+            url = connectorReq.url,
+            method = connectorReq.method,
+            headers = connectorReq.headersMap,
+            body = if (connectorReq.hasBody()) connectorReq.body.toByteArray() else null
         )
 
-        val resultBytes = authorizeResTransformer(
-            ffiRes,
-            requestBytes,
-            metadata,
-            opts,
-        )
+        // 4. Execute network call (uses native options mapped from proto)
+        val response = HttpClient.execute(connectorRequest, getNativeHttpOptions())
 
-        // 4. Decode Result
-        return PaymentServiceAuthorizeResponse.parseFrom(resultBytes)
+        // 5. Transform connector response via FFI
+        // New Step: Serialize native response to Protobuf bytes (Safe)
+        val resProto = ucs.v2.SdkOptions.FfiConnectorHttpResponse.newBuilder()
+            .setStatusCode(response.statusCode)
+            .putAllHeaders(response.headers)
+            .setBody(com.google.protobuf.ByteString.copyFrom(response.body))
+            .build()
+        val resBytes = resProto.toByteArray()
+
+        val responseBytes = uniffi.authorizeRes(resBytes, requestBytes, metadata, optionsBytes)
+
+        // 6. Deserialize and return
+        return PaymentServiceAuthorizeResponse.parseFrom(responseBytes)
     }
 }

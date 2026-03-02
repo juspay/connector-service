@@ -2,11 +2,11 @@
  * UniFFI client for Node.js — calls the same shared library as Python/Kotlin.
  *
  * Uses koffi to call the UniFFI C ABI directly, replacing NAPI entirely.
+ * Handles RustBuffer serialization/deserialization for the UniFFI protocol.
  */
 
 import koffi from "koffi";
 import path from "path";
-import { HttpRequest, HttpResponse } from "../http_client";
 
 // Standard Node.js __dirname
 declare const __dirname: string;
@@ -124,48 +124,24 @@ function liftError(buf: RustBuffer): string {
   return `${variantNames[variant] || "UniffiError"}: ${msg}`;
 }
 
+/**
+ * UniFFI Strings are serialized as raw UTF8 bytes when top-level.
+ */
 function liftString(buf: RustBuffer): string {
   if (!buf.data || buf.len === 0n) return "";
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
   return raw.toString("utf-8");
 }
 
+/**
+ * UniFFI Vec<u8> are serialized as [i32 len] + [bytes]
+ */
 function liftBytes(buf: RustBuffer): Buffer {
   if (!buf.data || buf.len === 0n) return Buffer.alloc(0);
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
   // Bytes are serialized as: i32 length + raw bytes
   const len = raw.readInt32BE(0);
   return raw.subarray(4, 4 + len);
-}
-
-function liftConnectorHttpRequest(buf: RustBuffer): HttpRequest {
-  if (!buf.data || buf.len === 0n) throw new Error("Empty buffer");
-  const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
-  let offset = 0;
-
-  const readStr = () => {
-    const len = raw.readInt32BE(offset); offset += 4;
-    const s = raw.subarray(offset, offset + len).toString("utf-8"); offset += len;
-    return s;
-  };
-
-  const url = readStr();
-  const method = readStr();
-
-  const headersCount = raw.readInt32BE(offset); offset += 4;
-  const headers: Record<string, string> = {};
-  for (let i = 0; i < headersCount; i++) {
-    headers[readStr()] = readStr();
-  }
-
-  const hasBody = raw.readInt8(offset); offset += 1;
-  let body: Uint8Array | undefined;
-  if (hasBody === 1) {
-    const bodyLen = raw.readInt32BE(offset); offset += 4;
-    body = new Uint8Array(raw.subarray(offset, offset + bodyLen));
-  }
-
-  return { url, method, headers, body };
 }
 
 function freeRustBuffer(ffi: FfiFunctions, buf: RustBuffer): void {
@@ -186,9 +162,10 @@ function allocRustBuffer(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuff
 
 /**
  * Lowers raw data into a UniFFI-compliant RustBuffer.
- * This is used for Top-level Vec<u8> parameters.
+ * For top-level parameters, UniFFI EXPECTS a 4-byte length prefix inside the buffer.
  */
 function lowerBytes(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuffer {
+  // UniFFI bytes format: i32 length prefix + raw bytes
   const buf = Buffer.alloc(4 + data.length);
   buf.writeInt32BE(data.length, 0);
   Buffer.from(data).copy(buf, 4);
@@ -196,10 +173,10 @@ function lowerBytes(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuffer {
 }
 
 /**
- * Lowers a Map into a UniFFI-compliant RustBuffer.
- * This is used for Top-level HashMap parameters.
+ * Lowers a Map into a UniFFI-compliant RustBuffer for top-level parameters.
  */
 function lowerMap(ffi: FfiFunctions, map: Record<string, string>): RustBuffer {
+  // Layout: [i32 count] + [ [i32 len]+[bytes] + [i32 len]+[bytes] ] * count
   const entries = Object.entries(map);
   let totalSize = 4; // count
   const encoded = entries.map(([k, v]) => {
@@ -223,47 +200,6 @@ function lowerMap(ffi: FfiFunctions, map: Record<string, string>): RustBuffer {
   return allocRustBuffer(ffi, buf);
 }
 
-/**
- * Lowers an HttpResponse into an FfiConnectorHttpResponse UniFFI record.
- */
-function lowerConnectorHttpResponse(ffi: FfiFunctions, res: HttpResponse): RustBuffer {
-  // A Record is just the concatenation of its fields.
-  // 1. status_code (u16) -> 2 bytes
-  // 2. headers (HashMap) -> lowerMap layout
-  // 3. body (Vec<u8>)    -> lowerBytes layout
-  
-  const entries = Object.entries(res.headers);
-  let headersSize = 4;
-  const encodedHeaders = entries.map(([k, v]) => {
-    const kBuf = Buffer.from(k, "utf-8");
-    const vBuf = Buffer.from(v, "utf-8");
-    headersSize += 4 + kBuf.length + 4 + vBuf.length;
-    return { kBuf, vBuf };
-  });
-
-  const totalSize = 2 + headersSize + (4 + res.body.length);
-  const buf = Buffer.alloc(totalSize);
-  let offset = 0;
-  
-  // 1. status_code
-  buf.writeUInt16BE(res.statusCode, offset); offset += 2;
-
-  // 2. headers
-  buf.writeInt32BE(entries.length, offset); offset += 4;
-  for (const { kBuf, vBuf } of encodedHeaders) {
-    buf.writeInt32BE(kBuf.length, offset); offset += 4;
-    kBuf.copy(buf, offset); offset += kBuf.length;
-    buf.writeInt32BE(vBuf.length, offset); offset += 4;
-    vBuf.copy(buf, offset); offset += vBuf.length;
-  }
-
-  // 3. body
-  buf.writeInt32BE(res.body.length, offset); offset += 4;
-  Buffer.from(res.body).copy(buf, offset);
-
-  return allocRustBuffer(ffi, buf);
-}
-
 export class UniffiClient {
   private _ffi: FfiFunctions;
 
@@ -275,7 +211,7 @@ export class UniffiClient {
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
-  ): HttpRequest {
+  ): Buffer {
     const rbReq = lowerBytes(this._ffi, requestBytes);
     const rbMeta = lowerMap(this._ffi, metadata);
     const rbOpts = lowerBytes(this._ffi, optionsBytes);
@@ -285,19 +221,19 @@ export class UniffiClient {
 
     try {
       checkCallStatus(this._ffi, status);
-      return liftConnectorHttpRequest(result);
+      return liftBytes(result);
     } finally {
       freeRustBuffer(this._ffi, result);
     }
   }
 
   authorizeRes(
-    response: HttpResponse,
+    resBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    const rbRes = lowerConnectorHttpResponse(this._ffi, response);
+    const rbRes = lowerBytes(this._ffi, resBytes);
     const rbReq = lowerBytes(this._ffi, requestBytes);
     const rbMeta = lowerMap(this._ffi, metadata);
     const rbOpts = lowerBytes(this._ffi, optionsBytes);

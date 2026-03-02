@@ -1,32 +1,48 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use crate::http_client::{HttpClient, HttpClientError, HttpRequest as ClientHttpRequest};
+use crate::http_client::{HttpClient, HttpClientError, HttpRequest as ClientHttpRequest, HttpOptions as NativeHttpOptions, ProxyConfig};
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
 use domain_types::router_response_types::Response;
 use grpc_api_types::payments::{
-    FfiOptions, HttpOptions, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+    FfiOptions, Options, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
 };
 
 /// A Rust-native connector client that calls handler functions directly
 /// without going through FFI or gRPC serialization boundaries.
 pub struct ConnectorClient {
-    http_client: HttpClient,
-    options: grpc_api_types::payments::Options,
+    options: Options,
 }
 
 impl ConnectorClient {
     /**
      * @param options - unified SDK configuration (http, ffi)
      */
-    pub fn new(options: grpc_api_types::payments::Options) -> Result<Self, HttpClientError> {
-        let http_options = options.http.clone().unwrap_or_else(HttpOptions::default);
-        Ok(Self {
-            http_client: HttpClient::new(http_options)?,
-            options,
-        })
+    pub fn new(options: Options) -> Self {
+        Self { options }
+    }
+
+    /// Internal helper to map Protobuf HttpOptions to Native HttpClient options.
+    fn get_native_http_options(&self) -> NativeHttpOptions {
+        let proto = match &self.options.http {
+            Some(h) => h,
+            None => return NativeHttpOptions::default(),
+        };
+
+        NativeHttpOptions {
+            total_timeout_ms: proto.total_timeout_ms,
+            connect_timeout_ms: proto.connect_timeout_ms,
+            response_timeout_ms: proto.response_timeout_ms,
+            keep_alive_timeout_ms: proto.keep_alive_timeout_ms,
+            proxy: proto.proxy.as_ref().map(|p| ProxyConfig {
+                http_url: p.http_url.clone(),
+                https_url: p.https_url.clone(),
+                bypass_urls: p.bypass_urls.clone(),
+            }),
+            ca_cert: proto.ca_cert.clone(),
+        }
     }
 
     /// Authorize a payment by:
@@ -87,7 +103,9 @@ impl ConnectorClient {
             body,
         };
 
-        let http_response = self.http_client.execute(http_req).await?;
+        // Use the global client cache via HttpClient::new
+        let http_client = HttpClient::new(self.get_native_http_options())?;
+        let http_response = http_client.execute(http_req).await?;
 
         // Step 3: Convert HTTP response to domain Response type
         let mut header_map = http::HeaderMap::new();

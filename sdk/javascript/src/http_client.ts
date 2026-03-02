@@ -21,9 +21,24 @@ export interface HttpResponse {
   statusCode: number;
   headers: Record<string, string>;
   body: Uint8Array;
-  meta: {
-    latencyMs: number;
+  latencyMs: number; // Flat field for cross-language parity
+}
+
+/**
+ * Native configuration options for the network transport layer.
+ * Decoupled from Protobuf for reuse and portability.
+ */
+export interface HttpOptions {
+  totalTimeoutMs?: number;
+  connectTimeoutMs?: number;
+  responseTimeoutMs?: number;
+  keepAliveTimeoutMs?: number;
+  proxy?: {
+    httpUrl?: string;
+    httpsUrl?: string;
+    bypassUrls?: string[];
   };
+  caCert?: string | Buffer | Uint8Array;
 }
 
 /**
@@ -33,7 +48,7 @@ export class ConnectorError extends Error {
   constructor(
     public message: string,
     public statusCode?: number,
-    public errorCode?: 'CONNECT_TIMEOUT' | 'RESPONSE_TIMEOUT' | 'TOTAL_TIMEOUT' | 'NETWORK_FAILURE' | 'INVALID_CONFIGURATION' | string,
+    public errorCode?: 'CONNECT_TIMEOUT' | 'RESPONSE_TIMEOUT' | 'TOTAL_TIMEOUT' | 'NETWORK_FAILURE' | 'INVALID_CONFIGURATION' | 'CLIENT_INITIALIZATION' | string,
     public body?: string,
     public headers?: Record<string, string>
   ) {
@@ -49,7 +64,7 @@ const MAX_CACHE_SIZE = 100;
 /**
  * Resolve proxy URL, honoring bypass rules.
  */
-function resolveProxyUrl(url: string, proxy?: ucs.v2.IProxyOptions | null): string | null {
+function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): string | null {
   if (!proxy) return null;
   const shouldBypass = Array.isArray(proxy.bypassUrls) && proxy.bypassUrls.includes(url);
   if (shouldBypass) return null;
@@ -59,19 +74,19 @@ function resolveProxyUrl(url: string, proxy?: ucs.v2.IProxyOptions | null): stri
 /**
  * Generates a stable key to identify a unique connection pool configuration.
  */
-function getConnectionKey(proxyUrl: string | null, config: ucs.v2.IHttpOptions): string {
+function getConnectionKey(proxyUrl: string | null, config: HttpOptions): string {
   return JSON.stringify({
     uri: proxyUrl || TRANSPORT_DIRECT,
     connect: config.connectTimeoutMs,
     res: config.responseTimeoutMs,
-    ca: config.caCert?.length,
+    caLength: config.caCert instanceof Uint8Array ? config.caCert.length : (config.caCert as any)?.length,
   });
 }
 
 /**
  * Creates a high-performance dispatcher with specialized fintech timeouts.
  */
-function createDispatcher(proxyUrl: string | null, config: ucs.v2.IHttpOptions): Dispatcher {
+function createDispatcher(proxyUrl: string | null, config: HttpOptions): Dispatcher {
   const dispatcherOptions: any = {
     connect: {
       timeout: config.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS,
@@ -88,9 +103,9 @@ function createDispatcher(proxyUrl: string | null, config: ucs.v2.IHttpOptions):
       : new Agent(dispatcherOptions);
   } catch (error: any) {
     throw new ConnectorError(
-      `Invalid HTTP Configuration: ${error.message}`,
+      `Internal HTTP setup failed: ${error.message}`,
       500,
-      'INVALID_CONFIGURATION'
+      'CLIENT_INITIALIZATION'
     );
   }
 }
@@ -100,7 +115,7 @@ function createDispatcher(proxyUrl: string | null, config: ucs.v2.IHttpOptions):
  */
 export async function execute(
   request: HttpRequest,
-  options: ucs.v2.IHttpOptions = {}
+  options: HttpOptions = {}
 ): Promise<HttpResponse> {
   const { url, method, headers, body } = request;
 
@@ -144,7 +159,7 @@ export async function execute(
       statusCode: response.status,
       headers: responseHeaders,
       body: new Uint8Array(await response.arrayBuffer()),
-      meta: { latencyMs: Date.now() - startTime }
+      latencyMs: Date.now() - startTime
     };
   } catch (error: any) {
     if (error.name === 'AbortError') {

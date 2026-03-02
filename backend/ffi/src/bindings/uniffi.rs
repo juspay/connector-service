@@ -8,17 +8,15 @@ mod uniffi_bindings_inner {
         get_res_handler, refund_req_handler, refund_res_handler, void_req_handler,
         void_res_handler,
     };
-    use crate::types::{
-        FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiMetadataPayload, FfiRequestData,
-    };
     use crate::utils::ffi_headers_to_masked_metadata;
     use bytes::Bytes;
     use common_utils::request::Request;
     use domain_types::router_response_types::Response;
     use grpc_api_types::payments::{
-        FfiOptions, MerchantAuthenticationServiceCreateAccessTokenRequest,
-        PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceVoidRequest,
+        FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions,
+        MerchantAuthenticationServiceCreateAccessTokenRequest, PaymentServiceAuthorizeRequest,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceVoidRequest,
     };
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
@@ -27,33 +25,30 @@ mod uniffi_bindings_inner {
     /// Build FfiMetadataPayload from the caller's flat HashMap.
     ///
     /// Expected keys:
-    ///   "connector"        — connector name, e.g. "stripe"
-    ///   "x-connector-auth" — JSON-encoded typed auth, e.g.
-    ///                        '{"auth_type":{"Stripe":{"api_key":"sk_test_..."}}}'
+    ///   "connector"           — connector name, e.g. "Stripe"
+    ///   "connector_auth_type" — JSON-encoded typed auth, e.g.
+    ///                           '{"Stripe":{"api_key":"sk_test_..."}}'
     fn parse_metadata(
         metadata: &HashMap<String, String>,
-    ) -> Result<FfiMetadataPayload, UniffiError> {
-        let connector_val = metadata
-            .get("connector")
-            .or_else(|| metadata.get("x-connector"))
-            .ok_or_else(|| UniffiError::MissingMetadata {
-                key: "connector".to_string(),
-            })?;
-
-        // Support both new x-connector-auth and legacy connector_auth_type
-        let auth_val = metadata
-            .get("x-connector-auth")
-            .or_else(|| metadata.get("connector_auth_type"))
-            .ok_or_else(|| UniffiError::MissingMetadata {
-                key: "x-connector-auth".to_string(),
-            })?;
+    ) -> Result<crate::types::FfiMetadataPayload, UniffiError> {
+        let connector_val =
+            metadata
+                .get("connector")
+                .ok_or_else(|| UniffiError::MissingMetadata {
+                    key: "connector".to_string(),
+                })?;
+        let auth_val =
+            metadata
+                .get("connector_auth_type")
+                .ok_or_else(|| UniffiError::MissingMetadata {
+                    key: "connector_auth_type".to_string(),
+                })?;
 
         let auth_json: serde_json::Value =
             serde_json::from_str(auth_val).map_err(|e| UniffiError::MetadataParseError {
-                msg: format!("Authentication JSON is not valid: {e}"),
+                msg: format!("connector_auth_type is not valid JSON: {e}"),
             })?;
 
-        // FfiMetadataPayload expects { "connector": "Stripe", "connector_auth_type": { "Stripe": { "api_key": "..." } } }
         let obj = serde_json::json!({
             "connector": connector_val,
             "connector_auth_type": auth_json,
@@ -63,8 +58,8 @@ mod uniffi_bindings_inner {
             .map_err(|e| UniffiError::MetadataParseError { msg: e.to_string() })
     }
 
-    /// Helper to convert internal Request to FfiConnectorHttpRequest (Binary Safe)
-    fn build_ffi_request(request: &Request) -> Result<FfiConnectorHttpRequest, UniffiError> {
+    /// Helper to convert internal Request to Protobuf FfiConnectorHttpRequest (Safe)
+    fn build_ffi_request_bytes(request: &Request) -> Result<Vec<u8>, UniffiError> {
         let mut headers = request.get_headers_map();
         let (body, boundary) = request
             .body
@@ -82,11 +77,39 @@ mod uniffi_bindings_inner {
             );
         }
 
-        Ok(FfiConnectorHttpRequest {
+        let proto = FfiConnectorHttpRequest {
             url: request.url.clone(),
             method: request.method.to_string(),
             headers,
             body,
+        };
+
+        Ok(proto.encode_to_vec())
+    }
+
+    /// Helper to convert Protobuf FfiConnectorHttpResponse bytes to internal Response
+    fn build_domain_response(response_bytes: Vec<u8>) -> Result<Response, UniffiError> {
+        let response = FfiConnectorHttpResponse::decode(Bytes::from(response_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let mut header_map = HeaderMap::new();
+        for (key, value) in &response.headers {
+            if let (Ok(name), Ok(val)) = (
+                HeaderName::from_bytes(key.as_bytes()),
+                HeaderValue::from_str(value),
+            ) {
+                header_map.insert(name, val);
+            }
+        }
+
+        Ok(Response {
+            headers: if header_map.is_empty() {
+                None
+            } else {
+                Some(header_map)
+            },
+            response: Bytes::from(response.body),
+            status_code: response.status_code as u16,
         })
     }
 
@@ -106,29 +129,6 @@ mod uniffi_bindings_inner {
         ffi_options.env.as_ref().map(|env| env.test_mode)
     }
 
-    /// Helper to convert FfiConnectorHttpResponse to internal Response
-    fn build_domain_response(response: FfiConnectorHttpResponse) -> Response {
-        let mut header_map = HeaderMap::new();
-        for (key, value) in &response.headers {
-            if let (Ok(name), Ok(val)) = (
-                HeaderName::from_bytes(key.as_bytes()),
-                HeaderValue::from_str(value),
-            ) {
-                header_map.insert(name, val);
-            }
-        }
-
-        Response {
-            headers: if header_map.is_empty() {
-                None
-            } else {
-                Some(header_map)
-            },
-            response: Bytes::from(response.body),
-            status_code: response.status_code,
-        }
-    }
-
     /// Build the connector HTTP request.
     ///
     /// # Arguments
@@ -137,20 +137,20 @@ mod uniffi_bindings_inner {
     /// - `options_bytes`: protobuf-encoded `FfiOptions`
     ///
     /// # Returns
-    /// FfiConnectorHttpRequest struct (Binary Safe)
+    /// FfiConnectorHttpRequest protobuf bytes (Safe)
     #[uniffi::export]
     pub fn authorize_req_transformer(
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
-    ) -> Result<FfiConnectorHttpRequest, UniffiError> {
+    ) -> Result<Vec<u8>, UniffiError> {
         let payload = PaymentServiceAuthorizeRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -165,13 +165,13 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        build_ffi_request(&connector_request)
+        build_ffi_request_bytes(&connector_request)
     }
 
     /// Process the connector HTTP response and produce a structured response.
     ///
     /// # Arguments
-    /// - `response`: `FfiConnectorHttpResponse` record containing raw status, headers, and body
+    /// - `response_bytes`: Protobuf-encoded `FfiConnectorHttpResponse`
     /// - `request_bytes`: the original protobuf-encoded `PaymentServiceAuthorizeRequest`
     /// - `metadata`: the original metadata map passed to `authorize_req_transformer`
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
@@ -180,12 +180,12 @@ mod uniffi_bindings_inner {
     /// protobuf-encoded `PaymentServiceAuthorizeResponse` bytes
     #[uniffi::export]
     pub fn authorize_res_transformer(
-        response: FfiConnectorHttpResponse,
+        response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, UniffiError> {
-        let domain_response = build_domain_response(response);
+        let domain_response = build_domain_response(response_bytes)?;
 
         let payload = PaymentServiceAuthorizeRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
@@ -193,7 +193,7 @@ mod uniffi_bindings_inner {
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -219,20 +219,20 @@ mod uniffi_bindings_inner {
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
     ///
     /// # Returns
-    /// FfiConnectorHttpRequest struct (Binary Safe)
+    /// FfiConnectorHttpRequest protobuf bytes (Safe)
     #[uniffi::export]
     pub fn capture_req_transformer(
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
-    ) -> Result<FfiConnectorHttpRequest, UniffiError> {
+    ) -> Result<Vec<u8>, UniffiError> {
         let payload = PaymentServiceCaptureRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -247,13 +247,13 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        build_ffi_request(&connector_request)
+        build_ffi_request_bytes(&connector_request)
     }
 
     /// Process the connector HTTP response for capture operation.
     ///
     /// # Arguments
-    /// - `response`: `FfiConnectorHttpResponse` record
+    /// - `response_bytes`: Protobuf-encoded `FfiConnectorHttpResponse`
     /// - `request_bytes`: the original protobuf-encoded `PaymentServiceCaptureRequest`
     /// - `metadata`: the original metadata map passed to `capture_req_transformer`
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
@@ -262,12 +262,12 @@ mod uniffi_bindings_inner {
     /// protobuf-encoded `PaymentServiceCaptureResponse` bytes
     #[uniffi::export]
     pub fn capture_res_transformer(
-        response: FfiConnectorHttpResponse,
+        response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, UniffiError> {
-        let domain_response = build_domain_response(response);
+        let domain_response = build_domain_response(response_bytes)?;
 
         let payload = PaymentServiceCaptureRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
@@ -275,7 +275,7 @@ mod uniffi_bindings_inner {
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -301,20 +301,20 @@ mod uniffi_bindings_inner {
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
     ///
     /// # Returns
-    /// FfiConnectorHttpRequest struct (Binary Safe)
+    /// FfiConnectorHttpRequest protobuf bytes (Safe)
     #[uniffi::export]
     pub fn void_req_transformer(
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
-    ) -> Result<FfiConnectorHttpRequest, UniffiError> {
+    ) -> Result<Vec<u8>, UniffiError> {
         let payload = PaymentServiceVoidRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -329,13 +329,13 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        build_ffi_request(&connector_request)
+        build_ffi_request_bytes(&connector_request)
     }
 
     /// Process the connector HTTP response for void operation.
     ///
     /// # Arguments
-    /// - `response`: `FfiConnectorHttpResponse` record
+    /// - `response_bytes`: Protobuf-encoded `FfiConnectorHttpResponse`
     /// - `request_bytes`: the original protobuf-encoded `PaymentServiceVoidRequest`
     /// - `metadata`: the original metadata map passed to `void_req_transformer`
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
@@ -344,12 +344,12 @@ mod uniffi_bindings_inner {
     /// protobuf-encoded `PaymentServiceVoidResponse` bytes
     #[uniffi::export]
     pub fn void_res_transformer(
-        response: FfiConnectorHttpResponse,
+        response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, UniffiError> {
-        let domain_response = build_domain_response(response);
+        let domain_response = build_domain_response(response_bytes)?;
 
         let payload = PaymentServiceVoidRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
@@ -357,7 +357,7 @@ mod uniffi_bindings_inner {
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -383,20 +383,20 @@ mod uniffi_bindings_inner {
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
     ///
     /// # Returns
-    /// FfiConnectorHttpRequest struct (Binary Safe)
+    /// FfiConnectorHttpRequest protobuf bytes (Safe)
     #[uniffi::export]
     pub fn get_req_transformer(
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
-    ) -> Result<FfiConnectorHttpRequest, UniffiError> {
+    ) -> Result<Vec<u8>, UniffiError> {
         let payload = PaymentServiceGetRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -411,13 +411,13 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        build_ffi_request(&connector_request)
+        build_ffi_request_bytes(&connector_request)
     }
 
     /// Process the connector HTTP response for get operation.
     ///
     /// # Arguments
-    /// - `response`: `FfiConnectorHttpResponse` record
+    /// - `response_bytes`: Protobuf-encoded `FfiConnectorHttpResponse`
     /// - `request_bytes`: the original protobuf-encoded `PaymentServiceGetRequest`
     /// - `metadata`: the original metadata map passed to `get_req_transformer`
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
@@ -426,12 +426,12 @@ mod uniffi_bindings_inner {
     /// protobuf-encoded `PaymentServiceGetResponse` bytes
     #[uniffi::export]
     pub fn get_res_transformer(
-        response: FfiConnectorHttpResponse,
+        response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, UniffiError> {
-        let domain_response = build_domain_response(response);
+        let domain_response = build_domain_response(response_bytes)?;
 
         let payload = PaymentServiceGetRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
@@ -439,7 +439,7 @@ mod uniffi_bindings_inner {
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -465,13 +465,13 @@ mod uniffi_bindings_inner {
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
     ///
     /// # Returns
-    /// FfiConnectorHttpRequest struct (Binary Safe)
+    /// FfiConnectorHttpRequest protobuf bytes (Safe)
     #[uniffi::export]
     pub fn create_access_token_req_transformer(
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
-    ) -> Result<FfiConnectorHttpRequest, UniffiError> {
+    ) -> Result<Vec<u8>, UniffiError> {
         let payload = MerchantAuthenticationServiceCreateAccessTokenRequest::decode(Bytes::from(
             request_bytes,
         ))
@@ -480,7 +480,7 @@ mod uniffi_bindings_inner {
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -496,13 +496,13 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        build_ffi_request(&connector_request)
+        build_ffi_request_bytes(&connector_request)
     }
 
     /// Process the connector HTTP response for create access token operation.
     ///
     /// # Arguments
-    /// - `response`: `FfiConnectorHttpResponse` record
+    /// - `response_bytes`: Protobuf-encoded `FfiConnectorHttpResponse`
     /// - `request_bytes`: the original protobuf-encoded `MerchantAuthenticationServiceCreateAccessTokenRequest`
     /// - `metadata`: the original metadata map passed to `create_access_token_req_transformer`
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
@@ -511,12 +511,12 @@ mod uniffi_bindings_inner {
     /// protobuf-encoded `MerchantAuthenticationServiceCreateAccessTokenResponse` bytes
     #[uniffi::export]
     pub fn create_access_token_res_transformer(
-        response: FfiConnectorHttpResponse,
+        response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, UniffiError> {
-        let domain_response = build_domain_response(response);
+        let domain_response = build_domain_response(response_bytes)?;
 
         let payload = MerchantAuthenticationServiceCreateAccessTokenRequest::decode(Bytes::from(
             request_bytes,
@@ -526,7 +526,7 @@ mod uniffi_bindings_inner {
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -550,20 +550,20 @@ mod uniffi_bindings_inner {
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
     ///
     /// # Returns
-    /// FfiConnectorHttpRequest struct (Binary Safe)
+    /// FfiConnectorHttpRequest protobuf bytes (Safe)
     #[uniffi::export]
     pub fn refund_req_transformer(
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
-    ) -> Result<FfiConnectorHttpRequest, UniffiError> {
+    ) -> Result<Vec<u8>, UniffiError> {
         let payload = PaymentServiceRefundRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -578,13 +578,13 @@ mod uniffi_bindings_inner {
 
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
-        build_ffi_request(&connector_request)
+        build_ffi_request_bytes(&connector_request)
     }
 
     /// Process the connector HTTP response for refund operation.
     ///
     /// # Arguments
-    /// - `response`: `FfiConnectorHttpResponse` record
+    /// - `response_bytes`: Protobuf-encoded `FfiConnectorHttpResponse`
     /// - `request_bytes`: the original protobuf-encoded `PaymentServiceRefundRequest`
     /// - `metadata`: the original metadata map passed to `refund_req_transformer`
     /// - `options_bytes`: protobuf-encoded `FfiOptions` (optional)
@@ -593,12 +593,12 @@ mod uniffi_bindings_inner {
     /// protobuf-encoded `PaymentServiceRefundResponse` bytes
     #[uniffi::export]
     pub fn refund_res_transformer(
-        response: FfiConnectorHttpResponse,
+        response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
         metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, UniffiError> {
-        let domain_response = build_domain_response(response);
+        let domain_response = build_domain_response(response_bytes)?;
 
         let payload = PaymentServiceRefundRequest::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
@@ -606,7 +606,7 @@ mod uniffi_bindings_inner {
         let ffi_metadata = parse_metadata(&metadata)?;
         let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
 
-        let request = FfiRequestData {
+        let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
             masked_metadata: Some(masked_metadata),
@@ -626,5 +626,4 @@ mod uniffi_bindings_inner {
 }
 
 #[cfg(feature = "uniffi")]
-// macro implementation need to implemented
 pub use uniffi_bindings_inner::*;

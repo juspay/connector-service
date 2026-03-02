@@ -7,7 +7,6 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import ucs.v2.SdkOptions.HttpOptions
 import ucs.v2.SdkOptions.SdkDefault
 
 data class HttpRequest(
@@ -24,6 +23,25 @@ data class HttpResponse(
     val latencyMs: Long
 )
 
+/**
+ * Native configuration options for the network transport layer.
+ * Decoupled from Protobuf for reuse and portability.
+ */
+data class HttpOptions(
+    val totalTimeoutMs: Long? = null,
+    val connectTimeoutMs: Long? = null,
+    val responseTimeoutMs: Long? = null,
+    val keepAliveTimeoutMs: Long? = null,
+    val proxy: ProxyConfig? = null,
+    val caCert: ByteArray? = null
+)
+
+data class ProxyConfig(
+    val httpUrl: String? = null,
+    val httpsUrl: String? = null,
+    val bypassUrls: List<String> = emptyList()
+)
+
 class ConnectorError(
     message: String,
     val statusCode: Int? = null,
@@ -34,27 +52,39 @@ object HttpClient {
     private val clientCache = ConcurrentHashMap<String, OkHttpClient>()
     private const val MAX_CACHE_SIZE = 100
 
+    /**
+     * Resolve proxy URL, honoring bypass rules.
+     */
+    fun resolveProxyUrl(url: String, proxy: ProxyConfig?): String? {
+        if (proxy == null) return null
+        if (proxy.bypassUrls.contains(url)) return null
+        return proxy.httpsUrl ?: proxy.httpUrl
+    }
+
+    /**
+     * Generates a stable key to identify a unique connection pool configuration.
+     */
     private fun getClientKey(proxyUrl: String?, options: HttpOptions): String {
-        return "proxy=$proxyUrl;connect=${options.connectTimeoutMs};response=${options.responseTimeoutMs};ca=${options.caCert?.size()}"
+        return "proxy=$proxyUrl;connect=${options.connectTimeoutMs};response=${options.responseTimeoutMs};ca=${options.caCert?.size}"
     }
 
     private fun createClient(proxyUrl: String?, options: HttpOptions): OkHttpClient {
         try {
             val builder = OkHttpClient.Builder()
                 .connectTimeout(
-                    (if (options.hasConnectTimeoutMs()) options.connectTimeoutMs else SdkDefault.CONNECT_TIMEOUT_MS_VALUE).toLong(), 
+                    options.connectTimeoutMs ?: SdkDefault.CONNECT_TIMEOUT_MS_VALUE.toLong(), 
                     TimeUnit.MILLISECONDS
                 )
                 .readTimeout(
-                    (if (options.hasResponseTimeoutMs()) options.responseTimeoutMs else SdkDefault.RESPONSE_TIMEOUT_MS_VALUE).toLong(), 
+                    options.responseTimeoutMs ?: SdkDefault.RESPONSE_TIMEOUT_MS_VALUE.toLong(), 
                     TimeUnit.MILLISECONDS
                 )
                 .writeTimeout(
-                    (if (options.hasResponseTimeoutMs()) options.responseTimeoutMs else SdkDefault.RESPONSE_TIMEOUT_MS_VALUE).toLong(), 
+                    options.responseTimeoutMs ?: SdkDefault.RESPONSE_TIMEOUT_MS_VALUE.toLong(), 
                     TimeUnit.MILLISECONDS
                 )
                 .callTimeout(
-                    (if (options.hasTotalTimeoutMs()) options.totalTimeoutMs else SdkDefault.TOTAL_TIMEOUT_MS_VALUE).toLong(), 
+                    options.totalTimeoutMs ?: SdkDefault.TOTAL_TIMEOUT_MS_VALUE.toLong(), 
                     TimeUnit.MILLISECONDS
                 )
                 .followRedirects(false)
@@ -70,18 +100,20 @@ object HttpClient {
             }
             return builder.build()
         } catch (e: Exception) {
-            throw ConnectorError("Invalid HTTP Configuration: ${e.message}", 500, "INVALID_CONFIGURATION")
+            throw ConnectorError("Internal HTTP setup failed: ${e.message}", 500, "CLIENT_INITIALIZATION")
         }
     }
 
-    fun execute(request: HttpRequest, options: HttpOptions = HttpOptions.getDefaultInstance()): HttpResponse {
-        val shouldBypass = options.proxy?.bypassUrlsList?.contains(request.url) ?: false
-        val proxyUrl = if (!options.hasProxy() || shouldBypass) null 
-                       else (if (options.proxy.hasHttpsUrl()) options.proxy.httpsUrl else options.proxy.httpUrl)
-
+    fun execute(request: HttpRequest, options: HttpOptions = HttpOptions()): HttpResponse {
+        val proxyUrl = resolveProxyUrl(request.url, options.proxy)
         val clientKey = getClientKey(proxyUrl, options)
+        
         if (!clientCache.containsKey(clientKey)) {
-            if (clientCache.size >= MAX_CACHE_SIZE) clientCache.clear()
+            // Eviction strategy: Remove oldest if cache is full (FIFO attempt)
+            if (clientCache.size >= MAX_CACHE_SIZE) {
+                val oldestKey = clientCache.keys().nextElement()
+                if (oldestKey != null) clientCache.remove(oldestKey)
+            }
             clientCache[clientKey] = createClient(proxyUrl, options)
         }
         
@@ -114,7 +146,7 @@ object HttpClient {
         } catch (e: IOException) {
             val msg = e.message?.lowercase() ?: ""
             val latency = System.currentTimeMillis() - startTime
-            val totalTimeout = (if (options.hasTotalTimeoutMs()) options.totalTimeoutMs else SdkDefault.TOTAL_TIMEOUT_MS_VALUE).toLong()
+            val totalTimeout = options.totalTimeoutMs ?: SdkDefault.TOTAL_TIMEOUT_MS_VALUE.toLong()
 
             when {
                 msg.contains("timeout") && latency >= totalTimeout -> {

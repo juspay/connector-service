@@ -1,7 +1,33 @@
 use common_utils::request::Method;
-use grpc_api_types::payments::{HttpOptions, SdkDefault};
 use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
+use grpc_api_types::payments::SdkDefault;
+use once_cell::sync::Lazy;
+
+// Re-exporting or defining native options for decoupling
+#[derive(Clone, Debug)]
+pub struct ProxyConfig {
+    pub http_url: Option<String>,
+    pub https_url: Option<String>,
+    pub bypass_urls: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct HttpOptions {
+    pub total_timeout_ms: Option<u32>,
+    pub connect_timeout_ms: Option<u32>,
+    pub response_timeout_ms: Option<u32>,
+    pub keep_alive_timeout_ms: Option<u32>,
+    pub proxy: Option<ProxyConfig>,
+    pub ca_cert: Option<Vec<u8>>,
+}
+
+// Static cache for connection pooling
+static CLIENT_CACHE: Lazy<Mutex<HashMap<String, reqwest::Client>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+const MAX_CACHE_SIZE: usize = 100;
+const TRANSPORT_DIRECT: &str = "TRANSPORT_DIRECT";
 
 pub struct HttpRequest {
     pub url: String,
@@ -29,13 +55,15 @@ pub enum HttpClientError {
     NetworkFailure(String),
     #[error("Invalid Configuration: {0}")]
     InvalidConfiguration(String),
+    #[error("Client Initialization Failure: {0}")]
+    ClientInitialization(String),
 }
 
 impl HttpClientError {
     pub fn status_code(&self) -> u16 {
         match self {
             Self::ConnectTimeout(_) | Self::ResponseTimeout(_) | Self::TotalTimeout(_) => 504,
-            Self::NetworkFailure(_) | Self::InvalidConfiguration(_) => 500,
+            Self::NetworkFailure(_) | Self::InvalidConfiguration(_) | Self::ClientInitialization(_) => 500,
         }
     }
 
@@ -46,6 +74,7 @@ impl HttpClientError {
             Self::TotalTimeout(_) => "TOTAL_TIMEOUT",
             Self::NetworkFailure(_) => "NETWORK_FAILURE",
             Self::InvalidConfiguration(_) => "INVALID_CONFIGURATION",
+            Self::ClientInitialization(_) => "CLIENT_INITIALIZATION_FAILURE",
         }
     }
 }
@@ -57,15 +86,23 @@ pub struct HttpClient {
 
 impl HttpClient {
     pub fn new(options: HttpOptions) -> Result<Self, HttpClientError> {
-        let connect_timeout = options
-            .connect_timeout_ms
-            .unwrap_or(SdkDefault::ConnectTimeoutMs as u32);
-        let total_timeout = options
-            .total_timeout_ms
-            .unwrap_or(SdkDefault::TotalTimeoutMs as u32);
-        let keep_alive_timeout = options
-            .keep_alive_timeout_ms
-            .unwrap_or(SdkDefault::KeepAliveTimeoutMs as u32);
+        // 1. Resolve Identity for Caching
+        let proxy_url = options.proxy.as_ref().and_then(|p| p.https_url.clone().or(p.http_url.clone()));
+        let cache_key = get_connection_key(proxy_url.as_deref(), &options);
+
+        let mut cache = CLIENT_CACHE.lock().map_err(|_| HttpClientError::ClientInitialization("Failed to access global connection pool".to_string()))?;
+        
+        if let Some(existing_client) = cache.get(&cache_key) {
+            return Ok(Self {
+                client: existing_client.clone(),
+                options,
+            });
+        }
+
+        // 2. Cache miss - create new pooled client
+        let connect_timeout = options.connect_timeout_ms.unwrap_or(SdkDefault::ConnectTimeoutMs as u32);
+        let total_timeout = options.total_timeout_ms.unwrap_or(SdkDefault::TotalTimeoutMs as u32);
+        let keep_alive_timeout = options.keep_alive_timeout_ms.unwrap_or(SdkDefault::KeepAliveTimeoutMs as u32);
 
         let mut builder = reqwest::Client::builder()
             .connect_timeout(Duration::from_millis(connect_timeout as u64))
@@ -73,38 +110,34 @@ impl HttpClient {
             .pool_idle_timeout(Duration::from_millis(keep_alive_timeout as u64))
             .redirect(reqwest::redirect::Policy::none());
 
-        // Add CA cert if provided
         if let Some(ca_cert_bytes) = &options.ca_cert {
-            let cert = reqwest::Certificate::from_pem(ca_cert_bytes).map_err(|e| {
-                HttpClientError::InvalidConfiguration(format!("Invalid CA Certificate: {}", e))
-            })?;
+            let cert = reqwest::Certificate::from_pem(ca_cert_bytes)
+                .map_err(|e| HttpClientError::InvalidConfiguration(format!("Invalid CA Certificate: {}", e)))?;
             builder = builder.add_root_certificate(cert);
         }
 
         if let Some(proxy_config) = &options.proxy {
-            if let Some(proxy_url) = proxy_config
-                .https_url
-                .as_ref()
-                .or(proxy_config.http_url.as_ref())
-            {
-                if let Ok(mut proxy) = reqwest::Proxy::all(proxy_url) {
+            if let Some(url) = proxy_config.https_url.as_ref().or(proxy_config.http_url.as_ref()) {
+                if let Ok(mut proxy) = reqwest::Proxy::all(url) {
                     for bypass in &proxy_config.bypass_urls {
                         proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
                     }
                     builder = builder.proxy(proxy);
-                } else {
-                    return Err(HttpClientError::InvalidConfiguration(format!(
-                        "Invalid Proxy URL: {:?}",
-                        proxy_url
-                    )));
                 }
             }
         }
 
-        let client = builder.build().map_err(|e| {
-            HttpClientError::InvalidConfiguration(format!("Failed to build HTTP client: {}", e))
-        })?;
+        let client = builder.build()
+            .map_err(|e| HttpClientError::ClientInitialization(format!("Failed to build HTTP client: {}", e)))?;
 
+        // 3. Eviction strategy: FIFO attempt
+        if cache.len() >= MAX_CACHE_SIZE {
+            if let Some(oldest_key) = cache.keys().next().cloned() {
+                cache.remove(&oldest_key);
+            }
+        }
+
+        cache.insert(cache_key, client.clone());
         Ok(Self { client, options })
     }
 
@@ -129,10 +162,7 @@ impl HttpClient {
 
         let response = req_builder.send().await.map_err(|e| {
             let elapsed = start_time.elapsed().as_millis() as u64;
-            let total_timeout =
-                self.options
-                    .total_timeout_ms
-                    .unwrap_or(SdkDefault::TotalTimeoutMs as u32) as u64;
+            let total_timeout = self.options.total_timeout_ms.unwrap_or(SdkDefault::TotalTimeoutMs as u32) as u64;
             if e.is_timeout() {
                 if e.is_connect() {
                     HttpClientError::ConnectTimeout(request.url.clone())
@@ -156,22 +186,7 @@ impl HttpClient {
             );
         }
 
-        let body = response
-            .bytes()
-            .await
-            .map_err(|e| {
-                let elapsed = start_time.elapsed().as_millis() as u64;
-                let total_timeout =
-                    self.options
-                        .total_timeout_ms
-                        .unwrap_or(SdkDefault::TotalTimeoutMs as u32) as u64;
-                if e.is_timeout() && elapsed >= total_timeout {
-                    HttpClientError::TotalTimeout(request.url.clone())
-                } else {
-                    HttpClientError::NetworkFailure(e.to_string())
-                }
-            })?
-            .to_vec();
+        let body = response.bytes().await.map_err(|e| HttpClientError::NetworkFailure(e.to_string()))?.to_vec();
 
         Ok(HttpResponse {
             status_code,
@@ -180,4 +195,25 @@ impl HttpClient {
             latency_ms: latency,
         })
     }
+}
+
+/// Helper to resolve proxy URL, honoring bypass rules.
+pub fn resolve_proxy_url(url: &str, proxy: &Option<ProxyConfig>) -> Option<String> {
+    let proxy = proxy.as_ref()?;
+    let should_bypass = proxy.bypass_urls.iter().any(|b| b == url);
+    if should_bypass {
+        return None;
+    }
+    proxy.https_url.clone().or_else(|| proxy.http_url.clone())
+}
+
+/// Generates a stable key to identify a unique connection pool configuration.
+pub fn get_connection_key(proxy_url: Option<&str>, options: &HttpOptions) -> String {
+    format!(
+        "uri={:?};connect={:?};res={:?};ca={:?}",
+        proxy_url.unwrap_or(TRANSPORT_DIRECT),
+        options.connect_timeout_ms,
+        options.response_timeout_ms,
+        options.ca_cert.as_ref().map(|c| c.len())
+    )
 }

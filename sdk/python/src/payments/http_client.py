@@ -31,7 +31,15 @@ class ConnectorError(Exception):
 SESSION_CACHE = {}
 MAX_CACHE_SIZE = 100
 
-def get_session_key(proxy_url: Optional[str], options: sdk_options_pb2.HttpOptions) -> str:
+def resolve_proxy_url(url: str, proxy: Optional[sdk_options_pb2.ProxyOptions]) -> Optional[str]:
+    """Helper to resolve proxy URL, honoring bypass rules."""
+    if not proxy: return None
+    should_bypass = url in proxy.bypass_urls
+    if should_bypass: return None
+    return proxy.https_url or proxy.http_url or None
+
+def get_connection_key(proxy_url: Optional[str], options: sdk_options_pb2.HttpOptions) -> str:
+    """Generates a stable key to identify a unique connection pool configuration."""
     identity = {
         "proxy": proxy_url,
         "connect": options.connect_timeout_ms or Defaults.CONNECT_TIMEOUT_MS,
@@ -50,25 +58,24 @@ def create_session(proxy_url: Optional[str], options: sdk_options_pb2.HttpOption
             session.verify = options.ca_cert
         return session
     except Exception as e:
-        raise ConnectorError(f"Invalid HTTP Configuration: {str(e)}", 500, "INVALID_CONFIGURATION")
+        raise ConnectorError(f"Internal HTTP setup failed: {str(e)}", 500, "CLIENT_INITIALIZATION")
 
 def execute(request: HttpRequest, options: Optional[sdk_options_pb2.HttpOptions] = None) -> HttpResponse:
     """Standardized network execution engine for Unified Connector Service."""
     if options is None: options = sdk_options_pb2.HttpOptions()
     
-    # Configuration & Proxy Resolution (using Protobuf field names)
+    # Configuration & Proxy Resolution
     total_timeout = (options.total_timeout_ms or Defaults.TOTAL_TIMEOUT_MS) / 1000.0
     connect_timeout = (options.connect_timeout_ms or Defaults.CONNECT_TIMEOUT_MS) / 1000.0
     response_timeout = (options.response_timeout_ms or Defaults.RESPONSE_TIMEOUT_MS) / 1000.0
     
-    proxy = options.proxy
-    should_bypass = request.url in (proxy.bypass_urls if proxy else [])
-    proxy_url = None if (not proxy or should_bypass) else (proxy.https_url or proxy.http_url)
+    proxy_url = resolve_proxy_url(request.url, options.proxy)
     
-    session_key = get_session_key(proxy_url, options)
+    session_key = get_connection_key(proxy_url, options)
     if session_key not in SESSION_CACHE:
         if len(SESSION_CACHE) >= MAX_CACHE_SIZE:
-            del SESSION_CACHE[next(iter(SESSION_CACHE))]
+            # Simple FIFO eviction
+            SESSION_CACHE.pop(next(iter(SESSION_CACHE)))
         SESSION_CACHE[session_key] = create_session(proxy_url, options)
     
     session = SESSION_CACHE[session_key]
