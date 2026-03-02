@@ -1,8 +1,9 @@
 use std::{collections::HashMap, str::FromStr, sync::RwLock, time::Duration};
 
 use common_enums::ApiClientError;
+#[cfg(feature = "injector-client")]
+use common_utils::{consts::{X_API_TAG, X_API_URL, X_SESSION_ID}, events::{EventStage, MaskedSerdeValue}};
 use common_utils::{
-    consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
     ext_traits::AsyncExt,
     lineage,
     request::{Method, Request, RequestContent},
@@ -15,6 +16,7 @@ use domain_types::{
     types::Proxy,
 };
 use hyperswitch_masking::Secret;
+#[cfg(feature = "injector-client")]
 use injector;
 
 /// Test context for mock server integration
@@ -82,21 +84,26 @@ impl AdditionalHeaders for domain_types::connector_types::DisputeFlowData {
     }
 }
 use common_utils::{
-    emit_event_with_config,
-    events::{Event, EventConfig, EventStage, FlowName, MaskedSerdeValue},
+    events::{Event, EventConfig, FlowName},
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
+use hyperswitch_masking::{ExposeInterface, Maskable};
+#[cfg(feature = "injector-client")]
+use hyperswitch_masking::{ErasedMaskSerialize};
+#[cfg(feature = "injector-client")]
 // TokenData is now imported from hyperswitch_injector
-use common_utils::consts;
+use common_utils::{consts,emit_event_with_config};
+#[cfg(feature = "injector-client")]
 use injector::{injector_core, HttpMethod, TokenData};
+#[cfg(feature = "injector-client")]
+use interfaces::integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
-    integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
+#[cfg(feature = "injector-client")]
 use tracing::field::Empty;
 
 use crate::shared_metrics as metrics;
@@ -216,10 +223,12 @@ where
     }
 }
 
+#[cfg(feature = "injector-client")]
 trait ToHttpMethod {
     fn to_http_method(&self) -> HttpMethod;
 }
 
+#[cfg(feature = "injector-client")]
 impl ToHttpMethod for Method {
     fn to_http_method(&self) -> HttpMethod {
         match self {
@@ -246,6 +255,7 @@ pub struct EventProcessingParams<'a> {
     pub shadow_mode: bool,
 }
 
+#[cfg(feature = "injector-client")]
 #[tracing::instrument(
     name = "execute_connector_processing_step",
     skip_all,
@@ -1145,6 +1155,7 @@ pub fn extract_raw_connector_request(connector_request: &Request) -> String {
     .to_string()
 }
 
+#[cfg(feature = "injector-client")]
 /// Helper function to parse JSON from response bytes with BOM handling
 fn parse_json_with_bom_handling(
     response_bytes: &[u8],

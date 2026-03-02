@@ -37,8 +37,13 @@ else
   LIB_EXT := so
 endif
 
+# Profile used for local builds (test-package). release-fast skips LTO and
+# uses parallel codegen — same opt-level as release, ~5x faster to compile.
+# dist overrides this to --release for production-optimised artifacts.
+PROFILE  := release-fast
+
 # Pre-built FFI library for the current platform (output of build-ffi-lib).
-LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/release/libconnector_service_ffi.$(LIB_EXT)
+LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/libconnector_service_ffi.$(LIB_EXT)
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -60,14 +65,14 @@ install-deps:
 # ---------------------------------------------------------------------------
 # build-ffi-lib
 # Builds the Rust FFI shared library for the auto-detected platform.
-# Output: target/<PLATFORM>/release/libconnector_service_ffi.<ext>
+# Output: target/<PLATFORM>/<PROFILE>/libconnector_service_ffi.<ext>
 # Using --target consistently means local builds and CI builds share the same
 # directory layout — no special-case LIBRARY= or TARGET_TRIPLE= variables needed.
 # ---------------------------------------------------------------------------
 build-ffi-lib:
-	@echo "Building FFI shared library for $(PLATFORM)..."
+	@echo "Building FFI shared library for $(PLATFORM) [profile: $(PROFILE)]..."
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
-		--release --target $(PLATFORM)
+		--profile $(PROFILE) --target $(PLATFORM)
 	@echo "Build complete: $(LIBRARY)"
 
 # ---------------------------------------------------------------------------
