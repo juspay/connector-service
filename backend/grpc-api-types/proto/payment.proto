@@ -761,7 +761,7 @@ message BrowserInformation {
   optional string device_model = 15;
 }
 
-message MandateReferenceId {
+message MandateReference {
   oneof mandate_id_type {
     // mandate_id sent by the connector
     ConnectorMandateReferenceId connector_mandate_id = 1;
@@ -1387,7 +1387,7 @@ message PaymentServiceAuthorizeResponse {
   optional int64 authorized_amount = 15;
 
   // Mandate and Connector Response
-  optional MandateReferenceId mandate_reference = 16;
+  optional MandateReference mandate_reference = 16;
   optional ConnectorResponseData connector_response = 17;
   optional SecretString feature_data = 18; // Connector-specific metadata for the transaction
 }
@@ -1442,7 +1442,7 @@ message PaymentServiceGetResponse {
   map<string, string> response_headers = 5;
 
   // Transaction Details
-  optional MandateReferenceId mandate_reference = 6;
+  optional MandateReference mandate_reference = 6;
   optional string network_transaction_id = 7;
 
   // Payment Details
@@ -1527,7 +1527,7 @@ message PaymentServiceVoidResponse {
   optional SecretString raw_connector_request = 8;
 
   // Mandate Details
-  optional MandateReferenceId mandate_reference = 9;
+  optional MandateReference mandate_reference = 9;
 
   // Authorization Details
   optional bool incremental_authorization_allowed = 10;
@@ -1709,7 +1709,7 @@ message PaymentServiceCaptureResponse {
   optional int64 captured_amount = 9; // Captured amount in minor currency units
 
   // Mandate Details
-  MandateReferenceId mandate_reference = 10;
+  MandateReference mandate_reference = 10;
 
   // Authorization Details
   optional bool incremental_authorization_allowed = 11;
@@ -1961,7 +1961,7 @@ message PaymentServiceRegisterAutoDebitResponse {
   map<string, string> response_headers = 5; // Optional HTTP response headers from the connector
 
   // Mandate Details
-  MandateReferenceId mandate_reference = 6; // Reference to the created mandate
+  MandateReference mandate_reference = 6; // Reference to the created mandate
 
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 7; // Data for redirecting the customer's browser
@@ -1989,7 +1989,7 @@ message RecurringPaymentServiceChargeRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
 
   // Mandate Information (for MIT)
-  optional MandateReferenceId mandate_reference_id = 2; // Reference to existing mandate
+  optional MandateReference mandate_reference_id = 2; // Reference to existing mandate
 
   // Amount Information
   Money amount = 3;
@@ -2070,7 +2070,7 @@ message RecurringPaymentServiceChargeResponse {
   // Transaction Details
   optional string network_transaction_id = 7;
   optional Identifier response_ref_id = 8;
-  optional MandateReferenceId mandate_reference = 9;
+  optional MandateReference mandate_reference = 9;
 
   // State Information
   optional ConnectorState state = 10;

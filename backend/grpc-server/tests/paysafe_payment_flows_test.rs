@@ -223,7 +223,7 @@ fn create_payment_authorize_request(
             email: Some(TEST_EMAIL.to_string().into()),
             name: None,
             id: None,
-            connector_id: None,
+            connector_customer_id: None,
             phone_number: None,
         }),
         address: Some(grpc_api_types::payments::PaymentAddress {

@@ -17,11 +17,11 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, mandate_reference_id::MandateIdType, payment_method,
+        identifier::IdType, mandate_reference::MandateIdType, payment_method,
         payment_service_client::PaymentServiceClient,
         recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
         AuthenticationType, CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReferenceId, PaymentAddress,
+        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceRegisterAutoDebitRequest, PaymentServiceVoidRequest, PaymentStatus,
@@ -147,7 +147,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             email: Some(TEST_EMAIL.to_string().into()),
             name: None,
             id: None,
-            connector_id: None,
+            connector_customer_id: None,
             phone_number: None,
         }),
         address: Some(address),
@@ -257,7 +257,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
     let mut rng = rand::thread_rng();
     let unique_amount = rng.gen_range(1000..10000); // Amount between $10.00 and $100.00
 
-    let mandate_reference = MandateReferenceId {
+    let mandate_reference = MandateReference {
         mandate_id_type: Some(MandateIdType::ConnectorMandateId(
             ConnectorMandateReferenceId {
                 connector_mandate_request_reference_id: None,
@@ -337,7 +337,7 @@ fn create_register_request_with_prefix(_prefix: &str) -> PaymentServiceRegisterA
             email: Some(unique_email.clone().into()),
             name: Some(format!("{unique_first_name} Doe")),
             id: None,
-            connector_id: None,
+            connector_customer_id: None,
             phone_number: None,
         }),
         customer_acceptance: Some(CustomerAcceptance {

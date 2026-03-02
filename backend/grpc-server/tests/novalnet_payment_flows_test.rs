@@ -133,7 +133,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             email: Some(TEST_EMAIL.to_string().into()),
             name: None,
             id: None,
-            connector_id: None,
+            connector_customer_id: None,
             phone_number: None,
         }),
         address: Some(address),
