@@ -4,7 +4,10 @@ use super::macros;
 use transformers::*;
 
 use common_utils::{
-    crypto::VerifySignature, errors::CustomResult, events, ext_traits::ByteSliceExt,
+    crypto::{self, GenerateDigest, VerifySignature},
+    errors::{CryptoError, CustomResult},
+    events,
+    ext_traits::ByteSliceExt,
 };
 use domain_types::{
     connector_flow::{
@@ -41,7 +44,10 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, PeekInterface};
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types,
+    webhooks::{IncomingWebhook, IncomingWebhookEvent, IncomingWebhookRequestDetails},
 };
 
 use crate::{types::ResponseRouterData, with_error_response_body};
@@ -52,6 +58,24 @@ use std::sync::LazyLock;
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const MERCHANT_ID: &str = "Merchant-Id";
+    pub(crate) const REQUEST_IDEMPOTENCY_KEY: &str = "Request-Idempotency-Key";
+}
+
+pub trait PproFlowCommonData {
+    fn get_connector_request_reference_id(&self) -> String;
+}
+
+impl PproFlowCommonData for PaymentFlowData {
+    fn get_connector_request_reference_id(&self) -> String {
+        self.connector_request_reference_id.clone()
+    }
+}
+
+impl PproFlowCommonData for RefundFlowData {
+    fn get_connector_request_reference_id(&self) -> String {
+        self.connector_request_reference_id.clone()
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
@@ -87,7 +111,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     headers::AUTHORIZATION.to_string(),
                     format!("Bearer {}", api_key.peek()).into_masked(),
                 ),
-                ("Merchant-Id".to_string(), merchant_id.clone().into_masked()),
+                (
+                    headers::MERCHANT_ID.to_string(),
+                    merchant_id.clone().into_masked(),
+                ),
             ]),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -289,6 +316,115 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Ppro<T>
 {
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
+    {
+        let mut header = self.get_auth_header(&req.connector_auth_type)?;
+        header.push((
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        ));
+        Ok(header)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Ok(format!(
+            "{}/v1/payment-agreements",
+            self.base_url(&req.resource_common_data.connectors)
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
+        let ppro_req = PproAgreementRequest::try_from(PproRouterData {
+            connector: self.to_owned(),
+            router_data: req.clone(),
+        })?;
+        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
+            ppro_req,
+        ))))
+    }
+
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        let request = common_utils::request::RequestBuilder::new()
+            .method(common_utils::request::Method::Post)
+            .url(&self.get_url(req)?)
+            .attach_default_headers()
+            .headers(self.get_headers(req)?)
+            .set_optional_body(self.get_request_body(req)?)
+            .build();
+        Ok(Some(request))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        let response: PproAgreementResponse = res
+            .response
+            .parse_struct("PproAgreementResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        with_error_response_body!(event_builder, response);
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -299,6 +435,116 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Ppro<T>
 {
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            RepeatPayment,
+            PaymentFlowData,
+            RepeatPaymentData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
+    {
+        let mut header = self.get_auth_header(&req.connector_auth_type)?;
+        header.push((
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        ));
+        Ok(header)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            RepeatPayment,
+            PaymentFlowData,
+            RepeatPaymentData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let agr_id = req.request.connector_mandate_id().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "mandate_reference.connector_mandate_id",
+            },
+        )?;
+        Ok(format!(
+            "{}/v1/payment-agreements/{}/payment-charges",
+            self.base_url(&req.resource_common_data.connectors),
+            agr_id
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            RepeatPayment,
+            PaymentFlowData,
+            RepeatPaymentData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
+        let ppro_req = PproAgreementChargeRequest::try_from(PproRouterData {
+            connector: self.to_owned(),
+            router_data: req.clone(),
+        })?;
+        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
+            ppro_req,
+        ))))
+    }
+
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<
+            RepeatPayment,
+            PaymentFlowData,
+            RepeatPaymentData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        let request = common_utils::request::RequestBuilder::new()
+            .method(common_utils::request::Method::Post)
+            .url(&self.get_url(req)?)
+            .attach_default_headers()
+            .headers(self.get_headers(req)?)
+            .set_optional_body(self.get_request_body(req)?)
+            .build();
+        Ok(Some(request))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            RepeatPayment,
+            PaymentFlowData,
+            RepeatPaymentData<T>,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: PproPaymentsResponse = res
+            .response
+            .parse_struct("PproPaymentsResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        with_error_response_body!(event_builder, response);
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -406,7 +652,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("PproWebhookEvent")
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
-        let status = match event.data.status.as_str() {
+        let charge = match event.data {
+            PproWebhookData::Charge { charge } => charge,
+            _ => return Err(errors::ConnectorError::WebhookBodyDecodingFailed.into()),
+        };
+
+        let status = match charge.status.as_str() {
             "AUTHORIZATION_PROCESSING" | "CAPTURE_PROCESSING" => {
                 common_enums::AttemptStatus::Pending
             }
@@ -418,7 +669,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             _ => common_enums::AttemptStatus::Pending,
         };
 
-        let (error_code, error_message, error_reason) = if let Some(failure) = &event.data.failure {
+        let (error_code, error_message, error_reason) = if let Some(failure) = &charge.failure {
             (
                 failure.failure_code.clone(),
                 Some(failure.failure_message.clone()),
@@ -433,9 +684,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         Ok(WebhookDetailsResponse {
-            resource_id: Some(ResponseId::ConnectorTransactionId(event.data.id.clone())),
+            resource_id: Some(ResponseId::ConnectorTransactionId(charge.id.clone())),
             status,
-            connector_response_reference_id: Some(event.data.id),
+            connector_response_reference_id: Some(charge.id),
             error_code,
             error_message,
             error_reason,
@@ -464,7 +715,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("PproWebhookEvent")
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
-        let status = match event.data.status.as_str() {
+        let charge = match event.data {
+            PproWebhookData::Charge { charge } => charge,
+            _ => return Err(errors::ConnectorError::WebhookBodyDecodingFailed.into()),
+        };
+
+        let status = match charge.status.as_str() {
             "CAPTURED" | "REFUND_SETTLED" | "SUCCESS" | "REFUNDED" => {
                 common_enums::RefundStatus::Success
             }
@@ -472,7 +728,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             _ => common_enums::RefundStatus::Pending,
         };
 
-        let (error_code, error_message) = if let Some(failure) = &event.data.failure {
+        let (error_code, error_message) = if let Some(failure) = &charge.failure {
             (
                 failure.failure_code.clone(),
                 Some(failure.failure_message.clone()),
@@ -483,9 +739,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         Ok(
             domain_types::connector_types::RefundWebhookDetailsResponse {
-                connector_refund_id: Some(event.data.id.clone()),
+                connector_refund_id: Some(charge.id.clone()),
                 status,
-                connector_response_reference_id: Some(event.data.id),
+                connector_response_reference_id: Some(charge.id),
                 error_code,
                 error_message,
                 raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
@@ -523,7 +779,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .get("Webhook-Signature")
             .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
 
-        let algorithm = common_utils::crypto::HmacSha256;
+        let algorithm = crypto::HmacSha256;
         let expected_signature = hex::decode(signature)
             .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
 
@@ -548,14 +804,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("PproWebhookEvent")
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
-        let response = PproPaymentsResponse {
-            id: event.data.id,
-            status: event.data.status,
-            amount: None,
-            authentication_methods: None,
-            failure: event.data.failure,
-        };
-        Ok(Box::new(response))
+        match event.data {
+            PproWebhookData::Charge { charge } => Ok(Box::new(charge)),
+            PproWebhookData::Agreement { agreement } => Ok(Box::new(agreement)),
+        }
     }
 }
 
@@ -616,32 +868,9 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
         },
     );
 
-    let bank_redirect_methods = vec![
-        common_enums::PaymentMethodType::Ideal,
-        common_enums::PaymentMethodType::Sofort,
-        common_enums::PaymentMethodType::Giropay,
-        common_enums::PaymentMethodType::BancontactCard,
-        common_enums::PaymentMethodType::Eps,
-        common_enums::PaymentMethodType::Przelewy24,
-        common_enums::PaymentMethodType::Trustly,
-    ];
-
-    for pm_type in bank_redirect_methods {
-        ppro_supported_payment_methods.add(
-            common_enums::PaymentMethod::BankRedirect,
-            pm_type,
-            PaymentMethodDetails {
-                mandates: FeatureStatus::NotSupported,
-                refunds: FeatureStatus::Supported,
-                supported_capture_methods: ppro_bridge_supported_capture_methods.clone(),
-                specific_features: None,
-            },
-        );
-    }
-
     ppro_supported_payment_methods.add(
-        common_enums::PaymentMethod::PayLater,
-        common_enums::PaymentMethodType::Klarna,
+        common_enums::PaymentMethod::Upi,
+        common_enums::PaymentMethodType::UpiCollect,
         PaymentMethodDetails {
             mandates: FeatureStatus::NotSupported,
             refunds: FeatureStatus::Supported,
@@ -649,6 +878,38 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
             specific_features: None,
         },
     );
+
+    let bank_redirect_methods = vec![
+        (
+            common_enums::PaymentMethodType::Ideal,
+            FeatureStatus::Supported,
+        ),
+        (
+            common_enums::PaymentMethodType::BancontactCard,
+            FeatureStatus::Supported,
+        ),
+        (
+            common_enums::PaymentMethodType::Trustly,
+            FeatureStatus::NotSupported,
+        ),
+        (
+            common_enums::PaymentMethodType::Blik,
+            FeatureStatus::Supported,
+        ),
+    ];
+
+    for (pm_type, mandate_support) in bank_redirect_methods {
+        ppro_supported_payment_methods.add(
+            common_enums::PaymentMethod::BankRedirect,
+            pm_type,
+            PaymentMethodDetails {
+                mandates: mandate_support,
+                refunds: FeatureStatus::Supported,
+                supported_capture_methods: ppro_bridge_supported_capture_methods.clone(),
+                specific_features: None,
+            },
+        );
+    }
 
     ppro_supported_payment_methods
 });
@@ -711,6 +972,18 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: PproRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: PproAgreementRequest,
+            response_body: PproAgreementResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: PproAgreementChargeRequest,
+            response_body: PproPaymentsResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -719,13 +992,29 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
             _connectors: &domain_types::types::Connectors,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
+        where
+            FCD: PproFlowCommonData,
+            F: 'static,
+        {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type()
-                    .to_string()
-                    .into(),
+                self.common_get_content_type().to_string().into(),
             )];
+
+            // PPRO only allows idempotency keys on POST/PATCH requests (Authorize, Capture, Refund, etc.)
+            // It rejects them on GET requests (Sync).
+            if std::any::TypeId::of::<F>() != std::any::TypeId::of::<PSync>()
+                && std::any::TypeId::of::<F>() != std::any::TypeId::of::<RSync>()
+            {
+                header.push((
+                    headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
+                    req.resource_common_data
+                        .get_connector_request_reference_id()
+                        .into(),
+                ));
+            }
+
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut api_key);
             Ok(header)
@@ -813,7 +1102,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let id = req.request.get_connector_transaction_id().change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            Ok(format!("{}/v1/payment-charges/{}/capture", self.base_url(&req.resource_common_data.connectors), id))
+            Ok(format!("{}/v1/payment-charges/{}/captures", self.base_url(&req.resource_common_data.connectors), id))
         }
     }
 );
@@ -842,7 +1131,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let id = req.request.connector_transaction_id.clone();
-            Ok(format!("{}/v1/payment-charges/{}/void", self.base_url(&req.resource_common_data.connectors), id))
+            Ok(format!("{}/v1/payment-charges/{}/voids", self.base_url(&req.resource_common_data.connectors), id))
         }
     }
 );
@@ -871,7 +1160,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let id = req.request.connector_transaction_id.clone();
-            Ok(format!("{}/v1/payment-charges/{}/refund", self.base_url(&req.resource_common_data.connectors), id))
+            Ok(format!("{}/v1/payment-charges/{}/refunds", self.base_url(&req.resource_common_data.connectors), id))
         }
     }
 );
@@ -903,6 +1192,118 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+#[derive(Debug, Clone)]
+pub struct PproWebhookSignature;
+
+impl VerifySignature for PproWebhookSignature {
+    fn verify_signature(
+        &self,
+        secret: &[u8],
+        signature: &[u8],
+        msg: &[u8],
+    ) -> CustomResult<bool, CryptoError> {
+        let mut buf = Vec::with_capacity(msg.len() + 1 + secret.len());
+        buf.extend_from_slice(msg);
+        buf.push(b'.');
+        buf.extend_from_slice(secret);
+
+        let digest = crypto::Sha256
+            .generate_digest(&buf)
+            .change_context(CryptoError::SignatureVerificationFailed)?;
+
+        let expected_signature = hex::encode(digest);
+        Ok(expected_signature.as_bytes() == signature)
+    }
+}
+
+#[async_trait::async_trait]
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> IncomingWebhook
+    for Ppro<T>
+{
+    fn get_webhook_source_verification_algorithm(
+        &self,
+        _request: &IncomingWebhookRequestDetails<'_>,
+    ) -> CustomResult<Box<dyn VerifySignature + Send>, errors::ConnectorError> {
+        Ok(Box::new(PproWebhookSignature))
+    }
+
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &IncomingWebhookRequestDetails<'_>,
+        _connector_webhook_secrets: &ConnectorWebhookSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        let header_value = request
+            .headers
+            .get("Webhook-Signature")
+            .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?
+            .to_str()
+            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+
+        Ok(header_value.as_bytes().to_vec())
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &IncomingWebhookRequestDetails<'_>,
+        _merchant_id: &common_utils::id_type::MerchantId,
+        _connector_webhook_secrets: &ConnectorWebhookSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(request.body.to_vec())
+    }
+
+    fn get_webhook_event_type(
+        &self,
+        request: &IncomingWebhookRequestDetails<'_>,
+    ) -> CustomResult<IncomingWebhookEvent, errors::ConnectorError> {
+        let event: PproWebhookEvent = request
+            .body
+            .parse_struct("PproWebhookEvent")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        match event.r#type.as_str() {
+            "PAYMENT_CHARGE_AUTHORIZATION_SUCCEEDED" | "PAYMENT_CHARGE_SUCCESS" => {
+                Ok(IncomingWebhookEvent::PaymentIntentSuccess)
+            }
+            "PAYMENT_CHARGE_AUTHORIZATION_FAILED" | "PAYMENT_CHARGE_FAILED" => {
+                Ok(IncomingWebhookEvent::PaymentIntentFailure)
+            }
+            "PAYMENT_CHARGE_DISCARDED" => Ok(IncomingWebhookEvent::PaymentIntentFailure),
+            "PAYMENT_CHARGE_CAPTURE_SUCCEEDED" => {
+                Ok(IncomingWebhookEvent::PaymentIntentCaptureSuccess)
+            }
+            "PAYMENT_CHARGE_CAPTURE_FAILED" => {
+                Ok(IncomingWebhookEvent::PaymentIntentCaptureFailure)
+            }
+            "PAYMENT_CHARGE_VOID_SUCCEEDED" => Ok(IncomingWebhookEvent::PaymentIntentCancelled),
+            "PAYMENT_CHARGE_VOID_FAILED" => Ok(IncomingWebhookEvent::PaymentIntentCancelFailure),
+            "PAYMENT_CHARGE_REFUND_SUCCEEDED" => Ok(IncomingWebhookEvent::RefundSuccess),
+            "PAYMENT_CHARGE_REFUND_FAILED" => Ok(IncomingWebhookEvent::RefundFailure),
+            "PAYMENT_AGREEMENT_ACTIVE" => Ok(IncomingWebhookEvent::MandateActive),
+            "PAYMENT_AGREEMENT_FAILED"
+            | "PAYMENT_AGREEMENT_REVOKED_BY_CONSUMER"
+            | "PAYMENT_AGREEMENT_REVOKED_BY_MERCHANT"
+            | "PAYMENT_AGREEMENT_REVOKED_BY_PROVIDER" => Ok(IncomingWebhookEvent::MandateRevoked),
+            _ => Ok(IncomingWebhookEvent::EventNotSupported),
+        }
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: &IncomingWebhookRequestDetails<'_>,
+    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, errors::ConnectorError>
+    {
+        let event: PproWebhookEvent = request
+            .body
+            .parse_struct("PproWebhookEvent")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        match event.data {
+            PproWebhookData::Charge { charge } => Ok(Box::new(charge)),
+            PproWebhookData::Agreement { agreement } => Ok(Box::new(agreement)),
+        }
+    }
+}
 
 #[cfg(test)]
 mod test;
