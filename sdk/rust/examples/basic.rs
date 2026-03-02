@@ -194,7 +194,7 @@ async fn demo_full_round_trip(
 
     // Initialize with default http options (Pooling + Timeouts)
     let client = ConnectorClient::new(HttpOptions::default());
-    
+
     // Pass test_mode = true for the demo
     match client.authorize(request, metadata, Some(true)).await {
         Ok(response) => {
