@@ -980,7 +980,7 @@ where
 
         let frequency = metadata.as_ref().and_then(|m| {
             let f_type = m.get("frequency_type")?.as_str()?;
-            let interval = m.get("frequency_interval")?.as_u64()? as u32;
+            let interval = u32::try_from(m.get("frequency_interval")?.as_u64()?).ok()?;
             let r_type = match f_type.to_uppercase().as_str() {
                 "DAILY" => PproFrequencyType::Daily,
                 "WEEKLY" => PproFrequencyType::Weekly,
@@ -1055,7 +1055,7 @@ where
             let bank_name = match &router_data.request.payment_method_data {
                 domain_types::payment_method_data::PaymentMethodData::BankRedirect(
                     domain_types::payment_method_data::BankRedirectData::Ideal { bank_name },
-                ) => bank_name.clone(),
+                ) => *bank_name,
                 _ => None,
             };
             let bank_code = bank_name.and_then(get_ppro_bank_code);
