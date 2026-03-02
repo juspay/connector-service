@@ -18,7 +18,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        SdkSessionToken, SetupMandate, SubmitEvidence, UpdateMetadata, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -29,11 +29,11 @@ use domain_types::{
         PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
-        WebhookDetailsResponse,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, PaymentsUpdateMetadataData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
@@ -213,6 +213,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Adyen<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::UpdateMetadataV2<T> for Adyen<T>
 {
 }
 
@@ -657,6 +662,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Adyen<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        UpdateMetadata,
+        PaymentFlowData,
+        PaymentsUpdateMetadataData<T>,
         PaymentsResponseData,
     > for Adyen<T>
 {

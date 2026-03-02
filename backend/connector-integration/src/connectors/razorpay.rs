@@ -18,7 +18,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        SdkSessionToken, SetupMandate, SubmitEvidence, UpdateMetadata, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -30,10 +30,10 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RequestDetails, ResponseId, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        PaymentsSyncData, PaymentsUpdateMetadataData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
@@ -219,6 +219,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     connector_types::MandateRevokeV2 for Razorpay<T>
 {
 }
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::UpdateMetadataV2<T> for Razorpay<T>
+{
+}
+
 impl<T> Razorpay<T> {
     pub const fn new() -> &'static Self {
         &Self {
@@ -1269,6 +1275,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentFlowData,
         MandateRevokeRequestData,
         MandateRevokeResponseData,
+    > for Razorpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        UpdateMetadata,
+        PaymentFlowData,
+        PaymentsUpdateMetadataData<T>,
+        PaymentsResponseData,
     > for Razorpay<T>
 {
 }

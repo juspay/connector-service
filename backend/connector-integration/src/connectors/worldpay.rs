@@ -13,6 +13,8 @@ use self::response::{
     WorldpayVoidResponse,
 };
 use common_utils::{errors::CustomResult, events, ext_traits::BytesExt};
+use domain_types::connector_flow::UpdateMetadata;
+use domain_types::connector_types::PaymentsUpdateMetadataData;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
@@ -178,6 +180,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Worldpay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::UpdateMetadataV2<T> for Worldpay<T>
 {
 }
 
@@ -777,4 +783,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// SourceVerification implementations for all flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        UpdateMetadata,
+        PaymentFlowData,
+        PaymentsUpdateMetadataData<T>,
+        PaymentsResponseData,
+    > for Worldpay<T>
+{
+}

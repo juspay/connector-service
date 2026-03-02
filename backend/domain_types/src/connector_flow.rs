@@ -67,6 +67,9 @@ pub struct IncrementalAuthorization;
 #[derive(Debug, Clone)]
 pub struct MandateRevoke;
 
+#[derive(Debug, Clone)]
+pub struct UpdateMetadata;
+
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
@@ -95,4 +98,5 @@ pub enum FlowName {
     SdkSessionToken,
     IncrementalAuthorization,
     MandateRevoke,
+    UpdateMetadata,
 }

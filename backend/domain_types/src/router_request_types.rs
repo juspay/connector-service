@@ -466,3 +466,6 @@ pub struct IncrementalAuthorizationIntegrityObject {}
 pub struct MandateRevokeIntegrityObject {
     pub mandate_id: Secret<String>,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct UpdateMetadataIntegrityObject {}

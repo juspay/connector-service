@@ -14,7 +14,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
         IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate,
         PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        SubmitEvidence, Void, VoidPC,
+        SubmitEvidence, UpdateMetadata, Void, VoidPC,
     },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
@@ -85,6 +85,8 @@ where
         FlowName::IncrementalAuthorization
     } else if type_id == std::any::TypeId::of::<MandateRevoke>() {
         FlowName::MandateRevoke
+    } else if type_id == std::any::TypeId::of::<UpdateMetadata>() {
+        FlowName::UpdateMetadata
     } else {
         tracing::warn!("Unknown flow marker type: {}", std::any::type_name::<F>());
         FlowName::Unknown

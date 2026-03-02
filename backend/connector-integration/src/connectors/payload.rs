@@ -174,6 +174,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Payload<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::UpdateMetadataV2<T> for Payload<T>
+{
+}
 pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -726,7 +730,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// SourceVerification implementations for all flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::UpdateMetadata,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsUpdateMetadataData<T>,
+        PaymentsResponseData,
+    > for Payload<T>
+{
+}
 
 // Webhook implementation
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

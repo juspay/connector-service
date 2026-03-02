@@ -1382,6 +1382,10 @@ pub enum PaymentsResponseData {
         connector_authorization_id: Option<String>,
         status_code: u16,
     },
+    PaymentResourceUpdateResponse {
+        status: common_enums::PaymentResourceUpdateStatus,
+        status_code: u16,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1638,6 +1642,16 @@ pub struct MandateRevokeRequestData {
 pub struct MandateRevokeResponseData {
     pub mandate_status: common_enums::MandateStatus,
     pub status_code: u16,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaymentsUpdateMetadataData<T: PaymentMethodDataTypes> {
+    pub metadata: Option<SecretSerdeValue>,
+    pub connector_transaction_id: String,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
+    pub connector_metadata: Option<SecretSerdeValue>,
+    pub feature_metadata: Option<FeatureMetadata>,
+    pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -3439,4 +3453,16 @@ pub struct BillingDescriptor {
     pub statement_descriptor_suffix: Option<String>,
     /// A reference to be shown on billing description
     pub reference: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+pub struct FeatureMetadata {
+    /// Redirection response coming in request as metadata field only for redirection scenarios
+    pub redirect_response: Option<RedirectResponse>,
+}
+
+#[derive(Default, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize, Clone)]
+pub struct RedirectResponse {
+    pub param: Option<Secret<String>>,
+    pub json_payload: Option<SecretSerdeValue>,
 }

@@ -7,14 +7,15 @@ use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Authorize, Capture, CreateConnectorCustomer, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, RSync, Refund, SdkSessionToken, Void,
+        PSync, PaymentMethodToken, RSync, Refund, SdkSessionToken, UpdateMetadata, Void,
     },
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, MandateRevokeRequestData,
         MandateRevokeResponseData, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        PaymentsSyncData, PaymentsUpdateMetadataData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
@@ -758,6 +759,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         MandateRevokeRequestData,
         MandateRevokeResponseData,
+    > for Stax<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::UpdateMetadataV2<T> for Stax<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        UpdateMetadata,
+        PaymentFlowData,
+        PaymentsUpdateMetadataData<T>,
+        PaymentsResponseData,
     > for Stax<T>
 {
 }
