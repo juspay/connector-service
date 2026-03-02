@@ -847,9 +847,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Get invoice number (random string if > MAX_ID_LENGTH or None)
-        let invoice_number = get_invoice_number_or_random(
-            item.router_data.request.merchant_order_id.clone(),
-        );
+        let invoice_number =
+            get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
 
         let order = Order {
             invoice_number,

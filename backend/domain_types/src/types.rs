@@ -21,8 +21,8 @@ use grpc_api_types::payments::{
     MerchantAuthenticationServiceCreateSdkSessionTokenResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
-    PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
-    PaymentServiceReverseResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
+    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RecurringPaymentServiceRevokeRequest, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -3829,7 +3829,9 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     redirection_data: redirection_data
                         .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
                         .transpose()?,
-                    connector_feature_data: convert_connector_metadata_to_secret_string(connector_metadata),
+                    connector_feature_data: convert_connector_metadata_to_secret_string(
+                        connector_metadata,
+                    ),
                     network_transaction_id: network_txn_id,
                     merchant_transaction_id: connector_response_reference_id.map(|id| {
                         grpc_api_types::payments::Identifier {
@@ -4568,7 +4570,9 @@ pub fn generate_payment_void_response(
                     state,
                     mandate_reference: mandate_reference_grpc,
                     incremental_authorization_allowed,
-                    connector_feature_data: convert_connector_metadata_to_secret_string(connector_metadata),
+                    connector_feature_data: convert_connector_metadata_to_secret_string(
+                        connector_metadata,
+                    ),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -5703,8 +5707,11 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                     .collect()
             })
             .unwrap_or_default();
-        let mandate_reference_grpc = value.mandate_reference.map(|m| {
-            grpc_api_types::payments::MandateReference {
+        let mandate_reference_grpc =
+            value
+                .mandate_reference
+                .map(|m| {
+                    grpc_api_types::payments::MandateReference {
                 mandate_id_type: Some(
                     grpc_api_types::payments::mandate_reference::MandateIdType::ConnectorMandateId(
                         grpc_payment_types::ConnectorMandateReferenceId {
@@ -5716,7 +5723,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                     ),
                 ),
             }
-        });
+                });
         Ok(Self {
             connector_transaction_id: value
                 .resource_id
@@ -6900,7 +6907,9 @@ pub fn generate_payment_capture_response(
                     incremental_authorization_allowed,
                     mandate_reference: mandate_reference_grpc,
                     captured_amount: router_data_v2.resource_common_data.amount_captured,
-                    connector_feature_data: convert_connector_metadata_to_secret_string(connector_metadata),
+                    connector_feature_data: convert_connector_metadata_to_secret_string(
+                        connector_metadata,
+                    ),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -7469,8 +7478,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         SetupMandateRequestData<T>,
         PaymentsResponseData,
     >,
-) -> Result<PaymentServiceSetupRecurringResponse, error_stack::Report<ApplicationErrorResponse>>
-{
+) -> Result<PaymentServiceSetupRecurringResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);

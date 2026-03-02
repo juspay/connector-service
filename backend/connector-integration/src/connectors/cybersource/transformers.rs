@@ -2392,11 +2392,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            value
-                .router_data
-                .request
-                .merchant_order_id
-                .clone(),
+            value.router_data.request.merchant_order_id.clone(),
         );
 
         let currency =
