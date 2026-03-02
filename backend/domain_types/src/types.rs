@@ -1,7 +1,7 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use crate::{connector_types, utils::extract_connector_request_reference_id};
+use crate::{connector_types, utils::extract_connector_request_reference_id,};
 use common_enums::{
     CaptureMethod, CardNetwork, CountryAlpha2, FutureUsage, PaymentMethod, PaymentMethodType, SamsungPayCardBrand
 };
@@ -12,7 +12,7 @@ use common_utils::{
     pii::Email,
     Method, SecretSerdeValue,
 };
-use error_stack::{report, ResultExt};
+use error_stack::{report, ResultExt, Report};
 use grpc_api_types::payments::{
     self as grpc_payment_types, AcceptDisputeResponse, ConnectorState, DisputeDefendRequest,
     DisputeDefendResponse, DisputeResponse, DisputeServiceSubmitEvidenceResponse,
@@ -1046,8 +1046,18 @@ impl<
                         error_object: None,
                     }).into());
                 }
-
-                if token_data.data.trim().is_empty() {
+                let raw_token = token_data
+                    .data
+                    .clone()
+                    .ok_or_else(|| {
+                        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "MISSING_TOKEN_DATA".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Samsung Pay token data is required".to_owned(),
+                            error_object: None,
+                        }))
+                    })?;
+                if raw_token.peek().trim().is_empty() {
                     return Err(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_TOKEN_DATA".to_owned(),
@@ -1091,7 +1101,17 @@ impl<
                                     token_data: payment_method_data::SamsungPayTokenData {
                                         three_ds_type: token_data.r#type.clone(),
                                         version: token_data.version.clone(),
-                                        data: token_data.data.clone().into(),
+                                        data: token_data
+                                        .data
+                                        .clone()
+                                        .ok_or_else(|| {
+                                        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                            sub_code: "MISSING_TOKEN_DATA".to_owned(),
+                                            error_identifier: 400,
+                                            error_message: "Samsung Pay token data is required".to_owned(),
+                                            error_object: None,
+                                        }))
+                                    })?
                                     },
                                 },
                             },

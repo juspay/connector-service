@@ -1,10 +1,12 @@
 use base64::Engine;
+use josekit::jwt;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    ext_traits::{ValueExt},
+    ext_traits::{OptionExt, ValueExt},
     pii,
     types::{SemanticVersion, StringMajorUnit},
+    consts,
 };
 
 use crate::{connectors::cybersource::CybersourceRouterData, types::ResponseRouterData, utils};
@@ -1932,13 +1934,29 @@ fn get_samsung_pay_payment_information<
 fn get_samsung_pay_fluid_data_value(
     samsung_pay_token_data: &payment_method_data::SamsungPayTokenData,
 ) -> Result<SamsungPayFluidDataValue, error_stack::Report<ConnectorError>> {
+
+    let samsung_pay_header = jwt::decode_header(
+        samsung_pay_token_data.data.peek(),
+    )
+    .change_context(ConnectorError::RequestEncodingFailed)
+    .attach_printable("Failed to decode samsung pay header")?;
+
+    let samsung_pay_kid_optional = samsung_pay_header
+    .claim("kid")
+    .and_then(|kid| kid.as_str());
+
+    let public_key_hash = samsung_pay_kid_optional
+    .get_required_value("samsung pay public_key_hash")
+    .change_context(ConnectorError::RequestEncodingFailed)?;
+
     let samsung_pay_fluid_data_value = SamsungPayFluidDataValue {
-        public_key_hash: Secret::new(
-            String::new()
-        ),
+        public_key_hash: Secret::new(public_key_hash.to_string()),
         version: samsung_pay_token_data.version.clone(),
-        data: Secret::new(BASE64_ENGINE.encode(samsung_pay_token_data.data.peek())),
+        data: Secret::new(
+            consts::BASE64_ENGINE.encode(samsung_pay_token_data.data.peek()),
+        ),
     };
+
     Ok(samsung_pay_fluid_data_value)
 }
 
