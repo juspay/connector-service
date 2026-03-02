@@ -31,9 +31,9 @@ impl<T> RequestData<T> {
             payload: interface_data.payload,
             extracted_metadata: interface_data.extracted_metadata,
             masked_metadata: interface_data.masked_metadata,
-            extensions: interface_data.extensions.ok_or_else(|| {
-                tonic::Status::internal("Extensions missing from gRPC request")
-            })?,
+            extensions: interface_data
+                .extensions
+                .ok_or_else(|| tonic::Status::internal("Extensions missing from gRPC request"))?,
         })
     }
 }

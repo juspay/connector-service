@@ -36,7 +36,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
                 email: Some(Secret::new("example@gmail.com".to_string())),
                 name: None,
                 id: None,
-                connector_id: None,
+                connector_customer_id: None,
                 phone_number: None,
             }),
             payment_method: Some(PaymentMethod {

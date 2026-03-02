@@ -1,7 +1,5 @@
 use common_utils::{
-    consts::{
-        X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_CONNECTOR_AUTH, X_KEY1, X_KEY2,
-    },
+    consts::{X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_CONNECTOR_AUTH, X_KEY1, X_KEY2},
     errors::CustomResult,
 };
 use domain_types::{

@@ -55,9 +55,7 @@ fn to_metadata_value(key: &str, value: &str) -> Result<MetadataValue<Ascii>, Int
 
 /// Converts headers from any `HeaderSource` into a gRPC `MetadataMap`.
 /// Validates that all required headers are present.
-pub fn headers_to_metadata<H: HeaderSource>(
-    headers: &H,
-) -> Result<MetadataMap, InterfaceError> {
+pub fn headers_to_metadata<H: HeaderSource>(headers: &H) -> Result<MetadataMap, InterfaceError> {
     let mut metadata = MetadataMap::new();
 
     for header_name in REQUIRED_HEADERS {

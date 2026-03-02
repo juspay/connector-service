@@ -16,9 +16,8 @@ use ucs_env::configs::Config;
 pub fn http_headers_to_grpc_metadata(
     http_headers: &HeaderMap,
 ) -> Result<MetadataMap, Box<tonic::Status>> {
-    ucs_interface_common::headers::headers_to_metadata(http_headers).map_err(|e| {
-        Box::new(tonic::Status::from(e))
-    })
+    ucs_interface_common::headers::headers_to_metadata(http_headers)
+        .map_err(|e| Box::new(tonic::Status::from(e)))
 }
 
 /// Transfers config from Axum Extension to gRPC request
@@ -43,13 +42,11 @@ where
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         match Json::<T>::from_request(req, state).await {
             Ok(Json(value)) => Ok(Self(value)),
-            Err(rejection) => {
-                Err(HttpError {
-                    status: StatusCode::BAD_REQUEST,
-                    message: rejection.to_string(),
-                }
-                .into_response())
+            Err(rejection) => Err(HttpError {
+                status: StatusCode::BAD_REQUEST,
+                message: rejection.to_string(),
             }
+            .into_response()),
         }
     }
 }

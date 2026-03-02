@@ -147,7 +147,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             email: Some(TEST_EMAIL.to_string().into()),
             name: None,
             id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
-            connector_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
+            connector_customer_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
             phone_number: None,
         }),
         // browser_info: TODO - BrowserInfo type not available in grpc_api_types

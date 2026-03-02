@@ -21,12 +21,12 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, mandate_reference_id::MandateIdType, payment_method,
+        identifier::IdType, mandate_reference::MandateIdType, payment_method,
         payment_service_client::PaymentServiceClient,
         recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
         AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
         ConnectorMandateReferenceId, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage,
-        Identifier, MandateReferenceId, PaymentAddress, PaymentMethod, PaymentMethodType,
+        Identifier, MandateReference, PaymentAddress, PaymentMethod, PaymentMethodType,
         PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceRegisterAutoDebitRequest, PaymentServiceVoidRequest, PaymentStatus,
@@ -182,7 +182,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
         id_type: Some(IdType::Id(generate_unique_request_ref_id("repeat_req"))),
     };
 
-    let mandate_reference = MandateReferenceId {
+    let mandate_reference = MandateReference {
         mandate_id_type: Some(MandateIdType::ConnectorMandateId(
             ConnectorMandateReferenceId {
                 connector_mandate_request_reference_id: None,
@@ -333,7 +333,7 @@ fn create_payment_authorize_request(
         email: Some(generate_unique_email().into()),
         name: None,
         id: Some("TEST_CONNECTOR".to_string()),
-        connector_id: Some("TEST_CONNECTOR".to_string()),
+        connector_customer_id: Some("TEST_CONNECTOR".to_string()),
         phone_number: None,
     });
     // Generate random names for billing to prevent duplicate transaction errors
@@ -588,7 +588,7 @@ fn create_register_request() -> PaymentServiceRegisterAutoDebitRequest {
         email: Some(generate_unique_email().into()),
         name: Some(TEST_CARD_HOLDER.to_string()),
         id: None,
-        connector_id: None,
+        connector_customer_id: None,
         phone_number: None,
     });
 
