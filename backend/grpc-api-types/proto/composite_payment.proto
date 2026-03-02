@@ -91,7 +91,7 @@ message CompositeAuthorizeRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 42; // Redirection Response from client browser
-  Identifier request_ref_id = 43; // Reference ID for tracking
+  Identifier merchant_access_token_id = 43; // Reference ID for tracking
   optional string customer_name = 44;
   optional SecretString email = 45;
   optional Identifier merchant_customer_id = 46;
