@@ -592,12 +592,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ok()
                 });
 
-                let (first_name, last_name) = split_account_holder_name(holder_name);
-
                 // Map bank_holder_type to Checkout's expected format
                 let holder_type: CheckoutAchHolderType = bank_holder_type
                     .map(Into::into)
                     .unwrap_or(CheckoutAchHolderType::Individual);
+
+                // Only include account_holder when a name is available to avoid
+                // sending null first_name/last_name which causes ACH validation errors
+                let account_holder = holder_name.map(|name| {
+                    let (first_name, last_name) = split_account_holder_name(Some(name));
+                    AchAccountHolder {
+                        holder_type,
+                        first_name,
+                        last_name,
+                    }
+                });
 
                 // Use bank_type from input or default to Savings
                 let account_type = bank_type.unwrap_or(common_enums::BankType::Savings);
@@ -608,11 +617,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     country: ACH_COUNTRY_US.to_string(),
                     account_number: account_number.clone(),
                     routing_number: routing_number.clone(),
-                    account_holder: Some(AchAccountHolder {
-                        holder_type,
-                        first_name,
-                        last_name,
-                    }),
+                    account_holder,
                 });
                 // For ACH bank debit, we typically want to store for future use if it's a mandate payment
                 let store_for_future = if item.router_data.request.is_mandate_payment() {
@@ -1034,12 +1039,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ok()
                 });
 
-                let (first_name, last_name) = split_account_holder_name(holder_name);
-
                 // Map bank_holder_type to Checkout's expected format
                 let holder_type: CheckoutAchHolderType = bank_holder_type
                     .map(Into::into)
                     .unwrap_or(CheckoutAchHolderType::Individual);
+
+                // Only include account_holder when a name is available to avoid
+                // sending null first_name/last_name which causes ACH validation errors
+                let account_holder = holder_name.map(|name| {
+                    let (first_name, last_name) = split_account_holder_name(Some(name));
+                    AchAccountHolder {
+                        holder_type,
+                        first_name,
+                        last_name,
+                    }
+                });
 
                 // Use bank_type from input or default to Savings
                 let account_type = bank_type.unwrap_or(common_enums::BankType::Savings);
@@ -1050,11 +1064,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     country: ACH_COUNTRY_US.to_string(),
                     account_number: account_number.clone(),
                     routing_number: routing_number.clone(),
-                    account_holder: Some(AchAccountHolder {
-                        holder_type,
-                        first_name,
-                        last_name,
-                    }),
+                    account_holder,
                 });
                 Ok((payment_source, None, Some(false), payment_type, Some(true)))
             }
