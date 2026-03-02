@@ -224,7 +224,6 @@ fn create_payment_authorize_request(
             name: None,
             id: None,
             connector_customer_id: None,
-            connector_customer_id: None,
             phone_number: None,
         }),
         address: Some(grpc_api_types::payments::PaymentAddress {
