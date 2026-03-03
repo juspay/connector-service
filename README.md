@@ -79,13 +79,14 @@ Integrating multiple payment processors shouldn't require months of engineering 
 
 ### Payment & Capture Flow Sequence
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#B3D9F2', 'primaryTextColor': '#333333', 'primaryBorderColor': '#5B9BD5', 'lineColor': '#666666', 'secondaryColor': '#C5E8C0', 'tertiaryColor': '#F9B872'}}}%%
 sequenceDiagram
    autonumber
    participant App as Your App
    participant SDK as Connector Service SDK
    participant PSP as Payment Service Provider (PSP)
-
-
+   
    Note over App,PSP: Payment Authorization
    App->>SDK: paymentservice.authorize(amount, currency, payment_method)
    activate SDK
@@ -95,7 +96,6 @@ sequenceDiagram
    deactivate PSP
    SDK-->>App: Unified authorize response
    deactivate SDK
-
 
    Note over App,PSP: Payment Capture
    App->>SDK: paymentservice.capture(payment_id, amount)
@@ -107,7 +107,6 @@ sequenceDiagram
    SDK-->>App: Unified capture response
    deactivate SDK
 
-
    Note over App,PSP: Event Service (Webhooks)
    PSP->>App: webhook(event_payload)
    activate App
@@ -117,6 +116,7 @@ sequenceDiagram
    deactivate SDK
    deactivate App
 
+```
 
 ---
 
