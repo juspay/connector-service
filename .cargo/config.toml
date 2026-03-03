@@ -1,13 +1,15 @@
 # Use LLVM's ld64.lld on macOS for significantly faster linking of large dylibs.
 # Apple's ld is slow on projects with hundreds of compilation units; ld64.lld
 # (LLVM 20) is typically 3-5x faster for the connector_service_ffi cdylib link.
+#
+# The wrapper script falls back to the system linker if lld is not installed,
+# so builds work out of the box. Install lld for the speed benefit:
+#   brew install lld
 [target.aarch64-apple-darwin]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=/opt/homebrew/opt/lld/bin/ld64.lld"]
+linker = ".cargo/macos-lld-linker.sh"
 
 [target.x86_64-apple-darwin]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=/opt/homebrew/opt/lld/bin/ld64.lld"]
+linker = ".cargo/macos-lld-linker.sh"
 
 [profile.release.package.uniffi-bindgen]
 # uniffi-bindgen is a build tool, not a shipped binary.
