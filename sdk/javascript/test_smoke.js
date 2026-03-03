@@ -1,16 +1,11 @@
 /**
  * Smoke test for the packed hyperswitch-payments npm tarball.
- *
- * Usage:
- *   mkdir /tmp/test-js-sdk && cd /tmp/test-js-sdk && npm init -y
- *   npm install <path-to>/hyperswitch-payments-0.1.0.tgz
- *   node test_pack.js
  */
 
 "use strict";
 
-const { UniffiClient, ConnectorClient } = require("hyperswitch-payments");
-const { ucs } = require("hyperswitch-payments/src/payments/generated/proto");
+const { UniffiClient, ConnectorClient } = require("./dist/src/index");
+const { ucs } = require("./dist/src/payments/generated/proto");
 
 const PaymentServiceAuthorizeRequest = ucs.v2.PaymentServiceAuthorizeRequest;
 const Currency = ucs.v2.Currency;
@@ -20,8 +15,6 @@ const FfiOptions = ucs.v2.FfiOptions;
 const EnvOptions = ucs.v2.EnvOptions;
 
 console.log("Loaded hyperswitch-payments from node_modules");
-console.log(`  ConnectorClient: ${typeof ConnectorClient}`);
-console.log(`  UniffiClient: ${typeof UniffiClient}`);
 
 const apiKey = process.env.STRIPE_API_KEY || "sk_test_placeholder";
 const metadata = {
@@ -33,7 +26,7 @@ const metadata = {
   "x-tenant-id": "public",
   "x-auth": "body-key",
   "x-api-key": apiKey,
-};
+  };
 
 // Create FfiOptions with testMode
 const ffiOptions = FfiOptions.create({
@@ -42,29 +35,35 @@ const ffiOptions = FfiOptions.create({
 const optionsBytes = Buffer.from(FfiOptions.encode(ffiOptions).finish());
 
 const requestMsg = PaymentServiceAuthorizeRequest.create({
-  requestRefId: { id: "test_pack_123" },
+  merchantTransactionId: { id: "test_pack_123" },
   amount: {
     minorAmount: 1000,
-    currency: Currency.USD,
+    currency: Currency.USD
   },
   captureMethod: CaptureMethod.AUTOMATIC,
   paymentMethod: {
     card: {
-      cardNumber: { value: "4111111111111111" },
+      cardNumber: { value: "4242424242424242" },
       cardExpMonth: { value: "12" },
-      cardExpYear: { value: "2050" },
+      cardExpYear: { value: "2030" },
       cardCvc: { value: "123" },
       cardHolderName: { value: "Test User" },
     },
   },
   customer: {
     email: { value: "test@example.com" },
-    name: "Test",
+    name: "Test"
   },
   authType: AuthenticationType.NO_THREE_DS,
   returnUrl: "https://example.com/return",
-  webhookUrl: "https://example.com/webhook",
-  address: {},
+  address: {
+    billingAddress: {
+      addressLine1: "123 Test St",
+      city: "Test City",
+      country: "US",
+      zip: "12345"
+    }
+  },
   testMode: true,
 });
 
@@ -75,12 +74,12 @@ const requestBytes = Buffer.from(
 // --- Test 1: Low-level FFI ---
 console.log("\n=== Test 1: Low-level FFI (UniffiClient.authorizeReq) ===");
 const uniffi = new UniffiClient();
-const result = uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
-const parsed = JSON.parse(result);
-console.log(`  URL:    ${parsed.url}`);
-console.log(`  Method: ${parsed.method}`);
-if (parsed.url !== "https://api.stripe.com/v1/payment_intents") throw new Error("Unexpected URL");
-if (parsed.method !== "POST") throw new Error("Unexpected method");
+const resultBytes = uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
+const result = ucs.v2.FfiConnectorHttpRequest.decode(resultBytes);
+console.log(`  URL:    ${result.url}`);
+console.log(`  Method: ${result.method}`);
+if (result.url !== "https://api.stripe.com/v1/payment_intents") throw new Error(`Unexpected URL: ${result.url}`);
+if (result.method !== "POST") throw new Error("Unexpected method");
 console.log("  PASSED");
 
 // --- Test 2: Full round-trip via ConnectorClient ---
@@ -91,11 +90,15 @@ async function testRoundTrip() {
     return;
   }
 
-  const client = new ConnectorClient();
+  // Use the new Unified Options structure
+  const client = new ConnectorClient(null, {
+    http: { totalTimeoutMs: 15000 },
+    ffi: { env: { testMode: true } }
+  });
+
   try {
-    const response = await client.authorize(requestMsg, metadata, ffiOptions);
-    console.log(`  Response type: ${typeof response}`);
-    console.log(`  Response keys: ${Object.keys(response)}`);
+    const response = await client.authorize(requestMsg, metadata);
+    console.log(`  Response Status: ${response.status}`);
     console.log("  PASSED");
   } catch (e) {
     console.log(`  Response/error received: ${e.message}`);

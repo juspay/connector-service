@@ -26,6 +26,11 @@ fun buildRequest(): PaymentServiceAuthorizeRequest =
             minorAmount = 1000
             currency = Currency.USD
         }
+        merchantTransactionIdBuilder.id = "smoke_test_123"
+        amountBuilder.apply {
+            minorAmount = 1000
+            currency = Currency.USD
+        }
         captureMethod = CaptureMethod.AUTOMATIC
         paymentMethodBuilder.cardBuilder.apply {
             cardNumberBuilder.value = "4111111111111111"
@@ -33,6 +38,10 @@ fun buildRequest(): PaymentServiceAuthorizeRequest =
             cardExpYearBuilder.value = "2050"
             cardCvcBuilder.value = "123"
             cardHolderNameBuilder.value = "Test User"
+        }
+        customerBuilder.apply {
+            emailBuilder.value = "test@example.com"
+            name = "Test"
         }
         customerBuilder.apply {
             emailBuilder.value = "test@example.com"
@@ -92,9 +101,10 @@ fun testLowLevelFfi() {
     val optionsBytes = buildOptions()
 
     try {
-        val json = JSONObject(authorizeReqTransformer(requestBytes, metadata, optionsBytes))
-        val url = json.getString("url")
-        val method = json.getString("method")
+        // Now returns a native FfiConnectorHttpRequest object, no JSONObject needed!
+        val connectorRequest = authorizeReqTransformer(requestBytes, metadata, optionsBytes)
+        val url = connectorRequest.url
+        val method = connectorRequest.method
 
         assert(url == "https://api.stripe.com/v1/payment_intents",
             "Expected Stripe payment_intents URL, got: $url")
