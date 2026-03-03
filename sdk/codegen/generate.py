@@ -24,6 +24,20 @@ FFI_BINDINGS = REPO_ROOT / "backend/ffi/src/bindings/uniffi.rs"
 PROTO_DESCRIPTOR = REPO_ROOT / "sdk/codegen/services.desc"
 
 
+def ensure_descriptor_exists() -> None:
+    """Verify proto descriptor file exists and is readable."""
+    if not PROTO_DESCRIPTOR.exists():
+        print(
+            f"ERROR: Proto descriptor not found: {PROTO_DESCRIPTOR}",
+            file=sys.stderr,
+        )
+        print(
+            "Run 'make generate' from the sdk directory to generate the descriptor.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 # ── Source parsing ───────────────────────────────────────────────────────────
 
 def to_snake_case(name: str) -> str:
@@ -391,6 +405,7 @@ def main() -> None:
         help="Language to generate (default: all)",
     )
     args = parser.parse_args()
+    ensure_descriptor_exists()
 
     print(f"Parsing: {SERVICES_PROTO.relative_to(REPO_ROOT)}")
     print(f"Parsing: {FFI_BINDINGS.relative_to(REPO_ROOT)}")
