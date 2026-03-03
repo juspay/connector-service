@@ -1,4 +1,4 @@
-.PHONY: install-deps build-ffi-lib generate-bindings generate-proto generate-all \
+.PHONY: install-deps build-ffi-lib generate generate-bindings generate-proto generate-all \
         pack-archive install test-package dist clean
 
 # ---------------------------------------------------------------------------
@@ -71,6 +71,15 @@ build-ffi-lib:
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
 		--release --target $(PLATFORM)
 	@echo "Build complete: $(LIBRARY)"
+
+# ---------------------------------------------------------------------------
+# generate
+# Auto-discovers flows from services.proto + bindings/uniffi.rs and regenerates
+# the Kotlin SDK client code (GeneratedFlows.kt).
+# ---------------------------------------------------------------------------
+generate:
+	@echo "Discovering flows and generating Kotlin SDK client code..."
+	@python3 $(REPO_ROOT)/sdk/codegen/generate.py --lang kotlin
 
 # ---------------------------------------------------------------------------
 # generate-bindings
@@ -179,4 +188,5 @@ dist:
 
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)
+	@rm -f $(SDK_ROOT)src/main/kotlin/GeneratedFlows.kt
 	@$(SDK_ROOT)/gradlew clean 2>/dev/null || true

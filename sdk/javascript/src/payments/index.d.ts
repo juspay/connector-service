@@ -1,2 +1,2 @@
-export { ConnectorClient } from "./connector_client";
-export { UniffiClient } from "./uniffi_client";
+export { ConnectorClient } from "./_generated_connector_client_flows";
+export { UniffiClient } from "./_generated_uniffi_client_flows";
