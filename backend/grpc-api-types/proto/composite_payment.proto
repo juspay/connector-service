@@ -114,3 +114,50 @@ message CompositeAuthorizeResponse {
   optional PaymentServiceCreateConnectorCustomerResponse create_customer_response = 2; // Create customer flow response
   optional PaymentServiceAuthorizeResponse authorize_response = 3; // Authorize flow response
 }
+
+// Request message for composite get flow.
+message CompositeGetRequest {
+  // Identification
+  Identifier transaction_id = 1; // The resource ID to synchronize
+
+  // Reference
+  optional Identifier request_ref_id = 2; // Reference ID for tracking
+
+  // State Information
+  optional ConnectorState state = 3; // State data for access token storage and other connector-specific state
+
+  // Body of the response
+  optional bytes handle_response = 4;
+
+  // Amount Information
+  int64 amount = 5; // The amount for the payment in minor currency units
+  Currency currency = 6; // The currency for the payment, in ISO 4217 three-letter code
+
+  // Payment Experience
+  optional PaymentExperience payment_experience = 7; // Preferred payment experience
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 8; // Method for capturing the payment
+
+  // Encoded Data
+  optional string encoded_data = 9; // Encoded context data for redirect flows, etc if applicable
+
+  // Metadata
+  optional SecretString metadata = 10; // Additional metadata for the connector
+  optional FutureUsage setup_future_usage = 11; // Indicates future usage intention
+  optional SecretString merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  optional SecretString connector_metadata = 13; // Connector-specific metadata for the transaction
+  optional SyncRequestType sync_type = 14; // Indicates the type of payment sync request
+
+  // Connector Reference Id
+  optional string connector_order_reference_id = 15; // Connector's reference id for order
+
+  // Environment Configuration
+  optional bool test_mode = 16; // A boolean value to indicate if the connector is in Test mode
+}
+
+// Response message for composite get flow.
+message CompositeGetResponse {
+  optional PaymentServiceCreateAccessTokenResponse access_token_response = 1; // Access token flow response
+  PaymentServiceGetResponse get_response = 2; // Get flow response
+}

@@ -1,8 +1,9 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, ConnectorState, PaymentServiceAuthorizeOnlyRequest,
-    PaymentServiceCreateAccessTokenRequest, PaymentServiceCreateAccessTokenResponse,
-    PaymentServiceCreateConnectorCustomerRequest, PaymentServiceCreateConnectorCustomerResponse,
+    CompositeAuthorizeRequest, CompositeGetRequest, ConnectorState,
+    PaymentServiceAuthorizeOnlyRequest, PaymentServiceCreateAccessTokenRequest,
+    PaymentServiceCreateAccessTokenResponse, PaymentServiceCreateConnectorCustomerRequest,
+    PaymentServiceCreateConnectorCustomerResponse, PaymentServiceGetRequest,
 };
 
 use crate::utils::{
@@ -129,6 +130,66 @@ impl
             threeds_completion_indicator: item.threeds_completion_indicator,
             redirection_response: item.redirection_response.clone(),
             tokenization_strategy: item.tokenization_strategy,
+        }
+    }
+}
+
+impl ForeignFrom<(&CompositeGetRequest, &ConnectorEnum)>
+    for PaymentServiceCreateAccessTokenRequest
+{
+    fn foreign_from((item, connector): (&CompositeGetRequest, &ConnectorEnum)) -> Self {
+        Self {
+            request_ref_id: item.request_ref_id.clone(),
+            connector: grpc_connector_from_connector_enum(connector),
+            merchant_account_metadata: item.merchant_account_metadata.clone(),
+            metadata: item.metadata.clone(),
+            connector_metadata: item.connector_metadata.clone(),
+            test_mode: item.test_mode,
+        }
+    }
+}
+
+impl
+    ForeignFrom<(
+        &CompositeGetRequest,
+        Option<&PaymentServiceCreateAccessTokenResponse>,
+    )> for PaymentServiceGetRequest
+{
+    fn foreign_from(
+        (item, access_token_response): (
+            &CompositeGetRequest,
+            Option<&PaymentServiceCreateAccessTokenResponse>,
+        ),
+    ) -> Self {
+        let access_token_from_req = item
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.clone());
+
+        let access_token = get_access_token(access_token_from_req, access_token_response);
+
+        let resolved_state = Some(ConnectorState {
+            access_token,
+            connector_customer_id: None,
+        });
+
+        Self {
+            transaction_id: item.transaction_id.clone(),
+            request_ref_id: item.request_ref_id.clone(),
+            state: resolved_state,
+            handle_response: item.handle_response.clone(),
+            amount: item.amount,
+            currency: item.currency,
+            payment_experience: item.payment_experience,
+            capture_method: item.capture_method,
+            encoded_data: item.encoded_data.clone(),
+            metadata: item.metadata.clone(),
+            setup_future_usage: item.setup_future_usage,
+            merchant_account_metadata: item.merchant_account_metadata.clone(),
+            connector_metadata: item.connector_metadata.clone(),
+            sync_type: item.sync_type,
+            connector_order_reference_id: item.connector_order_reference_id.clone(),
+            test_mode: item.test_mode,
         }
     }
 }
