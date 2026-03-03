@@ -15,7 +15,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
@@ -352,19 +352,19 @@ pub struct CardVerificationDetails<T: PaymentMethodDataTypes + Serialize + Debug
     csc: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for ZiftAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for ZiftAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::SignatureKey {
-            api_key,
-            key1,
-            api_secret,
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Zift {
+            user_name,
+            password,
+            account_id,
         } = auth_type
         {
             Ok(Self {
-                user_name: api_key.to_owned(),
-                password: api_secret.to_owned(),
-                account_id: key1.to_owned(),
+                user_name: user_name.to_owned(),
+                password: password.to_owned(),
+                account_id: account_id.to_owned(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?

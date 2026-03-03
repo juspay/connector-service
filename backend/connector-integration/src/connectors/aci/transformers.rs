@@ -11,7 +11,7 @@ use domain_types::{
         BankRedirectData, Card, NetworkTokenData, PayLaterData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -64,13 +64,13 @@ pub struct AciAuthType {
     pub entity_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for AciAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for AciAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::BodyKey { api_key, key1 } = item {
+    fn try_from(item: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Aci { api_key, entity_id } = item {
             Ok(Self {
                 api_key: api_key.to_owned(),
-                entity_id: key1.to_owned(),
+                entity_id: entity_id.to_owned(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?

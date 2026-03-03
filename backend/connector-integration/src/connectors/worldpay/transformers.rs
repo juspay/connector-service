@@ -15,7 +15,7 @@ use domain_types::{
         PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -595,23 +595,23 @@ pub struct WorldpayAuthType {
     pub(super) entity_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for WorldpayAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for WorldpayAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
+            ConnectorSpecificAuth::Worldpay {
+                username,
+                password,
+                entity_id,
             } => {
-                let auth_key = format!("{}:{}", key1.peek(), api_key.peek());
+                let auth_key = format!("{}:{}", username.peek(), password.peek());
                 let auth_header = format!(
                     "Basic {}",
                     base64::Engine::encode(&base64::engine::general_purpose::STANDARD, auth_key)
                 );
                 Ok(Self {
                     api_key: Secret::new(auth_header),
-                    entity_id: api_secret.clone(),
+                    entity_id: entity_id.clone(),
                 })
             }
             _ => Err(ConnectorError::FailedToObtainAuthType)?,

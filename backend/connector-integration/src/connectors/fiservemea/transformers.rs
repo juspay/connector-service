@@ -17,7 +17,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -67,22 +67,17 @@ impl FiservemeaAuthType {
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for FiservemeaAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
+            ConnectorSpecificAuth::Fiservemea {
                 api_key,
                 api_secret,
-                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
-            }),
-            ConnectorAuthType::BodyKey { api_key, key1, .. } => Ok(Self {
-                api_key: api_key.to_owned(),
-                api_secret: key1.to_owned(), // key1 is the API secret for fiservemea
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
