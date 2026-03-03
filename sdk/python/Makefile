@@ -1,4 +1,4 @@
-.PHONY: install-deps build-ffi-lib generate-bindings generate-proto generate-all \
+.PHONY: install-deps build-ffi-lib generate generate-bindings generate-proto generate-all \
         pack-archive install test-package dist clean
 
 # ---------------------------------------------------------------------------
@@ -79,6 +79,25 @@ build-ffi-lib:
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
 		--profile $(PROFILE) --target $(PLATFORM)
 	@echo "Build complete: $(LIBRARY)"
+
+# ---------------------------------------------------------------------------
+# generate
+# Auto-discovers flows from services.proto + bindings/uniffi.rs and regenerates
+# the Python SDK client code (_generated_flows.py, connector_client.pyi).
+# Also regenerates Python protobuf stubs with mypy type annotations.
+# ---------------------------------------------------------------------------
+generate: install-deps
+	@echo "Discovering flows and generating Python SDK client code..."
+	@python3 $(REPO_ROOT)/sdk/codegen/generate.py --lang python
+	@echo "Generating Python protobuf stubs with mypy annotations..."
+	@python3 -m grpc_tools.protoc \
+		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
+		--python_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
+		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
+		--plugin=protoc-gen-mypy=$(shell python3 -c "import sysconfig, os; dirs = [sysconfig.get_path('scripts', s) for s in (sysconfig.get_preferred_scheme('user'), 'posix_prefix')]; print(next(os.path.join(d, 'protoc-gen-mypy') for d in dirs if os.path.exists(os.path.join(d, 'protoc-gen-mypy'))))") \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_options.proto
 
 # ---------------------------------------------------------------------------
 # generate-bindings
@@ -195,4 +214,6 @@ dist:
 
 clean:
 	@rm -rf $(GENERATED_OUT)
+	@rm -f $(SDK_ROOT)/src/payments/_generated_flows.py \
+	        $(SDK_ROOT)/src/payments/connector_client.pyi
 	@rm -rf $(SDK_ROOT)/build $(SDK_ROOT)/*.egg-info $(SDK_ROOT)/src/*.egg-info

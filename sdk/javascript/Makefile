@@ -1,4 +1,4 @@
-.PHONY: install-deps build-ffi-lib generate-bindings generate-proto generate-all \
+.PHONY: install-deps build-ffi-lib generate generate-bindings generate-proto generate-all \
         build-ts pack-archive install test-package dist clean
 
 # ---------------------------------------------------------------------------
@@ -74,6 +74,15 @@ build-ffi-lib:
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
 		--profile $(PROFILE) --target $(PLATFORM)
 	@echo "Build complete: $(LIBRARY)"
+
+# ---------------------------------------------------------------------------
+# generate
+# Auto-discovers flows from services.proto + bindings/uniffi.rs and regenerates
+# the JavaScript/TypeScript SDK client code (connector_client.ts, uniffi_client.ts).
+# ---------------------------------------------------------------------------
+generate:
+	@echo "Discovering flows and generating JavaScript SDK client code..."
+	@python3 $(REPO_ROOT)/sdk/codegen/generate.py --lang javascript
 
 # ---------------------------------------------------------------------------
 # generate-bindings
@@ -196,3 +205,6 @@ dist:
 
 clean:
 	@rm -rf $(GENERATED_OUT) node_modules
+	@rm -f $(SDK_ROOT)src/payments/_generated_flows.js \
+	        $(SDK_ROOT)src/payments/_generated_connector_client_flows.ts \
+	        $(SDK_ROOT)src/payments/_generated_uniffi_client_flows.ts
