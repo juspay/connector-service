@@ -588,7 +588,7 @@ fn create_register_request() -> PaymentServiceSetupRecurringRequest {
         email: Some(generate_unique_email().into()),
         name: Some(TEST_CARD_HOLDER.to_string()),
         id: None,
-        connector_customer_id: None,
+        connector_customer_id: Some("TEST_CONNECTOR_CUSTOMER_ID".to_string()),
         phone_number: None,
     });
 
