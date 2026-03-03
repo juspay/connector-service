@@ -67,18 +67,12 @@ Integrating multiple payment processors shouldn't require months of engineering 
 
 ### Payment & Capture Flow Sequence
 
-```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#B3D9F2', 'primaryTextColor': '#333333', 'primaryBorderColor': '#5B9BD5', 'lineColor': '#666666', 'secondaryColor': '#C5E8C0', 'tertiaryColor': '#F9B872'}}}%%
 sequenceDiagram
     autonumber
     participant App as Your App
     participant SDK as Connector Service SDK
     participant PSP as Payment Service Provider (PSP)
-
-    %% Apply Hyperswitch color scheme
-    participantStyle App fill:#C5E8C0,stroke:#4CAF50,stroke-width:2px,color:#333333
-    participantStyle SDK fill:#B3D9F2,stroke:#5B9BD5,stroke-width:2px,color:#333333
-    participantStyle PSP fill:#F9B872,stroke:#F5A623,stroke-width:2px,color:#333333
 
     Note over App,PSP: Payment Authorization
     App->>SDK: paymentservice.authorize(amount, currency, payment_method)
@@ -101,14 +95,13 @@ sequenceDiagram
     deactivate SDK
 
     Note over App,PSP: Event Service (Webhooks)
-    PSP->>SDK: eventservice.webhook(event_payload)
+    PSP->>App: webhook(event_payload)
+    activate App
+    App->>SDK: eventservice.handle(unified_event)
     activate SDK
-    SDK->>SDK: Normalize & validate event
-    SDK->>App: eventservice.callback(unified_event)
-    App-->>SDK: Acknowledgment
+    SDK->>App: Unified event payload
     deactivate SDK
-    SDK-->>PSP: 200 OK
-```
+    deactivate App
 
 ---
 
