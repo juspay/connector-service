@@ -704,7 +704,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         let access_token = req
-            .resource_common_data
+            .request
             .access_token
             .clone()
             .ok_or(ConnectorError::FailedToObtainAuthType)?;

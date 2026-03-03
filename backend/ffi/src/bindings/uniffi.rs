@@ -167,7 +167,6 @@ mod uniffi_bindings_inner {
             authorize_req_handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
                 msg: format!("{e:?}"),
             })?;
-
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
         build_ffi_request_bytes(&connector_request)
@@ -498,7 +497,6 @@ mod uniffi_bindings_inner {
                 msg: format!("{e:?}"),
             }
         })?;
-
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
 
         build_ffi_request_bytes(&connector_request)

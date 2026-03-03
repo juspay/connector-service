@@ -30,7 +30,8 @@ class ConnectorClient(
 
     init {
         // Instance-level connection pool (OkHttpClient)
-        this.httpClient = HttpClient.createClient(getNativeHttpOptions(options.http))
+        // Uses proto-generated HttpOptions directly
+        this.httpClient = HttpClient.createClient(options.http)
     }
 
     /**
@@ -91,7 +92,7 @@ class ConnectorClient(
         )
 
         // 2. Execute HTTP request via standardized HttpClient
-        val response = HttpClient.execute(httpRequest, getNativeHttpOptions(options.http), this.httpClient)
+        val response = HttpClient.execute(connectorRequest, options.http, this.httpClient)
 
         // 3. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
         val ffiResponseBytes = FfiConnectorHttpResponse.newBuilder()
