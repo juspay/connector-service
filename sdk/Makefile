@@ -37,6 +37,30 @@ help: ## Show this help message
 check-cargo: ## Verify cargo is installed
 	@which cargo > /dev/null 2>&1 || (echo "Error: cargo is not installed" && exit 1)
 
+# ---------------------------------------------------------------------------
+# install-deps
+# Installs Python build-time dependencies required for code generation.
+# Checks for tool existence before installing. In Nix environments tools are
+# provided by the shell so installation is skipped (IN_NIX_SHELL is set).
+# Outside Nix, installs grpcio-tools and mypy-protobuf if absent.
+# ---------------------------------------------------------------------------
+install-deps: ## Install Python dependencies (skipped in Nix shell)
+	@command -v python3 >/dev/null 2>&1 || \
+		(echo "Error: python3 not found. Install via nix or your system package manager." && exit 1)
+	@command -v cargo >/dev/null 2>&1 || \
+		(echo "Error: cargo not found. Install Rust via rustup." && exit 1)
+	@if [ -z "$${IN_NIX_SHELL:-}" ]; then \
+		python3 -c "import grpc_tools" 2>/dev/null || \
+			(echo "  → Installing grpcio-tools..." && \
+			 pip3 install grpcio-tools --quiet 2>/dev/null || \
+			 pip3 install grpcio-tools --user --quiet); \
+		python3 -c "import mypy_protobuf" 2>/dev/null || \
+			(echo "  → Installing mypy-protobuf..." && \
+			 pip3 install mypy-protobuf --quiet 2>/dev/null || \
+			 pip3 install mypy-protobuf --user --quiet); \
+	fi
+	@echo "All required tools present."
+
 build: check-cargo ## Build UniFFI library for current platform
 	@echo "Building UniFFI library for current platform..."
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi --release
@@ -87,6 +111,7 @@ build-all: ## Build for all supported platforms
 	)
 	@echo "All builds complete!"
 
+<<<<<<< HEAD
 generate-python: ## Regenerate Python SDK client (flows + protobuf stubs)
 	@$(MAKE) -C $(MAKEFILE_DIR)python generate
 
@@ -97,6 +122,30 @@ generate-kotlin: ## Regenerate Kotlin SDK client (flows)
 	@$(MAKE) -C $(MAKEFILE_DIR)java generate
 
 generate: generate-python generate-javascript generate-kotlin ## Regenerate all SDK clients (delegates to each language)
+=======
+generate: install-deps ## Auto-discover flows from services.proto + uniffi.rs and regenerate all SDK clients
+	@echo "Generating proto descriptor..."
+	@protoc \
+		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
+		--descriptor_set_out=$(REPO_ROOT)/sdk/codegen/services.desc \
+		--include_source_info \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/services.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_options.proto
+	@echo "Descriptor written to sdk/codegen/services.desc"
+	@echo
+	@echo "Discovering flows from services.proto and bindings/uniffi.rs..."
+	@python3 codegen/generate.py
+	@echo "Generating Python protobuf stubs (_pb2.pyi)..."
+	@python3 -m grpc_tools.protoc \
+		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
+		--python_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
+		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_options.proto
+>>>>>>> 847f8d05e (ci: improve generate code and add deps to flake/Makefile)
 
 clean: ## Clean all build artifacts
 	@echo "Cleaning build artifacts..."
