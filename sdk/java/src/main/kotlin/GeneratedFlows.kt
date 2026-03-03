@@ -5,8 +5,8 @@ import uniffi.connector_service_ffi.authorizeReqTransformer
 import uniffi.connector_service_ffi.authorizeResTransformer
 import uniffi.connector_service_ffi.captureReqTransformer
 import uniffi.connector_service_ffi.captureResTransformer
-import uniffi.connector_service_ffi.create_access_tokenReqTransformer
-import uniffi.connector_service_ffi.create_access_tokenResTransformer
+import uniffi.connector_service_ffi.createAccessTokenReqTransformer
+import uniffi.connector_service_ffi.createAccessTokenResTransformer
 import uniffi.connector_service_ffi.getReqTransformer
 import uniffi.connector_service_ffi.getResTransformer
 import uniffi.connector_service_ffi.refundReqTransformer
@@ -29,19 +29,19 @@ import ucs.v2.Payment.PaymentServiceVoidResponse
 import ucs.v2.SdkOptions.FfiOptions
 
 object FlowRegistry {
-    val reqTransformers: Map<String, (ByteArray, Map<String, String>, ByteArray) -> String> = mapOf(
+    val reqTransformers: Map<String, (ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(
         "authorize" to ::authorizeReqTransformer,
         "capture" to ::captureReqTransformer,
-        "create_access_token" to ::create_access_tokenReqTransformer,
+        "create_access_token" to ::createAccessTokenReqTransformer,
         "get" to ::getReqTransformer,
         "refund" to ::refundReqTransformer,
         "void" to ::voidReqTransformer,
     )
 
-    val resTransformers: Map<String, (ByteArray, UShort, Map<String, String>, ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(
+    val resTransformers: Map<String, (ByteArray, ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(
         "authorize" to ::authorizeResTransformer,
         "capture" to ::captureResTransformer,
-        "create_access_token" to ::create_access_tokenResTransformer,
+        "create_access_token" to ::createAccessTokenResTransformer,
         "get" to ::getResTransformer,
         "refund" to ::refundResTransformer,
         "void" to ::voidResTransformer,

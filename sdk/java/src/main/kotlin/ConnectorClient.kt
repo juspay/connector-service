@@ -1,9 +1,9 @@
 /**
- * ConnectorClient — high-level wrapper around UniFFI FFI bindings.
+ * ConnectorClient — high-level wrapper around UniFFI bindings.
  *
  * Handles the full round-trip for any payment flow:
  *   1. Build connector HTTP request via {flow}_req_transformer (FFI)
- *   2. Execute the HTTP request via OkHttp
+ *   2. Execute the HTTP request via our standardized HttpClient
  *   3. Parse the connector response via {flow}_res_transformer (FFI)
  *
  * Flow methods (authorize, capture, void, refund, …) are defined as Kotlin
@@ -11,18 +11,49 @@
  * To add a new flow: edit sdk/flows.yaml and run `make codegen`.
  */
 
+package payments
+
+import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
-import okhttp3.Headers.Companion.toHeaders
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
+import ucs.v2.SdkOptions.FfiConnectorHttpRequest
+import ucs.v2.SdkOptions.FfiConnectorHttpResponse
+import ucs.v2.SdkOptions.FfiOptions
+import ucs.v2.SdkOptions.Options
 
-class ConnectorClient {
+class ConnectorClient(
+    libPath: String? = null,
+    private val options: Options = Options.getDefaultInstance()
+) {
+    private val uniffi = UniffiClient(libPath)
+    private val httpClient: okhttp3.OkHttpClient
 
-    private val httpClient = OkHttpClient()
+    init {
+        // Instance-level connection pool (OkHttpClient)
+        this.httpClient = HttpClient.createClient(getNativeHttpOptions(options.http))
+    }
+
+    /**
+     * Internal helper to map Protobuf HttpOptions to Native HttpClient options.
+     */
+    private fun getNativeHttpOptions(proto: ucs.v2.SdkOptions.HttpOptions?): HttpOptions {
+        if (proto == null) return HttpOptions()
+
+        return HttpOptions(
+            totalTimeoutMs = if (proto.hasTotalTimeoutMs()) proto.totalTimeoutMs.toLong() else null,
+            connectTimeoutMs = if (proto.hasConnectTimeoutMs()) proto.connect_timeout_ms.toLong() else null,
+            responseTimeoutMs = if (proto.hasResponseTimeoutMs()) proto.response_timeout_ms.toLong() else null,
+            keepAliveTimeoutMs = if (proto.hasKeepAliveTimeoutMs()) proto.keep_alive_timeout_ms.toLong() else null,
+            proxy = if (proto.hasProxy()) {
+                ProxyConfig(
+                    httpUrl = if (proto.proxy.hasHttpUrl()) proto.proxy.httpUrl else null,
+                    httpsUrl = if (proto.proxy.hasHttpsUrl()) proto.proxy.httpsUrl else null,
+                    bypassUrls = proto.proxy.bypassUrlsList ?: emptyList()
+                )
+            } else null,
+            caCert = if (proto.hasCaCert()) proto.caCert.toByteArray() else null
+        )
+    }
 
     /**
      * Execute a full round-trip for any payment flow.
@@ -31,7 +62,7 @@ class ConnectorClient {
      * @param requestBytes Serialized protobuf request bytes.
      * @param responseParser Protobuf parser for the expected response type.
      * @param metadata Map with connector routing and auth info.
-     * @param optionsBytes Optional FfiOptions serialized to bytes. Pass empty byte array or null for default.
+     * @param optionsBytes Optional FfiOptions serialized to bytes. Pass null for default.
      * @return Parsed protobuf response.
      */
     fun <T : MessageLite> executeFlow(
@@ -46,42 +77,33 @@ class ConnectorClient {
         val resTransformer = FlowRegistry.resTransformers[flow]
             ?: error("Unknown flow: '$flow'. Add it to sdk/flows.yaml and run `make codegen`.")
 
-        // Use provided bytes or default to empty byte array
         val opts = optionsBytes ?: ByteArray(0)
 
-        val connectorRequestJson = reqTransformer(requestBytes, metadata, opts)
-        val connectorRequest = JSONObject(connectorRequestJson)
+        // 1. Build connector HTTP request via FFI (returns FfiConnectorHttpRequest protobuf bytes)
+        val connectorRequestBytes = reqTransformer(requestBytes, metadata, opts)
+        val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
 
-        val url = connectorRequest.getString("url")
-        val method = connectorRequest.getString("method")
+        val httpRequest = HttpRequest(
+            url = connectorRequest.url,
+            method = connectorRequest.method,
+            headers = connectorRequest.headersMap,
+            body = if (connectorRequest.hasBody()) connectorRequest.body.toByteArray() else null
+        )
 
-        val headersObj = connectorRequest.optJSONObject("headers") ?: JSONObject()
-        val headersMap = mutableMapOf<String, String>()
-        for (key in headersObj.keys()) {
-            headersMap[key] = headersObj.getString(key)
-        }
+        // 2. Execute HTTP request via standardized HttpClient
+        val response = HttpClient.execute(httpRequest, getNativeHttpOptions(options.http), this.httpClient)
 
-        val body = connectorRequest.opt("body")?.toString()
-        val requestBody = body?.toRequestBody(headersMap["Content-Type"]?.toMediaTypeOrNull())
-
-        val httpRequest = Request.Builder()
-            .url(url)
-            .method(method, requestBody)
-            .headers(headersMap.toHeaders())
+        // 3. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
+        val ffiResponseBytes = FfiConnectorHttpResponse.newBuilder()
+            .setStatusCode(response.statusCode)
+            .putAllHeaders(response.headers)
+            .setBody(ByteString.copyFrom(response.body))
             .build()
+            .toByteArray()
 
-        val response = httpClient.newCall(httpRequest).execute()
-
-        val responseBody = response.body?.string() ?: ""
-        val responseHeaders = mutableMapOf<String, String>()
-        for (name in response.headers.names()) {
-            responseHeaders[name] = response.header(name) ?: ""
-        }
-
+        // 4. Parse connector response via FFI
         val resultBytes = resTransformer(
-            responseBody.toByteArray(Charsets.UTF_8),
-            response.code.toUShort(),
-            responseHeaders,
+            ffiResponseBytes,
             requestBytes,
             metadata,
             opts,
