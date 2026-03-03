@@ -101,4 +101,5 @@ generate: generate-python generate-javascript generate-kotlin ## Regenerate all 
 clean: ## Clean all build artifacts
 	@echo "Cleaning build artifacts..."
 	@cd $(FFI_CRATE) && cargo clean
+	@rm -f $(REPO_ROOT)/sdk/codegen/services.desc
 	@echo "Clean complete."
