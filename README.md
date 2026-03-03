@@ -64,29 +64,21 @@ Integrating multiple payment processors shouldn't require months of engineering 
                                  │
                                  ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                 Connector Service SDK                           │
-│              Type-safe, idiomatic APIs                          │
+│                      Connector Service SDK                      │
+│                 (Type-safe, idiomatic interface)                │
 └─────────────────────────────────┬───────────────────────────────┘
                                  │
                                  ▼
-         ┌───────────────────────┼───────────────────────┐
-         ▼                       ▼                       ▼
-   ┌──────────┐           ┌──────────┐           ┌──────────┐
-   │  Stripe  │           │  Adyen   │           │ Braintree│
-   └──────────┘           └──────────┘           └──────────┘
-         └───────────────────────┴───────────────────────┘
-                                 │
-                                 ▼
-                        ┌──────────────┐
-                        │  50+ more    │
-                        └──────────────┘
+         ┌───────────────────────┼───────────────────────┬───────────────────────┐
+         ▼                       ▼                       ▼                       ▼
+   ┌──────────┐           ┌──────────┐           ┌──────────┐           ┌──────────┐
+   │  Stripe  │           │  Adyen   │           │ Braintree│           │ 50+ more │
+   └──────────┘           └──────────┘           └──────────┘           └──────────┘
 ```
 
 
 ### Payment & Capture Flow Sequence
 
-
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#B3D9F2', 'primaryTextColor': '#333333', 'primaryBorderColor': '#5B9BD5', 'lineColor': '#666666', 'secondaryColor': '#C5E8C0', 'tertiaryColor': '#F9B872'}}}%%
 sequenceDiagram
    autonumber
    participant App as Your App
