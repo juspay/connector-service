@@ -3,14 +3,22 @@
  *
  * Uses koffi to call the UniFFI C ABI directly, replacing NAPI entirely.
  * Handles RustBuffer serialization/deserialization for the UniFFI protocol.
+ *
+ * Flow dispatch is generic: callReq(flow, ...) and callRes(flow, ...) load
+ * the corresponding C symbol dynamically from the flow list in _generated_flows.js.
+ * No flow names are hardcoded here — add new flows to flows.yaml and run `make generate`.
  */
 
 import koffi from "koffi";
 import path from "path";
+// @ts-ignore - generated CommonJS module
+import { FLOWS } from "./_generated_flows.js";
 
 // Standard Node.js __dirname
 declare const __dirname: string;
 const _dirname = __dirname;
+
+const FLOW_NAMES: string[] = Object.keys(FLOWS as Record<string, unknown>);
 
 // ── RustBuffer struct layout ────────────────────────────────────────────────
 // UniFFI uses RustBuffer { capacity: u64, len: u64, data: *u8 } for all
@@ -41,12 +49,9 @@ const RustCallStatusStruct = koffi.struct("RustCallStatus", {
 // ── Shared Library Interface ─────────────────────────────────────────────────
 
 interface FfiFunctions {
-  authorize_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
-  authorize_res: (res: RustBuffer, req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
-  create_access_token_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
-  create_access_token_res: (res: RustBuffer, req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
   alloc: (len: bigint, status: any) => RustBuffer;
   free: (buf: RustBuffer, status: any) => void;
+  [key: string]: (...args: any[]) => any;
 }
 
 function loadLib(libPath?: string): FfiFunctions {
@@ -57,27 +62,7 @@ function loadLib(libPath?: string): FfiFunctions {
 
   const lib = koffi.load(libPath);
 
-  return {
-    authorize_req: lib.func(
-      "uniffi_connector_service_ffi_fn_func_authorize_req_transformer",
-      RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
-    ),
-    authorize_res: lib.func(
-      "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
-      RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
-    ),
-    create_access_token_req: lib.func(
-      "uniffi_connector_service_ffi_fn_func_create_access_token_req_transformer",
-      RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
-    ),
-    create_access_token_res: lib.func(
-      "uniffi_connector_service_ffi_fn_func_create_access_token_res_transformer",
-      RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
-    ),
+  const fns: Record<string, any> = {
     alloc: lib.func(
       "ffi_connector_service_ffi_rustbuffer_alloc",
       RustBufferStruct,
@@ -89,6 +74,22 @@ function loadLib(libPath?: string): FfiFunctions {
       [RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
   };
+
+  // Load req and res transformer symbols for every registered flow.
+  for (const flow of FLOW_NAMES) {
+    fns[`${flow}_req`] = lib.func(
+      `uniffi_connector_service_ffi_fn_func_${flow}_req_transformer`,
+      RustBufferStruct,
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+    );
+    fns[`${flow}_res`] = lib.func(
+      `uniffi_connector_service_ffi_fn_func_${flow}_res_transformer`,
+      RustBufferStruct,
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+    );
+  }
+
+  return fns as FfiFunctions;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -105,13 +106,13 @@ function checkCallStatus(ffi: FfiFunctions, status: RustCallStatus): void {
     freeRustBuffer(ffi, status.error_buf);
     throw new Error(errMsg);
   }
-  
+
   if (status.error_buf.len > 0n) {
     const msg = liftString(status.error_buf);
     freeRustBuffer(ffi, status.error_buf);
     throw new Error(`Rust panic: ${msg}`);
   }
-  
+
   throw new Error("Unknown Rust panic");
 }
 
@@ -152,7 +153,7 @@ function liftString(buf: RustBuffer): string {
 function liftBytes(buf: RustBuffer): Buffer {
   if (!buf.data || buf.len === 0n) return Buffer.alloc(0);
   const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
-  
+
   // UniFFI protocol for return values: first 4 bytes are the length of the actual payload
   const len = raw.readInt32BE(0);
   return raw.subarray(4, 4 + len);
@@ -220,99 +221,181 @@ export class UniffiClient {
     this._ffi = loadLib(libPath);
   }
 
+  /**
+   * Build the connector HTTP request for any flow.
+   * Returns protobuf-encoded FfiConnectorHttpRequest bytes.
+   */
+  callReq(
+    flow: string,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    const fn = this._ffi[`${flow}_req`];
+    if (!fn) throw new Error(`Unknown flow: '${flow}'. Supported: ${FLOW_NAMES.join(", ")}`);
+
+    const rbReq = lowerBytes(this._ffi, requestBytes);
+    const rbMeta = lowerMap(this._ffi, metadata);
+    const rbOpts = lowerBytes(this._ffi, optionsBytes);
+    const status = makeCallStatus();
+
+    const result = fn(rbReq, rbMeta, rbOpts, status);
+
+    try {
+      checkCallStatus(this._ffi, status);
+      return liftBytes(result);
+    } finally {
+      freeRustBuffer(this._ffi, result);
+    }
+  }
+
+  /**
+   * Parse the connector HTTP response for any flow.
+   * responseBytes: protobuf-encoded FfiConnectorHttpResponse.
+   * Returns protobuf-encoded response bytes for the flow's response type.
+   */
+  callRes(
+    flow: string,
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    const fn = this._ffi[`${flow}_res`];
+    if (!fn) throw new Error(`Unknown flow: '${flow}'. Supported: ${FLOW_NAMES.join(", ")}`);
+
+    const rbRes = lowerBytes(this._ffi, responseBytes);
+    const rbReq = lowerBytes(this._ffi, requestBytes);
+    const rbMeta = lowerMap(this._ffi, metadata);
+    const rbOpts = lowerBytes(this._ffi, optionsBytes);
+    const status = makeCallStatus();
+
+    const result = fn(rbRes, rbReq, rbMeta, rbOpts, status);
+
+    try {
+      checkCallStatus(this._ffi, status);
+      return liftBytes(result);
+    } finally {
+      freeRustBuffer(this._ffi, result);
+    }
+  }
+
+  // <GENERATED_FLOWS_START> - This section is auto-generated by sdk/codegen/generate.py
+  // Do not edit manually. Run `make generate` to update.
+
+  /** Build connector HTTP request for authorize flow. */
   authorizeReq(
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    const rbReq = lowerBytes(this._ffi, requestBytes);
-    const rbMeta = lowerMap(this._ffi, metadata);
-    const rbOpts = lowerBytes(this._ffi, optionsBytes);
-    const status = makeCallStatus();
-
-    const result = this._ffi.authorize_req(rbReq, rbMeta, rbOpts, status);
-
-    try {
-      checkCallStatus(this._ffi, status);
-      return liftBytes(result);
-    } finally {
-      freeRustBuffer(this._ffi, result);
-    }
+    return this.callReq('authorize', requestBytes, metadata, optionsBytes);
   }
 
+  /** Parse connector HTTP response for authorize flow. */
   authorizeRes(
-    resBytes: Buffer | Uint8Array,
+    responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    const rbRes = lowerBytes(this._ffi, resBytes);
-    const rbReq = lowerBytes(this._ffi, requestBytes);
-    const rbMeta = lowerMap(this._ffi, metadata);
-    const rbOpts = lowerBytes(this._ffi, optionsBytes);
-    const status = makeCallStatus();
-
-    const result = this._ffi.authorize_res(
-      rbRes,
-      rbReq,
-      rbMeta,
-      rbOpts,
-      status
-    );
-
-    try {
-      checkCallStatus(this._ffi, status);
-      return liftBytes(result);
-    } finally {
-      freeRustBuffer(this._ffi, result);
-    }
+    return this.callRes('authorize', responseBytes, requestBytes, metadata, optionsBytes);
   }
 
+  /** Build connector HTTP request for capture flow. */
+  captureReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('capture', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for capture flow. */
+  captureRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('capture', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for create_access_token flow. */
   createAccessTokenReq(
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    const rbReq = lowerBytes(this._ffi, requestBytes);
-    const rbMeta = lowerMap(this._ffi, metadata);
-    const rbOpts = lowerBytes(this._ffi, optionsBytes);
-    const status = makeCallStatus();
-
-    const result = this._ffi.create_access_token_req(rbReq, rbMeta, rbOpts, status);
-
-    try {
-      checkCallStatus(this._ffi, status);
-      return liftBytes(result);
-    } finally {
-      freeRustBuffer(this._ffi, result);
-    }
+    return this.callReq('create_access_token', requestBytes, metadata, optionsBytes);
   }
 
+  /** Parse connector HTTP response for create_access_token flow. */
   createAccessTokenRes(
-    resBytes: Buffer | Uint8Array,
+    responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    const rbRes = lowerBytes(this._ffi, resBytes);
-    const rbReq = lowerBytes(this._ffi, requestBytes);
-    const rbMeta = lowerMap(this._ffi, metadata);
-    const rbOpts = lowerBytes(this._ffi, optionsBytes);
-    const status = makeCallStatus();
-
-    const result = this._ffi.create_access_token_res(
-      rbRes,
-      rbReq,
-      rbMeta,
-      rbOpts,
-      status
-    );
-
-    try {
-      checkCallStatus(this._ffi, status);
-      return liftBytes(result);
-    } finally {
-      freeRustBuffer(this._ffi, result);
-    }
+    return this.callRes('create_access_token', responseBytes, requestBytes, metadata, optionsBytes);
   }
+
+  /** Build connector HTTP request for get flow. */
+  getReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('get', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for get flow. */
+  getRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('get', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for refund flow. */
+  refundReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('refund', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for refund flow. */
+  refundRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('refund', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for void flow. */
+  voidReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('void', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for void flow. */
+  voidRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('void', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  // <GENERATED_FLOWS_END>
 }
