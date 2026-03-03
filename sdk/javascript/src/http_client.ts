@@ -25,21 +25,13 @@ export interface HttpResponse {
 }
 
 /**
- * Native configuration options for the network transport layer.
- * Decoupled from Protobuf for reuse and portability.
+ * HTTP client configuration options.
+ * Uses proto-generated IHttpOptions as the base, with extended caCert type
+ * for better developer experience (accepts string, Buffer, or Uint8Array).
  */
-export interface HttpOptions {
-  totalTimeoutMs?: number;
-  connectTimeoutMs?: number;
-  responseTimeoutMs?: number;
-  keepAliveTimeoutMs?: number;
-  proxy?: {
-    httpUrl?: string;
-    httpsUrl?: string;
-    bypassUrls?: string[];
-  };
+export type HttpOptions = Omit<ucs.v2.IHttpOptions, 'caCert'> & {
   caCert?: string | Buffer | Uint8Array;
-}
+};
 
 /**
  * Specialized error class for HTTP failures in the Connector Service.
@@ -72,10 +64,22 @@ export function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): stri
  * (The instance-level connection pool)
  */
 export function createDispatcher(config: HttpOptions): Dispatcher {
+  // Convert caCert to Uint8Array if provided as string or Buffer
+  let caCert: Uint8Array | undefined;
+  if (config.caCert !== undefined) {
+    if (typeof config.caCert === 'string') {
+      caCert = new TextEncoder().encode(config.caCert);
+    } else if (Buffer.isBuffer(config.caCert)) {
+      caCert = new Uint8Array(config.caCert);
+    } else {
+      caCert = config.caCert;
+    }
+  }
+
   const dispatcherOptions: any = {
     connect: {
       timeout: config.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS,
-      ca: config.caCert,
+      ca: caCert,
     },
     headersTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
     bodyTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
@@ -84,7 +88,7 @@ export function createDispatcher(config: HttpOptions): Dispatcher {
 
   try {
     const proxyUrl = config.proxy?.httpsUrl || config.proxy?.httpUrl;
-    return proxyUrl 
+    return proxyUrl
       ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
       : new Agent(dispatcherOptions);
   } catch (error: any) {
@@ -146,15 +150,15 @@ export async function execute(
     if (cause) {
       if (cause.code === 'UND_ERR_CONNECT_TIMEOUT') {
         throw new ConnectorError(
-          `Connection Timeout: Failed to connect to ${url}`, 
-          504, 
+          `Connection Timeout: Failed to connect to ${url}`,
+          504,
           'CONNECT_TIMEOUT'
         );
       }
       if (cause.code === 'UND_ERR_BODY_TIMEOUT' || cause.code === 'UND_ERR_HEADERS_TIMEOUT') {
         throw new ConnectorError(
-          `Response Timeout: Gateway ${url} accepted connection but failed to respond`, 
-          504, 
+          `Response Timeout: Gateway ${url} accepted connection but failed to respond`,
+          504,
           'RESPONSE_TIMEOUT'
         );
       }

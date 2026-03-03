@@ -43,6 +43,8 @@ const RustCallStatusStruct = koffi.struct("RustCallStatus", {
 interface FfiFunctions {
   authorize_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
   authorize_res: (res: RustBuffer, req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
+  create_access_token_req: (req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
+  create_access_token_res: (res: RustBuffer, req: RustBuffer, meta: RustBuffer, opts: RustBuffer, status: any) => RustBuffer;
   alloc: (len: bigint, status: any) => RustBuffer;
   free: (buf: RustBuffer, status: any) => void;
 }
@@ -63,6 +65,16 @@ function loadLib(libPath?: string): FfiFunctions {
     ),
     authorize_res: lib.func(
       "uniffi_connector_service_ffi_fn_func_authorize_res_transformer",
+      RustBufferStruct,
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+    ),
+    create_access_token_req: lib.func(
+      "uniffi_connector_service_ffi_fn_func_create_access_token_req_transformer",
+      RustBufferStruct,
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+    ),
+    create_access_token_res: lib.func(
+      "uniffi_connector_service_ffi_fn_func_create_access_token_res_transformer",
       RustBufferStruct,
       [RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     ),
@@ -241,6 +253,54 @@ export class UniffiClient {
     const status = makeCallStatus();
 
     const result = this._ffi.authorize_res(
+      rbRes,
+      rbReq,
+      rbMeta,
+      rbOpts,
+      status
+    );
+
+    try {
+      checkCallStatus(this._ffi, status);
+      return liftBytes(result);
+    } finally {
+      freeRustBuffer(this._ffi, result);
+    }
+  }
+
+  createAccessTokenReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    const rbReq = lowerBytes(this._ffi, requestBytes);
+    const rbMeta = lowerMap(this._ffi, metadata);
+    const rbOpts = lowerBytes(this._ffi, optionsBytes);
+    const status = makeCallStatus();
+
+    const result = this._ffi.create_access_token_req(rbReq, rbMeta, rbOpts, status);
+
+    try {
+      checkCallStatus(this._ffi, status);
+      return liftBytes(result);
+    } finally {
+      freeRustBuffer(this._ffi, result);
+    }
+  }
+
+  createAccessTokenRes(
+    resBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    const rbRes = lowerBytes(this._ffi, resBytes);
+    const rbReq = lowerBytes(this._ffi, requestBytes);
+    const rbMeta = lowerMap(this._ffi, metadata);
+    const rbOpts = lowerBytes(this._ffi, optionsBytes);
+    const status = makeCallStatus();
+
+    const result = this._ffi.create_access_token_res(
       rbRes,
       rbReq,
       rbMeta,

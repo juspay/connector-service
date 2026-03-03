@@ -26,31 +26,9 @@ class ConnectorClient(
 
     init {
         // Instance-level connection pool (OkHttpClient)
-        this.httpClient = HttpClient.createClient(getNativeHttpOptions(options.http))
+        // Uses proto-generated HttpOptions directly
+        this.httpClient = HttpClient.createClient(options.http)
     }
-
-    /**
-     * Internal helper to map Protobuf HttpOptions to Native HttpClient options.
-     */
-    private fun getNativeHttpOptions(proto: ucs.v2.SdkOptions.HttpOptions?): HttpOptions {
-        if (proto == null) return HttpOptions()
-
-        return HttpOptions(
-            totalTimeoutMs = if (proto.hasTotalTimeoutMs()) proto.totalTimeoutMs.toLong() else null,
-            connectTimeoutMs = if (proto.hasConnectTimeoutMs()) proto.connect_timeout_ms.toLong() else null,
-            responseTimeoutMs = if (proto.hasResponseTimeoutMs()) proto.response_timeout_ms.toLong() else null,
-            keepAliveTimeoutMs = if (proto.hasKeepAliveTimeoutMs()) proto.keep_alive_timeout_ms.toLong() else null,
-            proxy = if (proto.hasProxy()) {
-                ProxyConfig(
-                    httpUrl = if (proto.proxy.hasHttpUrl()) proto.proxy.httpUrl else null,
-                    httpsUrl = if (proto.proxy.hasHttpsUrl()) proto.proxy.httpsUrl else null,
-                    bypassUrls = proto.proxy.bypassUrlsList ?: emptyList()
-                )
-            } else null,
-            caCert = if (proto.hasCaCert()) proto.caCert.toByteArray() else null
-        )
-    }
-
 
     /**
      * Execute a full authorize round-trip.
@@ -86,8 +64,8 @@ class ConnectorClient(
             body = if (connectorReq.hasBody()) connectorReq.body.toByteArray() else null
         )
 
-        // 4. Execute network call (uses native options mapped from proto and owned client)
-        val response = HttpClient.execute(connectorRequest, getNativeHttpOptions(options.http), this.httpClient)
+        // 4. Execute network call (uses proto HttpOptions directly and owned client)
+        val response = HttpClient.execute(connectorRequest, options.http, this.httpClient)
 
         // 5. Transform connector response via FFI
         val resProto = ucs.v2.SdkOptions.FfiConnectorHttpResponse.newBuilder()

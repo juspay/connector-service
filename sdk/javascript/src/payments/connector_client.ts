@@ -29,7 +29,7 @@ export class ConnectorClient {
   constructor(libPath?: string, options: ucs.v2.IOptions = {}) {
     this.uniffi = new UniffiClient(libPath);
     this.options = options;
-    
+
     // Instance-level cache: create the primary connection pool at startup
     this.dispatcher = createDispatcher(this.getNativeHttpOptions(options.http));
   }
@@ -66,8 +66,8 @@ export class ConnectorClient {
    * @returns decoded PaymentServiceAuthorizeResponse message
    */
   async authorize(
-    requestMsg: ucs.v2.IPaymentServiceAuthorizeRequest, 
-    metadata: Record<string, string>, 
+    requestMsg: ucs.v2.IPaymentServiceAuthorizeRequest,
+    metadata: Record<string, string>,
     ffiOptions?: ucs.v2.IFfiOptions | null
   ): Promise<ucs.v2.PaymentServiceAuthorizeResponse> {
     // 1. Serialize request
@@ -90,8 +90,8 @@ export class ConnectorClient {
 
     // 4. Execute HTTP using the instance-owned connection pool
     const response = await execute(
-      connectorRequest, 
-      this.getNativeHttpOptions(this.options.http), 
+      connectorRequest,
+      this.getNativeHttpOptions(this.options.http),
       this.dispatcher
     );
 
@@ -107,5 +107,60 @@ export class ConnectorClient {
 
     // 6. Decode and return
     return v2.PaymentServiceAuthorizeResponse.decode(resultBytesRes);
+  }
+
+  /**
+   * Execute a full create access token round-trip.
+   * 
+   * @param requestMsg - MerchantAuthenticationServiceCreateAccessTokenRequest protobuf message
+   * @param metadata - Dict with connector routing and auth info. Must include:
+   *                 - "connector": connector name (e.g. "Paypal")
+   *                 - "connector_auth_type": JSON string of auth config
+   *                 - x-* headers for masked metadata
+   * @param ffiOptions - optional IFfiOptions message override
+   * @returns decoded MerchantAuthenticationServiceCreateAccessTokenResponse message
+   */
+  async createAccessToken(
+    requestMsg: ucs.v2.IMerchantAuthenticationServiceCreateAccessTokenRequest,
+    metadata: Record<string, string>,
+    ffiOptions?: ucs.v2.IFfiOptions | null
+  ): Promise<ucs.v2.MerchantAuthenticationServiceCreateAccessTokenResponse> {
+    // 1. Serialize request
+    const requestBytes = Buffer.from(v2.MerchantAuthenticationServiceCreateAccessTokenRequest.encode(requestMsg).finish());
+
+    // 2. Resolve FFI options (prefer call-specific)
+    const ffi = ffiOptions || this.options.ffi;
+    const optionsBytes = ffi ? Buffer.from(v2.FfiOptions.encode(ffi).finish()) : Buffer.alloc(0);
+
+    // 3. Transform to connector request via FFI (returns Protobuf bytes)
+    const resultBytes = this.uniffi.createAccessTokenReq(requestBytes, metadata, optionsBytes);
+    const connectorReq = v2.FfiConnectorHttpRequest.decode(resultBytes);
+    console.log(requestMsg)
+    const connectorRequest: HttpRequest = {
+      url: connectorReq.url,
+      method: connectorReq.method,
+      headers: connectorReq.headers || {},
+      body: connectorReq.body ?? undefined
+    };
+
+    // 4. Execute HTTP using the instance-owned connection pool
+    const response = await execute(
+      connectorRequest,
+      this.getNativeHttpOptions(this.options.http),
+      this.dispatcher
+    );
+
+    // 5. Transform connector response via FFI
+    const resProto = v2.FfiConnectorHttpResponse.create({
+      statusCode: response.statusCode,
+      headers: response.headers,
+      body: response.body
+    });
+    const resBytes = Buffer.from(v2.FfiConnectorHttpResponse.encode(resProto).finish());
+
+    const resultBytesRes = this.uniffi.createAccessTokenRes(resBytes, requestBytes, metadata, optionsBytes);
+
+    // 6. Decode and return
+    return v2.MerchantAuthenticationServiceCreateAccessTokenResponse.decode(resultBytesRes);
   }
 }
