@@ -534,7 +534,22 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
         credential: grpc_api_types::payments::samsung_wallet::PaymentCredential,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Validate card_last_four_digits
-        if credential.card_last_four_digits.trim().is_empty() {
+        let last4 = credential
+            .card_last_four_digits
+            .as_ref()
+            .map(|s| s.clone().expose())
+            .ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CARD_LAST4".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Samsung Pay card last four digits cannot be empty".to_owned(),
+                    error_object: None,
+                })
+            })?;
+
+        let last4 = last4.trim();
+
+        if last4.is_empty() {
             return Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CARD_LAST4".to_owned(),
                 error_identifier: 400,
@@ -544,7 +559,7 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
             .into());
         }
 
-        if credential.card_last_four_digits.len() != 4 {
+        if last4.len() != 4 {
             return Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CARD_LAST4_LENGTH".to_owned(),
                 error_identifier: 400,
@@ -555,18 +570,21 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
         }
 
         // Validate DPAN last four digits
-        if let Some(ref dpan) = credential.dpan_last_four_digits {
-            if dpan.len() != 4 {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_DPAN_LAST4_LENGTH".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Samsung Pay DPAN last four digits must be 4 characters"
-                        .to_owned(),
-                    error_object: None,
-                })
-                .into());
-            }
+        if let Some(dpan) = credential.dpan_last_four_digits.as_ref() {
+        let dpan = dpan.clone().expose();
+        let dpan = dpan.trim();
+
+        if dpan.len() != 4 {
+            return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_DPAN_LAST4_LENGTH".to_owned(),
+                error_identifier: 400,
+                error_message: "Samsung Pay DPAN last four digits must be 4 characters"
+                    .to_owned(),
+                error_object: None,
+            })
+            .into());
         }
+    }
 
         // Validate token_data
         let token_data = credential.token_data.as_ref().ok_or_else(|| {
@@ -612,8 +630,8 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
             method: credential.method,
             recurring_payment: credential.recurring_payment,
             card_brand,
-            dpan_last_four_digits: credential.dpan_last_four_digits,
-            card_last_four_digits: credential.card_last_four_digits,
+            dpan_last_four_digits: credential.dpan_last_four_digits.as_ref().map(|s| s.clone().expose()),
+            card_last_four_digits: last4.to_string(),
             token_data: payment_method_data::SamsungPayTokenData {
                 three_ds_type: token_data.r#type.clone(),
                 version: token_data.version.clone(),
@@ -623,34 +641,30 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::payment_credential::CardBrand>
+impl ForeignTryFrom<grpc_api_types::payments::CardNetwork>
     for SamsungPayCardBrand
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: grpc_api_types::payments::samsung_wallet::payment_credential::CardBrand,
+        value: grpc_api_types::payments::CardNetwork,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            grpc_api_types::payments::samsung_wallet::payment_credential::CardBrand::Visa => {
+            grpc_api_types::payments::CardNetwork::Visa => {
                 Ok(SamsungPayCardBrand::Visa)
             }
-            grpc_api_types::payments::samsung_wallet::payment_credential::CardBrand::Mastercard => {
+            grpc_api_types::payments::CardNetwork::Mastercard => {
                 Ok(SamsungPayCardBrand::MasterCard)
             }
-            grpc_api_types::payments::samsung_wallet::payment_credential::CardBrand::Amex => {
+            grpc_api_types::payments::CardNetwork::Amex => {
                 Ok(SamsungPayCardBrand::Amex)
             }
-            grpc_api_types::payments::samsung_wallet::payment_credential::CardBrand::Discover => {
+            grpc_api_types::payments::CardNetwork::Discover => {
                 Ok(SamsungPayCardBrand::Discover)
             }
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CARD_BRAND".to_owned(),
-                error_identifier: 400,
-                error_message: "Unsupported Samsung Pay card brand".to_owned(),
-                error_object: None,
-            })
-            .into()),
+            _ => {
+                Ok(SamsungPayCardBrand::Unknown)
+            },
         }
     }
 }
