@@ -236,8 +236,9 @@ def gen_connector_client_ts_flows(flows: list[dict]) -> None:
 
     for f in flows:
         n, req, res = f["name"], f["request"], f["response"]
+        camel = to_camel(n)
         flow_lines.append(f"  /** {f['service']}.{f['rpc']} — {f['description']} */")
-        flow_lines.append(f"  async {n}(")
+        flow_lines.append(f"  async {camel}(")
         flow_lines.append(f"    requestMsg: ucs.v2.I{req},")
         flow_lines.append(f"    metadata: Record<string, string>,")
         flow_lines.append(f"    ffiOptions?: ucs.v2.IFfiOptions | null")
@@ -278,9 +279,10 @@ def gen_uniffi_client_ts_flows(flows: list[dict]) -> None:
 
     for f in flows:
         n = f["name"]
+        camel = to_camel(n)
         # Generate Req method that delegates to callReq
         flow_lines.append(f"  /** Build connector HTTP request for {n} flow. */")
-        flow_lines.append(f"  {n}Req(")
+        flow_lines.append(f"  {camel}Req(")
         flow_lines.append(f"    requestBytes: Buffer | Uint8Array,")
         flow_lines.append(f"    metadata: Record<string, string>,")
         flow_lines.append(f"    optionsBytes: Buffer | Uint8Array")
@@ -290,7 +292,7 @@ def gen_uniffi_client_ts_flows(flows: list[dict]) -> None:
         flow_lines.append(f"")
         # Generate Res method that delegates to callRes
         flow_lines.append(f"  /** Parse connector HTTP response for {n} flow. */")
-        flow_lines.append(f"  {n}Res(")
+        flow_lines.append(f"  {camel}Res(")
         flow_lines.append(f"    responseBytes: Buffer | Uint8Array,")
         flow_lines.append(f"    requestBytes: Buffer | Uint8Array,")
         flow_lines.append(f"    metadata: Record<string, string>,")

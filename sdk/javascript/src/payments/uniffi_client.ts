@@ -322,7 +322,7 @@ export class UniffiClient {
   }
 
   /** Build connector HTTP request for create_access_token flow. */
-  create_access_tokenReq(
+  createAccessTokenReq(
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
@@ -331,7 +331,7 @@ export class UniffiClient {
   }
 
   /** Parse connector HTTP response for create_access_token flow. */
-  create_access_tokenRes(
+  createAccessTokenRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     metadata: Record<string, string>,

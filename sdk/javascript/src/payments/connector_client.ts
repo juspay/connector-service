@@ -144,7 +144,7 @@ export class ConnectorClient {
   }
 
   /** MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side. */
-  async create_access_token(
+  async createAccessToken(
     requestMsg: ucs.v2.IMerchantAuthenticationServiceCreateAccessTokenRequest,
     metadata: Record<string, string>,
     ffiOptions?: ucs.v2.IFfiOptions | null
