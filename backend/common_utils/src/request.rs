@@ -4,6 +4,14 @@ use utoipa::ToSchema;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+#[derive(Debug, thiserror::Error)]
+pub enum RequestError {
+    #[error("Multipart rendering failed: {0}")]
+    MultipartRenderingFailed(String),
+    #[error("Failed to read multipart stream: {0}")]
+    MultipartReadFailed(String),
+}
+
 #[derive(
     Clone,
     Copy,
@@ -83,6 +91,22 @@ impl RequestContent {
             Self::RawBytes(bytes) => String::from_utf8(bytes.clone()).unwrap_or_default().into(),
         }
     }
+
+    pub fn get_body_bytes(&self) -> Result<(Option<Vec<u8>>, Option<String>), RequestError> {
+        use hyperswitch_masking::ExposeInterface;
+        match self {
+            Self::RawBytes(bytes) => Ok((Some(bytes.clone()), None)),
+            Self::Json(_) | Self::FormUrlEncoded(_) | Self::Xml(_) | Self::FormData(_) => {
+                Ok((Some(self.get_inner_value().expose().into_bytes()), None))
+            } /*
+               todo: once ucs pr#566 merged, uncomment this.
+              // Self::FormData(data) => {
+              //     let (bytes, boundary) = data.render_as_bytes()?;
+              //     Ok((Some(bytes), Some(boundary)))
+              // }
+              */
+        }
+    }
 }
 
 impl Request {
@@ -96,6 +120,22 @@ impl Request {
             body: None,
             ca_certificate: None,
         }
+    }
+
+    /// Converts the request headers into a simple HashMap with lowercase keys.
+    /// This ensures global parity across all language SDKs.
+    pub fn get_headers_map(&self) -> std::collections::HashMap<String, String> {
+        use hyperswitch_masking::ExposeInterface;
+        self.headers
+            .iter()
+            .map(|(k, v)| {
+                let value = match v {
+                    Maskable::Normal(val) => val.clone(),
+                    Maskable::Masked(val) => val.clone().expose(),
+                };
+                (k.to_lowercase(), value)
+            })
+            .collect()
     }
 
     pub fn set_body<T: Into<RequestContent>>(&mut self, body: T) {

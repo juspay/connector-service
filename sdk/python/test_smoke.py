@@ -18,7 +18,7 @@ from payments.generated.payment_pb2 import (
     AUTOMATIC,
     NO_THREE_DS,
 )
-from payments.generated.sdk_options_pb2 import FfiOptions, EnvOptions
+from payments.generated.sdk_options_pb2 import FfiOptions, EnvOptions, FfiConnectorHttpRequest
 
 print(f"Loaded payments package from: {__file__}")
 print(f"  ConnectorClient: {ConnectorClient}")
@@ -67,12 +67,15 @@ req.test_mode = True
 
 # --- Test 1: Low-level FFI ---
 print("\n=== Test 1: Low-level FFI (authorize_req_transformer) ===")
-result = authorize_req_transformer(req.SerializeToString(), metadata, options_bytes)
-parsed = json.loads(result)
-print(f"  URL:    {parsed['url']}")
-print(f"  Method: {parsed['method']}")
-assert parsed["url"] == "https://api.stripe.com/v1/payment_intents", "Unexpected URL"
-assert parsed["method"] == "POST", "Unexpected method"
+# Now returns raw Protobuf bytes. We must decode them.
+result_bytes = authorize_req_transformer(req.SerializeToString(), metadata, options_bytes)
+result = FfiConnectorHttpRequest.FromString(result_bytes)
+print(f"  URL:    {result.url}")
+print(f"  Method: {result.method}")
+if result.url != "https://api.stripe.com/v1/payment_intents":
+    raise Exception(f"Unexpected URL: {result.url}")
+if result.method != "POST":
+    raise Exception("Unexpected method")
 print("  PASSED")
 
 # --- Test 2: Full round-trip via ConnectorClient ---
