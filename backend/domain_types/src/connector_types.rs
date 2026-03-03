@@ -1813,6 +1813,7 @@ pub enum HttpMethod {
 pub struct RequestDetails {
     pub method: HttpMethod,
     pub uri: Option<String>,
+    pub url: Option<Url>,
     pub headers: HashMap<String, String>,
     pub body: Vec<u8>,
     pub query_params: Option<String>,
@@ -2182,6 +2183,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RequestDetails> for RequestDetails
         Ok(Self {
             method,
             uri: value.uri,
+            url: value.url.and_then(|url_str| Url::parse(&url_str).ok()),
             headers: value.headers,
             body: value.body,
             query_params: value.query_params,
