@@ -1360,7 +1360,7 @@ impl PaymentOperationsInternal for Payments {
 
 #[tonic::async_trait]
 impl PaymentService for Payments {
-     #[tracing::instrument(
+    #[tracing::instrument(
         name = "payment_authorize",
         fields(
             name = common_utils::consts::NAME,
