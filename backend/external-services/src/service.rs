@@ -92,8 +92,8 @@ use common_utils::events::{Event, EventConfig, FlowName};
 use common_utils::{consts, emit_event_with_config};
 use error_stack::{report, ResultExt};
 #[cfg(feature = "injector-client")]
-use hyperswitch_masking::ErasedMaskSerialize;
-use hyperswitch_masking::{ExposeInterface, Maskable};
+use hyperswitch_masking::{ExposeInterface, ErasedMaskSerialize};
+use hyperswitch_masking::Maskable;
 #[cfg(feature = "injector-client")]
 use injector::{injector_core, HttpMethod, TokenData};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
@@ -1107,6 +1107,7 @@ fn strip_bom_and_convert_to_string(response_bytes: &[u8]) -> Option<String> {
     })
 }
 
+#[cfg(feature = "injector-client")]
 fn extract_raw_connector_request(connector_request: &Request) -> String {
     // Extract actual body content
     let body_content = match connector_request.body.as_ref() {

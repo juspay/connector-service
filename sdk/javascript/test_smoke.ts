@@ -11,9 +11,9 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { ConnectorClient } from "./src/index";
+import { ConnectorClient } from "hyperswitch-payments";
 // @ts-ignore - protobuf generated files might not have types yet
-import { ucs } from "./src/payments/generated/proto";
+import { ucs } from "hyperswitch-payments/dist/src/payments/generated/proto";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -103,7 +103,7 @@ async function testAccessTokenFlow(): Promise<void> {
 
       console.log(accessTokenValue);
       console.log(
-        `  Access Token received: ${accessTokenValue.substring(0, 20)}...`
+        `  Access Token received: ${accessTokenValue!.substring(0, 20)}...`
       );
       console.log(`  Token Type: ${tokenTypeValue}`);
       console.log(

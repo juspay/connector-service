@@ -169,6 +169,8 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 	@cd /tmp/test-hyperswitch-js && npm init -y --silent && \
 		npm install $(PACKAGE_DIR)/hyperswitch-payments-0.1.0.tgz --silent
 	@cp $(SDK_ROOT)/test_smoke.ts /tmp/test-hyperswitch-js/test_smoke.ts
+	@printf '{"compilerOptions":{"module":"CommonJS","moduleResolution":"node","esModuleInterop":true,"skipLibCheck":true,"strict":true}}\n' \
+		> /tmp/test-hyperswitch-js/tsconfig.json
 	@cd /tmp/test-hyperswitch-js && npx ts-node test_smoke.ts
 	@rm -rf /tmp/test-hyperswitch-js
 	@echo "Package test passed."

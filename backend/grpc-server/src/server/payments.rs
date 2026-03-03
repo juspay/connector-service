@@ -259,7 +259,7 @@ pub struct Payments {
 pub struct Customer;
 
 impl Customer {
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, dead_code)]
     async fn handle_connector_customer<
         T: PaymentMethodDataTypes
             + Default
@@ -389,7 +389,7 @@ impl Customer {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, dead_code)]
     async fn handle_connector_customer_for_setup_mandate<
         T: PaymentMethodDataTypes
             + Default
@@ -715,185 +715,6 @@ impl Payments {
             )
         })?;
 
-        let lineage_ids = &metadata_payload.lineage_ids;
-        let reference_id = &metadata_payload.reference_id;
-        let resource_id = &metadata_payload.resource_id;
-
-        // Extract access token from request
-        let cached_access_token = payload
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref());
-
-        // Check if connector supports access tokens
-        let should_do_access_token = connector_data
-            .connector
-            .should_do_access_token(payment_flow_data.payment_method);
-
-        // Conditional token generation - ONLY if not provided in request
-        let payment_flow_data = if should_do_access_token {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                service_type: utils::service_type_str(&config.server.type_),
-                request_id,
-                lineage_ids,
-                reference_id,
-                resource_id,
-                shadow_mode: metadata_payload.shadow_mode,
-            };
-
-            let access_token_data = self
-                .merchant_authentication_service
-                .handle_access_token_flow(
-                    config,
-                    &connector_data,
-                    cached_access_token,
-                    &payment_flow_data,
-                    metadata_payload.connector_auth_type.clone(),
-                    &connector.to_string(),
-                    service_name,
-                    event_params,
-                )
-                .await
-                .map_err(|err| {
-                    tracing::error!("Failed to process payment access token data: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Failure,
-                        Some("Failed to process payment access token data".to_string()),
-                        Some("ACCESS_TOKEN_ERROR".to_string()),
-                        Some(400),
-                    )
-                })?;
-
-            // Store in flow data for connector API calls
-            payment_flow_data.set_access_token(Some(access_token_data))
-        } else {
-            // Connector doesn't support access tokens
-            payment_flow_data
-        };
-
-        let should_do_order_create = connector_data.connector.should_do_order_create();
-
-        let payment_flow_data = if should_do_order_create {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                service_type: utils::service_type_str(&config.server.type_),
-                request_id,
-                lineage_ids,
-                reference_id,
-                resource_id,
-                shadow_mode: metadata_payload.shadow_mode,
-            };
-
-            let order_create_result = Box::pin(self.handle_order_creation(
-                config,
-                connector_data.clone(),
-                &payment_flow_data,
-                connector_auth_details.clone(),
-                &payload,
-                &connector.to_string(),
-                service_name,
-                event_params,
-            ))
-            .await?;
-
-            tracing::info!(
-                "Order created successfully with order_id: {}",
-                order_create_result.order_id
-            );
-
-            payment_flow_data.set_order_reference_id(Some(order_create_result.order_id))
-        } else {
-            payment_flow_data
-        };
-
-        let should_do_session_token = connector_data.connector.should_do_session_token();
-
-        let payment_flow_data = if should_do_session_token {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                service_type: utils::service_type_str(&config.server.type_),
-                request_id,
-                lineage_ids,
-                reference_id,
-                resource_id,
-                shadow_mode: metadata_payload.shadow_mode,
-            };
-
-            let payment_session_data =
-                Box::pin(self.merchant_authentication_service.handle_session_token(
-                    config,
-                    connector_data.clone(),
-                    &payment_flow_data,
-                    connector_auth_details.clone(),
-                    &payload,
-                    &connector.to_string(),
-                    service_name,
-                    event_params,
-                ))
-                .await?;
-            tracing::info!(
-                "Session Token created successfully with session_id: {}",
-                payment_session_data.session_token
-            );
-            payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
-        } else {
-            payment_flow_data
-        };
-
-        // Extract connector customer ID (if provided by Hyperswitch)
-        let cached_connector_customer_id = payload
-            .customer
-            .clone()
-            .and_then(|c| c.connector_customer_id.clone())
-            .clone();
-
-        // Check if connector supports customer creation
-        let should_create_connector_customer =
-            connector_data.connector.should_create_connector_customer();
-
-        // Conditional customer creation - ONLY if connector needs it AND no existing customer ID
-        let payment_flow_data = if should_create_connector_customer {
-            match cached_connector_customer_id {
-                Some(_customer_id) => payment_flow_data,
-                None => {
-                    let event_params = EventParams {
-                        _connector_name: &connector.to_string(),
-                        _service_name: service_name,
-                        service_type: utils::service_type_str(&config.server.type_),
-                        request_id,
-                        lineage_ids,
-                        reference_id,
-                        resource_id,
-                        shadow_mode: metadata_payload.shadow_mode,
-                    };
-
-                    let connector_customer_response =
-                        Box::pin(self.customer_service.handle_connector_customer(
-                            config,
-                            connector_data.clone(),
-                            &payment_flow_data,
-                            &connector_auth_details.clone(),
-                            &payload,
-                            &connector.to_string(),
-                            service_name,
-                            event_params,
-                        ))
-                        .await?;
-
-                    payment_flow_data.set_connector_customer_id(Some(
-                        connector_customer_response.connector_customer_id,
-                    ))
-                }
-            }
-        } else {
-            // Connector doesn't support customer creation
-            payment_flow_data
-        };
-
         // Create connector request data
         let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
             .map_err(|err| {
@@ -904,44 +725,7 @@ impl Payments {
                     Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
                     None,
                 )
-            })?
-            // Set session token from payment flow data if available
-            .set_session_token(payment_flow_data.session_token.clone());
-
-        let should_do_payment_method_token =
-            connector_data.connector.should_do_payment_method_token(
-                payment_flow_data.payment_method,
-                payment_authorize_data.payment_method_type,
-            );
-
-        let payment_flow_data = if should_do_payment_method_token {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                service_type: utils::service_type_str(&config.server.type_),
-                request_id,
-                lineage_ids,
-                reference_id,
-                resource_id,
-                shadow_mode: metadata_payload.shadow_mode,
-            };
-            let payment_method_token_data = self
-                .handle_payment_method_token(
-                    config,
-                    connector_data.clone(),
-                    &payment_flow_data,
-                    connector_auth_details.clone(),
-                    event_params,
-                    &payment_authorize_data,
-                    &connector.to_string(),
-                    service_name,
-                )
-                .await?;
-            tracing::info!("Payment Method Token created successfully");
-            payment_flow_data.set_payment_method_token(Some(payment_method_token_data.token))
-        } else {
-            payment_flow_data
-        };
+            })?;
 
         // Construct router data
         let router_data = RouterDataV2::<
@@ -980,13 +764,13 @@ impl Payments {
             flow_name: FlowName::Authorize,
             event_config: &config.events,
             request_id,
-            lineage_ids,
-            reference_id,
-            resource_id,
+            lineage_ids: &metadata_payload.lineage_ids,
+            reference_id: &metadata_payload.reference_id,
+            resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
         };
 
-        // Execute connector processing
+        // Execute connector processing - ONLY the authorize call
         let response = external_services::service::execute_connector_processing_step(
             &config.proxy,
             connector_integration,
@@ -1073,7 +857,7 @@ impl Payments {
         Ok(authorize_response)
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, dead_code)]
     async fn handle_order_creation<
         T: PaymentMethodDataTypes
             + Default
@@ -1245,7 +1029,7 @@ impl Payments {
             )),
         }
     }
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, dead_code)]
     async fn handle_order_creation_for_setup_mandate<
         T: PaymentMethodDataTypes
             + Default
@@ -1364,7 +1148,7 @@ impl Payments {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, dead_code)]
     async fn handle_payment_method_token<
         T: PaymentMethodDataTypes
             + Default
@@ -1576,7 +1360,7 @@ impl PaymentOperationsInternal for Payments {
 
 #[tonic::async_trait]
 impl PaymentService for Payments {
-    #[tracing::instrument(
+     #[tracing::instrument(
         name = "payment_authorize",
         fields(
             name = common_utils::consts::NAME,
@@ -1644,6 +1428,7 @@ impl PaymentService for Payments {
                                 }
                             }
                             _ => {
+                                tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
                                 match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                                     &config,
                                     payload.clone(),
@@ -1657,8 +1442,14 @@ impl PaymentService for Payments {
                                 ))
                                 .await
                                 {
-                                    Ok(response) => response,
-                                    Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                    Ok(response) => {
+                                        tracing::info!("REGULAR: Authorization completed successfully without injector");
+                                        response
+                                    },
+                                    Err(error_response) => {
+                                        tracing::error!("REGULAR: Authorization failed without injector - error: {:?}", error_response);
+                                        PaymentServiceAuthorizeResponse::from(error_response)
+                                    },
                                 }
                             }
                         }
@@ -2586,6 +2377,7 @@ impl PaymentService for Payments {
             FlowName::SetupMandate,
             |request_data| {
                 let service_name = service_name.clone();
+                let config = config.clone();
                 Box::pin(async move {
                     let payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
@@ -2616,90 +2408,6 @@ impl PaymentService for Payments {
                         &request_data.masked_metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
-
-                    let should_do_order_create = connector_data.connector.should_do_order_create();
-
-                    let order_id = if should_do_order_create {
-                        let event_params = EventParams {
-                            _connector_name: &connector.to_string(),
-                            _service_name: &service_name,
-                            service_type: utils::service_type_str(&config.server.type_),
-                            request_id: &request_id,
-                            lineage_ids: &lineage_ids,
-                            reference_id: &metadata_payload.reference_id,
-                            resource_id: &metadata_payload.resource_id,
-                            shadow_mode: metadata_payload.shadow_mode,
-                        };
-
-                        Some(
-                            Box::pin(self.handle_order_creation_for_setup_mandate(
-                                &config,
-                                connector_data.clone(),
-                                &payment_flow_data,
-                                connector_auth_details.clone(),
-                                event_params,
-                                &payload,
-                                &connector.to_string(),
-                                &service_name,
-                            ))
-                            .await?,
-                        )
-                    } else {
-                        None
-                    };
-                    let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
-
-                    // Extract connector customer ID (if provided)
-                    let cached_connector_customer_id = payload
-                        .customer
-                        .clone()
-                        .and_then(|c| c.connector_customer_id)
-                        .clone();
-
-                    // Check if connector supports customer creation
-                    let should_create_connector_customer =
-                        connector_data.connector.should_create_connector_customer();
-
-                    // Conditional customer creation - ONLY if connector needs it AND no existing customer ID
-                    let payment_flow_data = if should_create_connector_customer {
-                        match cached_connector_customer_id {
-                            Some(_customer_id) => payment_flow_data,
-                            None => {
-                                let event_params = EventParams {
-                                    _connector_name: &connector.to_string(),
-                                    _service_name: &service_name,
-                                    service_type: utils::service_type_str(&config.server.type_),
-                                    request_id: &request_id,
-                                    lineage_ids: &lineage_ids,
-                                    reference_id: &metadata_payload.reference_id,
-                                    resource_id: &metadata_payload.resource_id,
-                                    shadow_mode: metadata_payload.shadow_mode,
-                                };
-
-                                let connector_customer_response = Box::pin(
-                                    self.customer_service
-                                        .handle_connector_customer_for_setup_mandate(
-                                            &config,
-                                            connector_data.clone(),
-                                            &payment_flow_data,
-                                            connector_auth_details.clone(),
-                                            &payload,
-                                            &connector.to_string(),
-                                            &service_name,
-                                            event_params,
-                                        ),
-                                )
-                                .await?;
-
-                                payment_flow_data.set_connector_customer_id(Some(
-                                    connector_customer_response.connector_customer_id,
-                                ))
-                            }
-                        }
-                    } else {
-                        // Connector doesn't support customer creation
-                        payment_flow_data
-                    };
 
                     let setup_mandate_request_data =
                         SetupMandateRequestData::foreign_try_from(payload.clone())

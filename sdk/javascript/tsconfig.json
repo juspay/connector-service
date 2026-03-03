@@ -15,9 +15,14 @@
     "baseUrl": "./",
     "paths": {
       "@generated/*": ["src/payments/generated/*"],
-      "@src/*": ["src/*"]
+      "@src/*": ["src/*"],
+      "hyperswitch-payments": ["./src/index"],
+      "hyperswitch-payments/dist/src/payments/generated/proto": ["./src/payments/generated/proto"]
     }
   },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "test_smoke.ts"]
 }
