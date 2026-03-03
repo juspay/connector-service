@@ -20,12 +20,12 @@ Integrating multiple payment processors shouldn't require months of engineering 
 
 **Connector Service solves this with a unified schema that works across all payment providers.**
 
-| Without Connector Service | With Connector Service |
-|---------------------------|------------------------|
-| 50+ different API schemas | 1 unified schema |
-| Months of integration work | Hours to integrate |
-| Brittle, provider-specific code | Portable, provider-agnostic code |
-| Hard to switch providers | Change providers in 1 line |
+| ❌ Without Connector Service | ✅ With Connector Service |
+|------------------------------|----------------------------|
+| 🗂️ 50+ different API schemas | 📋 Single unified schema |
+| ⏳ Months of integration work | ⚡ Hours to integrate |
+| 🔗 Brittle, provider-specific code | 🔓 Portable, provider-agnostic code |
+| 🚫 Hard to switch providers | 🔄 Change providers in 1 line |
 
 ---
 
@@ -68,23 +68,46 @@ Integrating multiple payment processors shouldn't require months of engineering 
 ### Payment & Capture Flow Sequence
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#B3D9F2', 'primaryTextColor': '#333333', 'primaryBorderColor': '#5B9BD5', 'lineColor': '#666666', 'secondaryColor': '#C5E8C0', 'tertiaryColor': '#F9B872'}}}%%
 sequenceDiagram
     autonumber
     participant App as Your App
     participant SDK as Connector Service SDK
-    participant PSP as Payment Provider
+    participant PSP as Payment Service Provider (PSP)
+
+    %% Apply Hyperswitch color scheme
+    participantStyle App fill:#C5E8C0,stroke:#4CAF50,stroke-width:2px,color:#333333
+    participantStyle SDK fill:#B3D9F2,stroke:#5B9BD5,stroke-width:2px,color:#333333
+    participantStyle PSP fill:#F9B872,stroke:#F5A623,stroke-width:2px,color:#333333
 
     Note over App,PSP: Payment Authorization
-    App->>SDK: create_payment(amount, currency, payment_method)
-    SDK->>PSP: Provider-specific API call
-    PSP-->>SDK: Provider response
-    SDK-->>App: Type-safe response
+    App->>SDK: paymentservice.authorize(amount, currency, payment_method)
+    activate SDK
+    SDK->>PSP: Provider-specific Authorize API call
+    activate PSP
+    PSP-->>SDK: Provider-specific response
+    deactivate PSP
+    SDK-->>App: Unified authorize response
+    deactivate SDK
 
     Note over App,PSP: Payment Capture
-    App->>SDK: capture_payment(payment_id, amount)
-    SDK->>PSP: Capture API call
-    PSP-->>SDK: Capture response
-    SDK-->>App: Capture confirmation
+    App->>SDK: paymentservice.capture(payment_id, amount)
+    activate SDK
+    SDK->>PSP: Provider-specific Capture API call
+    activate PSP
+    PSP-->>SDK: Provider-specific Capture response
+    deactivate PSP
+    SDK-->>App: Unified capture response
+    deactivate SDK
+
+    Note over App,PSP: Event Service (Webhooks)
+    PSP->>SDK: eventservice.webhook(event_payload)
+    activate SDK
+    SDK->>SDK: Normalize & validate event
+    SDK->>App: eventservice.callback(unified_event)
+    App-->>SDK: Acknowledgment
+    deactivate SDK
+    SDK-->>PSP: 200 OK
 ```
 
 ---
@@ -215,7 +238,7 @@ Each flow uses the same unified schema regardless of the underlying processor's 
 
 ```bash
 # Clone the repository
-git clone https://github.com/juspay/connector-service.git
+git clone https://github.com/manojradhakrishnan/connector-service.git
 cd connector-service
 
 # Build
