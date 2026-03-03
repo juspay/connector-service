@@ -599,14 +599,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 // Only include account_holder when a name is available to avoid
                 // sending null first_name/last_name which causes ACH validation errors
-                let account_holder = holder_name.map(|name| {
-                    let (first_name, last_name) = split_account_holder_name(Some(name));
-                    AchAccountHolder {
-                        holder_type,
-                        first_name,
-                        last_name,
+                let account_holder = match holder_name {
+                    Some(name) => {
+                        let (first_name, last_name) = split_account_holder_name(Some(name));
+                        Some(AchAccountHolder {
+                            holder_type,
+                            first_name,
+                            last_name,
+                        })
                     }
-                });
+                    None => None,
+                };
 
                 // Use bank_type from input or default to Savings
                 let account_type = bank_type.unwrap_or(common_enums::BankType::Savings);
@@ -1046,14 +1049,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 // Only include account_holder when a name is available to avoid
                 // sending null first_name/last_name which causes ACH validation errors
-                let account_holder = holder_name.map(|name| {
-                    let (first_name, last_name) = split_account_holder_name(Some(name));
-                    AchAccountHolder {
-                        holder_type,
-                        first_name,
-                        last_name,
+                let account_holder = match holder_name {
+                    Some(name) => {
+                        let (first_name, last_name) = split_account_holder_name(Some(name));
+                        Some(AchAccountHolder {
+                            holder_type,
+                            first_name,
+                            last_name,
+                        })
                     }
-                });
+                    None => None,
+                };
 
                 // Use bank_type from input or default to Savings
                 let account_type = bank_type.unwrap_or(common_enums::BankType::Savings);
