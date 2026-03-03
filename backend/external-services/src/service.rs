@@ -894,7 +894,7 @@ fn get_base_client(
     should_bypass_proxy: bool,
     test_mode: bool,
 ) -> CustomResult<Client, ApiClientError> {
-    // Check if proxy configuration is provided using cache_key method
+    // Check if proxy configuration is provided using cache_key extract_raw_connector_request
     if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy) {
         tracing::debug!(
             "Using proxy-specific client cache with key: {:?}",
@@ -1107,7 +1107,7 @@ fn strip_bom_and_convert_to_string(response_bytes: &[u8]) -> Option<String> {
     })
 }
 
-pub fn extract_raw_connector_request(connector_request: &Request) -> String {
+fn extract_raw_connector_request(connector_request: &Request) -> String {
     // Extract actual body content
     let body_content = match connector_request.body.as_ref() {
         Some(request) => {

@@ -1,5 +1,5 @@
 .PHONY: install-deps build-ffi-lib generate-bindings generate-proto generate-all \
-        pack-archive install test-package dist clean
+        build-ts pack-archive install test-package dist clean
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -119,10 +119,21 @@ generate-proto: install-deps
 generate-all: generate-proto generate-bindings
 
 # ---------------------------------------------------------------------------
+# build-ts
+# Compiles TypeScript sources to dist/ and copies the generated proto stubs
+# and native FFI library into dist/src/payments/generated/ so that npm pack
+# includes them. Must run after generate-all (requires generated/ to be populated).
+# ---------------------------------------------------------------------------
+build-ts: install-deps
+	@echo "Compiling TypeScript to dist/..."
+	@cd $(SDK_ROOT) && npm run build
+	@echo "TypeScript compiled to dist/"
+
+# ---------------------------------------------------------------------------
 # pack-archive
 # Builds the SDK npm tarball (.tgz) using npm pack.
-# Assumes generated/ already contains the native FFI library and proto stubs.
-# Copies any symlinks as real files first since npm does not follow symlinks.
+# Assumes dist/ has been populated by build-ts. Copies any symlinks as real
+# files first since npm does not follow symlinks.
 # ---------------------------------------------------------------------------
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
@@ -151,14 +162,14 @@ install: pack-archive
 # npm project and runs the smoke test to verify the package works correctly.
 # The temp directory is cleaned up after the test.
 # ---------------------------------------------------------------------------
-test-package: build-ffi-lib generate-all pack-archive
+test-package: build-ffi-lib generate-all build-ts pack-archive
 	@echo "Testing packed tarball in isolation..."
 	@rm -rf /tmp/test-hyperswitch-js
 	@mkdir -p /tmp/test-hyperswitch-js
 	@cd /tmp/test-hyperswitch-js && npm init -y --silent && \
 		npm install $(PACKAGE_DIR)/hyperswitch-payments-0.1.0.tgz --silent
-	@cp $(SDK_ROOT)/test_smoke.js /tmp/test-hyperswitch-js/test_smoke.js
-	@cd /tmp/test-hyperswitch-js && node test_smoke.js
+	@cp $(SDK_ROOT)/test_smoke.ts /tmp/test-hyperswitch-js/test_smoke.ts
+	@cd /tmp/test-hyperswitch-js && npx ts-node test_smoke.ts
 	@rm -rf /tmp/test-hyperswitch-js
 	@echo "Package test passed."
 
@@ -177,6 +188,7 @@ dist:
 		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: Linux x86_64 binary not found (skipping)"
 	@cp -fL $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib \
 		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: macOS aarch64 binary not found (skipping)"
+	@$(MAKE) -C $(SDK_ROOT) build-ts
 	@$(MAKE) -C $(SDK_ROOT) pack-archive
 	@echo "Distribution tarball created in $(PACKAGE_DIR)/"
 

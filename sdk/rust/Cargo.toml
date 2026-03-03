@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 # Internal crates (path deps)
-ffi = { path = "../../backend/ffi", default-features = false }
+ffi = { path = "../../backend/ffi", features = ["uniffi"] }
 grpc-api-types = { path = "../../backend/grpc-api-types" }
 external-services = { path = "../../backend/external-services", default-features = false }
 ucs_env = { path = "../../backend/ucs_env" }
@@ -14,8 +14,9 @@ domain_types = { path = "../../backend/domain_types" }
 cards = { path = "../../backend/cards", package = "ucs_cards" }
 
 # Third-party
+thiserror = { workspace = true }
 bytes = { workspace = true }
-http = "0.2.12"
+http = { workspace = true }
 reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
 tokio = { version = "1", features = ["full"] }
 serde_json = { workspace = true }
