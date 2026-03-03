@@ -217,3 +217,6 @@ pub use self::zift::Zift;
 
 pub mod revolv3;
 pub use self::revolv3::Revolv3;
+
+pub mod finix;
+pub use self::finix::Finix;
