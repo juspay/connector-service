@@ -1037,6 +1037,7 @@ dependencies = [
  "html-escape",
  "image",
  "interfaces",
+ "josekit",
  "jsonwebtoken",
  "masking",
  "paste",
@@ -3408,6 +3409,24 @@ checksum = "9afb3de4395d6b3e67a780b6de64b51c978ecf11cb9a462c66be7d4ca9039d33"
 dependencies = [
  "getrandom 0.3.3",
  "libc",
+]
+
+[[package]]
+name = "josekit"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54b85e2125819afc4fd2ae57416207e792c7e12797858e5db2a6c6f24a166829"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "flate2",
+ "once_cell",
+ "openssl",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "time",
 ]
 
 [[package]]

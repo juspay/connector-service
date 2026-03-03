@@ -601,7 +601,8 @@ enum Connector {
   HYPERPG = 107;
   ZIFT = 108;
   REVOLV3 = 109;
-  PPRO = 110;
+  TRUELAYER = 110;
+  PPRO = 111;
 }
 
 // Payment method types.
@@ -3492,7 +3493,8 @@ message NexixpayAuth {
 }
 
 message RevolutAuth {
-  SecretString api_key = 1;
+  SecretString secret_api_key = 1;
+  optional SecretString signing_secret = 2;
 }
 
 message Revolv3Auth {

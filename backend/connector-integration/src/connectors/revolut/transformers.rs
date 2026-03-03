@@ -22,7 +22,8 @@ use std::fmt::Debug;
 use time::PrimitiveDateTime;
 
 pub struct RevolutAuthType {
-    pub api_key: Secret<String>,
+    pub secret_api_key: Secret<String>,
+    pub signing_secret: Option<Secret<String>>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -452,8 +453,12 @@ impl TryFrom<&ConnectorSpecificAuth> for RevolutAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Revolut { api_key } => Ok(Self {
-                api_key: api_key.to_owned(),
+            ConnectorSpecificAuth::Revolut {
+                secret_api_key,
+                signing_secret,
+            } => Ok(Self {
+                secret_api_key: secret_api_key.to_owned(),
+                signing_secret: signing_secret.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }

@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.03.03.0
+
+### Features
+
+- **connector:** [Revolut] Rename RevolutAuth "api_key" field and add "signing_secret" for webhook source verification ([#570](https://github.com/juspay/connector-service/pull/570)) ([`6bc06bd`](https://github.com/juspay/connector-service/commit/6bc06bdc3f5f332d605a5541dc3e57bce20903a6))
+
+**Full Changelog:** [`2026.03.02.0...2026.03.03.0`](https://github.com/juspay/connector-service/compare/2026.03.02.0...2026.03.03.0)
+
+- - -
+
 ## 2026.03.02.0
 
 ### Features
