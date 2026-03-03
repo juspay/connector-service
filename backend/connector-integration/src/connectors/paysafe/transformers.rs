@@ -271,70 +271,78 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let currency = router_data.request.currency;
         let amount = router_data.request.amount;
 
-
-        let (payment_method, payment_type, account_id) = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(req_card) => {
-                let card = PaysafeCard {
-                    card_num: req_card.card_number.clone(),
-                    card_expiry: PaysafeCardExpiry {
-                        month: req_card.card_exp_month.clone(),
-                        year: req_card.get_expiry_year_4_digit(),
-                    },
-                    cvv: if req_card.card_cvc.peek().is_empty() {
-                        None
-                    } else {
-                        Some(req_card.card_cvc.clone())
-                    },
-                    holder_name: req_card.card_holder_name.clone().or_else(|| {
-                        router_data
-                            .resource_common_data
-                            .get_optional_billing_full_name()
-                    }),
-                };
-                let account_id = metadata.account_id.get_no_three_ds_account_id(currency)?;
-                (PaysafePaymentMethod::Card { card }, PaysafePaymentType::Card, account_id)
-            }
-            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
-                account_number,
-                routing_number,
-                bank_account_holder_name,
-                bank_type,
-                ..
-            }) => {
-                let account_holder_name = bank_account_holder_name
-                    .clone()
-                    .or_else(|| {
-                        router_data
-                            .resource_common_data
-                            .get_optional_billing_full_name()
-                    })
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "bank_account_holder_name",
-                    })?;
-                let account_type = bank_type
-                    .as_ref()
-                    .map(|bt| PaysafeAchAccountType::from(bt))
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "bank_type (ach.accountType)",
-                    })?;
-                let ach = PaysafeAch {
-                    account_holder_name,
-                    account_number: account_number.clone(),
-                    routing_number: routing_number.clone(),
-                    account_type,
-                };
-                let account_id = metadata.account_id.get_ach_account_id(currency)?;
-                (PaysafePaymentMethod::Ach { ach }, PaysafePaymentType::Ach, account_id)
-            }
-            _ => {
-                return Err(errors::ConnectorError::NotSupported {
-                    message: "Only card and ACH payment methods are supported for PaymentMethodToken"
-                        .to_string(),
-                    connector: "Paysafe",
+        let (payment_method, payment_type, account_id) =
+            match &router_data.request.payment_method_data {
+                PaymentMethodData::Card(req_card) => {
+                    let card = PaysafeCard {
+                        card_num: req_card.card_number.clone(),
+                        card_expiry: PaysafeCardExpiry {
+                            month: req_card.card_exp_month.clone(),
+                            year: req_card.get_expiry_year_4_digit(),
+                        },
+                        cvv: if req_card.card_cvc.peek().is_empty() {
+                            None
+                        } else {
+                            Some(req_card.card_cvc.clone())
+                        },
+                        holder_name: req_card.card_holder_name.clone().or_else(|| {
+                            router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                        }),
+                    };
+                    let account_id = metadata.account_id.get_no_three_ds_account_id(currency)?;
+                    (
+                        PaysafePaymentMethod::Card { card },
+                        PaysafePaymentType::Card,
+                        account_id,
+                    )
                 }
-                .into())
-            }
-        };
+                PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                    account_number,
+                    routing_number,
+                    bank_account_holder_name,
+                    bank_type,
+                    ..
+                }) => {
+                    let account_holder_name = bank_account_holder_name
+                        .clone()
+                        .or_else(|| {
+                            router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                        })
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "bank_account_holder_name",
+                        })?;
+                    let account_type = bank_type.as_ref().map(PaysafeAchAccountType::from).ok_or(
+                        errors::ConnectorError::MissingRequiredField {
+                            field_name: "bank_type (ach.accountType)",
+                        },
+                    )?;
+                    let ach = PaysafeAch {
+                        account_holder_name,
+                        account_number: account_number.clone(),
+                        routing_number: routing_number.clone(),
+                        account_type,
+                    };
+                    let account_id = metadata.account_id.get_ach_account_id(currency)?;
+                    (
+                        PaysafePaymentMethod::Ach { ach },
+                        PaysafePaymentType::Ach,
+                        account_id,
+                    )
+                }
+                _ => {
+                    return Err(errors::ConnectorError::NotSupported {
+                        message:
+                            "Only card and ACH payment methods are supported for PaymentMethodToken"
+                                .to_string(),
+                        connector: "Paysafe",
+                    }
+                    .into())
+                }
+            };
 
         // For ACH payments, Paysafe requires settleWithAuth to be true
         let settle_with_auth = match payment_type {
@@ -497,7 +505,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Determine if this is an ACH payment based on payment_method
         let is_ach = matches!(
             router_data.resource_common_data.payment_method,
-            common_enums::enums::PaymentMethod::BankDebit
+            enums::PaymentMethod::BankDebit
         );
 
         // For ACH payments, Paysafe requires settleWithAuth to be true
