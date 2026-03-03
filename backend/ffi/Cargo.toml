@@ -10,9 +10,9 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # First-party dependencies
 grpc-api-types = { path = "../grpc-api-types" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
 connector-integration = { path = "../connector-integration" }
-external-services = { path = "../external-services" }
+external-services = { path = "../external-services", default-features = false }
 interfaces = { path = "../interfaces" }
 domain_types = { path = "../domain_types" }
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
@@ -24,30 +24,25 @@ ucs_interface_common = { path = "../ucs_interface_common" }
 config = "0.14.0"
 toml = "0.8"
 error-stack = "0.4.1"
-serde = { version = "1.0.189", features = ["derive"] }
-serde_json = "1.0.107"
+serde = { workspace = true }
+serde_json = { workspace = true }
 serde_path_to_error = "0.1.16"
 http = "0.2.12"
-tonic = "0.13.0"
+tonic = { workspace = true }
 paste = "1.0"
-tracing = "0.1"
+tracing = { workspace = true }
 uniffi = { version = "0.28", optional = true }
-prost = "0.13"
-bytes = "1"
-thiserror = "1"
+prost = { workspace = true }
+bytes = { workspace = true }
+thiserror = { workspace = true }
 
 [build-dependencies]
-prost-build = "0.13"
+prost-build = { workspace = true }
 uniffi = { version = "0.28", features = ["build"], optional = true }
-
-[[bin]]
-name = "uniffi-bindgen"
-required-features = ["uniffi-cli"]
 
 [features]
 default = ["uniffi"]
 uniffi = ["dep:uniffi"]
-uniffi-cli = ["uniffi", "uniffi/cli"]
 c-ffi = []
 
 [lints]

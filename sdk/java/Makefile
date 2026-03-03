@@ -1,4 +1,4 @@
-.PHONY: install-deps build-ffi-lib generate-bindings generate-proto generate-all \
+.PHONY: install-deps build-ffi-lib generate generate-bindings generate-proto generate-all \
         pack-archive install test-package dist clean
 
 # ---------------------------------------------------------------------------
@@ -39,10 +39,15 @@ else
   LIB_EXT := so
 endif
 
-# Pre-built FFI library for the current platform (output of build-ffi-lib).
-LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/release/libconnector_service_ffi.$(LIB_EXT)
+# Profile used for local builds (test-package). release-fast skips LTO and
+# uses parallel codegen — same opt-level as release, ~5x faster to compile.
+# dist overrides this to --release for production-optimised artifacts.
+PROFILE  := release-fast
 
-BINDGEN := $(REPO_ROOT)/target/$(PLATFORM)/release/uniffi-bindgen
+# Pre-built FFI library for the current platform (output of build-ffi-lib).
+LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/libconnector_service_ffi.$(LIB_EXT)
+
+BINDGEN := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/uniffi-bindgen
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -67,22 +72,31 @@ install-deps:
 # directory layout — no special-case LIBRARY= or TARGET_TRIPLE= variables needed.
 # ---------------------------------------------------------------------------
 build-ffi-lib:
-	@echo "Building FFI shared library for $(PLATFORM)..."
+	@echo "Building FFI shared library for $(PLATFORM) [profile: $(PROFILE)]..."
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
-		--release --target $(PLATFORM)
+		--profile $(PROFILE) --target $(PLATFORM)
 	@echo "Build complete: $(LIBRARY)"
+
+# ---------------------------------------------------------------------------
+# generate
+# Auto-discovers flows from services.proto + bindings/uniffi.rs and regenerates
+# the Kotlin SDK client code (GeneratedFlows.kt).
+# ---------------------------------------------------------------------------
+generate:
+	@echo "Discovering flows and generating Kotlin SDK client code..."
+	@python3 $(REPO_ROOT)/sdk/codegen/generate.py --lang kotlin
 
 # ---------------------------------------------------------------------------
 # generate-bindings
 # Builds the uniffi-bindgen binary then runs uniffi-bindgen generate.
-# uniffi-cli implies uniffi (scaffolding), so no second build-ffi-lib call is
-# needed. All deps compiled by build-ffi-lib are reused from the shared
-# target/ directory — only ffi itself and uniffi/cli need recompiling.
+# uniffi-bindgen lives in its own crate (backend/uniffi-bindgen) so the ffi
+# library never pulls in the uniffi/cli codegen deps. The output binary lands
+# in the same target/<PLATFORM>/release/ directory as before.
 # ---------------------------------------------------------------------------
-generate-bindings:
+generate-bindings: build-ffi-lib
 	@echo "Building uniffi-bindgen..."
-	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi-cli \
-		--release --target $(PLATFORM) --bin uniffi-bindgen
+	@cd $(REPO_ROOT) && cargo build -p uniffi-bindgen \
+		--profile $(PROFILE) --target $(PLATFORM)
 	@echo "Generating UniFFI Kotlin bindings from $(LIBRARY)..."
 	@mkdir -p $(GENERATED_KOTLIN) $(NATIVE_DIR)
 	@cp -f $(LIBRARY) $(NATIVE_DIR)/
@@ -156,7 +170,7 @@ install: pack-archive
 # ---------------------------------------------------------------------------
 test-package: generate-all install
 	@echo "Running smoke test..."
-	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --quiet
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --stacktrace --debug
 	@echo "Package test passed."
 
 # ---------------------------------------------------------------------------
@@ -179,4 +193,5 @@ dist:
 
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)
+	@rm -f $(SDK_ROOT)src/main/kotlin/GeneratedFlows.kt
 	@$(SDK_ROOT)/gradlew clean 2>/dev/null || true

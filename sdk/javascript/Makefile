@@ -1,4 +1,4 @@
-.PHONY: install-deps build-ffi-lib generate-bindings generate-proto generate-all \
+.PHONY: install-deps build-ffi-lib generate generate-bindings generate-proto generate-all \
         build-ts pack-archive install test-package dist clean
 
 # ---------------------------------------------------------------------------
@@ -37,8 +37,13 @@ else
   LIB_EXT := so
 endif
 
+# Profile used for local builds (test-package). release-fast skips LTO and
+# uses parallel codegen — same opt-level as release, ~5x faster to compile.
+# dist overrides this to --release for production-optimised artifacts.
+PROFILE  := release-fast
+
 # Pre-built FFI library for the current platform (output of build-ffi-lib).
-LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/release/libconnector_service_ffi.$(LIB_EXT)
+LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/libconnector_service_ffi.$(LIB_EXT)
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -65,10 +70,19 @@ install-deps:
 # directory layout — no special-case LIBRARY= or TARGET_TRIPLE= variables needed.
 # ---------------------------------------------------------------------------
 build-ffi-lib:
-	@echo "Building FFI shared library for $(PLATFORM)..."
+	@echo "Building FFI shared library for $(PLATFORM) [profile: $(PROFILE)]..."
 	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
-		--release --target $(PLATFORM)
+		--profile $(PROFILE) --target $(PLATFORM)
 	@echo "Build complete: $(LIBRARY)"
+
+# ---------------------------------------------------------------------------
+# generate
+# Auto-discovers flows from services.proto + bindings/uniffi.rs and regenerates
+# the JavaScript/TypeScript SDK client code (connector_client.ts, uniffi_client.ts).
+# ---------------------------------------------------------------------------
+generate:
+	@echo "Discovering flows and generating JavaScript SDK client code..."
+	@python3 $(REPO_ROOT)/sdk/codegen/generate.py --lang javascript
 
 # ---------------------------------------------------------------------------
 # generate-bindings
@@ -164,6 +178,8 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 	@cd /tmp/test-hyperswitch-js && npm init -y --silent && \
 		npm install $(PACKAGE_DIR)/hyperswitch-payments-0.1.0.tgz --silent
 	@cp $(SDK_ROOT)/test_smoke.ts /tmp/test-hyperswitch-js/test_smoke.ts
+	@printf '{"compilerOptions":{"module":"CommonJS","moduleResolution":"node","esModuleInterop":true,"skipLibCheck":true,"strict":true}}\n' \
+		> /tmp/test-hyperswitch-js/tsconfig.json
 	@cd /tmp/test-hyperswitch-js && npx ts-node test_smoke.ts
 	@rm -rf /tmp/test-hyperswitch-js
 	@echo "Package test passed."
@@ -189,3 +205,6 @@ dist:
 
 clean:
 	@rm -rf $(GENERATED_OUT) node_modules
+	@rm -f $(SDK_ROOT)src/payments/_generated_flows.js \
+	        $(SDK_ROOT)src/payments/_generated_connector_client_flows.ts \
+	        $(SDK_ROOT)src/payments/_generated_uniffi_client_flows.ts

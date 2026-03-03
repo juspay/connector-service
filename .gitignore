@@ -425,5 +425,6 @@ sdk/**/*.tgz
 sdk/**/dist/
 sdk/**/build/
 sdk/java/smoke-test/gradle*
+sdk/java/bin
 
 artifacts/
