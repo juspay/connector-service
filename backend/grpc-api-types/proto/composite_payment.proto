@@ -114,3 +114,57 @@ message CompositeAuthorizeResponse {
   optional PaymentServiceCreateConnectorCustomerResponse create_customer_response = 2; // Create customer flow response
   optional PaymentServiceAuthorizeResponse authorize_response = 3; // Authorize flow response
 }
+
+// Request message for composite pre-authenticate flow.
+message CompositePreAuthenticateRequest {
+  // Payment Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+
+  // Amount Information
+  int64 amount = 2; // The amount for the payment in major currency units
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+
+  // Payment Method
+  PaymentMethod payment_method = 5; // Payment method to be used
+
+  // Customer Information
+  optional SecretString email = 6; // Email address of the customer
+  optional string customer_name = 7; // Name of the customer
+
+  // Address Information
+  PaymentAddress address = 8; // Billing and shipping address details
+
+  // Authentication Details
+  bool enrolled_for_3ds = 9; // Indicates if the customer is enrolled for 3D Secure
+
+  // Metadata
+  optional SecretString metadata = 10; // Additional metadata for the connector
+
+  // URLs for Redirection
+  optional string return_url = 11; // URL to redirect after authentication
+  optional string continue_redirection_url = 12; // URL to complete authorization
+
+  // Contextual Information
+  optional BrowserInformation browser_info = 14; // Information about the customer's browser
+
+  // State Information
+  optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
+
+  // Account-Specific Configuration
+  optional SecretString merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Connector-specific metadata
+  optional SecretString connector_metadata = 17; // Connector-specific metadata for the transaction
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 19; // Method for capturing the payment
+
+  // Description
+  optional string description = 20; // An arbitrary string attached to the payment
+}
+
+// Response message for composite pre-authenticate flow.
+message CompositePreAuthenticateResponse {
+  optional PaymentServicePreAuthenticateResponse pre_authenticate_response = 1; // Pre-authenticate flow response
+}

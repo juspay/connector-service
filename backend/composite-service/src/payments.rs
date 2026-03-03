@@ -6,8 +6,9 @@ use domain_types::{
 use grpc_api_types::payments::{
     composite_payment_service_server::CompositePaymentService,
     payment_service_server::PaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
+    CompositePreAuthenticateRequest, CompositePreAuthenticateResponse,
     PaymentServiceAuthorizeResponse, PaymentServiceCreateAccessTokenResponse,
-    PaymentServiceCreateConnectorCustomerResponse,
+    PaymentServiceCreateConnectorCustomerResponse, PaymentServicePreAuthenticateResponse,
 };
 
 use crate::transformers::ForeignFrom;
@@ -147,6 +148,28 @@ where
         Ok(authorize_response)
     }
 
+    async fn pre_authenticate(
+        &self,
+        payload: &CompositePreAuthenticateRequest,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<PaymentServicePreAuthenticateResponse, tonic::Status> {
+        let pre_authenticate_payload =
+            grpc_api_types::payments::PaymentServicePreAuthenticateRequest::foreign_from(payload);
+
+        let mut pre_authenticate_request = tonic::Request::new(pre_authenticate_payload);
+        *pre_authenticate_request.metadata_mut() = metadata.clone();
+        *pre_authenticate_request.extensions_mut() = extensions.clone();
+
+        let pre_authenticate_response = self
+            .payment_service
+            .pre_authenticate(pre_authenticate_request)
+            .await?
+            .into_inner();
+
+        Ok(pre_authenticate_response)
+    }
+
     async fn process_composite_authorize(
         &self,
         request: tonic::Request<CompositeAuthorizeRequest>,
@@ -177,6 +200,21 @@ where
             authorize_response: Some(authorize_response),
         }))
     }
+
+    async fn process_composite_pre_authenticate(
+        &self,
+        request: tonic::Request<CompositePreAuthenticateRequest>,
+    ) -> Result<tonic::Response<CompositePreAuthenticateResponse>, tonic::Status> {
+        let (metadata, extensions, payload) = request.into_parts();
+
+        let pre_authenticate_response = self
+            .pre_authenticate(&payload, &metadata, &extensions)
+            .await?;
+
+        Ok(tonic::Response::new(CompositePreAuthenticateResponse {
+            pre_authenticate_response: Some(pre_authenticate_response),
+        }))
+    }
 }
 
 #[tonic::async_trait]
@@ -189,5 +227,12 @@ where
         request: tonic::Request<CompositeAuthorizeRequest>,
     ) -> Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status> {
         self.process_composite_authorize(request).await
+    }
+
+    async fn composite_pre_authenticate(
+        &self,
+        request: tonic::Request<CompositePreAuthenticateRequest>,
+    ) -> Result<tonic::Response<CompositePreAuthenticateResponse>, tonic::Status> {
+        self.process_composite_pre_authenticate(request).await
     }
 }

@@ -1,8 +1,9 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, ConnectorState, PaymentServiceAuthorizeOnlyRequest,
-    PaymentServiceCreateAccessTokenRequest, PaymentServiceCreateAccessTokenResponse,
-    PaymentServiceCreateConnectorCustomerRequest, PaymentServiceCreateConnectorCustomerResponse,
+    CompositeAuthorizeRequest, CompositePreAuthenticateRequest, ConnectorState,
+    PaymentServiceAuthorizeOnlyRequest, PaymentServiceCreateAccessTokenRequest,
+    PaymentServiceCreateAccessTokenResponse, PaymentServiceCreateConnectorCustomerRequest,
+    PaymentServiceCreateConnectorCustomerResponse, PaymentServicePreAuthenticateRequest,
 };
 
 use crate::utils::{
@@ -41,6 +42,31 @@ impl ForeignFrom<&CompositeAuthorizeRequest> for PaymentServiceCreateConnectorCu
             metadata: item.metadata.clone(),
             connector_metadata: item.connector_metadata.clone(),
             test_mode: item.test_mode,
+        }
+    }
+}
+
+impl ForeignFrom<&CompositePreAuthenticateRequest> for PaymentServicePreAuthenticateRequest {
+    fn foreign_from(item: &CompositePreAuthenticateRequest) -> Self {
+        Self {
+            request_ref_id: item.request_ref_id.clone(),
+            amount: item.amount,
+            currency: item.currency,
+            minor_amount: item.minor_amount,
+            payment_method: item.payment_method.clone(),
+            email: item.email.clone(),
+            customer_name: item.customer_name.clone(),
+            address: item.address.clone(),
+            enrolled_for_3ds: item.enrolled_for_3ds,
+            metadata: item.metadata.clone(),
+            connector_metadata: item.connector_metadata.clone(),
+            return_url: item.return_url.clone(),
+            continue_redirection_url: item.continue_redirection_url.clone(),
+            browser_info: item.browser_info.clone(),
+            state: item.state.clone(),
+            merchant_account_metadata: item.merchant_account_metadata.clone(),
+            capture_method: item.capture_method,
+            description: item.description.clone(),
         }
     }
 }
