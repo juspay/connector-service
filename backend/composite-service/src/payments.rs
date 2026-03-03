@@ -224,7 +224,7 @@ where
         Ok(access_token_response)
     }
 
-    async fn call_get(
+    async fn get(
         &self,
         payload: &CompositeGetRequest,
         access_token_response: Option<&PaymentServiceCreateAccessTokenResponse>,
@@ -257,7 +257,7 @@ where
             .create_access_token_for_get(&connector, &payload, &metadata, &extensions)
             .await?;
         let get_response = self
-            .call_get(
+            .get(
                 &payload,
                 access_token_response.as_ref(),
                 &metadata,
