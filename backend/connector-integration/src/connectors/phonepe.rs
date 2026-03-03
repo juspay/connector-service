@@ -26,7 +26,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{ConnectorInfo, Connectors},
@@ -461,7 +461,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorAuthType,
+        auth_type: &ConnectorSpecificAuth,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let _auth = phonepe::PhonepeAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;

@@ -11,7 +11,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -36,14 +36,17 @@ impl DatatransAuthType {
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for DatatransAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for DatatransAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                merchant_id: key1.to_owned(),
-                password: api_key.to_owned(),
+            ConnectorSpecificAuth::Datatrans {
+                merchant_id,
+                password,
+            } => Ok(Self {
+                merchant_id: merchant_id.to_owned(),
+                password: password.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType

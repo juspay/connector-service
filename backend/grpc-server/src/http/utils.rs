@@ -25,7 +25,6 @@ pub fn http_headers_to_grpc_metadata(
         consts::X_MERCHANT_ID,
         consts::X_REQUEST_ID,
         consts::X_TENANT_ID,
-        consts::X_AUTH,
     ];
 
     // Optional headers - these may or may not be present
@@ -37,6 +36,8 @@ pub fn http_headers_to_grpc_metadata(
         consts::X_KEY2,
         consts::X_AUTH_KEY_MAP,
         consts::X_SHADOW_MODE,
+        consts::X_AUTH,
+        consts::X_CONNECTOR_AUTH,
     ];
 
     // Process required headers - fail if missing
