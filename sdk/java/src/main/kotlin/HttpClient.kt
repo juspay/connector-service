@@ -9,8 +9,6 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
 import ucs.v2.SdkOptions.SdkDefault
-import ucs.v2.SdkOptions.HttpOptions
-import ucs.v2.SdkOptions.ProxyOptions
 
 data class HttpRequest(
     val url: String,

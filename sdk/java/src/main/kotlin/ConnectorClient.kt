@@ -16,10 +16,6 @@ package payments
 import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
-import ucs.v2.SdkOptions.FfiConnectorHttpRequest
-import ucs.v2.SdkOptions.FfiConnectorHttpResponse
-import ucs.v2.SdkOptions.FfiOptions
-import ucs.v2.SdkOptions.Options
 
 class ConnectorClient(
     libPath: String? = null,

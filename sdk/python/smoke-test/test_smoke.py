@@ -9,17 +9,17 @@ resolve against the installed package.
 import json
 import os
 
-from payments import ConnectorClient
-from payments.generated.connector_service_ffi import authorize_req_transformer
-from payments.generated.payment_pb2 import (
+from payments import (
+    ConnectorClient,
+    authorize_req_transformer,
     PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse,
     PaymentAddress,
+    FfiConnectorHttpRequest,
     USD,
     AUTOMATIC,
     NO_THREE_DS,
-    PaymentServiceAuthorizeResponse,
 )
-from payments.generated.sdk_options_pb2 import FfiConnectorHttpRequest
 
 print(f"Loaded payments package from: {__file__}")
 print(f"  ConnectorClient: {ConnectorClient}")
