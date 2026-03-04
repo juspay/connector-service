@@ -17,7 +17,8 @@ members = [
   "backend/composite-service",
   "backend/ucs_env",
   "backend/ucs_interface_common",
-  "backend/ffi"
+  "backend/ffi",
+  "backend/ucs-connector-tests"
 ]
 exclude = [
   "examples/example-rs",

@@ -9,7 +9,14 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean
+.PHONY: all fmt check clippy test nextest ci ucs-summary help proto-format proto-generate proto-build proto-lint proto-clean
+
+UCS_CONNECTOR ?=
+UCS_FLOW ?=
+UCS_SUMMARY_FORMAT ?= table
+UCS_CAPABILITIES_ONLY ?= true
+UCS_SHOW_TEST_NAMES ?= false
+UCS_TEST_NAME_VIEW ?=
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -38,6 +45,17 @@ test:
 nextest:
 	@echo "▶ cargo nextest…"
 	cargo nextest run --config-file .nextest.toml
+
+## Show UCS capability summary from test annotations
+ucs-summary:
+	@echo "▶ ucs test summary…"
+	@ARGS="--format $(UCS_SUMMARY_FORMAT)"; \
+	if [ -n "$(UCS_CONNECTOR)" ]; then ARGS="$$ARGS --connector $(UCS_CONNECTOR)"; fi; \
+	if [ -n "$(UCS_FLOW)" ]; then ARGS="$$ARGS --flow $(UCS_FLOW)"; fi; \
+	if [ "$(UCS_CAPABILITIES_ONLY)" = "true" ]; then ARGS="$$ARGS --capabilities-only"; fi; \
+	if [ "$(UCS_SHOW_TEST_NAMES)" = "true" ]; then ARGS="$$ARGS --show-test-names"; fi; \
+	if [ -n "$(UCS_TEST_NAME_VIEW)" ]; then ARGS="$$ARGS --test-name-view $(UCS_TEST_NAME_VIEW)"; fi; \
+	cargo run -p ucs-connector-tests --bin ucs_test_summary -- $$ARGS
 
 ## CI-friendly invocation:
 ##    make ci
@@ -84,6 +102,7 @@ help:
 	@echo "  clippy   Run cargo-hack clippy (no dev-deps)"
 	@echo "  test     Run cargo-hack test"
 	@echo "  nextest  Run tests with nextest (faster test runner)"
+	@echo "  ucs-summary  Show UCS capability summary (vars: UCS_CONNECTOR optional, UCS_FLOW, UCS_SUMMARY_FORMAT, UCS_CAPABILITIES_ONLY, UCS_SHOW_TEST_NAMES, UCS_TEST_NAME_VIEW)"
 	@echo "  ci       Same as '''all''' but with CI=true (treat warnings as errors)"
 	@echo
 	@echo "Proto Targets:"
