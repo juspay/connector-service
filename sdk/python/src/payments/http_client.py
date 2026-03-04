@@ -8,6 +8,10 @@ from .generated import sdk_options_pb2
 # Centralized defaults from Protobuf Single Source of Truth
 Defaults = sdk_options_pb2.SdkDefault
 
+# Type alias for proto-generated HttpOptions
+HttpOptions = sdk_options_pb2.HttpOptions
+ProxyOptions = sdk_options_pb2.ProxyOptions
+
 @dataclass
 class HttpRequest:
     url: str
@@ -28,9 +32,10 @@ class ConnectorError(Exception):
         self.status_code = status_code
         self.error_code = error_code
 
-def resolve_proxy_config(url: str, proxy_options: Optional[Any] = None) -> Optional[Dict[str, str]]:
+def resolve_proxy_config(url: str, proxy_options: Optional[ProxyOptions] = None) -> Optional[Dict[str, str]]:
     """
     Decides the proxy configuration for a specific URL.
+    Uses proto-generated ProxyOptions directly.
     
     Returns:
         - dict: Explicit proxy map (e.g. {'https': '...'}) or {} for explicit bypass.
@@ -42,23 +47,24 @@ def resolve_proxy_config(url: str, proxy_options: Optional[Any] = None) -> Optio
     # Hostname matching for bypass (Fintech Standard)
     # Checks if the target hostname ends with any string in bypass_urls.
     target_host = urlparse(url).hostname or ""
-    for bypass in getattr(proxy_options, 'bypass_urls', []):
+    for bypass in list(proxy_options.bypass_urls):
         if target_host.endswith(bypass):
             return {} # Explicit bypass (direct connection)
 
     # Protocol-specific selection
     proxies = {}
-    if url.startswith("https") and getattr(proxy_options, 'https_url', None):
+    if url.startswith("https") and proxy_options.https_url:
         proxies["https"] = proxy_options.https_url
-    elif getattr(proxy_options, 'http_url', None):
+    elif proxy_options.http_url:
         proxies["http"] = proxy_options.http_url
         
     return proxies if proxies else None
 
-def create_session(http_options: Optional[Any] = None) -> requests.Session:
+def create_session(http_options: Optional[HttpOptions] = None) -> requests.Session:
     """
     Creates a high-performance connection pool (Session).
     The ConnectorClient instance will own this.
+    Uses proto-generated HttpOptions directly.
     """
     session = requests.Session()
     
@@ -66,15 +72,15 @@ def create_session(http_options: Optional[Any] = None) -> requests.Session:
         # Set session-level default proxies if provided
         proxies = {}
         if http_options.proxy:
-            if getattr(http_options.proxy, 'http_url', None):
+            if http_options.proxy.http_url:
                 proxies["http"] = http_options.proxy.http_url
-            if getattr(http_options.proxy, 'https_url', None):
+            if http_options.proxy.https_url:
                 proxies["https"] = http_options.proxy.https_url
         if proxies:
             session.proxies = proxies
 
         # Certificate Pinning / CA Bundle
-        if getattr(http_options, 'ca_cert', None):
+        if http_options.ca_cert:
             session.verify = http_options.ca_cert
 
     return session

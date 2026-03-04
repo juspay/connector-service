@@ -1,12 +1,15 @@
 /**
  * ConnectorClient — high-level wrapper using UniFFI bindings via koffi.
  *
- * Handles the full round-trip:
+ * Handles the full round-trip for any payment flow:
  *   1. Serialize protobuf request to bytes
- *   2. Build connector HTTP request via authorizeReqTransformer (UniFFI FFI)
+ *   2. Build connector HTTP request via UniffiClient.callReq (generic FFI dispatch)
  *   3. Execute the HTTP request via our standardized HttpClient
- *   4. Parse the connector response via authorizeResTransformer (UniFFI FFI)
+ *   4. Parse the connector response via UniffiClient.callRes (generic FFI dispatch)
  *   5. Deserialize protobuf response from bytes
+ *
+ * Flow methods (authorize, capture, void, refund, …) are in _generated_connector_client_flows.ts.
+ * To add a new flow: implement it in the FFI crate and run `make generate`.
  */
 
 import { Dispatcher } from "undici";
@@ -29,7 +32,7 @@ export class ConnectorClient {
   constructor(libPath?: string, options: ucs.v2.IOptions = {}) {
     this.uniffi = new UniffiClient(libPath);
     this.options = options;
-    
+
     // Instance-level cache: create the primary connection pool at startup
     this.dispatcher = createDispatcher(this.getNativeHttpOptions(options.http));
   }
@@ -55,30 +58,41 @@ export class ConnectorClient {
   }
 
   /**
-   * Execute a full authorize round-trip.
-   * 
-   * @param requestMsg - PaymentServiceAuthorizeRequest protobuf message
-   * @param metadata - Dict with connector routing and auth info. Must include:
-   *                 - "connector": connector name (e.g. "Stripe")
-   *                 - "connector_auth_type": JSON string of auth config
-   *                 - x-* headers for masked metadata
-   * @param ffiOptions - optional IFfiOptions message override
-   * @returns decoded PaymentServiceAuthorizeResponse message
+   * Execute a full round-trip for any registered payment flow.
+   *
+   * Looks up the request/response protobuf type names from FLOWS, encodes the
+   * request, calls callReq → HTTP → callRes via the generic FFI dispatcher,
+   * then decodes and returns the response.
+   *
+   * @param flow - Flow name matching the FFI transformer prefix (e.g. "authorize").
+   * @param requestMsg - Protobuf request message object.
+   * @param metadata - Dict with connector routing and auth info.
+   * @param ffiOptions - Optional IFfiOptions override.
    */
-  async authorize(
-    requestMsg: ucs.v2.IPaymentServiceAuthorizeRequest, 
-    metadata: Record<string, string>, 
-    ffiOptions?: ucs.v2.IFfiOptions | null
-  ): Promise<ucs.v2.PaymentServiceAuthorizeResponse> {
+  async _executeFlow(
+    flow: string,
+    requestMsg: object,
+    metadata: Record<string, string>,
+    ffiOptions?: ucs.v2.IFfiOptions | null,
+    reqTypeName?: string,
+    resTypeName?: string
+  ): Promise<unknown> {
+    const reqType = reqTypeName ? (v2 as any)[reqTypeName] : undefined;
+    const resType = resTypeName ? (v2 as any)[resTypeName] : undefined;
+
+    if (!reqType || !resType) {
+      throw new Error(`Unknown flow: '${flow}' or missing type names.`);
+    }
+
     // 1. Serialize request
-    const requestBytes = Buffer.from(v2.PaymentServiceAuthorizeRequest.encode(requestMsg).finish());
+    const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
 
     // 2. Resolve FFI options (prefer call-specific)
     const ffi = ffiOptions || this.options.ffi;
     const optionsBytes = ffi ? Buffer.from(v2.FfiOptions.encode(ffi).finish()) : Buffer.alloc(0);
 
-    // 3. Transform to connector request via FFI (returns Protobuf bytes)
-    const resultBytes = this.uniffi.authorizeReq(requestBytes, metadata, optionsBytes);
+    // 3. Build connector HTTP request via FFI (returns FfiConnectorHttpRequest protobuf bytes)
+    const resultBytes = this.uniffi.callReq(flow, requestBytes, metadata, optionsBytes);
     const connectorReq = v2.FfiConnectorHttpRequest.decode(resultBytes);
 
     const connectorRequest: HttpRequest = {
@@ -90,12 +104,12 @@ export class ConnectorClient {
 
     // 4. Execute HTTP using the instance-owned connection pool
     const response = await execute(
-      connectorRequest, 
-      this.getNativeHttpOptions(this.options.http), 
+      connectorRequest,
+      this.getNativeHttpOptions(this.options.http),
       this.dispatcher
     );
 
-    // 5. Transform connector response via FFI
+    // 5. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
     const resProto = v2.FfiConnectorHttpResponse.create({
       statusCode: response.statusCode,
       headers: response.headers,
@@ -103,9 +117,8 @@ export class ConnectorClient {
     });
     const resBytes = Buffer.from(v2.FfiConnectorHttpResponse.encode(resProto).finish());
 
-    const resultBytesRes = this.uniffi.authorizeRes(resBytes, requestBytes, metadata, optionsBytes);
-
-    // 6. Decode and return
-    return v2.PaymentServiceAuthorizeResponse.decode(resultBytesRes);
+    // 6. Parse connector response via FFI and decode
+    const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, metadata, optionsBytes);
+    return resType.decode(resultBytesRes);
   }
 }

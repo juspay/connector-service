@@ -9,16 +9,17 @@ resolve against the installed package.
 import json
 import os
 
-from payments import ConnectorClient
-from payments.generated.connector_service_ffi import authorize_req_transformer
-from payments.generated.payment_pb2 import (
+from payments import (
+    ConnectorClient,
+    authorize_req_transformer,
     PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse,
     PaymentAddress,
+    FfiConnectorHttpRequest,
     USD,
     AUTOMATIC,
     NO_THREE_DS,
 )
-from payments.generated.sdk_options_pb2 import FfiOptions, EnvOptions, FfiConnectorHttpRequest
 
 print(f"Loaded payments package from: {__file__}")
 print(f"  ConnectorClient: {ConnectorClient}")
@@ -40,11 +41,6 @@ metadata = {
     "x-api-key": api_key,
 }
 
-# Create FfiOptions with test_mode
-options = FfiOptions()
-options.env.test_mode = True
-options_bytes = options.SerializeToString()
-
 # Build a protobuf request
 req = PaymentServiceAuthorizeRequest()
 req.merchant_transaction_id.id = "test_pack_123"
@@ -65,9 +61,12 @@ req.webhook_url = "https://example.com/webhook"
 req.address.CopyFrom(PaymentAddress())
 req.test_mode = True
 
+# Create empty options bytes
+options_bytes = b""
+
 # --- Test 1: Low-level FFI ---
 print("\n=== Test 1: Low-level FFI (authorize_req_transformer) ===")
-# Now returns raw Protobuf bytes. We must decode them.
+# FFI function takes (request_bytes, metadata, options_bytes) and returns protobuf bytes
 result_bytes = authorize_req_transformer(req.SerializeToString(), metadata, options_bytes)
 result = FfiConnectorHttpRequest.FromString(result_bytes)
 print(f"  URL:    {result.url}")

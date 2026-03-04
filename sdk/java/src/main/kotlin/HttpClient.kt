@@ -1,6 +1,8 @@
 package payments
 
 import okhttp3.*
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
@@ -22,24 +24,6 @@ data class HttpResponse(
     val latencyMs: Long
 )
 
-/**
- * Native configuration options for the network transport layer.
- */
-data class HttpOptions(
-    val totalTimeoutMs: Long? = null,
-    val connectTimeoutMs: Long? = null,
-    val responseTimeoutMs: Long? = null,
-    val keepAliveTimeoutMs: Long? = null,
-    val proxy: ProxyConfig? = null,
-    val caCert: ByteArray? = null
-)
-
-data class ProxyConfig(
-    val httpUrl: String? = null,
-    val httpsUrl: String? = null,
-    val bypassUrls: List<String> = emptyList()
-)
-
 class ConnectorError(
     message: String,
     val statusCode: Int? = null,
@@ -49,45 +33,50 @@ class ConnectorError(
 object HttpClient {
     /**
      * Creates a high-performance OkHttpClient. (The instance-level connection pool)
+     * Uses proto-generated HttpOptions directly.
      */
-    fun createClient(options: HttpOptions): OkHttpClient {
+    fun createClient(options: HttpOptions?): OkHttpClient {
         try {
             val builder = OkHttpClient.Builder()
                 .connectTimeout(
-                    options.connectTimeoutMs ?: SdkDefault.CONNECT_TIMEOUT_MS_VALUE.toLong(), 
+                    if (options?.hasConnectTimeoutMs() == true) options.connectTimeoutMs.toLong() else SdkDefault.CONNECT_TIMEOUT_MS_VALUE.toLong(), 
                     TimeUnit.MILLISECONDS
                 )
                 .readTimeout(
-                    options.responseTimeoutMs ?: SdkDefault.RESPONSE_TIMEOUT_MS_VALUE.toLong(), 
+                    if (options?.hasResponseTimeoutMs() == true) options.responseTimeoutMs.toLong() else SdkDefault.RESPONSE_TIMEOUT_MS_VALUE.toLong(), 
                     TimeUnit.MILLISECONDS
                 )
                 .writeTimeout(
-                    options.responseTimeoutMs ?: SdkDefault.RESPONSE_TIMEOUT_MS_VALUE.toLong(), 
+                    if (options?.hasResponseTimeoutMs() == true) options.responseTimeoutMs.toLong() else SdkDefault.RESPONSE_TIMEOUT_MS_VALUE.toLong(), 
                     TimeUnit.MILLISECONDS
                 )
                 .callTimeout(
-                    options.totalTimeoutMs ?: SdkDefault.TOTAL_TIMEOUT_MS_VALUE.toLong(), 
+                    if (options?.hasTotalTimeoutMs() == true) options.totalTimeoutMs.toLong() else SdkDefault.TOTAL_TIMEOUT_MS_VALUE.toLong(), 
                     TimeUnit.MILLISECONDS
                 )
                 .followRedirects(false)
                 .followSslRedirects(false)
 
-            val proxyUrl = options.proxy?.let { if (it.httpsUrl != null) it.httpsUrl else it.httpUrl }
-            if (proxyUrl != null) {
-                val url = HttpUrl.parse(proxyUrl)
-                if (url != null) {
-                    builder.proxy(java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host(), url.port())))
+            // Configure proxy if provided
+            if (options?.hasProxy() == true) {
+                val proxyUrl = options.proxy.httpsUrl.takeIf { it.isNotEmpty() } ?: options.proxy.httpUrl.takeIf { it.isNotEmpty() }
+                if (proxyUrl != null) {
+                    val url = proxyUrl.toHttpUrlOrNull()
+                    if (url != null) {
+                        builder.proxy(java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host, url.port)))
+                    }
                 }
             }
+            
             return builder.build()
         } catch (e: Exception) {
             throw ConnectorError("Internal HTTP setup failed: ${e.message}", 500, "CLIENT_INITIALIZATION")
         }
     }
 
-    fun execute(request: HttpRequest, options: HttpOptions, client: OkHttpClient): HttpResponse {
+    fun execute(request: HttpRequest, options: HttpOptions?, client: OkHttpClient): HttpResponse {
         val okHeaders = request.headers?.toHeaders() ?: Headers.Builder().build()
-        val mediaType = okHeaders["Content-Type"]?.let { MediaType.parse(it) }
+        val mediaType = okHeaders["Content-Type"]?.let { it.toMediaTypeOrNull() }
         val requestBody = request.body?.toRequestBody(mediaType)
         
         val okRequest = Request.Builder()
@@ -114,7 +103,7 @@ object HttpClient {
         } catch (e: IOException) {
             val msg = e.message?.lowercase() ?: ""
             val latency = System.currentTimeMillis() - startTime
-            val totalTimeout = options.totalTimeoutMs ?: SdkDefault.TOTAL_TIMEOUT_MS_VALUE.toLong()
+            val totalTimeout = if (options?.hasTotalTimeoutMs() == true) options.totalTimeoutMs.toLong() else SdkDefault.TOTAL_TIMEOUT_MS_VALUE.toLong()
 
             when {
                 msg.contains("timeout") && latency >= totalTimeout -> {

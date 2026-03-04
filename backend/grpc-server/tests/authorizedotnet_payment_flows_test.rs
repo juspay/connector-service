@@ -227,7 +227,6 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
 }
 
 // Test repeat payment (MIT) flow using previously created mandate
-#[tokio::test]
 async fn test_repeat_everything() {
     grpc_test!([client: PaymentServiceClient<Channel>, recurring_client: RecurringPaymentServiceClient<Channel>], {
         // First, create a mandate using register
@@ -588,7 +587,7 @@ fn create_register_request() -> PaymentServiceSetupRecurringRequest {
         email: Some(generate_unique_email().into()),
         name: Some(TEST_CARD_HOLDER.to_string()),
         id: None,
-        connector_customer_id: None,
+        connector_customer_id: Some("TEST_CONNECTOR_CUSTOMER_ID".to_string()),
         phone_number: None,
     });
 
@@ -1021,7 +1020,6 @@ async fn test_refund() {
 }
 
 // Test register (setup mandate) flow
-#[tokio::test]
 async fn test_register() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the register request

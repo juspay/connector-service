@@ -2,21 +2,21 @@
 # Builds FFI binaries for all SDK platforms
 # This Makefile should be run from the repository root
 
-.PHONY: help build build-all build-macos build-linux clean check-cargo
+.PHONY: help build build-all build-macos build-linux clean check-cargo generate install-deps \
+        generate-descriptor generate-flows-python generate-flows-javascript generate-flows-java \
+        test test-python test-javascript test-java \
+        dist dist-python dist-javascript dist-java
 
 # Default target
 .DEFAULT_GOAL := help
 
-# Auto-detect repo root (works when run from sdk/ via -C or from repo root via -f)
+# Include common SDK build configuration
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-REPO_ROOT := $(shell cd $(MAKEFILE_DIR).. && pwd)
+SDK_ROOT     := $(MAKEFILE_DIR)
+REPO_ROOT    := $(shell cd $(MAKEFILE_DIR).. && pwd)
+include $(MAKEFILE_DIR)/common.mk
 
-# Configuration
-FFI_CRATE := $(REPO_ROOT)/backend/ffi
-RELEASE_DIR := $(REPO_ROOT)/target/release
-CROSS_RELEASE_DIR := $(REPO_ROOT)/target/cross
-
-# Target platforms
+# Target platforms (for cross-compilation)
 TARGET_MACOS_x86_64 := x86_64-apple-darwin
 TARGET_MACOS_AARCH64 := aarch64-apple-darwin
 TARGET_LINUX_x86_64 := x86_64-unknown-linux-gnu
@@ -33,8 +33,29 @@ help: ## Show this help message
 	@echo ""
 	@echo "Current platform: $(UNAME) $(ARCH)"
 
-check-cargo: ## Verify cargo is installed
-	@which cargo > /dev/null 2>&1 || (echo "Error: cargo is not installed" && exit 1)
+# ---------------------------------------------------------------------------
+# install-deps
+# Installs Python build-time dependencies required for code generation.
+# Checks for tool existence before installing. In Nix environments tools are
+# provided by the shell so installation is skipped (IN_NIX_SHELL is set).
+# Outside Nix, installs grpcio-tools and mypy-protobuf if absent.
+# ---------------------------------------------------------------------------
+install-deps: ## Install Python dependencies (skipped in Nix shell)
+	@command -v python3 >/dev/null 2>&1 || \
+		(echo "Error: python3 not found. Install via nix or your system package manager." && exit 1)
+	@command -v cargo >/dev/null 2>&1 || \
+		(echo "Error: cargo not found. Install Rust via rustup." && exit 1)
+	@if [ -z "$${IN_NIX_SHELL:-}" ]; then \
+		python3 -c "import grpc_tools" 2>/dev/null || \
+			(echo "  → Installing grpcio-tools..." && \
+			 pip3 install grpcio-tools --quiet 2>/dev/null || \
+			 pip3 install grpcio-tools --user --quiet); \
+		python3 -c "import mypy_protobuf" 2>/dev/null || \
+			(echo "  → Installing mypy-protobuf..." && \
+			 pip3 install mypy-protobuf --quiet 2>/dev/null || \
+			 pip3 install mypy-protobuf --user --quiet); \
+	fi
+	@echo "All required tools present."
 
 build: check-cargo ## Build UniFFI library for current platform
 	@echo "Building UniFFI library for current platform..."
@@ -86,7 +107,106 @@ build-all: ## Build for all supported platforms
 	)
 	@echo "All builds complete!"
 
+generate-python: ## Regenerate Python SDK client (flows + protobuf stubs)
+	@$(MAKE) -C $(MAKEFILE_DIR)python generate
+
+generate-javascript: ## Regenerate JavaScript/TypeScript SDK client (flows)
+	@$(MAKE) -C $(MAKEFILE_DIR)javascript generate
+
+generate-kotlin: ## Regenerate Kotlin SDK client (flows)
+	@$(MAKE) -C $(MAKEFILE_DIR)java generate
+
+# ---------------------------------------------------------------------------
+# generate-descriptor
+# Generates the proto descriptor file used by all SDK codegen scripts.
+# This is a prerequisite for generate-client-* targets.
+# ---------------------------------------------------------------------------
+generate-descriptor:
+	@echo "Generating proto descriptor..."
+	@protoc \
+		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
+		--descriptor_set_out=$(REPO_ROOT)/sdk/codegen/services.desc \
+		--include_source_info \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/services.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_options.proto
+	@echo "Descriptor written to sdk/codegen/services.desc"
+
+# ---------------------------------------------------------------------------
+# generate-client-python
+# Delegates to python/Makefile to generate Python client flow methods.
+# ---------------------------------------------------------------------------
+generate-client-python: generate-descriptor
+	@$(MAKE) -C $(REPO_ROOT)/sdk/python generate-client
+
+# ---------------------------------------------------------------------------
+# generate-client-javascript
+# Delegates to javascript/Makefile to generate JavaScript client flow methods.
+# ---------------------------------------------------------------------------
+generate-client-javascript: generate-descriptor
+	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript generate-client
+
+# ---------------------------------------------------------------------------
+# generate-client-java
+# Delegates to java/Makefile to generate Java/Kotlin client flow methods.
+# ---------------------------------------------------------------------------
+generate-client-java: generate-descriptor
+	@$(MAKE) -C $(REPO_ROOT)/sdk/java generate-client
+
+# ---------------------------------------------------------------------------
+# generate
+# Main entry point for regenerating all SDK clients.
+# Generates the descriptor, then delegates to each SDK's generate-client target.
+# ---------------------------------------------------------------------------
+generate: install-deps generate-descriptor generate-client-python generate-client-javascript generate-client-java ## Auto-discover flows and regenerate all SDK clients
+	@echo
+	@echo "Generating Python protobuf stubs (_pb2.pyi)..."
+	@python3 -m grpc_tools.protoc \
+		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
+		--python_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
+		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
+		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_options.proto
+	@echo "All SDK clients regenerated successfully!"
+
+# ---------------------------------------------------------------------------
+# Test targets - delegate to SDK-specific test-package
+# ---------------------------------------------------------------------------
+test: test-python test-javascript test-java ## Run all SDK smoke tests
+
+test-python: build-ffi-lib ## Build FFI → Run Python smoke test
+	@$(MAKE) -C $(REPO_ROOT)/sdk/python test-package
+
+test-javascript: build-ffi-lib ## Build FFI → Run JavaScript smoke test
+	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-package
+
+test-java: build-ffi-lib ## Build FFI → Run Java smoke test
+	@$(MAKE) -C $(REPO_ROOT)/sdk/java test-package
+
+# ---------------------------------------------------------------------------
+# Distribution targets - delegate to SDK-specific dist
+# ---------------------------------------------------------------------------
+dist: dist-python dist-javascript dist-java ## Build all SDK distribution packages
+
+dist-python: build-ffi-lib ## Build FFI → Build Python wheel
+	@$(MAKE) -C $(REPO_ROOT)/sdk/python dist
+
+dist-javascript: build-ffi-lib ## Build FFI → Build JS npm package
+	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript dist
+
+dist-java: build-ffi-lib ## Build FFI → Build Java JAR
+	@$(MAKE) -C $(REPO_ROOT)/sdk/java dist
+
+# ---------------------------------------------------------------------------
+# Clean - comprehensive cleanup across all SDKs
+# ---------------------------------------------------------------------------
 clean: ## Clean all build artifacts
 	@echo "Cleaning build artifacts..."
 	@cd $(FFI_CRATE) && cargo clean
+	@rm -f $(REPO_ROOT)/sdk/codegen/services.desc
+	@$(MAKE) -C $(REPO_ROOT)/sdk/python clean
+	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript clean
+	@$(MAKE) -C $(REPO_ROOT)/sdk/java clean
 	@echo "Clean complete."

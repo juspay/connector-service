@@ -9,9 +9,9 @@ base64 = "0.21"
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 interfaces = { path = "../interfaces" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking" }
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = { version = "1.0.115", features = ["preserve_order"] }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
 serde_qs = "0.12.0"
 serde_urlencoded = "0.7.1"
 serde_with = "3.7.0"
@@ -29,17 +29,17 @@ reqwest = { version = "0.11.27", features = [
     "gzip",
     "multipart",
 ] }
-bytes = "1.6.0"
+bytes = { workspace = true }
 ring = "0.17"
 aes = "0.8"
 cbc = "0.1"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
-tracing = { version = "0.1.40" }
+tracing = { workspace = true }
 encoding_rs = "0.8"
 hex = "0.4.3"
 qrcode = "0.14.1"
 image = { version = "0.25.6", default-features = false, features = ["png"] }
-thiserror = "1.0.69"
+thiserror = { workspace = true }
 sha2 = "0.10"
 rand = "0.8"
 jsonwebtoken = "9.2"

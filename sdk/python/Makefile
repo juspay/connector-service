@@ -1,46 +1,18 @@
-.PHONY: install-deps build-ffi-lib generate-bindings generate-proto generate-all \
-        pack-archive install test-package dist clean
-
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
+.PHONY: install-deps generate-bindings generate-proto generate-all \
+        generate-flows pack-archive install test-package dist clean
+	#
+# SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
-REPO_ROOT    := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
 
-FFI_CRATE     := $(REPO_ROOT)/backend/ffi
-PROTO_DIR     := $(REPO_ROOT)/backend/grpc-api-types/proto
+# Include common SDK build configuration
+include $(SDK_ROOT)/../common.mk
+
+# SDK-specific paths continued
 GENERATED_OUT := $(SDK_ROOT)/src/payments/generated
-ARTIFACTS_DIR := $(REPO_ROOT)/artifacts
 PACKAGE_DIR   := $(ARTIFACTS_DIR)/sdk-python
 
-# ---------------------------------------------------------------------------
-# Platform detection
-# Always building with --target <PLATFORM> keeps the artifact layout identical
-# on CI runners and developer machines (target/<PLATFORM>/release/).
-# ---------------------------------------------------------------------------
-UNAME_S := $(shell uname -s)
-UNAME_M := $(shell uname -m)
-ifeq ($(UNAME_S), Darwin)
-  ifeq ($(UNAME_M), arm64)
-    PLATFORM := aarch64-apple-darwin
-  else
-    PLATFORM := x86_64-apple-darwin
-  endif
-  LIB_EXT := dylib
-else
-  ifeq ($(UNAME_M), aarch64)
-    PLATFORM := aarch64-unknown-linux-gnu
-  else
-    PLATFORM := x86_64-unknown-linux-gnu
-  endif
-  LIB_EXT := so
-endif
-
-# Pre-built FFI library for the current platform (output of build-ffi-lib).
-LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/release/libconnector_service_ffi.$(LIB_EXT)
-
-BINDGEN := $(REPO_ROOT)/target/$(PLATFORM)/release/uniffi-bindgen
+# Note: BINDGEN is defined in common.mk
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -62,30 +34,16 @@ install-deps:
 	fi
 	@echo "All required tools present."
 
-# ---------------------------------------------------------------------------
-# build-ffi-lib
-# Builds the Rust FFI shared library for the auto-detected platform.
-# Output: target/<PLATFORM>/release/libconnector_service_ffi.<ext>
-# Using --target consistently means local builds and CI builds share the same
-# directory layout — no special-case LIBRARY= or TARGET_TRIPLE= variables needed.
-# ---------------------------------------------------------------------------
-build-ffi-lib:
-	@echo "Building FFI shared library for $(PLATFORM)..."
-	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
-		--release --target $(PLATFORM)
-	@echo "Build complete: $(LIBRARY)"
-
-# ---------------------------------------------------------------------------
 # generate-bindings
 # Builds the uniffi-bindgen binary then runs uniffi-bindgen generate.
-# uniffi-cli implies uniffi (scaffolding), so no second build-ffi-lib call is
-# needed. All deps compiled by build-ffi-lib are reused from the shared
-# target/ directory — only ffi itself and uniffi/cli need recompiling.
+# uniffi-bindgen lives in its own crate (backend/uniffi-bindgen) so the ffi
+# library never pulls in the uniffi/cli codegen deps. The output binary lands
+# in the same target/<PLATFORM>/release/ directory as before.
 # ---------------------------------------------------------------------------
-generate-bindings:
+generate-bindings: build-ffi-lib
 	@echo "Building uniffi-bindgen..."
-	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi-cli \
-		--release --target $(PLATFORM) --bin uniffi-bindgen
+	@cd $(REPO_ROOT) && cargo build -p uniffi-bindgen \
+		--profile $(PROFILE) --target $(PLATFORM)
 	@echo "Generating UniFFI Python bindings from $(LIBRARY)..."
 	@mkdir -p $(GENERATED_OUT)
 	@cp -f $(LIBRARY) $(GENERATED_OUT)/
@@ -130,6 +88,16 @@ generate-proto: install-deps
 generate-all: generate-proto generate-bindings
 
 # ---------------------------------------------------------------------------
+# generate-flows
+# Generates flow methods (authorize, capture, etc.) by running the SDK
+# codegen script. Assumes descriptor is already generated.
+# ---------------------------------------------------------------------------
+generate-flows:
+	@echo "Generating Python flow methods..."
+	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang python
+	@echo "Python flow methods generated."
+
+# ---------------------------------------------------------------------------
 # pack-archive
 # Builds the SDK distribution wheel (.whl) using pip.
 # Assumes generated/ already contains the UniFFI Python bindings, proto stubs,
@@ -160,7 +128,7 @@ test-package: generate-all pack-archive
 	@echo "Testing packed wheel in isolation..."
 	@rm -rf /tmp/test-hyperswitch-py
 	@mkdir -p /tmp/test-hyperswitch-py
-	@cp $(SDK_ROOT)/test_smoke.py /tmp/test-hyperswitch-py/
+	@cp $(SDK_ROOT)/smoke-test/test_smoke.py /tmp/test-hyperswitch-py/
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
@@ -184,9 +152,12 @@ dist:
 		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: Linux x86_64 binary not found (skipping)"
 	@cp -f $(REPO_ROOT)/target/aarch64-apple-darwin/release/libconnector_service_ffi.dylib \
 		$(GENERATED_OUT)/ 2>/dev/null || echo "  Note: macOS aarch64 binary not found (skipping)"
+	@# dist always ships release-optimised binaries (lto=thin, codegen-units=1).
 	@$(MAKE) -C $(SDK_ROOT) pack-archive
 	@echo "Distribution wheel created in $(PACKAGE_DIR)/"
 
 clean:
 	@rm -rf $(GENERATED_OUT)
+	@rm -f $(SDK_ROOT)/src/payments/_generated_flows.py \
+	        $(SDK_ROOT)/src/payments/connector_client.pyi
 	@rm -rf $(SDK_ROOT)/build $(SDK_ROOT)/*.egg-info $(SDK_ROOT)/src/*.egg-info

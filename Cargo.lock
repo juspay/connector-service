@@ -7257,7 +7257,6 @@ dependencies = [
  "external-services",
  "grpc-api-types",
  "http 1.3.1",
- "injector",
  "interfaces",
  "log_utils",
  "masking",
@@ -7373,6 +7372,13 @@ dependencies = [
  "uniffi_build",
  "uniffi_core",
  "uniffi_macros",
+]
+
+[[package]]
+name = "uniffi-bindgen"
+version = "0.1.0"
+dependencies = [
+ "uniffi",
 ]
 
 [[package]]
