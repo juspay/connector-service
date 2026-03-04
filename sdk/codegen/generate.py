@@ -1,16 +1,28 @@
 
 #!/usr/bin/env python3
 """
-SDK codegen — auto-discovers flows by cross-referencing:
-  1. services.proto     → RPC name, request type, response type, service name,
-                          and the leading doc-comment from the proto file.
-  2. bindings/uniffi.rs → which flows have #[uniffi::export] {flow}_req_transformer
+SDK codegen — auto-discovers payment flows and generates type-safe client methods.
 
-Generates _generated_flows.* files for all SDK connector clients.
+Cross-references:
+  1. services.proto (via protoc descriptor) → RPC definitions with types and docs
+  2. bindings/uniffi.rs → which flows have #[uniffi::export] transformers
 
-Usage (from repo root):
+Generates flow methods (authorize, capture, refund, etc.) for each SDK.
+
+Usage:
+    # Generate all SDKs
     python3 sdk/codegen/generate.py
     make generate
+
+    # Generate specific SDK only
+    python3 sdk/codegen/generate.py --sdk python
+    python3 sdk/codegen/generate.py --sdk javascript
+    python3 sdk/codegen/generate.py --sdk kotlin
+
+    # Via individual SDK Makefiles
+    make -C sdk/python generate-client
+    make -C sdk/javascript generate-client
+    make -C sdk/java generate-client
 """
 
 import re
@@ -91,6 +103,8 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
                     # Path for method: [6 (service), svc_idx, 2 (method), method_idx]
                     path = (6, svc_idx, 2, method_idx)
                     comment = source_info.get(path, f"{service.name}.{rpc_name}")
+                    # Normalize whitespace to single-line
+                    comment = ' '.join(comment.split())
                     
                     rpcs[snake] = {
                         "request": req_type,
@@ -154,7 +168,9 @@ def flow_comment(f: dict, prefix: str) -> str:
     Single-line comment for a flow, e.g.:
       // authorize: PaymentService.Authorize — Authorizes a payment amount...
     """
-    return f"{prefix} {f['name']}: {f['service']}.{f['rpc']} — {f['description']}"
+    # Normalize all whitespace to single spaces for single-line comment
+    desc = ' '.join(f['description'].split())
+    return f"{prefix} {f['name']}: {f['service']}.{f['rpc']} — {desc}"
 
 
 def gen_python(flows: list[dict]) -> None:
@@ -398,13 +414,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="SDK codegen — regenerate SDK clients from services.proto ∩ bindings/uniffi.rs"
     )
+
     parser.add_argument(
         "--lang",
         choices=["python", "javascript", "kotlin", "all"],
         default="all",
-        help="Language to generate (default: all)",
+        help="Which language/SDK to generate (default: all)"
     )
     args = parser.parse_args()
+    
     ensure_descriptor_exists()
 
     print(f"Parsing: {SERVICES_PROTO.relative_to(REPO_ROOT)}")
