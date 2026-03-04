@@ -1,9 +1,13 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use crate::{connector_types, utils::extract_connector_request_reference_id};
+use crate::{
+    connector_types, payment_method_data::SamsungPayWalletCredentials,
+    utils::extract_connector_request_reference_id,
+};
 use common_enums::{
     CaptureMethod, CardNetwork, CountryAlpha2, FutureUsage, PaymentMethod, PaymentMethodType,
+    SamsungPayCardBrand,
 };
 use common_utils::{
     consts::{self, NO_ERROR_CODE, X_EXTERNAL_VAULT_METADATA},
@@ -522,6 +526,150 @@ impl ForeignTryFrom<grpc_api_types::payments::Tokenization> for common_enums::To
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
+    for SamsungPayWalletCredentials
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        credential: grpc_api_types::payments::samsung_wallet::PaymentCredential,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Validate card_last_four_digits
+        let last4 = credential
+            .card_last_four_digits
+            .as_ref()
+            .map(|s| s.clone().expose())
+            .ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CARD_LAST4".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Samsung Pay card last four digits cannot be empty".to_owned(),
+                    error_object: None,
+                })
+            })?;
+
+        let last4 = last4.trim();
+
+        if last4.is_empty() {
+            return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CARD_LAST4".to_owned(),
+                error_identifier: 400,
+                error_message: "Samsung Pay card last four digits cannot be empty".to_owned(),
+                error_object: None,
+            })
+            .into());
+        }
+
+        if last4.len() != 4 {
+            return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CARD_LAST4_LENGTH".to_owned(),
+                error_identifier: 400,
+                error_message: "Samsung Pay card last four digits must be 4 characters".to_owned(),
+                error_object: None,
+            })
+            .into());
+        }
+
+        // Validate DPAN last four digits
+        if let Some(dpan) = credential.dpan_last_four_digits.as_ref() {
+        let dpan = dpan.clone().expose();
+        let dpan = dpan.trim();
+
+        if dpan.len() != 4 {
+            return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_DPAN_LAST4_LENGTH".to_owned(),
+                error_identifier: 400,
+                error_message: "Samsung Pay DPAN last four digits must be 4 characters"
+                    .to_owned(),
+                error_object: None,
+            })
+            .into());
+        }
+    }
+
+        // Validate token_data
+        let token_data = credential.token_data.as_ref().ok_or_else(|| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_TOKEN_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Samsung Pay token data is required".to_owned(),
+                error_object: None,
+            })
+        })?;
+
+        if token_data.version.trim().is_empty() {
+            return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_TOKEN_VERSION".to_owned(),
+                error_identifier: 400,
+                error_message: "Samsung Pay token version cannot be empty".to_owned(),
+                error_object: None,
+            })
+            .into());
+        }
+
+        let raw_token = token_data.data.clone().ok_or_else(|| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_TOKEN_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Samsung Pay token data is required".to_owned(),
+                error_object: None,
+            })
+        })?;
+
+        if raw_token.peek().trim().is_empty() {
+            return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_TOKEN_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Samsung Pay token data cannot be empty".to_owned(),
+                error_object: None,
+            })
+            .into());
+        }
+
+        let card_brand = SamsungPayCardBrand::foreign_try_from(credential.card_brand())?;
+        Ok(Self {
+            method: credential.method,
+            recurring_payment: credential.recurring_payment,
+            card_brand,
+            dpan_last_four_digits: credential.dpan_last_four_digits.as_ref().map(|s| s.clone().expose()),
+            card_last_four_digits: last4.to_string(),
+            token_data: payment_method_data::SamsungPayTokenData {
+                three_ds_type: token_data.r#type.clone(),
+                version: token_data.version.clone(),
+                data: raw_token,
+            },
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::CardNetwork>
+    for SamsungPayCardBrand
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::CardNetwork,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::CardNetwork::Visa => {
+                Ok(SamsungPayCardBrand::Visa)
+            }
+            grpc_api_types::payments::CardNetwork::Mastercard => {
+                Ok(SamsungPayCardBrand::MasterCard)
+            }
+            grpc_api_types::payments::CardNetwork::Amex => {
+                Ok(SamsungPayCardBrand::Amex)
+            }
+            grpc_api_types::payments::CardNetwork::Discover => {
+                Ok(SamsungPayCardBrand::Discover)
+            }
+            _ => {
+                Ok(SamsungPayCardBrand::Unknown)
+            },
+        }
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience>
     for common_enums::PaymentExperience
 {
@@ -986,6 +1134,34 @@ impl<
                         paze_wallet_data,
                     ))))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::SamsungPay(
+                    samsung_pay,
+                ) => {
+                let credential = samsung_pay
+                    .payment_credential
+                    .ok_or_else(|| {
+                        ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "MISSING_SAMSUNG_PAY_CREDENTIAL".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Samsung Pay payment credential is required".to_owned(),
+                            error_object: None,
+                        })
+                    })?;
+
+                let domain_credential =
+                    payment_method_data::SamsungPayWalletCredentials::foreign_try_from(
+                        credential,
+                    )?;
+
+                Ok(Self::Wallet(
+                    payment_method_data::WalletData::SamsungPay(Box::new(
+                        payment_method_data::SamsungPayWalletData {
+                            payment_credential: domain_credential,
+                        },
+                    )),
+    ))
+                }
+
                 // ============================================================================
                 // BANK TRANSFERS - Direct variants
                 // ============================================================================
@@ -1817,6 +1993,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(_) => Ok(Some(PaymentMethodType::Mifinity)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Bluecode(_) => Ok(Some(PaymentMethodType::Bluecode)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Paze(_) => Ok(Some(PaymentMethodType::Paze)),
+                grpc_api_types::payments::payment_method::PaymentMethod::SamsungPay(_) => Ok(Some(PaymentMethodType::SamsungPay)),
                 // ============================================================================
                 // BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
@@ -4316,6 +4493,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::GooglePay(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SamsungPay(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
