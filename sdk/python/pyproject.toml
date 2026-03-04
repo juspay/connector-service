@@ -13,4 +13,4 @@ dependencies = ["requests>=2.28.0"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-payments = ["generated/*.dylib", "generated/*.so"]
+payments = ["generated/*.dylib", "generated/*.so", "generated/*.py"]

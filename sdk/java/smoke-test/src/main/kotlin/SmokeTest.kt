@@ -7,6 +7,8 @@
  * Exits non-zero on any assertion failure.
  */
 
+import payments.ConnectorClient
+import payments.authorize
 import uniffi.connector_service_ffi.UniffiException
 import uniffi.connector_service_ffi.authorizeReqTransformer
 import ucs.v2.Payment.PaymentServiceAuthorizeRequest

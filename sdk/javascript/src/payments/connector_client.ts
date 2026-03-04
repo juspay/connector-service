@@ -121,5 +121,4 @@ export class ConnectorClient {
     const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, metadata, optionsBytes);
     return resType.decode(resultBytesRes);
   }
-
 }
