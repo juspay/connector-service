@@ -337,6 +337,8 @@ def gen_kotlin(flows: list[dict]) -> None:
         "// AUTO-GENERATED — do not edit by hand.",
         "// Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate",
         "",
+        "package payments",
+        "",
     ]
 
     # FFI transformer imports — use full camelCase matching UniFFI Kotlin codegen

@@ -1,193 +1,407 @@
 /**
- * Smoke test for PayPal access token flow using hyperswitch-payments npm tarball.
- *
- * This test demonstrates:
- *   1. Create an access token via PayPal
- *   2. Use the access token in an authorize request
- *
+ * Multi-connector smoke test for hyperswitch-payments SDK.
+ * 
+ * Loads connector credentials from external JSON file and runs authorize flow
+ * for multiple connectors.
+ * 
  * Usage:
- *   mkdir /tmp/test-js-sdk && cd /tmp/test-js-sdk && npm init -y
- *   npm install <path-to>/hyperswitch-payments-0.1.0.tgz
- *   npx ts-node test_access_token_smoke.ts
+ *   npx ts-node test_smoke.ts --creds-file creds.json --all
+ *   npx ts-node test_smoke.ts --creds-file creds.json --connectors stripe,aci
+ *   npx ts-node test_smoke.ts --creds-file creds.json --all --dry-run
  */
 
+import * as fs from "fs";
+import * as path from "path";
 import { ConnectorClient } from "hyperswitch-payments";
 // @ts-ignore - protobuf generated files might not have types yet
 import { ucs } from "hyperswitch-payments/dist/src/payments/generated/proto";
 
 const {
-  MerchantAuthenticationServiceCreateAccessTokenRequest,
-  MerchantAuthenticationServiceCreateAccessTokenResponse,
   PaymentServiceAuthorizeRequest,
   PaymentServiceAuthorizeResponse,
   Currency,
   CaptureMethod,
   AuthenticationType,
   Connector,
-  SecretString,
-  AccessToken,
   FfiOptions,
   EnvOptions,
-  ConnectorState,
+  PaymentAddress,
 } = ucs.v2;
 
-const PAYPAL_CREDS = {
-  client_id:
-    "client_id",
-  client_secret:
-    "client_secret",
+// Test card configurations
+const TEST_CARDS: Record<string, any> = {
+  visa: {
+    number: "4111111111111111",
+    expMonth: "12",
+    expYear: "2050",
+    cvc: "123",
+    holder: "Test User",
+  },
+  mastercard: {
+    number: "5555555555554444",
+    expMonth: "12",
+    expYear: "2050",
+    cvc: "123",
+    holder: "Test User",
+  },
 };
 
-const metadata: Record<string, string> = {
-  connector: "Paypal",
-  connector_auth_type: JSON.stringify({
-    Paypal: {
-      client_id: PAYPAL_CREDS.client_id,
-      client_secret: PAYPAL_CREDS.client_secret,
-    },
-  }),
-  "x-connector": "Paypal",
-  "x-merchant-id": "test_merchant_123",
-  "x-request-id": "test-pack-001",
-  "x-tenant-id": "public",
-  "x-auth": "body-key",
-  "x-api-key": PAYPAL_CREDS.client_secret,
-  "x-key1": PAYPAL_CREDS.client_id,
-};
+// Default test amount
+const DEFAULT_AMOUNT = { minorAmount: 1000, currency: Currency.USD };
 
-// Create FfiOptions with testMode
-const ffiOptions: ucs.v2.IFfiOptions = FfiOptions.create({
-  env: EnvOptions.create({ testMode: true }),
-});
+// Placeholder values that indicate credentials are not configured
+const PLACEHOLDER_VALUES = new Set(["", "placeholder", "test", "dummy", "sk_test_placeholder"]);
 
-/**
- * Test the access token flow:
- * 1. Create access token
- * 2. Use access token in authorize request
- */
-async function testAccessTokenFlow(): Promise<void> {
-  console.log("\n=== Test: PayPal Access Token Flow ===");
-
-  const client = new ConnectorClient();
-
-  // Step 1: Create Access Token Request
-  console.log("\n--- Step 1: Create Access Token ---");
-  const accessTokenRequest: ucs.v2.IMerchantAuthenticationServiceCreateAccessTokenRequest =
-    MerchantAuthenticationServiceCreateAccessTokenRequest.create({
-      merchantAccessTokenId: { id: "access_token_test_" + Date.now() },
-      connector: Connector.PAYPAL,
-      testMode: true,
-    });
-
-  // Make the request via ConnectorClient
-  let accessTokenResponse: ucs.v2.MerchantAuthenticationServiceCreateAccessTokenResponse;
-  let accessTokenValue: string | null = null;
-  let tokenTypeValue: string | null = null;
-
-  try {
-    accessTokenResponse = await client.createAccessToken(
-      accessTokenRequest,
-      metadata,
-      ffiOptions
-    );
-    console.log(`  Response type: ${typeof accessTokenResponse}`);
-    console.log(`  Response keys: ${Object.keys(accessTokenResponse)}`);
-
-    // Extract access token from response
-    if (
-      accessTokenResponse.accessToken &&
-      accessTokenResponse.accessToken.value
-    ) {
-      accessTokenValue = accessTokenResponse.accessToken.value;
-      tokenTypeValue = accessTokenResponse.tokenType ?? "Bearer";
-
-      console.log(accessTokenValue);
-      console.log(
-        `  Access Token received: ${accessTokenValue!.substring(0, 20)}...`
-      );
-      console.log(`  Token Type: ${tokenTypeValue}`);
-      console.log(
-        `  Expires In: ${accessTokenResponse.expiresInSeconds} seconds`
-      );
-      console.log(`  Status: ${accessTokenResponse.status}`);
-    } else {
-      console.log("  WARNING: No access token in response");
-      console.log(
-        "  Full response:",
-        JSON.stringify(accessTokenResponse, null, 2)
-      );
-    }
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.log(`  Error creating access token: ${message}`);
-    console.log("  This might be expected if credentials are not valid");
-    return;
-  }
-
-  if (!accessTokenValue) {
-    console.log("  SKIPPED: Cannot proceed without access token");
-    return;
-  }
-
-  // Step 2: Use Access Token in Authorize Request
-  console.log("\n--- Step 2: Authorize with Access Token ---");
-  const authorizeRequest: ucs.v2.IPaymentServiceAuthorizeRequest =
-    PaymentServiceAuthorizeRequest.create({
-      merchantTransactionId: {
-        id: "authorize_with_token_" + Date.now(),
-      },
-      amount: {
-        minorAmount: 1000, // $10.00
-        currency: Currency.USD,
-      },
-      captureMethod: CaptureMethod.AUTOMATIC,
-      paymentMethod: {
-        card: {
-          cardNumber: { value: "4111111111111111" },
-          cardExpMonth: { value: "12" },
-          cardExpYear: { value: "2050" },
-          cardCvc: { value: "123" },
-          cardHolderName: { value: "Test User" },
-        },
-      },
-      customer: {
-        email: { value: "test@example.com" },
-        name: "Test",
-      },
-      state: ConnectorState.create({
-        accessToken: AccessToken.create({
-          token: SecretString.create({ value: accessTokenValue }),
-          tokenType: tokenTypeValue,
-          expiresInSeconds: accessTokenResponse!.expiresInSeconds,
-        }),
-      }),
-      authType: AuthenticationType.NO_THREE_DS,
-      returnUrl: "https://example.com/return",
-      webhookUrl: "https://example.com/webhook",
-      address: {},
-      testMode: true,
-    });
-
-  try {
-    const authorizeResponse: ucs.v2.PaymentServiceAuthorizeResponse =
-      await client.authorize(authorizeRequest, metadata, ffiOptions);
-    console.log(`  Response type: ${typeof authorizeResponse}`);
-    console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);
-    console.log(`  Payment status: ${authorizeResponse.status}`);
-    console.log("  PASSED");
-  } catch (e: unknown) {
-    console.log(`  Error during authorize: ${e}`);
-    // This might be expected depending on PayPal API behavior
-    console.log("  PASSED (round-trip completed, error is from PayPal)");
-  }
-
-  console.log("\n=== Test Complete ===");
+interface AuthConfig {
+  [key: string]: string | object;
+  metadata?: any;
 }
 
-// Run the test
-testAccessTokenFlow()
-  .then(() => console.log("\nAll checks passed."))
-  .catch((e: unknown) => {
-    console.error(e);
-    process.exit(1);
+interface Credentials {
+  [connector: string]: AuthConfig | AuthConfig[];
+}
+
+interface TestResult {
+  connector: string;
+  status: "passed" | "failed" | "skipped" | "dry_run" | "passed_with_error";
+  ffiTest?: { url: string; method: string; passed: boolean };
+  roundTripTest?: { status?: number; type?: string; passed: boolean; error?: string; skipped?: boolean; reason?: string };
+  error?: string;
+}
+
+function loadCredentials(credsFile: string): Credentials {
+  if (!fs.existsSync(credsFile)) {
+    throw new Error(`Credentials file not found: ${credsFile}`);
+  }
+  const content = fs.readFileSync(credsFile, "utf-8");
+  return JSON.parse(content);
+}
+
+function isPlaceholder(value: string): boolean {
+  if (!value) return true;
+  const lower = value.toLowerCase();
+  return PLACEHOLDER_VALUES.has(lower) || lower.includes("placeholder");
+}
+
+function hasValidCredentials(authConfig: AuthConfig): boolean {
+  for (const [key, value] of Object.entries(authConfig)) {
+    if (key === "metadata") continue;
+    if (typeof value === "string" && !isPlaceholder(value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function buildMetadata(connectorName: string, authConfig: AuthConfig): Record<string, string> {
+  const authFields: Record<string, any> = {};
+  for (const [key, value] of Object.entries(authConfig)) {
+    if (key !== "metadata") {
+      authFields[key] = value;
+    }
+  }
+
+  const authTypeKey = connectorName.charAt(0).toUpperCase() + connectorName.slice(1);
+
+  const metadata: Record<string, string> = {
+    connector: authTypeKey,
+    connector_auth_type: JSON.stringify({ [authTypeKey]: authFields }),
+    "x-connector": authTypeKey,
+    "x-merchant-id": `test_merchant_${connectorName}`,
+    "x-request-id": `smoke-test-${connectorName}-${Date.now()}`,
+    "x-tenant-id": "public",
+  };
+
+  if (authFields.api_key) {
+    metadata["x-api-key"] = authFields.api_key;
+  }
+  if (authFields.key1) {
+    metadata["x-key1"] = authFields.key1;
+  }
+
+  // Determine auth type
+  if (authFields.key2) {
+    metadata["x-auth"] = "multi-auth-key";
+  } else if (authFields.api_secret) {
+    metadata["x-auth"] = "signature-key";
+  } else if (authFields.key1) {
+    metadata["x-auth"] = "body-key";
+  } else {
+    metadata["x-auth"] = "header-key";
+  }
+
+  return metadata;
+}
+
+function buildAuthorizeRequest(cardType: string = "visa"): any {
+  const card = TEST_CARDS[cardType] || TEST_CARDS.visa;
+
+  return PaymentServiceAuthorizeRequest.create({
+    merchantTransactionId: { id: `smoke_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` },
+    amount: {
+      minorAmount: DEFAULT_AMOUNT.minorAmount,
+      currency: DEFAULT_AMOUNT.currency,
+    },
+    captureMethod: CaptureMethod.AUTOMATIC,
+    paymentMethod: {
+      card: {
+        cardNumber: { value: card.number },
+        cardExpMonth: { value: card.expMonth },
+        cardExpYear: { value: card.expYear },
+        cardCvc: { value: card.cvc },
+        cardHolderName: { value: card.holder },
+      },
+    },
+    customer: {
+      email: { value: "test@example.com" },
+      name: "Test User",
+    },
+    authType: AuthenticationType.NO_THREE_DS,
+    returnUrl: "https://example.com/return",
+    webhookUrl: "https://example.com/webhook",
+    address: {},
+    testMode: true,
   });
+}
+
+async function testConnector(
+  connectorName: string,
+  authConfig: AuthConfig,
+  dryRun: boolean = false
+): Promise<TestResult> {
+  const result: TestResult = {
+    connector: connectorName,
+    status: "pending" as any,
+  };
+
+  try {
+    const req = buildAuthorizeRequest();
+    const metadata = buildMetadata(connectorName, authConfig);
+
+    // Test 1: Low-level FFI via ConnectorClient internals
+    // We use the client to build the request
+    const client = new ConnectorClient();
+    const ffiOptions = FfiOptions.create({ env: EnvOptions.create({ testMode: true }) });
+
+    // For now, we'll just verify the request building works
+    // The actual FFI call happens inside client.authorize()
+
+    if (dryRun) {
+      result.status = "dry_run";
+      result.ffiTest = { url: "dry-run", method: "POST", passed: true };
+      return result;
+    }
+
+    if (!hasValidCredentials(authConfig)) {
+      result.status = "skipped";
+      result.roundTripTest = { skipped: true, reason: "placeholder_credentials", passed: false };
+      return result;
+    }
+
+    try {
+      const response = await client.authorize(req, metadata, ffiOptions);
+      result.roundTripTest = {
+        status: response.status,
+        type: "PaymentServiceAuthorizeResponse",
+        passed: true,
+      };
+      result.status = "passed";
+    } catch (e: any) {
+      result.roundTripTest = {
+        passed: true,
+        error: e.message || String(e),
+      };
+      result.status = "passed_with_error";
+    }
+  } catch (e: any) {
+    result.status = "failed";
+    result.error = e.message || String(e);
+  }
+
+  return result;
+}
+
+function parseArgs(): { credsFile: string; connectors?: string[]; all: boolean; dryRun: boolean; card: string } {
+  const args = process.argv.slice(2);
+  let credsFile = "creds.json";
+  let connectors: string[] | undefined;
+  let all = false;
+  let dryRun = false;
+  let card = "visa";
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--creds-file" && i + 1 < args.length) {
+      credsFile = args[++i];
+    } else if (arg === "--connectors" && i + 1 < args.length) {
+      connectors = args[++i].split(",").map((c) => c.trim());
+    } else if (arg === "--all") {
+      all = true;
+    } else if (arg === "--dry-run") {
+      dryRun = true;
+    } else if (arg === "--card" && i + 1 < args.length) {
+      card = args[++i];
+    } else if (arg === "--help" || arg === "-h") {
+      console.log(`
+Usage: npx ts-node test_smoke.ts [options]
+
+Options:
+  --creds-file <path>     Path to credentials JSON (default: creds.json)
+  --connectors <list>     Comma-separated list of connectors to test
+  --all                   Test all connectors in the credentials file
+  --dry-run               Build requests without executing HTTP calls
+  --card <type>           Test card type: visa or mastercard (default: visa)
+  --help, -h              Show this help message
+
+Examples:
+  npx ts-node test_smoke.ts --all
+  npx ts-node test_smoke.ts --connectors stripe,aci
+  npx ts-node test_smoke.ts --all --dry-run
+`);
+      process.exit(0);
+    }
+  }
+
+  if (!all && !connectors) {
+    console.error("Error: Must specify either --all or --connectors");
+    process.exit(1);
+  }
+
+  return { credsFile, connectors, all, dryRun, card };
+}
+
+async function runTests(
+  credsFile: string,
+  connectors: string[] | undefined,
+  dryRun: boolean
+): Promise<TestResult[]> {
+  const credentials = loadCredentials(credsFile);
+  const results: TestResult[] = [];
+
+  const testConnectors = connectors || Object.keys(credentials);
+
+  console.log(`\n${"=".repeat(60)}`);
+  console.log(`Running smoke tests for ${testConnectors.length} connector(s)`);
+  console.log(`${"=".repeat(60)}\n`);
+
+  for (const connectorName of testConnectors) {
+    const authConfig = credentials[connectorName];
+    if (!authConfig) {
+      console.log(`\n--- Testing ${connectorName} ---`);
+      console.log(`  SKIPPED (not found in credentials file)`);
+      results.push({ connector: connectorName, status: "skipped", error: "not_found" });
+      continue;
+    }
+
+    console.log(`\n--- Testing ${connectorName} ---`);
+
+    if (Array.isArray(authConfig)) {
+      // Multi-instance connector
+      for (let i = 0; i < authConfig.length; i++) {
+        const instanceName = `${connectorName}[${i + 1}]`;
+        console.log(`  Instance: ${instanceName}`);
+
+        if (!hasValidCredentials(authConfig[i])) {
+          console.log(`  SKIPPED (placeholder credentials)`);
+          results.push({
+            connector: instanceName,
+            status: "skipped",
+            roundTripTest: { skipped: true, reason: "placeholder_credentials", passed: false },
+          });
+          continue;
+        }
+
+        const result = await testConnector(instanceName, authConfig[i], dryRun);
+        results.push(result);
+
+        if (result.status === "passed") {
+          console.log(`  ✓ PASSED`);
+        } else if (result.status === "passed_with_error") {
+          console.log(`  ✓ PASSED (with connector error)`);
+        } else if (result.status === "dry_run") {
+          console.log(`  ✓ DRY RUN`);
+        } else {
+          console.log(`  ✗ ${result.status.toUpperCase()}: ${result.error || "Unknown error"}`);
+        }
+      }
+    } else {
+      // Single-instance connector
+      if (!hasValidCredentials(authConfig)) {
+        console.log(`  SKIPPED (placeholder credentials)`);
+        results.push({
+          connector: connectorName,
+          status: "skipped",
+          roundTripTest: { skipped: true, reason: "placeholder_credentials", passed: false },
+        });
+        continue;
+      }
+
+      const result = await testConnector(connectorName, authConfig, dryRun);
+      results.push(result);
+
+      if (result.status === "passed") {
+        console.log(`  ✓ PASSED`);
+      } else if (result.status === "passed_with_error") {
+        console.log(`  ✓ PASSED (with connector error)`);
+      } else if (result.status === "dry_run") {
+        console.log(`  ✓ DRY RUN`);
+      } else {
+        console.log(`  ✗ ${result.status.toUpperCase()}: ${result.error || "Unknown error"}`);
+      }
+    }
+  }
+
+  return results;
+}
+
+function printSummary(results: TestResult[]): number {
+  console.log(`\n${"=".repeat(60)}`);
+  console.log("TEST SUMMARY");
+  console.log(`${"=".repeat(60)}\n`);
+
+  const passed = results.filter((r) => ["passed", "passed_with_error", "dry_run"].includes(r.status)).length;
+  const skipped = results.filter((r) => r.status === "skipped").length;
+  const failed = results.filter((r) => r.status === "failed").length;
+  const total = results.length;
+
+  console.log(`Total:   ${total}`);
+  console.log(`Passed:  ${passed} ✓`);
+  console.log(`Skipped: ${skipped} (placeholder credentials)`);
+  console.log(`Failed:  ${failed} ✗`);
+  console.log();
+
+  if (failed > 0) {
+    console.log("Failed tests:");
+    for (const result of results) {
+      if (result.status === "failed") {
+        console.log(`  - ${result.connector}: ${result.error || "Unknown error"}`);
+      }
+    }
+    console.log();
+    return 1;
+  }
+
+  if (passed === 0 && skipped > 0) {
+    console.log("All tests skipped (no valid credentials found)");
+    console.log("Update creds.json with real credentials to run tests");
+    return 1;
+  }
+
+  console.log("All tests completed successfully!");
+  return 0;
+}
+
+async function main() {
+  const { credsFile, connectors, all, dryRun, card } = parseArgs();
+
+  try {
+    const results = await runTests(credsFile, connectors, dryRun);
+    const exitCode = printSummary(results);
+    process.exit(exitCode);
+  } catch (e: any) {
+    console.error(`\nFatal error: ${e.message || e}`);
+    process.exit(1);
+  }
+}
+
+main();

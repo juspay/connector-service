@@ -1,6 +1,8 @@
 // AUTO-GENERATED — do not edit by hand.
 // Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate
 
+package payments
+
 import uniffi.connector_service_ffi.authorizeReqTransformer
 import uniffi.connector_service_ffi.authorizeResTransformer
 import uniffi.connector_service_ffi.captureReqTransformer

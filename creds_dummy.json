@@ -1,0 +1,514 @@
+{
+  "aci": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "entity_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for aci connector"
+  },
+  "adyen": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_account": "<REPLACE_WITH_YOUR_VALUE>",
+    "review_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for adyen connector"
+  },
+  "adyen_payout": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_account": "<REPLACE_WITH_YOUR_VALUE>",
+    "review_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for adyen_payout connector"
+  },
+  "adyenplatform_payout": {
+    "connector_account_details": {
+      "auth_type": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "metadata": {
+      "source_balance_account": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for adyenplatform_payout connector"
+  },
+  "airwallex": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "client_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for airwallex connector"
+  },
+  "authorizedotnet": {
+    "name": "<REPLACE_WITH_YOUR_VALUE>",
+    "transaction_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for authorizedotnet connector"
+  },
+  "bambora": {
+    "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for bambora connector"
+  },
+  "bamboraapac": {
+    "username": "<REPLACE_WITH_YOUR_VALUE>",
+    "password": "<REPLACE_WITH_YOUR_VALUE>",
+    "account_number": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for bamboraapac connector"
+  },
+  "bankofamerica": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_account": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for bankofamerica connector"
+  },
+  "billwerk": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "public_api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for billwerk connector"
+  },
+  "bluesnap": {
+    "username": "<REPLACE_WITH_YOUR_VALUE>",
+    "password": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for bluesnap connector"
+  },
+  "braintree": {
+    "public_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "private_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "metadata": {
+      "merchant_account_id": "<REPLACE_WITH_YOUR_VALUE>",
+      "merchant_config_currency": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for braintree connector"
+  },
+  "checkout": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "processing_channel_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for checkout connector"
+  },
+  "cybersource": [
+    {
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "merchant_account": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+      "metadata": {
+        "google_pay": {
+          "merchant_info": {
+            "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+            "merchant_name": "<REPLACE_WITH_YOUR_VALUE>"
+          },
+          "allowed_payment_methods": [
+            {
+              "type": "<REPLACE_WITH_YOUR_VALUE>",
+              "parameters": {
+                "allowed_auth_methods": [
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>"
+                ],
+                "allowed_card_networks": [
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>"
+                ]
+              },
+              "tokenization_specification": {
+                "type": "<REPLACE_WITH_YOUR_VALUE>",
+                "parameters": {
+                  "gateway": "<REPLACE_WITH_YOUR_VALUE>",
+                  "gateway_merchant_id": "<REPLACE_WITH_YOUR_VALUE>"
+                }
+              }
+            }
+          ]
+        },
+        "acquirer_bin": "<REPLACE_WITH_YOUR_VALUE>",
+        "apple_pay_combined": {
+          "simplified": {
+            "session_token_data": {
+              "initiative_context": "<REPLACE_WITH_YOUR_VALUE>",
+              "merchant_business_country": "<REPLACE_WITH_YOUR_VALUE>"
+            },
+            "payment_request_data": {
+              "label": "<REPLACE_WITH_YOUR_VALUE>",
+              "supported_networks": [
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>"
+              ],
+              "merchant_capabilities": [
+                "<REPLACE_WITH_YOUR_VALUE>"
+              ]
+            }
+          }
+        },
+        "acquirer_merchant_id": "<REPLACE_WITH_YOUR_VALUE>"
+      },
+      "_comment": "Configuration for cybersource connector instance 1"
+    },
+    {
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "merchant_account": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+      "metadata": {
+        "google_pay": {
+          "merchant_info": {
+            "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+            "merchant_name": "<REPLACE_WITH_YOUR_VALUE>"
+          },
+          "allowed_payment_methods": [
+            {
+              "type": "<REPLACE_WITH_YOUR_VALUE>",
+              "parameters": {
+                "allowed_auth_methods": [
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>"
+                ],
+                "allowed_card_networks": [
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>",
+                  "<REPLACE_WITH_YOUR_VALUE>"
+                ]
+              },
+              "tokenization_specification": {
+                "type": "<REPLACE_WITH_YOUR_VALUE>",
+                "parameters": {
+                  "gateway": "<REPLACE_WITH_YOUR_VALUE>",
+                  "gateway_merchant_id": "<REPLACE_WITH_YOUR_VALUE>"
+                }
+              }
+            }
+          ]
+        },
+        "acquirer_bin": "<REPLACE_WITH_YOUR_VALUE>",
+        "apple_pay_combined": {
+          "simplified": {
+            "session_token_data": {
+              "initiative_context": "<REPLACE_WITH_YOUR_VALUE>",
+              "merchant_business_country": "<REPLACE_WITH_YOUR_VALUE>"
+            },
+            "payment_request_data": {
+              "label": "<REPLACE_WITH_YOUR_VALUE>",
+              "supported_networks": [
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>"
+              ],
+              "merchant_capabilities": [
+                "<REPLACE_WITH_YOUR_VALUE>"
+              ]
+            }
+          }
+        },
+        "acquirer_merchant_id": "<REPLACE_WITH_YOUR_VALUE>"
+      },
+      "_comment": "Configuration for cybersource connector instance 2"
+    }
+  ],
+  "datatrans": {
+    "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "password": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for datatrans connector"
+  },
+  "deutschebank": {
+    "connector_account_details": {
+      "auth_type": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "key1": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_secret": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for deutschebank connector"
+  },
+  "elavon": {
+    "ssl_merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "ssl_user_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "ssl_pin": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for elavon connector"
+  },
+  "fiserv": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_account": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "metadata": {
+      "terminal_id": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for fiserv connector"
+  },
+  "fiservemea": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for fiservemea connector"
+  },
+  "fiuu": {
+    "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "verify_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "secret_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for fiuu connector"
+  },
+  "forte": {
+    "api_access_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "organization_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "location_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_secret_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for forte connector"
+  },
+  "getnet": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "seller_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for getnet connector"
+  },
+  "globalpay": {
+    "app_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "app_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for globalpay connector"
+  },
+  "helcim": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for helcim connector"
+  },
+  "hipay": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for hipay connector"
+  },
+  "iatapay": {
+    "client_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "client_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for iatapay connector"
+  },
+  "itaubank": {
+    "connector_account_details": {
+      "auth_type": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "key1": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for itaubank connector"
+  },
+  "jpmorgan": {
+    "client_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "client_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for jpmorgan connector"
+  },
+  "moneris": {
+    "connector_account_details": {
+      "auth_type": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+      "key1": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for moneris connector"
+  },
+  "multisafepay": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for multisafepay connector"
+  },
+  "nexinets": {
+    "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for nexinets connector"
+  },
+  "nexixpay": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for nexixpay connector"
+  },
+  "nmi": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "public_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for nmi connector"
+  },
+  "noon": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "business_identifier": "<REPLACE_WITH_YOUR_VALUE>",
+    "application_identifier": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for noon connector"
+  },
+  "novalnet": {
+    "product_activation_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "payment_access_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "tariff_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for novalnet connector"
+  },
+  "nuvei": {
+    "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_site_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for nuvei connector"
+  },
+  "paybox": {
+    "site": "<REPLACE_WITH_YOUR_VALUE>",
+    "rank": "<REPLACE_WITH_YOUR_VALUE>",
+    "key": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_id": null,
+    "_comment": "Configuration for paybox connector"
+  },
+  "payload": {
+    "connector_account_details": {
+      "auth_type": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for payload connector"
+  },
+  "paypal": {
+    "client_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "client_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for paypal connector"
+  },
+  "payu": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for payu connector"
+  },
+  "powertranz": {
+    "power_tranz_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "power_tranz_password": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for powertranz connector"
+  },
+  "rapyd": {
+    "access_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "secret_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for rapyd connector"
+  },
+  "redsys": {
+    "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "terminal_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "sha256_pwd": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for redsys connector"
+  },
+  "shift4": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for shift4 connector"
+  },
+  "square": {
+    "connector_account_details": {
+      "auth_type": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "key1": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for square connector"
+  },
+  "stax": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for stax connector"
+  },
+  "stripe": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "metadata": {
+      "google_pay": {
+        "merchant_info": {
+          "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+          "merchant_name": "<REPLACE_WITH_YOUR_VALUE>"
+        },
+        "allowed_payment_methods": [
+          {
+            "type": "<REPLACE_WITH_YOUR_VALUE>",
+            "parameters": {
+              "allowed_auth_methods": [
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>"
+              ],
+              "allowed_card_networks": [
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>",
+                "<REPLACE_WITH_YOUR_VALUE>"
+              ],
+              "assurance_details_required": false
+            },
+            "tokenization_specification": {
+              "type": "<REPLACE_WITH_YOUR_VALUE>",
+              "parameters": {
+                "gateway": "<REPLACE_WITH_YOUR_VALUE>",
+                "stripe:version": "<REPLACE_WITH_YOUR_VALUE>",
+                "stripe:publishableKey": "<REPLACE_WITH_YOUR_VALUE>"
+              }
+            }
+          }
+        ]
+      },
+      "apple_pay_combined": {
+        "simplified": {
+          "session_token_data": {
+            "initiative_context": "<REPLACE_WITH_YOUR_VALUE>",
+            "merchant_business_country": "<REPLACE_WITH_YOUR_VALUE>"
+          },
+          "payment_request_data": {
+            "label": "<REPLACE_WITH_YOUR_VALUE>",
+            "supported_networks": [
+              "<REPLACE_WITH_YOUR_VALUE>",
+              "<REPLACE_WITH_YOUR_VALUE>",
+              "<REPLACE_WITH_YOUR_VALUE>",
+              "<REPLACE_WITH_YOUR_VALUE>"
+            ],
+            "merchant_capabilities": [
+              "<REPLACE_WITH_YOUR_VALUE>"
+            ]
+          }
+        }
+      }
+    },
+    "_comment": "Configuration for stripe connector"
+  },
+  "trustpay": [
+    {
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "project_id": "<REPLACE_WITH_YOUR_VALUE>",
+      "secret_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "_comment": "Configuration for trustpay connector instance 1"
+    },
+    {
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "project_id": "<REPLACE_WITH_YOUR_VALUE>",
+      "secret_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "_comment": "Configuration for trustpay connector instance 2"
+    }
+  ],
+  "tsys": {
+    "device_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "transaction_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "developer_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for tsys connector"
+  },
+  "wellsfargo": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_account": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_secret": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for wellsfargo connector"
+  },
+  "wise_payout": {
+    "connector_account_details": {
+      "auth_type": "<REPLACE_WITH_YOUR_VALUE>",
+      "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+      "key1": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for wise_payout connector"
+  },
+  "worldpay": {
+    "username": "<REPLACE_WITH_YOUR_VALUE>",
+    "password": "<REPLACE_WITH_YOUR_VALUE>",
+    "entity_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for worldpay connector"
+  },
+  "worldpayvantiv": {
+    "user": "<REPLACE_WITH_YOUR_VALUE>",
+    "password": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_id": "<REPLACE_WITH_YOUR_VALUE>",
+    "metadata": {
+      "report_group": "<REPLACE_WITH_YOUR_VALUE>",
+      "merchant_config_currency": "<REPLACE_WITH_YOUR_VALUE>"
+    },
+    "_comment": "Configuration for worldpayvantiv connector"
+  },
+  "worldpayxml": {
+    "api_username": "<REPLACE_WITH_YOUR_VALUE>",
+    "api_password": "<REPLACE_WITH_YOUR_VALUE>",
+    "merchant_code": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for worldpayxml connector"
+  },
+  "xendit": {
+    "api_key": "<REPLACE_WITH_YOUR_VALUE>",
+    "_comment": "Configuration for xendit connector"
+  }
+}

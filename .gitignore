@@ -428,3 +428,6 @@ sdk/java/smoke-test/gradle*
 sdk/java/bin
 
 artifacts/
+
+# creds file to be ignored
+creds.json

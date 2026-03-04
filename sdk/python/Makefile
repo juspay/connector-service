@@ -85,7 +85,7 @@ generate-proto: install-deps
 # stubs. Proto is generated first to ensure the __init__.py marker exists
 # before the UniFFI wrapper references the package.
 # ---------------------------------------------------------------------------
-generate-all: generate-proto generate-bindings
+generate-all: generate-proto generate-bindings generate-flows 
 
 # ---------------------------------------------------------------------------
 # generate-flows
@@ -122,6 +122,7 @@ install: pack-archive
 # Full end-to-end local test: builds the FFI library, generates all code
 # artifacts, packs the wheel, then installs it into an isolated temp directory
 # and runs the smoke test to verify the package works correctly.
+# Tests Stripe connector using credentials from creds.json.
 # The temp directory is cleaned up after the test.
 # ---------------------------------------------------------------------------
 test-package: generate-all pack-archive
@@ -129,11 +130,17 @@ test-package: generate-all pack-archive
 	@rm -rf /tmp/test-hyperswitch-py
 	@mkdir -p /tmp/test-hyperswitch-py
 	@cp $(SDK_ROOT)/smoke-test/test_smoke.py /tmp/test-hyperswitch-py/
+	@# Copy credentials file if it exists
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-py/; \
+	else \
+		echo "  Note: creds.json not found, test will use placeholder credentials"; \
+	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
 		--no-deps --force-reinstall
-	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors stripe 
 	@rm -rf /tmp/test-hyperswitch-py
 	@echo "Package test passed."
 
