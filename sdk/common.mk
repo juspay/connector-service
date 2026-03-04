@@ -71,7 +71,7 @@ build-ffi-lib:
 
 # ---------------------------------------------------------------------------
 # check-cargo
-# Verifies cargo is installed before attempting builds.
+# Verifies cargo command is installed before attempting builds.
 # ---------------------------------------------------------------------------
 .PHONY: check-cargo
 check-cargo:
