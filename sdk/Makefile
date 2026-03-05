@@ -3,7 +3,7 @@
 # This Makefile should be run from the repository root
 
 .PHONY: help build build-all build-macos build-linux clean check-cargo generate install-deps \
-        generate-descriptor generate-flows-python generate-flows-javascript generate-flows-java \
+        generate-descriptor generate-rust generate-flows-python generate-flows-javascript generate-flows-java \
         test test-python test-javascript test-java \
         dist dist-python dist-javascript dist-java
 
@@ -107,14 +107,18 @@ build-all: ## Build for all supported platforms
 	)
 	@echo "All builds complete!"
 
+generate-rust: ## Regenerate Rust FFI flow registrations (handlers + bindings)
+	@echo "Generating Rust FFI flow registrations..."
+	@python3 $(MAKEFILE_DIR)codegen/generate.py --lang rust
+
 generate-python: ## Regenerate Python SDK client (flows + protobuf stubs)
-	@$(MAKE) -C $(MAKEFILE_DIR)python generate
+	@$(MAKE) -C $(MAKEFILE_DIR)python generate-flows
 
 generate-javascript: ## Regenerate JavaScript/TypeScript SDK client (flows)
-	@$(MAKE) -C $(MAKEFILE_DIR)javascript generate
+	@$(MAKE) -C $(MAKEFILE_DIR)javascript generate-flows
 
 generate-kotlin: ## Regenerate Kotlin SDK client (flows)
-	@$(MAKE) -C $(MAKEFILE_DIR)java generate
+	@$(MAKE) -C $(MAKEFILE_DIR)java generate-flows
 
 # ---------------------------------------------------------------------------
 # generate-descriptor
@@ -159,10 +163,11 @@ generate-client-java: generate-descriptor
 # Main entry point for regenerating all SDK clients.
 # Generates the descriptor, then delegates to each SDK's generate-client target.
 # ---------------------------------------------------------------------------
-generate: install-deps generate-descriptor generate-client-python generate-client-javascript generate-client-java ## Auto-discover flows and regenerate all SDK clients
+generate: install-deps generate-descriptor generate-rust generate-python generate-javascript generate-kotlin ## Auto-discover flows and regenerate all SDK clients
 	@echo
 	@echo "Generating Python protobuf stubs (_pb2.pyi)..."
-	@python3 -m grpc_tools.protoc \
+	@MYPY_BIN="$$(python3 -c "import sysconfig; print(sysconfig.get_path('scripts', 'posix_user'))")" && \
+		PATH="$$MYPY_BIN:$$PATH" python3 -m grpc_tools.protoc \
 		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
 		--python_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
 		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
@@ -206,6 +211,8 @@ clean: ## Clean all build artifacts
 	@echo "Cleaning build artifacts..."
 	@cd $(FFI_CRATE) && cargo clean
 	@rm -f $(REPO_ROOT)/sdk/codegen/services.desc
+	@rm -f $(REPO_ROOT)/backend/ffi/src/handlers/_generated_flow_registrations.rs
+	@rm -f $(REPO_ROOT)/backend/ffi/src/bindings/_generated_ffi_flows.rs
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python clean
 	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript clean
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java clean

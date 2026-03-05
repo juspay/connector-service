@@ -5,7 +5,12 @@
     "esModuleInterop": true,
     "moduleResolution": "node",
     "skipLibCheck": true,
-    "strict": true
+    "strict": true,
+    "baseUrl": "..",
+    "paths": {
+      "hyperswitch-payments": ["src/index"],
+      "hyperswitch-payments/dist/src/payments/generated/proto": ["src/payments/generated/proto"]
+    }
   },
   "include": ["test_smoke.ts"]
 }
