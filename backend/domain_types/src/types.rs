@@ -5817,7 +5817,6 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     fn foreign_try_from(
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let amount = value.amount.map(common_utils::types::MinorUnit::new);
         // If currency is unspecified, send None, otherwise try to convert it
         let currency = if let Some(a) = value.amount {
             if a.currency() == grpc_api_types::payments::Currency::Unspecified {
@@ -7210,7 +7209,7 @@ impl ForeignTryFrom<PaymentServiceSetupRecurringRequest>
                     })
                 })?,
             )?,
-            amount: Some(value.minor_amount.unwrap_or(0)),
+            amount: Some(amount.amount.get_amount_as_i64()),
             confirm: true,
             customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
                 customer_acceptance.clone(),
@@ -7231,8 +7230,7 @@ impl ForeignTryFrom<PaymentServiceSetupRecurringRequest>
             customer_name: value
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.name.clone())
-                .map(Secret::new),
+                .and_then(|customer| customer.name.clone()),
             return_url: value.return_url.clone(),
             payment_method_type: value
                 .payment_method
@@ -7248,9 +7246,7 @@ impl ForeignTryFrom<PaymentServiceSetupRecurringRequest>
             complete_authorize_url: None,
             capture_method: None,
             integrity_object: None,
-            minor_amount: Some(common_utils::types::MinorUnit::new(
-                value.minor_amount.unwrap_or(0),
-            )),
+            minor_amount: Some(amount.amount),
             shipping_cost: None,
             customer_id: value
                 .customer
