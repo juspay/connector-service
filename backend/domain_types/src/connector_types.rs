@@ -8,7 +8,7 @@ use common_utils::{
     errors,
     ext_traits::{OptionExt, ValueExt},
     pii::IpAddress,
-    types::{MinorUnit, StringMajorUnit, StringMinorUnit},
+    types::{MinorUnit, Money, StringMajorUnit, StringMinorUnit},
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
@@ -41,7 +41,9 @@ use crate::{
 use url::Url;
 
 // snake case for enum variants
-#[derive(Clone, Copy, Debug, Display, EnumString, Eq, Hash, PartialEq, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -315,9 +317,9 @@ pub struct NetworkTokenWithNTIRef {
 
 #[derive(Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub enum MandateReferenceId {
-    ConnectorMandateId(ConnectorMandateReferenceId), // mandate_id send by connector
-    NetworkMandateId(String), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with card data
-    NetworkTokenWithNTI(NetworkTokenWithNTIRef), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with network token data
+    ConnectorMandateId(ConnectorMandateReferenceId), // mandate_id sent by connector
+    NetworkMandateId(String), // network_txns_id sent by Issuer to connector, Used for PG agnostic mandate txns along with card data
+    NetworkTokenWithNTI(NetworkTokenWithNTIRef), // network_txns_id sent by Issuer to connector, Used for PG agnostic mandate txns along with network token data
 }
 
 #[derive(Default, Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
@@ -981,7 +983,7 @@ pub struct PaymentVoidData {
     pub currency: Option<Currency>,
     pub connector_metadata: Option<SecretSerdeValue>,
     pub metadata: Option<SecretSerdeValue>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
 }
 
 impl PaymentVoidData {
@@ -1088,7 +1090,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     /// Merchant's identifier for the payment/invoice. This will be sent to the connector
     /// if the connector provides support to accept multiple reference ids.
     /// In case the connector supports only one reference id, Hyperswitch's Payment ID will be sent as reference.
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
     pub integrity_object: Option<AuthoriseIntegrityObject>,
@@ -1540,8 +1542,6 @@ pub struct PaymentsSdkSessionTokenData {
     pub country: Option<common_enums::CountryAlpha2>,
     pub order_details: Option<Vec<OrderDetailsWithAmount>>,
     pub email: Option<Email>,
-    // Minor Unit amount for amount frame work
-    pub minor_amount: MinorUnit,
     pub customer_name: Option<Secret<String>>,
     pub order_tax_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
@@ -1742,8 +1742,7 @@ impl RefundFlowData {
 pub struct RedirectDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: Option<AttemptStatus>,
-    pub response_minor_amount: Option<MinorUnit>,
-    pub response_currency: Option<Currency>,
+    pub response_amount: Option<Money>,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
@@ -2091,7 +2090,7 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::RecoveryInvoiceCancel => {
                 Ok(Self::RecoveryInvoiceCancel)
             }
-            grpc_api_types::payments::WebhookEventType::IncomingWebhookEventUnspecified => {
+            grpc_api_types::payments::WebhookEventType::Unspecified => {
                 Ok(Self::IncomingWebhookEventUnspecified)
             }
         }
@@ -2147,7 +2146,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::RecoveryPaymentSuccess => Ok(Self::RecoveryPaymentSuccess),
             EventType::RecoveryPaymentPending => Ok(Self::RecoveryPaymentPending),
             EventType::RecoveryInvoiceCancel => Ok(Self::RecoveryInvoiceCancel),
-            EventType::IncomingWebhookEventUnspecified => Ok(Self::IncomingWebhookEventUnspecified),
+            EventType::IncomingWebhookEventUnspecified => Ok(Self::Unspecified),
 
             // Legacy broad categories (for backward compatibility)
             EventType::Payment => Ok(Self::PaymentIntentSuccess), // Map broad Payment to PaymentIntentSuccess
@@ -2299,7 +2298,7 @@ pub struct PaymentsCaptureData {
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub metadata: Option<SecretSerdeValue>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
 }
 
 impl PaymentsCaptureData {
@@ -2358,12 +2357,11 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub metadata: Option<SecretSerdeValue>,
     pub complete_authorize_url: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<CustomerId>,
     pub integrity_object: Option<SetupMandateIntegrityObject>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
     pub locale: Option<String>,
@@ -2421,7 +2419,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub amount: i64,
     pub minor_amount: MinorUnit,
     pub currency: Currency,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<RepeatPaymentIntegrityObject>,

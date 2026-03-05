@@ -912,7 +912,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let purchase_units = vec![PurchaseUnitRequest {
             reference_id: Some(connector_request_reference_id.clone()),
-            custom_id: item.router_data.request.merchant_order_reference_id.clone(),
+            custom_id: item.router_data.request.merchant_order_id.clone(),
             invoice_id: Some(connector_request_reference_id),
             amount,
             payee,
@@ -2883,7 +2883,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let purchase_units = vec![PurchaseUnitRequest {
             reference_id: Some(connector_request_reference_id.clone()),
-            custom_id: item.router_data.request.merchant_order_reference_id.clone(),
+            custom_id: item.router_data.request.merchant_order_id.clone(),
             invoice_id: Some(connector_request_reference_id),
             amount,
             payee,
