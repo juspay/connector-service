@@ -1651,7 +1651,7 @@ pub struct PaymentsUpdateMetadataData<T: PaymentMethodDataTypes> {
     pub metadata: Option<SecretSerdeValue>,
     pub connector_transaction_id: String,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
-    pub feature_metadata: Option<FeatureMetadata>,
+    pub feature_metadata: Option<SecretSerdeValue>,
     pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
 }
 
@@ -3501,16 +3501,4 @@ pub struct BillingDescriptor {
     pub statement_descriptor_suffix: Option<String>,
     /// A reference to be shown on billing description
     pub reference: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
-pub struct FeatureMetadata {
-    /// Redirection response coming in request as metadata field only for redirection scenarios
-    pub redirect_response: Option<RedirectResponse>,
-}
-
-#[derive(Default, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize, Clone)]
-pub struct RedirectResponse {
-    pub param: Option<Secret<String>>,
-    pub json_payload: Option<SecretSerdeValue>,
 }

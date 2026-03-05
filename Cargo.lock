@@ -3540,7 +3540,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
- "time",
+ "time 0.3.43",
 ]
 
 [[package]]

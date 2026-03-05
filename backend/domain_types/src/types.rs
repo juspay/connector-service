@@ -10594,6 +10594,8 @@ impl<
     fn foreign_try_from(
         value: grpc_api_types::payments::PaymentServiceUpdateMetadataRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let payment_method_type =
+            <Option<PaymentMethodType>>::foreign_try_from(value.payment_method_type())?;
         Ok(Self {
             metadata: value
                 .metadata
@@ -10607,9 +10609,21 @@ impl<
                     _ => None,
                 })
                 .unwrap_or_default(),
-            payment_method_data: None,
-            payment_method_type: None,
-            feature_metadata: None,
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<T>::foreign_try_from)
+                .transpose()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Payment method data construction failed".to_owned(),
+                    error_object: None,
+                }))?,
+            payment_method_type,
+            feature_metadata: value
+                .feature_metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "feature metadata")))
+                .transpose()?,
         })
     }
 }

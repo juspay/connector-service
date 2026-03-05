@@ -72,6 +72,10 @@ pub fn create_router(state: AppState) -> Router {
             "/payments/verify_redirect_response",
             post(handlers::payments::verify_redirect_response),
         )
+        .route(
+            "/payments/update_metadata",
+            post(handlers::payments::update_metadata),
+        )
         // RefundService routes
         .route("/refunds/get", post(handlers::refunds::get_refund))
         .route(

@@ -2072,8 +2072,12 @@ message PaymentServiceUpdateMetadataRequest {
   Identifier transaction_id = 2; // Existing payment intent/order identifier to update  
   
   // Metadata to merge (optional; provided fields are merged into existing values)  
-  optional SecretString metadata = 3; // Merchant-defined metadata  
-  optional SecretString feature_metadata = 4; // Feature-level metadata   
+  optional SecretString metadata = 3; // Merchant-defined metadata
+  optional SecretString feature_metadata = 4; // Feature-level metadata
+
+  // Payment method and payment method type
+  optional PaymentMethod payment_method = 5; // Payment method to be used
+  optional PaymentMethodType payment_method_type = 6; // The type of payment method (e.g., apple_pay, google_pay)
 }  
   
 // Response message for updating metadata on a payment intent/order.  

@@ -19,6 +19,7 @@ use grpc_api_types::payments::{
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse,
+    PaymentServiceUpdateMetadataRequest, PaymentServiceUpdateMetadataResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
@@ -177,5 +178,12 @@ http_handler!(
     PaymentServiceVerifyRedirectResponseRequest,
     PaymentServiceVerifyRedirectResponseResponse,
     verify_redirect_response,
+    payments_service
+);
+http_handler!(
+    update_metadata,
+    PaymentServiceUpdateMetadataRequest,
+    PaymentServiceUpdateMetadataResponse,
+    update_metadata,
     payments_service
 );
