@@ -9,11 +9,11 @@ use common_utils::{
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, IncrementalAuthorization, PSync, RSync, Refund, Void},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -132,6 +132,7 @@ pub enum AuthipayRequestType {
     ReturnTransaction,
     VoidPreAuthTransactions,
     VoidTransaction,
+    PreAuthSecondaryTransaction,
 }
 
 // ===== REQUEST STRUCTURES =====
@@ -1060,11 +1061,171 @@ pub type AuthipayVoidResponse = AuthipayPaymentsResponse;
 pub type AuthipayCaptureResponse = AuthipayPaymentsResponse;
 pub type AuthipayRefundResponse = AuthipayPaymentsResponse;
 pub type AuthipayRefundSyncResponse = AuthipayPaymentsResponse;
+pub type AuthipayIncrementalAuthorizationResponse = AuthipayPaymentsResponse;
+
+// ===== INCREMENTAL AUTHORIZATION REQUEST STRUCTURE =====
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthipayIncrementalAuthorizationRequest {
+    pub request_type: AuthipayRequestType,
+    pub transaction_amount: AuthipayIncrementalTransactionAmount,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_transaction_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comments: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthipayIncrementalTransactionAmount {
+    pub total: FloatMajorUnit,
+    pub currency: common_enums::Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub incremental_flag: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub decremental_flag: Option<bool>,
+}
+
+// ===== INCREMENTAL AUTHORIZATION REQUEST TRANSFORMATION =====
+
+impl
+    TryFrom<
+        &RouterDataV2<
+            IncrementalAuthorization,
+            PaymentFlowData,
+            PaymentsIncrementalAuthorizationData,
+            PaymentsResponseData,
+        >,
+    > for AuthipayIncrementalAuthorizationRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            IncrementalAuthorization,
+            PaymentFlowData,
+            PaymentsIncrementalAuthorizationData,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Convert amount to FloatMajorUnit format
+        let converter = FloatMajorUnitForConnector;
+        let amount_major = converter
+            .convert(item.request.minor_amount, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let transaction_amount = AuthipayIncrementalTransactionAmount {
+            total: amount_major,
+            currency: item.request.currency,
+            // Authipay API: incrementalFlag/decrementalFlag are optional booleans
+            // If amount is positive, it's an incremental authorization
+            // If amount is negative, it would be a decremental (but we only support positive amounts)
+            incremental_flag: None,
+            decremental_flag: None,
+        };
+
+        Ok(Self {
+            request_type: AuthipayRequestType::PreAuthSecondaryTransaction,
+            transaction_amount,
+            merchant_transaction_id: Some(
+                item.resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+            comments: item.request.reason.clone(),
+        })
+    }
+}
+
+// ===== INCREMENTAL AUTHORIZATION RESPONSE TRANSFORMATION =====
+
+impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // Map transaction status using status/result, state, AND transaction type
+        let status = map_status(
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+            item.response.transaction_state.clone(),
+            item.response.transaction_type.clone(),
+        );
+
+        // Extract connector metadata from payment token using helper function
+        let connector_metadata = extract_connector_metadata(item.response.payment_token.as_ref());
+
+        // Extract network-specific fields from processor object using helper function
+        let (network_txn_id, _network_decline_code, _network_error_message) =
+            extract_network_fields(item.response.processor.as_ref());
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata,
+                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
+                connector_response_reference_id: item.response.client_request_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== TRYFROM IMPLEMENTATIONS FOR MACRO COMPATIBILITY =====
+
+use crate::connectors::authipay::AuthipayRouterData;
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AuthipayRouterData<
+            RouterDataV2<
+                IncrementalAuthorization,
+                PaymentFlowData,
+                PaymentsIncrementalAuthorizationData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AuthipayIncrementalAuthorizationRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: AuthipayRouterData<
+            RouterDataV2<
+                IncrementalAuthorization,
+                PaymentFlowData,
+                PaymentsIncrementalAuthorizationData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
+    }
+}
 
 // ===== TRYFROM IMPLEMENTATIONS FOR MACRO COMPATIBILITY =====
 // These delegate to the existing TryFrom<&RouterDataV2> implementations
-
-use crate::connectors::authipay::AuthipayRouterData;
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
