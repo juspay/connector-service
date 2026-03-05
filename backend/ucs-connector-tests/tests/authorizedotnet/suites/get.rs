@@ -4,11 +4,24 @@ use ucs_connector_tests::harness::{
     base_requests, context::FlowContext, executor::AuthorizedotnetExecutor,
 };
 
-use crate::authorizedotnet::suites::{authorize, capture, create_customer, generated_cases};
+use crate::authorizedotnet::suites::{
+    authorize, capture, create_customer, generated_input_variants,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GetScenario {
     Default,
+}
+
+#[derive(Clone, Copy)]
+pub struct GetOverrides {
+    pub max_attempts: usize,
+}
+
+#[derive(Clone, Copy)]
+pub struct GetExpectation {
+    pub expected_status: PaymentStatus,
+    pub require_no_error: bool,
 }
 
 pub fn default_scenario() -> GetScenario {
@@ -20,21 +33,36 @@ pub fn variants() -> &'static [GetScenario] {
     &[GetScenario::Default]
 }
 
+fn scenario_overrides(_context: &FlowContext, scenario: GetScenario) -> GetOverrides {
+    match scenario {
+        GetScenario::Default => GetOverrides { max_attempts: 3 },
+    }
+}
+
+fn scenario_expectation(scenario: GetScenario) -> GetExpectation {
+    match scenario {
+        GetScenario::Default => GetExpectation {
+            expected_status: PaymentStatus::Charged,
+            require_no_error: true,
+        },
+    }
+}
+
 pub async fn execute(
     executor: &AuthorizedotnetExecutor,
     flow_name: &str,
     context: &mut FlowContext,
     scenario: GetScenario,
 ) {
+    let overrides = scenario_overrides(context, scenario);
+    let expectation = scenario_expectation(scenario);
+
     let transaction_id = context.require_connector_transaction_id("get");
     let mut last_observed: Option<(i32, bool)> = None;
 
-    for attempt in 0..3 {
-        let request = match scenario {
-            GetScenario::Default => {
-                base_requests::get_request(&transaction_id, context.amount_minor)
-            }
-        };
+    for attempt in 0..overrides.max_attempts {
+        let mut request = base_requests::get_request(&transaction_id, context.amount_minor);
+        context.apply_to_get_request(&mut request);
 
         let step = format!("get_{scenario:?}_{attempt}");
         let (request_id, connector_ref_id) = AuthorizedotnetExecutor::step_ids(flow_name, &step);
@@ -45,9 +73,10 @@ pub async fn execute(
             .expect("get should return a response")
             .into_inner();
 
-        let is_charged = response.status == i32::from(PaymentStatus::Charged);
+        let is_expected_status = response.status == i32::from(expectation.expected_status);
         let has_no_error = response.error.is_none();
-        if is_charged && has_no_error {
+        context.capture_from_get_response(&response);
+        if is_expected_status && (!expectation.require_no_error || has_no_error) {
             return;
         }
 
@@ -60,10 +89,13 @@ pub async fn execute(
 
     assert_eq!(
         status,
-        i32::from(PaymentStatus::Charged),
-        "Get should settle to CHARGED"
+        i32::from(expectation.expected_status),
+        "Get should settle to expected status"
     );
-    assert!(has_no_error, "Get should settle without error details");
+
+    if expectation.require_no_error {
+        assert!(has_no_error, "Get should settle without error details");
+    }
 }
 
 /// @capability capability_id=ANET-CAP-003
@@ -81,7 +113,7 @@ async fn test_authorizedotnet__suite_get__after_manual_authorize_and_capture__re
 ) {
     let executor = AuthorizedotnetExecutor::new().await;
 
-    for case in generated_cases() {
+    for case in generated_input_variants() {
         let mut context = FlowContext::new(case, "get_suite");
         create_customer::execute(
             &executor,

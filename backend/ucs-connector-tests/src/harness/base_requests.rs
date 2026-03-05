@@ -9,7 +9,7 @@ use grpc_api_types::payments::{
 };
 use hyperswitch_masking::Secret;
 
-use crate::harness::generators::GeneratedCase;
+use crate::harness::generators::GeneratedInputVariant;
 
 const DEFAULT_CARD_NUMBER: &str = "5123456789012346";
 const DEFAULT_CARD_EXP_MONTH: &str = "12";
@@ -38,12 +38,12 @@ fn default_browser_info() -> BrowserInformation {
         java_script_enabled: Some(false),
         language: Some("en-US".to_string()),
         referer: None,
-        ip_address: None,
+        ip_address: Some("127.0.0.1".to_string().into()),
         os_type: None,
         os_version: None,
         device_model: None,
-        accept_language: None,
-        time_zone_offset_minutes: None,
+        accept_language: Some("en-US".to_string()),
+        time_zone_offset_minutes: Some(330),
     }
 }
 
@@ -63,11 +63,25 @@ pub fn card_details(card_number: &str) -> CardDetails {
     }
 }
 
-pub fn base_authorize_request(case: &GeneratedCase) -> PaymentServiceAuthorizeRequest {
-    let mut metadata_map = std::collections::HashMap::new();
-    metadata_map.insert("metadata".to_string(), AUTHNET_BASE64_METADATA.to_string());
-    let metadata_json =
-        serde_json::to_string(&metadata_map).expect("authorize metadata should serialize");
+pub fn base_authorize_request(case: &GeneratedInputVariant) -> PaymentServiceAuthorizeRequest {
+    base_authorize_request_for_connector("authorizedotnet", case)
+}
+
+pub fn base_authorize_request_for_connector(
+    connector: &str,
+    case: &GeneratedInputVariant,
+) -> PaymentServiceAuthorizeRequest {
+    let metadata = match connector {
+        "authorizedotnet" => {
+            let mut metadata_map = std::collections::HashMap::new();
+            metadata_map.insert("metadata".to_string(), AUTHNET_BASE64_METADATA.to_string());
+            let metadata_json =
+                serde_json::to_string(&metadata_map).expect("authorize metadata should serialize");
+            Some(Secret::new(metadata_json))
+        }
+        "cybersource" => Some(Secret::new("{}".to_string())),
+        _ => None,
+    };
 
     PaymentServiceAuthorizeRequest {
         amount: Some(grpc_api_types::payments::Money {
@@ -111,34 +125,68 @@ pub fn base_authorize_request(case: &GeneratedCase) -> PaymentServiceAuthorizeRe
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(CaptureMethod::Automatic)),
         browser_info: Some(default_browser_info()),
-        metadata: Some(Secret::new(metadata_json)),
+        metadata,
         ..Default::default()
     }
 }
 
 pub fn capture_request(transaction_id: &str, amount_minor: i64) -> PaymentServiceCaptureRequest {
+    capture_request_for_connector("authorizedotnet", transaction_id, amount_minor)
+}
+
+pub fn capture_request_for_connector(
+    connector: &str,
+    transaction_id: &str,
+    amount_minor: i64,
+) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
         connector_transaction_id: Some(id(transaction_id.to_string())),
         amount_to_capture: Some(grpc_api_types::payments::Money {
             minor_amount: amount_minor,
             currency: i32::from(Currency::Usd),
         }),
+        metadata: if connector == "cybersource" {
+            Some(Secret::new("{}".to_string()))
+        } else {
+            None
+        },
         ..Default::default()
     }
 }
 
 pub fn get_request(transaction_id: &str, amount_minor: i64) -> PaymentServiceGetRequest {
+    get_request_for_connector("authorizedotnet", transaction_id, amount_minor)
+}
+
+pub fn get_request_for_connector(
+    connector: &str,
+    transaction_id: &str,
+    amount_minor: i64,
+) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
         connector_transaction_id: Some(id(transaction_id.to_string())),
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: amount_minor,
             currency: i32::from(Currency::Usd),
         }),
+        metadata: if connector == "cybersource" {
+            Some(Secret::new("{}".to_string()))
+        } else {
+            None
+        },
         ..Default::default()
     }
 }
 
 pub fn void_request(transaction_id: &str, amount_minor: i64) -> PaymentServiceVoidRequest {
+    void_request_for_connector("authorizedotnet", transaction_id, amount_minor)
+}
+
+pub fn void_request_for_connector(
+    connector: &str,
+    transaction_id: &str,
+    amount_minor: i64,
+) -> PaymentServiceVoidRequest {
     PaymentServiceVoidRequest {
         connector_transaction_id: Some(id(transaction_id.to_string())),
         amount: Some(grpc_api_types::payments::Money {
@@ -146,13 +194,19 @@ pub fn void_request(transaction_id: &str, amount_minor: i64) -> PaymentServiceVo
             currency: i32::from(Currency::Usd),
         }),
         merchant_void_id: Some(id(format!("void_{transaction_id}"))),
+        cancellation_reason: Some("requested_by_customer".to_string()),
+        metadata: if connector == "cybersource" {
+            Some(Secret::new("{}".to_string()))
+        } else {
+            None
+        },
         ..Default::default()
     }
 }
 
 pub fn customer_create_request(
     merchant_customer_id: &str,
-    case: &GeneratedCase,
+    case: &GeneratedInputVariant,
 ) -> CustomerServiceCreateRequest {
     CustomerServiceCreateRequest {
         merchant_customer_id: Some(id(merchant_customer_id.to_string())),
@@ -188,14 +242,35 @@ pub fn refund_request(
     amount_minor: i64,
     customer_id: Option<String>,
 ) -> PaymentServiceRefundRequest {
-    let connector_feature_data = serde_json::json!({
-        "creditCard": {
-            "cardNumber": DEFAULT_CARD_NUMBER,
-            "expirationDate": format!("{}-{}", DEFAULT_CARD_EXP_YEAR, DEFAULT_CARD_EXP_MONTH),
-        }
-    });
-    let connector_feature_data_json = serde_json::to_string(&connector_feature_data)
-        .expect("refund connector_feature_data should serialize");
+    refund_request_for_connector(
+        "authorizedotnet",
+        transaction_id,
+        merchant_refund_id,
+        amount_minor,
+        customer_id,
+    )
+}
+
+pub fn refund_request_for_connector(
+    connector: &str,
+    transaction_id: &str,
+    merchant_refund_id: &str,
+    amount_minor: i64,
+    customer_id: Option<String>,
+) -> PaymentServiceRefundRequest {
+    let connector_feature_data = if connector == "authorizedotnet" {
+        let connector_feature_data = serde_json::json!({
+            "creditCard": {
+                "cardNumber": DEFAULT_CARD_NUMBER,
+                "expirationDate": format!("{}-{}", DEFAULT_CARD_EXP_YEAR, DEFAULT_CARD_EXP_MONTH),
+            }
+        });
+        let connector_feature_data_json = serde_json::to_string(&connector_feature_data)
+            .expect("refund connector_feature_data should serialize");
+        Some(Secret::new(connector_feature_data_json))
+    } else {
+        None
+    };
 
     PaymentServiceRefundRequest {
         merchant_refund_id: Some(id(merchant_refund_id.to_string())),
@@ -205,13 +280,21 @@ pub fn refund_request(
             minor_amount: amount_minor,
             currency: i32::from(Currency::Usd),
         }),
-        reason: Some("UCS connector test refund".to_string()),
+        reason: Some(if connector == "adyen" {
+            "CUSTOMER REQUEST".to_string()
+        } else {
+            "UCS connector test refund".to_string()
+        }),
         webhook_url: None,
         merchant_account_id: None,
         capture_method: None,
-        metadata: None,
+        metadata: if connector == "cybersource" {
+            Some(Secret::new("{}".to_string()))
+        } else {
+            None
+        },
         refund_metadata: None,
-        connector_feature_data: Some(Secret::new(connector_feature_data_json)),
+        connector_feature_data,
         browser_info: None,
         state: None,
         test_mode: Some(true),

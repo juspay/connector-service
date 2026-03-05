@@ -15,7 +15,7 @@ Connector tests live under:
 
 `tests/<connector>/suites/*.rs`
 
-Current connector example:
+Current connector suites:
 
 - `tests/authorizedotnet/suites/authorize.rs`
 - `tests/authorizedotnet/suites/create_customer.rs`
@@ -24,6 +24,24 @@ Current connector example:
 - `tests/authorizedotnet/suites/void.rs`
 - `tests/authorizedotnet/suites/refund.rs`
 - `tests/authorizedotnet/suites/composite.rs`
+- `tests/adyen/suites/authorize.rs`
+- `tests/stripe/suites/authorize.rs`
+- `tests/cybersource/suites/authorize.rs`
+
+## Test writing pattern
+
+All connector suites follow a common pattern so reviewers can quickly read:
+
+1. request overrides,
+2. request generation,
+3. response assertions.
+
+Reference: `docs/test-writing-pattern.md`.
+
+Input iteration helper:
+
+- `generated_input_variants()` runs each scenario against multiple valid input variants.
+- Source generator: `src/harness/generators.rs` (`generate_input_variants`).
 
 ## Running tests
 
@@ -32,6 +50,9 @@ From workspace root:
 ```bash
 UCS_CREDS_PATH="/absolute/path/to/connector_creds.json" \
 cargo test -p ucs-connector-tests --test authorizedotnet -- --nocapture --test-threads=1
+
+UCS_CREDS_PATH="/absolute/path/to/connector_creds.json" \
+cargo test -p ucs-connector-tests --test stripe -- --nocapture --test-threads=1
 ```
 
 Credentials env vars supported by test harness:
@@ -121,6 +142,7 @@ make ucs-summary UCS_SUMMARY_FORMAT=markdown UCS_CAPABILITIES_ONLY=true
 Every test function should include capability tags above it:
 
 ```rust
+/// @capability capability_id=ANET-CAP-009
 /// @capability connector=authorizedotnet
 /// @capability layer=suite
 /// @capability flow=authorize
@@ -133,6 +155,7 @@ Every test function should include capability tags above it:
 
 Required keys:
 
+- `capability_id`
 - `connector`
 - `layer`
 - `flow`

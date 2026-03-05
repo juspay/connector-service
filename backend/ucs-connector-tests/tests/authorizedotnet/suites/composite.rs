@@ -2,7 +2,7 @@ use serial_test::serial;
 use ucs_connector_tests::harness::{context::FlowContext, executor::AuthorizedotnetExecutor};
 
 use crate::authorizedotnet::suites::{
-    authorize, capture, create_customer, generated_cases, get, refund, void,
+    authorize, capture, create_customer, generated_input_variants, get, refund, void,
 };
 
 #[derive(Clone, Copy)]
@@ -149,7 +149,7 @@ async fn run_progressive_composite_flow(
     flow_name: &str,
     steps: &[CompositeStep],
 ) {
-    for case in generated_cases() {
+    for case in generated_input_variants() {
         let mut default_context: Option<FlowContext> = None;
 
         for (index, step) in steps.iter().enumerate() {

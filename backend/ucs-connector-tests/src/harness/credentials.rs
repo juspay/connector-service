@@ -1,9 +1,19 @@
 use std::{fs, path::PathBuf};
 
 #[derive(Clone, Debug)]
-pub struct ConnectorAuth {
-    pub api_key: String,
-    pub key1: String,
+pub enum ConnectorAuth {
+    HeaderKey {
+        api_key: String,
+    },
+    BodyKey {
+        api_key: String,
+        key1: String,
+    },
+    SignatureKey {
+        api_key: String,
+        key1: String,
+        api_secret: String,
+    },
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -16,7 +26,7 @@ pub enum CredentialError {
     ConnectorNotFound(String),
     #[error("Missing connector_account_details for '{0}'")]
     MissingAccountDetails(String),
-    #[error("Invalid auth_type '{auth_type}' for '{connector}' (expected body_key/body-key)")]
+    #[error("Invalid auth_type '{auth_type}' for '{connector}'")]
     InvalidAuthType {
         connector: String,
         auth_type: String,
@@ -49,6 +59,35 @@ fn extract_account_details<'a>(
     }
 
     if let Some(connector_obj) = connector_value.as_object() {
+        let env_key = format!(
+            "UCS_CONNECTOR_LABEL_{}",
+            connector.to_ascii_uppercase().replace('-', "_")
+        );
+
+        if let Ok(label) = std::env::var(&env_key) {
+            if let Some(account_details) = connector_obj
+                .get(&label)
+                .and_then(|value| value.get("connector_account_details"))
+            {
+                return Ok(account_details);
+            }
+        }
+
+        let preferred_labels: &[&str] = if connector == "cybersource" {
+            &["connector_2", "connector_1"]
+        } else {
+            &["connector_1", "connector_2"]
+        };
+
+        for label in preferred_labels {
+            if let Some(account_details) = connector_obj
+                .get(*label)
+                .and_then(|value| value.get("connector_account_details"))
+            {
+                return Ok(account_details);
+            }
+        }
+
         for nested_value in connector_obj.values() {
             if let Some(account_details) = nested_value.get("connector_account_details") {
                 return Ok(account_details);
@@ -61,7 +100,22 @@ fn extract_account_details<'a>(
     ))
 }
 
-pub fn load_body_key_auth(connector: &str) -> Result<ConnectorAuth, CredentialError> {
+fn get_required_string(
+    account_details: &serde_json::Value,
+    connector: &str,
+    field: &str,
+) -> Result<String, CredentialError> {
+    account_details
+        .get(field)
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| CredentialError::MissingField {
+            connector: connector.to_string(),
+            field: field.to_string(),
+        })
+        .map(ToString::to_string)
+}
+
+pub fn load_connector_auth(connector: &str) -> Result<ConnectorAuth, CredentialError> {
     let content = fs::read_to_string(creds_file_path())?;
     let json: serde_json::Value = serde_json::from_str(&content)?;
     let account_details = extract_account_details(&json, connector)?;
@@ -75,33 +129,33 @@ pub fn load_body_key_auth(connector: &str) -> Result<ConnectorAuth, CredentialEr
         })?;
 
     let normalized_auth_type = auth_type.to_ascii_lowercase();
-    if normalized_auth_type != "body_key"
-        && normalized_auth_type != "body-key"
-        && normalized_auth_type != "bodykey"
-    {
-        return Err(CredentialError::InvalidAuthType {
+
+    match normalized_auth_type.as_str() {
+        "header_key" | "header-key" | "headerkey" => Ok(ConnectorAuth::HeaderKey {
+            api_key: get_required_string(account_details, connector, "api_key")?,
+        }),
+        "body_key" | "body-key" | "bodykey" => Ok(ConnectorAuth::BodyKey {
+            api_key: get_required_string(account_details, connector, "api_key")?,
+            key1: get_required_string(account_details, connector, "key1")?,
+        }),
+        "signature_key" | "signature-key" | "signaturekey" => Ok(ConnectorAuth::SignatureKey {
+            api_key: get_required_string(account_details, connector, "api_key")?,
+            key1: get_required_string(account_details, connector, "key1")?,
+            api_secret: get_required_string(account_details, connector, "api_secret")?,
+        }),
+        _ => Err(CredentialError::InvalidAuthType {
             connector: connector.to_string(),
             auth_type: auth_type.to_string(),
-        });
+        }),
     }
+}
 
-    let api_key = account_details
-        .get("api_key")
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| CredentialError::MissingField {
+pub fn load_body_key_auth(connector: &str) -> Result<ConnectorAuth, CredentialError> {
+    match load_connector_auth(connector)? {
+        auth @ ConnectorAuth::BodyKey { .. } => Ok(auth),
+        other => Err(CredentialError::InvalidAuthType {
             connector: connector.to_string(),
-            field: "api_key".to_string(),
-        })?
-        .to_string();
-
-    let key1 = account_details
-        .get("key1")
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| CredentialError::MissingField {
-            connector: connector.to_string(),
-            field: "key1".to_string(),
-        })?
-        .to_string();
-
-    Ok(ConnectorAuth { api_key, key1 })
+            auth_type: format!("{other:?}"),
+        }),
+    }
 }

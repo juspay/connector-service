@@ -4,11 +4,22 @@ use ucs_connector_tests::harness::{
     base_requests, context::FlowContext, executor::AuthorizedotnetExecutor,
 };
 
-use crate::authorizedotnet::suites::{authorize, create_customer, generated_cases};
+use crate::authorizedotnet::suites::{authorize, create_customer, generated_input_variants};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VoidScenario {
     Default,
+}
+
+#[derive(Clone, Copy)]
+pub struct VoidOverrides {
+    pub amount_minor: i64,
+}
+
+#[derive(Clone, Copy)]
+pub struct VoidExpectation {
+    pub expected_status: PaymentStatus,
+    pub require_no_error: bool,
 }
 
 pub fn default_scenario() -> VoidScenario {
@@ -19,16 +30,35 @@ pub fn variants() -> &'static [VoidScenario] {
     &[VoidScenario::Default]
 }
 
+fn scenario_overrides(context: &FlowContext, scenario: VoidScenario) -> VoidOverrides {
+    match scenario {
+        VoidScenario::Default => VoidOverrides {
+            amount_minor: context.amount_minor,
+        },
+    }
+}
+
+fn scenario_expectation(scenario: VoidScenario) -> VoidExpectation {
+    match scenario {
+        VoidScenario::Default => VoidExpectation {
+            expected_status: PaymentStatus::Voided,
+            require_no_error: true,
+        },
+    }
+}
+
 pub async fn execute(
     executor: &AuthorizedotnetExecutor,
     flow_name: &str,
     context: &mut FlowContext,
     scenario: VoidScenario,
 ) {
+    let overrides = scenario_overrides(context, scenario);
+    let expectation = scenario_expectation(scenario);
+
     let transaction_id = context.require_connector_transaction_id("void");
-    let request = match scenario {
-        VoidScenario::Default => base_requests::void_request(&transaction_id, context.amount_minor),
-    };
+    let mut request = base_requests::void_request(&transaction_id, overrides.amount_minor);
+    context.apply_to_void_request(&mut request);
 
     let step = format!("void_{scenario:?}");
     let (request_id, connector_ref_id) = AuthorizedotnetExecutor::step_ids(flow_name, &step);
@@ -39,15 +69,19 @@ pub async fn execute(
         .expect("void should return a response")
         .into_inner();
 
-    assert!(
-        response.error.is_none(),
-        "Void should not include error details"
-    );
+    if expectation.require_no_error {
+        assert!(
+            response.error.is_none(),
+            "Void should not include error details"
+        );
+    }
     assert_eq!(
         response.status,
-        i32::from(PaymentStatus::Voided),
-        "Void should return VOIDED"
+        i32::from(expectation.expected_status),
+        "Void should return expected status"
     );
+
+    context.capture_from_void_response(&response);
 }
 
 /// @capability capability_id=ANET-CAP-004
@@ -64,7 +98,7 @@ pub async fn execute(
 async fn test_authorizedotnet__suite_void__after_manual_authorize__returns_voided() {
     let executor = AuthorizedotnetExecutor::new().await;
 
-    for case in generated_cases() {
+    for case in generated_input_variants() {
         let mut context = FlowContext::new(case, "void_suite");
         create_customer::execute(
             &executor,

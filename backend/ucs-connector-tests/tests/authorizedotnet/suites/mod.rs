@@ -1,10 +1,12 @@
 //! Shared suite helpers for Authorize.Net connector tests.
 //!
-//! `generated_cases()` controls per-test generated iterations and
+//! `generated_input_variants()` controls per-test generated iterations and
 //! `extract_id()` provides a common identifier extractor used across suites.
 
 use grpc_api_types::payments::{identifier::IdType, Identifier};
-use ucs_connector_tests::harness::generators::{generate_cases, GeneratedCase};
+use ucs_connector_tests::harness::generators::{
+    generate_input_variants as build_input_variants, GeneratedInputVariant,
+};
 
 pub mod authorize;
 pub mod capture;
@@ -16,8 +18,8 @@ pub mod void;
 
 const GENERATED_CASES_PER_SCENARIO: usize = 3;
 
-pub(crate) fn generated_cases() -> Vec<GeneratedCase> {
-    generate_cases(GENERATED_CASES_PER_SCENARIO)
+pub(crate) fn generated_input_variants() -> Vec<GeneratedInputVariant> {
+    build_input_variants(GENERATED_CASES_PER_SCENARIO)
 }
 
 pub(crate) fn extract_id(identifier: Option<&Identifier>) -> Option<String> {

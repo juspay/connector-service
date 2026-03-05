@@ -4,8 +4,12 @@ use proptest::{
     test_runner::TestRunner,
 };
 
+/// Input variant used to execute the same scenario with different valid payload values.
+///
+/// This helps us catch request-shape regressions and connector edge cases that are data-dependent,
+/// while keeping one readable scenario per test function.
 #[derive(Clone, Debug)]
-pub struct GeneratedCase {
+pub struct GeneratedInputVariant {
     pub amount_minor: i64,
     pub email: String,
     pub merchant_txn_id: String,
@@ -18,9 +22,13 @@ pub struct GeneratedCase {
     pub zip_code: String,
 }
 
-pub fn generate_cases(count: usize) -> Vec<GeneratedCase> {
+/// Generates `count` input variants for the current scenario.
+///
+/// The generated values are stable in shape and valid for connector requests,
+/// but different enough across iterations to exercise varied input data.
+pub fn generate_input_variants(count: usize) -> Vec<GeneratedInputVariant> {
     let strategy = (100_i64..5000_i64, any::<u32>(), any::<u32>(), any::<u16>()).prop_map(
-        |(amount_minor, a, b, c)| GeneratedCase {
+        |(amount_minor, a, b, c)| GeneratedInputVariant {
             amount_minor,
             email: format!("ucs.{a}.{b}@example.com"),
             merchant_txn_id: format!("ucs_authnet_{a}_{b}"),
@@ -43,4 +51,10 @@ pub fn generate_cases(count: usize) -> Vec<GeneratedCase> {
             tree.current()
         })
         .collect()
+}
+
+pub type GeneratedCase = GeneratedInputVariant;
+
+pub fn generate_cases(count: usize) -> Vec<GeneratedInputVariant> {
+    generate_input_variants(count)
 }

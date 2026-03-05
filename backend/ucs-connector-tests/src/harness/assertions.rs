@@ -122,7 +122,8 @@ pub fn assert_decline_error_in_status(status: &tonic::Status) {
 pub fn assert_no_error(response: &PaymentServiceAuthorizeResponse, context: &str) {
     assert!(
         response.error.is_none(),
-        "{context}: expected no error details for success response"
+        "{context}: expected no error details for success response, got: {:?}",
+        response.error
     );
 }
 
