@@ -629,7 +629,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::SwishQr(_)
                 | WalletData::Mifinity(_)
                 | WalletData::RevolutPay(_)
-                | WalletData::BluecodeRedirect { .. } => Err(ConnectorError::NotImplemented(
+                | WalletData::BluecodeRedirect { .. }
+                | WalletData::MbWay(_)
+                | WalletData::Satispay(_)
+                | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("fiuu"),
                 )
                 .into()),

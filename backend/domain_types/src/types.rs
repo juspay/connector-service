@@ -751,6 +751,21 @@ impl<
                         Box::new(payment_method_data::WeChatPayQr {}),
                     )))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::MbWay(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::MbWay(
+                        payment_method_data::MbWayData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Satispay(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::Satispay(
+                        payment_method_data::SatispayData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Wero(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::Wero(
+                        payment_method_data::WeroData {},
+                    )))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(
                     mifinity_data,
                 ) => Ok(Self::Wallet(payment_method_data::WalletData::Mifinity(
@@ -1734,6 +1749,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::InstantBankTransferPoland => {
                 Ok(Some(PaymentMethodType::InstantBankTransferPoland))
             }
+            grpc_api_types::payments::PaymentMethodType::MbWay => {
+                Ok(Some(PaymentMethodType::MbWay))
+            }
+            grpc_api_types::payments::PaymentMethodType::Satispay => {
+                Ok(Some(PaymentMethodType::Satispay))
+            }
+            grpc_api_types::payments::PaymentMethodType::Wero => {
+                Ok(Some(PaymentMethodType::Wero))
+            }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
                 error_identifier: 400,
@@ -1967,6 +1991,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CimbVaBankTransfer(_) => Ok(Some(PaymentMethodType::CimbVa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::DanamonVaBankTransfer(_) => Ok(Some(PaymentMethodType::DanamonVa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MandiriVaBankTransfer(_) => Ok(Some(PaymentMethodType::MandiriVa)),
+                // ============================================================================
+                // WALLET PAYMENTS - PaymentMethodType mappings
+                // ============================================================================
+                grpc_api_types::payments::payment_method::PaymentMethod::MbWay(_) => Ok(Some(PaymentMethodType::MbWay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Satispay(_) => Ok(Some(PaymentMethodType::Satispay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Wero(_) => Ok(Some(PaymentMethodType::Wero)),
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -5462,6 +5492,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::AliPay => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::Cashapp => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::RevolutPay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::MbWay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::Satispay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::Wero => Ok(Self::Wallet),
 
             grpc_api_types::payments::PaymentMethodType::UpiCollect => Ok(Self::Upi),
             grpc_api_types::payments::PaymentMethodType::UpiIntent => Ok(Self::Upi),
@@ -8296,6 +8329,9 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
+    MbWay,
+    Satispay,
+    Wero,
     SepaGuaranteedBankDebit,
     IndonesianBankTransfer,
 }

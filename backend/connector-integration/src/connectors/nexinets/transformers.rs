@@ -833,7 +833,10 @@ fn get_wallet_details<
         | WalletData::CashappQr(_)
         | WalletData::SwishQr(_)
         | WalletData::Mifinity(_)
-        | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
+        | WalletData::RevolutPay(_)
+        | WalletData::MbWay(_)
+        | WalletData::Satispay(_)
+        | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("nexinets"),
         ))?,
     }

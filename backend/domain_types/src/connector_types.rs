@@ -2770,6 +2770,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::WalletData::AmazonPayRedirect(_) => Self::AmazonPayRedirect,
                 payment_method_data::WalletData::Paze(_) => Self::Paze,
                 payment_method_data::WalletData::RevolutPay(_) => Self::RevolutPay,
+                payment_method_data::WalletData::MbWay(_) => Self::MbWay,
+                payment_method_data::WalletData::Satispay(_) => Self::Satispay,
+                payment_method_data::WalletData::Wero(_) => Self::Wero,
             },
             PaymentMethodData::PayLater(pay_later_data) => match pay_later_data {
                 payment_method_data::PayLaterData::KlarnaRedirect { .. } => Self::KlarnaRedirect,

@@ -869,6 +869,39 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
     );
 
     ppro_supported_payment_methods.add(
+        common_enums::PaymentMethod::Wallet,
+        common_enums::PaymentMethodType::MbWay,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::NotSupported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: ppro_bridge_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
+    ppro_supported_payment_methods.add(
+        common_enums::PaymentMethod::Wallet,
+        common_enums::PaymentMethodType::Satispay,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::NotSupported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: ppro_bridge_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
+    ppro_supported_payment_methods.add(
+        common_enums::PaymentMethod::Wallet,
+        common_enums::PaymentMethodType::Wero,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::NotSupported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: ppro_bridge_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
+    ppro_supported_payment_methods.add(
         common_enums::PaymentMethod::Upi,
         common_enums::PaymentMethodType::UpiCollect,
         PaymentMethodDetails {

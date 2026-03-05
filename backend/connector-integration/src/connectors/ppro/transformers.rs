@@ -110,6 +110,9 @@ where
             Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
             Some(common_enums::PaymentMethodType::BancontactCard) => "BANCONTACT".to_string(),
             Some(common_enums::PaymentMethodType::UpiCollect) => "UPI".to_string(),
+            Some(common_enums::PaymentMethodType::MbWay) => "MBWAY".to_string(),
+            Some(common_enums::PaymentMethodType::Satispay) => "SATISPAY".to_string(),
+            Some(common_enums::PaymentMethodType::Wero) => "WERO".to_string(),
             Some(ref pm) => pm.to_string().to_uppercase(),
             None => "".to_string(),
         };
@@ -877,6 +880,9 @@ where
             Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
             Some(common_enums::PaymentMethodType::BancontactCard) => "BANCONTACT".to_string(),
             Some(common_enums::PaymentMethodType::UpiCollect) => "UPI".to_string(),
+            Some(common_enums::PaymentMethodType::MbWay) => "MBWAY".to_string(),
+            Some(common_enums::PaymentMethodType::Satispay) => "SATISPAY".to_string(),
+            Some(common_enums::PaymentMethodType::Wero) => "WERO".to_string(),
             Some(ref pm) => pm.to_string().to_uppercase(),
             None => "".to_string(),
         };

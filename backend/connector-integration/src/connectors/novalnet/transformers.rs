@@ -470,7 +470,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::CashappQr(_)
                 | WalletDataPaymentMethod::SwishQr(_)
                 | WalletDataPaymentMethod::WeChatPayQr(_)
-                | WalletDataPaymentMethod::Mifinity(_) => Err(ConnectorError::NotImplemented(
+                | WalletDataPaymentMethod::Mifinity(_)
+                | WalletDataPaymentMethod::MbWay(_)
+                | WalletDataPaymentMethod::Satispay(_)
+                | WalletDataPaymentMethod::Wero(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                 )
                 .into()),
@@ -2154,7 +2157,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::CashappQr(_)
                 | WalletDataPaymentMethod::SwishQr(_)
                 | WalletDataPaymentMethod::WeChatPayQr(_)
-                | WalletDataPaymentMethod::Mifinity(_) => Err(ConnectorError::NotImplemented(
+                | WalletDataPaymentMethod::Mifinity(_)
+                | WalletDataPaymentMethod::MbWay(_)
+                | WalletDataPaymentMethod::Satispay(_)
+                | WalletDataPaymentMethod::Wero(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                 ))?,
             },
