@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026.03.04.0
+
+### Features
+
+- **connector:**
+  - [Adyen] Add Apple pay and Google pay Decrypt for Adyen ([#509](https://github.com/juspay/connector-service/pull/509)) ([`ada0603`](https://github.com/juspay/connector-service/commit/ada06037ada6e62f18bb270dfa3e0366aeb49720))
+  - [Truelayer] Integrate OpenBankingUK flows ([#519](https://github.com/juspay/connector-service/pull/519)) ([`40eb645`](https://github.com/juspay/connector-service/commit/40eb64581346db3fd0e4c9424160fdc7ef4218bc))
+- Ach bankdebit integration for bluesnap ([#552](https://github.com/juspay/connector-service/pull/552)) ([`d1ed349`](https://github.com/juspay/connector-service/commit/d1ed349a8b5d86ae011a1c76ed511b7ccb836c65))
+- Ach bankdebit integration for nuvei ([#551](https://github.com/juspay/connector-service/pull/551)) ([`28cd250`](https://github.com/juspay/connector-service/commit/28cd250652e4d5b6eba50eb4a8205627dd76221d))
+
+**Full Changelog:** [`2026.03.03.0...2026.03.04.0`](https://github.com/juspay/connector-service/compare/2026.03.03.0...2026.03.04.0)
+
+- - -
+
+## 2026.03.03.0
+
+### Features
+
+- **connector:** [Revolut] Rename RevolutAuth "api_key" field and add "signing_secret" for webhook source verification ([#570](https://github.com/juspay/connector-service/pull/570)) ([`6bc06bd`](https://github.com/juspay/connector-service/commit/6bc06bdc3f5f332d605a5541dc3e57bce20903a6))
+
+**Full Changelog:** [`2026.03.02.0...2026.03.03.0`](https://github.com/juspay/connector-service/compare/2026.03.02.0...2026.03.03.0)
+
+- - -
+
 ## 2026.03.02.0
 
 ### Features

@@ -57,7 +57,19 @@ pub struct BluesnapWallet {
     pub wallet_type: String,
 }
 
-// Payment method details - supports cards and wallets
+// ACH bank debit data structure
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapAchData {
+    pub account_number: Secret<String>,
+    pub routing_number: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_holder_type: Option<String>,
+}
+
+// Payment method details - supports cards, wallets, and ACH
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum BluesnapPaymentMethodDetails {
@@ -67,6 +79,10 @@ pub enum BluesnapPaymentMethodDetails {
     },
     Wallet {
         wallet: BluesnapWallet,
+    },
+    Ach {
+        #[serde(rename = "ecp")]
+        ach: BluesnapAchData,
     },
 }
 
@@ -135,6 +151,50 @@ pub struct BluesnapRefundRequest {
     pub amount: Option<StringMajorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+}
+
+// ===== ACH/ECP PAYMENT STRUCTURES =====
+
+// Payer info for ACH transactions (required by BlueSnap alt-transactions endpoint)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapPayerInfo {
+    pub first_name: Secret<String>,
+    pub last_name: Secret<String>,
+    pub zip: Secret<String>,
+}
+
+// ECP transaction data for ACH (BlueSnap alt-transactions format)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapEcpTransaction {
+    pub routing_number: Secret<String>,
+    pub account_number: Secret<String>,
+    pub account_type: String,
+}
+
+// ACH-specific authorize request structure
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapAchAuthorizeRequest {
+    pub ecp_transaction: BluesnapEcpTransaction,
+    pub amount: StringMajorUnit,
+    pub currency: String,
+    pub authorized_by_shopper: bool,
+    pub payer_info: BluesnapPayerInfo,
+    pub merchant_transaction_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub soft_descriptor: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_fraud_info: Option<TransactionFraudInfo>,
+}
+
+// Unified authorize request enum to support multiple payment methods
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum BluesnapAuthorizeRequest {
+    Card(BluesnapPaymentsRequest),
+    Ach(BluesnapAchAuthorizeRequest),
 }
 
 // ===== 3DS AUTHENTICATION STRUCTURES =====
