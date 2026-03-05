@@ -47,7 +47,7 @@ else
 endif
 
 # Build profile (release or debug)
-PROFILE ?= release
+PROFILE ?= release-fast
 
 # Pre-built FFI library for the current platform (output of build-ffi-lib).
 LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/libconnector_service_ffi.$(LIB_EXT)
