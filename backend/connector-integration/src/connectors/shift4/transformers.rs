@@ -2,11 +2,11 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{pii, request::Method, types::MinorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund},
+    connector_flow::{Authorize, Capture, IncrementalAuthorization, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{
@@ -723,5 +723,138 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Delegate to the existing TryFrom<&RouterDataV2> implementation
         Self::try_from(&item.router_data)
+    }
+}
+
+// ============================================================================
+// INCREMENTAL AUTHORIZATION
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4IncrementalAuthorizationRequest {
+    pub amount: i64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4IncrementalAuthorizationResponse {
+    pub id: String,
+    pub amount: i64,
+    pub captured: bool,
+    pub status: String,
+    pub card: Option<Shift4IncrementalAuthCardResponse>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4IncrementalAuthCardResponse {
+    pub id: String,
+    pub first6: String,
+    pub last4: String,
+    pub brand: String,
+}
+
+// TryFrom for IncrementalAuthorization Request
+impl
+    TryFrom<
+        &RouterDataV2<
+            IncrementalAuthorization,
+            PaymentFlowData,
+            PaymentsIncrementalAuthorizationData,
+            PaymentsResponseData,
+        >,
+    > for Shift4IncrementalAuthorizationRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            IncrementalAuthorization,
+            PaymentFlowData,
+            PaymentsIncrementalAuthorizationData,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            amount: item.request.minor_amount.get_amount_as_i64(),
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        Shift4RouterData<
+            RouterDataV2<
+                IncrementalAuthorization,
+                PaymentFlowData,
+                PaymentsIncrementalAuthorizationData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for Shift4IncrementalAuthorizationRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: Shift4RouterData<
+            RouterDataV2<
+                IncrementalAuthorization,
+                PaymentFlowData,
+                PaymentsIncrementalAuthorizationData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
+    }
+}
+
+// TryFrom for IncrementalAuthorization Response
+impl TryFrom<ResponseRouterData<Shift4IncrementalAuthorizationResponse, Self>>
+    for RouterDataV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<Shift4IncrementalAuthorizationResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = match item.response.status.as_str() {
+            "successful" => AttemptStatus::Authorized,
+            "pending" => AttemptStatus::Pending,
+            _ => AttemptStatus::Failure,
+        };
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: item.response.card.as_ref().map(|card| {
+                    serde_json::json!({
+                        "card_id": card.id.clone(),
+                        "card_brand": card.brand.clone(),
+                        "card_last4": card.last4.clone(),
+                    })
+                    .into()
+                }),
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.id.clone()),
+                incremental_authorization_allowed: Some(true),
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
     }
 }
