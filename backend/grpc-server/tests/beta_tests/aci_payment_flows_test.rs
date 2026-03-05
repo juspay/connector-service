@@ -2,7 +2,8 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
-use grpc_server::{app, configs};
+use grpc_server::app;
+use ucs_env::configs;
 use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
 mod utils;
@@ -23,7 +24,7 @@ use grpc_api_types::{
         Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
+        PaymentServiceSetupRecurringRequest, RecurringPaymentServiceChargeRequest,
         PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
@@ -292,7 +293,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
 }
 
 // Helper function to create a register (setup mandate) request
-fn create_register_request() -> PaymentServiceRegisterRequest {
+fn create_register_request() -> PaymentServiceSetupRecurringRequest {
     let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
@@ -307,7 +308,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
         nick_name: None,
     });
 
-    PaymentServiceRegisterRequest {
+    PaymentServiceSetupRecurringRequest {
         minor_amount: Some(TEST_AMOUNT),
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
@@ -352,7 +353,7 @@ card_details),
 
 // Helper function to create a repeat payment request (matching your JSON format)
 #[allow(clippy::field_reassign_with_default)]
-fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEverythingRequest {
+fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceChargeRequest {
     let mandate_reference = MandateReference {
         mandate_id: Some(mandate_id.to_string()),
         payment_method_id: None,
@@ -366,7 +367,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         "Monthly subscription payment".to_string(),
     );
 
-    PaymentServiceRepeatEverythingRequest {
+    RecurringPaymentServiceChargeRequest {
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("mandate_{}", get_timestamp()))),
         }),
@@ -374,7 +375,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         minor_amount: TEST_AMOUNT,
-        merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
+        merchant_order_id: Some(format!("repeat_order_{}", get_timestamp())),
         metadata,
         webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
         capture_method: None,
