@@ -4396,6 +4396,7 @@ export interface WebhookResponseContent {
 export interface RequestDetails {
   method: Method;
   uri?: string | undefined;
+  url?: string | undefined;
   headers: { [key: string]: string };
   body: Uint8Array;
   queryParams?: string | undefined;
@@ -6474,6 +6475,7 @@ export const RequestDetails: MessageFns<RequestDetails> = {
     return {
       method: isSet(object.method) ? methodFromJSON(object.method) : 0,
       uri: isSet(object.uri) ? globalThis.String(object.uri) : undefined,
+      url: isSet(object.url) ? globalThis.String(object.url) : undefined,
       headers: isObject(object.headers)
         ? Object.entries(object.headers).reduce<{ [key: string]: string }>((acc, [key, value]) => {
           acc[key] = String(value);
@@ -6518,6 +6520,7 @@ export const RequestDetails: MessageFns<RequestDetails> = {
     const message = createBaseRequestDetails();
     message.method = object.method ?? 0;
     message.uri = object.uri ?? undefined;
+    message.url = object.url ?? undefined;
     message.headers = Object.entries(object.headers ?? {}).reduce<{ [key: string]: string }>((acc, [key, value]) => {
       if (value !== undefined) {
         acc[key] = globalThis.String(value);
