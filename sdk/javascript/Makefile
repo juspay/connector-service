@@ -1,49 +1,16 @@
-.PHONY: install-deps build-ffi-lib generate generate-bindings generate-proto generate-all \
-        build-ts pack-archive install test-package dist clean
+.PHONY: install-deps generate-bindings generate-proto generate-all \
+        generate-flows build-ts pack-archive install test-package dist clean
 
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
+# SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
-REPO_ROOT    := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
 
-FFI_CRATE     := $(REPO_ROOT)/backend/ffi
-PROTO_DIR     := $(REPO_ROOT)/backend/grpc-api-types/proto
+# Include common SDK build configuration
+include $(SDK_ROOT)/../common.mk
+
+# SDK-specific paths continued
 GENERATED_OUT := $(SDK_ROOT)/src/payments/generated
-ARTIFACTS_DIR := $(REPO_ROOT)/artifacts
 PACKAGE_DIR   := $(ARTIFACTS_DIR)/sdk-javascript
-
-# ---------------------------------------------------------------------------
-# Platform detection
-# Always building with --target <PLATFORM> keeps the artifact layout identical
-# on CI runners and developer machines (target/<PLATFORM>/release/).
-# ---------------------------------------------------------------------------
-UNAME_S := $(shell uname -s)
-UNAME_M := $(shell uname -m)
-ifeq ($(UNAME_S), Darwin)
-  ifeq ($(UNAME_M), arm64)
-    PLATFORM := aarch64-apple-darwin
-  else
-    PLATFORM := x86_64-apple-darwin
-  endif
-  LIB_EXT := dylib
-else
-  ifeq ($(UNAME_M), aarch64)
-    PLATFORM := aarch64-unknown-linux-gnu
-  else
-    PLATFORM := x86_64-unknown-linux-gnu
-  endif
-  LIB_EXT := so
-endif
-
-# Profile used for local builds (test-package). release-fast skips LTO and
-# uses parallel codegen — same opt-level as release, ~5x faster to compile.
-# dist overrides this to --release for production-optimised artifacts.
-PROFILE  := release-fast
-
-# Pre-built FFI library for the current platform (output of build-ffi-lib).
-LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/libconnector_service_ffi.$(LIB_EXT)
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -58,31 +25,8 @@ install-deps:
 	@command -v npm >/dev/null 2>&1 || \
 		(echo "Error: npm not found. Install via nix or https://nodejs.org" && exit 1)
 	@cd $(SDK_ROOT) && \
-		(test -d node_modules && test -f node_modules/.bin/pbjs && test -f node_modules/.bin/pbts) || \
 		(echo "  → Installing npm dependencies..." && npm install)
 	@echo "All required tools present."
-
-# ---------------------------------------------------------------------------
-# build-ffi-lib
-# Builds the Rust FFI shared library for the auto-detected platform.
-# Output: target/<PLATFORM>/<PROFILE>/libconnector_service_ffi.<ext>
-# Using --target consistently means local builds and CI builds share the same
-# directory layout — no special-case LIBRARY= or TARGET_TRIPLE= variables needed.
-# ---------------------------------------------------------------------------
-build-ffi-lib:
-	@echo "Building FFI shared library for $(PLATFORM) [profile: $(PROFILE)]..."
-	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
-		--profile $(PROFILE) --target $(PLATFORM)
-	@echo "Build complete: $(LIBRARY)"
-
-# ---------------------------------------------------------------------------
-# generate
-# Auto-discovers flows from services.proto + bindings/uniffi.rs and regenerates
-# the JavaScript/TypeScript SDK client code (connector_client.ts, uniffi_client.ts).
-# ---------------------------------------------------------------------------
-generate:
-	@echo "Discovering flows and generating JavaScript SDK client code..."
-	@python3 $(REPO_ROOT)/sdk/codegen/generate.py --lang javascript
 
 # ---------------------------------------------------------------------------
 # generate-bindings
@@ -126,6 +70,16 @@ generate-proto: install-deps
 # order relative to each other.
 # ---------------------------------------------------------------------------
 generate-all: generate-proto generate-bindings
+
+# ---------------------------------------------------------------------------
+# generate-flows
+# Generates flow methods (authorize, capture, etc.) by running the SDK
+# codegen script. Assumes descriptor is already generated.
+# ---------------------------------------------------------------------------
+generate-flows:
+	@echo "Generating JavaScript flow methods..."
+	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang javascript
+	@echo "JavaScript flow methods generated."
 
 # ---------------------------------------------------------------------------
 # build-ts
@@ -176,11 +130,10 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 	@rm -rf /tmp/test-hyperswitch-js
 	@mkdir -p /tmp/test-hyperswitch-js
 	@cd /tmp/test-hyperswitch-js && npm init -y --silent && \
-		npm install $(PACKAGE_DIR)/hyperswitch-payments-0.1.0.tgz --silent
-	@cp $(SDK_ROOT)/test_smoke.ts /tmp/test-hyperswitch-js/test_smoke.ts
-	@printf '{"compilerOptions":{"module":"CommonJS","moduleResolution":"node","esModuleInterop":true,"skipLibCheck":true,"strict":true}}\n' \
-		> /tmp/test-hyperswitch-js/tsconfig.json
-	@cd /tmp/test-hyperswitch-js && npx ts-node test_smoke.ts
+		npm install $(PACKAGE_DIR)/hyperswitch-payments-0.1.0.tgz typescript @types/node --silent
+	@cp $(SDK_ROOT)/smoke-test/test_smoke.ts /tmp/test-hyperswitch-js/test_smoke.ts
+	@cp $(SDK_ROOT)/smoke-test/tsconfig.json /tmp/test-hyperswitch-js/tsconfig.json
+	@cd /tmp/test-hyperswitch-js && npx tsc && node test_smoke.js
 	@rm -rf /tmp/test-hyperswitch-js
 	@echo "Package test passed."
 

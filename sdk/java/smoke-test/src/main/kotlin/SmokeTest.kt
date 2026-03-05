@@ -7,24 +7,21 @@
  * Exits non-zero on any assertion failure.
  */
 
+import payments.ConnectorClient
+import payments.authorize
+import payments.PaymentServiceAuthorizeRequest
+import payments.PaymentAddress
+import payments.Currency
+import payments.CaptureMethod
+import payments.AuthenticationType
+import payments.FfiConnectorHttpRequest
+import payments.FfiOptions
+import payments.EnvOptions
 import uniffi.connector_service_ffi.UniffiException
 import uniffi.connector_service_ffi.authorizeReqTransformer
-import ucs.v2.Payment.PaymentServiceAuthorizeRequest
-import ucs.v2.Payment.PaymentAddress
-import ucs.v2.Payment.Currency
-import ucs.v2.Payment.CaptureMethod
-import ucs.v2.Payment.AuthenticationType
-import ucs.v2.SdkOptions.FfiConnectorHttpRequest
-import ucs.v2.SdkOptions.FfiOptions
-import ucs.v2.SdkOptions.EnvOptions
 
 fun buildRequest(): PaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionIdBuilder.id = "smoke_test_123"
-        amountBuilder.apply {
-            minorAmount = 1000
-            currency = Currency.USD
-        }
         merchantTransactionIdBuilder.id = "smoke_test_123"
         amountBuilder.apply {
             minorAmount = 1000
@@ -37,10 +34,6 @@ fun buildRequest(): PaymentServiceAuthorizeRequest =
             cardExpYearBuilder.value = "2050"
             cardCvcBuilder.value = "123"
             cardHolderNameBuilder.value = "Test User"
-        }
-        customerBuilder.apply {
-            emailBuilder.value = "test@example.com"
-            name = "Test"
         }
         customerBuilder.apply {
             emailBuilder.value = "test@example.com"

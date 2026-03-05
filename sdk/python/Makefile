@@ -1,51 +1,18 @@
-.PHONY: install-deps build-ffi-lib generate generate-bindings generate-proto generate-all \
-        pack-archive install test-package dist clean
-
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
+.PHONY: install-deps generate-bindings generate-proto generate-all \
+        generate-flows pack-archive install test-package dist clean
+	#
+# SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
-REPO_ROOT    := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
 
-FFI_CRATE     := $(REPO_ROOT)/backend/ffi
-PROTO_DIR     := $(REPO_ROOT)/backend/grpc-api-types/proto
+# Include common SDK build configuration
+include $(SDK_ROOT)/../common.mk
+
+# SDK-specific paths continued
 GENERATED_OUT := $(SDK_ROOT)/src/payments/generated
-ARTIFACTS_DIR := $(REPO_ROOT)/artifacts
 PACKAGE_DIR   := $(ARTIFACTS_DIR)/sdk-python
 
-# ---------------------------------------------------------------------------
-# Platform detection
-# Always building with --target <PLATFORM> keeps the artifact layout identical
-# on CI runners and developer machines (target/<PLATFORM>/release/).
-# ---------------------------------------------------------------------------
-UNAME_S := $(shell uname -s)
-UNAME_M := $(shell uname -m)
-ifeq ($(UNAME_S), Darwin)
-  ifeq ($(UNAME_M), arm64)
-    PLATFORM := aarch64-apple-darwin
-  else
-    PLATFORM := x86_64-apple-darwin
-  endif
-  LIB_EXT := dylib
-else
-  ifeq ($(UNAME_M), aarch64)
-    PLATFORM := aarch64-unknown-linux-gnu
-  else
-    PLATFORM := x86_64-unknown-linux-gnu
-  endif
-  LIB_EXT := so
-endif
-
-# Profile used for local builds (test-package). release-fast skips LTO and
-# uses parallel codegen — same opt-level as release, ~5x faster to compile.
-# dist overrides this to --release for production-optimised artifacts.
-PROFILE  := release-fast
-
-# Pre-built FFI library for the current platform (output of build-ffi-lib).
-LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/libconnector_service_ffi.$(LIB_EXT)
-
-BINDGEN := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/uniffi-bindgen
+# Note: BINDGEN is defined in common.mk
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -67,39 +34,6 @@ install-deps:
 	fi
 	@echo "All required tools present."
 
-# ---------------------------------------------------------------------------
-# build-ffi-lib
-# Builds the Rust FFI shared library for the auto-detected platform.
-# Output: target/<PLATFORM>/release/libconnector_service_ffi.<ext>
-# Using --target consistently means local builds and CI builds share the same
-# directory layout — no special-case LIBRARY= or TARGET_TRIPLE= variables needed.
-# ---------------------------------------------------------------------------
-build-ffi-lib:
-	@echo "Building FFI shared library for $(PLATFORM) [profile: $(PROFILE)]..."
-	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
-		--profile $(PROFILE) --target $(PLATFORM)
-	@echo "Build complete: $(LIBRARY)"
-
-# ---------------------------------------------------------------------------
-# generate
-# Auto-discovers flows from services.proto + bindings/uniffi.rs and regenerates
-# the Python SDK client code (_generated_flows.py, connector_client.pyi).
-# Also regenerates Python protobuf stubs with mypy type annotations.
-# ---------------------------------------------------------------------------
-generate: install-deps
-	@echo "Discovering flows and generating Python SDK client code..."
-	@python3 $(REPO_ROOT)/sdk/codegen/generate.py --lang python
-	@echo "Generating Python protobuf stubs with mypy annotations..."
-	@python3 -m grpc_tools.protoc \
-		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
-		--python_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
-		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
-		--plugin=protoc-gen-mypy=$(shell python3 -c "import sysconfig, os; dirs = [sysconfig.get_path('scripts', s) for s in (sysconfig.get_preferred_scheme('user'), 'posix_prefix')]; print(next(os.path.join(d, 'protoc-gen-mypy') for d in dirs if os.path.exists(os.path.join(d, 'protoc-gen-mypy'))))") \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_options.proto
-
-# ---------------------------------------------------------------------------
 # generate-bindings
 # Builds the uniffi-bindgen binary then runs uniffi-bindgen generate.
 # uniffi-bindgen lives in its own crate (backend/uniffi-bindgen) so the ffi
@@ -154,6 +88,16 @@ generate-proto: install-deps
 generate-all: generate-proto generate-bindings
 
 # ---------------------------------------------------------------------------
+# generate-flows
+# Generates flow methods (authorize, capture, etc.) by running the SDK
+# codegen script. Assumes descriptor is already generated.
+# ---------------------------------------------------------------------------
+generate-flows:
+	@echo "Generating Python flow methods..."
+	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang python
+	@echo "Python flow methods generated."
+
+# ---------------------------------------------------------------------------
 # pack-archive
 # Builds the SDK distribution wheel (.whl) using pip.
 # Assumes generated/ already contains the UniFFI Python bindings, proto stubs,
@@ -184,7 +128,7 @@ test-package: generate-all pack-archive
 	@echo "Testing packed wheel in isolation..."
 	@rm -rf /tmp/test-hyperswitch-py
 	@mkdir -p /tmp/test-hyperswitch-py
-	@cp $(SDK_ROOT)/test_smoke.py /tmp/test-hyperswitch-py/
+	@cp $(SDK_ROOT)/smoke-test/test_smoke.py /tmp/test-hyperswitch-py/
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \

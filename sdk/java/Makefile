@@ -1,53 +1,20 @@
-.PHONY: install-deps build-ffi-lib generate generate-bindings generate-proto generate-all \
-        pack-archive install test-package dist clean
+.PHONY: install-deps generate-bindings generate-proto generate-all \
+        generate-flows pack-archive install test-package dist clean
 
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
+# SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
-REPO_ROOT    := $(shell cd $(MAKEFILE_DIR)../.. && pwd)
 
-FFI_CRATE        := $(REPO_ROOT)/backend/ffi
-PROTO_DIR        := $(REPO_ROOT)/backend/grpc-api-types/proto
-GENERATED_KOTLIN := $(SDK_ROOT)src/main/kotlin/generated
+# Include common SDK build configuration
+include $(SDK_ROOT)/../common.mk
+
+# SDK-specific paths continued
+GENERATED_KOTLIN := $(SDK_ROOT)/src/main/kotlin/generated
 GENERATED_JAVA   := $(SDK_ROOT)/src/main/java/generated
 NATIVE_DIR       := $(SDK_ROOT)/src/main/resources/native
-ARTIFACTS_DIR    := $(REPO_ROOT)/artifacts
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-java
 
-# ---------------------------------------------------------------------------
-# Platform detection
-# Always building with --target <PLATFORM> keeps the artifact layout identical
-# on CI runners and developer machines (target/<PLATFORM>/release/).
-# ---------------------------------------------------------------------------
-UNAME_S := $(shell uname -s)
-UNAME_M := $(shell uname -m)
-ifeq ($(UNAME_S), Darwin)
-  ifeq ($(UNAME_M), arm64)
-    PLATFORM := aarch64-apple-darwin
-  else
-    PLATFORM := x86_64-apple-darwin
-  endif
-  LIB_EXT := dylib
-else
-  ifeq ($(UNAME_M), aarch64)
-    PLATFORM := aarch64-unknown-linux-gnu
-  else
-    PLATFORM := x86_64-unknown-linux-gnu
-  endif
-  LIB_EXT := so
-endif
-
-# Profile used for local builds (test-package). release-fast skips LTO and
-# uses parallel codegen — same opt-level as release, ~5x faster to compile.
-# dist overrides this to --release for production-optimised artifacts.
-PROFILE  := release-fast
-
-# Pre-built FFI library for the current platform (output of build-ffi-lib).
-LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/libconnector_service_ffi.$(LIB_EXT)
-
-BINDGEN := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/uniffi-bindgen
+# Note: BINDGEN is defined in common.mk
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -65,28 +32,6 @@ install-deps:
 	@echo "All required tools present."
 
 # ---------------------------------------------------------------------------
-# build-ffi-lib
-# Builds the Rust FFI shared library for the auto-detected platform.
-# Output: target/<PLATFORM>/release/libconnector_service_ffi.<ext>
-# Using --target consistently means local builds and CI builds share the same
-# directory layout — no special-case LIBRARY= or TARGET_TRIPLE= variables needed.
-# ---------------------------------------------------------------------------
-build-ffi-lib:
-	@echo "Building FFI shared library for $(PLATFORM) [profile: $(PROFILE)]..."
-	@cd $(FFI_CRATE) && cargo build --no-default-features --features uniffi \
-		--profile $(PROFILE) --target $(PLATFORM)
-	@echo "Build complete: $(LIBRARY)"
-
-# ---------------------------------------------------------------------------
-# generate
-# Auto-discovers flows from services.proto + bindings/uniffi.rs and regenerates
-# the Kotlin SDK client code (GeneratedFlows.kt).
-# ---------------------------------------------------------------------------
-generate:
-	@echo "Discovering flows and generating Kotlin SDK client code..."
-	@python3 $(REPO_ROOT)/sdk/codegen/generate.py --lang kotlin
-
-# ---------------------------------------------------------------------------
 # generate-bindings
 # Builds the uniffi-bindgen binary then runs uniffi-bindgen generate.
 # uniffi-bindgen lives in its own crate (backend/uniffi-bindgen) so the ffi
@@ -99,6 +44,7 @@ generate-bindings: build-ffi-lib
 		--profile $(PROFILE) --target $(PLATFORM)
 	@echo "Generating UniFFI Kotlin bindings from $(LIBRARY)..."
 	@mkdir -p $(GENERATED_KOTLIN) $(NATIVE_DIR)
+	@rm -f $(NATIVE_DIR)/libconnector_service_ffi.$(LIB_EXT)
 	@cp -f $(LIBRARY) $(NATIVE_DIR)/
 	@$(BINDGEN) generate \
 		--library $(LIBRARY) \
@@ -138,6 +84,16 @@ generate-proto:
 # types at compile time.
 # ---------------------------------------------------------------------------
 generate-all: generate-proto generate-bindings
+
+# ---------------------------------------------------------------------------
+# generate-flows
+# Generates flow methods (authorize, capture, etc.) by running the SDK
+# codegen script. Assumes descriptor is already generated.
+# ---------------------------------------------------------------------------
+generate-flows:
+	@echo "Generating Kotlin flow methods..."
+	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang kotlin
+	@echo "Kotlin flow methods generated."
 
 # ---------------------------------------------------------------------------
 # pack-archive

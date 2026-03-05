@@ -11,9 +11,7 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { ConnectorClient } from "hyperswitch-payments";
-// @ts-ignore - protobuf generated files might not have types yet
-import { ucs } from "hyperswitch-payments/dist/src/payments/generated/proto";
+import { ConnectorClient, payments, configs } from "hyperswitch-payments";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -26,10 +24,10 @@ const {
   Connector,
   SecretString,
   AccessToken,
-  FfiOptions,
-  EnvOptions,
   ConnectorState,
-} = ucs.v2;
+} = payments;
+
+const { FfiOptions, EnvOptions } = configs;
 
 const PAYPAL_CREDS = {
   client_id:
@@ -56,7 +54,7 @@ const metadata: Record<string, string> = {
 };
 
 // Create FfiOptions with testMode
-const ffiOptions: ucs.v2.IFfiOptions = FfiOptions.create({
+const ffiOptions: configs.IFfiOptions = FfiOptions.create({
   env: EnvOptions.create({ testMode: true }),
 });
 
@@ -72,7 +70,7 @@ async function testAccessTokenFlow(): Promise<void> {
 
   // Step 1: Create Access Token Request
   console.log("\n--- Step 1: Create Access Token ---");
-  const accessTokenRequest: ucs.v2.IMerchantAuthenticationServiceCreateAccessTokenRequest =
+  const accessTokenRequest: payments.IMerchantAuthenticationServiceCreateAccessTokenRequest =
     MerchantAuthenticationServiceCreateAccessTokenRequest.create({
       merchantAccessTokenId: { id: "access_token_test_" + Date.now() },
       connector: Connector.PAYPAL,
@@ -80,7 +78,7 @@ async function testAccessTokenFlow(): Promise<void> {
     });
 
   // Make the request via ConnectorClient
-  let accessTokenResponse: ucs.v2.MerchantAuthenticationServiceCreateAccessTokenResponse;
+  let accessTokenResponse: payments.MerchantAuthenticationServiceCreateAccessTokenResponse;
   let accessTokenValue: string | null = null;
   let tokenTypeValue: string | null = null;
 
@@ -131,7 +129,7 @@ async function testAccessTokenFlow(): Promise<void> {
 
   // Step 2: Use Access Token in Authorize Request
   console.log("\n--- Step 2: Authorize with Access Token ---");
-  const authorizeRequest: ucs.v2.IPaymentServiceAuthorizeRequest =
+  const authorizeRequest: payments.IPaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.create({
       merchantTransactionId: {
         id: "authorize_with_token_" + Date.now(),
@@ -169,7 +167,7 @@ async function testAccessTokenFlow(): Promise<void> {
     });
 
   try {
-    const authorizeResponse: ucs.v2.PaymentServiceAuthorizeResponse =
+    const authorizeResponse: payments.PaymentServiceAuthorizeResponse =
       await client.authorize(authorizeRequest, metadata, ffiOptions);
     console.log(`  Response type: ${typeof authorizeResponse}`);
     console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);

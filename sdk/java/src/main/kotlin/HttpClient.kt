@@ -1,14 +1,14 @@
 package payments
 
 import okhttp3.*
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
 import ucs.v2.SdkOptions.SdkDefault
-import ucs.v2.SdkOptions.HttpOptions
-import ucs.v2.SdkOptions.ProxyOptions
 
 data class HttpRequest(
     val url: String,
@@ -61,9 +61,9 @@ object HttpClient {
             if (options?.hasProxy() == true) {
                 val proxyUrl = options.proxy.httpsUrl.takeIf { it.isNotEmpty() } ?: options.proxy.httpUrl.takeIf { it.isNotEmpty() }
                 if (proxyUrl != null) {
-                    val url = HttpUrl.parse(proxyUrl)
+                    val url = proxyUrl.toHttpUrlOrNull()
                     if (url != null) {
-                        builder.proxy(java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host(), url.port())))
+                        builder.proxy(java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host, url.port)))
                     }
                 }
             }
@@ -76,7 +76,7 @@ object HttpClient {
 
     fun execute(request: HttpRequest, options: HttpOptions?, client: OkHttpClient): HttpResponse {
         val okHeaders = request.headers?.toHeaders() ?: Headers.Builder().build()
-        val mediaType = okHeaders["Content-Type"]?.let { MediaType.parse(it) }
+        val mediaType = okHeaders["Content-Type"]?.let { it.toMediaTypeOrNull() }
         val requestBody = request.body?.toRequestBody(mediaType)
         
         val okRequest = Request.Builder()

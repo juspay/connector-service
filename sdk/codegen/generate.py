@@ -1,16 +1,28 @@
 
 #!/usr/bin/env python3
 """
-SDK codegen — auto-discovers flows by cross-referencing:
-  1. services.proto     → RPC name, request type, response type, service name,
-                          and the leading doc-comment from the proto file.
-  2. bindings/uniffi.rs → which flows have #[uniffi::export] {flow}_req_transformer
+SDK codegen — auto-discovers payment flows and generates type-safe client methods.
 
-Generates _generated_flows.* files for all SDK connector clients.
+Cross-references:
+  1. services.proto (via protoc descriptor) → RPC definitions with types and docs
+  2. bindings/uniffi.rs → which flows have #[uniffi::export] transformers
 
-Usage (from repo root):
+Generates flow methods (authorize, capture, refund, etc.) for each SDK.
+
+Usage:
+    # Generate all SDKs
     python3 sdk/codegen/generate.py
     make generate
+
+    # Generate specific SDK only
+    python3 sdk/codegen/generate.py --sdk python
+    python3 sdk/codegen/generate.py --sdk javascript
+    python3 sdk/codegen/generate.py --sdk kotlin
+
+    # Via individual SDK Makefiles
+    make -C sdk/python generate-client
+    make -C sdk/javascript generate-client
+    make -C sdk/java generate-client
 """
 
 import re
@@ -21,6 +33,21 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 SDK_ROOT = REPO_ROOT / "sdk"
 SERVICES_PROTO = REPO_ROOT / "backend/grpc-api-types/proto/services.proto"
 FFI_BINDINGS = REPO_ROOT / "backend/ffi/src/bindings/uniffi.rs"
+PROTO_DESCRIPTOR = REPO_ROOT / "sdk/codegen/services.desc"
+
+
+def ensure_descriptor_exists() -> None:
+    """Verify proto descriptor file exists and is readable."""
+    if not PROTO_DESCRIPTOR.exists():
+        print(
+            f"ERROR: Proto descriptor not found: {PROTO_DESCRIPTOR}",
+            file=sys.stderr,
+        )
+        print(
+            "Run 'make generate' from the sdk directory to generate the descriptor.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 # ── Source parsing ───────────────────────────────────────────────────────────
@@ -31,63 +58,62 @@ def to_snake_case(name: str) -> str:
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s).lower()
 
 
-def parse_proto_rpcs(proto_file: Path) -> dict[str, dict]:
+def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
     """
-    Parse all rpc definitions, capturing:
-      - request / response type names
-      - the parent service name
-      - the rpc's original PascalCase name
-      - the first line of the leading // doc-comment (if any)
-
+    Parse RPC definitions from a protobuf descriptor file.
+    
+    Uses protoc-generated descriptor to properly handle:
+      - All proto syntax (imports, nested types, options)
+      - Request/response type names
+      - Parent service name
+      - Original PascalCase RPC name
+      - Doc comments from SourceCodeInfo
+    
     Returns {snake_case_rpc_name: {...}}.
-    First-occurrence wins on name collision (e.g. PaymentService.Get beats
-    RefundService.Get for the key 'get'), which matches the FFI implementation.
+    First-occurrence wins on name collision.
     """
-    lines = proto_file.read_text().splitlines()
+    from google.protobuf.descriptor_pb2 import FileDescriptorSet
+    
+    with open(desc_file, 'rb') as f:
+        desc_set = FileDescriptorSet.FromString(f.read())
+    
     rpcs: dict[str, dict] = {}
-    current_service: str | None = None
-    pending_comments: list[str] = []
-
-    for line in lines:
-        stripped = line.strip()
-
-        # Track current service block
-        sm = re.match(r"service\s+(\w+)\s*\{", stripped)
-        if sm:
-            current_service = sm.group(1)
-            pending_comments = []
-            continue
-
-        # Accumulate consecutive leading // comment lines
-        if stripped.startswith("//"):
-            pending_comments.append(stripped[2:].strip())
-            continue
-
-        # Parse rpc definition
-        rm = re.match(
-            r"rpc\s+(\w+)\s*\(\s*(\w+)\s*\)\s+returns\s*\(\s*(\w+)\s*\)", stripped
-        )
-        if rm and current_service:
-            rpc_name, req_type, res_type = rm.groups()
-            snake = to_snake_case(rpc_name)
-            if snake not in rpcs:
-                # Join all comment lines; fall back to ServiceName.RpcName if none
-                desc = (
-                    " ".join(pending_comments)
-                    if pending_comments
-                    else f"{current_service}.{rpc_name}"
-                )
-                rpcs[snake] = {
-                    "request": req_type,
-                    "response": res_type,
-                    "service": current_service,
-                    "rpc": rpc_name,
-                    "description": desc,
-                }
-
-        # Any non-comment line (including blank lines and rpc lines) resets the buffer
-        pending_comments = []
-
+    
+    for file_desc in desc_set.file:
+        # Build source info lookup for doc comments
+        # Location path: [service_index, method_index]
+        source_info = {}
+        if file_desc.source_code_info:
+            for location in file_desc.source_code_info.location:
+                path = tuple(location.path)
+                if location.leading_comments:
+                    source_info[path] = location.leading_comments.strip()
+        
+        for svc_idx, service in enumerate(file_desc.service):
+            for method_idx, method in enumerate(service.method):
+                rpc_name = method.name
+                snake = to_snake_case(rpc_name)
+                
+                if snake not in rpcs:
+                    # Extract type names (remove package prefix)
+                    req_type = method.input_type.split('.')[-1]
+                    res_type = method.output_type.split('.')[-1]
+                    
+                    # Get doc comment if available
+                    # Path for method: [6 (service), svc_idx, 2 (method), method_idx]
+                    path = (6, svc_idx, 2, method_idx)
+                    comment = source_info.get(path, f"{service.name}.{rpc_name}")
+                    # Normalize whitespace to single-line
+                    comment = ' '.join(comment.split())
+                    
+                    rpcs[snake] = {
+                        "request": req_type,
+                        "response": res_type,
+                        "service": service.name,
+                        "rpc": rpc_name,
+                        "description": comment,
+                    }
+    
     return rpcs
 
 
@@ -110,7 +136,7 @@ def discover_flows() -> list[dict]:
     Cross-reference proto RPCs with implemented FFI transformers.
     Only flows present in BOTH sources are returned, sorted by name.
     """
-    proto_rpcs = parse_proto_rpcs(SERVICES_PROTO)
+    proto_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
     ffi_flows = parse_ffi_flows(FFI_BINDINGS)
 
     flows = []
@@ -142,7 +168,9 @@ def flow_comment(f: dict, prefix: str) -> str:
     Single-line comment for a flow, e.g.:
       // authorize: PaymentService.Authorize — Authorizes a payment amount...
     """
-    return f"{prefix} {f['name']}: {f['service']}.{f['rpc']} — {f['description']}"
+    # Normalize all whitespace to single spaces for single-line comment
+    desc = ' '.join(f['description'].split())
+    return f"{prefix} {f['name']}: {f['service']}.{f['rpc']} — {desc}"
 
 
 def gen_python(flows: list[dict]) -> None:
@@ -386,13 +414,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="SDK codegen — regenerate SDK clients from services.proto ∩ bindings/uniffi.rs"
     )
+
     parser.add_argument(
         "--lang",
         choices=["python", "javascript", "kotlin", "all"],
         default="all",
-        help="Language to generate (default: all)",
+        help="Which language/SDK to generate (default: all)"
     )
     args = parser.parse_args()
+    
+    ensure_descriptor_exists()
 
     print(f"Parsing: {SERVICES_PROTO.relative_to(REPO_ROOT)}")
     print(f"Parsing: {FFI_BINDINGS.relative_to(REPO_ROOT)}")

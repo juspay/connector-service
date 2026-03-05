@@ -8,7 +8,7 @@
  *
  * Flow methods (authorize, capture, void, refund, …) are defined as Kotlin
  * extension functions in GeneratedFlows.kt — no flow names are hardcoded here.
- * To add a new flow: edit sdk/flows.yaml and run `make codegen`.
+ * To add a new flow: edit sdk/flows.yaml and run `make generate`.
  */
 
 package payments
@@ -16,44 +16,16 @@ package payments
 import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
-import ucs.v2.SdkOptions.FfiConnectorHttpRequest
-import ucs.v2.SdkOptions.FfiConnectorHttpResponse
-import ucs.v2.SdkOptions.FfiOptions
-import ucs.v2.SdkOptions.Options
 
 class ConnectorClient(
     libPath: String? = null,
     private val options: Options = Options.getDefaultInstance()
 ) {
-    private val uniffi = UniffiClient(libPath)
     private val httpClient: okhttp3.OkHttpClient
 
     init {
         // Instance-level connection pool (OkHttpClient)
-        // Uses proto-generated HttpOptions directly
         this.httpClient = HttpClient.createClient(options.http)
-    }
-
-    /**
-     * Internal helper to map Protobuf HttpOptions to Native HttpClient options.
-     */
-    private fun getNativeHttpOptions(proto: ucs.v2.SdkOptions.HttpOptions?): HttpOptions {
-        if (proto == null) return HttpOptions()
-
-        return HttpOptions(
-            totalTimeoutMs = if (proto.hasTotalTimeoutMs()) proto.totalTimeoutMs.toLong() else null,
-            connectTimeoutMs = if (proto.hasConnectTimeoutMs()) proto.connect_timeout_ms.toLong() else null,
-            responseTimeoutMs = if (proto.hasResponseTimeoutMs()) proto.response_timeout_ms.toLong() else null,
-            keepAliveTimeoutMs = if (proto.hasKeepAliveTimeoutMs()) proto.keep_alive_timeout_ms.toLong() else null,
-            proxy = if (proto.hasProxy()) {
-                ProxyConfig(
-                    httpUrl = if (proto.proxy.hasHttpUrl()) proto.proxy.httpUrl else null,
-                    httpsUrl = if (proto.proxy.hasHttpsUrl()) proto.proxy.httpsUrl else null,
-                    bypassUrls = proto.proxy.bypassUrlsList ?: emptyList()
-                )
-            } else null,
-            caCert = if (proto.hasCaCert()) proto.caCert.toByteArray() else null
-        )
     }
 
     /**
@@ -92,7 +64,7 @@ class ConnectorClient(
         )
 
         // 2. Execute HTTP request via standardized HttpClient
-        val response = HttpClient.execute(connectorRequest, options.http, this.httpClient)
+        val response = HttpClient.execute(httpRequest, options.http, this.httpClient)
 
         // 3. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
         val ffiResponseBytes = FfiConnectorHttpResponse.newBuilder()
