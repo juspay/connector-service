@@ -14,7 +14,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,
         PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
-        SetupMandate, SubmitEvidence, UpdateMetadata, Void, VoidPC,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse,
@@ -24,9 +24,9 @@ use domain_types::{
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, PaymentsUpdateMetadataData, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
@@ -48,7 +48,7 @@ use interfaces::{
         PaymentOrderCreate, PaymentPostAuthenticateV2, PaymentPreAuthenticateV2,
         PaymentSessionToken, PaymentSyncV2, PaymentVoidPostCaptureV2, PaymentVoidV2, RefundSyncV2,
         RefundV2, RepeatPaymentV2, SdkSessionTokenV2, SetupMandateV2, SubmitEvidenceV2,
-        UpdateMetadataV2, ValidationTrait, VerifyRedirectResponse,
+        ValidationTrait, VerifyRedirectResponse,
     },
     decode::BodyDecoding,
     verification::SourceVerification,
@@ -184,11 +184,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> BodyDecoding
     for Worldpayvantiv<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    UpdateMetadataV2<T> for Worldpayvantiv<T>
 {
 }
 
@@ -998,15 +993,5 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorSpecifications for Worldpayvantiv<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        UpdateMetadata,
-        PaymentFlowData,
-        PaymentsUpdateMetadataData<T>,
-        PaymentsResponseData,
-    > for Worldpayvantiv<T>
 {
 }

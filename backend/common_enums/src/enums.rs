@@ -2142,18 +2142,7 @@ pub enum Tokenization {
     TokenizeAtPsp,
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Eq,
-    PartialEq,
-    serde::Deserialize,
-    serde::Serialize,
-    strum::Display,
-    strum::EnumString,
-    ToSchema,
-    Hash,
-)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, strum::Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum PaymentResourceUpdateStatus {

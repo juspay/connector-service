@@ -242,11 +242,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::UpdateMetadataV2<T> for Loonio<T>
-{
-}
-
 // ===== AUTHORIZE FLOW IMPLEMENTATION =====
 
 macros::macro_connector_implementation!(
@@ -491,16 +486,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         IncrementalAuthorization,
         PaymentFlowData,
         PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Loonio<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        UpdateMetadata,
-        PaymentFlowData,
-        PaymentsUpdateMetadataData<T>,
         PaymentsResponseData,
     > for Loonio<T>
 {

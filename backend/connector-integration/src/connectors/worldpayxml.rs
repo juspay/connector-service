@@ -139,11 +139,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::UpdateMetadataV2<T> for Worldpayxml<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthenticateV2<T> for Worldpayxml<T>
 {
 }
@@ -369,16 +364,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::PaymentCreateOrderData,
         domain_types::connector_types::PaymentCreateOrderResponse,
-    > for Worldpayxml<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::UpdateMetadata,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsUpdateMetadataData<T>,
-        PaymentsResponseData,
     > for Worldpayxml<T>
 {
 }

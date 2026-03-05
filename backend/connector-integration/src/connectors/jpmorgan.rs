@@ -211,10 +211,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Jpmorgan<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::UpdateMetadataV2<T> for Jpmorgan<T>
-{
-}
 
 macros::create_amount_converter_wrapper!(connector_name: Jpmorgan, amount_type: MinorUnit);
 macros::create_all_prerequisites!(
@@ -502,16 +498,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SetupMandate,
         PaymentFlowData,
         SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::UpdateMetadata,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsUpdateMetadataData<T>,
         PaymentsResponseData,
     > for Jpmorgan<T>
 {
