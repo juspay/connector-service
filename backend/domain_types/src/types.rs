@@ -10626,10 +10626,6 @@ impl<
                     _ => None,
                 })
                 .unwrap_or_default(),
-            connector_metadata: value
-                .merchant_account_metadata
-                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
-                .transpose()?,
             payment_method_data: None,
             payment_method_type: None,
             feature_metadata: None,
@@ -10664,12 +10660,6 @@ impl
             Some(false), // should_unify_address
         );
 
-        // Create connector metadata from the metadata field if present
-        let connector_meta_data = value
-            .merchant_account_metadata
-            .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
-            .transpose()?;
-
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -10685,7 +10675,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,

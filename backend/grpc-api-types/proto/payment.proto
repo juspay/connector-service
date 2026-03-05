@@ -2073,8 +2073,7 @@ message PaymentServiceUpdateMetadataRequest {
   
   // Metadata to merge (optional; provided fields are merged into existing values)  
   optional SecretString metadata = 3; // Merchant-defined metadata  
-  optional SecretString feature_metadata = 4; // Feature-level metadata  
-  optional SecretString merchant_account_metadata = 5; // Account-level configuration metadata (e.g., merchant_name, brand_id)  
+  optional SecretString feature_metadata = 4; // Feature-level metadata   
 }  
   
 // Response message for updating metadata on a payment intent/order.  
