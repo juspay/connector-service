@@ -4,11 +4,12 @@ pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/producti
 use crate::errors::FfiPaymentError;
 use crate::types::FfiRequestData;
 use domain_types::payment_method_data::DefaultPCIHolder;
+use grpc_api_types::payments::Environment;
 
 fn get_config(
-    test_mode: Option<bool>,
+    environment: Option<Environment>,
 ) -> Result<std::sync::Arc<ucs_env::configs::Config>, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
+    let config_str = if environment == Some(Environment::Production) {
         EMBEDDED_PROD_CONFIG
     } else {
         EMBEDDED_DEVELOPMENT_CONFIG
@@ -18,7 +19,7 @@ fn get_config(
 
 /// Generates a `{flow}_req_handler` and `{flow}_res_handler` function pair.
 ///
-/// Both functions load the appropriate config via `get_config(test_mode)` and
+/// Both functions load the appropriate config via `get_config(environment)` and
 /// delegate directly to the supplied service-layer transformer functions.
 ///
 /// # Arguments
@@ -32,9 +33,9 @@ macro_rules! impl_flow_handlers {
         paste::paste! {
             pub fn [<$flow _req_handler>](
                 request: FfiRequestData<$req_type>,
-                test_mode: Option<bool>,
+                environment: Option<Environment>,
             ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
-                let config = get_config(test_mode)?;
+                let config = get_config(environment)?;
                 $req_svc::<DefaultPCIHolder>(
                     request.payload,
                     &config,
@@ -47,9 +48,9 @@ macro_rules! impl_flow_handlers {
             pub fn [<$flow _res_handler>](
                 request: FfiRequestData<$req_type>,
                 response: domain_types::router_response_types::Response,
-                test_mode: Option<bool>,
+                environment: Option<Environment>,
             ) -> Result<$res_type, FfiPaymentError> {
-                let config = get_config(test_mode)?;
+                let config = get_config(environment)?;
                 $res_svc::<DefaultPCIHolder>(
                     request.payload,
                     &config,

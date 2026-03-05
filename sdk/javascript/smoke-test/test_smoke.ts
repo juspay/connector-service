@@ -27,36 +27,22 @@ const {
   ConnectorState,
 } = payments;
 
-const { FfiOptions, EnvOptions } = configs;
+const { ClientConfig, Environment } = configs;
 
 const PAYPAL_CREDS = {
-  client_id:
-    "client_id",
-  client_secret:
-    "client_secret",
+  client_id: "ATgoxBHjmSsuOhDSgso8GZMAHi3jYq13UdcGePiT-yhL-Es_pLjQXaYLWR-pIu8hs2Hq9GMfeJTmQOsb",
+  client_secret: "EI1EawmSyw0lOF9lFGoJnu3c0ShF7ZnsxpNx5jPx1Smi5uXQ-_2cmF6w2tOCKC7A302eKuKNkKBQUlyQ",
 };
 
 const metadata: Record<string, string> = {
-  connector: "Paypal",
-  connector_auth_type: JSON.stringify({
-    Paypal: {
-      client_id: PAYPAL_CREDS.client_id,
-      client_secret: PAYPAL_CREDS.client_secret,
-    },
-  }),
-  "x-connector": "Paypal",
   "x-merchant-id": "test_merchant_123",
   "x-request-id": "test-pack-001",
   "x-tenant-id": "public",
+  "x-connector": "Paypal",
   "x-auth": "body-key",
   "x-api-key": PAYPAL_CREDS.client_secret,
   "x-key1": PAYPAL_CREDS.client_id,
 };
-
-// Create FfiOptions with testMode
-const ffiOptions: configs.IFfiOptions = FfiOptions.create({
-  env: EnvOptions.create({ testMode: true }),
-});
 
 /**
  * Test the access token flow:
@@ -66,7 +52,19 @@ const ffiOptions: configs.IFfiOptions = FfiOptions.create({
 async function testAccessTokenFlow(): Promise<void> {
   console.log("\n=== Test: PayPal Access Token Flow ===");
 
-  const client = new ConnectorClient();
+  // New initialization pattern
+  const clientConfig: configs.IClientConfig = {
+    connector: Connector.PAYPAL,
+    environment: Environment.SANDBOX,
+    auth: {
+      paypal: {
+        clientId: { value: PAYPAL_CREDS.client_id },
+        clientSecret: { value: PAYPAL_CREDS.client_secret },
+      }
+    }
+  };
+
+  const client = new ConnectorClient(clientConfig);
 
   // Step 1: Create Access Token Request
   console.log("\n--- Step 1: Create Access Token ---");
@@ -85,8 +83,7 @@ async function testAccessTokenFlow(): Promise<void> {
   try {
     accessTokenResponse = await client.createAccessToken(
       accessTokenRequest,
-      metadata,
-      ffiOptions
+      metadata
     );
     console.log(`  Response type: ${typeof accessTokenResponse}`);
     console.log(`  Response keys: ${Object.keys(accessTokenResponse)}`);
@@ -107,7 +104,7 @@ async function testAccessTokenFlow(): Promise<void> {
       console.log(
         `  Expires In: ${accessTokenResponse.expiresInSeconds} seconds`
       );
-      console.log(`  Status: ${accessTokenResponse.status}`);
+      console.log(`  Status: ${payments.PaymentStatus[accessTokenResponse.status]} (${accessTokenResponse.status})`);
     } else {
       console.log("  WARNING: No access token in response");
       console.log(
@@ -154,7 +151,7 @@ async function testAccessTokenFlow(): Promise<void> {
       },
       state: ConnectorState.create({
         accessToken: AccessToken.create({
-          token: SecretString.create({ value: accessTokenValue }),
+          token: { value: accessTokenValue },
           tokenType: tokenTypeValue,
           expiresInSeconds: accessTokenResponse!.expiresInSeconds,
         }),
@@ -168,10 +165,10 @@ async function testAccessTokenFlow(): Promise<void> {
 
   try {
     const authorizeResponse: payments.PaymentServiceAuthorizeResponse =
-      await client.authorize(authorizeRequest, metadata, ffiOptions);
+      await client.authorize(authorizeRequest, metadata);
     console.log(`  Response type: ${typeof authorizeResponse}`);
     console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);
-    console.log(`  Payment status: ${authorizeResponse.status}`);
+    console.log(`  Payment status: ${payments.PaymentStatus[authorizeResponse.status]} (${authorizeResponse.status})`);
     console.log("  PASSED");
   } catch (e: unknown) {
     console.log(`  Error during authorize: ${e}`);

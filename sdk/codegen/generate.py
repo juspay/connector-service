@@ -286,9 +286,9 @@ def gen_connector_client_ts(flows: list[dict]) -> None:
         lines.append(f"  async {camel}(")
         lines.append(f"    requestMsg: ucs.v2.I{req},")
         lines.append(f"    metadata: Record<string, string>,")
-        lines.append(f"    ffiOptions?: ucs.v2.IFfiOptions | null")
+        lines.append(f"    requestOptions?: ucs.v2.IRequestOptions | null")
         lines.append(f"  ): Promise<ucs.v2.{res}> {{")
-        lines.append(f"    return this._executeFlow('{n}', requestMsg, metadata, ffiOptions, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
+        lines.append(f"    return this._executeFlow('{n}', requestMsg, metadata, requestOptions, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
         lines.append(f"  }}")
         lines.append("")
     lines += ["}", ""]

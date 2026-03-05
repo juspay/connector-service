@@ -9,12 +9,12 @@
  *   5. Deserialize protobuf response from bytes
  *
  * Flow methods (authorize, capture, void, refund, …) are in _generated_connector_client_flows.ts.
- * To add a new flow: implement it in the FFI crate and run `make generate`.
+ * To add a new flow: edit sdk/flows.yaml and run `make codegen`.
  */
 
 import { Dispatcher } from "undici";
 import { UniffiClient } from "./uniffi_client";
-import { execute, createDispatcher, HttpOptions, HttpRequest } from "../http_client";
+import { execute, createDispatcher, HttpRequest, ConnectorError } from "../http_client";
 // @ts-ignore - protobuf generated files might not have types yet
 import { ucs } from "./generated/proto";
 
@@ -22,58 +22,72 @@ const v2 = ucs.v2;
 
 export class ConnectorClient {
   private uniffi: UniffiClient;
-  private options: ucs.v2.IOptions;
+  private config: ucs.v2.IClientConfig;
   private dispatcher: Dispatcher;
 
   /**
+   * @param config - initialization configuration (connector, environment, auth, http)
    * @param libPath - optional path to the UniFFI shared library
-   * @param options - unified SDK configuration from Protobuf (Options message)
    */
-  constructor(libPath?: string, options: ucs.v2.IOptions = {}) {
+  constructor(config: ucs.v2.IClientConfig, libPath?: string) {
     this.uniffi = new UniffiClient(libPath);
-    this.options = options;
+    this.config = config;
+
+    if (config.connector === undefined || config.environment === undefined) {
+      throw new ConnectorError(
+        "Connector and Environment are required in ClientConfig",
+        400,
+        "CLIENT_INITIALIZATION"
+      );
+    }
 
     // Instance-level cache: create the primary connection pool at startup
-    this.dispatcher = createDispatcher(this.getNativeHttpOptions(options.http));
+    this.dispatcher = createDispatcher(config.http || {});
   }
 
   /**
-   * Internal helper to map Protobuf HttpOptions to Native HttpClient options.
+   * Merges request-level overrides with client defaults to build the 
+   * final context for the Rust transformation engine.
    */
-  private getNativeHttpOptions(proto?: ucs.v2.IHttpOptions | null): HttpOptions {
-    if (!proto) return {};
+  private resolveFfiOptions(requestOptions?: ucs.v2.IRequestOptions | null): ucs.v2.FfiOptions {
+    return v2.FfiOptions.create({
+      environment: this.config.environment,
+      connector: this.config.connector,
+      auth: requestOptions?.auth ?? this.config.auth
+    });
+  }
+
+  /**
+   * Merges request-level HTTP overrides with client defaults using 
+   * explicit field-level precedence.
+   */
+  private resolveHttpConfig(requestOptions?: ucs.v2.IRequestOptions | null): ucs.v2.IHttpConfig {
+    const defaults = this.config.http || {};
+    const overrides = requestOptions?.http || {};
 
     return {
-      totalTimeoutMs: proto.totalTimeoutMs ?? undefined,
-      connectTimeoutMs: proto.connectTimeoutMs ?? undefined,
-      responseTimeoutMs: proto.responseTimeoutMs ?? undefined,
-      keepAliveTimeoutMs: proto.keepAliveTimeoutMs ?? undefined,
-      proxy: proto.proxy ? {
-        httpUrl: proto.proxy.httpUrl ?? undefined,
-        httpsUrl: proto.proxy.httpsUrl ?? undefined,
-        bypassUrls: proto.proxy.bypassUrls ?? undefined,
-      } : undefined,
-      caCert: proto.caCert ?? undefined,
+      totalTimeoutMs: overrides.totalTimeoutMs ?? defaults.totalTimeoutMs,
+      connectTimeoutMs: overrides.connectTimeoutMs ?? defaults.connectTimeoutMs,
+      responseTimeoutMs: overrides.responseTimeoutMs ?? defaults.responseTimeoutMs,
+      keepAliveTimeoutMs: overrides.keepAliveTimeoutMs ?? defaults.keepAliveTimeoutMs,
+      proxy: (overrides.proxy ?? defaults.proxy) as ucs.v2.IProxyOptions | null | undefined,
+      caCert: (overrides.caCert ?? defaults.caCert) as ucs.v2.ICaCert | null | undefined,
     };
   }
 
   /**
    * Execute a full round-trip for any registered payment flow.
    *
-   * Looks up the request/response protobuf type names from FLOWS, encodes the
-   * request, calls callReq → HTTP → callRes via the generic FFI dispatcher,
-   * then decodes and returns the response.
-   *
    * @param flow - Flow name matching the FFI transformer prefix (e.g. "authorize").
    * @param requestMsg - Protobuf request message object.
    * @param metadata - Dict with connector routing and auth info.
-   * @param ffiOptions - Optional IFfiOptions override.
+   * @param requestOptions - Optional IRequestOptions override (auth, http).
    */
   async _executeFlow(
     flow: string,
     requestMsg: object,
     metadata: Record<string, string>,
-    ffiOptions?: ucs.v2.IFfiOptions | null,
+    requestOptions?: ucs.v2.IRequestOptions | null,
     reqTypeName?: string,
     resTypeName?: string
   ): Promise<unknown> {
@@ -84,14 +98,15 @@ export class ConnectorClient {
       throw new Error(`Unknown flow: '${flow}' or missing type names.`);
     }
 
-    // 1. Serialize request
+    // 1. Resolve final configuration (Pattern-based merging)
+    const ffiOptions = this.resolveFfiOptions(requestOptions);
+    const httpConfig = this.resolveHttpConfig(requestOptions);
+    const optionsBytes = Buffer.from(v2.FfiOptions.encode(ffiOptions).finish());
+
+    // 2. Serialize domain request
     const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
 
-    // 2. Resolve FFI options (prefer call-specific)
-    const ffi = ffiOptions || this.options.ffi;
-    const optionsBytes = ffi ? Buffer.from(v2.FfiOptions.encode(ffi).finish()) : Buffer.alloc(0);
-
-    // 3. Build connector HTTP request via FFI (returns FfiConnectorHttpRequest protobuf bytes)
+    // 3. Build connector HTTP request via FFI
     const resultBytes = this.uniffi.callReq(flow, requestBytes, metadata, optionsBytes);
     const connectorReq = v2.FfiConnectorHttpRequest.decode(resultBytes);
 
@@ -102,10 +117,10 @@ export class ConnectorClient {
       body: connectorReq.body ?? undefined
     };
 
-    // 4. Execute HTTP using the instance-owned connection pool
+    // 4. Execute HTTP using the instance-owned connection pool and merged config
     const response = await execute(
       connectorRequest,
-      this.getNativeHttpOptions(this.options.http),
+      httpConfig,
       this.dispatcher
     );
 
