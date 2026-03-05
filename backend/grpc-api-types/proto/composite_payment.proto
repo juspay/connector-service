@@ -161,3 +161,92 @@ message CompositeGetResponse {
   optional PaymentServiceCreateAccessTokenResponse access_token_response = 1; // Access token flow response
   PaymentServiceGetResponse get_response = 2; // Get flow response
 }
+
+// Request message for composite refund flow.
+// Union of PaymentServiceCreateAccessTokenRequest + PaymentServiceRefundRequest fields (minus connector).
+message CompositeRefundRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  string refund_id = 2; // Unique identifier for the refund
+  Identifier transaction_id = 3; // Transaction ID of the original payment
+
+  // Amount Information
+  int64 payment_amount = 4; // Original payment amount in major currency units
+  Currency currency = 5; // Currency of the refund, ISO 4217 code
+  int64 minor_payment_amount = 6; // Original payment amount in minor currency units
+  int64 refund_amount = 7; // Amount to refund in major currency units
+  int64 minor_refund_amount = 8; // Amount to refund in minor currency units
+
+  // Refund Context
+  optional string reason = 9; // Reason for the refund
+  optional string webhook_url = 10; // URL for webhook notifications
+  optional string merchant_account_id = 11; // Merchant account ID for the refund
+  optional CaptureMethod capture_method = 12; // Capture method of the original payment
+
+  // Metadata
+  optional SecretString metadata = 13; // Metadata specific to the connector
+  optional SecretString refund_metadata = 14; // Metadata specific to the refund
+  optional SecretString connector_metadata = 15; // Connector-specific metadata
+
+  // Browser Information
+  optional BrowserInformation browser_info = 16; // Browser information, if relevant
+
+  // State Information
+  optional ConnectorState state = 17; // State data for access token storage and other connector-specific state
+
+  // Account-Specific Configuration
+  optional SecretString merchant_account_metadata = 18; // Account-level configuration metadata
+
+  // Environment Configuration
+  optional bool test_mode = 19; // A boolean value to indicate if the connector is in Test mode
+
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 20; // Indicates the sub type of payment method
+
+  // Customer Information
+  optional string customer_id = 21; // Merchant's customer ID
+}
+
+// Response message for composite refund flow.
+message CompositeRefundResponse {
+  optional PaymentServiceCreateAccessTokenResponse access_token_response = 1; // Access token flow response (absent if token was cached)
+  RefundResponse refund_response = 2; // Refund flow response
+}
+
+// Request message for composite refund sync flow.
+// Union of PaymentServiceCreateAccessTokenRequest + RefundServiceGetRequest fields (minus connector).
+message CompositeRefundSyncRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  Identifier transaction_id = 2; // Transaction ID of the original payment
+  string refund_id = 3; // Refund identifier to synchronize
+
+  // Refund Details
+  optional string refund_reason = 4; // Reason for the refund, if provided during sync
+
+  // Browser Information
+  optional BrowserInformation browser_info = 5; // Browser information, if relevant
+
+  // Metadata
+  optional SecretString refund_metadata = 6; // Metadata specific to the refund sync
+  optional SecretString metadata = 11; // Additional metadata for the connector (from CreateAccessToken)
+  optional SecretString connector_metadata = 12; // Connector-specific metadata (from CreateAccessToken)
+
+  // State Information
+  optional ConnectorState state = 7; // State data for access token storage and other connector-specific state
+
+  // Account-Specific Configuration
+  optional SecretString merchant_account_metadata = 8; // Account-level configuration metadata
+
+  // Environment Configuration
+  optional bool test_mode = 9; // A boolean value to indicate if the connector is in Test mode
+
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 10; // Indicates the sub type of payment method
+}
+
+// Response message for composite refund sync flow.
+message CompositeRefundSyncResponse {
+  optional PaymentServiceCreateAccessTokenResponse access_token_response = 1; // Access token flow response (absent if token was cached)
+  RefundResponse refund_sync_response = 2; // Refund sync flow response
+}

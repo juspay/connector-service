@@ -95,8 +95,10 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
 
 pub struct Service {
     pub health_check_service: crate::server::health_check::HealthCheck,
-    pub composite_payments_service:
-        composite_service::payments::Payments<crate::server::payments::Payments>,
+    pub composite_payments_service: composite_service::payments::Payments<
+        crate::server::payments::Payments,
+        crate::server::refunds::Refunds,
+    >,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
@@ -119,14 +121,17 @@ impl Service {
         }
 
         let payments_service = crate::server::payments::Payments;
-        let composite_payments_service =
-            composite_service::payments::Payments::new(payments_service.clone());
+        let refunds_service = crate::server::refunds::Refunds;
+        let composite_payments_service = composite_service::payments::Payments::new(
+            payments_service.clone(),
+            refunds_service.clone(),
+        );
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
             composite_payments_service,
             payments_service,
-            refunds_service: crate::server::refunds::Refunds,
+            refunds_service,
             disputes_service: crate::server::disputes::Disputes,
         }
     }

@@ -1,9 +1,10 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, CompositeGetRequest, ConnectorState,
-    PaymentServiceAuthorizeOnlyRequest, PaymentServiceCreateAccessTokenRequest,
-    PaymentServiceCreateAccessTokenResponse, PaymentServiceCreateConnectorCustomerRequest,
-    PaymentServiceCreateConnectorCustomerResponse, PaymentServiceGetRequest,
+    CompositeAuthorizeRequest, CompositeGetRequest, CompositeRefundRequest,
+    CompositeRefundSyncRequest, ConnectorState, PaymentServiceAuthorizeOnlyRequest,
+    PaymentServiceCreateAccessTokenRequest, PaymentServiceCreateAccessTokenResponse,
+    PaymentServiceCreateConnectorCustomerRequest, PaymentServiceCreateConnectorCustomerResponse,
+    PaymentServiceGetRequest, PaymentServiceRefundRequest, RefundServiceGetRequest,
 };
 
 use crate::utils::{
@@ -13,6 +14,8 @@ use crate::utils::{
 pub trait ForeignFrom<F>: Sized {
     fn foreign_from(item: F) -> Self;
 }
+
+// ── CompositeAuthorize transformers ───────────────────────────────────────────
 
 impl ForeignFrom<(&CompositeAuthorizeRequest, &ConnectorEnum)>
     for PaymentServiceCreateAccessTokenRequest
@@ -134,6 +137,8 @@ impl
     }
 }
 
+// ── CompositeGet transformers ─────────────────────────────────────────────────
+
 impl ForeignFrom<(&CompositeGetRequest, &ConnectorEnum)>
     for PaymentServiceCreateAccessTokenRequest
 {
@@ -190,6 +195,129 @@ impl
             sync_type: item.sync_type,
             connector_order_reference_id: item.connector_order_reference_id.clone(),
             test_mode: item.test_mode,
+        }
+    }
+}
+
+// ── CompositeRefund transformers ──────────────────────────────────────────────
+
+impl ForeignFrom<(&CompositeRefundRequest, &ConnectorEnum)>
+    for PaymentServiceCreateAccessTokenRequest
+{
+    fn foreign_from((item, connector): (&CompositeRefundRequest, &ConnectorEnum)) -> Self {
+        Self {
+            request_ref_id: item.request_ref_id.clone(),
+            connector: grpc_connector_from_connector_enum(connector),
+            merchant_account_metadata: item.merchant_account_metadata.clone(),
+            metadata: item.metadata.clone(),
+            connector_metadata: item.connector_metadata.clone(),
+            test_mode: item.test_mode,
+        }
+    }
+}
+
+impl
+    ForeignFrom<(
+        &CompositeRefundRequest,
+        Option<&PaymentServiceCreateAccessTokenResponse>,
+    )> for PaymentServiceRefundRequest
+{
+    fn foreign_from(
+        (item, access_token_response): (
+            &CompositeRefundRequest,
+            Option<&PaymentServiceCreateAccessTokenResponse>,
+        ),
+    ) -> Self {
+        let access_token_from_req = item
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.clone());
+
+        let access_token = get_access_token(access_token_from_req, access_token_response);
+
+        let resolved_state = Some(ConnectorState {
+            access_token,
+            connector_customer_id: None,
+        });
+
+        Self {
+            request_ref_id: item.request_ref_id.clone(),
+            refund_id: item.refund_id.clone(),
+            transaction_id: item.transaction_id.clone(),
+            payment_amount: item.payment_amount,
+            currency: item.currency,
+            minor_payment_amount: item.minor_payment_amount,
+            refund_amount: item.refund_amount,
+            minor_refund_amount: item.minor_refund_amount,
+            reason: item.reason.clone(),
+            webhook_url: item.webhook_url.clone(),
+            merchant_account_id: item.merchant_account_id.clone(),
+            capture_method: item.capture_method,
+            metadata: item.metadata.clone(),
+            refund_metadata: item.refund_metadata.clone(),
+            connector_metadata: item.connector_metadata.clone(),
+            browser_info: item.browser_info.clone(),
+            state: resolved_state,
+            merchant_account_metadata: item.merchant_account_metadata.clone(),
+            test_mode: item.test_mode,
+            payment_method_type: item.payment_method_type,
+            customer_id: item.customer_id.clone(),
+        }
+    }
+}
+
+// ── CompositeRefundSync transformers ─────────────────────────────────────────
+
+impl ForeignFrom<(&CompositeRefundSyncRequest, &ConnectorEnum)>
+    for PaymentServiceCreateAccessTokenRequest
+{
+    fn foreign_from((item, connector): (&CompositeRefundSyncRequest, &ConnectorEnum)) -> Self {
+        Self {
+            request_ref_id: item.request_ref_id.clone(),
+            connector: grpc_connector_from_connector_enum(connector),
+            merchant_account_metadata: item.merchant_account_metadata.clone(),
+            metadata: item.metadata.clone(),
+            connector_metadata: item.connector_metadata.clone(),
+            test_mode: item.test_mode,
+        }
+    }
+}
+
+impl
+    ForeignFrom<(
+        &CompositeRefundSyncRequest,
+        Option<&PaymentServiceCreateAccessTokenResponse>,
+    )> for RefundServiceGetRequest
+{
+    fn foreign_from(
+        (item, access_token_response): (
+            &CompositeRefundSyncRequest,
+            Option<&PaymentServiceCreateAccessTokenResponse>,
+        ),
+    ) -> Self {
+        let access_token_from_req = item
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.clone());
+
+        let access_token = get_access_token(access_token_from_req, access_token_response);
+
+        let resolved_state = Some(ConnectorState {
+            access_token,
+            connector_customer_id: None,
+        });
+
+        Self {
+            request_ref_id: item.request_ref_id.clone(),
+            transaction_id: item.transaction_id.clone(),
+            refund_id: item.refund_id.clone(),
+            refund_reason: item.refund_reason.clone(),
+            browser_info: item.browser_info.clone(),
+            refund_metadata: item.refund_metadata.clone(),
+            state: resolved_state,
+            merchant_account_metadata: item.merchant_account_metadata.clone(),
+            test_mode: item.test_mode,
+            payment_method_type: item.payment_method_type,
         }
     }
 }
