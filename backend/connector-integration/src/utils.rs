@@ -8,6 +8,7 @@ use common_utils::{
     },
     errors::{ParsingError, ReportSwitchExt},
     ext_traits::ValueExt,
+    request::MultipartData,
     types::MinorUnit,
     CustomResult,
 };
@@ -33,8 +34,7 @@ use serde::{Deserialize, Serialize};
 
 pub fn build_form_from_struct<T: Serialize>(
     data: T,
-) -> Result<common_utils::request::MultipartData, errors::ParsingError> {
-    use common_utils::request::MultipartData;
+) -> Result<MultipartData, errors::ParsingError> {
     let mut form = MultipartData::new();
     let serialized =
         serde_json::to_value(&data).map_err(|_| errors::ParsingError::EncodeError("json-value"))?;

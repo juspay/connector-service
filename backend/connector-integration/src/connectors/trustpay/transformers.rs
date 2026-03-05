@@ -1498,7 +1498,7 @@ where
     #[allow(clippy::unimplemented)]
     fn get_form_data(&self) -> common_utils::request::MultipartData {
         // This should never be called for TrustPay since we only use Json and FormUrlEncoded
-        common_utils::request::MultipartData::new()
+        unimplemented!("TrustPay only support Json and FormUrlEncoded content types.")
     }
 }
 
@@ -1667,7 +1667,7 @@ pub struct TrustpayRefundRequestBankRedirect {
 impl connectors::macros::GetFormData for TrustpayRefundRequest {
     fn get_form_data(&self) -> common_utils::request::MultipartData {
         // TrustPay refunds only support Json and FormUrlEncoded content types
-        common_utils::request::MultipartData::new()
+        unimplemented!("TrustPay only support Json and FormUrlEncoded content types.")
     }
 }
 
