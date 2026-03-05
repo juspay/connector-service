@@ -15,126 +15,140 @@ approved: true
 
 ## Overview
 
-The `Authorize` RPC reserves funds on a customer's payment method without transferring them. This is the first step in a two-step payment flow (authorize + capture).
+The `Authorize` RPC reserves funds on a customer's payment method without transferring them. This is the first step in a two-step payment flow (authorize + capture), commonly used in e-commerce, marketplaces, and subscription businesses.
+
+**Business Use Case:** When a customer places an order, you want to verify their payment method has sufficient funds and lock those funds for fulfillment. The actual charge (capture) happens later when the order ships or service is delivered. This reduces chargebacks and improves cash flow management.
 
 ## Purpose
 
-- Reserve funds for later capture
-- Verify payment method validity
-- Reduce fraud risk by verifying funds availability
-- Enable delayed capture for order fulfillment workflows
+**Why use authorization instead of immediate charge?**
 
-## Request: PaymentServiceAuthorizeRequest
+| Scenario | Benefit |
+|----------|---------|
+| **E-commerce fulfillment** | Verify funds at checkout, capture when order ships |
+| **Hotel reservations** | Pre-authorize for incidentals, capture final amount at checkout |
+| **Marketplace holds** | Secure funds from buyer before releasing to seller |
+| **Subscription trials** | Validate card at signup, first charge after trial ends |
 
-```protobuf
-message PaymentServiceAuthorizeRequest {
-  // Required fields
-  Money amount = 1;
-  PaymentMethod payment_method = 2;
-  Connector connector = 3;
+**Key outcomes:**
+- Guaranteed funds availability (typically 7-10 days hold)
+- Reduced fraud exposure through pre-verification
+- Better customer experience (no double charges for partial shipments)
+- Compliance with card network rules for delayed delivery
 
-  // Optional fields
-  string merchant_order_reference_id = 4;
-  string description = 5;
-  Address billing_address = 6;
-  Address shipping_address = 7;
-  Metadata metadata = 8;
-  SetupMandateDetails mandate_data = 9;
-  string idempotency_key = 10;
-  AuthenticationData authentication_data = 11;
-  CaptureMethod capture_method = 12;  // MANUAL (default) or AUTOMATIC
-}
-```
-
-### Request Fields
+## Request Fields
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `amount` | Money | Yes | Amount to authorize (currency + amount in minor units) |
-| `payment_method` | PaymentMethod | Yes | Card, wallet, or other payment method |
-| `connector` | Connector | Yes | Target payment processor (STRIPE, ADYEN, etc.) |
-| `merchant_order_reference_id` | string | No | Your internal order reference ID |
-| `description` | string | No | Payment description shown to customer |
-| `billing_address` | Address | No | Customer billing address for fraud checks |
-| `shipping_address` | Address | No | Customer shipping/delivery address |
-| `metadata` | Metadata | No | Custom key-value pairs (max 20 keys) |
-| `mandate_data` | SetupMandateDetails | No | For setting up recurring payments |
-| `idempotency_key` | string | No | Unique key for safe retries (max 36 chars) |
-| `authentication_data` | AuthenticationData | No | 3DS authentication data |
-| `capture_method` | CaptureMethod | No | MANUAL (default) or AUTOMATIC |
+| `merchant_transaction_id` | Identifier | Yes | Your unique transaction reference |
+| `amount` | Money | Yes | The amount for the payment in minor units (e.g., 1000 = $10.00) |
+| `order_tax_amount` | int64 | No | Tax amount for the order in minor units |
+| `shipping_cost` | int64 | No | Cost of shipping for the order in minor units |
+| `payment_method` | PaymentMethod | Yes | Payment method to be used (card, wallet, bank) |
+| `capture_method` | CaptureMethod | No | Method for capturing. Values: MANUAL, AUTOMATIC |
+| `customer` | Customer | No | Customer information for fraud scoring |
+| `address` | PaymentAddress | No | Billing and shipping address |
+| `auth_type` | AuthenticationType | Yes | Authentication flow type (e.g., THREE_DS, NO_THREE_DS) |
+| `enrolled_for_3ds` | bool | No | Whether 3DS enrollment check passed |
+| `authentication_data` | AuthenticationData | No | 3DS authentication results |
+| `metadata` | SecretString | No | Additional metadata for the connector (max 20 keys) |
+| `connector_feature_data` | SecretString | No | Connector-specific feature data for the transaction |
+| `return_url` | string | No | URL to redirect customer after 3DS/redirect flow |
+| `webhook_url` | string | No | URL for async webhook notifications |
+| `complete_authorize_url` | string | No | URL to complete authorization after redirect |
+| `session_token` | string | No | Session token for wallet payments (Apple Pay, Google Pay) |
+| `order_category` | string | No | Category of goods/services being purchased |
+| `merchant_order_id` | string | No | Your internal order ID |
+| `setup_future_usage` | FutureUsage | No | ON_SESSION or OFF_SESSION for tokenization |
+| `off_session` | bool | No | Whether customer is present (false = customer present) |
+| `request_incremental_authorization` | bool | No | Allow increasing authorized amount later |
+| `request_extended_authorization` | bool | No | Request extended hold period |
+| `enable_partial_authorization` | bool | No | Allow partial approval (e.g., $80 of $100) |
+| `customer_acceptance` | CustomerAcceptance | No | Customer consent for recurring payments |
+| `browser_info` | BrowserInformation | No | Browser details for 3DS fingerprinting |
+| `payment_experience` | PaymentExperience | No | Desired UX (e.g., REDIRECT, EMBEDDED) |
+| `description` | string | No | Payment description shown on statements |
+| `payment_channel` | PaymentChannel | No | E-commerce, MOTO, or recurring indicator |
+| `test_mode` | bool | No | Process as test transaction |
+| `setup_mandate_details` | SetupMandateDetails | No | Mandate setup for recurring SEPA/bank debits |
+| `statement_descriptor_name` | string | No | Your business name on customer statement |
+| `statement_descriptor_suffix` | string | No | Additional descriptor suffix |
+| `billing_descriptor` | BillingDescriptor | No | Complete billing descriptor configuration |
+| `state` | ConnectorState | No | State from previous multi-step flow |
+| `order_details` | OrderDetailsWithAmount[] | No | Line item details with amounts |
+| `locale` | string | No | Locale for localized responses (e.g., "en-US") |
+| `tokenization_strategy` | Tokenization | No | Tokenization configuration |
+| `threeds_completion_indicator` | ThreeDsCompletionIndicator | No | 3DS method completion status |
+| `redirection_response` | RedirectionResponse | No | Response data from redirect-based auth |
+| `continue_redirection_url` | string | No | URL to continue after redirect |
+| `payment_method_token` | SecretString | No | Token for previously saved payment method |
 
-## Response: PaymentServiceAuthorizeResponse
-
-```protobuf
-message PaymentServiceAuthorizeResponse {
-  Payment payment = 1;
-  ConnectorResponseData connector_response = 2;
-  RedirectionResponse redirection_response = 3;  // If redirect required
-}
-```
-
-### Response Fields
+## Response Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `payment` | Payment | Created payment with ID, status, and amount |
-| `connector_response` | ConnectorResponseData | Raw connector response for debugging |
-| `redirection_response` | RedirectionResponse | Redirect URL if 3DS or redirect-based payment needed |
+| `merchant_transaction_id` | Identifier | Your transaction reference (echoed back) |
+| `connector_transaction_id` | Identifier | Connector's transaction ID (e.g., Stripe pi_xxx) |
+| `status` | PaymentStatus | Current status: AUTHORIZED, PENDING, FAILED, etc. |
+| `error` | ErrorInfo | Error details if status is FAILED |
+| `status_code` | uint32 | HTTP-style status code (200, 402, etc.) |
+| `response_headers` | map<string,string> | Connector-specific response headers |
+| `redirection_data` | RedirectForm | Redirect URL/form for 3DS or bank authentication |
+| `network_transaction_id` | string | Card network transaction reference |
+| `incremental_authorization_allowed` | bool | Whether amount can be increased later |
+| `state` | ConnectorState | State to pass to next request in multi-step flow |
+| `raw_connector_response` | SecretString | Raw API response from connector (debugging) |
+| `raw_connector_request` | SecretString | Raw API request sent to connector (debugging) |
+| `captured_amount` | int64 | Amount already captured (0 for fresh auth) |
 
 ## Example
 
 ### Request (grpcurl)
 
 ```bash
-grpcurl -H "Authorization: Bearer $UCS_API_KEY" \
+grpcurl -H "x-connector: stripe" \
+  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
   -d '{
+    "merchant_transaction_id": {"id": "txn_order_001"},
     "amount": {
-      "currency": "USD",
-      "amount": 1000
+      "minor_amount": 1000,
+      "currency": "USD"
     },
     "payment_method": {
       "card": {
-        "card_number": "4111111111111111",
-        "expiry_month": "12",
-        "expiry_year": "2027",
-        "card_holder_name": "John Doe",
-        "cvc": "123"
+        "card_number": {"value": "4242424242424242"},
+        "expiry_month": {"value": "12"},
+        "expiry_year": {"value": "2027"},
+        "card_holder_name": {"value": "John Doe"},
+        "cvc": {"value": "123"}
       }
     },
-    "connector": "STRIPE",
-    "merchant_order_reference_id": "order-001",
-    "capture_method": "MANUAL"
+    "auth_type": "NO_THREE_DS",
+    "capture_method": "MANUAL",
+    "test_mode": true
   }' \
-  api.juspay.in:443 ucs.v2.PaymentService/Authorize
+  localhost:8080 \
+  ucs.v2.PaymentService/Authorize
 ```
 
 ### Response
 
 ```json
 {
-  "payment": {
-    "id": "pay_abc123xyz",
-    "status": "AUTHORIZED",
-    "amount": {
-      "currency": "USD",
-      "amount": 1000
-    },
-    "connector": "STRIPE"
-  }
+  "merchant_transaction_id": {
+    "id": "txn_order_001"
+  },
+  "connector_transaction_id": {
+    "id": "pi_3Oxxx..."
+  },
+  "status": "AUTHORIZED",
+  "status_code": 200,
+  "incremental_authorization_allowed": false
 }
 ```
 
-## Error Cases
-
-| Error Code | Cause | Resolution |
-|------------|-------|------------|
-| `CARD_DECLINED` | Issuer declined | Use different payment method |
-| `INSUFFICIENT_FUNDS` | Card has no funds | Use different payment method |
-| `INVALID_CARD_NUMBER` | Card number invalid | Check card number format |
-| `EXPIRED_CARD` | Card expired | Use different card |
-
 ## Next Steps
 
-- [Capture](./capture.md) - Capture the authorized payment
-- [Void](./void.md) - Cancel the authorization
-- [Get](./get.md) - Check payment status
+- [Capture](./capture.md) - Finalize the payment and transfer funds
+- [Void](./void.md) - Release held funds if order cancelled
+- [Get](./get.md) - Check current authorization status
