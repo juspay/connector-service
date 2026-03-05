@@ -161,7 +161,7 @@ jobs:
       - name: Build binary (${{ matrix.target }})
         # build-ffi-lib auto-detects the platform and always writes to
         # target/<PLATFORM>/release/ — identical layout on local and CI.
-        run: make -C sdk/java build-ffi-lib
+        run: make -C sdk/java build-ffi-lib PROFILE=release
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
