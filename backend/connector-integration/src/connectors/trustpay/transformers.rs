@@ -1665,6 +1665,7 @@ pub struct TrustpayRefundRequestBankRedirect {
 // Implement GetFormData for TrustpayRefundRequest to satisfy the macro requirement
 // This will never be called since TrustPay only uses Json and FormUrlEncoded
 impl connectors::macros::GetFormData for TrustpayRefundRequest {
+    #[allow(clippy::unimplemented)]
     fn get_form_data(&self) -> common_utils::request::MultipartData {
         // TrustPay refunds only support Json and FormUrlEncoded content types
         unimplemented!("TrustPay only support Json and FormUrlEncoded content types.")
