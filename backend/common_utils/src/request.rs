@@ -4,6 +4,14 @@ use utoipa::ToSchema;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+#[derive(Debug, thiserror::Error)]
+pub enum RequestError {
+    #[error("Multipart rendering failed: {0}")]
+    MultipartRenderingFailed(String),
+    #[error("Failed to read multipart stream: {0}")]
+    MultipartReadFailed(String),
+}
+
 #[derive(
     Clone,
     Copy,
@@ -63,12 +71,102 @@ impl std::fmt::Debug for RequestContent {
     }
 }
 
+#[derive(Serialize)]
 pub enum RequestContent {
     Json(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     FormUrlEncoded(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
-    FormData(reqwest::multipart::Form),
+    FormData(MultipartData),
     Xml(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     RawBytes(Vec<u8>),
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MultipartData {
+    pub parts: Vec<FormDataPart>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub enum FormDataPart {
+    Text {
+        name: String,
+        value: String,
+    },
+    File {
+        name: String,
+        filename: String,
+        bytes: Vec<u8>,
+        mime_type: String,
+    },
+}
+
+impl MultipartData {
+    pub fn new() -> Self {
+        Self { parts: Vec::new() }
+    }
+
+    pub fn add_text(&mut self, name: impl Into<String>, value: impl Into<String>) {
+        self.parts.push(FormDataPart::Text {
+            name: name.into(),
+            value: value.into(),
+        });
+    }
+
+    pub fn add_file(
+        &mut self,
+        name: impl Into<String>,
+        filename: impl Into<String>,
+        bytes: Vec<u8>,
+        mime_type: impl Into<String>,
+    ) {
+        self.parts.push(FormDataPart::File {
+            name: name.into(),
+            filename: filename.into(),
+            bytes,
+            mime_type: mime_type.into(),
+        });
+    }
+
+    pub fn render_as_bytes(&self) -> Result<(Vec<u8>, String), RequestError> {
+        use std::io::Read;
+        let mut builder = multipart::client::lazy::Multipart::new();
+
+        for part in &self.parts {
+            match part {
+                FormDataPart::Text { name, value } => builder.add_text(name, value),
+                FormDataPart::File {
+                    name,
+                    filename,
+                    bytes,
+                    mime_type,
+                } => {
+                    let mime = if !mime_type.is_empty() {
+                        mime_type.parse().ok()
+                    } else {
+                        None
+                    };
+                    builder.add_stream(name, std::io::Cursor::new(bytes), Some(filename), mime)
+                }
+            };
+        }
+
+        let mut prepared = builder
+            .prepare()
+            .map_err(|e| RequestError::MultipartRenderingFailed(e.to_string()))?;
+        let boundary = prepared.boundary().to_string();
+
+        let mut finished_bytes = Vec::new();
+        prepared
+            .read_to_end(&mut finished_bytes)
+            .map_err(|e| RequestError::MultipartReadFailed(e.to_string()))?;
+
+        Ok((finished_bytes, boundary))
+    }
+}
+
+impl Default for MultipartData {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RequestContent {
@@ -80,6 +178,20 @@ impl RequestContent {
             Self::FormData(_) => String::new().into(),
             // For RawBytes (e.g., SOAP XML), convert to UTF-8 string for logging
             Self::RawBytes(bytes) => String::from_utf8(bytes.clone()).unwrap_or_default().into(),
+        }
+    }
+
+    pub fn get_body_bytes(&self) -> Result<(Option<Vec<u8>>, Option<String>), RequestError> {
+        use hyperswitch_masking::ExposeInterface;
+        match self {
+            Self::RawBytes(bytes) => Ok((Some(bytes.clone()), None)),
+            Self::Json(_) | Self::FormUrlEncoded(_) | Self::Xml(_) => {
+                Ok((Some(self.get_inner_value().expose().into_bytes()), None))
+            }
+            Self::FormData(data) => {
+                let (bytes, boundary) = data.render_as_bytes()?;
+                Ok((Some(bytes), Some(boundary)))
+            }
         }
     }
 }
@@ -95,6 +207,20 @@ impl Request {
             body: None,
             ca_certificate: None,
         }
+    }
+
+    pub fn get_headers_map(&self) -> std::collections::HashMap<String, String> {
+        use hyperswitch_masking::PeekInterface;
+        let mut map = std::collections::HashMap::new();
+        for (k, v) in &self.headers {
+            let val = match v {
+                Maskable::Masked(s) => s.peek().to_string(),
+                Maskable::Normal(s) => s.to_string(),
+            };
+            // Standardize to lowercase for cross-language/FFI compatibility
+            map.insert(k.to_lowercase(), val);
+        }
+        map
     }
 
     pub fn set_body<T: Into<RequestContent>>(&mut self, body: T) {

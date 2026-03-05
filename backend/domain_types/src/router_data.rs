@@ -289,6 +289,10 @@ pub enum ConnectorSpecificAuth {
         public_key: Secret<String>,
         private_key: Secret<String>,
     },
+    Truelayer {
+        client_id: Secret<String>,
+        client_secret: Secret<String>,
+    },
     Worldpay {
         username: Secret<String>,
         password: Secret<String>,
@@ -1052,6 +1056,13 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
+            ConnectorEnum::Truelayer => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Truelayer {
+                    client_id: api_key.clone(),
+                    client_secret: key1.clone(),
+                }),
+                _ => Err(err().into()),
+            },
 
             // --- Connectors supporting both BodyKey and SignatureKey ---
             ConnectorEnum::Adyen => match auth {
@@ -1659,7 +1670,6 @@ impl ErrorResponse {
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApplePayCryptogramData {
     pub online_payment_cryptogram: Secret<String>,
     pub eci_indicator: Option<String>,
