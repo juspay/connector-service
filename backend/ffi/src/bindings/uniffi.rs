@@ -130,7 +130,7 @@ mod uniffi_bindings_inner {
         ) -> Result<Option<Request>, crate::errors::FfiPaymentError>,
     ) -> Result<Vec<u8>, UniffiError>
     where
-        Req: prost::Message + Default,
+        Req: Message + Default,
     {
         let payload = Req::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
@@ -167,8 +167,8 @@ mod uniffi_bindings_inner {
         ) -> Result<Res, crate::errors::FfiPaymentError>,
     ) -> Result<Vec<u8>, UniffiError>
     where
-        Req: prost::Message + Default,
-        Res: prost::Message,
+        Req: Message + Default,
+        Res: Message,
     {
         let domain_response = build_domain_response(response_bytes)?;
 
