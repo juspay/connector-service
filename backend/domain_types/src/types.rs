@@ -353,6 +353,7 @@ pub struct Connectors {
     pub hyperpg: ConnectorParams,
     pub zift: ConnectorParams,
     pub revolv3: ConnectorParams,
+    pub truelayer: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
