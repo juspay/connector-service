@@ -1756,9 +1756,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::Satispay => {
                 Ok(Some(PaymentMethodType::Satispay))
             }
-            grpc_api_types::payments::PaymentMethodType::Wero => {
-                Ok(Some(PaymentMethodType::Wero))
-            }
+            grpc_api_types::payments::PaymentMethodType::Wero => Ok(Some(PaymentMethodType::Wero)),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
                 error_identifier: 400,
@@ -5821,7 +5819,6 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let amount = value.amount.map(common_utils::types::MinorUnit::new);
         // If currency is unspecified, send None, otherwise try to convert it
-        let amount = value.amount.map(common_utils::types::MinorUnit::new);
         let currency = if let Some(a) = value.amount {
             if a.currency() == grpc_api_types::payments::Currency::Unspecified {
                 None
@@ -7231,7 +7228,11 @@ impl ForeignTryFrom<PaymentServiceSetupRecurringRequest>
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             email,
-            customer_name: value.customer_name.clone(),
+            customer_name: value
+                .customer
+                .as_ref()
+                .and_then(|customer| customer.name.clone())
+                .map(Secret::new),
             return_url: value.return_url.clone(),
             payment_method_type: value
                 .payment_method
