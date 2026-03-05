@@ -70,7 +70,6 @@ impl std::fmt::Debug for RequestContent {
         })
     }
 }
-
 #[derive(Serialize)]
 pub enum RequestContent {
     Json(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
@@ -209,18 +208,20 @@ impl Request {
         }
     }
 
+    /// Converts the request headers into a simple HashMap with lowercase keys.
+    /// This ensures global parity across all language SDKs.
     pub fn get_headers_map(&self) -> std::collections::HashMap<String, String> {
-        use hyperswitch_masking::PeekInterface;
-        let mut map = std::collections::HashMap::new();
-        for (k, v) in &self.headers {
-            let val = match v {
-                Maskable::Masked(s) => s.peek().to_string(),
-                Maskable::Normal(s) => s.to_string(),
-            };
-            // Standardize to lowercase for cross-language/FFI compatibility
-            map.insert(k.to_lowercase(), val);
-        }
-        map
+        use hyperswitch_masking::ExposeInterface;
+        self.headers
+            .iter()
+            .map(|(k, v)| {
+                let value = match v {
+                    Maskable::Normal(val) => val.clone(),
+                    Maskable::Masked(val) => val.clone().expose(),
+                };
+                (k.to_lowercase(), value)
+            })
+            .collect()
     }
 
     pub fn set_body<T: Into<RequestContent>>(&mut self, body: T) {
