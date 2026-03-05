@@ -146,8 +146,9 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let result = handler(request, ffi_options)
-            .map_err(|e| UniffiError::HandlerError { msg: format!("{e:?}") })?;
+        let result = handler(request, ffi_options).map_err(|e| UniffiError::HandlerError {
+            msg: format!("{e:?}"),
+        })?;
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
         build_ffi_request_bytes(&connector_request)
     }
@@ -185,8 +186,11 @@ mod uniffi_bindings_inner {
 
         let ffi_options = parse_ffi_options(options_bytes);
 
-        let proto_response = handler(request, domain_response, ffi_options)
-            .map_err(|e| UniffiError::HandlerError { msg: format!("{e:?}") })?;
+        let proto_response = handler(request, domain_response, ffi_options).map_err(|e| {
+            UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            }
+        })?;
         Ok(proto_response.encode_to_vec())
     }
 

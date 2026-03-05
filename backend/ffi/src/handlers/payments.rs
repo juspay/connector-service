@@ -1,7 +1,6 @@
 pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/development.toml");
 pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/production.toml");
 
-
 use crate::errors::FfiPaymentError;
 use crate::types::FfiRequestData;
 use domain_types::payment_method_data::DefaultPCIHolder;
