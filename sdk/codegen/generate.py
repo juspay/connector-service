@@ -5,24 +5,26 @@ SDK codegen — auto-discovers payment flows and generates type-safe client meth
 
 Cross-references:
   1. services.proto (via protoc descriptor) → RPC definitions with types and docs
-  2. bindings/uniffi.rs → which flows have #[uniffi::export] transformers
+  2. services/payments.rs → which flows have req_transformer implementations
 
-Generates flow methods (authorize, capture, refund, etc.) for each SDK.
+Generates flow methods (authorize, capture, refund, etc.) for each SDK,
+and the Rust FFI flow registration files.
 
 Usage:
-    # Generate all SDKs
+    # Generate all SDKs + Rust FFI registrations
     python3 sdk/codegen/generate.py
     make generate
 
-    # Generate specific SDK only
-    python3 sdk/codegen/generate.py --sdk python
-    python3 sdk/codegen/generate.py --sdk javascript
-    python3 sdk/codegen/generate.py --sdk kotlin
+    # Generate specific language only
+    python3 sdk/codegen/generate.py --lang python
+    python3 sdk/codegen/generate.py --lang javascript
+    python3 sdk/codegen/generate.py --lang kotlin
+    python3 sdk/codegen/generate.py --lang rust
 
     # Via individual SDK Makefiles
-    make -C sdk/python generate-client
-    make -C sdk/javascript generate-client
-    make -C sdk/java generate-client
+    make -C sdk/python generate
+    make -C sdk/javascript generate
+    make -C sdk/java generate
 """
 
 import re
@@ -32,8 +34,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent.parent
 SDK_ROOT = REPO_ROOT / "sdk"
 SERVICES_PROTO = REPO_ROOT / "backend/grpc-api-types/proto/services.proto"
-FFI_BINDINGS = REPO_ROOT / "backend/ffi/src/bindings/uniffi.rs"
+FFI_SERVICES = REPO_ROOT / "backend/ffi/src/services/payments.rs"
 PROTO_DESCRIPTOR = REPO_ROOT / "sdk/codegen/services.desc"
+
+RUST_HANDLERS_OUT = REPO_ROOT / "backend/ffi/src/handlers/_generated_flow_registrations.rs"
+RUST_FFI_FLOWS_OUT = REPO_ROOT / "backend/ffi/src/bindings/_generated_ffi_flows.rs"
 
 
 def ensure_descriptor_exists() -> None:
@@ -117,41 +122,41 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
     return rpcs
 
 
-def parse_ffi_flows(ffi_file: Path) -> set[str]:
+def parse_service_flows(service_file: Path) -> set[str]:
     """
-    Scan bindings/uniffi.rs for every function marked with #[uniffi::export]
-    whose name matches {flow}_req_transformer.
+    Scan services/payments.rs for every req_transformer! invocation.
+    Captures the flow name from `fn_name: {flow}_req_transformer`.
     """
-    text = ffi_file.read_text()
+    text = service_file.read_text()
     return {
         m.group(1)
         for m in re.finditer(
-            r"#\[uniffi::export\]\s+pub fn (\w+)_req_transformer\b", text
+            r"fn_name:\s*(\w+)_req_transformer\b", text
         )
     }
 
 
 def discover_flows() -> list[dict]:
     """
-    Cross-reference proto RPCs with implemented FFI transformers.
+    Cross-reference proto RPCs with implemented service transformers.
     Only flows present in BOTH sources are returned, sorted by name.
     """
     proto_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
-    ffi_flows = parse_ffi_flows(FFI_BINDINGS)
+    service_flows = parse_service_flows(FFI_SERVICES)
 
     flows = []
-    for flow in sorted(ffi_flows):
+    for flow in sorted(service_flows):
         if flow not in proto_rpcs:
             print(
-                f"  WARNING: '{flow}_req_transformer' exists in FFI but has no matching RPC in services.proto",
+                f"  WARNING: '{flow}_req_transformer' exists in services/payments.rs but has no matching RPC in services.proto",
                 file=sys.stderr,
             )
             continue
         flows.append({"name": flow, **proto_rpcs[flow]})
 
-    unimplemented = sorted(set(proto_rpcs) - ffi_flows)
+    unimplemented = sorted(set(proto_rpcs) - service_flows)
     if unimplemented:
-        print(f"  Proto RPCs not yet in FFI (skipped): {unimplemented}")
+        print(f"  Proto RPCs not yet implemented (skipped): {unimplemented}")
 
     return flows
 
@@ -335,7 +340,9 @@ def gen_uniffi_client_ts(flows: list[dict]) -> None:
 def gen_kotlin(flows: list[dict]) -> None:
     lines = [
         "// AUTO-GENERATED — do not edit by hand.",
-        "// Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate",
+        "// Source: services.proto ∩ services/payments.rs  |  Regenerate: make generate",
+        "",
+        "package payments",
         "",
     ]
 
@@ -347,16 +354,8 @@ def gen_kotlin(flows: list[dict]) -> None:
             f"import uniffi.connector_service_ffi.{camel}ResTransformer",
         ]
     lines.append("")
-
-    # Proto imports — deduplicated (request + response per flow)
-    seen: set[str] = set()
-    for f in flows:
-        for cls in (f["request"], f["response"]):
-            if cls not in seen:
-                lines.append(f"import ucs.v2.Payment.{cls}")
-                seen.add(cls)
-    lines.append("import ucs.v2.SdkOptions.FfiOptions")
-    lines.append("")
+    # Proto types and FfiOptions are available via type aliases in package payments
+    # (Payments.kt / Configs.kt) — no ucs.v2.* imports needed.
 
     # FlowRegistry object
     # reqTransformers: returns ByteArray (protobuf FfiConnectorHttpRequest bytes)
@@ -396,15 +395,56 @@ def gen_kotlin(flows: list[dict]) -> None:
     )
 
 
-def print_rust_note(flows: list[dict]) -> None:
-    print()
-    print("  Rust SDK — sdk/rust/src/connector_client.rs needs these methods:")
+def gen_rust_handlers(flows: list[dict]) -> None:
+    """Generate _generated_flow_registrations.rs — included by handlers/payments.rs."""
+    all_types = sorted({t for f in flows for t in (f["request"], f["response"])})
+
+    lines = [
+        "// AUTO-GENERATED — do not edit by hand.",
+        "// Source: services.proto ∩ services/payments.rs  |  Regenerate: make generate",
+        "",
+        "use grpc_api_types::payments::{",
+    ]
+    for t in all_types:
+        lines.append(f"    {t},")
+    lines.append("};")
+    lines.append("use crate::services::payments::{")
+    for f in flows:
+        lines.append(f"    {f['name']}_req_transformer, {f['name']}_res_transformer,")
+    lines.append("};")
+    lines.append("")
     for f in flows:
         n, req, res = f["name"], f["request"], f["response"]
-        print(f"    // {f['service']}.{f['rpc']} — {f['description']}")
-        print(f"    pub async fn {n}(&self, request: {req}, metadata: &HashMap<String, String>)")
-        print(f"        -> Result<{res}, Box<dyn Error>>")
-        print(f"        {{ /* {n}_req_handler / {n}_res_handler */ }}")
+        lines.append(flow_comment(f, "//"))
+        lines.append(f"impl_flow_handlers!({n}, {req}, {res}, {n}_req_transformer, {n}_res_transformer);")
+    lines.append("")
+    write(RUST_HANDLERS_OUT, "\n".join(lines))
+
+
+def gen_rust_ffi_flows(flows: list[dict]) -> None:
+    """Generate _generated_ffi_flows.rs — included by bindings/uniffi.rs."""
+    req_types = sorted({f["request"] for f in flows})
+
+    lines = [
+        "// AUTO-GENERATED — do not edit by hand.",
+        "// Source: services.proto ∩ services/payments.rs  |  Regenerate: make generate",
+        "",
+        "use grpc_api_types::payments::{",
+    ]
+    for t in req_types:
+        lines.append(f"    {t},")
+    lines.append("};")
+    lines.append("use crate::handlers::payments::{")
+    for f in flows:
+        lines.append(f"    {f['name']}_req_handler, {f['name']}_res_handler,")
+    lines.append("};")
+    lines.append("")
+    for f in flows:
+        n, req = f["name"], f["request"]
+        lines.append(flow_comment(f, "//"))
+        lines.append(f"define_ffi_flow!({n}, {req}, {n}_req_handler, {n}_res_handler);")
+    lines.append("")
+    write(RUST_FFI_FLOWS_OUT, "\n".join(lines))
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────
@@ -412,27 +452,32 @@ def print_rust_note(flows: list[dict]) -> None:
 def main() -> None:
     import argparse
     parser = argparse.ArgumentParser(
-        description="SDK codegen — regenerate SDK clients from services.proto ∩ bindings/uniffi.rs"
+        description="SDK codegen — regenerate SDK clients from services.proto ∩ services/payments.rs"
     )
 
     parser.add_argument(
         "--lang",
-        choices=["python", "javascript", "kotlin", "all"],
+        choices=["python", "javascript", "kotlin", "rust", "all"],
         default="all",
         help="Which language/SDK to generate (default: all)"
     )
     args = parser.parse_args()
-    
+
     ensure_descriptor_exists()
 
     print(f"Parsing: {SERVICES_PROTO.relative_to(REPO_ROOT)}")
-    print(f"Parsing: {FFI_BINDINGS.relative_to(REPO_ROOT)}")
+    print(f"Parsing: {FFI_SERVICES.relative_to(REPO_ROOT)}")
     print()
 
     flows = discover_flows()
 
     print(f"Discovered {len(flows)} flows: {[f['name'] for f in flows]}")
     print()
+
+    if args.lang in ("rust", "all"):
+        print("Generating Rust FFI flow registrations...")
+        gen_rust_handlers(flows)
+        gen_rust_ffi_flows(flows)
 
     if args.lang in ("python", "all"):
         print("Generating Python SDK...")
@@ -446,10 +491,6 @@ def main() -> None:
     if args.lang in ("kotlin", "all"):
         print("Generating Kotlin SDK...")
         gen_kotlin(flows)
-
-    if args.lang == "all":
-        print("Rust SDK (manual — Rust requires explicit types):")
-        print_rust_note(flows)
 
     print("\nDone.")
 

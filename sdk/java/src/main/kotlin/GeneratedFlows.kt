@@ -1,7 +1,7 @@
 // AUTO-GENERATED — do not edit by hand.
-// Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate
+// Source: services.proto ∩ services/payments.rs  |  Regenerate: make generate
 
-import payments.ConnectorClient
+package payments
 
 import uniffi.connector_service_ffi.authorizeReqTransformer
 import uniffi.connector_service_ffi.authorizeResTransformer
@@ -15,20 +15,6 @@ import uniffi.connector_service_ffi.refundReqTransformer
 import uniffi.connector_service_ffi.refundResTransformer
 import uniffi.connector_service_ffi.voidReqTransformer
 import uniffi.connector_service_ffi.voidResTransformer
-
-import ucs.v2.Payment.PaymentServiceAuthorizeRequest
-import ucs.v2.Payment.PaymentServiceAuthorizeResponse
-import ucs.v2.Payment.PaymentServiceCaptureRequest
-import ucs.v2.Payment.PaymentServiceCaptureResponse
-import ucs.v2.Payment.MerchantAuthenticationServiceCreateAccessTokenRequest
-import ucs.v2.Payment.MerchantAuthenticationServiceCreateAccessTokenResponse
-import ucs.v2.Payment.PaymentServiceGetRequest
-import ucs.v2.Payment.PaymentServiceGetResponse
-import ucs.v2.Payment.PaymentServiceRefundRequest
-import ucs.v2.Payment.RefundResponse
-import ucs.v2.Payment.PaymentServiceVoidRequest
-import ucs.v2.Payment.PaymentServiceVoidResponse
-import ucs.v2.SdkOptions.FfiOptions
 
 object FlowRegistry {
     val reqTransformers: Map<String, (ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(

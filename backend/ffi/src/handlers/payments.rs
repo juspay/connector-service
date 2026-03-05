@@ -1,276 +1,71 @@
 pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/development.toml");
 pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/production.toml");
 
-use grpc_api_types::payments::{
-    MerchantAuthenticationServiceCreateAccessTokenRequest,
-    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
-    PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServiceRefundRequest,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
-};
-
-use crate::services::payments::{
-    access_token_req_transformer, access_token_res_transformer, authorize_req_transformer,
-    authorize_res_transformer, capture_req_transformer, capture_res_transformer,
-    get_req_transformer, get_res_transformer, refund_req_transformer, refund_res_transformer,
-    void_req_transformer, void_res_transformer,
-};
 
 use crate::errors::FfiPaymentError;
 use crate::types::FfiRequestData;
 use domain_types::payment_method_data::DefaultPCIHolder;
-// authorize_req handler
-pub fn authorize_req_handler(
-    request: FfiRequestData<PaymentServiceAuthorizeRequest>,
+
+fn get_config(
     test_mode: Option<bool>,
-) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
+) -> Result<std::sync::Arc<ucs_env::configs::Config>, FfiPaymentError> {
     let config_str = if test_mode == Some(false) {
         EMBEDDED_PROD_CONFIG
     } else {
         EMBEDDED_DEVELOPMENT_CONFIG
     };
-    let config = crate::utils::load_config(config_str)?;
-    // PCI and NON PCI clients need to be determined
-    authorize_req_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-    )
+    Ok(crate::utils::load_config(config_str)?)
 }
 
-// authorize_res handler
-pub fn authorize_res_handler(
-    request: FfiRequestData<PaymentServiceAuthorizeRequest>,
-    response: domain_types::router_response_types::Response,
-    test_mode: Option<bool>,
-) -> Result<PaymentServiceAuthorizeResponse, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
+/// Generates a `{flow}_req_handler` and `{flow}_res_handler` function pair.
+///
+/// Both functions load the appropriate config via `get_config(test_mode)` and
+/// delegate directly to the supplied service-layer transformer functions.
+///
+/// # Arguments
+/// - `$flow`      — identifier prefix for the generated function names
+/// - `$req_type`  — protobuf request type (e.g. `PaymentServiceAuthorizeRequest`)
+/// - `$res_type`  — protobuf response type (e.g. `PaymentServiceAuthorizeResponse`)
+/// - `$req_svc`   — service function for building the connector HTTP request
+/// - `$res_svc`   — service function for parsing the connector HTTP response
+macro_rules! impl_flow_handlers {
+    ($flow:ident, $req_type:ty, $res_type:ty, $req_svc:ident, $res_svc:ident) => {
+        paste::paste! {
+            pub fn [<$flow _req_handler>](
+                request: FfiRequestData<$req_type>,
+                test_mode: Option<bool>,
+            ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
+                let config = get_config(test_mode)?;
+                $req_svc::<DefaultPCIHolder>(
+                    request.payload,
+                    &config,
+                    request.extracted_metadata.connector,
+                    request.extracted_metadata.connector_auth_type,
+                    &request.masked_metadata.unwrap_or_default(),
+                )
+            }
+
+            pub fn [<$flow _res_handler>](
+                request: FfiRequestData<$req_type>,
+                response: domain_types::router_response_types::Response,
+                test_mode: Option<bool>,
+            ) -> Result<$res_type, FfiPaymentError> {
+                let config = get_config(test_mode)?;
+                $res_svc::<DefaultPCIHolder>(
+                    request.payload,
+                    &config,
+                    request.extracted_metadata.connector,
+                    request.extracted_metadata.connector_auth_type,
+                    &request.masked_metadata.unwrap_or_default(),
+                    response,
+                )
+            }
+        }
     };
-    let config = crate::utils::load_config(config_str)?;
-    // PCI and NON PCI clients need to be determined
-    authorize_res_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-        response,
-    )
 }
 
-// capture_req handler
-pub fn capture_req_handler(
-    request: FfiRequestData<PaymentServiceCaptureRequest>,
-    test_mode: Option<bool>,
-) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    // PCI and NON PCI clients need to be determined
-    capture_req_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-    )
-}
+// ── Flow registrations (auto-generated) ──────────────────────────────────────
+// To add a new flow: implement req_transformer!/res_transformer! in
+// services/payments.rs, then run `make generate` to regenerate this file.
 
-// capture_res handler
-pub fn capture_res_handler(
-    request: FfiRequestData<PaymentServiceCaptureRequest>,
-    response: domain_types::router_response_types::Response,
-    test_mode: Option<bool>,
-) -> Result<PaymentServiceCaptureResponse, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    // PCI and NON PCI clients need to be determined
-    capture_res_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-        response,
-    )
-}
-
-// void_req handler
-pub fn void_req_handler(
-    request: FfiRequestData<PaymentServiceVoidRequest>,
-    test_mode: Option<bool>,
-) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    void_req_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-    )
-}
-
-// void_res handler
-pub fn void_res_handler(
-    request: FfiRequestData<PaymentServiceVoidRequest>,
-    response: domain_types::router_response_types::Response,
-    test_mode: Option<bool>,
-) -> Result<PaymentServiceVoidResponse, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    void_res_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-        response,
-    )
-}
-
-// get_req handler
-pub fn get_req_handler(
-    request: FfiRequestData<PaymentServiceGetRequest>,
-    test_mode: Option<bool>,
-) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    get_req_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-    )
-}
-
-// get_res handler
-pub fn get_res_handler(
-    request: FfiRequestData<PaymentServiceGetRequest>,
-    response: domain_types::router_response_types::Response,
-    test_mode: Option<bool>,
-) -> Result<PaymentServiceGetResponse, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    get_res_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-        response,
-    )
-}
-
-// create_access_token_req handler
-pub fn create_access_token_req_handler(
-    request: FfiRequestData<MerchantAuthenticationServiceCreateAccessTokenRequest>,
-    test_mode: Option<bool>,
-) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    access_token_req_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-    )
-}
-
-// create_access_token_res handler
-pub fn create_access_token_res_handler(
-    request: FfiRequestData<MerchantAuthenticationServiceCreateAccessTokenRequest>,
-    response: domain_types::router_response_types::Response,
-    test_mode: Option<bool>,
-) -> Result<MerchantAuthenticationServiceCreateAccessTokenResponse, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    access_token_res_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-        response,
-    )
-}
-
-// refund_req handler
-pub fn refund_req_handler(
-    request: FfiRequestData<PaymentServiceRefundRequest>,
-    test_mode: Option<bool>,
-) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    refund_req_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-    )
-}
-
-// refund_res handler
-pub fn refund_res_handler(
-    request: FfiRequestData<PaymentServiceRefundRequest>,
-    response: domain_types::router_response_types::Response,
-    test_mode: Option<bool>,
-) -> Result<RefundResponse, FfiPaymentError> {
-    let config_str = if test_mode == Some(false) {
-        EMBEDDED_PROD_CONFIG
-    } else {
-        EMBEDDED_DEVELOPMENT_CONFIG
-    };
-    let config = crate::utils::load_config(config_str)?;
-    refund_res_transformer::<DefaultPCIHolder>(
-        request.payload,
-        &config,
-        request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
-        &request.masked_metadata.unwrap_or_default(),
-        response,
-    )
-}
+include!("_generated_flow_registrations.rs");

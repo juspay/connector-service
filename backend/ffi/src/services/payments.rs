@@ -107,9 +107,9 @@ res_transformer!(
     generate_response_fn: generate_payment_sync_response,
 );
 
-// access token request transformer
+// create access token request transformer
 req_transformer!(
-    fn_name: access_token_req_transformer,
+    fn_name: create_access_token_req_transformer,
     request_type: MerchantAuthenticationServiceCreateAccessTokenRequest,
     flow_marker: CreateAccessToken,
     resource_common_data_type: PaymentFlowData,
@@ -117,9 +117,9 @@ req_transformer!(
     response_data_type: AccessTokenResponseData,
 );
 
-// access token response transformer
+// create access token response transformer
 res_transformer!(
-    fn_name: access_token_res_transformer,
+    fn_name: create_access_token_res_transformer,
     request_type: MerchantAuthenticationServiceCreateAccessTokenRequest,
     response_type: MerchantAuthenticationServiceCreateAccessTokenResponse,
     flow_marker: CreateAccessToken,
