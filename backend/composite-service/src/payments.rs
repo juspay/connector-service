@@ -6,9 +6,7 @@ use domain_types::{
 use grpc_api_types::payments::{
     composite_payment_service_server::CompositePaymentService,
     payment_service_server::PaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
-    CompositeGetRequest, CompositeGetResponse, PaymentServiceAuthorizeResponse,
-    PaymentServiceCreateAccessTokenResponse, PaymentServiceCreateConnectorCustomerResponse,
-    PaymentServiceGetResponse,
+    CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenResponse,
 };
 
 use crate::transformers::ForeignFrom;
@@ -162,20 +160,20 @@ where
         let create_customer_response = self
             .create_connector_customer(&connector, &payload, &metadata, &extensions)
             .await?;
-        let authorize_response = self
-            .authorize_only(
-                &payload,
-                access_token_response.as_ref(),
-                create_customer_response.as_ref(),
-                &metadata,
-                &extensions,
-            )
-            .await?;
+        // let authorize_response = self
+        //     .authorize_only(
+        //         &payload,
+        //         access_token_response.as_ref(),
+        //         create_customer_response.as_ref(),
+        //         &metadata,
+        //         &extensions,
+        //     )
+        //     .await?;
 
         Ok(tonic::Response::new(CompositeAuthorizeResponse {
             access_token_response,
             create_customer_response,
-            authorize_response: Some(authorize_response),
+            authorize_response: None,
         }))
     }
 
@@ -282,12 +280,5 @@ where
         request: tonic::Request<CompositeAuthorizeRequest>,
     ) -> Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status> {
         self.process_composite_authorize(request).await
-    }
-
-    async fn composite_get(
-        &self,
-        request: tonic::Request<CompositeGetRequest>,
-    ) -> Result<tonic::Response<CompositeGetResponse>, tonic::Status> {
-        self.process_composite_get(request).await
     }
 }

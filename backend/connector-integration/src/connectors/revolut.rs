@@ -24,7 +24,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -152,8 +152,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_code: None,
             error_message: None,
             error_reason: None,
-            response_currency: None,
-            response_minor_amount: None,
+            response_amount: None,
             raw_connector_response: None,
         })
     }
@@ -283,14 +282,33 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         // Revolut uses HMAC-SHA256
         let algorithm = crypto::HmacSha256;
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(errors::ConnectorError::WebhookSourceVerificationFailed)?,
+            None => {
+                // If webhook secrets are not provided, take them from connector_account_details
+                let auth = revolut::RevolutAuthType::try_from(
+                    connector_account_details
+                        .as_ref()
+                        .ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
+                )
+                .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+                ConnectorWebhookSecrets {
+                    secret: auth
+                        .signing_secret
+                        .as_ref()
+                        .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?
+                        .peek()
+                        .as_bytes()
+                        .to_vec(),
+                    additional_secret: None,
+                }
+            }
         };
 
         let signature =
@@ -309,7 +327,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
         let notif: revolut::RevolutWebhookBody = request
             .body
@@ -343,7 +361,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let notif: revolut::RevolutWebhookBody = request
             .body
@@ -541,13 +559,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorAuthType,
+        auth_type: &ConnectorSpecificAuth,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = revolut::RevolutAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.peek()).into(),
+            format!("Bearer {}", auth.secret_api_key.peek()).into(),
         )])
     }
 

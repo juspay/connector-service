@@ -21,29 +21,17 @@ struct CompositeFlowSpec {
     ignore_composite_only_fields: &'static [&'static str],
 }
 
-const COMPOSITE_FLOW_SPECS: &[CompositeFlowSpec] = &[
-    CompositeFlowSpec {
-        name: "authorize",
-        composite_request_message: "CompositeAuthorizeRequest",
-        granular_request_messages: &[
-            "PaymentServiceCreateAccessTokenRequest",
-            "PaymentServiceCreateConnectorCustomerRequest",
-            "PaymentServiceAuthorizeOnlyRequest",
-        ],
-        ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
-        ignore_composite_only_fields: DEFAULT_IGNORE_COMPOSITE_ONLY_FIELDS,
-    },
-    CompositeFlowSpec {
-        name: "get",
-        composite_request_message: "CompositeGetRequest",
-        granular_request_messages: &[
-            "PaymentServiceCreateAccessTokenRequest",
-            "PaymentServiceGetRequest",
-        ],
-        ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
-        ignore_composite_only_fields: DEFAULT_IGNORE_COMPOSITE_ONLY_FIELDS,
-    },
-];
+const COMPOSITE_FLOW_SPECS: &[CompositeFlowSpec] = &[CompositeFlowSpec {
+    name: "authorize",
+    composite_request_message: "CompositeAuthorizeRequest",
+    granular_request_messages: &[
+        "MerchantAuthenticationServiceCreateAccessTokenRequest",
+        "CustomerServiceCreateRequest",
+        "PaymentServiceAuthorizeRequest",
+    ],
+    ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
+    ignore_composite_only_fields: DEFAULT_IGNORE_COMPOSITE_ONLY_FIELDS,
+}];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct FieldShape {

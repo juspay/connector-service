@@ -37,7 +37,7 @@ mod tests {
             connector_types::{PaymentFlowData, PaymentsAuthorizeData},
             payment_address::{Address, PaymentAddress, PhoneDetails},
             payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},
-            router_data::{ConnectorAuthType, ErrorResponse},
+            router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             router_request_types::BrowserInformation,
             router_response_types::Response,
@@ -112,9 +112,9 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_auth_type: ConnectorSpecificAuth::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
-                    key1: "dummy_key1".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -183,7 +183,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -301,9 +301,9 @@ mod tests {
                     order_details: None,
                     minor_amount_capturable: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_auth_type: ConnectorSpecificAuth::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
-                    key1: "dummy_key1".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -349,7 +349,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -441,9 +441,9 @@ mod tests {
                     order_details: None,
                     minor_amount_capturable: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_auth_type: ConnectorSpecificAuth::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
-                    key1: "dummy_key1".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -488,7 +488,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -539,7 +539,7 @@ mod tests {
             use domain_types::{
                 connector_types::PaymentFlowData,
                 payment_address::PaymentAddress,
-                router_data::{ConnectorAuthType, ErrorResponse},
+                router_data::{ConnectorSpecificAuth, ErrorResponse},
                 router_data_v2::RouterDataV2,
                 types::{ConnectorParams, Connectors},
             };
@@ -603,9 +603,9 @@ mod tests {
                     order_details: None,
                     minor_amount_capturable: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_auth_type: ConnectorSpecificAuth::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
-                    key1: "dummy_key1".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -673,7 +673,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -871,7 +871,7 @@ mod tests {
         use domain_types::{
             connector_types::PaymentFlowData,
             payment_address::PaymentAddress,
-            router_data::{ConnectorAuthType, ErrorResponse},
+            router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -936,9 +936,9 @@ mod tests {
                 order_details: None,
                 minor_amount_capturable: None,
             },
-            connector_auth_type: ConnectorAuthType::BodyKey {
+            connector_auth_type: ConnectorSpecificAuth::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
-                key1: "dummy_key1".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
             },
             request: PaymentsAuthorizeData {
                 payment_channel: None,
@@ -1001,7 +1001,7 @@ mod tests {
                 request_incremental_authorization: Some(false),
                 metadata: None,
                 minor_amount: MinorUnit::new(1000),
-                merchant_order_reference_id: None,
+                merchant_order_id: None,
                 shipping_cost: None,
                 integrity_object: None,
                 merchant_account_id: None,
@@ -1067,7 +1067,7 @@ mod tests {
         use domain_types::{
             connector_types::PaymentFlowData,
             payment_address::PaymentAddress,
-            router_data::{ConnectorAuthType, ErrorResponse},
+            router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -1132,9 +1132,9 @@ mod tests {
                 recurring_mandate_payment_data: None,
                 order_details: None,
             },
-            connector_auth_type: ConnectorAuthType::BodyKey {
+            connector_auth_type: ConnectorSpecificAuth::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
-                key1: "dummy_key1".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
             },
             request: PaymentsAuthorizeData {
                 payment_channel: None,
@@ -1197,7 +1197,7 @@ mod tests {
                 request_incremental_authorization: Some(false),
                 metadata: None,
                 minor_amount: MinorUnit::new(1000),
-                merchant_order_reference_id: None,
+                merchant_order_id: None,
                 shipping_cost: None,
                 integrity_object: None,
                 merchant_account_id: None,
@@ -1251,7 +1251,7 @@ mod tests {
         use domain_types::{
             payment_address::{Address, PhoneDetails},
             payment_method_data::DefaultPCIHolder,
-            router_data::ConnectorAuthType,
+            router_data::ConnectorSpecificAuth,
             types::{ConnectorParams, Connectors},
         };
         use interfaces::connector_types::BoxedConnector;
@@ -1266,7 +1266,7 @@ mod tests {
             use domain_types::{
                 connector_types::PaymentCreateOrderData,
                 payment_address::PaymentAddress,
-                router_data::{ConnectorAuthType, ErrorResponse},
+                router_data::{ConnectorSpecificAuth, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
             use serde_json::{to_value, Value};
@@ -1330,9 +1330,9 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_auth_type: ConnectorSpecificAuth::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
-                    key1: "dummy_key1".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
                 },
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(1000),
@@ -1395,7 +1395,7 @@ mod tests {
             use domain_types::{
                 connector_types::PaymentCreateOrderData,
                 payment_address::PaymentAddress,
-                router_data::{ConnectorAuthType, ErrorResponse},
+                router_data::{ConnectorSpecificAuth, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
 
@@ -1446,9 +1446,9 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_auth_type: ConnectorSpecificAuth::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
-                    key1: "dummy_key1".to_string().into(),
+                    api_secret: Some("dummy_key1".to_string().into()),
                 },
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(0),
@@ -1565,9 +1565,9 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_auth_type: ConnectorSpecificAuth::Razorpay {
                     api_key: "invalid_key".to_string().into(),
-                    key1: "invalid_key1".to_string().into(),
+                    api_secret: Some("invalid_key1".to_string().into()),
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -1613,7 +1613,7 @@ mod tests {
                     metadata: None,
                     integrity_object: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -1662,7 +1662,7 @@ mod tests {
         use domain_types::{
             connector_types::{PaymentCreateOrderData, PaymentFlowData},
             payment_address::PaymentAddress,
-            router_data::{ConnectorAuthType, ErrorResponse},
+            router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -1726,9 +1726,9 @@ mod tests {
                 order_details: None,
                 minor_amount_capturable: None,
             },
-            connector_auth_type: ConnectorAuthType::BodyKey {
+            connector_auth_type: ConnectorSpecificAuth::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
-                key1: "dummy_key1".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
             },
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
@@ -1789,7 +1789,7 @@ mod tests {
         use domain_types::{
             connector_types::PaymentCreateOrderData,
             payment_address::PaymentAddress,
-            router_data::{ConnectorAuthType, ErrorResponse},
+            router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -1854,9 +1854,9 @@ mod tests {
                 recurring_mandate_payment_data: None,
                 order_details: None,
             },
-            connector_auth_type: ConnectorAuthType::BodyKey {
+            connector_auth_type: ConnectorSpecificAuth::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
-                key1: "dummy_key1".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
             },
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
@@ -1906,7 +1906,7 @@ mod tests {
         use domain_types::{
             connector_types::PaymentCreateOrderData,
             payment_address::PaymentAddress,
-            router_data::{ConnectorAuthType, ErrorResponse},
+            router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -1971,9 +1971,9 @@ mod tests {
                 recurring_mandate_payment_data: None,
                 order_details: None,
             },
-            connector_auth_type: ConnectorAuthType::BodyKey {
+            connector_auth_type: ConnectorSpecificAuth::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
-                key1: "dummy_key1".to_string().into(),
+                api_secret: Some("dummy_key1".to_string().into()),
             },
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),

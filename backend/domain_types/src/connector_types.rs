@@ -8,7 +8,7 @@ use common_utils::{
     errors,
     ext_traits::{OptionExt, ValueExt},
     pii::IpAddress,
-    types::{MinorUnit, StringMajorUnit, StringMinorUnit},
+    types::{MinorUnit, Money, StringMajorUnit, StringMinorUnit},
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
@@ -41,7 +41,9 @@ use crate::{
 use url::Url;
 
 // snake case for enum variants
-#[derive(Clone, Copy, Debug, Display, EnumString)]
+#[derive(
+    Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -118,6 +120,7 @@ pub enum ConnectorEnum {
     Hyperpg,
     Zift,
     Revolv3,
+    Truelayer,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -198,6 +201,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Hyperpg => Ok(Self::Hyperpg),
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
             grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
+            grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -311,9 +315,9 @@ pub struct NetworkTokenWithNTIRef {
 
 #[derive(Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub enum MandateReferenceId {
-    ConnectorMandateId(ConnectorMandateReferenceId), // mandate_id send by connector
-    NetworkMandateId(String), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with card data
-    NetworkTokenWithNTI(NetworkTokenWithNTIRef), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with network token data
+    ConnectorMandateId(ConnectorMandateReferenceId), // mandate_id sent by connector
+    NetworkMandateId(String), // network_txns_id sent by Issuer to connector, Used for PG agnostic mandate txns along with card data
+    NetworkTokenWithNTI(NetworkTokenWithNTIRef), // network_txns_id sent by Issuer to connector, Used for PG agnostic mandate txns along with network token data
 }
 
 #[derive(Default, Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
@@ -977,7 +981,7 @@ pub struct PaymentVoidData {
     pub currency: Option<Currency>,
     pub connector_metadata: Option<SecretSerdeValue>,
     pub metadata: Option<SecretSerdeValue>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
 }
 
 impl PaymentVoidData {
@@ -1084,7 +1088,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     /// Merchant's identifier for the payment/invoice. This will be sent to the connector
     /// if the connector provides support to accept multiple reference ids.
     /// In case the connector supports only one reference id, Hyperswitch's Payment ID will be sent as reference.
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
     pub integrity_object: Option<AuthoriseIntegrityObject>,
@@ -1536,8 +1540,6 @@ pub struct PaymentsSdkSessionTokenData {
     pub country: Option<common_enums::CountryAlpha2>,
     pub order_details: Option<Vec<OrderDetailsWithAmount>>,
     pub email: Option<Email>,
-    // Minor Unit amount for amount frame work
-    pub minor_amount: MinorUnit,
     pub customer_name: Option<Secret<String>>,
     pub order_tax_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
@@ -1738,8 +1740,7 @@ impl RefundFlowData {
 pub struct RedirectDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: Option<AttemptStatus>,
-    pub response_minor_amount: Option<MinorUnit>,
-    pub response_currency: Option<Currency>,
+    pub response_amount: Option<Money>,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
@@ -2087,7 +2088,7 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::RecoveryInvoiceCancel => {
                 Ok(Self::RecoveryInvoiceCancel)
             }
-            grpc_api_types::payments::WebhookEventType::IncomingWebhookEventUnspecified => {
+            grpc_api_types::payments::WebhookEventType::Unspecified => {
                 Ok(Self::IncomingWebhookEventUnspecified)
             }
         }
@@ -2143,7 +2144,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::RecoveryPaymentSuccess => Ok(Self::RecoveryPaymentSuccess),
             EventType::RecoveryPaymentPending => Ok(Self::RecoveryPaymentPending),
             EventType::RecoveryInvoiceCancel => Ok(Self::RecoveryInvoiceCancel),
-            EventType::IncomingWebhookEventUnspecified => Ok(Self::IncomingWebhookEventUnspecified),
+            EventType::IncomingWebhookEventUnspecified => Ok(Self::Unspecified),
 
             // Legacy broad categories (for backward compatibility)
             EventType::Payment => Ok(Self::PaymentIntentSuccess), // Map broad Payment to PaymentIntentSuccess
@@ -2295,7 +2296,7 @@ pub struct PaymentsCaptureData {
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub metadata: Option<SecretSerdeValue>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
 }
 
 impl PaymentsCaptureData {
@@ -2354,12 +2355,11 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub metadata: Option<SecretSerdeValue>,
     pub complete_authorize_url: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<CustomerId>,
     pub integrity_object: Option<SetupMandateIntegrityObject>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
     pub locale: Option<String>,
@@ -2417,7 +2417,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub amount: i64,
     pub minor_amount: MinorUnit,
     pub currency: Currency,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<RepeatPaymentIntegrityObject>,
@@ -2503,6 +2503,16 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
     pub fn get_optional_email(&self) -> Option<Email> {
         self.email.clone()
     }
+
+    pub fn get_network_mandate_id(&self) -> Option<String> {
+        match &self.mandate_reference {
+            MandateReferenceId::NetworkMandateId(network_mandate_id) => {
+                Some(network_mandate_id.to_string())
+            }
+            MandateReferenceId::ConnectorMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -2542,6 +2552,43 @@ impl RawConnectorRequestResponse for DisputeFlowData {
 }
 
 impl ConnectorResponseHeaders for DisputeFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VerifyWebhookSourceFlowData {
+    pub connectors: Connectors,
+    pub connector_request_reference_id: String,
+    pub raw_connector_response: Option<Secret<String>>,
+    pub raw_connector_request: Option<Secret<String>>,
+    pub connector_response_headers: Option<http::HeaderMap>,
+}
+
+impl RawConnectorRequestResponse for VerifyWebhookSourceFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
+        self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
+        self.raw_connector_response.clone()
+    }
+
+    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
+        self.raw_connector_request.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
+        self.raw_connector_request = request;
+    }
+}
+
+impl ConnectorResponseHeaders for VerifyWebhookSourceFlowData {
     fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
         self.connector_response_headers = headers;
     }

@@ -12,7 +12,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -87,20 +87,19 @@ impl TrustpaymentsAuthType {
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for TrustpaymentsAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for TrustpaymentsAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,    // username
-                key1,       // password
-                api_secret, // site_reference
-                ..
+            ConnectorSpecificAuth::Trustpayments {
+                username,
+                password,
+                site_reference,
             } => Ok(Self {
-                username: api_key.to_owned(),
-                password: key1.to_owned(),
-                site_reference: api_secret.to_owned(),
+                username: username.to_owned(),
+                password: password.to_owned(),
+                site_reference: site_reference.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType)?,
         }

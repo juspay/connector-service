@@ -98,6 +98,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Wellsfargo => Box::new(connectors::Wellsfargo::new()),
             ConnectorEnum::Hyperpg => Box::new(connectors::Hyperpg::new()),
             ConnectorEnum::Zift => Box::new(connectors::Zift::new()),
+            ConnectorEnum::Truelayer => Box::new(connectors::Truelayer::new()),
         }
     }
 }
