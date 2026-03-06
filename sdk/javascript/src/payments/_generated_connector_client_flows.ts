@@ -24,6 +24,15 @@ export class PaymentClient extends _ConnectorClientBase {
     return this._executeFlow('capture', requestMsg, metadata, ffiOptions, 'PaymentServiceCaptureRequest', 'PaymentServiceCaptureResponse') as Promise<ucs.v2.PaymentServiceCaptureResponse>;
   }
 
+  /** PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates. */
+  async createOrder(
+    requestMsg: ucs.v2.IPaymentServiceCreateOrderRequest,
+    metadata: Record<string, string>,
+    ffiOptions?: ucs.v2.IFfiOptions | null
+  ): Promise<ucs.v2.PaymentServiceCreateOrderResponse> {
+    return this._executeFlow('create_order', requestMsg, metadata, ffiOptions, 'PaymentServiceCreateOrderRequest', 'PaymentServiceCreateOrderResponse') as Promise<ucs.v2.PaymentServiceCreateOrderResponse>;
+  }
+
   /** PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking. */
   async get(
     requestMsg: ucs.v2.IPaymentServiceGetRequest,

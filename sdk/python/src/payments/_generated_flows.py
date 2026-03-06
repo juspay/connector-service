@@ -6,6 +6,8 @@ SERVICE_FLOWS = {
         "authorize": "PaymentServiceAuthorizeResponse",
         # capture: PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
         "capture": "PaymentServiceCaptureResponse",
+        # create_order: PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
+        "create_order": "PaymentServiceCreateOrderResponse",
         # get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
         "get": "PaymentServiceGetResponse",
         # refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.

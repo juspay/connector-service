@@ -21,8 +21,9 @@ use grpc_api_types::payments::{
     MerchantAuthenticationServiceCreateSdkSessionTokenResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
-    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
-    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    PaymentServiceCreateOrderResponse, PaymentServiceReverseResponse,
+    PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RecurringPaymentServiceRevokeRequest, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -3639,7 +3640,7 @@ pub fn generate_create_order_response(
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     >,
-) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
+) -> Result<PaymentServiceCreateOrderResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
@@ -3650,35 +3651,23 @@ pub fn generate_create_order_response(
         .resource_common_data
         .get_raw_connector_request();
     let response = match transaction_response {
-        Ok(response) => {
-            // For successful order creation, return basic success response
-            PaymentServiceAuthorizeResponse {
-                connector_transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                        response.order_id,
-                    )),
-                }),
-                redirection_data: None,
-                network_transaction_id: None,
-                merchant_transaction_id: None,
-                incremental_authorization_allowed: None,
-                status: grpc_status as i32,
-                error: None,
-                status_code: 200,
-                raw_connector_response,
-                raw_connector_request,
-                response_headers: router_data_v2
-                    .resource_common_data
-                    .get_connector_response_headers_as_map(),
-                connector_feature_data: None,
-                state: None,
-                captured_amount: None,
-                capturable_amount: None,
-                authorized_amount: None,
-                mandate_reference: None,
-                connector_response: None,
-            }
-        }
+        Ok(response) => PaymentServiceCreateOrderResponse {
+            connector_order_id: Some(grpc_api_types::payments::Identifier {
+                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                    response.order_id,
+                )),
+            }),
+            status: grpc_status as i32,
+            error: None,
+            status_code: 200,
+            response_headers: router_data_v2
+                .resource_common_data
+                .get_connector_response_headers_as_map(),
+            merchant_order_id: None,
+            raw_connector_request,
+            raw_connector_response,
+            session_token: None,
+        },
         Err(err) => {
             let status = match err.get_attempt_status_for_grpc(
                 err.status_code,
@@ -3689,20 +3678,12 @@ pub fn generate_create_order_response(
                 }
                 None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
             };
-            PaymentServiceAuthorizeResponse {
-                connector_transaction_id: err.connector_transaction_id.clone().map(|id| {
+            PaymentServiceCreateOrderResponse {
+                connector_order_id: err.connector_transaction_id.clone().map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
                 }),
-                redirection_data: None,
-                network_transaction_id: None,
-                merchant_transaction_id: err.connector_transaction_id.map(|id| {
-                    grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                    }
-                }),
-                incremental_authorization_allowed: None,
                 status: status as i32,
                 error: Some(grpc_api_types::payments::ErrorInfo {
                     connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
@@ -3712,7 +3693,7 @@ pub fn generate_create_order_response(
                     }),
                     unified_details: None,
                     issuer_details: Some(grpc_api_types::payments::IssuerErrorDetails {
-                        code: None, // To be filled with card network
+                        code: None,
                         message: err.network_error_message.clone(),
                         network_details: Some(grpc_api_types::payments::NetworkErrorDetails {
                             advice_code: err.network_advice_code,
@@ -3725,15 +3706,14 @@ pub fn generate_create_order_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
-                connector_feature_data: None,
-                raw_connector_response,
+                merchant_order_id: err.connector_transaction_id.map(|id| {
+                    grpc_api_types::payments::Identifier {
+                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    }
+                }),
                 raw_connector_request,
-                state: None,
-                captured_amount: None,
-                capturable_amount: None,
-                authorized_amount: None,
-                mandate_reference: None,
-                connector_response: None,
+                raw_connector_response,
+                session_token: None,
             }
         }
     };

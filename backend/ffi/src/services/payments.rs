@@ -4,6 +4,7 @@ use grpc_api_types::payments::{
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse,
     PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServiceRefundRequest,
     PaymentServiceReverseRequest, PaymentServiceReverseResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
@@ -16,12 +17,12 @@ use crate::macros::{req_transformer, res_transformer};
 use domain_types::{
     connector_flow::{
         Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, PSync, Refund,
-        RepeatPayment, Void, VoidPC,
+        RepeatPayment, Void, VoidPC, CreateOrder,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, PaymentCreateOrderData, PaymentCreateOrderResponse,
         RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
     },
 };
@@ -112,6 +113,28 @@ res_transformer!(
     request_data_type: PaymentsSyncData,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_sync_response,
+);
+
+// create order request transformer
+req_transformer!(
+    fn_name: create_order_req_transformer,
+    request_type: PaymentServiceCreateOrderRequest,
+    flow_marker: CreateOrder,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentCreateOrderData,
+    response_data_type: PaymentCreateOrderResponse,
+);
+
+// create order response transformer
+res_transformer!(
+    fn_name: create_order_res_transformer,
+    request_type: PaymentServiceCreateOrderRequest,
+    response_type: PaymentServiceCreateOrderResponse,
+    flow_marker: CreateOrder,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentCreateOrderData,
+    response_data_type: PaymentCreateOrderResponse,
+    generate_response_fn: generate_create_order_response,
 );
 
 // create access token request transformer

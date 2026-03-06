@@ -18,6 +18,9 @@ const FLOWS = {
   // create_access_token: MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
   create_access_token : { request: "MerchantAuthenticationServiceCreateAccessTokenRequest", response: "MerchantAuthenticationServiceCreateAccessTokenResponse" },
 
+  // create_order: PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
+  create_order        : { request: "PaymentServiceCreateOrderRequest", response: "PaymentServiceCreateOrderResponse" },
+
   // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
   get                 : { request: "PaymentServiceGetRequest", response: "PaymentServiceGetResponse" },
 

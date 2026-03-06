@@ -6,6 +6,7 @@ use grpc_api_types::payments::{
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     PaymentServiceAuthorizeRequest,
     PaymentServiceCaptureRequest,
+    PaymentServiceCreateOrderRequest,
     PaymentServiceGetRequest,
     PaymentServiceRefundRequest,
     PaymentServiceReverseRequest,
@@ -18,6 +19,7 @@ use crate::handlers::payments::{
     charge_req_handler, charge_res_handler,
     create_req_handler, create_res_handler,
     create_access_token_req_handler, create_access_token_res_handler,
+    create_order_req_handler, create_order_res_handler,
     get_req_handler, get_res_handler,
     refund_req_handler, refund_res_handler,
     reverse_req_handler, reverse_res_handler,
@@ -34,6 +36,8 @@ define_ffi_flow!(charge, RecurringPaymentServiceChargeRequest, charge_req_handle
 define_ffi_flow!(create, CustomerServiceCreateRequest, create_req_handler, create_res_handler);
 // create_access_token: MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
 define_ffi_flow!(create_access_token, MerchantAuthenticationServiceCreateAccessTokenRequest, create_access_token_req_handler, create_access_token_res_handler);
+// create_order: PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
+define_ffi_flow!(create_order, PaymentServiceCreateOrderRequest, create_order_req_handler, create_order_res_handler);
 // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 define_ffi_flow!(get, PaymentServiceGetRequest, get_req_handler, get_res_handler);
 // refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.

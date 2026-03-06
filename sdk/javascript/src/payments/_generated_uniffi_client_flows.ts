@@ -99,6 +99,25 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('create_access_token', responseBytes, requestBytes, metadata, optionsBytes);
   }
 
+  /** Build connector HTTP request for create_order flow. */
+  createOrderReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('create_order', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for create_order flow. */
+  createOrderRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('create_order', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
   /** Build connector HTTP request for get flow. */
   getReq(
     requestBytes: Buffer | Uint8Array,

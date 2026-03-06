@@ -13,6 +13,8 @@ from payments.generated.payment_pb2 import (
     PaymentServiceAuthorizeResponse,
     PaymentServiceCaptureRequest,
     PaymentServiceCaptureResponse,
+    PaymentServiceCreateOrderRequest,
+    PaymentServiceCreateOrderResponse,
     PaymentServiceGetRequest,
     PaymentServiceGetResponse,
     PaymentServiceRefundRequest,
@@ -35,6 +37,10 @@ class PaymentClient(_ConnectorClientBase):
 
     def capture(self, request: PaymentServiceCaptureRequest, metadata: dict, options: FfiOptions | None = ...) -> PaymentServiceCaptureResponse:
         """PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle."""
+        ...
+
+    def create_order(self, request: PaymentServiceCreateOrderRequest, metadata: dict, options: FfiOptions | None = ...) -> PaymentServiceCreateOrderResponse:
+        """PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates."""
         ...
 
     def get(self, request: PaymentServiceGetRequest, metadata: dict, options: FfiOptions | None = ...) -> PaymentServiceGetResponse:

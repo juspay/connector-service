@@ -10,6 +10,8 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeResponse,
     PaymentServiceCaptureRequest,
     PaymentServiceCaptureResponse,
+    PaymentServiceCreateOrderRequest,
+    PaymentServiceCreateOrderResponse,
     PaymentServiceGetRequest,
     PaymentServiceGetResponse,
     PaymentServiceRefundRequest,
@@ -27,6 +29,7 @@ use crate::services::payments::{
     charge_req_transformer, charge_res_transformer,
     create_req_transformer, create_res_transformer,
     create_access_token_req_transformer, create_access_token_res_transformer,
+    create_order_req_transformer, create_order_res_transformer,
     get_req_transformer, get_res_transformer,
     refund_req_transformer, refund_res_transformer,
     reverse_req_transformer, reverse_res_transformer,
@@ -43,6 +46,8 @@ impl_flow_handlers!(charge, RecurringPaymentServiceChargeRequest, RecurringPayme
 impl_flow_handlers!(create, CustomerServiceCreateRequest, CustomerServiceCreateResponse, create_req_transformer, create_res_transformer);
 // create_access_token: MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
 impl_flow_handlers!(create_access_token, MerchantAuthenticationServiceCreateAccessTokenRequest, MerchantAuthenticationServiceCreateAccessTokenResponse, create_access_token_req_transformer, create_access_token_res_transformer);
+// create_order: PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
+impl_flow_handlers!(create_order, PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, create_order_req_transformer, create_order_res_transformer);
 // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 impl_flow_handlers!(get, PaymentServiceGetRequest, PaymentServiceGetResponse, get_req_transformer, get_res_transformer);
 // refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.

@@ -15,6 +15,10 @@ class PaymentClient(_ConnectorClientBase):
         """PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle."""
         return self._execute_flow("capture", request, metadata, _pb2.PaymentServiceCaptureResponse, options)
 
+    def create_order(self, request, metadata: dict, options=None):
+        """PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates."""
+        return self._execute_flow("create_order", request, metadata, _pb2.PaymentServiceCreateOrderResponse, options)
+
     def get(self, request, metadata: dict, options=None):
         """PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking."""
         return self._execute_flow("get", request, metadata, _pb2.PaymentServiceGetResponse, options)

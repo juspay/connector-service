@@ -13,6 +13,8 @@ import uniffi.connector_service_ffi.createReqTransformer
 import uniffi.connector_service_ffi.createResTransformer
 import uniffi.connector_service_ffi.createAccessTokenReqTransformer
 import uniffi.connector_service_ffi.createAccessTokenResTransformer
+import uniffi.connector_service_ffi.createOrderReqTransformer
+import uniffi.connector_service_ffi.createOrderResTransformer
 import uniffi.connector_service_ffi.getReqTransformer
 import uniffi.connector_service_ffi.getResTransformer
 import uniffi.connector_service_ffi.refundReqTransformer
@@ -29,6 +31,7 @@ object FlowRegistry {
         "charge" to ::chargeReqTransformer,
         "create" to ::createReqTransformer,
         "create_access_token" to ::createAccessTokenReqTransformer,
+        "create_order" to ::createOrderReqTransformer,
         "get" to ::getReqTransformer,
         "refund" to ::refundReqTransformer,
         "reverse" to ::reverseReqTransformer,
@@ -41,6 +44,7 @@ object FlowRegistry {
         "charge" to ::chargeResTransformer,
         "create" to ::createResTransformer,
         "create_access_token" to ::createAccessTokenResTransformer,
+        "create_order" to ::createOrderResTransformer,
         "get" to ::getResTransformer,
         "refund" to ::refundResTransformer,
         "reverse" to ::reverseResTransformer,
@@ -58,6 +62,10 @@ class PaymentClient(libPath: String? = null, options: Options = Options.getDefau
     // capture: PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
     fun capture(request: PaymentServiceCaptureRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceCaptureResponse =
         executeFlow("capture", request.toByteArray(), PaymentServiceCaptureResponse.parser(), metadata, options?.toByteArray())
+
+    // create_order: PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
+    fun create_order(request: PaymentServiceCreateOrderRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceCreateOrderResponse =
+        executeFlow("create_order", request.toByteArray(), PaymentServiceCreateOrderResponse.parser(), metadata, options?.toByteArray())
 
     // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
     fun get(request: PaymentServiceGetRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceGetResponse =
