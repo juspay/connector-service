@@ -51,12 +51,6 @@ fun buildMetadata(): Map<String, String> {
     return mapOf(
         "connector" to "Stripe",
         "connector_auth_type" to """{"Stripe":{"api_key":"$apiKey"}}""",
-        "x-connector" to "Stripe",
-        "x-merchant-id" to "test_merchant_123",
-        "x-request-id" to "smoke-test-001",
-        "x-tenant-id" to "public",
-        "x-auth" to "body-key",
-        "x-api-key" to apiKey,
     )
 }
 
