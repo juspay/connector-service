@@ -5,7 +5,12 @@ pub use ucs_interface_common::flow::*;
 pub use ucs_interface_common::metadata::*;
 
 use common_utils::{
-    consts,
+    config_patch::Patch,
+    consts::{
+        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_CONNECTOR_AUTH, X_KEY1, X_KEY2,
+        X_SHADOW_MODE, X_ENVIRONMENT,
+    },
+    errors::CustomResult,
     events::{Event, EventStage, FlowName, MaskedSerdeValue},
     lineage::LineageIds,
 };
@@ -41,6 +46,412 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
         .map(|request_id| span.record("request_id", request_id));
 
     span
+}
+
+/// Struct to hold extracted metadata payload
+///
+/// SECURITY WARNING: This struct should only contain non-sensitive business metadata.
+/// For any sensitive data (API keys, tokens, credentials, etc.), always:
+/// 1. Wrap in hyperswitch_masking::Secret<T>
+/// 2. Extract via MaskedMetadata methods instead of adding here
+///
+#[derive(Clone, Debug)]
+pub struct MetadataPayload {
+    pub tenant_id: String,
+    pub request_id: String,
+    pub merchant_id: String,
+    pub connector: connector_types::ConnectorEnum,
+    pub lineage_ids: LineageIds<'static>,
+    pub connector_auth_type: ConnectorSpecificAuth,
+    pub reference_id: Option<String>,
+    pub shadow_mode: bool,
+    pub resource_id: Option<String>,
+    /// Environment dimension for superposition config resolution (e.g., "production", "sandbox")
+    pub environment: Option<String>,
+}
+
+pub fn get_metadata_payload(
+    metadata: &metadata::MetadataMap,
+    server_config: Arc<configs::Config>,
+) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
+    let connector = connector_from_metadata(metadata)?;
+    let merchant_id = merchant_id_from_metadata(metadata)?;
+    let tenant_id = tenant_id_from_metadata(metadata)?;
+    let request_id = request_id_from_metadata(metadata)?;
+    let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
+    let connector_auth_type = resolve_connector_auth(metadata, &connector)?;
+    let reference_id = reference_id_from_metadata(metadata)?;
+    let resource_id = resource_id_from_metadata(metadata)?;
+    let shadow_mode = shadow_mode_from_metadata(metadata);
+    let environment = environment_from_metadata(metadata);
+    Ok(MetadataPayload {
+        tenant_id,
+        request_id,
+        merchant_id,
+        connector,
+        lineage_ids,
+        connector_auth_type,
+        reference_id,
+        shadow_mode,
+        resource_id,
+        environment,
+    })
+}
+
+/// Extracts typed `ConnectorAuth` from the `X-Connector-Auth` header (JSON).
+///
+/// Returns `Ok(Some(...))` if header is present and valid,
+/// `Ok(None)` if header is absent (legitimate fallback case),
+/// `Err(...)` if header is present but malformed.
+fn extract_connector_auth_from_header(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<Option<grpc_api_types::payments::ConnectorAuth>, ApplicationErrorResponse> {
+    metadata
+        .get(X_CONNECTOR_AUTH)
+        .map(|value| {
+            value
+                .to_str()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CONNECTOR_AUTH_HEADER".to_string(),
+                    error_identifier: 400,
+                    error_message: "X-Connector-Auth header contains non-ASCII characters"
+                        .to_string(),
+                    error_object: None,
+                }))
+                .and_then(|header_str| {
+                    serde_json::from_str(header_str).change_context(
+                        ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_CONNECTOR_AUTH_JSON".to_string(),
+                            error_identifier: 400,
+                            error_message: "Failed to parse X-Connector-Auth header as JSON"
+                                .to_string(),
+                            error_object: None,
+                        }),
+                    )
+                })
+        })
+        .transpose()
+}
+
+/// Resolves connector auth by trying the typed `X-Connector-Auth` header first,
+/// then falling back to legacy `x-auth` / `x-api-key` / `x-key1` headers.
+fn resolve_connector_auth(
+    metadata: &metadata::MetadataMap,
+    connector: &connector_types::ConnectorEnum,
+) -> CustomResult<ConnectorSpecificAuth, ApplicationErrorResponse> {
+    extract_connector_auth_from_header(metadata)?.map_or_else(
+        || {
+            logger::debug!(
+                "X-Connector-Auth header not found, falling back to legacy headers for connector: {}",
+                connector
+            );
+            auth_from_metadata(metadata, connector)
+        },
+        |typed_auth| {
+            logger::debug!(
+                "Connector specific auth found in X-Connector-Auth header for connector: {}",
+                connector
+            );
+            ConnectorSpecificAuth::foreign_try_from(typed_auth).map_err(|_| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "AUTH_CONVERSION_FAILED".to_string(),
+                    error_identifier: 400,
+                    error_message: "Failed to convert auth from X-Connector-Auth header".to_string(),
+                    error_object: None,
+                }))
+            })
+        },
+    )
+}
+
+pub fn connector_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<connector_types::ConnectorEnum, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_CONNECTOR_NAME).and_then(|inner| {
+        connector_types::ConnectorEnum::from_str(inner).map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CONNECTOR".to_string(),
+                error_identifier: 400,
+                error_message: format!("Invalid connector: {e}"),
+                error_object: None,
+            }))
+        })
+    })
+}
+
+pub fn merchant_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_MERCHANT_ID)
+        .map(|inner| inner.to_string())
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_MERCHANT_ID".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing merchant ID in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
+}
+
+pub fn request_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_REQUEST_ID)
+        .map(|inner| inner.to_string())
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_REQUEST_ID".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing request ID in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
+}
+
+pub fn tenant_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_TENANT_ID)
+        .map(|s| s.to_string())
+        .or_else(|_| Ok("DefaultTenantId".to_string()))
+}
+
+pub fn reference_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<Option<String>, ApplicationErrorResponse> {
+    parse_optional_metadata(metadata, consts::X_REFERENCE_ID).map(|s| s.map(|s| s.to_string()))
+}
+
+pub fn resource_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<Option<String>, ApplicationErrorResponse> {
+    parse_optional_metadata(metadata, consts::X_RESOURCE_ID).map(|s| s.map(|s| s.to_string()))
+}
+
+pub fn shadow_mode_from_metadata(metadata: &metadata::MetadataMap) -> bool {
+    parse_optional_metadata(metadata, X_SHADOW_MODE)
+        .ok()
+        .flatten()
+        .map(|value| value.to_lowercase() == "true")
+        .unwrap_or(false)
+}
+
+/// Extracts environment from the x-environment header for superposition config resolution.
+pub fn environment_from_metadata(metadata: &metadata::MetadataMap) -> Option<String> {
+    parse_optional_metadata(metadata, X_ENVIRONMENT)
+        .ok()
+        .flatten()
+        .map(|s| s.to_string())
+}
+
+/// Extracts connector-specific auth from metadata headers.
+/// Uses the connector name to determine which variant to create.
+pub fn auth_from_metadata(
+    metadata: &metadata::MetadataMap,
+    connector: &connector_types::ConnectorEnum,
+) -> CustomResult<ConnectorSpecificAuth, ApplicationErrorResponse> {
+    let generic_auth = generic_auth_from_metadata(metadata)?;
+    ConnectorSpecificAuth::foreign_try_from((&generic_auth, connector)).map_err(|_| {
+        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "AUTH_CONVERSION_FAILED".to_string(),
+            error_identifier: 400,
+            error_message: format!("Failed to convert legacy auth for connector: {}", connector),
+            error_object: None,
+        }))
+    })
+}
+
+/// Extracts generic auth type from metadata headers.
+/// This is the legacy format that uses key1, key2, etc.
+pub fn generic_auth_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<domain_types::router_data::ConnectorAuthType, ApplicationErrorResponse> {
+    use domain_types::router_data::ConnectorAuthType;
+
+    let auth = parse_metadata(metadata, X_AUTH)?;
+
+    #[allow(clippy::wildcard_in_or_patterns)]
+    match auth {
+        "header-key" => Ok(ConnectorAuthType::HeaderKey {
+            api_key: parse_metadata(metadata, X_API_KEY)?.to_string().into(),
+        }),
+        "body-key" => Ok(ConnectorAuthType::BodyKey {
+            api_key: parse_metadata(metadata, X_API_KEY)?.to_string().into(),
+            key1: parse_metadata(metadata, X_KEY1)?.to_string().into(),
+        }),
+        "signature-key" => Ok(ConnectorAuthType::SignatureKey {
+            api_key: parse_metadata(metadata, X_API_KEY)?.to_string().into(),
+            key1: parse_metadata(metadata, X_KEY1)?.to_string().into(),
+            api_secret: parse_metadata(metadata, X_API_SECRET)?.to_string().into(),
+        }),
+        "multi-auth-key" => Ok(ConnectorAuthType::MultiAuthKey {
+            api_key: parse_metadata(metadata, X_API_KEY)?.to_string().into(),
+            key1: parse_metadata(metadata, X_KEY1)?.to_string().into(),
+            key2: parse_metadata(metadata, X_KEY2)?.to_string().into(),
+            api_secret: parse_metadata(metadata, X_API_SECRET)?.to_string().into(),
+        }),
+        "no-key" => Ok(ConnectorAuthType::NoKey),
+        "temporary-auth" => Ok(ConnectorAuthType::TemporaryAuth),
+        "currency-auth-key" => {
+            let auth_key_map_str = parse_metadata(metadata, X_AUTH_KEY_MAP)?;
+            let auth_key_map: HashMap<
+                common_enums::enums::Currency,
+                common_utils::pii::SecretSerdeValue,
+            > = serde_json::from_str(auth_key_map_str).change_context(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_AUTH_KEY_MAP".to_string(),
+                    error_identifier: 400,
+                    error_message: "Invalid auth-key-map format".to_string(),
+                    error_object: None,
+                }),
+            )?;
+            Ok(ConnectorAuthType::CurrencyAuthKey { auth_key_map })
+        }
+        "certificate-auth" | _ => Err(Report::new(ApplicationErrorResponse::BadRequest(
+            ApiError {
+                sub_code: "INVALID_AUTH_TYPE".to_string(),
+                error_identifier: 400,
+                error_message: format!("Invalid auth type: {auth}"),
+                error_object: None,
+            },
+        ))),
+    }
+}
+
+pub fn merge_config_with_override(
+    config_override: String,
+    config: configs::Config,
+) -> CustomResult<Arc<configs::Config>, ApplicationErrorResponse> {
+    match config_override.trim().is_empty() {
+        true => Ok(Arc::new(config)),
+        false => {
+            let mut override_patch: ConfigPatch = serde_json::from_str(config_override.trim())
+                .map_err(|e| {
+                    Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "CANNOT_CONVERT_TO_JSON".into(),
+                        error_identifier: 400,
+                        error_message: format!("Cannot convert override config to JSON: {e}"),
+                        error_object: None,
+                    }))
+                })?;
+
+            if let Some(proxy_patch) = override_patch.proxy.as_mut() {
+                if let Some(cert_input) = proxy_patch
+                    .mitm_ca_cert
+                    .as_ref()
+                    .and_then(|value| value.as_ref())
+                {
+                    let cert_trimmed = cert_input.trim();
+
+                    let cert = if cert_trimmed.is_empty() {
+                        Err(Report::new(ApplicationErrorResponse::BadRequest(
+                            ApiError {
+                                sub_code: "INVALID_MITM_CA_CERT_BASE64".into(),
+                                error_identifier: 400,
+                                error_message: "proxy.mitm_ca_cert must be base64-encoded"
+                                    .to_string(),
+                                error_object: None,
+                            },
+                        )))
+                    } else {
+                        let sanitized: String = cert_trimmed.split_whitespace().collect();
+                        let decoded = general_purpose::STANDARD
+                            .decode(sanitized.as_bytes())
+                            .map_err(|e| {
+                                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_MITM_CA_CERT_BASE64".into(),
+                                    error_identifier: 400,
+                                    error_message: format!(
+                                        "Invalid base64 for proxy.mitm_ca_cert: {e}"
+                                    ),
+                                    error_object: None,
+                                }))
+                            })?;
+
+                        String::from_utf8(decoded).map_err(|e| {
+                            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_MITM_CA_CERT_UTF8".into(),
+                                error_identifier: 400,
+                                error_message: format!(
+                                    "Decoded proxy.mitm_ca_cert is not valid UTF-8: {e}"
+                                ),
+                                error_object: None,
+                            }))
+                        })
+                    }?;
+
+                    proxy_patch.mitm_ca_cert = Some(Some(cert));
+                }
+            }
+
+            let mut merged_config = config;
+            merged_config.apply(override_patch);
+
+            tracing::info!("Config override applied successfully");
+
+            Ok(Arc::new(merged_config))
+        }
+    }
+}
+
+pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
+    match (base_val, override_val) {
+        (Value::Object(base_map), Value::Object(override_map)) => {
+            let mut merged = base_map.clone();
+            for (key, override_value) in override_map {
+                let base_value = base_map.get(key).unwrap_or(&Value::Null);
+                merged.insert(key.clone(), merge_configs(override_value, base_value));
+            }
+            Value::Object(merged)
+        }
+        // override replaces base for primitive, null, or array
+        (_, override_val) => override_val.clone(),
+    }
+}
+
+fn parse_metadata<'a>(
+    metadata: &'a metadata::MetadataMap,
+    key: &str,
+) -> CustomResult<&'a str, ApplicationErrorResponse> {
+    metadata
+        .get(key)
+        .ok_or_else(|| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_METADATA".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing {key} in request metadata"),
+                error_object: None,
+            }))
+        })
+        .and_then(|value| {
+            value.to_str().map_err(|e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".to_string(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid {key} in request metadata: {e}"),
+                    error_object: None,
+                }))
+            })
+        })
+}
+
+fn parse_optional_metadata<'a>(
+    metadata: &'a metadata::MetadataMap,
+    key: &str,
+) -> CustomResult<Option<&'a str>, ApplicationErrorResponse> {
+    metadata
+        .get(key)
+        .map(|value| value.to_str())
+        .transpose()
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_METADATA".to_string(),
+                error_identifier: 400,
+                error_message: format!("Invalid {key} in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
 }
 
 pub fn log_before_initialization<T>(

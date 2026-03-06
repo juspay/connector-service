@@ -30,6 +30,11 @@ exclude = [
 ]
 
 
+[workspace.dependencies]
+superposition_core = { git = "https://github.com/juspay/superposition", branch = "main" }
+uuid = "^1.20.0"
+serde = "1.0.215"
+
 [profile.release]
 strip = true
 lto = "thin"
