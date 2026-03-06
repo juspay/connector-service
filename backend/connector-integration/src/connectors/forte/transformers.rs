@@ -1,5 +1,6 @@
 use super::ForteRouterData;
 use common_enums::enums;
+use common_enums::BankType;
 use common_utils::types::FloatMajorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, Void},
@@ -9,7 +10,9 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     utils,
@@ -35,13 +38,28 @@ impl TryFrom<&Option<serde_json::Value>> for ForteMeta {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum FortePaymentMethod<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
+    Card(Card<T>),
+    Echeck(ForteEcheckWrapper),
+}
+
+#[derive(Debug, Serialize)]
+pub struct ForteEcheckWrapper {
+    echeck: ForteEcheck,
+}
+
+#[derive(Debug, Serialize)]
 pub struct FortePaymentsRequest<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     action: ForteAction,
     authorization_amount: FloatMajorUnit,
     billing_address: BillingAddress,
-    card: Card<T>,
+    #[serde(flatten)]
+    payment_method: FortePaymentMethod<T>,
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BillingAddress {
@@ -68,6 +86,40 @@ pub enum ForteCardType {
     Discover,
     DinersClub,
     Jcb,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ForteEcheck {
+    sec_code: ForteSecCode,
+    account_type: ForteAccountType,
+    routing_number: Secret<String>,
+    account_number: Secret<String>,
+    account_holder: Secret<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum ForteAccountType {
+    Checking,
+    Savings,
+}
+
+impl From<BankType> for ForteAccountType {
+    fn from(bank_type: BankType) -> Self {
+        match bank_type {
+            BankType::Checking => Self::Checking,
+            BankType::Savings => Self::Savings,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum ForteSecCode {
+    WEB,
+    PPD,
+    TEL,
+    CCD,
 }
 
 impl TryFrom<utils::CardIssuer> for ForteCardType {
@@ -161,14 +213,85 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     action,
                     authorization_amount,
                     billing_address,
-                    card,
+                    payment_method: FortePaymentMethod::Card(card),
                 })
             }
+            PaymentMethodData::BankDebit(ref bank_debit_data) => match bank_debit_data {
+                BankDebitData::AchBankDebit {
+                    account_number,
+                    routing_number,
+                    bank_account_holder_name,
+                    bank_type,
+                    ..
+                } => {
+                    let action = match item.router_data.request.is_auto_capture()? {
+                        true => ForteAction::Sale,
+                        false => ForteAction::Authorize,
+                    };
+
+                    let account_holder = bank_account_holder_name
+                        .clone()
+                        .or_else(|| {
+                            item.router_data
+                                .resource_common_data
+                                .get_billing_full_name()
+                                .ok()
+                        })
+                        .ok_or(ConnectorError::MissingRequiredField {
+                            field_name: "bank_account_holder_name",
+                        })?;
+
+                    let account_type = bank_type
+                        .map(ForteAccountType::from)
+                        .unwrap_or(ForteAccountType::Checking);
+
+                    let echeck = ForteEcheck {
+                        sec_code: ForteSecCode::WEB,
+                        account_type,
+                        routing_number: routing_number.clone(),
+                        account_number: account_number.clone(),
+                        account_holder,
+                    };
+
+                    let address = item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_address()?;
+                    let first_name = address.get_first_name()?;
+                    let billing_address = BillingAddress {
+                        first_name: first_name.clone(),
+                        last_name: address.get_last_name().unwrap_or(first_name).clone(),
+                    };
+
+                    let authorization_amount = item
+                        .connector
+                        .amount_converter
+                        .convert(
+                            item.router_data.request.minor_amount,
+                            item.router_data.request.currency,
+                        )
+                        .change_context(ConnectorError::RequestEncodingFailed)?;
+
+                    Ok(Self {
+                        action,
+                        authorization_amount,
+                        billing_address,
+                        payment_method: FortePaymentMethod::Echeck(ForteEcheckWrapper { echeck }),
+                    })
+                }
+                BankDebitData::SepaBankDebit { .. }
+                | BankDebitData::BecsBankDebit { .. }
+                | BankDebitData::BacsBankDebit { .. }
+                | BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                    Err(ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("Forte"),
+                    ))?
+                }
+            },
             PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Wallet(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
             | PaymentMethodData::BankTransfer(_)
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::MandatePayment
@@ -273,6 +396,16 @@ pub struct CardResponse {
     pub card_type: Option<String>,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct EcheckResponse {
+    pub account_holder: Option<Secret<String>>,
+    pub masked_account_number: String,
+    pub last_4_account_number: String,
+    pub routing_number: String,
+    pub account_type: String,
+    pub sec_code: String,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ForteResponseCode {
     A01,
@@ -331,6 +464,7 @@ pub struct FortePaymentsResponse {
     pub entered_by: String,
     pub billing_address: Option<BillingAddress>,
     pub card: Option<CardResponse>,
+    pub echeck: Option<EcheckResponse>,
     pub response: ResponseStatus,
 }
 
@@ -388,6 +522,7 @@ pub struct FortePaymentsSyncResponse {
     pub received_date: String,
     pub origination_date: Option<String>,
     pub card: Option<CardResponse>,
+    pub echeck: Option<EcheckResponse>,
     pub attempt_number: i64,
     pub response: ResponseStatus,
     pub links: ForteLink,
