@@ -84,4 +84,30 @@ open class ConnectorClient(
 
         return responseParser.parseFrom(resultBytes)
     }
+
+    /**
+     * Execute a single-step flow directly via FFI (no HTTP round-trip).
+     * Used for inbound flows like webhook processing where the connector sends data to us.
+     *
+     * @param flow Flow name matching the FFI transformer (e.g. "handle").
+     * @param requestBytes Serialized protobuf request bytes.
+     * @param responseParser Protobuf parser for the expected response type.
+     * @param metadata Map with connector routing and auth info.
+     * @param optionsBytes Optional FfiOptions serialized to bytes. Pass null for default.
+     * @return Parsed protobuf response.
+     */
+    fun <T : MessageLite> executeDirect(
+        flow: String,
+        requestBytes: ByteArray,
+        responseParser: Parser<T>,
+        metadata: Map<String, String>,
+        optionsBytes: ByteArray? = null,
+    ): T {
+        val transformer = FlowRegistry.directTransformers[flow]
+            ?: error("Unknown single-step flow: '$flow'. Register it via a {flow}_transformer in services/payments.rs and run `make generate`.")
+
+        val opts = optionsBytes ?: ByteArray(0)
+        val resultBytes = transformer(requestBytes, metadata, opts)
+        return responseParser.parseFrom(resultBytes)
+    }
 }

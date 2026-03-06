@@ -1,12 +1,22 @@
 use external_services;
 use grpc_api_types::payments::{
-    CustomerServiceCreateRequest, CustomerServiceCreateResponse,
-    MerchantAuthenticationServiceCreateAccessTokenRequest,
-    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
+    CustomerServiceCreateRequest, CustomerServiceCreateResponse, EventServiceHandleRequest,
+    EventServiceHandleResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse,
+    MerchantAuthenticationServiceCreateSessionTokenRequest,
+    MerchantAuthenticationServiceCreateSessionTokenResponse,
+    PaymentMethodAuthenticationServiceAuthenticateRequest,
+    PaymentMethodAuthenticationServiceAuthenticateResponse,
+    PaymentMethodAuthenticationServicePostAuthenticateRequest,
+    PaymentMethodAuthenticationServicePostAuthenticateResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest,
+    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
     PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
-    PaymentServiceReverseResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
+    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
 };
 
@@ -15,15 +25,19 @@ use crate::macros::{req_transformer, res_transformer};
 
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, PSync, Refund,
-        RepeatPayment, Void, VoidPC,
+        Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
+        CreateSessionToken, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
+        RepeatPayment, SetupMandate, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
-        RefundsResponseData, RepeatPaymentData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
     },
 };
 
@@ -246,3 +260,220 @@ res_transformer!(
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_repeat_payment_response,
 );
+
+// create session token request transformer
+req_transformer!(
+    fn_name: create_session_token_req_transformer,
+    request_type: MerchantAuthenticationServiceCreateSessionTokenRequest,
+    flow_marker: CreateSessionToken,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: SessionTokenRequestData,
+    response_data_type: SessionTokenResponseData,
+);
+
+// create session token response transformer
+res_transformer!(
+    fn_name: create_session_token_res_transformer,
+    request_type: MerchantAuthenticationServiceCreateSessionTokenRequest,
+    response_type: MerchantAuthenticationServiceCreateSessionTokenResponse,
+    flow_marker: CreateSessionToken,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: SessionTokenRequestData,
+    response_data_type: SessionTokenResponseData,
+    generate_response_fn: generate_session_token_response,
+);
+
+// setup recurring (setup mandate) request transformer
+req_transformer!(
+    fn_name: setup_recurring_req_transformer,
+    request_type: PaymentServiceSetupRecurringRequest,
+    flow_marker: SetupMandate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: SetupMandateRequestData<T>,
+    response_data_type: PaymentsResponseData,
+);
+
+// setup recurring (setup mandate) response transformer
+res_transformer!(
+    fn_name: setup_recurring_res_transformer,
+    request_type: PaymentServiceSetupRecurringRequest,
+    response_type: PaymentServiceSetupRecurringResponse,
+    flow_marker: SetupMandate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: SetupMandateRequestData<T>,
+    response_data_type: PaymentsResponseData,
+    generate_response_fn: generate_setup_mandate_response,
+);
+
+// tokenize (payment method token) request transformer
+req_transformer!(
+    fn_name: tokenize_req_transformer,
+    request_type: PaymentMethodServiceTokenizeRequest,
+    flow_marker: PaymentMethodToken,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentMethodTokenizationData<T>,
+    response_data_type: PaymentMethodTokenResponse,
+);
+
+// tokenize (payment method token) response transformer
+res_transformer!(
+    fn_name: tokenize_res_transformer,
+    request_type: PaymentMethodServiceTokenizeRequest,
+    response_type: PaymentMethodServiceTokenizeResponse,
+    flow_marker: PaymentMethodToken,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentMethodTokenizationData<T>,
+    response_data_type: PaymentMethodTokenResponse,
+    generate_response_fn: generate_create_payment_method_token_response,
+);
+
+// pre_authenticate request transformer
+req_transformer!(
+    fn_name: pre_authenticate_req_transformer,
+    request_type: PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    flow_marker: PreAuthenticate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsPreAuthenticateData<T>,
+    response_data_type: PaymentsResponseData,
+);
+
+// pre_authenticate response transformer
+res_transformer!(
+    fn_name: pre_authenticate_res_transformer,
+    request_type: PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    response_type: PaymentMethodAuthenticationServicePreAuthenticateResponse,
+    flow_marker: PreAuthenticate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsPreAuthenticateData<T>,
+    response_data_type: PaymentsResponseData,
+    generate_response_fn: generate_payment_pre_authenticate_response,
+);
+
+// authenticate request transformer
+req_transformer!(
+    fn_name: authenticate_req_transformer,
+    request_type: PaymentMethodAuthenticationServiceAuthenticateRequest,
+    flow_marker: Authenticate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsAuthenticateData<T>,
+    response_data_type: PaymentsResponseData,
+);
+
+// authenticate response transformer
+res_transformer!(
+    fn_name: authenticate_res_transformer,
+    request_type: PaymentMethodAuthenticationServiceAuthenticateRequest,
+    response_type: PaymentMethodAuthenticationServiceAuthenticateResponse,
+    flow_marker: Authenticate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsAuthenticateData<T>,
+    response_data_type: PaymentsResponseData,
+    generate_response_fn: generate_payment_authenticate_response,
+);
+
+// post_authenticate request transformer
+req_transformer!(
+    fn_name: post_authenticate_req_transformer,
+    request_type: PaymentMethodAuthenticationServicePostAuthenticateRequest,
+    flow_marker: PostAuthenticate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsPostAuthenticateData<T>,
+    response_data_type: PaymentsResponseData,
+);
+
+// post_authenticate response transformer
+res_transformer!(
+    fn_name: post_authenticate_res_transformer,
+    request_type: PaymentMethodAuthenticationServicePostAuthenticateRequest,
+    response_type: PaymentMethodAuthenticationServicePostAuthenticateResponse,
+    flow_marker: PostAuthenticate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsPostAuthenticateData<T>,
+    response_data_type: PaymentsResponseData,
+    generate_response_fn: generate_payment_post_authenticate_response,
+);
+
+/// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
+///
+/// The caller supplies the raw webhook body + headers received from the connector
+/// and gets back a fully-structured `EventServiceHandleResponse`.
+///
+/// External source verification (async HTTP used by PayPal / Stripe) is **not**
+/// performed here; only local synchronous signature verification is done.
+/// The gRPC server performs external verification before calling its equivalent path.
+pub fn handle_event_transformer(
+    payload: EventServiceHandleRequest,
+    _config: &std::sync::Arc<ucs_env::configs::Config>,
+    connector: domain_types::connector_types::ConnectorEnum,
+    connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
+    _metadata: &common_utils::metadata::MaskedMetadata,
+) -> Result<EventServiceHandleResponse, FfiPaymentError> {
+    use domain_types::utils::ForeignTryFrom as _;
+
+    let map_app_err = |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
+        FfiPaymentError::new(
+            grpc_api_types::payments::PaymentStatus::Pending,
+            Some(e.to_string()),
+            None,
+            Some(500),
+        )
+    };
+
+    let request_details = payload
+        .request_details
+        .ok_or_else(|| {
+            FfiPaymentError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some("missing request_details in payload".to_string()),
+                None,
+                Some(400),
+            )
+        })
+        .and_then(|rd| {
+            RequestDetails::foreign_try_from(rd).map_err(|e| {
+                FfiPaymentError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(e.to_string()),
+                    None,
+                    Some(400),
+                )
+            })
+        })?;
+
+    let webhook_secrets = payload
+        .webhook_secrets
+        .map(|ws| {
+            ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| {
+                FfiPaymentError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(e.to_string()),
+                    None,
+                    Some(400),
+                )
+            })
+        })
+        .transpose()?;
+
+    let connector_data: connector_integration::types::ConnectorData<
+        domain_types::payment_method_data::DefaultPCIHolder,
+    > = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+
+    // Local synchronous source verification only (no external HTTP call in FFI).
+    let source_verified = connector_data
+        .connector
+        .verify_webhook_source(
+            request_details.clone(),
+            webhook_secrets.clone(),
+            Some(connector_auth_details.clone()),
+        )
+        .unwrap_or(false);
+
+    connector_integration::webhook_utils::process_webhook_event(
+        connector_data,
+        request_details,
+        webhook_secrets,
+        Some(connector_auth_details),
+        source_verified,
+    )
+    .map_err(map_app_err)
+}

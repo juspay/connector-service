@@ -105,4 +105,33 @@ class _ConnectorClientBase:
         response_msg.ParseFromString(result_bytes_res)
         return response_msg
 
+    def _execute_direct(self, flow: str, request, metadata: dict, response_cls, ffi_options: FfiOptions = None):
+        """Execute a single-step flow: FFI transformer called directly, no HTTP round-trip.
+
+        Used for webhook processing and other inbound flows where the connector sends
+        data to us, so there is no outgoing HTTP request to build.
+
+        Args:
+            flow: Flow name matching the FFI transformer (e.g. "handle").
+            request: A protobuf request message.
+            metadata: Dict with connector routing and auth info.
+            response_cls: Protobuf message class to deserialize the response into.
+            ffi_options: Optional FfiOptions protobuf message override.
+
+        Returns:
+            A deserialized protobuf response message.
+        """
+        transformer = getattr(_ffi, f"{flow}_transformer")
+
+        request_bytes = request.SerializeToString()
+
+        ffi = ffi_options or self.options.ffi
+        options_bytes = ffi.SerializeToString() if ffi else b""
+
+        result_bytes = transformer(request_bytes, metadata, options_bytes)
+
+        response_msg = response_cls()
+        response_msg.ParseFromString(result_bytes)
+        return response_msg
+
 

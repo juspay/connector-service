@@ -11,7 +11,7 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { PaymentClient, MerchantAuthenticationClient, payments, configs } from "hyperswitch-payments";
+import { PaymentClient,MerchantAuthenticationClient, payments, configs } from "hyperswitch-payments";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
