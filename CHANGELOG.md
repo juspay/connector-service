@@ -19,6 +19,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.03.06.0
+
+### Features
+
+- Ach bankdebit integration for checkout ([#547](https://github.com/juspay/connector-service/pull/547)) ([`4ba9117`](https://github.com/juspay/connector-service/commit/4ba9117fcbb6d2bcde93fcb2eff6588960f98808))
+- Ach bankdebit integration for jpmorgan ([#553](https://github.com/juspay/connector-service/pull/553)) ([`61aec3b`](https://github.com/juspay/connector-service/commit/61aec3bf5f2e76aeefe2f5cad930601acb88d533))
+- Helper for multi form data as bytes to support with ffi lang ag… ([#566](https://github.com/juspay/connector-service/pull/566)) ([`d44785e`](https://github.com/juspay/connector-service/commit/d44785e87fbdc0b6e8ea66b3dadf3944865fc557))
+- FFI implementation ([#515](https://github.com/juspay/connector-service/pull/515)) ([`00e5edf`](https://github.com/juspay/connector-service/commit/00e5edf0369cb6007010b23fb26bc43dda1adf8f))
+- [PAYSAFE] ACH BankDebit ([#556](https://github.com/juspay/connector-service/pull/556)) ([`f9300f3`](https://github.com/juspay/connector-service/commit/f9300f3d040c78aee5d793ec10a56bc68325120b))
+
+### Bug Fixes
+
+- Redirect response removed ([#514](https://github.com/juspay/connector-service/pull/514)) ([`b275d05`](https://github.com/juspay/connector-service/commit/b275d05066690e080e5dfb658ccf567e9d3aea24))
+
+**Full Changelog:** [`2026.03.04.0...2026.03.06.0`](https://github.com/juspay/connector-service/compare/2026.03.04.0...2026.03.06.0)
+
+- - -
+
 ## 2026.03.03.0
 
 ### Features
