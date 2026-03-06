@@ -157,7 +157,7 @@ jobs:
 
   sdk-test:
     name: SDK Tests
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     env:
       RUSTFLAGS: "-D warnings"
