@@ -4,11 +4,10 @@ use grpc_api_types::payments::{
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
-    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse,
-    PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServiceRefundRequest,
-    PaymentServiceReverseRequest, PaymentServiceReverseResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
-    RecurringPaymentServiceChargeResponse, RefundResponse,
+    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
+    PaymentServiceReverseResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
 };
 
 use crate::errors::{FfiError, FfiPaymentError};
@@ -16,14 +15,15 @@ use crate::macros::{req_transformer, res_transformer};
 
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, PSync, Refund,
-        RepeatPayment, Void, VoidPC, CreateOrder,
+        Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, PSync, Refund,
+        RepeatPayment, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ConnectorCustomerResponse, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
+        RefundsResponseData, RepeatPaymentData,
     },
 };
 
