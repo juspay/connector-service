@@ -199,3 +199,12 @@ jobs:
       - name: Run SDK Tests
         shell: bash
         run: make -C sdk test
+
+      - name: Regenerate SDK code
+        shell: bash
+        run: make -C sdk generate
+
+      - name: Check for uncommitted changes
+        shell: bash
+        run: |
+          git diff --exit-code || (echo "ERROR: Generated SDK code is out of date. Run 'make -C sdk generate' and commit the changes." && exit 1)
