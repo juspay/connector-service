@@ -44,8 +44,9 @@ use interfaces::{
 use serde::Serialize;
 
 use self::transformers::{
-    Shift4AuthType, Shift4CaptureRequest, Shift4ErrorResponse, Shift4PSyncRequest,
-    Shift4PaymentsRequest, Shift4PaymentsResponse as Shift4AuthorizeResponse,
+    Shift4AuthType, Shift4CaptureRequest, Shift4ErrorResponse,
+    Shift4IncrementalAuthorizationRequest, Shift4IncrementalAuthorizationResponse,
+    Shift4PSyncRequest, Shift4PaymentsRequest, Shift4PaymentsResponse as Shift4AuthorizeResponse,
     Shift4PaymentsResponse as Shift4CaptureResponse, Shift4PaymentsResponse as Shift4PSyncResponse,
     Shift4RSyncRequest, Shift4RefundRequest, Shift4RefundResponse,
     Shift4RefundResponse as Shift4RSyncResponse,
@@ -60,16 +61,6 @@ pub(crate) mod headers {
 }
 
 // ===== CONNECTOR COMMON IMPLEMENTATION - Must be defined before macros =====
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Shift4<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Shift4<T>
@@ -199,6 +190,12 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
+            flow: IncrementalAuthorization,
+            request_body: Shift4IncrementalAuthorizationRequest,
+            response_body: Shift4IncrementalAuthorizationResponse,
+            router_data: RouterDataV2<IncrementalAuthorization, PaymentFlowData, PaymentsIncrementalAuthorizationData, PaymentsResponseData>,
+        ),
+        (
             flow: PSync,
             request_body: Shift4PSyncRequest,
             response_body: Shift4PSyncResponse,
@@ -321,6 +318,42 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
             Ok(format!("{base_url}/charges/{connector_transaction_id}"))
+        }
+    }
+);
+
+// IncrementalAuthorization Flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Shift4,
+    curl_request: Json(Shift4IncrementalAuthorizationRequest),
+    curl_response: Shift4IncrementalAuthorizationResponse,
+    flow_name: IncrementalAuthorization,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsIncrementalAuthorizationData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<IncrementalAuthorization, PaymentFlowData, PaymentsIncrementalAuthorizationData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<IncrementalAuthorization, PaymentFlowData, PaymentsIncrementalAuthorizationData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_transaction_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{base_url}/charges/{connector_transaction_id}/increment-authorization"))
         }
     }
 );
