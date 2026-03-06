@@ -218,5 +218,8 @@ pub use self::zift::Zift;
 pub mod revolv3;
 pub use self::revolv3::Revolv3;
 
+pub mod ppro;
+pub use self::ppro::Ppro;
+
 pub mod truelayer;
 pub use self::truelayer::Truelayer;
