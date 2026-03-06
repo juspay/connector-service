@@ -7479,7 +7479,6 @@ impl ForeignTryFrom<grpc_api_types::payments::MitCategory> for common_enums::Mit
     }
 }
 
-#[allow(clippy::result_large_err)]
 pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
     router_data_v2: RouterDataV2<
         SetupMandate,
