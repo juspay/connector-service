@@ -83,7 +83,7 @@ generate-proto:
 # stubs. Proto is generated first since the Kotlin code may reference those
 # types at compile time.
 # ---------------------------------------------------------------------------
-generate-all: generate-proto generate-bindings
+generate-all: generate-proto generate-bindings generate-flows
 
 # ---------------------------------------------------------------------------
 # generate-flows
@@ -126,7 +126,13 @@ install: pack-archive
 # ---------------------------------------------------------------------------
 test-package: generate-all install
 	@echo "Running smoke test..."
-	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --stacktrace --debug
+	@# Copy credentials file if it exists
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json $(SDK_ROOT)/smoke-test/; \
+	else \
+		echo "  Note: creds.json not found, test will use placeholder credentials"; \
+	fi
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors stripe"
 	@echo "Package test passed."
 
 # ---------------------------------------------------------------------------
