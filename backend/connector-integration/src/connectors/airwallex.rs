@@ -193,7 +193,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Airwallex<T>
 {
-    fn should_do_access_token(&self, _payment_method: common_enums::PaymentMethod) -> bool {
+    fn should_do_access_token(&self, _payment_method: Option<common_enums::PaymentMethod>) -> bool {
         true
     }
 

@@ -1566,7 +1566,7 @@ impl PaymentService for Payments {
                     // Check if connector supports access tokens
                     let should_do_access_token = connector_data
                         .connector
-                        .should_do_access_token(payment_flow_data.payment_method);
+                        .should_do_access_token(Some(payment_flow_data.payment_method));
 
                     // Conditional token generation - ONLY if not provided in request
                     let payment_flow_data = if should_do_access_token {
@@ -1778,7 +1778,7 @@ impl PaymentService for Payments {
                     })?;
                     let should_do_access_token = connector_data
                         .connector
-                        .should_do_access_token(temp_payment_flow_data.payment_method);
+                        .should_do_access_token(Some(temp_payment_flow_data.payment_method));
 
                     if should_do_access_token {
                         // Extract access token from Hyperswitch request
@@ -2277,7 +2277,7 @@ impl PaymentService for Payments {
                     })?;
                     let should_do_access_token = connector_data
                         .connector
-                        .should_do_access_token(temp_payment_flow_data.payment_method);
+                        .should_do_access_token(Some(temp_payment_flow_data.payment_method));
 
                     if should_do_access_token {
                         // Extract access token from Hyperswitch request

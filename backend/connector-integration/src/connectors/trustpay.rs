@@ -116,10 +116,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Trustpay<T>
 {
-    fn should_do_access_token(&self, payment_method: common_enums::PaymentMethod) -> bool {
+    fn should_do_access_token(&self, payment_method: Option<common_enums::PaymentMethod>) -> bool {
         matches!(
             payment_method,
-            common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer
+            Some(
+                common_enums::PaymentMethod::BankRedirect
+                    | common_enums::PaymentMethod::BankTransfer
+            )
         )
     }
 }
