@@ -4,7 +4,7 @@ use common_utils::{
     config_patch::Patch,
     consts::{
         self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_CONNECTOR_AUTH, X_KEY1, X_KEY2,
-        X_SHADOW_MODE,
+        X_SHADOW_MODE, X_ENVIRONMENT,
     },
     errors::CustomResult,
     events::{Event, EventStage, FlowName, MaskedSerdeValue},
@@ -168,6 +168,8 @@ pub struct MetadataPayload {
     pub reference_id: Option<String>,
     pub shadow_mode: bool,
     pub resource_id: Option<String>,
+    /// Environment dimension for superposition config resolution (e.g., "production", "sandbox")
+    pub environment: Option<String>,
 }
 
 pub fn get_metadata_payload(
@@ -183,6 +185,7 @@ pub fn get_metadata_payload(
     let reference_id = reference_id_from_metadata(metadata)?;
     let resource_id = resource_id_from_metadata(metadata)?;
     let shadow_mode = shadow_mode_from_metadata(metadata);
+    let environment = environment_from_metadata(metadata);
     Ok(MetadataPayload {
         tenant_id,
         request_id,
@@ -193,6 +196,7 @@ pub fn get_metadata_payload(
         reference_id,
         shadow_mode,
         resource_id,
+        environment,
     })
 }
 
@@ -333,6 +337,14 @@ pub fn shadow_mode_from_metadata(metadata: &metadata::MetadataMap) -> bool {
         .flatten()
         .map(|value| value.to_lowercase() == "true")
         .unwrap_or(false)
+}
+
+/// Extracts environment from the x-environment header for superposition config resolution.
+pub fn environment_from_metadata(metadata: &metadata::MetadataMap) -> Option<String> {
+    parse_optional_metadata(metadata, X_ENVIRONMENT)
+        .ok()
+        .flatten()
+        .map(|s| s.to_string())
 }
 
 /// Extracts connector-specific auth from metadata headers.

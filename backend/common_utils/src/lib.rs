@@ -4,6 +4,7 @@ extern crate self as common_utils;
 
 pub mod config_patch;
 pub mod crypto;
+pub mod superposition_config;
 pub mod custom_serde;
 pub mod errors;
 pub mod ext_traits;
@@ -33,6 +34,9 @@ pub fn emit_event_with_config(_event: events::Event, _config: &events::EventConf
 pub use global_id::{CellId, GlobalPaymentId};
 pub use id_type::{CustomerId, MerchantId};
 pub use pii::{Email, SecretSerdeValue};
+pub use superposition_config::{
+    get_optional_nonempty_string, get_string, SuperpositionConfig, SuperpositionConfigError,
+};
 pub use request::{Method, Request, RequestContent};
 pub use types::{
     AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit, MinorUnitForConnector,

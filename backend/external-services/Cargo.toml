@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 error-stack = "0.4.1"
-serde = {version = "1.0.189" ,features = ["derive"]}
+serde = { workspace = true, features = ["derive"] }
 thiserror = "1.0.49"
 clap = { version = "4.0", features = ["derive"] }
 config = "0.14.0"  
