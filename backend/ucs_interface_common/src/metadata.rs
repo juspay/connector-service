@@ -14,7 +14,7 @@ use std::{str::FromStr, sync::Arc};
 use tonic::metadata;
 use ucs_env::configs;
 
-use crate::auth::resolve_connector_and_auth;
+use crate::auth::connector_and_auth_from_metadata;
 
 /// Struct to hold extracted metadata payload.
 ///
@@ -41,7 +41,7 @@ pub fn get_metadata_payload(
 ) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
     // Resolve connector and auth: try x-connector-auth header first,
     // fall back to x-connector and x-auth legacy headers.
-    let (connector, connector_auth_type) = resolve_connector_and_auth(metadata)?;
+    let (connector, connector_auth_type) = connector_and_auth_from_metadata(metadata)?;
 
     let merchant_id = merchant_id_from_metadata(metadata)?;
     let tenant_id = tenant_id_from_metadata(metadata)?;

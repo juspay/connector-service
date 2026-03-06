@@ -18,7 +18,7 @@ use crate::metadata::parse_metadata;
 /// Resolves connector and auth by trying the typed `X-Connector-Auth` header first,
 /// parsing both the connector enum and the specific auth type in one go.
 /// If not present, falls back to legacy `x-connector` and `x-auth` (+ keys) headers.
-pub fn resolve_connector_and_auth(
+pub fn connector_and_auth_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificAuth), ApplicationErrorResponse>
 {
@@ -156,7 +156,7 @@ pub fn generic_auth_from_metadata(
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
 mod tests {
-    use super::resolve_connector_and_auth;
+    use super::connector_and_auth_from_metadata;
     use common_utils::consts;
     use domain_types::{connector_types, router_data::ConnectorSpecificAuth};
     use hyperswitch_masking::ExposeInterface;
@@ -204,7 +204,7 @@ mod tests {
         let metadata = metadata_with_typed_auth("typed-key-value");
 
         let (connector, auth) =
-            resolve_connector_and_auth(&metadata).expect("typed header auth should resolve");
+            connector_and_auth_from_metadata(&metadata).expect("typed header auth should resolve");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
         match auth {
@@ -220,7 +220,7 @@ mod tests {
         let metadata = metadata_with_legacy_auth("legacy-key-value");
 
         let (connector, auth) =
-            resolve_connector_and_auth(&metadata).expect("legacy header auth should resolve");
+            connector_and_auth_from_metadata(&metadata).expect("legacy header auth should resolve");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
         match auth {
@@ -240,8 +240,8 @@ mod tests {
             json.parse().expect("valid x-connector-auth header"),
         );
 
-        let (connector, auth) =
-            resolve_connector_and_auth(&metadata).expect("typed header should take precedence");
+        let (connector, auth) = connector_and_auth_from_metadata(&metadata)
+            .expect("typed header should take precedence");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
         match auth {
@@ -256,7 +256,7 @@ mod tests {
     fn connector_auth_fails_when_no_auth_present() {
         let metadata = MetadataMap::new();
 
-        let result = resolve_connector_and_auth(&metadata);
+        let result = connector_and_auth_from_metadata(&metadata);
 
         assert!(result.is_err());
     }
