@@ -64,6 +64,7 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
             id: None,
             connector_customer_id: None,
             phone_number: None,
+            phone_country_code: None,
         }),
 
         // Auth / 3DS
