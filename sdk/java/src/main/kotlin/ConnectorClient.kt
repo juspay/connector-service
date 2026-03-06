@@ -18,14 +18,56 @@ import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 
 class ConnectorClient(
-    libPath: String? = null,
-    private val options: Options = Options.getDefaultInstance()
+    val config: ClientConfig,
+    libPath: String? = null
 ) {
     private val httpClient: okhttp3.OkHttpClient
 
     init {
         // Instance-level connection pool (OkHttpClient)
-        this.httpClient = HttpClient.createClient(options.http)
+        // Infrastructure (Proxy, Certs) fixed at client level.
+        this.httpClient = HttpClient.createClient(config.http)
+    }
+
+    /**
+     * Merges request-level overrides with client defaults to build the 
+     * final context for the Rust transformation engine.
+     */
+    private fun resolveFfiOptions(requestOptions: RequestOptions?): FfiOptions {
+        val builder = FfiOptions.newBuilder()
+            .setEnvironment(config.environment)
+            .setConnector(config.connector)
+        
+        // Prefer request-level auth override
+        if (requestOptions != null && requestOptions.hasAuth()) {
+            builder.auth = requestOptions.auth
+        } else if (config.hasAuth()) {
+            builder.auth = config.auth
+        }
+        
+        return builder.build()
+    }
+
+    /**
+     * Resolves the final timeout configuration for a request.
+     * Identity Rule: Only timeouts can be overridden per request.
+     */
+    private fun resolveTimeoutConfig(requestOptions: RequestOptions?): HttpTimeoutConfig? {
+        val clientTimeouts = if (config.hasHttp() && config.http.hasTimeouts()) config.http.timeouts else null
+        val overrideTimeouts = if (requestOptions != null && requestOptions.hasTimeouts()) requestOptions.timeouts else null
+
+        if (overrideTimeouts == null) {
+            return clientTimeouts
+        }
+
+        // Merge timeouts: override > client default
+        val builder = HttpTimeoutConfig.newBuilder()
+        if (clientTimeouts != null) {
+            builder.mergeFrom(clientTimeouts)
+        }
+        builder.mergeFrom(overrideTimeouts)
+        
+        return builder.build()
     }
 
     /**
@@ -35,7 +77,7 @@ class ConnectorClient(
      * @param requestBytes Serialized protobuf request bytes.
      * @param responseParser Protobuf parser for the expected response type.
      * @param metadata Map with connector routing and auth info.
-     * @param optionsBytes Optional FfiOptions serialized to bytes. Pass null for default.
+     * @param requestOptions Optional RequestOptions message.
      * @return Parsed protobuf response.
      */
     fun <T : MessageLite> executeFlow(
@@ -43,17 +85,20 @@ class ConnectorClient(
         requestBytes: ByteArray,
         responseParser: Parser<T>,
         metadata: Map<String, String>,
-        optionsBytes: ByteArray? = null,
+        requestOptions: RequestOptions? = null,
     ): T {
         val reqTransformer = FlowRegistry.reqTransformers[flow]
             ?: error("Unknown flow: '$flow'. Add it to sdk/flows.yaml and run `make codegen`.")
         val resTransformer = FlowRegistry.resTransformers[flow]
             ?: error("Unknown flow: '$flow'. Add it to sdk/flows.yaml and run `make codegen`.")
 
-        val opts = optionsBytes ?: ByteArray(0)
+        // 1. Resolve final configuration (Pattern-based merging)
+        val ffiOptions = resolveFfiOptions(requestOptions)
+        val optionsBytes = ffiOptions.toByteArray()
+        val timeoutConfig = resolveTimeoutConfig(requestOptions)
 
-        // 1. Build connector HTTP request via FFI (returns FfiConnectorHttpRequest protobuf bytes)
-        val connectorRequestBytes = reqTransformer(requestBytes, metadata, opts)
+        // 2. Build connector HTTP request via FFI (returns FfiConnectorHttpRequest protobuf bytes)
+        val connectorRequestBytes = reqTransformer(requestBytes, metadata, optionsBytes)
         val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
 
         val httpRequest = HttpRequest(
@@ -63,10 +108,10 @@ class ConnectorClient(
             body = if (connectorRequest.hasBody()) connectorRequest.body.toByteArray() else null
         )
 
-        // 2. Execute HTTP request via standardized HttpClient
-        val response = HttpClient.execute(httpRequest, options.http, this.httpClient)
+        // 3. Execute HTTP request via standardized HttpClient using the connection pool
+        val response = HttpClient.execute(httpRequest, timeoutConfig, this.httpClient)
 
-        // 3. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
+        // 4. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
         val ffiResponseBytes = FfiConnectorHttpResponse.newBuilder()
             .setStatusCode(response.statusCode)
             .putAllHeaders(response.headers)
@@ -74,12 +119,12 @@ class ConnectorClient(
             .build()
             .toByteArray()
 
-        // 4. Parse connector response via FFI
+        // 5. Parse connector response via FFI
         val resultBytes = resTransformer(
             ffiResponseBytes,
             requestBytes,
             metadata,
-            opts,
+            optionsBytes,
         )
 
         return responseParser.parseFrom(resultBytes)

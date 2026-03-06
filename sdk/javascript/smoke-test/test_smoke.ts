@@ -30,8 +30,8 @@ const {
 const { ClientConfig, Environment } = configs;
 
 const PAYPAL_CREDS = {
-  client_id: "ATgoxBHjmSsuOhDSgso8GZMAHi3jYq13UdcGePiT-yhL-Es_pLjQXaYLWR-pIu8hs2Hq9GMfeJTmQOsb",
-  client_secret: "EI1EawmSyw0lOF9lFGoJnu3c0ShF7ZnsxpNx5jPx1Smi5uXQ-_2cmF6w2tOCKC7A302eKuKNkKBQUlyQ",
+  client_id: "PAYPAL_CLIENT_ID_PLACEHOLDER",
+  client_secret: "PAYPAL_CLIENT_SECRET_PLACEHOLDER",
 };
 
 const metadata: Record<string, string> = {

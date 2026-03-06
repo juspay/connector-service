@@ -210,7 +210,7 @@ def gen_python_stub(flows: list[dict]) -> None:
         "#",
         "# This stub exposes dynamically-attached flow methods to static analysers",
         "# (Pylance, pyright, mypy) so IDEs offer completions and type checking.",
-        "from payments.generated.sdk_options_pb2 import FfiOptions",
+        "from payments.generated.sdk_config_pb2 import RequestOptions",
         "from payments.generated.payment_pb2 import (",
     ]
     for t in imports:
@@ -226,7 +226,7 @@ def gen_python_stub(flows: list[dict]) -> None:
     for f in flows:
         n, req, res = f["name"], f["request"], f["response"]
         lines.append(
-            f"    def {n}(self, request: {req}, metadata: dict, options: FfiOptions | None = ...) -> {res}:"
+            f"    def {n}(self, request: {req}, metadata: dict, options: RequestOptions | None = ...) -> {res}:"
         )
         lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
         lines.append(f"        ...")
@@ -384,9 +384,9 @@ def gen_kotlin(flows: list[dict]) -> None:
         n, req, res = f["name"], f["request"], f["response"]
         lines.append(flow_comment(f, "//"))
         lines.append(
-            f"fun ConnectorClient.{n}(request: {req}, metadata: Map<String, String>, options: FfiOptions? = null): {res} ="
+            f"fun ConnectorClient.{n}(request: {req}, metadata: Map<String, String>, options: RequestOptions? = null): {res} ="
         )
-        lines.append(f'    executeFlow("{n}", request.toByteArray(), {res}.parser(), metadata, options?.toByteArray())')
+        lines.append(f'    executeFlow("{n}", request.toByteArray(), {res}.parser(), metadata, options)')
         lines.append("")
 
     write(

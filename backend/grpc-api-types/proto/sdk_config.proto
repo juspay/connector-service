@@ -58,16 +58,16 @@ message RequestOptions {
   // Override authentication for this specific request (useful for multi-tenancy)
   optional ConnectorAuth auth = 1;
 
-  // Override HTTP settings (e.g. timeouts) for this specific request
-  optional HttpConfig http = 2;
+  // Override HTTP timeouts for this specific request
+  optional HttpTimeoutConfig timeouts = 2;
 }
 
 // ============================================================
 // Transport Configuration (SDK-side)
 // ============================================================
 
-// HTTP client configuration options
-message HttpConfig {
+// HTTP timeout configuration
+message HttpTimeoutConfig {
   // Total timeout for entire request lifecycle (milliseconds)
   optional uint32 total_timeout_ms = 1;
 
@@ -79,13 +79,19 @@ message HttpConfig {
 
   // Keep-alive timeout for pooled connections (milliseconds)
   optional uint32 keep_alive_timeout_ms = 4;
+}
+
+// HTTP client configuration options (Infrastructure level)
+message HttpConfig {
+  // Timeouts configuration
+  optional HttpTimeoutConfig timeouts = 1;
 
   // Proxy configuration
-  optional ProxyOptions proxy = 5;
+  optional ProxyOptions proxy = 2;
 
   // CA certificate for pinning.
   // Supports both binary DER and text-based PEM formats.
-  optional CaCert ca_cert = 6;
+  optional CaCert ca_cert = 3;
 }
 
 // CA certificate message wrapper
@@ -114,8 +120,7 @@ message ProxyOptions {
 // FFI Options (Internal Boundary)
 // ============================================================
 
-// Internal context passed across the FFI boundary to the Rust engine.
-// Rust uses this to select the correct transformation logic and TOML config.
+// Internal context passed across the FFI boundary to the UCS core.
 message FfiOptions {
   // Required: Rust must know which environment (.toml) to use for config lookup
   Environment environment = 1;

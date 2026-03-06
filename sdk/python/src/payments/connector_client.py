@@ -3,7 +3,7 @@ ConnectorClient — high-level wrapper around UniFFI FFI bindings.
 
 Handles the full round-trip for any payment flow:
   1. Build connector HTTP request via {flow}_req_transformer (FFI)
-  2. Execute the HTTP request via requests library
+  2. Execute the HTTP request via httpx library
   3. Parse the connector response via {flow}_res_transformer (FFI)
 
 Flow methods (authorize, capture, void, refund, …) are attached dynamically
@@ -12,50 +12,77 @@ To add a new flow: edit sdk/flows.yaml and run `make codegen`.
 """
 
 import json
+from typing import Dict, Optional
 
 import payments.generated.connector_service_ffi as _ffi
 import payments.generated.payment_pb2 as _pb2
-import requests as http_requests
-
 from payments._generated_flows import FLOW_RESPONSES
-from payments.generated.sdk_options_pb2 import FfiOptions
-from .http_client import execute, HttpRequest, create_session, resolve_proxy_config, Defaults
-from .generated.payment_pb2 import PaymentServiceAuthorizeResponse, PaymentServiceAuthorizeRequest
-from .generated.sdk_options_pb2 import Options, FfiOptions, FfiConnectorHttpRequest, FfiConnectorHttpResponse
-from .generated.connector_service_ffi import authorize_req_transformer, authorize_res_transformer
-from typing import Dict, Optional
+from payments.generated.sdk_config_pb2 import (
+    FfiOptions, 
+    ClientConfig, 
+    RequestOptions, 
+    FfiConnectorHttpRequest, 
+    FfiConnectorHttpResponse,
+    HttpTimeoutConfig
+)
+from .http_client import execute, HttpRequest, create_client, Defaults
 
 
 class ConnectorClient:
     """High-level client for connector payment operations via UniFFI FFI."""
 
-    def __init__(self, lib_path: Optional[str] = None, options: Optional[Options] = None):
+    def __init__(self, config: ClientConfig, lib_path: Optional[str] = None):
         """
         Initialize the client.
         
         Args:
+            config: Initialization configuration (connector, environment, auth, http).
             lib_path: Optional path to the shared library.
-            options: Unified SDK configuration (http, ffi).
         """
-        self.options = options or Options()
+        self.config = config
         # Instance-level cache: create the primary connection pool at startup
-        self.session = create_session(self.options.http)
-    
-    def _execute_flow(self, flow: str, request, metadata: dict, ffi_options: FfiOptions = None):
-        """Execute a full payment flow round-trip: FFI request build -> HTTP -> FFI response parse.
+        # Infrastructure (Certs, Proxy) and default timeouts are fixed here.
+        self.client = create_client(self.config.http if self.config.HasField('http') else None)
 
-        Args:
-            flow: Flow name matching the FFI transformer prefix (e.g. "authorize", "capture").
-            request: A protobuf request message.
-            metadata: Dict with connector routing and auth info. Must include:
-                - "connector": connector name (e.g. "Stripe")
-                - "connector_auth_type": JSON string of auth config
-                - x-* headers for masked metadata
-            ffi_options: Optional FfiOptions protobuf message override.
-
-        Returns:
-            A deserialized protobuf response message.
+    def _resolve_ffi_options(self, request_options: Optional[RequestOptions] = None) -> FfiOptions:
         """
+        Merges request-level overrides with client defaults to build the 
+        final context for the Rust transformation engine.
+        """
+        # Resolve Auth: Prefer request-level override, fallback to client default
+        auth = request_options.auth if (request_options and request_options.HasField('auth')) else self.config.auth
+        
+        return FfiOptions(
+            environment=self.config.environment,
+            connector=self.config.connector,
+            auth=auth
+        )
+
+    def _resolve_timeout_config(self, request_options: Optional[RequestOptions] = None) -> Optional[HttpTimeoutConfig]:
+        """
+        Resolves the final timeout configuration for a request.
+        Identity Rule: Only timeouts can be overridden per request.
+        """
+        client_timeouts = self.config.http.timeouts if (self.config.HasField('http') and self.config.http.HasField('timeouts')) else None
+        override_timeouts = request_options.timeouts if (request_options and request_options.HasField('timeouts')) else None
+
+        if not override_timeouts:
+            return client_timeouts
+
+        # Merge timeouts: override > client default
+        merged = HttpTimeoutConfig()
+        if client_timeouts:
+            merged.CopyFrom(client_timeouts)
+        
+        if override_timeouts.HasField('total_timeout_ms'): merged.total_timeout_ms = override_timeouts.total_timeout_ms
+        if override_timeouts.HasField('connect_timeout_ms'): merged.connect_timeout_ms = override_timeouts.connect_timeout_ms
+        if override_timeouts.HasField('response_timeout_ms'): merged.response_timeout_ms = override_timeouts.response_timeout_ms
+        if override_timeouts.HasField('keep_alive_timeout_ms'): merged.keep_alive_timeout_ms = override_timeouts.keep_alive_timeout_ms
+        
+        return merged
+
+    def _execute_flow(self, flow: str, request, metadata: dict, request_options: Optional[RequestOptions] = None):
+        """Execute a full payment flow round-trip."""
         cls_name = FLOW_RESPONSES.get(flow)
         if cls_name is None:
             raise ValueError(
@@ -68,12 +95,11 @@ class ConnectorClient:
 
         request_bytes = request.SerializeToString()
 
-        # Resolve FFI options (prefer call-specific override)
-        ffi = ffi_options or self.options.ffi
-        options_bytes = ffi.SerializeToString() if ffi else b""
+        # 1. Resolve final configuration (Pattern-based merging)
+        ffi_options = self._resolve_ffi_options(request_options)
+        options_bytes = ffi_options.SerializeToString()
 
-        # Step 2: Build the connector HTTP request via FFI (returns Protobuf bytes)
-        # The FFI transformer handles the mapping from domain types to raw HTTP details.
+        # 2. Build the connector HTTP request via FFI
         result_bytes = req_transformer(request_bytes, metadata, options_bytes)
         connector_req = FfiConnectorHttpRequest.FromString(result_bytes)
         
@@ -84,22 +110,17 @@ class ConnectorClient:
             body=connector_req.body
         )
 
-        # Step 3: Execute the HTTP request using the instance-owned pool
-        # We resolve the proxy configuration specifically for this target URL.
-        proxy_config = resolve_proxy_config(connector_req.url, self.options.http.proxy)
+        # 3. Resolve Timeout Config (precedence logic)
+        timeout_config = self._resolve_timeout_config(request_options)
 
-        # Map Protobuf timeouts to primitive floats for the engine
-        http = self.options.http
+        # 4. Execute HTTP using the instance-owned client
         response = execute(
             connector_request, 
-            self.session,
-            connect_timeout_ms=float(http.connect_timeout_ms or Defaults.CONNECT_TIMEOUT_MS),
-            response_timeout_ms=float(http.response_timeout_ms or Defaults.RESPONSE_TIMEOUT_MS),
-            total_timeout_ms=float(http.total_timeout_ms or Defaults.TOTAL_TIMEOUT_MS),
-            proxy_config=proxy_config
+            self.client,
+            timeout_config=timeout_config
         )
 
-        # We wrap the native response in an internal FFI Protobuf record for safe binary transport.
+        # 5. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
         res_proto = FfiConnectorHttpResponse(
             status_code=response.status_code,
             headers=response.headers,
@@ -107,6 +128,7 @@ class ConnectorClient:
         )
         res_bytes = res_proto.SerializeToString()
 
+        # 6. Parse connector response via FFI
         result_bytes_res = res_transformer(
             res_bytes,
             request_bytes,
@@ -114,14 +136,14 @@ class ConnectorClient:
             options_bytes
         )
 
-        # Step 5: Deserialize the final domain protobuf response
+        # 7. Deserialize the final domain protobuf response
         response_msg = response_cls()
         response_msg.ParseFromString(result_bytes_res)
         return response_msg
 
 
 def _make_flow_method(flow: str):
-    def method(self, request, metadata: dict, options: FfiOptions = None):
+    def method(self, request, metadata: dict, options: Optional[RequestOptions] = None):
         return self._execute_flow(flow, request, metadata, options)
 
     method.__name__ = flow
@@ -130,6 +152,5 @@ def _make_flow_method(flow: str):
 
 
 # Attach a method for every flow registered in _generated_flows.py.
-# No flow names are hardcoded above — only _generated_flows.py is machine-written.
 for _flow in FLOW_RESPONSES:
     setattr(ConnectorClient, _flow, _make_flow_method(_flow))

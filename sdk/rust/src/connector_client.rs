@@ -2,102 +2,99 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::http_client::{
-    HttpClient, HttpClientError, HttpOptions as NativeHttpOptions,
-    HttpRequest as ClientHttpRequest, ProxyConfig,
+    HttpClient, HttpClientError, HttpTimeoutConfig as NativeHttpTimeoutConfig,
+    HttpRequest as ClientHttpRequest, HttpOptions as NativeHttpOptions,
 };
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
 use domain_types::router_response_types::Response;
 use grpc_api_types::payments::{
-    FfiOptions, Options, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+    FfiOptions, ClientConfig, RequestOptions, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse
 };
+use domain_types::router_data::ConnectorSpecificAuth;
+use domain_types::utils::ForeignTryFrom;
 
-/// A Rust-native connector client that calls handler functions directly.
-/// Owns its primary connection pool (http_client).
+/// ConnectorClient — high-level Rust wrapper for the Connector Service.
+///
+/// Handles the full round-trip for any payment flow:
+///   1. Build connector HTTP request via Rust core handlers
+///   2. Execute the HTTP request via our standardized HttpClient (reqwest)
+///   3. Parse the connector response via Rust core handlers
+///
+/// This client owns its primary connection pool (http_client).
 pub struct ConnectorClient {
     http_client: HttpClient,
-    options: Options,
+    config: ClientConfig,
 }
 
 impl ConnectorClient {
-    /**
-     * @param options - unified SDK configuration (http, ffi)
-     */
-    pub fn new(options: Options) -> Result<Self, HttpClientError> {
+    /// Initialize a new ConnectorClient.
+    ///
+    /// # Arguments
+    /// * `config` - The ClientConfig protobuf message defining the connector, 
+    ///              environment, and default settings.
+    pub fn new(config: ClientConfig) -> Result<Self, HttpClientError> {
         // Map the Protobuf options to native transport options
-        let native_opts = Self::get_native_http_options(&options.http);
+        // Identity Rule: Infrastructure settings (Proxy, Certs) are fixed at client level.
+        let native_opts = match config.http.as_ref() {
+            Some(http_proto) => NativeHttpOptions::from(http_proto),
+            None => NativeHttpOptions::default(),
+        };
 
-        // Initialize the connection pool.
         let http_client = HttpClient::new(native_opts)?;
 
         Ok(Self {
             http_client,
-            options,
+            config,
         })
     }
 
-    /// Internal helper to map Protobuf HttpOptions to Native HttpClient options.
-    fn get_native_http_options(
-        proto: &Option<grpc_api_types::payments::HttpOptions>,
-    ) -> NativeHttpOptions {
-        // If the user provided no HTTP options, we return a blank native struct.
-        // The HttpClient::new() method will then use SdkDefault values for any missing fields.
-        match proto {
-            None => NativeHttpOptions::default(),
-            Some(http) => NativeHttpOptions {
-                total_timeout_ms: http.total_timeout_ms,
-                connect_timeout_ms: http.connect_timeout_ms,
-                response_timeout_ms: http.response_timeout_ms,
-                keep_alive_timeout_ms: http.keep_alive_timeout_ms,
-                proxy: http.proxy.as_ref().map(|p| ProxyConfig {
-                    http_url: p.http_url.clone(),
-                    https_url: p.https_url.clone(),
-                    bypass_urls: p.bypass_urls.clone(),
-                }),
-                ca_cert: http.ca_cert.clone(),
-            },
+    /// Merges request-level overrides with client defaults to build the 
+    /// final context for the Rust transformation engine.
+    fn resolve_ffi_options(&self, request_options: &Option<RequestOptions>) -> FfiOptions {
+        // Precedence: Explicit Request Auth > Client Default Auth
+        let auth = match request_options {
+            Some(opts) if opts.auth.is_some() => opts.auth.clone(),
+            _ => self.config.auth.clone(),
+        };
+
+        FfiOptions {
+            environment: self.config.environment,
+            connector: self.config.connector,
+            auth,
         }
     }
 
-    /// Authorize a payment by:
-    /// 1. Building the connector HTTP request via `authorize_req_handler`
-    /// 2. Making the HTTP call with HttpClient
-    /// 3. Parsing the response via `authorize_res_handler`
+    /// Authorize a payment flow.
     ///
     /// # Arguments
     /// * `request` - The PaymentServiceAuthorizeRequest protobuf message.
-    /// * `metadata` - Metadata map containing connector routing and auth info.
-    ///   Must contain:
-    ///   - `"connector"`: connector name (e.g. `"Stripe"`)
-    ///   - `"connector_auth_type"`: JSON string of the auth config
-    ///     (e.g. `{"auth_type":"HeaderKey","api_key":"sk_test_xxx"}`)
-    ///   - `x-*` headers for MaskedMetadata
-    /// * `ffi_options` - Optional FfiOptions message override for this specific call.
+    /// * `metadata` - Metadata map containing x-* headers for MaskedMetadata.
+    /// * `request_options` - Optional RequestOptions for per-call overrides (auth, timeouts).
     pub async fn authorize(
         &self,
         request: PaymentServiceAuthorizeRequest,
         metadata: &HashMap<String, String>,
-        ffi_options: Option<FfiOptions>,
+        request_options: Option<RequestOptions>,
     ) -> Result<PaymentServiceAuthorizeResponse, Box<dyn Error>> {
-        let ffi_request = build_ffi_request(request.clone(), metadata)?;
+        // 1. Resolve final configuration (Pattern-based merging)
+        let ffi_options = self.resolve_ffi_options(&request_options);
+        
+        // Pass the raw override timeouts directly. If None, HttpClient uses its internal defaults.
+        let override_timeouts = request_options.as_ref()
+            .and_then(|o| o.timeouts.as_ref())
+            .map(NativeHttpTimeoutConfig::from);
+        
+        let ffi_request = build_ffi_request(request.clone(), metadata, &ffi_options)?;
+        let environment = Some(grpc_api_types::payments::Environment::try_from(ffi_options.environment)?);
 
-        // Resolve FFI options (prefer call-specific override)
-        let ffi = ffi_options.or(self.options.ffi);
-        let test_mode = ffi
-            .as_ref()
-            .and_then(|f| f.env.as_ref())
-            .map(|e| e.test_mode);
-
-        // 1. Build the connector HTTP request
-        let connector_request = authorize_req_handler(ffi_request, test_mode)
+        // 2. Build the connector HTTP request via core handler
+        let connector_request = authorize_req_handler(ffi_request, environment)
             .map_err(|e| format!("authorize_req_handler failed: {:?}", e))?
             .ok_or("No connector request generated")?;
 
-        // 2. Resolve the client
-        let client = &self.http_client;
-
-        // 3. Execute HTTP
+        // 3. Execute HTTP using the instance-owned client and resolved timeouts
         let (body, boundary) = connector_request
             .body
             .as_ref()
@@ -121,7 +118,7 @@ impl ConnectorClient {
             body,
         };
 
-        let http_response = client.execute(http_req).await?;
+        let http_response = self.http_client.execute(http_req, override_timeouts).await?;
 
         // 4. Convert HTTP response to domain Response type
         let mut header_map = http::HeaderMap::new();
@@ -143,9 +140,9 @@ impl ConnectorClient {
             status_code: http_response.status_code,
         };
 
-        // 5. Parse response via authorize_res_handler
-        let ffi_request_for_res = build_ffi_request(request, metadata)?;
-        match authorize_res_handler(ffi_request_for_res, response, test_mode) {
+        // 5. Parse response via core handler
+        let ffi_request_for_res = build_ffi_request(request, metadata, &ffi_options)?;
+        match authorize_res_handler(ffi_request_for_res, response, environment) {
             Ok(auth_response) => Ok(auth_response),
             Err(error_response) => {
                 Err(format!("Authorization failed: {:?}", error_response).into())
@@ -154,22 +151,24 @@ impl ConnectorClient {
     }
 }
 
-pub fn build_ffi_request(
-    payload: PaymentServiceAuthorizeRequest,
+/// Internal helper to build the FfiRequestData structure from typed inputs.
+pub fn build_ffi_request<T>(
+    payload: T,
     metadata: &HashMap<String, String>,
-) -> Result<FfiRequestData<PaymentServiceAuthorizeRequest>, Box<dyn Error>> {
-    let connector_val = metadata.get("connector").ok_or("Missing 'connector'")?;
-    let auth_type_json = metadata
-        .get("connector_auth_type")
-        .ok_or("Missing 'connector_auth_type'")?;
-    let auth_json: serde_json::Value = serde_json::from_str(auth_type_json)?;
-
-    let obj = serde_json::json!({
-        "connector": connector_val,
-        "connector_auth_type": auth_json,
-    });
-
-    let extracted_metadata: FfiMetadataPayload = serde_json::from_value(obj)?;
+    ffi_options: &FfiOptions,
+) -> Result<FfiRequestData<T>, Box<dyn Error>> {
+    let connector_enum = ffi_options.connector();
+    let connector = domain_types::connector_types::ConnectorEnum::foreign_try_from(connector_enum)?;
+    
+    // Use ForeignTryFrom to map binary Proto Auth to Domain Auth
+    let auth_proto = ffi_options.auth.clone().ok_or("Missing authentication configuration")?;
+    let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(auth_proto)?;
+    
+    let extracted_metadata = FfiMetadataPayload {
+        connector,
+        connector_auth_type,
+    };
+    
     let masked_metadata = ffi_headers_to_masked_metadata(metadata)?;
 
     Ok(FfiRequestData {

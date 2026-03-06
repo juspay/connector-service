@@ -60,18 +60,26 @@ export class ConnectorClient {
   /**
    * Merges request-level HTTP overrides with client defaults using 
    * explicit field-level precedence.
+   * 
+   * Proxy, Certs is fixed at Client Level.
+   * Timeouts can be overridden per request.
    */
   private resolveHttpConfig(requestOptions?: ucs.v2.IRequestOptions | null): ucs.v2.IHttpConfig {
-    const defaults = this.config.http || {};
-    const overrides = requestOptions?.http || {};
+    const clientHttp = this.config.http || {};
+    const clientTimeouts = clientHttp.timeouts || {};
+    const overrideTimeouts = requestOptions?.timeouts || {};
 
     return {
-      totalTimeoutMs: overrides.totalTimeoutMs ?? defaults.totalTimeoutMs,
-      connectTimeoutMs: overrides.connectTimeoutMs ?? defaults.connectTimeoutMs,
-      responseTimeoutMs: overrides.responseTimeoutMs ?? defaults.responseTimeoutMs,
-      keepAliveTimeoutMs: overrides.keepAliveTimeoutMs ?? defaults.keepAliveTimeoutMs,
-      proxy: (overrides.proxy ?? defaults.proxy) as ucs.v2.IProxyOptions | null | undefined,
-      caCert: (overrides.caCert ?? defaults.caCert) as ucs.v2.ICaCert | null | undefined,
+      // 1. Timeouts: Request-level override > Client-level default
+      timeouts: {
+        totalTimeoutMs: overrideTimeouts.totalTimeoutMs ?? clientTimeouts.totalTimeoutMs,
+        connectTimeoutMs: overrideTimeouts.connectTimeoutMs ?? clientTimeouts.connectTimeoutMs,
+        responseTimeoutMs: overrideTimeouts.responseTimeoutMs ?? clientTimeouts.responseTimeoutMs,
+        keepAliveTimeoutMs: overrideTimeouts.keepAliveTimeoutMs ?? clientTimeouts.keepAliveTimeoutMs,
+      },
+      // 2. Infrastructure: Always Client-level
+      proxy: clientHttp.proxy,
+      caCert: clientHttp.caCert,
     };
   }
 
@@ -81,7 +89,7 @@ export class ConnectorClient {
    * @param flow - Flow name matching the FFI transformer prefix (e.g. "authorize").
    * @param requestMsg - Protobuf request message object.
    * @param metadata - Dict with connector routing and auth info.
-   * @param requestOptions - Optional IRequestOptions override (auth, http).
+   * @param requestOptions - Optional IRequestOptions override (auth, timeouts).
    */
   async _executeFlow(
     flow: string,
