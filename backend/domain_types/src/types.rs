@@ -30,7 +30,7 @@ use grpc_api_types::payments::{
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceRevokeRequest,
     RefundResponse,
 };
-use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 use utoipa::ToSchema;
@@ -10570,7 +10570,7 @@ impl<
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
                 .transpose()?,
             connector_transaction_id: value
-                .transaction_id
+                .connector_transaction_id
                 .and_then(|id| id.id_type)
                 .and_then(|id_type| match id_type {
                     grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
@@ -10588,8 +10588,8 @@ impl<
                     error_object: None,
                 }))?,
             payment_method_type,
-            feature_metadata: value
-                .feature_metadata
+            connector_meta_data: value
+                .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature metadata")))
                 .transpose()?,
         })
@@ -10632,7 +10632,7 @@ impl
             address,
             auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: extract_connector_request_reference_id(
-                &value.request_ref_id,
+                &value.merchant_transaction_id,
             ),
             customer_id: None, // PaymentServiceCreateOrderRequest doesn't have customer_id field
             connector_customer: None,
@@ -10672,9 +10672,6 @@ pub fn generate_payment_update_metadata_response<T: PaymentMethodDataTypes>(
         PaymentsResponseData,
     >,
 ) -> Result<PaymentServiceUpdateMetadataResponse, error_stack::Report<ApplicationErrorResponse>> {
-    let metadata = convert_connector_metadata_to_secret_string(
-        router_data_v2.request.metadata.expose_option(),
-    );
     let raw_connector_request = router_data_v2
         .resource_common_data
         .get_raw_connector_request();
@@ -10694,18 +10691,14 @@ pub fn generate_payment_update_metadata_response<T: PaymentMethodDataTypes>(
                 Ok(PaymentServiceUpdateMetadataResponse {
                     status: grpc_status.into(),
                     status_code: status_code as u32,
-                    error_code: None,
-                    error_message: None,
-                    error_reason: None,
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
-                    feature_metadata: None,
-                    metadata,
                     raw_connector_request,
                     raw_connector_response,
-                    response_ref_id: None,
-                    transaction_id: None,
+                    connector_feature_data: None,
+                    metadata: None,
+                    error: None,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -10719,19 +10712,23 @@ pub fn generate_payment_update_metadata_response<T: PaymentMethodDataTypes>(
         },
         Err(e) => Ok(PaymentServiceUpdateMetadataResponse {
             status: grpc_api_types::payments::UpdateMetadataStatus::UpdateMetadataFailure.into(),
-            error_message: Some(e.message),
-            error_code: Some(e.code),
-            error_reason: e.reason,
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                    message: Some(e.message.clone()),
+                    code: Some(e.code.clone()),
+                    reason: e.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
             status_code: e.status_code as u32,
             response_headers: router_data_v2
                 .resource_common_data
                 .get_connector_response_headers_as_map(),
-            feature_metadata: None,
+            connector_feature_data: None,
             metadata: None,
             raw_connector_request,
             raw_connector_response,
-            response_ref_id: None,
-            transaction_id: None,
         }),
     }
 }

@@ -1651,7 +1651,7 @@ pub struct PaymentsUpdateMetadataData<T: PaymentMethodDataTypes> {
     pub metadata: Option<SecretSerdeValue>,
     pub connector_transaction_id: String,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
-    pub feature_metadata: Option<SecretSerdeValue>,
+    pub connector_meta_data: Option<SecretSerdeValue>,
     pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
 }
 
