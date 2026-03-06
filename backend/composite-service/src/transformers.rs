@@ -1,46 +1,45 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, CompositePreAuthenticateRequest, ConnectorState,
-    PaymentServiceAuthorizeOnlyRequest, PaymentServiceCreateAccessTokenRequest,
-    PaymentServiceCreateAccessTokenResponse, PaymentServiceCreateConnectorCustomerRequest,
-    PaymentServiceCreateConnectorCustomerResponse, PaymentServicePreAuthenticateRequest,
+    CompositeAuthorizeRequest, CustomerServiceCreateRequest,
+    MerchantAuthenticationServiceCreateAccessTokenRequest, CompositePreAuthenticateRequest,
+    PaymentServicePreAuthenticateRequest,
 };
 
-use crate::utils::{
-    get_access_token, get_connector_customer_id, grpc_connector_from_connector_enum,
-};
+use crate::utils::grpc_connector_from_connector_enum;
 
 pub trait ForeignFrom<F>: Sized {
     fn foreign_from(item: F) -> Self;
 }
 
 impl ForeignFrom<(&CompositeAuthorizeRequest, &ConnectorEnum)>
-    for PaymentServiceCreateAccessTokenRequest
+    for MerchantAuthenticationServiceCreateAccessTokenRequest
 {
     fn foreign_from((item, connector): (&CompositeAuthorizeRequest, &ConnectorEnum)) -> Self {
         Self {
-            request_ref_id: item.request_ref_id.clone(),
+            merchant_access_token_id: item.merchant_transaction_id.clone(),
             connector: grpc_connector_from_connector_enum(connector),
-            merchant_account_metadata: item.merchant_account_metadata.clone(),
             metadata: item.metadata.clone(),
-            connector_metadata: item.connector_metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
             test_mode: item.test_mode,
         }
     }
 }
 
-impl ForeignFrom<&CompositeAuthorizeRequest> for PaymentServiceCreateConnectorCustomerRequest {
+impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
     fn foreign_from(item: &CompositeAuthorizeRequest) -> Self {
+        let customer = item.customer.as_ref();
         Self {
-            request_ref_id: item.request_ref_id.clone(),
-            merchant_account_metadata: item.merchant_account_metadata.clone(),
-            customer_name: item.customer_name.clone(),
-            email: item.email.clone(),
-            customer_id: item.customer_id.clone(),
-            phone_number: item.phone_number.clone(),
+            merchant_customer_id: customer.and_then(|c| c.id.clone()).map(|id| {
+                grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id.clone())),
+                }
+            }),
+            customer_name: customer.and_then(|c| c.name.clone()),
+            email: customer.and_then(|c| c.email.clone()),
+            phone_number: customer.and_then(|c| c.phone_number.clone()),
             address: item.address.clone(),
             metadata: item.metadata.clone(),
-            connector_metadata: item.connector_metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
             test_mode: item.test_mode,
         }
     }

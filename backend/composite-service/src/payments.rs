@@ -6,9 +6,9 @@ use domain_types::{
 use grpc_api_types::payments::{
     composite_payment_service_server::CompositePaymentService,
     payment_service_server::PaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
+    CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenResponse,
     CompositePreAuthenticateRequest, CompositePreAuthenticateResponse,
-    PaymentServiceAuthorizeResponse, PaymentServiceCreateAccessTokenResponse,
-    PaymentServiceCreateConnectorCustomerResponse, PaymentServicePreAuthenticateResponse,
+    PaymentServiceAuthorizeResponse, PaymentServicePreAuthenticateResponse,
 };
 
 use crate::transformers::ForeignFrom;
@@ -227,12 +227,5 @@ where
         request: tonic::Request<CompositeAuthorizeRequest>,
     ) -> Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status> {
         self.process_composite_authorize(request).await
-    }
-
-    async fn composite_pre_authenticate(
-        &self,
-        request: tonic::Request<CompositePreAuthenticateRequest>,
-    ) -> Result<tonic::Response<CompositePreAuthenticateResponse>, tonic::Status> {
-        self.process_composite_pre_authenticate(request).await
     }
 }
