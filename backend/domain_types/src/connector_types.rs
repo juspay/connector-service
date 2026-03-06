@@ -330,6 +330,17 @@ impl MandateIds {
         )
     }
 
+    pub fn has_mandate_reference(&self) -> bool {
+        match &self.mandate_reference_id {
+            Some(MandateReferenceId::ConnectorMandateId(cm)) => {
+                cm.get_connector_mandate_id().is_some()
+            }
+            Some(MandateReferenceId::NetworkMandateId(_)) |
+            Some(MandateReferenceId::NetworkTokenWithNTI(_)) => true,
+            None => false,
+        }
+    }
+
     pub fn new(mandate_id: String) -> Self {
         Self {
             mandate_id: Some(mandate_id),
@@ -2685,6 +2696,42 @@ pub trait ConnectorSpecifications {
     /// About the connector
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
         None
+    }
+
+    /// Check if pre-authentication flow is required
+    fn is_pre_authentication_flow_required(
+        &self,
+        _auth_type: AuthenticationType,
+        _payment_method_data: &Option<PaymentMethodData<crate::payment_method_data::DefaultPCIHolder>>,
+        _mandate_ids: &Option<MandateIds>,
+    ) -> bool {
+        false
+    }
+
+    /// Check if authentication flow is required
+    fn is_authentication_flow_required(
+        &self,
+        _auth_type: AuthenticationType,
+        _redirect_response: &Option<ContinueRedirectionResponse>,
+    ) -> bool {
+        false
+    }
+
+    /// Check if post-authentication flow is required before authorize
+    fn is_post_authentication_flow_required(
+        &self,
+        _redirect_response: &Option<ContinueRedirectionResponse>,
+    ) -> bool {
+        false
+    }
+
+    /// Check if authenticate should be called after pre-authenticate (no redirect)
+    fn should_continue_to_authenticate_after_preauth(
+        &self,
+        _auth_type: AuthenticationType,
+        _payment_method_data: &Option<PaymentMethodData<crate::payment_method_data::DefaultPCIHolder>>,
+    ) -> bool {
+        false
     }
 }
 
