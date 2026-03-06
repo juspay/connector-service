@@ -13,19 +13,30 @@ from _generated_flows.py.
 import json
 from typing import Dict, Optional, Any
 
-import payments.generated.connector_service_ffi as _ffi
-import payments.generated.payment_pb2 as _pb2
-from payments._generated_flows import FLOW_RESPONSES
+from .generated import connector_service_ffi as _ffi
+from .generated import payment_pb2 as _pb2
+from ._generated_flows import FLOW_RESPONSES
 from .http_client import execute, HttpRequest, create_client
-from payments.generated.sdk_config_pb2 import ClientIdentity, ConfigOptions, FfiOptions, FfiConnectorHttpRequest, FfiConnectorHttpResponse
+from .generated.sdk_config_pb2 import (
+    ClientIdentity, 
+    ConfigOptions, 
+    FfiOptions, 
+    FfiConnectorHttpRequest, 
+    FfiConnectorHttpResponse
+)
 
 
 class ConnectorClient:
     """High-level asynchronous client for connector payment operations via UniFFI FFI."""
 
-    def __init__(self, identity: ClientIdentity, defaults: Optional[ConfigOptions] = None):
+    def __init__(self, identity: ClientIdentity, defaults: Optional[ConfigOptions] = None, lib_path: Optional[str] = None):
         """
-        Initialize the client with a fixed identity and overridable defaults.
+        Initialize the client.
+        
+        Args:
+            identity: Non-overridable identity parameters (connector, auth).
+            defaults: Optional overridable defaults (environment, http settings).
+            lib_path: Optional path to the shared library.
         """
         self.identity = identity
         self.defaults = defaults or ConfigOptions()
@@ -33,11 +44,14 @@ class ConnectorClient:
         self.client = create_client(self.defaults.http if self.defaults.HasField('http') else None)
 
     def _resolve_config(self, options: Optional[ConfigOptions] = None) -> tuple[FfiOptions, Optional[Any]]:
-        """Merges request-level options with client defaults."""
-        # 1. Environment: Request Override > Client Default
-        environment = options.environment if options is not None else self.defaults.environment
+        """
+        Merges request-level options with client defaults.
+        Enforces the "Identity Rule": Identity is fixed, others are merged request > client.
+        """
+        # 1. Environment: Request-level override > Client-level default
+        environment = options.environment if (options and options.HasField('environment')) else self.defaults.environment
 
-        # 2. HTTP Overrides: Request Override > Client Default
+        # 2. HTTP Overrides: Request-level override > Client-level default
         http_config = options.http if (options and options.HasField('http')) else (self.defaults.http if self.defaults.HasField('http') else None)
 
         # 3. Resolve FFI Context (Identity is strictly immutable)
@@ -50,7 +64,15 @@ class ConnectorClient:
         return ffi, http_config
 
     async def _execute_flow(self, flow: str, request: Any, metadata: dict, options: Optional[ConfigOptions] = None):
-        """Execute a full payment flow round-trip asynchronously."""
+        """
+        Execute a full payment flow round-trip asynchronously.
+        
+        Args:
+            flow: Flow name matching the FFI transformer prefix (e.g. "authorize").
+            request: A domain protobuf request message.
+            metadata: Dict with transport headers. (Connector and Auth are handled via identity).
+            options: Optional per-request configuration overrides.
+        """
         cls_name = FLOW_RESPONSES.get(flow)
         if cls_name is None:
             raise ValueError(f"Unknown flow '{flow}'")
