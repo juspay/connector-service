@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.9.25"
+    kotlin("jvm") version "2.3.10"
     application
 }
 
@@ -10,7 +10,6 @@ repositories {
 
 dependencies {
     implementation("com.hyperswitch:payments-client:0.1.0")
-    implementation("org.json:json:20240303")
     implementation("com.google.code.gson:gson:2.10.1")
 }
 
