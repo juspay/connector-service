@@ -15,13 +15,13 @@ use crate::macros::{req_transformer, res_transformer};
 
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, PSync, Refund, RepeatPayment,
-        Void, VoidPC,
+        Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, PSync, Refund,
+        RepeatPayment, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, PaymentFlowData, PaymentVoidData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        ConnectorCustomerResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
     },
 };
