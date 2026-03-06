@@ -13,10 +13,10 @@ pub fn create_router(state: AppState) -> Router {
             post(handlers::composite::payments::authorize),
         )
         .route("/payments/authorize", post(handlers::payments::authorize))
-        .route(
-            "/payments/authorize_only",
-            post(handlers::payments::authorize_only),
-        )
+        // .route(
+        //     "/payments/authorize_only",
+        //     post(handlers::payments::authorize_only),
+        // )
         .route("/payments/capture", post(handlers::payments::capture))
         .route("/payments/void", post(handlers::payments::void))
         .route(
@@ -40,17 +40,20 @@ pub fn create_router(state: AppState) -> Router {
             "/payments/create_payment_method_token",
             post(handlers::payments::create_payment_method_token),
         )
-        .route("/payments/register", post(handlers::payments::register))
         .route(
-            "/payments/register_only",
-            post(handlers::payments::register_only),
+            "/payments/register",
+            post(handlers::payments::setup_recurring),
         )
+        // .route(
+        //     "/payments/register_only",
+        //     post(handlers::payments::register_only),
+        // )
         .route(
             "/payments/repeat_everything",
             post(handlers::payments::repeat_everything),
         )
         .route("/payments/refund", post(handlers::payments::refund))
-        .route("/payments/dispute", post(handlers::payments::dispute))
+        // .route("/payments/dispute", post(handlers::payments::dispute))
         .route(
             "/payments/pre_authenticate",
             post(handlers::payments::pre_authenticate),

@@ -235,12 +235,12 @@ All domain type conversions implemented and tested. No compilation errors in dom
 
 3. **Update DisputeService Conversions**
    ```rust
-   // Handle new dispute messages: DisputeDefendRequest, AcceptDisputeRequest
-   impl TryFrom<grpc_api_types::DisputeDefendRequest> for DomainDisputeDefendRequest {
+   // Handle new dispute messages: DisputeServiceDefendRequest, DisputeServiceAcceptRequest
+   impl TryFrom<grpc_api_types::DisputeServiceDefendRequest> for DomainDisputeServiceDefendRequest {
        type Error = ConversionError;
        
-       fn try_from(proto: grpc_api_types::DisputeDefendRequest) -> Result<Self, Self::Error> {
-           Ok(DomainDisputeDefendRequest {
+       fn try_from(proto: grpc_api_types::DisputeServiceDefendRequest) -> Result<Self, Self::Error> {
+           Ok(DomainDisputeServiceDefendRequest {
                request_ref_id: convert_identifier(proto.request_ref_id)?,
                transaction_id: convert_identifier(proto.transaction_id)?,
                dispute_id: proto.dispute_id,
