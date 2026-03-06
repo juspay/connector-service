@@ -22,65 +22,67 @@ const v2 = ucs.v2;
 
 export class ConnectorClient {
   private uniffi: UniffiClient;
-  private config: ucs.v2.IClientConfig;
+  private identity: ucs.v2.ClientIdentity;
+  private defaults: ucs.v2.IConfigOptions;
   private dispatcher: Dispatcher;
 
   /**
-   * @param config - initialization configuration (connector, environment, auth, http)
-   * @param libPath - optional path to the UniFFI shared library
+   * Initialize the client with mandatory identity and overridable defaults.
+   *
+   * @param identity - Non-overridable (Connector, Auth).
+   * @param defaults - Overridable behavioral settings (Environment, Http).
+   * @param libPath - optional path to the UniFFI shared library.
    */
-  constructor(config: ucs.v2.IClientConfig, libPath?: string) {
+  constructor(
+    identity: ucs.v2.IClientIdentity,
+    defaults: ucs.v2.IConfigOptions = {},
+    libPath?: string
+  ) {
     this.uniffi = new UniffiClient(libPath);
-    this.config = config;
+    this.identity = ucs.v2.ClientIdentity.create(identity);
+    this.defaults = defaults;
 
-    if (config.connector === undefined || config.environment === undefined) {
+    if (identity.connector === undefined) {
       throw new ConnectorError(
-        "Connector and Environment are required in ClientConfig",
+        "Connector is required in ClientIdentity",
         400,
         "CLIENT_INITIALIZATION"
       );
     }
 
     // Instance-level cache: create the primary connection pool at startup
-    this.dispatcher = createDispatcher(config.http || {});
+    this.dispatcher = createDispatcher(defaults.http || {});
   }
 
   /**
-   * Merges request-level overrides with client defaults to build the 
-   * final context for the Rust transformation engine.
+   * Merges request-level options with client defaults.
    */
-  private resolveFfiOptions(requestOptions?: ucs.v2.IRequestOptions | null): ucs.v2.FfiOptions {
-    return v2.FfiOptions.create({
-      environment: this.config.environment,
-      connector: this.config.connector,
-      auth: requestOptions?.auth ?? this.config.auth
-    });
-  }
+  private _resolveConfig(overrides?: ucs.v2.IConfigOptions | null): {
+    ffi: ucs.v2.FfiOptions;
+    http: ucs.v2.IHttpConfig;
+  } {
+    const opt = overrides || {};
+    
+    const environment = opt.environment ?? this.defaults.environment ?? ucs.v2.Environment.SANDBOX;
+    const clientHttp = this.defaults.http || {};
+    const overrideHttp = opt.http || {};
 
-  /**
-   * Merges request-level HTTP overrides with client defaults using 
-   * explicit field-level precedence.
-   * 
-   * Proxy, Certs is fixed at Client Level.
-   * Timeouts can be overridden per request.
-   */
-  private resolveHttpConfig(requestOptions?: ucs.v2.IRequestOptions | null): ucs.v2.IHttpConfig {
-    const clientHttp = this.config.http || {};
-    const clientTimeouts = clientHttp.timeouts || {};
-    const overrideTimeouts = requestOptions?.timeouts || {};
-
-    return {
-      // 1. Timeouts: Request-level override > Client-level default
-      timeouts: {
-        totalTimeoutMs: overrideTimeouts.totalTimeoutMs ?? clientTimeouts.totalTimeoutMs,
-        connectTimeoutMs: overrideTimeouts.connectTimeoutMs ?? clientTimeouts.connectTimeoutMs,
-        responseTimeoutMs: overrideTimeouts.responseTimeoutMs ?? clientTimeouts.responseTimeoutMs,
-        keepAliveTimeoutMs: overrideTimeouts.keepAliveTimeoutMs ?? clientTimeouts.keepAliveTimeoutMs,
-      },
-      // 2. Infrastructure: Always Client-level
-      proxy: clientHttp.proxy,
-      caCert: clientHttp.caCert,
+    const http: ucs.v2.IHttpConfig = {
+      totalTimeoutMs: overrideHttp.totalTimeoutMs ?? clientHttp.totalTimeoutMs,
+      connectTimeoutMs: overrideHttp.connectTimeoutMs ?? clientHttp.connectTimeoutMs,
+      responseTimeoutMs: overrideHttp.responseTimeoutMs ?? clientHttp.responseTimeoutMs,
+      keepAliveTimeoutMs: overrideHttp.keepAliveTimeoutMs ?? clientHttp.keepAliveTimeoutMs,
+      proxy: overrideHttp.proxy ?? clientHttp.proxy,
+      caCert: overrideHttp.caCert ?? clientHttp.caCert,
     };
+
+    const ffi = ucs.v2.FfiOptions.create({
+      environment,
+      connector: this.identity.connector,
+      auth: this.identity.auth,
+    });
+
+    return { ffi, http };
   }
 
   /**
@@ -89,13 +91,13 @@ export class ConnectorClient {
    * @param flow - Flow name matching the FFI transformer prefix (e.g. "authorize").
    * @param requestMsg - Protobuf request message object.
    * @param metadata - Dict with connector routing and auth info.
-   * @param requestOptions - Optional IRequestOptions override (auth, timeouts).
+   * @param options - Optional ConfigOptions override (Environment, Http).
    */
   async _executeFlow(
     flow: string,
     requestMsg: object,
     metadata: Record<string, string>,
-    requestOptions?: ucs.v2.IRequestOptions | null,
+    options?: ucs.v2.IConfigOptions | null,
     reqTypeName?: string,
     resTypeName?: string
   ): Promise<unknown> {
@@ -106,10 +108,9 @@ export class ConnectorClient {
       throw new Error(`Unknown flow: '${flow}' or missing type names.`);
     }
 
-    // 1. Resolve final configuration (Pattern-based merging)
-    const ffiOptions = this.resolveFfiOptions(requestOptions);
-    const httpConfig = this.resolveHttpConfig(requestOptions);
-    const optionsBytes = Buffer.from(v2.FfiOptions.encode(ffiOptions).finish());
+    // 1. Resolve final configuration
+    const { ffi, http } = this._resolveConfig(options);
+    const optionsBytes = Buffer.from(v2.FfiOptions.encode(ffi).finish());
 
     // 2. Serialize domain request
     const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
@@ -125,14 +126,14 @@ export class ConnectorClient {
       body: connectorReq.body ?? undefined
     };
 
-    // 4. Execute HTTP using the instance-owned connection pool and merged config
+    // 4. Execute HTTP using the instance-owned connection pool
     const response = await execute(
       connectorRequest,
-      httpConfig,
+      http,
       this.dispatcher
     );
 
-    // 5. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
+    // 5. Encode HTTP response for FFI
     const resProto = v2.FfiConnectorHttpResponse.create({
       statusCode: response.statusCode,
       headers: response.headers,

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use grpc_api_types::payments::{
-    self, ClientConfig, Connector, ConnectorAuth, Environment, FfiOptions,
+    self, ClientIdentity, ConfigOptions, Connector, ConnectorAuth, Environment, FfiOptions,
     PaymentServiceAuthorizeRequest,
 };
 use hyperswitch_masking::Secret;
@@ -98,13 +98,8 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
 }
 
 /// Build metadata for Stripe with HeaderKey auth.
-///
-/// Two purposes:
-///   1. `"connector"` and `"connector_auth_type"` are used to build FfiMetadataPayload
-///   2. `x-*` headers are used by ffi_headers_to_masked_metadata for MaskedMetadata
 fn build_metadata(api_key: &str) -> HashMap<String, String> {
     let mut metadata = HashMap::new();
-    metadata.insert("connector".to_string(), "Stripe".to_string());
 
     // Required metadata headers (used by ffi_headers_to_masked_metadata)
     metadata.insert("x-connector".to_string(), "Stripe".to_string());
@@ -182,9 +177,6 @@ fn demo_low_level(
 }
 
 /// Demo 2: Full round-trip.
-///
-/// Uses ConnectorClient to make an actual HTTP call to the connector.
-/// Requires a valid STRIPE_API_KEY environment variable.
 async fn demo_full_round_trip(
     request: PaymentServiceAuthorizeRequest,
     metadata: &HashMap<String, String>,
@@ -202,17 +194,22 @@ async fn demo_full_round_trip(
     eprintln!("Connector: Stripe");
     eprintln!("Sending authorize request...\n");
 
-    // 1. Initialize Client with new "Blueprint" pattern
-    let config = ClientConfig {
+    // 1. Mandatory Identity
+    let identity = ClientIdentity {
         connector: ffi_options.connector,
-        environment: ffi_options.environment,
         auth: ffi_options.auth.clone(),
+    };
+
+    // 2. Overridable Options
+    let options = ConfigOptions {
+        environment: Some(ffi_options.environment),
         ..Default::default()
     };
 
-    let client = ConnectorClient::new(config).expect("Failed to create ConnectorClient");
+    let client =
+        ConnectorClient::new(identity, Some(options)).expect("Failed to create ConnectorClient");
 
-    // 2. Call authorize
+    // 3. Call authorize
     match client.authorize(request, metadata, None).await {
         Ok(response) => {
             eprintln!("Authorize response received:");

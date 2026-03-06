@@ -39,25 +39,25 @@ object FlowRegistry {
 // Extension functions — typed with concrete proto request/response types.
 
 // authorize: PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-fun ConnectorClient.authorize(request: PaymentServiceAuthorizeRequest, metadata: Map<String, String>, options: RequestOptions? = null): PaymentServiceAuthorizeResponse =
+fun ConnectorClient.authorize(request: PaymentServiceAuthorizeRequest, metadata: Map<String, String>, options: ConfigOptions? = null): PaymentServiceAuthorizeResponse =
     executeFlow("authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), metadata, options)
 
 // capture: PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
-fun ConnectorClient.capture(request: PaymentServiceCaptureRequest, metadata: Map<String, String>, options: RequestOptions? = null): PaymentServiceCaptureResponse =
+fun ConnectorClient.capture(request: PaymentServiceCaptureRequest, metadata: Map<String, String>, options: ConfigOptions? = null): PaymentServiceCaptureResponse =
     executeFlow("capture", request.toByteArray(), PaymentServiceCaptureResponse.parser(), metadata, options)
 
 // create_access_token: MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
-fun ConnectorClient.create_access_token(request: MerchantAuthenticationServiceCreateAccessTokenRequest, metadata: Map<String, String>, options: RequestOptions? = null): MerchantAuthenticationServiceCreateAccessTokenResponse =
+fun ConnectorClient.create_access_token(request: MerchantAuthenticationServiceCreateAccessTokenRequest, metadata: Map<String, String>, options: ConfigOptions? = null): MerchantAuthenticationServiceCreateAccessTokenResponse =
     executeFlow("create_access_token", request.toByteArray(), MerchantAuthenticationServiceCreateAccessTokenResponse.parser(), metadata, options)
 
 // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
-fun ConnectorClient.get(request: PaymentServiceGetRequest, metadata: Map<String, String>, options: RequestOptions? = null): PaymentServiceGetResponse =
+fun ConnectorClient.get(request: PaymentServiceGetRequest, metadata: Map<String, String>, options: ConfigOptions? = null): PaymentServiceGetResponse =
     executeFlow("get", request.toByteArray(), PaymentServiceGetResponse.parser(), metadata, options)
 
 // refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
-fun ConnectorClient.refund(request: PaymentServiceRefundRequest, metadata: Map<String, String>, options: RequestOptions? = null): RefundResponse =
+fun ConnectorClient.refund(request: PaymentServiceRefundRequest, metadata: Map<String, String>, options: ConfigOptions? = null): RefundResponse =
     executeFlow("refund", request.toByteArray(), RefundResponse.parser(), metadata, options)
 
 // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
-fun ConnectorClient.void(request: PaymentServiceVoidRequest, metadata: Map<String, String>, options: RequestOptions? = null): PaymentServiceVoidResponse =
+fun ConnectorClient.void(request: PaymentServiceVoidRequest, metadata: Map<String, String>, options: ConfigOptions? = null): PaymentServiceVoidResponse =
     executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), metadata, options)

@@ -9,8 +9,8 @@ export * from "./http_client";
 // ---------------------------------------------------------------------------
 // Domain namespaces — runtime values
 // Usage: import { payments, payment_methods, configs } from '@juspay/connector-service-sdk';
-//        const config: configs.IClientConfig = { ... };
-//        const client = new ConnectorClient(config);
+//        const identity: configs.IClientIdentity = { ... };
+//        const client = new ConnectorClient(identity);
 // ---------------------------------------------------------------------------
 
 export const payments = {
@@ -97,8 +97,8 @@ export const payment_methods = {
 
 export const configs = {
   // New Configuration types
-  ClientConfig: ucs.v2.ClientConfig,
-  RequestOptions: ucs.v2.RequestOptions,
+  ClientIdentity: ucs.v2.ClientIdentity,
+  ConfigOptions: ucs.v2.ConfigOptions,
   HttpConfig: ucs.v2.HttpConfig,
   CaCert: ucs.v2.CaCert,
   HttpDefault: ucs.v2.HttpDefault,
@@ -211,16 +211,16 @@ export namespace payment_methods {
 }
 
 export namespace configs {
-  export type IClientConfig = ucs.v2.IClientConfig;
-  export type IRequestOptions = ucs.v2.IRequestOptions;
+  export type IClientIdentity = ucs.v2.IClientIdentity;
+  export type IConfigOptions = ucs.v2.IConfigOptions;
   export type IHttpConfig = ucs.v2.IHttpConfig;
   export type ICaCert = ucs.v2.ICaCert;
   export type IFfiOptions = ucs.v2.IFfiOptions;
   export type IFfiConnectorHttpRequest = ucs.v2.IFfiConnectorHttpRequest;
   export type IFfiConnectorHttpResponse = ucs.v2.IFfiConnectorHttpResponse;
 
-  export type ClientConfig = ucs.v2.ClientConfig;
-  export type RequestOptions = ucs.v2.RequestOptions;
+  export type ClientIdentity = ucs.v2.ClientIdentity;
+  export type ConfigOptions = ucs.v2.ConfigOptions;
   export type HttpConfig = ucs.v2.HttpConfig;
   export type CaCert = ucs.v2.CaCert;
   export type FfiOptions = ucs.v2.FfiOptions;

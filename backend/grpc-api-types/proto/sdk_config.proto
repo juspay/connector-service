@@ -5,10 +5,9 @@
 //
 // Overview:
 //   Configuration options for the Connector SDK.
-//   - HttpConfig: Used by SDK to control HTTP request behavior
-//   - ClientConfig: Used for SDK initialization
-//   - RequestOptions: Used for per-request overrides
-//   - FfiOptions: Internal context for UniFFI transformation engine
+//   - ClientIdentity: Non-overridable identity (Connector + Auth).
+//   - ConfigOptions: Overridable parameters (Environment, HttpConfig, Vault).
+//   - FfiOptions: Internal context for UniFFI transformation engine.
 
 syntax = "proto3";
 
@@ -23,51 +22,45 @@ option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/
 // ============================================================
 
 // Deployment environment for the SDK.
-// This determines which backend configuration (URLs, credentials, etc.) is used.
 enum Environment {
-  ENVIRONMENT_UNSPECIFIED = 0;
-  
-  // Sandbox/Testing environment
-  SANDBOX = 1;
+  // Sandbox/Testing environment (Default)
+  SANDBOX = 0;
   
   // Production environment
-  PRODUCTION = 2;
+  PRODUCTION = 1;
 }
 
 // ============================================================
 // SDK Configuration (User-facing)
 // ============================================================
 
-// Initialization configuration for the ConnectorClient
-message ClientConfig {
-  // The connector to use for all requests from this client
+// Non-overridable identity parameters for the ConnectorClient.
+// Passed as the FIRST parameter during client creation.
+message ClientIdentity {
+  // The connector to use for all requests (Immutable)
   Connector connector = 1;
 
-  // The environment to use (Sandbox/Production)
-  Environment environment = 2;
+  // Mandatory authentication for the connector (Immutable)
+  ConnectorAuth auth = 2;
+}
 
-  // Optional default authentication for the connector
-  optional ConnectorAuth auth = 3;
+// Overridable parameters for the SDK behavior.
+// Used as the SECOND parameter in initialization (defaults)
+// and as the parameter for request-level overrides.
+message ConfigOptions {
+  // Deployment environment
+  optional Environment environment = 1;
 
   // HTTP and transport configuration
-  optional HttpConfig http = 4;
+  optional HttpConfig http = 2;
+
+  // Vault configuration options (Placeholder)
+  optional VaultOptions vault = 3;
 }
 
-// Per-request configuration overrides
-message RequestOptions {
-  // Override authentication for this specific request (useful for multi-tenancy)
-  optional ConnectorAuth auth = 1;
-
-  // Override HTTP timeouts for this specific request
-  optional HttpTimeoutConfig timeouts = 2;
-}
-
-// ============================================================
-// Transport Configuration (SDK-side)
-// ============================================================
-
-// HTTP timeout configuration
-message HttpTimeoutConfig {
+// HTTP transport configuration.
+// Flattened for cleaner access and merging logic across SDKs.
+message HttpConfig {
   // Total timeout for entire request lifecycle (milliseconds)
   optional uint32 total_timeout_ms = 1;
 
@@ -79,20 +72,17 @@ message HttpTimeoutConfig {
 
   // Keep-alive timeout for pooled connections (milliseconds)
   optional uint32 keep_alive_timeout_ms = 4;
-}
-
-// HTTP client configuration options (Infrastructure level)
-message HttpConfig {
-  // Timeouts configuration
-  optional HttpTimeoutConfig timeouts = 1;
 
   // Proxy configuration
-  optional ProxyOptions proxy = 2;
+  optional ProxyOptions proxy = 5;
 
   // CA certificate for pinning.
-  // Supports both binary DER and text-based PEM formats.
-  optional CaCert ca_cert = 3;
+  optional CaCert ca_cert = 6;
 }
+
+// ============================================================
+// Transport Configuration (SDK-side)
+// ============================================================
 
 // CA certificate message wrapper
 message CaCert {
@@ -116,27 +106,25 @@ message ProxyOptions {
   repeated string bypass_urls = 3;
 }
 
+// Vault configuration (Placeholder)
+message VaultOptions {
+  // Reserved for future vault/secrets integration
+}
+
 // ============================================================
 // FFI Options (Internal Boundary)
 // ============================================================
 
 // Internal context passed across the FFI boundary to the UCS core.
 message FfiOptions {
-  // Required: Rust must know which environment (.toml) to use for config lookup
+  // Environment context for config lookup
   Environment environment = 1;
 
-  // Required: Rust must know which connector logic to execute
+  // Connector context for logic selection
   Connector connector = 2;
 
-  // Required: Credentials needed to build auth headers/payloads
-  optional ConnectorAuth auth = 3;
-}
-
-// Root configuration message to ensure all types are included in code generation.
-message Config {
-  ClientConfig client = 1;
-  RequestOptions request = 2;
-  FfiOptions ffi = 3;
+  // Credentials needed to build auth headers/payloads
+  ConnectorAuth auth = 3;
 }
 
 // ============================================================

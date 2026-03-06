@@ -8,7 +8,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
-import ucs.v2.SdkConfig.HttpDefault
 
 data class HttpRequest(
     val url: String,
@@ -41,19 +40,17 @@ object HttpClient {
                 .followRedirects(false)
                 .followSslRedirects(false)
 
-            val timeouts = if (config != null && config.hasTimeouts()) config.timeouts else null
-            
             // Set Instance Defaults
             builder.connectTimeout(
-                if (timeouts?.hasConnectTimeoutMs() == true) timeouts.connectTimeoutMs.toLong() else HttpDefault.CONNECT_TIMEOUT_MS_VALUE.toLong(), 
+                if (config?.hasConnectTimeoutMs() == true) config.connectTimeoutMs.toLong() else HttpDefault.CONNECT_TIMEOUT_MS_VALUE.toLong(), 
                 TimeUnit.MILLISECONDS
             )
             builder.readTimeout(
-                if (timeouts?.hasResponseTimeoutMs() == true) timeouts.responseTimeoutMs.toLong() else HttpDefault.RESPONSE_TIMEOUT_MS_VALUE.toLong(), 
+                if (config?.hasResponseTimeoutMs() == true) config.responseTimeoutMs.toLong() else HttpDefault.RESPONSE_TIMEOUT_MS_VALUE.toLong(), 
                 TimeUnit.MILLISECONDS
             )
             builder.callTimeout(
-                if (timeouts?.hasTotalTimeoutMs() == true) timeouts.totalTimeoutMs.toLong() else HttpDefault.TOTAL_TIMEOUT_MS_VALUE.toLong(), 
+                if (config?.hasTotalTimeoutMs() == true) config.totalTimeoutMs.toLong() else HttpDefault.TOTAL_TIMEOUT_MS_VALUE.toLong(), 
                 TimeUnit.MILLISECONDS
             )
 
@@ -97,7 +94,7 @@ object HttpClient {
     /**
      * Executes a request using the provided client, allowing per-call timeout overrides.
      */
-    fun execute(request: HttpRequest, timeoutConfig: HttpTimeoutConfig?, client: OkHttpClient): HttpResponse {
+    fun execute(request: HttpRequest, config: HttpConfig?, client: OkHttpClient): HttpResponse {
         val okHeaders = request.headers?.toHeaders() ?: Headers.Builder().build()
         val mediaType = okHeaders["Content-Type"]?.toMediaTypeOrNull()
         val requestBody = request.body?.toRequestBody(mediaType)
@@ -111,17 +108,17 @@ object HttpClient {
 
         // Per-call Timeout Overrides
         var callClient = client
-        if (timeoutConfig != null) {
+        if (config != null) {
             val builder = client.newBuilder()
-            if (timeoutConfig.hasConnectTimeoutMs()) {
-                builder.connectTimeout(timeoutConfig.connectTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
+            if (config.hasConnectTimeoutMs()) {
+                builder.connectTimeout(config.connectTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
             }
-            if (timeoutConfig.hasResponseTimeoutMs()) {
-                builder.readTimeout(timeoutConfig.responseTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
-                builder.writeTimeout(timeoutConfig.responseTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
+            if (config.hasResponseTimeoutMs()) {
+                builder.readTimeout(config.responseTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
+                builder.writeTimeout(config.responseTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
             }
-            if (timeoutConfig.hasTotalTimeoutMs()) {
-                builder.callTimeout(timeoutConfig.totalTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
+            if (config.hasTotalTimeoutMs()) {
+                builder.callTimeout(config.totalTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
             }
             callClient = builder.build()
         }
@@ -144,8 +141,8 @@ object HttpClient {
         } catch (e: IOException) {
             val msg = e.message?.lowercase() ?: ""
             val latency = System.currentTimeMillis() - startTime
-            val totalTimeout = if (timeoutConfig?.hasTotalTimeoutMs() == true) {
-                timeoutConfig.totalTimeoutMs.toLong()
+            val totalTimeout = if (config?.hasTotalTimeoutMs() == true) {
+                config.totalTimeoutMs.toLong()
             } else {
                 HttpDefault.TOTAL_TIMEOUT_MS_VALUE.toLong()
             }

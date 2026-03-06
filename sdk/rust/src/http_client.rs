@@ -1,5 +1,5 @@
 use common_utils::request::Method;
-use grpc_api_types::payments::{CaCert, HttpDefault};
+use grpc_api_types::payments::{CaCert, HttpConfig, HttpDefault};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -12,16 +12,11 @@ pub struct ProxyConfig {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct HttpTimeoutConfig {
+pub struct HttpOptions {
     pub total_timeout_ms: Option<u32>,
     pub connect_timeout_ms: Option<u32>,
     pub response_timeout_ms: Option<u32>,
     pub keep_alive_timeout_ms: Option<u32>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct HttpOptions {
-    pub timeouts: Option<HttpTimeoutConfig>,
     pub proxy: Option<ProxyConfig>,
     pub ca_cert: Option<CaCert>,
 }
@@ -30,21 +25,8 @@ pub struct HttpOptions {
 // Converters: Map from Protobuf types to Native Transport types
 // ---------------------------------------------------------------------------
 
-impl From<&grpc_api_types::payments::HttpTimeoutConfig> for HttpTimeoutConfig {
-    fn from(proto: &grpc_api_types::payments::HttpTimeoutConfig) -> Self {
-        Self {
-            total_timeout_ms: proto.total_timeout_ms,
-            connect_timeout_ms: proto.connect_timeout_ms,
-            response_timeout_ms: proto.response_timeout_ms,
-            keep_alive_timeout_ms: proto.keep_alive_timeout_ms,
-        }
-    }
-}
-
-impl From<&grpc_api_types::payments::HttpConfig> for HttpOptions {
-    fn from(proto: &grpc_api_types::payments::HttpConfig) -> Self {
-        let timeouts = proto.timeouts.as_ref().map(HttpTimeoutConfig::from);
-
+impl From<&HttpConfig> for HttpOptions {
+    fn from(proto: &HttpConfig) -> Self {
         let proxy = proto.proxy.as_ref().map(|p| ProxyConfig {
             http_url: p.http_url.clone(),
             https_url: p.https_url.clone(),
@@ -52,7 +34,10 @@ impl From<&grpc_api_types::payments::HttpConfig> for HttpOptions {
         });
 
         Self {
-            timeouts,
+            total_timeout_ms: proto.total_timeout_ms,
+            connect_timeout_ms: proto.connect_timeout_ms,
+            response_timeout_ms: proto.response_timeout_ms,
+            keep_alive_timeout_ms: proto.keep_alive_timeout_ms,
             proxy,
             ca_cert: proto.ca_cert.clone(),
         }
@@ -120,21 +105,15 @@ impl HttpClient {
     /// Initialize a new HttpClient with fixed infrastructure settings.
     pub fn new(options: HttpOptions) -> Result<Self, HttpClientError> {
         let connect_timeout = options
-            .timeouts
-            .as_ref()
-            .and_then(|t| t.connect_timeout_ms)
+            .connect_timeout_ms
             .unwrap_or(HttpDefault::ConnectTimeoutMs as u32);
 
         let total_timeout = options
-            .timeouts
-            .as_ref()
-            .and_then(|t| t.total_timeout_ms)
+            .total_timeout_ms
             .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
 
         let keep_alive_timeout = options
-            .timeouts
-            .as_ref()
-            .and_then(|t| t.keep_alive_timeout_ms)
+            .keep_alive_timeout_ms
             .unwrap_or(HttpDefault::KeepAliveTimeoutMs as u32);
 
         let mut builder = reqwest::Client::builder()
@@ -184,11 +163,11 @@ impl HttpClient {
         Ok(Self { client, options })
     }
 
-    /// Execute an HTTP request, applying per-call timeout overrides if provided.
+    /// Execute an HTTP request, applying per-call behavioral overrides if provided.
     pub async fn execute(
         &self,
         request: HttpRequest,
-        override_timeouts: Option<HttpTimeoutConfig>,
+        override_options: Option<HttpOptions>,
     ) -> Result<HttpResponse, HttpClientError> {
         let start_time = Instant::now();
 
@@ -200,11 +179,16 @@ impl HttpClient {
             Method::Patch => self.client.patch(&request.url),
         };
 
-        // Apply per-request total timeout override if explicitly provided.
-        // Otherwise, the client-level defaults set in HttpClient::new() will apply.
-        if let Some(total) = override_timeouts.as_ref().and_then(|t| t.total_timeout_ms) {
-            req_builder = req_builder.timeout(Duration::from_millis(total as u64));
-        }
+        // Efficient Override: Apply total timeout directly to RequestBuilder.
+        let effective_total_timeout =
+            if let Some(total) = override_options.as_ref().and_then(|o| o.total_timeout_ms) {
+                req_builder = req_builder.timeout(Duration::from_millis(total as u64));
+                total
+            } else {
+                self.options
+                    .total_timeout_ms
+                    .unwrap_or(HttpDefault::TotalTimeoutMs as u32)
+            };
 
         for (key, value) in &request.headers {
             req_builder = req_builder.header(key, value);
@@ -217,21 +201,10 @@ impl HttpClient {
         let response = req_builder.send().await.map_err(|e| {
             let elapsed = start_time.elapsed().as_millis() as u32;
 
-            // Re-resolve the effective total timeout for accurate error reporting
-            let effective_timeout = override_timeouts
-                .as_ref()
-                .and_then(|t| t.total_timeout_ms)
-                .or(self
-                    .options
-                    .timeouts
-                    .as_ref()
-                    .and_then(|t| t.total_timeout_ms))
-                .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
-
             if e.is_timeout() {
                 if e.is_connect() {
                     HttpClientError::ConnectTimeout(request.url.clone())
-                } else if elapsed >= effective_timeout {
+                } else if elapsed >= effective_total_timeout {
                     HttpClientError::TotalTimeout(request.url.clone())
                 } else {
                     HttpClientError::ResponseTimeout(request.url.clone())
@@ -266,7 +239,6 @@ impl HttpClient {
     }
 }
 
-/// Resolve the proxy URL for a target URL, respecting bypass rules.
 pub fn resolve_proxy_url(_url: &str, proxy: &Option<ProxyConfig>) -> Option<String> {
     let proxy = proxy.as_ref()?;
     proxy.https_url.clone().or_else(|| proxy.http_url.clone())

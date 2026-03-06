@@ -18,54 +18,54 @@ import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 
 class ConnectorClient(
-    val config: ClientConfig,
+    val identity: ClientIdentity,
+    val defaults: ConfigOptions = ConfigOptions.getDefaultInstance(),
     libPath: String? = null
 ) {
     private val httpClient: okhttp3.OkHttpClient
 
     init {
-        // Instance-level connection pool (OkHttpClient)
+        // Instance-level cache: create the primary connection pool at startup
         // Infrastructure (Proxy, Certs) fixed at client level.
-        this.httpClient = HttpClient.createClient(config.http)
+        val httpConfig = if (defaults.hasHttp()) defaults.http else null
+        this.httpClient = HttpClient.createClient(httpConfig)
     }
 
     /**
-     * Merges request-level overrides with client defaults to build the 
+     * Merges request-level options with client defaults to build the 
      * final context for the Rust transformation engine.
      */
-    private fun resolveFfiOptions(requestOptions: RequestOptions?): FfiOptions {
-        val builder = FfiOptions.newBuilder()
-            .setEnvironment(config.environment)
-            .setConnector(config.connector)
-        
-        // Prefer request-level auth override
-        if (requestOptions != null && requestOptions.hasAuth()) {
-            builder.auth = requestOptions.auth
-        } else if (config.hasAuth()) {
-            builder.auth = config.auth
+    private fun resolveFfiOptions(overrides: ConfigOptions?): FfiOptions {
+        // Resolve Environment: Request Override > Client Default > Sandbox (0)
+        // Note: Java Protobuf enums don't have hasField() methods.
+        val environment = when {
+            overrides != null && overrides.environment != Environment.ENVIRONMENT_UNSPECIFIED -> overrides.environment
+            defaults.environment != Environment.ENVIRONMENT_UNSPECIFIED -> defaults.environment
+            else -> Environment.SANDBOX
         }
-        
-        return builder.build()
+
+        return FfiOptions.newBuilder()
+            .setEnvironment(environment)
+            .setConnector(identity.connector)
+            .setAuth(identity.auth)
+            .build()
     }
 
     /**
-     * Resolves the final timeout configuration for a request.
-     * Identity Rule: Only timeouts can be overridden per request.
+     * Merges request-level HTTP overrides with client defaults.
      */
-    private fun resolveTimeoutConfig(requestOptions: RequestOptions?): HttpTimeoutConfig? {
-        val clientTimeouts = if (config.hasHttp() && config.http.hasTimeouts()) config.http.timeouts else null
-        val overrideTimeouts = if (requestOptions != null && requestOptions.hasTimeouts()) requestOptions.timeouts else null
+    private fun resolveHttpConfig(overrides: ConfigOptions?): HttpConfig? {
+        val clientHttp = if (defaults.hasHttp()) defaults.http else null
+        val overrideHttp = if (overrides != null && overrides.hasHttp()) overrides.http else null
 
-        if (overrideTimeouts == null) {
-            return clientTimeouts
+        if (overrideHttp == null) return clientHttp
+        
+        // Merge: Field-level override > Client default
+        val builder = HttpConfig.newBuilder()
+        if (clientHttp != null) {
+            builder.mergeFrom(clientHttp)
         }
-
-        // Merge timeouts: override > client default
-        val builder = HttpTimeoutConfig.newBuilder()
-        if (clientTimeouts != null) {
-            builder.mergeFrom(clientTimeouts)
-        }
-        builder.mergeFrom(overrideTimeouts)
+        builder.mergeFrom(overrideHttp)
         
         return builder.build()
     }
@@ -77,7 +77,7 @@ class ConnectorClient(
      * @param requestBytes Serialized protobuf request bytes.
      * @param responseParser Protobuf parser for the expected response type.
      * @param metadata Map with connector routing and auth info.
-     * @param requestOptions Optional RequestOptions message.
+     * @param options Optional ConfigOptions message.
      * @return Parsed protobuf response.
      */
     fun <T : MessageLite> executeFlow(
@@ -85,19 +85,19 @@ class ConnectorClient(
         requestBytes: ByteArray,
         responseParser: Parser<T>,
         metadata: Map<String, String>,
-        requestOptions: RequestOptions? = null,
+        options: ConfigOptions? = null,
     ): T {
         val reqTransformer = FlowRegistry.reqTransformers[flow]
-            ?: error("Unknown flow: '$flow'. Add it to sdk/flows.yaml and run `make codegen`.")
+            ?: error("Unknown flow: '$flow'")
         val resTransformer = FlowRegistry.resTransformers[flow]
-            ?: error("Unknown flow: '$flow'. Add it to sdk/flows.yaml and run `make codegen`.")
+            ?: error("Unknown flow: '$flow'")
 
         // 1. Resolve final configuration (Pattern-based merging)
-        val ffiOptions = resolveFfiOptions(requestOptions)
+        val ffiOptions = resolveFfiOptions(options)
         val optionsBytes = ffiOptions.toByteArray()
-        val timeoutConfig = resolveTimeoutConfig(requestOptions)
+        val httpConfig = resolveHttpConfig(options)
 
-        // 2. Build connector HTTP request via FFI (returns FfiConnectorHttpRequest protobuf bytes)
+        // 2. Build connector HTTP request via FFI
         val connectorRequestBytes = reqTransformer(requestBytes, metadata, optionsBytes)
         val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
 
@@ -109,7 +109,7 @@ class ConnectorClient(
         )
 
         // 3. Execute HTTP request via standardized HttpClient using the connection pool
-        val response = HttpClient.execute(httpRequest, timeoutConfig, this.httpClient)
+        val response = HttpClient.execute(httpRequest, httpConfig, this.httpClient)
 
         // 4. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
         val ffiResponseBytes = FfiConnectorHttpResponse.newBuilder()

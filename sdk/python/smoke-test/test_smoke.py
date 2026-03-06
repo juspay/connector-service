@@ -1,8 +1,9 @@
 """
-Smoke test for the packed asynchronous hyperswitch-payments wheel.
+Smoke test for the packed hyperswitch-payments wheel.
 
 Run via `make test-pack` — the Makefile installs the wheel into a temp
-directory, copies this script there, and runs it in-place.
+directory, copies this script there, and runs it in-place so imports
+resolve against the installed package.
 """
 
 import json
@@ -19,20 +20,21 @@ from payments import (
     USD,
     AUTOMATIC,
     NO_THREE_DS,
+    # New Blueprint Configuration Types
     Connector,
     Environment,
-    ClientConfig,
-    PaymentStatus
+    ClientIdentity,
+    ConfigOptions,
 )
 
-async def run_smoke_test():
+async def run_test():
     print(f"Loaded payments package from: {__file__}")
     print(f"  ConnectorClient: {ConnectorClient}")
     print(f"  authorize_req_transformer: {authorize_req_transformer}")
 
     api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
 
-    # Metadata strictly contains transport/context headers
+    # Metadata now strictly contains transport/context headers
     metadata = {
         "x-connector": "Stripe",
         "x-merchant-id": "test_merchant_123",
@@ -43,12 +45,17 @@ async def run_smoke_test():
     }
 
     # 1. Initialize Client with new "Blueprint" pattern
-    config = ClientConfig(
-        connector=Connector.STRIPE,
-        environment=Environment.SANDBOX
+    identity = ClientIdentity(
+        connector=Connector.STRIPE
     )
     # Set Stripe API key surgically via the typed auth oneof
-    config.auth.stripe.api_key.value = api_key
+    identity.auth.stripe.api_key.value = api_key
+
+    defaults = ConfigOptions(
+        environment=Environment.SANDBOX
+    )
+
+    client = ConnectorClient(identity, defaults)
 
     # Build a protobuf request
     req = PaymentServiceAuthorizeRequest()
@@ -75,7 +82,7 @@ async def run_smoke_test():
     ffi_opts = FfiOptions(
         environment=Environment.SANDBOX,
         connector=Connector.STRIPE,
-        auth=config.auth
+        auth=identity.auth
     )
     options_bytes = ffi_opts.SerializeToString()
 
@@ -87,6 +94,8 @@ async def run_smoke_test():
     print(f"  Method: {result.method}")
     if result.url != "https://api.stripe.com/v1/payment_intents":
         raise Exception(f"Unexpected URL: {result.url}")
+    if result.method != "POST":
+        raise Exception("Unexpected method")
     print("  PASSED")
 
     # --- Test 2: Full round-trip via ConnectorClient ---
@@ -94,22 +103,17 @@ async def run_smoke_test():
     if api_key == "sk_test_placeholder":
         print("  SKIPPED (set STRIPE_API_KEY to enable)")
     else:
-        client = ConnectorClient(config)
         try:
-            # We must AWAIT the authorize call now
             response = await client.authorize(req, metadata)
-            
-            # Display human-readable status
-            status_name = PaymentStatus.Name(response.status)
-            print(f"  Payment status: {status_name} ({response.status})")
+            print(f"  Response status: {response.status}")
+            print(f"  Response type:   {type(response).__name__}")
             print("  PASSED")
         except Exception as e:
             print(f"  Response/error received: {e}")
             print("  PASSED (round-trip completed, error is from Stripe)")
-        finally:
-            await client.close()
 
-    print("\nAll Python checks passed.")
+    await client.close()
+    print("\nAll checks passed.")
 
 if __name__ == "__main__":
-    asyncio.run(run_smoke_test())
+    asyncio.run(run_test())

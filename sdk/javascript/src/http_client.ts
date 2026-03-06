@@ -64,16 +64,14 @@ export function createDispatcher(config: ucs.v2.IHttpConfig): Dispatcher {
     }
   }
 
-  const timeouts = config.timeouts || {};
-
   const dispatcherOptions: any = {
     connect: {
-      timeout: timeouts.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS,
+      timeout: config.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS,
       ca,
     },
-    headersTimeout: timeouts.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
-    bodyTimeout: timeouts.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
-    keepAliveTimeout: timeouts.keepAliveTimeoutMs ?? Defaults.KEEP_ALIVE_TIMEOUT_MS,
+    headersTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
+    bodyTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
+    keepAliveTimeout: config.keepAliveTimeoutMs ?? Defaults.KEEP_ALIVE_TIMEOUT_MS,
   };
 
   try {
@@ -101,8 +99,7 @@ export async function execute(
   const { url, method, headers, body } = request;
 
   // Lifecycle Management
-  const timeouts = options.timeouts || {};
-  const totalTimeout = timeouts.totalTimeoutMs ?? Defaults.TOTAL_TIMEOUT_MS;
+  const totalTimeout = options.totalTimeoutMs ?? Defaults.TOTAL_TIMEOUT_MS;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), totalTimeout);
 

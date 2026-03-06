@@ -12,7 +12,6 @@ Defaults = sdk_config_pb2.HttpDefault
 
 # Type alias for proto-generated HttpConfig and sub-configs
 HttpConfig = sdk_config_pb2.HttpConfig
-HttpTimeoutConfig = sdk_config_pb2.HttpTimeoutConfig
 ProxyOptions = sdk_config_pb2.ProxyOptions
 
 @dataclass
@@ -61,12 +60,10 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient
     verify: Union[bool, ssl.SSLContext] = True
     mounts = None
     
-    # 1. Resolve Timeouts (Client Level Defaults)
-    t = http_config.timeouts if (http_config and http_config.HasField('timeouts')) else None
-    
-    total_timeout = (t.total_timeout_ms / 1000.0) if (t and t.HasField('total_timeout_ms')) else (Defaults.TOTAL_TIMEOUT_MS / 1000.0)
-    connect_timeout = (t.connect_timeout_ms / 1000.0) if (t and t.HasField('connect_timeout_ms')) else (Defaults.CONNECT_TIMEOUT_MS / 1000.0)
-    read_timeout = (t.response_timeout_ms / 1000.0) if (t and t.HasField('response_timeout_ms')) else (Defaults.RESPONSE_TIMEOUT_MS / 1000.0)
+    # Resolve Timeouts (Defaults from HttpConfig or Protobuf Constants)
+    total_timeout = (http_config.total_timeout_ms / 1000.0) if (http_config and http_config.HasField('total_timeout_ms')) else (Defaults.TOTAL_TIMEOUT_MS / 1000.0)
+    connect_timeout = (http_config.connect_timeout_ms / 1000.0) if (http_config and http_config.HasField('connect_timeout_ms')) else (Defaults.CONNECT_TIMEOUT_MS / 1000.0)
+    read_timeout = (http_config.response_timeout_ms / 1000.0) if (http_config and http_config.HasField('response_timeout_ms')) else (Defaults.RESPONSE_TIMEOUT_MS / 1000.0)
 
     if http_config:
         # 2. Resolve Certificate
@@ -98,7 +95,7 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient
 async def execute(
     request: HttpRequest, 
     client: httpx.AsyncClient,
-    timeout_config: Optional[HttpTimeoutConfig] = None
+    http_config: Optional[HttpConfig] = None
 ) -> HttpResponse:
     """
     Standardized stateless execution engine using httpx AsyncClient.
@@ -107,10 +104,10 @@ async def execute(
     
     # Per-request timeout override
     timeout = httpx.USE_CLIENT_DEFAULT
-    if timeout_config:
-        total = (timeout_config.total_timeout_ms / 1000.0) if timeout_config.HasField('total_timeout_ms') else None
-        connect = (timeout_config.connect_timeout_ms / 1000.0) if timeout_config.HasField('connect_timeout_ms') else None
-        read = (timeout_config.response_timeout_ms / 1000.0) if timeout_config.HasField('response_timeout_ms') else None
+    if http_config:
+        total = (http_config.total_timeout_ms / 1000.0) if http_config.HasField('total_timeout_ms') else None
+        connect = (http_config.connect_timeout_ms / 1000.0) if http_config.HasField('connect_timeout_ms') else None
+        read = (http_config.response_timeout_ms / 1000.0) if http_config.HasField('response_timeout_ms') else None
         timeout = httpx.Timeout(total, connect=connect, read=read)
 
     try:

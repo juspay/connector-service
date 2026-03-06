@@ -27,22 +27,47 @@ const {
   ConnectorState,
 } = payments;
 
-const { ClientConfig, Environment } = configs;
+const { ClientIdentity, ConfigOptions, Environment } = configs;
 
 const PAYPAL_CREDS = {
-  client_id: "PAYPAL_CLIENT_ID_PLACEHOLDER",
-  client_secret: "PAYPAL_CLIENT_SECRET_PLACEHOLDER",
+  client_id:
+    "client_id",
+  client_secret:
+    "client_secret",
 };
 
 const metadata: Record<string, string> = {
+  connector: "Paypal",
+  connector_auth_type: JSON.stringify({
+    Paypal: {
+      client_id: PAYPAL_CREDS.client_id,
+      client_secret: PAYPAL_CREDS.client_secret,
+    },
+  }),
+  "x-connector": "Paypal",
   "x-merchant-id": "test_merchant_123",
   "x-request-id": "test-pack-001",
   "x-tenant-id": "public",
-  "x-connector": "Paypal",
   "x-auth": "body-key",
   "x-api-key": PAYPAL_CREDS.client_secret,
   "x-key1": PAYPAL_CREDS.client_id,
 };
+
+// 1. Mandatory Identity
+const identity = ClientIdentity.create({
+  connector: Connector.PAYPAL,
+  auth: {
+    paypal: {
+      clientId: { value: PAYPAL_CREDS.client_id },
+      clientSecret: { value: PAYPAL_CREDS.client_secret },
+    }
+  }
+});
+
+// 2. Overridable Options
+const options = ConfigOptions.create({
+  environment: Environment.SANDBOX,
+});
 
 /**
  * Test the access token flow:
@@ -52,19 +77,7 @@ const metadata: Record<string, string> = {
 async function testAccessTokenFlow(): Promise<void> {
   console.log("\n=== Test: PayPal Access Token Flow ===");
 
-  // New initialization pattern
-  const clientConfig: configs.IClientConfig = {
-    connector: Connector.PAYPAL,
-    environment: Environment.SANDBOX,
-    auth: {
-      paypal: {
-        clientId: { value: PAYPAL_CREDS.client_id },
-        clientSecret: { value: PAYPAL_CREDS.client_secret },
-      }
-    }
-  };
-
-  const client = new ConnectorClient(clientConfig);
+  const client = new ConnectorClient(identity, options);
 
   // Step 1: Create Access Token Request
   console.log("\n--- Step 1: Create Access Token ---");
@@ -104,7 +117,7 @@ async function testAccessTokenFlow(): Promise<void> {
       console.log(
         `  Expires In: ${accessTokenResponse.expiresInSeconds} seconds`
       );
-      console.log(`  Status: ${payments.PaymentStatus[accessTokenResponse.status]} (${accessTokenResponse.status})`);
+      console.log(`  Status: ${accessTokenResponse.status}`);
     } else {
       console.log("  WARNING: No access token in response");
       console.log(
@@ -151,7 +164,7 @@ async function testAccessTokenFlow(): Promise<void> {
       },
       state: ConnectorState.create({
         accessToken: AccessToken.create({
-          token: { value: accessTokenValue },
+          token: SecretString.create({ value: accessTokenValue }),
           tokenType: tokenTypeValue,
           expiresInSeconds: accessTokenResponse!.expiresInSeconds,
         }),
@@ -168,7 +181,7 @@ async function testAccessTokenFlow(): Promise<void> {
       await client.authorize(authorizeRequest, metadata);
     console.log(`  Response type: ${typeof authorizeResponse}`);
     console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);
-    console.log(`  Payment status: ${payments.PaymentStatus[authorizeResponse.status]} (${authorizeResponse.status})`);
+    console.log(`  Payment status: ${authorizeResponse.status}`);
     console.log("  PASSED");
   } catch (e: unknown) {
     console.log(`  Error during authorize: ${e}`);

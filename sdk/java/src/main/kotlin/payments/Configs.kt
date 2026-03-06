@@ -15,12 +15,12 @@ package payments
 import ucs.v2.SdkConfig
 
 typealias Environment = SdkConfig.Environment
-typealias ClientConfig = SdkConfig.ClientConfig
-typealias RequestOptions = SdkConfig.RequestOptions
+typealias ClientIdentity = SdkConfig.ClientIdentity
+typealias ConfigOptions = SdkConfig.ConfigOptions
 typealias HttpConfig = SdkConfig.HttpConfig
-typealias HttpTimeoutConfig = SdkConfig.HttpTimeoutConfig
 typealias CaCert = SdkConfig.CaCert
 typealias ProxyOptions = SdkConfig.ProxyOptions
 typealias FfiOptions = SdkConfig.FfiOptions
 typealias FfiConnectorHttpRequest = SdkConfig.FfiConnectorHttpRequest
 typealias FfiConnectorHttpResponse = SdkConfig.FfiConnectorHttpResponse
+typealias HttpDefault = SdkConfig.HttpDefault

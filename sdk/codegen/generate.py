@@ -210,7 +210,7 @@ def gen_python_stub(flows: list[dict]) -> None:
         "#",
         "# This stub exposes dynamically-attached flow methods to static analysers",
         "# (Pylance, pyright, mypy) so IDEs offer completions and type checking.",
-        "from payments.generated.sdk_config_pb2 import RequestOptions",
+        "from payments.generated.sdk_config_pb2 import ClientIdentity, ConfigOptions",
         "from payments.generated.payment_pb2 import (",
     ]
     for t in imports:
@@ -219,14 +219,14 @@ def gen_python_stub(flows: list[dict]) -> None:
         ")",
         "",
         "class ConnectorClient:",
-        "    def __init__(self, lib_path: str | None = ...) -> None: ...",
+        "    def __init__(self, identity: ClientIdentity, defaults: ConfigOptions | None = ...) -> None: ...",
         "",
     ]
 
     for f in flows:
         n, req, res = f["name"], f["request"], f["response"]
         lines.append(
-            f"    def {n}(self, request: {req}, metadata: dict, options: RequestOptions | None = ...) -> {res}:"
+            f"    def {n}(self, request: {req}, metadata: dict, options: ConfigOptions | None = ...) -> {res}:"
         )
         lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
         lines.append(f"        ...")
@@ -286,9 +286,9 @@ def gen_connector_client_ts(flows: list[dict]) -> None:
         lines.append(f"  async {camel}(")
         lines.append(f"    requestMsg: ucs.v2.I{req},")
         lines.append(f"    metadata: Record<string, string>,")
-        lines.append(f"    requestOptions?: ucs.v2.IRequestOptions | null")
+        lines.append(f"    options?: ucs.v2.IConfigOptions | null")
         lines.append(f"  ): Promise<ucs.v2.{res}> {{")
-        lines.append(f"    return this._executeFlow('{n}', requestMsg, metadata, requestOptions, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
+        lines.append(f"    return this._executeFlow('{n}', requestMsg, metadata, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
         lines.append(f"  }}")
         lines.append("")
     lines += ["}", ""]
@@ -384,7 +384,7 @@ def gen_kotlin(flows: list[dict]) -> None:
         n, req, res = f["name"], f["request"], f["response"]
         lines.append(flow_comment(f, "//"))
         lines.append(
-            f"fun ConnectorClient.{n}(request: {req}, metadata: Map<String, String>, options: RequestOptions? = null): {res} ="
+            f"fun ConnectorClient.{n}(request: {req}, metadata: Map<String, String>, options: ConfigOptions? = null): {res} ="
         )
         lines.append(f'    executeFlow("{n}", request.toByteArray(), {res}.parser(), metadata, options)')
         lines.append("")
