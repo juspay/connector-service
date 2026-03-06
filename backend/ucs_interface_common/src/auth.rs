@@ -5,7 +5,7 @@ use common_utils::{
 use domain_types::{
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
-    router_data::ConnectorSpecificAuth,
+    router_data::{ConnectorAuthType, ConnectorSpecificAuth},
     utils::ForeignTryFrom,
 };
 use error_stack::{Report, ResultExt};
@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use tonic::metadata;
 use ucs_env::logger;
 
-use crate::metadata::parse_metadata;
+use crate::metadata::{connector_from_metadata, parse_metadata};
 
 /// Resolves connector and auth by trying the typed `X-Connector-Auth` header first,
 /// parsing both the connector enum and the specific auth type in one go.
@@ -52,7 +52,6 @@ pub fn connector_and_auth_from_metadata(
             }))
         })?;
 
-        use domain_types::utils::ForeignTryFrom;
         let connector = connector_types::ConnectorEnum::foreign_try_from(auth_type.clone())?;
 
         let auth = ConnectorSpecificAuth::foreign_try_from(typed_auth).change_context(
@@ -72,7 +71,7 @@ pub fn connector_and_auth_from_metadata(
     } else {
         logger::debug!("X-Connector-Auth header not found, falling back to legacy headers");
 
-        let connector = crate::metadata::connector_from_metadata(metadata)?;
+        let connector = connector_from_metadata(metadata)?;
         let auth = auth_from_metadata(metadata, &connector)?;
 
         Ok((connector, auth))
@@ -100,9 +99,7 @@ pub fn auth_from_metadata(
 /// This is the legacy format that uses key1, key2, etc.
 pub fn generic_auth_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<domain_types::router_data::ConnectorAuthType, ApplicationErrorResponse> {
-    use domain_types::router_data::ConnectorAuthType;
-
+) -> CustomResult<ConnectorAuthType, ApplicationErrorResponse> {
     let auth = parse_metadata(metadata, X_AUTH)?;
 
     #[allow(clippy::wildcard_in_or_patterns)]

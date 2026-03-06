@@ -38,6 +38,7 @@ use crate::{
     },
     utils::{missing_field_err, Error, ForeignTryFrom},
 };
+use grpc_api_types::payments::connector_auth::AuthType;
 use url::Url;
 
 // snake case for enum variants
@@ -3492,8 +3493,6 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for Conn
     fn foreign_try_from(
         auth_type: grpc_api_types::payments::connector_auth::AuthType,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        use grpc_api_types::payments::connector_auth::AuthType;
-        #[allow(unreachable_patterns)]
         match auth_type {
             AuthType::Adyen(_) => Ok(Self::Adyen),
             AuthType::Airwallex(_) => Ok(Self::Airwallex),
@@ -3602,14 +3601,6 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for Conn
             )),
             AuthType::Revolv3(_) => Ok(Self::Revolv3),
             AuthType::Authorizedotnet(_) => Ok(Self::Authorizedotnet),
-            _ => Err(error_stack::Report::new(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CONNECTOR_AUTH_TYPE".to_string(),
-                    error_identifier: 400,
-                    error_message: "Unknown auth type".to_string(),
-                    error_object: None,
-                }),
-            )),
         }
     }
 }
