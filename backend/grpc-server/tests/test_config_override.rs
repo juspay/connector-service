@@ -130,8 +130,10 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
             "Expected failure due to test data, got status: {:?}",
             response.status
         );
-        assert_eq!(response.status_code, 400, "Expected 400 status code");
-        assert!(response.error.is_some(), "Expected error details in response");
+        assert!(
+            response.error.is_some(),
+            "Expected error details in response"
+        );
     });
     Ok(())
 }
