@@ -1,22 +1,28 @@
 use std::collections::HashMap;
 
-use grpc_api_types::payments::{self, PaymentServiceAuthorizeRequest, ClientConfig, Environment, Connector, ConnectorAuth, FfiOptions};
+use grpc_api_types::payments::{
+    self, ClientConfig, Connector, ConnectorAuth, Environment, FfiOptions,
+    PaymentServiceAuthorizeRequest,
+};
 use hyperswitch_masking::Secret;
 use hyperswitch_payments_client::ConnectorClient;
 
 #[tokio::main]
 async fn main() {
     let request = build_authorize_request();
-    let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_placeholder".to_string());
-    
+    let api_key =
+        std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_placeholder".to_string());
+
     // Define the final configuration context
     let ffi_options = FfiOptions {
         environment: Environment::Sandbox.into(),
         connector: Connector::Stripe.into(),
         auth: Some(ConnectorAuth {
-            auth_type: Some(payments::connector_auth::AuthType::Stripe(payments::StripeAuth {
-                api_key: Some(Secret::new(api_key.to_string()))
-            })),
+            auth_type: Some(payments::connector_auth::AuthType::Stripe(
+                payments::StripeAuth {
+                    api_key: Some(Secret::new(api_key.to_string())),
+                },
+            )),
         }),
     };
 
@@ -100,7 +106,6 @@ fn build_metadata(api_key: &str) -> HashMap<String, String> {
     let mut metadata = HashMap::new();
     metadata.insert("connector".to_string(), "Stripe".to_string());
 
-
     // Required metadata headers (used by ffi_headers_to_masked_metadata)
     metadata.insert("x-connector".to_string(), "Stripe".to_string());
     metadata.insert("x-merchant-id".to_string(), "test_merchant_123".to_string());
@@ -115,21 +120,32 @@ fn build_metadata(api_key: &str) -> HashMap<String, String> {
 }
 
 /// Demo 1: Low-level handler call.
-fn demo_low_level(request: &PaymentServiceAuthorizeRequest, metadata: &HashMap<String, String>, ffi_options: &FfiOptions) {
+fn demo_low_level(
+    request: &PaymentServiceAuthorizeRequest,
+    metadata: &HashMap<String, String>,
+    ffi_options: &FfiOptions,
+) {
     eprintln!("=== Demo 1: Low-Level Handler Call ===\n");
 
-    let ffi_request =
-        match hyperswitch_payments_client::build_ffi_request(request.clone(), metadata, ffi_options) {
-            Ok(req) => req,
-            Err(e) => {
-                eprintln!("Failed to build FFI request: {}", e);
-                return;
-            }
-        };
+    let ffi_request = match hyperswitch_payments_client::build_ffi_request(
+        request.clone(),
+        metadata,
+        ffi_options,
+    ) {
+        Ok(req) => req,
+        Err(e) => {
+            eprintln!("Failed to build FFI request: {}", e);
+            return;
+        }
+    };
 
-    let environment = Some(grpc_api_types::payments::Environment::try_from(ffi_options.environment).unwrap_or_default());
+    let environment = Some(
+        grpc_api_types::payments::Environment::try_from(ffi_options.environment)
+            .unwrap_or_default(),
+    );
 
-    match connector_service_ffi::handlers::payments::authorize_req_handler(ffi_request, environment) {
+    match connector_service_ffi::handlers::payments::authorize_req_handler(ffi_request, environment)
+    {
         Ok(Some(connector_request)) => {
             let url = connector_request.url.clone();
             let method = connector_request.method;
@@ -185,7 +201,6 @@ async fn demo_full_round_trip(
 
     eprintln!("Connector: Stripe");
     eprintln!("Sending authorize request...\n");
-
 
     // 1. Initialize Client with new "Blueprint" pattern
     let config = ClientConfig {

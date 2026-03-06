@@ -1,5 +1,5 @@
 use common_utils::request::Method;
-use grpc_api_types::payments::{HttpDefault, CaCert};
+use grpc_api_types::payments::{CaCert, HttpDefault};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -44,7 +44,7 @@ impl From<&grpc_api_types::payments::HttpTimeoutConfig> for HttpTimeoutConfig {
 impl From<&grpc_api_types::payments::HttpConfig> for HttpOptions {
     fn from(proto: &grpc_api_types::payments::HttpConfig) -> Self {
         let timeouts = proto.timeouts.as_ref().map(HttpTimeoutConfig::from);
-        
+
         let proxy = proto.proxy.as_ref().map(|p| ProxyConfig {
             http_url: p.http_url.clone(),
             https_url: p.https_url.clone(),
@@ -119,15 +119,21 @@ pub struct HttpClient {
 impl HttpClient {
     /// Initialize a new HttpClient with fixed infrastructure settings.
     pub fn new(options: HttpOptions) -> Result<Self, HttpClientError> {
-        let connect_timeout = options.timeouts.as_ref()
+        let connect_timeout = options
+            .timeouts
+            .as_ref()
             .and_then(|t| t.connect_timeout_ms)
             .unwrap_or(HttpDefault::ConnectTimeoutMs as u32);
-            
-        let total_timeout = options.timeouts.as_ref()
+
+        let total_timeout = options
+            .timeouts
+            .as_ref()
             .and_then(|t| t.total_timeout_ms)
             .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
-            
-        let keep_alive_timeout = options.timeouts.as_ref()
+
+        let keep_alive_timeout = options
+            .timeouts
+            .as_ref()
             .and_then(|t| t.keep_alive_timeout_ms)
             .unwrap_or(HttpDefault::KeepAliveTimeoutMs as u32);
 
@@ -140,20 +146,28 @@ impl HttpClient {
         if let Some(ca) = &options.ca_cert {
             let cert = match &ca.format {
                 Some(grpc_api_types::payments::ca_cert::Format::Pem(pem)) => {
-                    reqwest::Certificate::from_pem(pem.as_bytes())
-                        .map_err(|e| HttpClientError::InvalidConfiguration(format!("Invalid PEM: {}", e)))
+                    reqwest::Certificate::from_pem(pem.as_bytes()).map_err(|e| {
+                        HttpClientError::InvalidConfiguration(format!("Invalid PEM: {}", e))
+                    })
                 }
                 Some(grpc_api_types::payments::ca_cert::Format::Der(der)) => {
-                    reqwest::Certificate::from_der(der)
-                        .map_err(|e| HttpClientError::InvalidConfiguration(format!("Invalid DER: {}", e)))
+                    reqwest::Certificate::from_der(der).map_err(|e| {
+                        HttpClientError::InvalidConfiguration(format!("Invalid DER: {}", e))
+                    })
                 }
-                None => Err(HttpClientError::InvalidConfiguration("Missing cert format".to_string())),
+                None => Err(HttpClientError::InvalidConfiguration(
+                    "Missing cert format".to_string(),
+                )),
             }?;
             builder = builder.add_root_certificate(cert);
         }
 
         if let Some(proxy_config) = &options.proxy {
-            if let Some(url) = proxy_config.https_url.as_ref().or(proxy_config.http_url.as_ref()) {
+            if let Some(url) = proxy_config
+                .https_url
+                .as_ref()
+                .or(proxy_config.http_url.as_ref())
+            {
                 if let Ok(mut proxy) = reqwest::Proxy::all(url) {
                     for bypass in &proxy_config.bypass_urls {
                         proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
@@ -172,9 +186,9 @@ impl HttpClient {
 
     /// Execute an HTTP request, applying per-call timeout overrides if provided.
     pub async fn execute(
-        &self, 
-        request: HttpRequest, 
-        override_timeouts: Option<HttpTimeoutConfig>
+        &self,
+        request: HttpRequest,
+        override_timeouts: Option<HttpTimeoutConfig>,
     ) -> Result<HttpResponse, HttpClientError> {
         let start_time = Instant::now();
 
@@ -202,11 +216,16 @@ impl HttpClient {
 
         let response = req_builder.send().await.map_err(|e| {
             let elapsed = start_time.elapsed().as_millis() as u32;
-            
+
             // Re-resolve the effective total timeout for accurate error reporting
-            let effective_timeout = override_timeouts.as_ref()
+            let effective_timeout = override_timeouts
+                .as_ref()
                 .and_then(|t| t.total_timeout_ms)
-                .or(self.options.timeouts.as_ref().and_then(|t| t.total_timeout_ms))
+                .or(self
+                    .options
+                    .timeouts
+                    .as_ref()
+                    .and_then(|t| t.total_timeout_ms))
                 .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
 
             if e.is_timeout() {

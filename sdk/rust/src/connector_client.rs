@@ -2,18 +2,19 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::http_client::{
-    HttpClient, HttpClientError, HttpTimeoutConfig as NativeHttpTimeoutConfig,
-    HttpRequest as ClientHttpRequest, HttpOptions as NativeHttpOptions,
+    HttpClient, HttpClientError, HttpOptions as NativeHttpOptions,
+    HttpRequest as ClientHttpRequest, HttpTimeoutConfig as NativeHttpTimeoutConfig,
 };
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
-use domain_types::router_response_types::Response;
-use grpc_api_types::payments::{
-    FfiOptions, ClientConfig, RequestOptions, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse
-};
 use domain_types::router_data::ConnectorSpecificAuth;
+use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
+use grpc_api_types::payments::{
+    ClientConfig, FfiOptions, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+    RequestOptions,
+};
 
 /// ConnectorClient — high-level Rust wrapper for the Connector Service.
 ///
@@ -32,7 +33,7 @@ impl ConnectorClient {
     /// Initialize a new ConnectorClient.
     ///
     /// # Arguments
-    /// * `config` - The ClientConfig protobuf message defining the connector, 
+    /// * `config` - The ClientConfig protobuf message defining the connector,
     ///              environment, and default settings.
     pub fn new(config: ClientConfig) -> Result<Self, HttpClientError> {
         // Map the Protobuf options to native transport options
@@ -50,7 +51,7 @@ impl ConnectorClient {
         })
     }
 
-    /// Merges request-level overrides with client defaults to build the 
+    /// Merges request-level overrides with client defaults to build the
     /// final context for the Rust transformation engine.
     fn resolve_ffi_options(&self, request_options: &Option<RequestOptions>) -> FfiOptions {
         // Precedence: Explicit Request Auth > Client Default Auth
@@ -80,14 +81,17 @@ impl ConnectorClient {
     ) -> Result<PaymentServiceAuthorizeResponse, Box<dyn Error>> {
         // 1. Resolve final configuration (Pattern-based merging)
         let ffi_options = self.resolve_ffi_options(&request_options);
-        
+
         // Pass the raw override timeouts directly. If None, HttpClient uses its internal defaults.
-        let override_timeouts = request_options.as_ref()
+        let override_timeouts = request_options
+            .as_ref()
             .and_then(|o| o.timeouts.as_ref())
             .map(NativeHttpTimeoutConfig::from);
-        
+
         let ffi_request = build_ffi_request(request.clone(), metadata, &ffi_options)?;
-        let environment = Some(grpc_api_types::payments::Environment::try_from(ffi_options.environment)?);
+        let environment = Some(grpc_api_types::payments::Environment::try_from(
+            ffi_options.environment,
+        )?);
 
         // 2. Build the connector HTTP request via core handler
         let connector_request = authorize_req_handler(ffi_request, environment)
@@ -118,7 +122,10 @@ impl ConnectorClient {
             body,
         };
 
-        let http_response = self.http_client.execute(http_req, override_timeouts).await?;
+        let http_response = self
+            .http_client
+            .execute(http_req, override_timeouts)
+            .await?;
 
         // 4. Convert HTTP response to domain Response type
         let mut header_map = http::HeaderMap::new();
@@ -159,16 +166,19 @@ pub fn build_ffi_request<T>(
 ) -> Result<FfiRequestData<T>, Box<dyn Error>> {
     let connector_enum = ffi_options.connector();
     let connector = domain_types::connector_types::ConnectorEnum::foreign_try_from(connector_enum)?;
-    
+
     // Use ForeignTryFrom to map binary Proto Auth to Domain Auth
-    let auth_proto = ffi_options.auth.clone().ok_or("Missing authentication configuration")?;
+    let auth_proto = ffi_options
+        .auth
+        .clone()
+        .ok_or("Missing authentication configuration")?;
     let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(auth_proto)?;
-    
+
     let extracted_metadata = FfiMetadataPayload {
         connector,
         connector_auth_type,
     };
-    
+
     let masked_metadata = ffi_headers_to_masked_metadata(metadata)?;
 
     Ok(FfiRequestData {

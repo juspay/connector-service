@@ -12,11 +12,11 @@ mod uniffi_bindings_inner {
     use crate::errors::UniffiError;
     use crate::utils::ffi_headers_to_masked_metadata;
     use bytes::Bytes;
-    use domain_types::utils::ForeignTryFrom;
     use common_utils::request::Request;
     use domain_types::connector_types::ConnectorEnum;
     use domain_types::router_data::ConnectorSpecificAuth;
     use domain_types::router_response_types::Response;
+    use domain_types::utils::ForeignTryFrom;
     use grpc_api_types::payments::{
         Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions,
     };
@@ -40,15 +40,17 @@ mod uniffi_bindings_inner {
         })?;
 
         // 2. Resolve Auth (Taken from typed Protobuf in FfiOptions)
-        let proto_auth = options.auth.as_ref().ok_or_else(|| UniffiError::MissingMetadata {
-            key: "auth".to_string(),
-        })?;
+        let proto_auth = options
+            .auth
+            .as_ref()
+            .ok_or_else(|| UniffiError::MissingMetadata {
+                key: "auth".to_string(),
+            })?;
 
-        let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(proto_auth.clone()).map_err(|e| {
-            UniffiError::MetadataParseError {
+        let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(proto_auth.clone())
+            .map_err(|e| UniffiError::MetadataParseError {
                 msg: format!("Typed auth mapping failed: {e}"),
-            }
-        })?;
+            })?;
 
         Ok(crate::types::FfiMetadataPayload {
             connector,

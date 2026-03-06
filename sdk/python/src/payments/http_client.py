@@ -1,6 +1,7 @@
 import time
 import httpx
 import ssl
+import asyncio
 from typing import Optional, Dict, Union, Any
 from dataclasses import dataclass
 from urllib.parse import urlparse
@@ -37,7 +38,6 @@ class ConnectorError(Exception):
 def resolve_proxies(proxy_options: Optional[ProxyOptions]) -> Optional[Dict[str, Optional[str]]]:
     """
     Builds the native httpx proxy dictionary with bypass support.
-    Standard httpx mapping: "all://" is default, None is bypass.
     """
     if not proxy_options:
         return None
@@ -48,17 +48,15 @@ def resolve_proxies(proxy_options: Optional[ProxyOptions]) -> Optional[Dict[str,
 
     proxies = {"all://": proxy_url}
     for bypass in list(proxy_options.bypass_urls):
-        # Ensure domain-only bypass (remove protocol/path)
         clean_domain = bypass.replace("http://", "").replace("https://", "").split("/")[0]
         if clean_domain:
             proxies[f"all://{clean_domain}"] = None
         
     return proxies
 
-def create_client(http_config: Optional[HttpConfig] = None) -> httpx.Client:
+def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient:
     """
-    Creates a high-performance synchronous connection pool.
-    Infrastructure settings (Certs, Proxy) and Default Timeouts are fixed here.
+    Creates a high-performance asynchronous connection pool.
     """
     verify: Union[bool, ssl.SSLContext] = True
     mounts = None
@@ -71,7 +69,7 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.Client:
     read_timeout = (t.response_timeout_ms / 1000.0) if (t and t.HasField('response_timeout_ms')) else (Defaults.RESPONSE_TIMEOUT_MS / 1000.0)
 
     if http_config:
-        # 2. Resolve Certificate (In-Memory SSLContext)
+        # 2. Resolve Certificate
         if http_config.HasField('ca_cert'):
             ca = http_config.ca_cert
             context = ssl.create_default_context()
@@ -81,15 +79,15 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.Client:
                 context.load_verify_locations(cadata=ca.der)
             verify = context
 
-        # 3. Resolve Proxy (httpx uses 'mounts' for complex proxy mapping)
+        # 3. Resolve Proxy
         proxies = resolve_proxies(http_config.proxy if http_config.HasField('proxy') else None)
         if proxies:
-            mounts = {k: httpx.HTTPTransport(proxy=v) if v else None for k, v in proxies.items()}
+            mounts = {k: httpx.AsyncHTTPTransport(proxy=v) if v else None for k, v in proxies.items()}
 
-    return httpx.Client(
+    return httpx.AsyncClient(
         verify=verify,
         mounts=mounts,
-        http2=True, # Enable HTTP/2 negotiation (Safe)
+        http2=True,
         timeout=httpx.Timeout(
             total_timeout,
             connect=connect_timeout,
@@ -97,14 +95,13 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.Client:
         )
     )
 
-def execute(
+async def execute(
     request: HttpRequest, 
-    client: httpx.Client,
+    client: httpx.AsyncClient,
     timeout_config: Optional[HttpTimeoutConfig] = None
 ) -> HttpResponse:
     """
-    Standardized stateless execution engine using httpx.
-    Allows per-call timeout overrides.
+    Standardized stateless execution engine using httpx AsyncClient.
     """
     start_time = time.time()
     
@@ -117,7 +114,7 @@ def execute(
         timeout = httpx.Timeout(total, connect=connect, read=read)
 
     try:
-        response = client.request(
+        response = await client.request(
             method=request.method.upper(),
             url=request.url,
             headers=request.headers or {},
