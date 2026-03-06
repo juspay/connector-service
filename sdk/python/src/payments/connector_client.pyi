@@ -5,6 +5,8 @@
 # (Pylance, pyright, mypy) so IDEs offer completions and type checking.
 from payments.generated.sdk_options_pb2 import FfiOptions
 from payments.generated.payment_pb2 import (
+    CustomerServiceCreateRequest,
+    CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     PaymentServiceAuthorizeRequest,
@@ -14,8 +16,12 @@ from payments.generated.payment_pb2 import (
     PaymentServiceGetRequest,
     PaymentServiceGetResponse,
     PaymentServiceRefundRequest,
+    PaymentServiceReverseRequest,
+    PaymentServiceReverseResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
+    RecurringPaymentServiceChargeRequest,
+    RecurringPaymentServiceChargeResponse,
     RefundResponse,
 )
 
@@ -39,8 +45,24 @@ class PaymentClient(_ConnectorClientBase):
         """PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment."""
         ...
 
+    def reverse(self, request: PaymentServiceReverseRequest, metadata: dict, options: FfiOptions | None = ...) -> PaymentServiceReverseResponse:
+        """PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations."""
+        ...
+
     def void(self, request: PaymentServiceVoidRequest, metadata: dict, options: FfiOptions | None = ...) -> PaymentServiceVoidResponse:
         """PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned."""
+        ...
+
+
+class RecurringPaymentClient(_ConnectorClientBase):
+    def charge(self, request: RecurringPaymentServiceChargeRequest, metadata: dict, options: FfiOptions | None = ...) -> RecurringPaymentServiceChargeResponse:
+        """RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details."""
+        ...
+
+
+class CustomerClient(_ConnectorClientBase):
+    def create(self, request: CustomerServiceCreateRequest, metadata: dict, options: FfiOptions | None = ...) -> CustomerServiceCreateResponse:
+        """CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information."""
         ...
 
 

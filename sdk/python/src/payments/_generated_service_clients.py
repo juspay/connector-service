@@ -23,9 +23,27 @@ class PaymentClient(_ConnectorClientBase):
         """PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment."""
         return self._execute_flow("refund", request, metadata, _pb2.RefundResponse, options)
 
+    def reverse(self, request, metadata: dict, options=None):
+        """PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations."""
+        return self._execute_flow("reverse", request, metadata, _pb2.PaymentServiceReverseResponse, options)
+
     def void(self, request, metadata: dict, options=None):
         """PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned."""
         return self._execute_flow("void", request, metadata, _pb2.PaymentServiceVoidResponse, options)
+
+class RecurringPaymentClient(_ConnectorClientBase):
+    """RecurringPaymentService flows"""
+
+    def charge(self, request, metadata: dict, options=None):
+        """RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details."""
+        return self._execute_flow("charge", request, metadata, _pb2.RecurringPaymentServiceChargeResponse, options)
+
+class CustomerClient(_ConnectorClientBase):
+    """CustomerService flows"""
+
+    def create(self, request, metadata: dict, options=None):
+        """CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information."""
+        return self._execute_flow("create", request, metadata, _pb2.CustomerServiceCreateResponse, options)
 
 class MerchantAuthenticationClient(_ConnectorClientBase):
     """MerchantAuthenticationService flows"""

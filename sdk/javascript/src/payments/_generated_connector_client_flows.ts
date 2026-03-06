@@ -42,6 +42,15 @@ export class PaymentClient extends _ConnectorClientBase {
     return this._executeFlow('refund', requestMsg, metadata, ffiOptions, 'PaymentServiceRefundRequest', 'RefundResponse') as Promise<ucs.v2.RefundResponse>;
   }
 
+  /** PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations. */
+  async reverse(
+    requestMsg: ucs.v2.IPaymentServiceReverseRequest,
+    metadata: Record<string, string>,
+    ffiOptions?: ucs.v2.IFfiOptions | null
+  ): Promise<ucs.v2.PaymentServiceReverseResponse> {
+    return this._executeFlow('reverse', requestMsg, metadata, ffiOptions, 'PaymentServiceReverseRequest', 'PaymentServiceReverseResponse') as Promise<ucs.v2.PaymentServiceReverseResponse>;
+  }
+
   /** PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned. */
   async void(
     requestMsg: ucs.v2.IPaymentServiceVoidRequest,
@@ -49,6 +58,30 @@ export class PaymentClient extends _ConnectorClientBase {
     ffiOptions?: ucs.v2.IFfiOptions | null
   ): Promise<ucs.v2.PaymentServiceVoidResponse> {
     return this._executeFlow('void', requestMsg, metadata, ffiOptions, 'PaymentServiceVoidRequest', 'PaymentServiceVoidResponse') as Promise<ucs.v2.PaymentServiceVoidResponse>;
+  }
+
+}
+
+export class RecurringPaymentClient extends _ConnectorClientBase {
+  /** RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details. */
+  async charge(
+    requestMsg: ucs.v2.IRecurringPaymentServiceChargeRequest,
+    metadata: Record<string, string>,
+    ffiOptions?: ucs.v2.IFfiOptions | null
+  ): Promise<ucs.v2.RecurringPaymentServiceChargeResponse> {
+    return this._executeFlow('charge', requestMsg, metadata, ffiOptions, 'RecurringPaymentServiceChargeRequest', 'RecurringPaymentServiceChargeResponse') as Promise<ucs.v2.RecurringPaymentServiceChargeResponse>;
+  }
+
+}
+
+export class CustomerClient extends _ConnectorClientBase {
+  /** CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information. */
+  async create(
+    requestMsg: ucs.v2.ICustomerServiceCreateRequest,
+    metadata: Record<string, string>,
+    ffiOptions?: ucs.v2.IFfiOptions | null
+  ): Promise<ucs.v2.CustomerServiceCreateResponse> {
+    return this._executeFlow('create', requestMsg, metadata, ffiOptions, 'CustomerServiceCreateRequest', 'CustomerServiceCreateResponse') as Promise<ucs.v2.CustomerServiceCreateResponse>;
   }
 
 }

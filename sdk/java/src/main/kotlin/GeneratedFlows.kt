@@ -7,12 +7,18 @@ import uniffi.connector_service_ffi.authorizeReqTransformer
 import uniffi.connector_service_ffi.authorizeResTransformer
 import uniffi.connector_service_ffi.captureReqTransformer
 import uniffi.connector_service_ffi.captureResTransformer
+import uniffi.connector_service_ffi.chargeReqTransformer
+import uniffi.connector_service_ffi.chargeResTransformer
+import uniffi.connector_service_ffi.createReqTransformer
+import uniffi.connector_service_ffi.createResTransformer
 import uniffi.connector_service_ffi.createAccessTokenReqTransformer
 import uniffi.connector_service_ffi.createAccessTokenResTransformer
 import uniffi.connector_service_ffi.getReqTransformer
 import uniffi.connector_service_ffi.getResTransformer
 import uniffi.connector_service_ffi.refundReqTransformer
 import uniffi.connector_service_ffi.refundResTransformer
+import uniffi.connector_service_ffi.reverseReqTransformer
+import uniffi.connector_service_ffi.reverseResTransformer
 import uniffi.connector_service_ffi.voidReqTransformer
 import uniffi.connector_service_ffi.voidResTransformer
 
@@ -20,18 +26,24 @@ object FlowRegistry {
     val reqTransformers: Map<String, (ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(
         "authorize" to ::authorizeReqTransformer,
         "capture" to ::captureReqTransformer,
+        "charge" to ::chargeReqTransformer,
+        "create" to ::createReqTransformer,
         "create_access_token" to ::createAccessTokenReqTransformer,
         "get" to ::getReqTransformer,
         "refund" to ::refundReqTransformer,
+        "reverse" to ::reverseReqTransformer,
         "void" to ::voidReqTransformer,
     )
 
     val resTransformers: Map<String, (ByteArray, ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(
         "authorize" to ::authorizeResTransformer,
         "capture" to ::captureResTransformer,
+        "charge" to ::chargeResTransformer,
+        "create" to ::createResTransformer,
         "create_access_token" to ::createAccessTokenResTransformer,
         "get" to ::getResTransformer,
         "refund" to ::refundResTransformer,
+        "reverse" to ::reverseResTransformer,
         "void" to ::voidResTransformer,
     )
 }
@@ -55,9 +67,27 @@ class PaymentClient(libPath: String? = null, options: Options = Options.getDefau
     fun refund(request: PaymentServiceRefundRequest, metadata: Map<String, String>, options: FfiOptions? = null): RefundResponse =
         executeFlow("refund", request.toByteArray(), RefundResponse.parser(), metadata, options?.toByteArray())
 
+    // reverse: PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations.
+    fun reverse(request: PaymentServiceReverseRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceReverseResponse =
+        executeFlow("reverse", request.toByteArray(), PaymentServiceReverseResponse.parser(), metadata, options?.toByteArray())
+
     // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
     fun void(request: PaymentServiceVoidRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceVoidResponse =
         executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), metadata, options?.toByteArray())
+
+}
+
+class RecurringPaymentClient(libPath: String? = null, options: Options = Options.getDefaultInstance()) : ConnectorClient(libPath, options) {
+    // charge: RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
+    fun charge(request: RecurringPaymentServiceChargeRequest, metadata: Map<String, String>, options: FfiOptions? = null): RecurringPaymentServiceChargeResponse =
+        executeFlow("charge", request.toByteArray(), RecurringPaymentServiceChargeResponse.parser(), metadata, options?.toByteArray())
+
+}
+
+class CustomerClient(libPath: String? = null, options: Options = Options.getDefaultInstance()) : ConnectorClient(libPath, options) {
+    // create: CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information.
+    fun create(request: CustomerServiceCreateRequest, metadata: Map<String, String>, options: FfiOptions? = null): CustomerServiceCreateResponse =
+        executeFlow("create", request.toByteArray(), CustomerServiceCreateResponse.parser(), metadata, options?.toByteArray())
 
 }
 

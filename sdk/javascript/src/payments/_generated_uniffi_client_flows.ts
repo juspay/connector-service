@@ -42,6 +42,44 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('capture', responseBytes, requestBytes, metadata, optionsBytes);
   }
 
+  /** Build connector HTTP request for charge flow. */
+  chargeReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('charge', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for charge flow. */
+  chargeRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('charge', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for create flow. */
+  createReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('create', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for create flow. */
+  createRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('create', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
   /** Build connector HTTP request for create_access_token flow. */
   createAccessTokenReq(
     requestBytes: Buffer | Uint8Array,
@@ -97,6 +135,25 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('refund', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for reverse flow. */
+  reverseReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('reverse', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for reverse flow. */
+  reverseRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('reverse', responseBytes, requestBytes, metadata, optionsBytes);
   }
 
   /** Build connector HTTP request for void flow. */
