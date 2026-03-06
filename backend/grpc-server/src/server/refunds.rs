@@ -12,10 +12,10 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    refund_service_server::RefundService, EventResponse, RefundResponse, RefundServiceGetRequest,
+    refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,
 };
 
-use ucs_env::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
+use ucs_env::error::{ReportSwitchExt, ResultExtGrpc};
 
 use crate::{implement_connector_operation, request::RequestData, utils};
 // Helper trait for refund operations
@@ -88,30 +88,4 @@ impl RefundService for Refunds {
         ))
         .await
     }
-}
-
-async fn get_refunds_webhook_content(
-    connector_data: ConnectorData<DefaultPCIHolder>,
-    request_details: domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorSpecificAuth>,
-) -> CustomResult<EventResponse, ApplicationErrorResponse> {
-    let webhook_details = connector_data
-        .connector
-        .process_refund_webhook(request_details, webhook_secrets, connector_auth_details)
-        .switch()?;
-
-    // Generate response
-    let response = RefundResponse::foreign_try_from(webhook_details).change_context(
-        ApplicationErrorResponse::InternalServerError(ApiError {
-            sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
-            error_identifier: 500,
-            error_message: "Error while constructing response".to_string(),
-            error_object: None,
-        }),
-    )?;
-
-    Ok(EventResponse {
-        content: Some(grpc_api_types::payments::event_response::Content::RefundsResponse(response)),
-    })
 }

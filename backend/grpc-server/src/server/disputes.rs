@@ -27,7 +27,7 @@ use grpc_api_types::payments::{
     dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
     DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
     DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
-    DisputeServiceSubmitEvidenceResponse, EventResponse,
+    DisputeServiceSubmitEvidenceResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
@@ -400,32 +400,4 @@ impl DisputeService for Disputes {
         ))
         .await
     }
-}
-
-async fn get_disputes_webhook_content(
-    connector_data: ConnectorData<DefaultPCIHolder>,
-    request_details: domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorSpecificAuth>,
-) -> CustomResult<EventResponse, ApplicationErrorResponse> {
-    let webhook_details = connector_data
-        .connector
-        .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
-        .switch()?;
-
-    // Generate response
-    let response = DisputeResponse::foreign_try_from(webhook_details).change_context(
-        ApplicationErrorResponse::InternalServerError(ApiError {
-            sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
-            error_identifier: 500,
-            error_message: "Error while constructing response".to_string(),
-            error_object: None,
-        }),
-    )?;
-
-    Ok(EventResponse {
-        content: Some(
-            grpc_api_types::payments::event_response::Content::DisputesResponse(response),
-        ),
-    })
 }

@@ -9,7 +9,10 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
+    dispute_service_server::DisputeService,
+    event_service_server::EventService,
+    DisputeResponse,
+    DisputeServiceAcceptRequest,
     DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
     DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
     DisputeServiceSubmitEvidenceResponse, EventServiceHandleRequest, EventServiceHandleResponse,
