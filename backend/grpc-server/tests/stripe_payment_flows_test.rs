@@ -151,6 +151,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             id: Some("cus_TE8065JzRWlLQf".to_string()),
             connector_customer_id: Some("cus_TE8065JzRWlLQf".to_string()),
             phone_number: None,
+            phone_country_code: None,
         }),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
