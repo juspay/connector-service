@@ -117,10 +117,6 @@ service PaymentService {
   // Setup a recurring payment instruction for future payments/ debits. This could be
   // for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
   rpc SetupRecurring(PaymentServiceSetupRecurringRequest) returns (PaymentServiceSetupRecurringResponse);
-
-  // Handle incoming webhooks from payment processors.
-  // This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type.
-  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
 // ======================================================================================
@@ -148,9 +144,6 @@ service RefundService {
   // through processor settlement for accurate customer communication.
   rpc Get(RefundServiceGetRequest) returns (RefundResponse);
 
-  // Handle incoming webhooks from payment processor.
-  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
-
 }
 
 // ============================================================================
@@ -175,9 +168,6 @@ service DisputeService {
   // Concede dispute and accepts chargeback loss. Acknowledges liability
   // and stops dispute defense process when evidence is insufficient.
   rpc Accept(DisputeServiceAcceptRequest) returns (DisputeServiceAcceptResponse);
-
-  // Handle incoming webhooks from connectors.
-  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
 // ============================================================================

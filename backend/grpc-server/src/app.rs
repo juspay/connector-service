@@ -4,8 +4,8 @@ use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
     payments::{
-        composite_payment_service_server, dispute_service_server, payment_service_server,
-        refund_service_server,
+        composite_payment_service_server, dispute_service_server, event_service_server,
+        payment_service_server, refund_service_server,
     },
 };
 use std::{future::Future, net, sync::Arc};
@@ -272,6 +272,9 @@ impl Service {
             ))
             .add_service(dispute_service_server::DisputeServiceServer::new(
                 self.disputes_service,
+            ))
+            .add_service(event_service_server::EventServiceServer::new(
+                self.event_service.clone(),
             ))
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;
