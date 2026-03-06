@@ -36,28 +36,34 @@ object FlowRegistry {
     )
 }
 
-// Extension functions — typed with concrete proto request/response types.
+// Per-service client classes — typed with concrete proto request/response types.
 
-// authorize: PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-fun ConnectorClient.authorize(request: PaymentServiceAuthorizeRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceAuthorizeResponse =
-    executeFlow("authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), metadata, options?.toByteArray())
+class PaymentClient(libPath: String? = null, options: Options = Options.getDefaultInstance()) : ConnectorClient(libPath, options) {
+    // authorize: PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+    fun authorize(request: PaymentServiceAuthorizeRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceAuthorizeResponse =
+        executeFlow("authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), metadata, options?.toByteArray())
 
-// capture: PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
-fun ConnectorClient.capture(request: PaymentServiceCaptureRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceCaptureResponse =
-    executeFlow("capture", request.toByteArray(), PaymentServiceCaptureResponse.parser(), metadata, options?.toByteArray())
+    // capture: PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
+    fun capture(request: PaymentServiceCaptureRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceCaptureResponse =
+        executeFlow("capture", request.toByteArray(), PaymentServiceCaptureResponse.parser(), metadata, options?.toByteArray())
 
-// create_access_token: MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
-fun ConnectorClient.create_access_token(request: MerchantAuthenticationServiceCreateAccessTokenRequest, metadata: Map<String, String>, options: FfiOptions? = null): MerchantAuthenticationServiceCreateAccessTokenResponse =
-    executeFlow("create_access_token", request.toByteArray(), MerchantAuthenticationServiceCreateAccessTokenResponse.parser(), metadata, options?.toByteArray())
+    // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+    fun get(request: PaymentServiceGetRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceGetResponse =
+        executeFlow("get", request.toByteArray(), PaymentServiceGetResponse.parser(), metadata, options?.toByteArray())
 
-// get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
-fun ConnectorClient.get(request: PaymentServiceGetRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceGetResponse =
-    executeFlow("get", request.toByteArray(), PaymentServiceGetResponse.parser(), metadata, options?.toByteArray())
+    // refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
+    fun refund(request: PaymentServiceRefundRequest, metadata: Map<String, String>, options: FfiOptions? = null): RefundResponse =
+        executeFlow("refund", request.toByteArray(), RefundResponse.parser(), metadata, options?.toByteArray())
 
-// refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
-fun ConnectorClient.refund(request: PaymentServiceRefundRequest, metadata: Map<String, String>, options: FfiOptions? = null): RefundResponse =
-    executeFlow("refund", request.toByteArray(), RefundResponse.parser(), metadata, options?.toByteArray())
+    // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
+    fun void(request: PaymentServiceVoidRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceVoidResponse =
+        executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), metadata, options?.toByteArray())
 
-// void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
-fun ConnectorClient.void(request: PaymentServiceVoidRequest, metadata: Map<String, String>, options: FfiOptions? = null): PaymentServiceVoidResponse =
-    executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), metadata, options?.toByteArray())
+}
+
+class MerchantAuthenticationClient(libPath: String? = null, options: Options = Options.getDefaultInstance()) : ConnectorClient(libPath, options) {
+    // create_access_token: MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
+    fun create_access_token(request: MerchantAuthenticationServiceCreateAccessTokenRequest, metadata: Map<String, String>, options: FfiOptions? = null): MerchantAuthenticationServiceCreateAccessTokenResponse =
+        executeFlow("create_access_token", request.toByteArray(), MerchantAuthenticationServiceCreateAccessTokenResponse.parser(), metadata, options?.toByteArray())
+
+}

@@ -17,7 +17,7 @@ import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 
-class ConnectorClient(
+open class ConnectorClient(
     libPath: String? = null,
     private val options: Options = Options.getDefaultInstance()
 ) {
