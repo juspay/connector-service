@@ -1386,6 +1386,10 @@ pub enum PaymentsResponseData {
         connector_authorization_id: Option<String>,
         status_code: u16,
     },
+    PaymentResourceUpdateResponse {
+        status: common_enums::PaymentResourceUpdateStatus,
+        status_code: u16,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1640,6 +1644,15 @@ pub struct MandateRevokeRequestData {
 pub struct MandateRevokeResponseData {
     pub mandate_status: common_enums::MandateStatus,
     pub status_code: u16,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaymentsUpdateMetadataData<T: PaymentMethodDataTypes> {
+    pub metadata: Option<SecretSerdeValue>,
+    pub connector_transaction_id: String,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
+    pub connector_meta_data: Option<SecretSerdeValue>,
+    pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
 }
 
 #[derive(Debug, Default, Clone)]

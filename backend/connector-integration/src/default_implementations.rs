@@ -9,13 +9,17 @@
 
 use crate::connectors::*;
 use domain_types::{
-    connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,
+    connector_flow::{UpdateMetadata, VerifyWebhookSource},
+    connector_types::{
+        PaymentFlowData, PaymentsResponseData, PaymentsUpdateMetadataData,
+        VerifyWebhookSourceFlowData,
+    },
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
 };
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;
-use interfaces::connector_types::VerifyWebhookSourceV2;
+use interfaces::connector_types::{UpdateMetadataV2, VerifyWebhookSourceV2};
 
 /// Macro to generate empty implementations of VerifyWebhookSourceV2 for connectors
 /// that don't need external webhook verification.
@@ -125,3 +129,112 @@ default_impl_verify_webhook_source_v2!(
     Zift
 );
 // PayPal has its own implementation in paypal.rs
+
+/// Macro to generate empty implementations of UpdateMetadataV2 for connectors
+/// that don't need metadata update functionality.
+///
+/// Usage: When a new connector is added, add it to the macro invocation below.
+/// If a connector needs real implementation (like Stripe), implement it in the connector's file
+/// and it will override this empty impl.
+#[macro_export]
+macro_rules! default_impl_update_metadata_v2 {
+    ($($connector:ident),*) => {
+        $(
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                UpdateMetadataV2<T> for $connector<T>
+            {
+            }
+
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                ConnectorIntegrationV2<
+                    UpdateMetadata,
+                    PaymentFlowData,
+                    PaymentsUpdateMetadataData<T>,
+                    PaymentsResponseData,
+                > for $connector<T>
+            {
+            }
+
+        )*
+    };
+}
+
+// Generate default implementations for all connectors that don't have custom implementations
+// Connectors with real implementations (like Stripe) will override these
+default_impl_update_metadata_v2!(
+    Adyen,
+    Aci,
+    Airwallex,
+    Authipay,
+    Authorizedotnet,
+    Bambora,
+    Bamboraapac,
+    Bankofamerica,
+    Barclaycard,
+    Billwerk,
+    Bluesnap,
+    Braintree,
+    Calida,
+    Cashfree,
+    Cashtocode,
+    Celero,
+    Checkout,
+    Cryptopay,
+    Cybersource,
+    Datatrans,
+    Dlocal,
+    Elavon,
+    Fiserv,
+    Fiservemea,
+    Fiuu,
+    Forte,
+    Getnet,
+    Gigadat,
+    Globalpay,
+    Helcim,
+    Hipay,
+    Hyperpg,
+    Iatapay,
+    Jpmorgan,
+    Loonio,
+    Mifinity,
+    Mollie,
+    Multisafepay,
+    Nexinets,
+    Nexixpay,
+    Nmi,
+    Noon,
+    Novalnet,
+    Nuvei,
+    Paybox,
+    Payload,
+    Payme,
+    Paysafe,
+    Paypal,
+    Paytm,
+    Payu,
+    Phonepe,
+    Placetopay,
+    Powertranz,
+    Rapyd,
+    Razorpay,
+    RazorpayV2,
+    Redsys,
+    Revolut,
+    Revolv3,
+    Shift4,
+    Silverflow,
+    Stax,
+    Truelayer,
+    Trustpay,
+    Trustpayments,
+    Tsys,
+    Volt,
+    Wellsfargo,
+    Worldpay,
+    Worldpayvantiv,
+    Worldpayxml,
+    Xendit,
+    Zift
+);
+// Stripe has its own implementation in stripe.rs

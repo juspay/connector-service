@@ -738,12 +738,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== SOURCE VERIFICATION IMPLEMENTATIONS =====
-
-// ===== AUTHENTICATION FLOW SOURCE VERIFICATION =====
-
-// ===== CONNECTOR CUSTOMER SOURCE VERIFICATION =====
-
 // ===== ACCESS TOKEN SOURCE VERIFICATION =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

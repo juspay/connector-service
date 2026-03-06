@@ -576,8 +576,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== SOURCE VERIFICATION IMPLEMENTATIONS =====
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         domain_types::connector_flow::SdkSessionToken,

@@ -938,7 +938,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Wellsfargo<T>
 {
 }
-
-// SourceVerification implementations for all flows
-
-// SourceVerification implementations for flows converted to macros

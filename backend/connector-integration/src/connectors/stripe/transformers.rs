@@ -12,15 +12,15 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Authorize, Capture, CreateConnectorCustomer, IncrementalAuthorization, PaymentMethodToken,
-        RepeatPayment, SetupMandate, Void,
+        RepeatPayment, SetupMandate, UpdateMetadata, Void,
     },
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        PaymentsUpdateMetadataData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     mandates::AcceptanceType,
@@ -3472,7 +3472,85 @@ pub struct CancelRequest {
 #[derive(Debug, Serialize)]
 pub struct UpdateMetadataRequest {
     #[serde(flatten)]
-    pub metadata: HashMap<String, String>,
+    pub metadata: Option<HashMap<String, String>>,
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                UpdateMetadata,
+                PaymentFlowData,
+                PaymentsUpdateMetadataData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for UpdateMetadataRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                UpdateMetadata,
+                PaymentFlowData,
+                PaymentsUpdateMetadataData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .as_ref()
+                .map(|data| format_metadata_for_request(data.clone())),
+        })
+    }
+}
+
+fn format_metadata_for_request(merchant_metadata: Secret<Value>) -> HashMap<String, String> {
+    let mut formatted_metadata = HashMap::new();
+    if let Value::Object(metadata_map) = merchant_metadata.expose() {
+        for (key, value) in metadata_map {
+            formatted_metadata.insert(format!("metadata[{key}]"), value.to_string());
+        }
+    }
+    formatted_metadata
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateMetadataResponse {}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<UpdateMetadataResponse, Self>>
+    for RouterDataV2<
+        UpdateMetadata,
+        PaymentFlowData,
+        PaymentsUpdateMetadataData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<UpdateMetadataResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // If 200 status code, then metadata was updated successfully.
+        let status = if item.http_code == 200 {
+            common_enums::PaymentResourceUpdateStatus::Success
+        } else {
+            common_enums::PaymentResourceUpdateStatus::Failure
+        };
+        Ok(Self {
+            response: Ok(PaymentsResponseData::PaymentResourceUpdateResponse {
+                status,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]

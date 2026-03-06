@@ -669,12 +669,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== SOURCE VERIFICATION IMPLEMENTATIONS =====
-
-// ===== AUTHENTICATION FLOW SOURCE VERIFICATION =====
-
-// ===== CONNECTOR CUSTOMER SOURCE VERIFICATION =====
-
 // ===== CONNECTOR COMMON IMPLEMENTATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Payme<T>

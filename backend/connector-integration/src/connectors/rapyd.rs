@@ -187,6 +187,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Rapyd<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Rapyd<T>
 {
@@ -716,4 +717,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Rapyd<T>
 {
 }
-// SourceVerification implementations for all flows

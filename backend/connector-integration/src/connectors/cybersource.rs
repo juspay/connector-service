@@ -1123,6 +1123,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Cybersource<T>
 {
 }
-// SourceVerification implementations for all flows
-
-// Authentication flow SourceVerification implementations

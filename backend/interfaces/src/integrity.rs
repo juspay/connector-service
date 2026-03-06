@@ -13,8 +13,8 @@ use domain_types::connector_types::{
     PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
     PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
     PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData,
-    PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
-    SetupMandateRequestData, SubmitEvidenceData,
+    PaymentsSyncData, PaymentsUpdateMetadataData, RefundSyncData, RefundsData, RepeatPaymentData,
+    SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::router_request_types::VerifyWebhookSourceRequestData;
 use domain_types::{
@@ -28,7 +28,8 @@ use domain_types::{
         PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
         PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
         RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
+        SubmitEvidenceIntegrityObject, UpdateMetadataIntegrityObject,
+        VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -173,6 +174,7 @@ impl_check_integrity!(PaymentsSdkSessionTokenData);
 impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
 impl_check_integrity!(VerifyWebhookSourceRequestData);
+impl_check_integrity!(PaymentsUpdateMetadataData<S>);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -432,6 +434,18 @@ impl GetIntegrityObject<IncrementalAuthorizationIntegrityObject>
 
     fn get_request_integrity_object(&self) -> IncrementalAuthorizationIntegrityObject {
         IncrementalAuthorizationIntegrityObject {}
+    }
+}
+
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<UpdateMetadataIntegrityObject>
+    for PaymentsUpdateMetadataData<T>
+{
+    fn get_response_integrity_object(&self) -> Option<UpdateMetadataIntegrityObject> {
+        None // Incremental authorization responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> UpdateMetadataIntegrityObject {
+        UpdateMetadataIntegrityObject {}
     }
 }
 
@@ -1123,6 +1137,18 @@ impl FlowIntegrity for PostAuthenticateIntegrityObject {
 }
 
 impl FlowIntegrity for IncrementalAuthorizationIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        _req_integrity_object: Self,
+        _res_integrity_object: Self,
+        _connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        Ok(())
+    }
+}
+
+impl FlowIntegrity for UpdateMetadataIntegrityObject {
     type IntegrityObject = Self;
 
     fn compare(

@@ -491,8 +491,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== SOURCE VERIFICATION IMPLEMENTATIONS =====
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Loonio<T>
 {

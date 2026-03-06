@@ -1,7 +1,11 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use crate::{connector_types, utils::extract_connector_request_reference_id};
+use crate::{
+    connector_flow::UpdateMetadata,
+    connector_types::{self, PaymentsUpdateMetadataData},
+    utils::extract_connector_request_reference_id,
+};
 use common_enums::{
     CaptureMethod, CardNetwork, CountryAlpha2, FutureUsage, PaymentMethod, PaymentMethodType,
 };
@@ -22,8 +26,9 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
-    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RecurringPaymentServiceRevokeRequest, RefundResponse,
+    PaymentServiceSetupRecurringResponse, PaymentServiceUpdateMetadataResponse,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceRevokeRequest,
+    RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -4422,6 +4427,17 @@ impl ForeignFrom<common_enums::AuthorizationStatus>
             common_enums::AuthorizationStatus::Unresolved => Self::AuthorizationUnresolved,
             common_enums::AuthorizationStatus::Processing => Self::AuthorizationProcessing,
             common_enums::AuthorizationStatus::Failure => Self::AuthorizationFailure,
+        }
+    }
+}
+
+impl ForeignFrom<common_enums::PaymentResourceUpdateStatus>
+    for grpc_api_types::payments::UpdateMetadataStatus
+{
+    fn foreign_from(status: common_enums::PaymentResourceUpdateStatus) -> Self {
+        match status {
+            common_enums::PaymentResourceUpdateStatus::Success => Self::UpdateMetadataSuccess,
+            common_enums::PaymentResourceUpdateStatus::Failure => Self::UpdateMetadataFailure,
         }
     }
 }
@@ -10524,5 +10540,195 @@ impl ForeignTryFrom<(bool, RedirectDetailsResponse)>
                 .raw_connector_response
                 .map(|response| response.into()),
         })
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + Default
+            + Debug
+            + Send
+            + Eq
+            + PartialEq
+            + Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + CardConversionHelper<T>,
+    > ForeignTryFrom<grpc_api_types::payments::PaymentServiceUpdateMetadataRequest>
+    for PaymentsUpdateMetadataData<T>
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceUpdateMetadataRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let payment_method_type =
+            <Option<PaymentMethodType>>::foreign_try_from(value.payment_method_type())?;
+        Ok(Self {
+            metadata: value
+                .metadata
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
+                .transpose()?,
+            connector_transaction_id: value
+                .connector_transaction_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<T>::foreign_try_from)
+                .transpose()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Payment method data construction failed".to_owned(),
+                    error_object: None,
+                }))?,
+            payment_method_type,
+            connector_meta_data: value
+                .connector_feature_data
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "feature metadata")))
+                .transpose()?,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceUpdateMetadataRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceUpdateMetadataRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let vault_headers = extract_headers_from_metadata(metadata);
+
+        // For order creation, create a default address
+        let address = PaymentAddress::new(
+            None,        // shipping
+            None,        // billing
+            None,        // payment_method_billing
+            Some(false), // should_unify_address
+        );
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
+            attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: PaymentMethod::Card,
+            address,
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.merchant_transaction_id,
+            ),
+            customer_id: None, // PaymentServiceCreateOrderRequest doesn't have customer_id field
+            connector_customer: None,
+            description: None,
+            return_url: None,
+            connector_meta_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            minor_amount_capturable: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+            minor_amount_authorized: None,
+        })
+    }
+}
+
+pub fn generate_payment_update_metadata_response<T: PaymentMethodDataTypes>(
+    router_data_v2: RouterDataV2<
+        UpdateMetadata,
+        PaymentFlowData,
+        PaymentsUpdateMetadataData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<PaymentServiceUpdateMetadataResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    match router_data_v2.response {
+        Ok(response) => match response {
+            PaymentsResponseData::PaymentResourceUpdateResponse {
+                status,
+                status_code,
+            } => {
+                let grpc_status =
+                    grpc_api_types::payments::UpdateMetadataStatus::foreign_from(status);
+
+                Ok(PaymentServiceUpdateMetadataResponse {
+                    status: grpc_status.into(),
+                    status_code: status_code as u32,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
+                    raw_connector_request,
+                    raw_connector_response,
+                    connector_feature_data: None,
+                    metadata: None,
+                    error: None,
+                })
+            }
+            _ => Err(report!(ApplicationErrorResponse::InternalServerError(
+                ApiError {
+                    sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
+                    error_identifier: 500,
+                    error_message: "Invalid response type received from connector".to_owned(),
+                    error_object: None,
+                }
+            ))),
+        },
+        Err(e) => Ok(PaymentServiceUpdateMetadataResponse {
+            status: grpc_api_types::payments::UpdateMetadataStatus::UpdateMetadataFailure.into(),
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                    message: Some(e.message.clone()),
+                    code: Some(e.code.clone()),
+                    reason: e.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: e.status_code as u32,
+            response_headers: router_data_v2
+                .resource_common_data
+                .get_connector_response_headers_as_map(),
+            connector_feature_data: None,
+            metadata: None,
+            raw_connector_request,
+            raw_connector_response,
+        }),
     }
 }

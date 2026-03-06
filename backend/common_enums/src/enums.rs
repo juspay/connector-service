@@ -2141,3 +2141,11 @@ pub enum Tokenization {
     /// Tokenize at PSP Level
     TokenizeAtPsp,
 }
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, strum::Display)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum PaymentResourceUpdateStatus {
+    Success,
+    Failure,
+}
