@@ -169,8 +169,8 @@ http_handler!(
     transform,
     EventServiceHandleRequest,
     EventServiceHandleResponse,
-    handle_event,
-    payments_service
+    handle,
+    event_service
 );
 http_handler!(
     verify_redirect_response,

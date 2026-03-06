@@ -50,7 +50,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use external_services::service::EventProcessingParams;
 use grpc_api_types::payments::{
-    customer_service_server::CustomerService,
+    customer_service_server::CustomerService, event_service_server::EventService,
     merchant_authentication_service_server::MerchantAuthenticationService, payment_method,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
     payment_method_service_server::PaymentMethodService, payment_service_server::PaymentService,
@@ -248,6 +248,182 @@ pub struct PaymentMethod;
 
 #[derive(Clone)]
 pub struct Events;
+
+#[tonic::async_trait]
+impl EventService for Events {
+    #[tracing::instrument(
+        name = "incoming_webhook",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = "EventService",
+            service_method = FlowName::IncomingWebhook.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::IncomingWebhook.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn handle(
+        &self,
+        request: tonic::Request<EventServiceHandleRequest>,
+    ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "EventService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::IncomingWebhook,
+            |request_data| {
+                let service_name_clone = service_name.clone();
+                async move {
+                    let payload = request_data.payload;
+                    let metadata_payload = request_data.extracted_metadata;
+                    let connector = metadata_payload.connector;
+                    let _request_id = &metadata_payload.request_id;
+                    let connector_auth_details = &metadata_payload.connector_auth_type;
+                    let request_details = payload
+                        .request_details
+                        .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+                        .ok_or_else(|| {
+                            tonic::Status::invalid_argument("missing request_details in the payload")
+                        })?
+                        .map_err(|e| e.into_grpc_status())?;
+                    let webhook_secrets = payload
+                        .webhook_secrets
+                        .clone()
+                        .map(|details| {
+                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                                details,
+                            )
+                            .map_err(|e| e.into_grpc_status())
+                        })
+                        .transpose()?;
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    let requires_external_verification = connector_data
+                        .connector
+                        .requires_external_webhook_verification(config
+                            .webhook_source_verification_call
+                            .connectors_with_webhook_source_verification_call
+                            .as_ref());
+
+                    let source_verified = if requires_external_verification {
+                        verify_webhook_source_external(
+                            config.as_ref(),
+                            &connector_data,
+                            &request_details,
+                            webhook_secrets.clone(),
+                            connector_auth_details,
+                            &metadata_payload,
+                            &service_name_clone,
+                        )
+                        .await?
+                    } else {
+                        match connector_data
+                            .connector
+                            .verify_webhook_source(
+                                request_details.clone(),
+                                webhook_secrets.clone(),
+                                Some(connector_auth_details.clone()),
+                            )
+                        {
+                            Ok(result) => result,
+                            Err(err) => {
+                                tracing::warn!(
+                                    target: "webhook",
+                                    "{:?}",
+                                    err
+                                );
+                                false
+                            }
+                        }
+                    };
+
+                    let event_type = connector_data
+                        .connector
+                        .get_event_type(
+                            request_details.clone(),
+                            webhook_secrets.clone(),
+                            Some(connector_auth_details.clone()),
+                        )
+                        .switch()
+                        .into_grpc_status()?;
+                    let content = if event_type.is_payment_event() {
+                        get_payments_webhook_content(
+                            connector_data,
+                            request_details,
+                            webhook_secrets,
+                            Some(connector_auth_details.clone()),
+                        )
+                        .await
+                        .into_grpc_status()?
+                    } else if event_type.is_refund_event() {
+                        get_refunds_webhook_content(
+                            connector_data,
+                            request_details,
+                            webhook_secrets,
+                            Some(connector_auth_details.clone()),
+                        )
+                        .await
+                        .into_grpc_status()?
+                    } else if event_type.is_dispute_event() {
+                        get_disputes_webhook_content(
+                            connector_data,
+                            request_details,
+                            webhook_secrets,
+                            Some(connector_auth_details.clone()),
+                        )
+                        .await
+                        .into_grpc_status()?
+                    } else {
+                        get_payments_webhook_content(
+                            connector_data,
+                            request_details,
+                            webhook_secrets,
+                            Some(connector_auth_details.clone()),
+                        )
+                        .await
+                        .into_grpc_status()?
+                    };
+                    let api_event_type =
+                        grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
+                            .map_err(|e| e.into_grpc_status())?;
+
+                    let webhook_transformation_status = match content.content {
+                        Some(grpc_api_types::payments::event_response::Content::IncompleteTransformation(_)) => WebhookEventStatus::Incomplete,
+                        _ => WebhookEventStatus::Complete,
+                    };
+
+                    let response = EventServiceHandleResponse {
+                        event_type: api_event_type.into(),
+                        event_response: Some(content),
+                        source_verified,
+                        merchant_event_id: None,
+                        event_status: webhook_transformation_status.into(),
+                    };
+
+                    Ok(tonic::Response::new(response))
+                }
+            },
+        )
+        .await
+    }
+}
 
 #[derive(Clone)]
 pub struct Payments {
@@ -1877,183 +2053,6 @@ impl PaymentService for Payments {
             config.clone(),
             FlowName::VoidPostCapture,
             |request_data| async move { self.internal_void_post_capture(request_data).await },
-        )
-        .await
-    }
-
-    #[tracing::instrument(
-        name = "incoming_webhook",
-        fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::IncomingWebhook.as_str(),
-            request_body = tracing::field::Empty,
-            response_body = tracing::field::Empty,
-            error_message = tracing::field::Empty,
-            merchant_id = tracing::field::Empty,
-            gateway = tracing::field::Empty,
-            request_id = tracing::field::Empty,
-            status_code = tracing::field::Empty,
-            message_ = "Golden Log Line (incoming)",
-            response_time = tracing::field::Empty,
-            tenant_id = tracing::field::Empty,
-            flow = FlowName::IncomingWebhook.as_str(),
-            flow_specific_fields.status = tracing::field::Empty,
-        )
-        skip(self, request)
-    )]
-    async fn handle_event(
-        &self,
-        request: tonic::Request<EventServiceHandleRequest>,
-    ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
-        let service_name = request
-            .extensions()
-            .get::<String>()
-            .cloned()
-            .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
-            request,
-            &service_name,
-            config.clone(),
-            FlowName::IncomingWebhook,
-            |request_data| {
-                let service_name_clone = service_name.clone();
-                async move {
-                    let payload = request_data.payload;
-                    let metadata_payload = request_data.extracted_metadata;
-                    let connector = metadata_payload.connector;
-                    let _request_id = &metadata_payload.request_id;
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
-                    let request_details = payload
-                        .request_details
-                        .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                        .ok_or_else(|| {
-                            tonic::Status::invalid_argument("missing request_details in the payload")
-                        })?
-                        .map_err(|e| e.into_grpc_status())?;
-                    let webhook_secrets = payload
-                        .webhook_secrets
-                        .clone()
-                        .map(|details| {
-                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                                details,
-                            )
-                            .map_err(|e| e.into_grpc_status())
-                        })
-                        .transpose()?;
-                    //get connector data
-                    let connector_data: ConnectorData<DefaultPCIHolder> =
-                        ConnectorData::get_connector_by_name(&connector);
-
-                    let requires_external_verification = connector_data
-                        .connector
-                        .requires_external_webhook_verification(config
-                            .webhook_source_verification_call
-                            .connectors_with_webhook_source_verification_call
-                            .as_ref());
-
-                    let source_verified = if requires_external_verification {
-                        verify_webhook_source_external(
-                            config.as_ref(),
-                            &connector_data,
-                            &request_details,
-                            webhook_secrets.clone(),
-                            connector_auth_details,
-                            &metadata_payload,
-                            &service_name_clone,
-                        )
-                        .await?
-                     } else {
-                        match connector_data
-                            .connector
-                            .verify_webhook_source(
-                                request_details.clone(),
-                                webhook_secrets.clone(),
-                                Some(connector_auth_details.clone()),
-                            )
-                        {
-                            Ok(result) => result,
-                            Err(err) => {
-                                tracing::warn!(
-                                    target: "webhook",
-                                    "{:?}",
-                                    err
-                                );
-                                false
-                            }
-                        }
-                    };
-
-                    let event_type = connector_data
-                        .connector
-                        .get_event_type(
-                            request_details.clone(),
-                            webhook_secrets.clone(),
-                            Some(connector_auth_details.clone()),
-                        )
-                        .switch()
-                        .into_grpc_status()?;
-                    // Get content for the webhook based on the event type using categorization
-                    let content = if event_type.is_payment_event() {
-                        get_payments_webhook_content(
-                            connector_data,
-                            request_details,
-                            webhook_secrets,
-                            Some(connector_auth_details.clone()),
-                        )
-                        .await
-                        .into_grpc_status()?
-                    } else if event_type.is_refund_event() {
-                        get_refunds_webhook_content(
-                            connector_data,
-                            request_details,
-                            webhook_secrets,
-                            Some(connector_auth_details.clone()),
-                        )
-                        .await
-                        .into_grpc_status()?
-                    } else if event_type.is_dispute_event() {
-                        get_disputes_webhook_content(
-                            connector_data,
-                            request_details,
-                            webhook_secrets,
-                            Some(connector_auth_details.clone()),
-                        )
-                        .await
-                        .into_grpc_status()?
-                    } else {
-                        // For all other event types, default to payment webhook content for now
-                        // This includes mandate, payout, recovery, and misc events
-                        get_payments_webhook_content(
-                            connector_data,
-                            request_details,
-                            webhook_secrets,
-                            Some(connector_auth_details.clone()),
-                        )
-                        .await
-                        .into_grpc_status()?
-                    };
-                    let api_event_type =
-                        grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
-                            .map_err(|e| e.into_grpc_status())?;
-
-                    let webhook_transformation_status = match content.content {
-                        Some(grpc_api_types::payments::event_response::Content::IncompleteTransformation(_)) => WebhookEventStatus::Incomplete,
-                        _ => WebhookEventStatus::Complete,
-                    };
-
-                    let response = EventServiceHandleResponse {
-                        event_type: api_event_type.into(),
-                        event_response: Some(content),
-                        source_verified,
-                        merchant_event_id: None,
-                        event_status: webhook_transformation_status.into(),
-                    };
-
-                    Ok(tonic::Response::new(response))
-                }
-            },
         )
         .await
     }

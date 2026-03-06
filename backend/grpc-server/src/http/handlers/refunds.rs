@@ -28,6 +28,6 @@ http_handler!(
     transform_refund,
     EventServiceHandleRequest,
     EventServiceHandleResponse,
-    handle_event,
-    refunds_service
+    handle,
+    event_service
 );
