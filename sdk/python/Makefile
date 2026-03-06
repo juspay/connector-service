@@ -132,7 +132,7 @@ test-package: generate-all pack-archive
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
-		--no-deps --force-reinstall
+		--force-reinstall
 	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py
 	@rm -rf /tmp/test-hyperswitch-py
 	@echo "Package test passed."
