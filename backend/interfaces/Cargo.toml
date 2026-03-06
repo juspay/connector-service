@@ -23,7 +23,7 @@ mime = "0.3.17"
 http = "0.2.12"
 thiserror = { workspace = true }
 bytes = { workspace = true }
-time = "0.3.41"
+time = "0.3.47"
 tracing-actix-web = "0.7.18"
 async-trait = "0.1.88"
 actix-web = "4.11.0"
