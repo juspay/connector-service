@@ -6,10 +6,10 @@
 #   - payment_methods (namespace - payment method types)
 #   - configs (namespace - configuration types)
 
-from .connector_client import ConnectorClient
+from payments.connector_client import ConnectorClient
 
 # Import from generated proto files
-from .generated.payment_pb2 import (
+from payments.generated.payment_pb2 import (
     # Request types
     PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse,
@@ -30,20 +30,7 @@ from .generated.payment_pb2 import (
     PaymentServiceVerifyRedirectResponseRequest,
     PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceDisputeRequest,
-    # Authentication types
-    PaymentMethodAuthenticationServicePreAuthenticateRequest,
-    PaymentMethodAuthenticationServicePreAuthenticateResponse,
-    PaymentMethodAuthenticationServiceAuthenticateRequest,
-    PaymentMethodAuthenticationServiceAuthenticateResponse,
-    # Tokenization
-    PaymentMethodServiceTokenizeRequest,
-    PaymentMethodServiceTokenizeResponse,
-    # Access token types
-    MerchantAuthenticationServiceCreateAccessTokenRequest,
-    MerchantAuthenticationServiceCreateAccessTokenResponse,
     # Data types
-    AccessToken,
-    ConnectorState,
     Customer,
     PaymentAddress,
     Money,
@@ -52,7 +39,27 @@ from .generated.payment_pb2 import (
     SessionToken,
     # Response types
     ConnectorResponseData,
+    CardConnectorResponse,
     ErrorInfo,
+)
+
+from payments.generated.payment_methods_pb2 import (
+    PaymentMethod,
+    CardNumberType,
+    CardDetails,
+)
+
+from payments.generated.sdk_config_pb2 import (
+    ClientConfig,
+    RequestOptions,
+    Environment,
+    FfiOptions,
+    FfiConnectorHttpRequest,
+    FfiConnectorHttpResponse,
+)
+
+# Import enums from payment_pb2
+from payments.generated.payment_pb2 import (
     # Enums
     Currency,
     CaptureMethod,
@@ -82,30 +89,19 @@ from .generated.payment_pb2 import (
     CavvAlgorithm,
 )
 
-from .generated.payment_methods_pb2 import (
-    PaymentMethod,
-    CardNumberType,
-    CardDetails,
+# Import FFI functions
+from payments.generated.connector_service_ffi import (
+    authorize_req_transformer,
+    authorize_res_transformer,
 )
 
-from .generated.sdk_config_pb2 import (
-    ClientConfig,
-    RequestOptions,
-    HttpConfig,
-    HttpTimeoutConfig,
-    CaCert,
-    ProxyOptions,
-    HttpDefault,
-    Environment,
-    FfiOptions,
-    FfiConnectorHttpRequest,
-    FfiConnectorHttpResponse,
-)
-
-from .http_client import HttpRequest, HttpResponse, ConnectorError, execute, create_client
+# Create namespace objects (matching JavaScript SDK structure)
+# These provide organized access to types
 
 class PaymentsNamespace:
     """Namespace for payment request/response types and enums."""
+
+    # Request types
     PaymentServiceAuthorizeRequest = PaymentServiceAuthorizeRequest
     PaymentServiceAuthorizeResponse = PaymentServiceAuthorizeResponse
     PaymentServiceCaptureRequest = PaymentServiceCaptureRequest
@@ -125,24 +121,21 @@ class PaymentsNamespace:
     PaymentServiceVerifyRedirectResponseRequest = PaymentServiceVerifyRedirectResponseRequest
     PaymentServiceVerifyRedirectResponseResponse = PaymentServiceVerifyRedirectResponseResponse
     PaymentServiceDisputeRequest = PaymentServiceDisputeRequest
-    PaymentMethodAuthenticationServicePreAuthenticateRequest = PaymentMethodAuthenticationServicePreAuthenticateRequest
-    PaymentMethodAuthenticationServicePreAuthenticateResponse = PaymentMethodAuthenticationServicePreAuthenticateResponse
-    PaymentMethodAuthenticationServiceAuthenticateRequest = PaymentMethodAuthenticationServiceAuthenticateRequest
-    PaymentMethodAuthenticationServiceAuthenticateResponse = PaymentMethodAuthenticationServiceAuthenticateResponse
-    PaymentMethodServiceTokenizeRequest = PaymentMethodServiceTokenizeRequest
-    PaymentMethodServiceTokenizeResponse = PaymentMethodServiceTokenizeResponse
-    MerchantAuthenticationServiceCreateAccessTokenRequest = MerchantAuthenticationServiceCreateAccessTokenRequest
-    MerchantAuthenticationServiceCreateAccessTokenResponse = MerchantAuthenticationServiceCreateAccessTokenResponse
-    AccessToken = AccessToken
-    ConnectorState = ConnectorState
+
+    # Data types
     Customer = Customer
     PaymentAddress = PaymentAddress
     Money = Money
     BrowserInformation = BrowserInformation
     CustomerAcceptance = CustomerAcceptance
     SessionToken = SessionToken
+
+    # Response types
     ConnectorResponseData = ConnectorResponseData
+    CardConnectorResponse = CardConnectorResponse
     ErrorInfo = ErrorInfo
+
+    # Enums
     Currency = Currency
     CaptureMethod = CaptureMethod
     AuthenticationType = AuthenticationType
@@ -170,43 +163,32 @@ class PaymentsNamespace:
     AcceptanceType = AcceptanceType
     CavvAlgorithm = CavvAlgorithm
 
+
 class PaymentMethodsNamespace:
     """Namespace for payment method types."""
+
     PaymentMethod = PaymentMethod
     CardNumberType = CardNumberType
     CardDetails = CardDetails
 
+
 class ConfigsNamespace:
     """Namespace for configuration types."""
+
     ClientConfig = ClientConfig
     RequestOptions = RequestOptions
-    HttpConfig = HttpConfig
-    HttpTimeoutConfig = HttpTimeoutConfig
-    CaCert = CaCert
-    ProxyOptions = ProxyOptions
-    HttpDefault = HttpDefault
     Environment = Environment
     FfiOptions = FfiOptions
     FfiConnectorHttpRequest = FfiConnectorHttpRequest
     FfiConnectorHttpResponse = FfiConnectorHttpResponse
+
 
 # Create namespace instances
 payments = PaymentsNamespace()
 payment_methods = PaymentMethodsNamespace()
 configs = ConfigsNamespace()
 
-# Re-export all from payment_pb2 for backward compatibility (e.g. USD, AUTOMATIC)
-from .generated.payment_pb2 import *
-
-# Explicitly define public API
-__all__ = [
-    "ConnectorClient",
-    "HttpRequest",
-    "HttpResponse",
-    "ConnectorError",
-    "execute",
-    "create_client",
-    "payments",
-    "payment_methods",
-    "configs",
-]
+# Legacy exports (to be deprecated)
+from payments.generated.payment_pb2 import *
+from payments.generated.sdk_config_pb2 import *
+from payments.generated.connector_service_ffi import *

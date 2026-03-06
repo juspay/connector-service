@@ -42,7 +42,7 @@ uniffi = { version = "0.28", features = ["build"], optional = true }
 
 [features]
 default = ["uniffi"]
-uniffi = ["dep:uniffi", "uniffi/cli"]
+uniffi = ["dep:uniffi"]
 c-ffi = []
 
 [lints]
