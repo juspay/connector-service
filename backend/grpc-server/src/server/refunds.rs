@@ -1,16 +1,11 @@
 use std::fmt::Debug;
 
-use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{FlowName as DomainFlowName, RSync},
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
-    errors::{ApiError, ApplicationErrorResponse},
-    payment_method_data::DefaultPCIHolder,
-    router_data::ConnectorSpecificAuth,
     utils::ForeignTryFrom,
 };
-use error_stack::ResultExt;
 use grpc_api_types::payments::{
     refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,
 };

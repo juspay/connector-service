@@ -4,7 +4,6 @@ use crate::{
     request::RequestData,
     utils::{grpc_logging_wrapper, MetadataPayload},
 };
-use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{Accept, DefendDispute, FlowName, SubmitEvidence},
@@ -12,9 +11,8 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         SubmitEvidenceData,
     },
-    errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     types::{
         generate_accept_dispute_response, generate_defend_dispute_response,
@@ -22,7 +20,6 @@ use domain_types::{
     },
     utils::ForeignTryFrom,
 };
-use error_stack::ResultExt;
 use grpc_api_types::payments::{
     dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
     DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
