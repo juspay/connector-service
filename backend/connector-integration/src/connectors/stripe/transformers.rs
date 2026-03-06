@@ -912,6 +912,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::DuitNow
             | common_enums::PaymentMethodType::PromptPay
             | common_enums::PaymentMethodType::VietQr
+            | common_enums::PaymentMethodType::NetworkToken
             | common_enums::PaymentMethodType::Mifinity => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
@@ -1499,6 +1500,7 @@ fn create_stripe_payment_method<
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::NetworkToken(_)
+        | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(
             ConnectorError::NotImplemented(get_unimplemented_payment_method_error_message(
                 "stripe",
@@ -4572,6 +4574,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
                 Err(ConnectorError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
@@ -4961,6 +4964,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         | PaymentMethodData::OpenBanking(_)
                         | PaymentMethodData::CardToken(_)
                         | PaymentMethodData::NetworkToken(_)
+                        | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
                         | PaymentMethodData::Card(_) => Err(ConnectorError::NotSupported {
                             message: "Network tokenization for payment method".to_string(),
                             connector: "Stripe",
