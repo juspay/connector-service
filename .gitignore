@@ -412,6 +412,7 @@ $RECYCLE.BIN/
 
 # Credentials files
 .github/test/creds.json
+creds.json
 
 # DrawIO files
 **/*.drawio.bkp

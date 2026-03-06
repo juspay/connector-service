@@ -69,7 +69,7 @@ generate-proto: install-deps
 # protobuf JS/TS module. Proto depends on install-deps; both can run in any
 # order relative to each other.
 # ---------------------------------------------------------------------------
-generate-all: generate-proto generate-bindings
+generate-all: generate-proto generate-bindings generate-flows
 
 # ---------------------------------------------------------------------------
 # generate-flows
@@ -133,7 +133,13 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 		npm install $(PACKAGE_DIR)/hyperswitch-payments-0.1.0.tgz typescript @types/node --silent
 	@cp $(SDK_ROOT)/smoke-test/test_smoke.ts /tmp/test-hyperswitch-js/test_smoke.ts
 	@cp $(SDK_ROOT)/smoke-test/tsconfig.json /tmp/test-hyperswitch-js/tsconfig.json
-	@cd /tmp/test-hyperswitch-js && npx tsc && node test_smoke.js
+	@# Copy credentials file if it exists
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-js/; \
+	else \
+		echo "  Note: creds.json not found, test will use placeholder credentials"; \
+	fi
+	@cd /tmp/test-hyperswitch-js && npx tsc && node test_smoke.js --connectors stripe
 	@rm -rf /tmp/test-hyperswitch-js
 	@echo "Package test passed."
 

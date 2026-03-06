@@ -196,9 +196,22 @@ jobs:
         with:
           cache-on-failure: true
 
+      - name: Create connector credentials for SDK tests
+        if: ${{ secrets.CONNECTOR_SPECIFIC_AUTH != '' }}
+        shell: bash
+        run: |
+          echo '${{ secrets.CONNECTOR_SPECIFIC_AUTH }}' > creds.json
+          echo "Connector credentials created for SDK tests"
+
       - name: Run SDK Tests
         shell: bash
-        run: make -C sdk test
+        run: |
+          if [[ -f "creds.json" ]]; then
+            echo "Running SDK tests with connector credentials"
+          else
+            echo "Running SDK tests without connector credentials (dry-run mode)"
+          fi
+          make -C sdk test
 
       - name: Regenerate SDK code
         shell: bash
