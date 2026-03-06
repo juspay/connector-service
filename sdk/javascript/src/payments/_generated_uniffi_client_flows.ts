@@ -4,6 +4,25 @@
 import { UniffiClient as _UniffiClientBase } from "./uniffi_client";
 
 export class UniffiClient extends _UniffiClientBase {
+  /** Build connector HTTP request for authenticate flow. */
+  authenticateReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('authenticate', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for authenticate flow. */
+  authenticateRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('authenticate', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
   /** Build connector HTTP request for authorize flow. */
   authorizeReq(
     requestBytes: Buffer | Uint8Array,
@@ -42,6 +61,44 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('capture', responseBytes, requestBytes, metadata, optionsBytes);
   }
 
+  /** Build connector HTTP request for charge flow. */
+  chargeReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('charge', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for charge flow. */
+  chargeRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('charge', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for create flow. */
+  createReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('create', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for create flow. */
+  createRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('create', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
   /** Build connector HTTP request for create_access_token flow. */
   createAccessTokenReq(
     requestBytes: Buffer | Uint8Array,
@@ -59,6 +116,44 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('create_access_token', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for create_order flow. */
+  createOrderReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('create_order', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for create_order flow. */
+  createOrderRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('create_order', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for create_session_token flow. */
+  createSessionTokenReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('create_session_token', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for create_session_token flow. */
+  createSessionTokenRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('create_session_token', responseBytes, requestBytes, metadata, optionsBytes);
   }
 
   /** Build connector HTTP request for get flow. */
@@ -80,6 +175,44 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('get', responseBytes, requestBytes, metadata, optionsBytes);
   }
 
+  /** Build connector HTTP request for post_authenticate flow. */
+  postAuthenticateReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('post_authenticate', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for post_authenticate flow. */
+  postAuthenticateRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('post_authenticate', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for pre_authenticate flow. */
+  preAuthenticateReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('pre_authenticate', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for pre_authenticate flow. */
+  preAuthenticateRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('pre_authenticate', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
   /** Build connector HTTP request for refund flow. */
   refundReq(
     requestBytes: Buffer | Uint8Array,
@@ -99,6 +232,63 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('refund', responseBytes, requestBytes, metadata, optionsBytes);
   }
 
+  /** Build connector HTTP request for reverse flow. */
+  reverseReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('reverse', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for reverse flow. */
+  reverseRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('reverse', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for setup_recurring flow. */
+  setupRecurringReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('setup_recurring', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for setup_recurring flow. */
+  setupRecurringRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('setup_recurring', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Build connector HTTP request for tokenize flow. */
+  tokenizeReq(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('tokenize', requestBytes, metadata, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for tokenize flow. */
+  tokenizeRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('tokenize', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
   /** Build connector HTTP request for void flow. */
   voidReq(
     requestBytes: Buffer | Uint8Array,
@@ -116,6 +306,15 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('void', responseBytes, requestBytes, metadata, optionsBytes);
+  }
+
+  /** Direct single-step transform for handle_event (no HTTP round-trip). */
+  handleEventDirect(
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callDirect('handle_event', requestBytes, metadata, optionsBytes);
   }
 
 }

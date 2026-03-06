@@ -11,7 +11,7 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { ConnectorClient, payments, configs } from "hyperswitch-payments";
+import { PaymentClient,MerchantAuthenticationClient, payments, configs } from "hyperswitch-payments";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -66,7 +66,8 @@ const ffiOptions: configs.IFfiOptions = FfiOptions.create({
 async function testAccessTokenFlow(): Promise<void> {
   console.log("\n=== Test: PayPal Access Token Flow ===");
 
-  const client = new ConnectorClient();
+  const authClient = new MerchantAuthenticationClient();
+  const paymentClient = new PaymentClient();
 
   // Step 1: Create Access Token Request
   console.log("\n--- Step 1: Create Access Token ---");
@@ -77,13 +78,13 @@ async function testAccessTokenFlow(): Promise<void> {
       testMode: true,
     });
 
-  // Make the request via ConnectorClient
+  // Make the request via MerchantAuthenticationClient
   let accessTokenResponse: payments.MerchantAuthenticationServiceCreateAccessTokenResponse;
   let accessTokenValue: string | null = null;
   let tokenTypeValue: string | null = null;
 
   try {
-    accessTokenResponse = await client.createAccessToken(
+    accessTokenResponse = await authClient.createAccessToken(
       accessTokenRequest,
       metadata,
       ffiOptions
@@ -168,7 +169,7 @@ async function testAccessTokenFlow(): Promise<void> {
 
   try {
     const authorizeResponse: payments.PaymentServiceAuthorizeResponse =
-      await client.authorize(authorizeRequest, metadata, ffiOptions);
+      await paymentClient.authorize(authorizeRequest, metadata, ffiOptions);
     console.log(`  Response type: ${typeof authorizeResponse}`);
     console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);
     console.log(`  Payment status: ${authorizeResponse.status}`);
