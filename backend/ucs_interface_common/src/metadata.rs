@@ -113,12 +113,11 @@ pub fn connector_from_metadata(
 pub fn merchant_id_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<String, ApplicationErrorResponse> {
-    parse_metadata(metadata, consts::X_MERCHANT_ID)
-        .map(|inner| inner.to_string())
-        .or_else(|_| {
-            tracing::debug!("x-merchant-id header missing, generating with default prefix");
-            Ok(fp_utils::generate_id_with_default_len("default_merchant"))
-        })
+    let masked = common_utils::metadata::MaskedMetadata::new(
+        metadata.clone(),
+        common_utils::metadata::HeaderMaskingConfig::default(),
+    );
+    Ok(masked.merchant_id())
 }
 
 pub fn request_id_from_metadata(

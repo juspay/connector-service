@@ -33,12 +33,6 @@ metadata = {
             "api_key": api_key
         }
     }),
-    "x-connector": "Stripe",
-    "x-merchant-id": "test_merchant_123",
-    "x-request-id": "test-pack-001",
-    "x-tenant-id": "public",
-    "x-auth": "body-key",
-    "x-api-key": api_key,
 }
 
 # Build a protobuf request
