@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -46,6 +46,11 @@ ci:
 	@echo "⚙️  Running in CI mode (warnings = errors)…"
 	@$(MAKE) CI=true all
 
+
+## Generate SDK flow bindings from services.proto ∩ bindings/uniffi.rs
+generate:
+	@echo "▶ Generating SDK flows from services.proto…"
+	python3 sdk/codegen/generate.py
 
 # Format proto files
 proto-format:
@@ -92,6 +97,9 @@ help:
 	@echo "  proto-build      Build/validate proto files"
 	@echo "  proto-lint       Lint proto files"
 	@echo "  proto-clean      Clean generated proto files"
+	@echo
+	@echo "SDK Codegen Targets:"
+	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin) from services.proto"
 	@echo
 	@echo "Other Targets:"
 	@echo "  help     Show this help message"

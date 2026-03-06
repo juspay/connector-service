@@ -9,7 +9,7 @@ use domain_types::{
         ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
@@ -26,10 +26,12 @@ const WALLET_TYPE_GOOGLE_PAY: &str = "GOOGLE_PAY";
 
 // Re-export request types
 pub use requests::{
-    BluesnapCaptureRequest, BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest,
-    BluesnapCreditCard, BluesnapMetadata, BluesnapPaymentMethodDetails, BluesnapPaymentsRequest,
-    BluesnapPaymentsTokenRequest, BluesnapRefundRequest, BluesnapThreeDSecureInfo, BluesnapTxnType,
-    BluesnapVoidRequest, BluesnapWallet, RequestMetadata, TransactionFraudInfo,
+    BluesnapAchAuthorizeRequest, BluesnapAchData, BluesnapAuthorizeRequest, BluesnapCaptureRequest,
+    BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest, BluesnapCreditCard,
+    BluesnapEcpTransaction, BluesnapMetadata, BluesnapPayerInfo, BluesnapPaymentMethodDetails,
+    BluesnapPaymentsRequest, BluesnapPaymentsTokenRequest, BluesnapRefundRequest,
+    BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest, BluesnapWallet,
+    RequestMetadata, TransactionFraudInfo,
 };
 
 // Re-export response types
@@ -73,6 +75,42 @@ fn get_card_holder_info(
     }))
 }
 
+// Helper function to extract payer info from billing address (for ACH transactions)
+fn get_payer_info(
+    address: &domain_types::payment_address::AddressDetails,
+) -> CustomResult<BluesnapPayerInfo, errors::ConnectorError> {
+    let first_name = address.get_first_name()?.clone();
+    let last_name = address.get_last_name().unwrap_or(&first_name).clone();
+    let zip = address.get_zip()?.clone();
+
+    Ok(BluesnapPayerInfo {
+        first_name,
+        last_name,
+        zip,
+    })
+}
+
+// Map bank type and holder type to BlueSnap's ECP account type format
+fn map_ecp_account_type(
+    bank_type: Option<common_enums::BankType>,
+    bank_holder_type: Option<common_enums::BankHolderType>,
+) -> String {
+    match (bank_holder_type, bank_type) {
+        (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Checking)) => {
+            "BUSINESS_CHECKING"
+        }
+        (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Savings)) => {
+            "BUSINESS_SAVINGS"
+        }
+        (Some(common_enums::BankHolderType::Personal), Some(common_enums::BankType::Savings))
+        | (None, Some(common_enums::BankType::Savings)) => "CONSUMER_SAVINGS",
+        (Some(common_enums::BankHolderType::Personal), Some(common_enums::BankType::Checking))
+        | (None, Some(common_enums::BankType::Checking))
+        | (_, None) => "CONSUMER_CHECKING",
+    }
+    .to_string()
+}
+
 // Auth Type
 #[derive(Debug, Clone)]
 pub struct BluesnapAuthType {
@@ -105,16 +143,21 @@ impl TryFrom<&ConnectorSpecificAuth> for BluesnapAuthType {
 }
 
 // Status mapping function - mimics Hyperswitch's ForeignTryFrom pattern
+// Note: txn_type is optional because ACH/ECP responses don't include cardTransactionType
 fn get_attempt_status_from_bluesnap_status(
-    txn_type: BluesnapTxnType,
+    txn_type: Option<BluesnapTxnType>,
     processing_status: BluesnapProcessingStatus,
 ) -> AttemptStatus {
     match processing_status {
         BluesnapProcessingStatus::Success => match txn_type {
-            BluesnapTxnType::AuthOnly => AttemptStatus::Authorized,
-            BluesnapTxnType::AuthReversal => AttemptStatus::Voided,
-            BluesnapTxnType::AuthCapture | BluesnapTxnType::Capture => AttemptStatus::Charged,
-            BluesnapTxnType::Refund => AttemptStatus::Charged,
+            Some(BluesnapTxnType::AuthOnly) => AttemptStatus::Authorized,
+            Some(BluesnapTxnType::AuthReversal) => AttemptStatus::Voided,
+            Some(BluesnapTxnType::AuthCapture) | Some(BluesnapTxnType::Capture) => {
+                AttemptStatus::Charged
+            }
+            Some(BluesnapTxnType::Refund) => AttemptStatus::Charged,
+            // Default for ACH/ECP (no transaction type) - treat as charged on success
+            None => AttemptStatus::Charged,
         },
         BluesnapProcessingStatus::Pending | BluesnapProcessingStatus::PendingMerchantReview => {
             AttemptStatus::Pending
@@ -146,7 +189,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for BluesnapPaymentsRequest
+    > for BluesnapAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -163,30 +206,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        // Determine card_transaction_type based on capture_method
-        let card_transaction_type = match router_data.request.capture_method {
-            Some(common_enums::CaptureMethod::Manual) => BluesnapTxnType::AuthOnly,
-            _ => BluesnapTxnType::AuthCapture,
-        };
-
         let billing_address = router_data
             .resource_common_data
             .address
             .get_payment_method_billing();
 
-        let card_holder_info = billing_address
-            .and_then(|addr| addr.address.as_ref())
-            .and_then(|details| {
-                router_data
-                    .request
-                    .email
-                    .clone()
-                    .and_then(|email| get_card_holder_info(details, email).ok().flatten())
-            });
-
-        // Build payment method details based on payment method type
-        let payment_method_details = match &router_data.request.payment_method_data {
+        // Build request based on payment method type
+        match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
+                // Determine card_transaction_type based on capture_method
+                let card_transaction_type = match router_data.request.capture_method {
+                    Some(common_enums::CaptureMethod::Manual) => BluesnapTxnType::AuthOnly,
+                    _ => BluesnapTxnType::AuthCapture,
+                };
+
+                let card_holder_info =
+                    billing_address
+                        .and_then(|addr| addr.address.as_ref())
+                        .and_then(|details| {
+                            router_data.request.email.clone().and_then(|email| {
+                                get_card_holder_info(details, email).ok().flatten()
+                            })
+                        });
+
                 // Convert card number to Secret<String>
                 let card_number = Secret::new(
                     serde_json::to_string(&card_data.card_number.clone().0)
@@ -194,89 +236,202 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .trim_matches('"')
                         .to_string(),
                 );
-                BluesnapPaymentMethodDetails::Card {
+
+                let payment_method_details = BluesnapPaymentMethodDetails::Card {
                     credit_card: BluesnapCreditCard {
                         card_number,
                         security_code: card_data.card_cvc.clone(),
                         expiration_month: card_data.card_exp_month.clone(),
                         expiration_year: card_data.get_expiry_year_4_digit(),
                     },
-                }
+                };
+
+                let transaction_meta_data =
+                    router_data
+                        .request
+                        .metadata
+                        .as_ref()
+                        .map(|metadata| BluesnapMetadata {
+                            meta_data: convert_metadata_to_request_metadata(
+                                metadata.clone().expose(),
+                            ),
+                        });
+
+                let amount = super::BluesnapAmountConvertor::convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )?;
+
+                Ok(Self::Card(BluesnapPaymentsRequest {
+                    amount,
+                    currency: router_data.request.currency.to_string(),
+                    card_transaction_type,
+                    payment_method_details,
+                    card_holder_info,
+                    transaction_fraud_info: Some(TransactionFraudInfo {
+                        fraud_session_id: router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    }),
+                    merchant_transaction_id: Some(
+                        router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    ),
+                    transaction_meta_data,
+                }))
             }
-            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-                domain_types::payment_method_data::WalletData::ApplePay(apple_pay_data) => {
-                    let encoded_payment_token = Secret::new(
-                        serde_json::to_string(&apple_pay_data.payment_data)
-                            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
-                    );
-                    BluesnapPaymentMethodDetails::Wallet {
-                        wallet: BluesnapWallet {
-                            apple_pay: Some(requests::BluesnapApplePayWallet {
-                                encoded_payment_token,
-                            }),
-                            google_pay: None,
-                            wallet_type: WALLET_TYPE_APPLE_PAY.to_string(),
-                        },
+            PaymentMethodData::Wallet(wallet_data) => {
+                // Determine card_transaction_type based on capture_method
+                let card_transaction_type = match router_data.request.capture_method {
+                    Some(common_enums::CaptureMethod::Manual) => BluesnapTxnType::AuthOnly,
+                    _ => BluesnapTxnType::AuthCapture,
+                };
+
+                let card_holder_info =
+                    billing_address
+                        .and_then(|addr| addr.address.as_ref())
+                        .and_then(|details| {
+                            router_data.request.email.clone().and_then(|email| {
+                                get_card_holder_info(details, email).ok().flatten()
+                            })
+                        });
+
+                let payment_method_details = match wallet_data {
+                    domain_types::payment_method_data::WalletData::ApplePay(apple_pay_data) => {
+                        let encoded_payment_token = Secret::new(
+                            serde_json::to_string(&apple_pay_data.payment_data)
+                                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+                        );
+                        BluesnapPaymentMethodDetails::Wallet {
+                            wallet: BluesnapWallet {
+                                apple_pay: Some(requests::BluesnapApplePayWallet {
+                                    encoded_payment_token,
+                                }),
+                                google_pay: None,
+                                wallet_type: WALLET_TYPE_APPLE_PAY.to_string(),
+                            },
+                        }
                     }
-                }
-                domain_types::payment_method_data::WalletData::GooglePay(google_pay_data) => {
-                    let encoded_payment_token = Secret::new(
-                        serde_json::to_string(&google_pay_data.tokenization_data)
-                            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
-                    );
-                    BluesnapPaymentMethodDetails::Wallet {
-                        wallet: BluesnapWallet {
-                            apple_pay: None,
-                            google_pay: Some(requests::BluesnapGooglePayWallet {
-                                encoded_payment_token,
-                            }),
-                            wallet_type: WALLET_TYPE_GOOGLE_PAY.to_string(),
-                        },
+                    domain_types::payment_method_data::WalletData::GooglePay(google_pay_data) => {
+                        let encoded_payment_token = Secret::new(
+                            serde_json::to_string(&google_pay_data.tokenization_data)
+                                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+                        );
+                        BluesnapPaymentMethodDetails::Wallet {
+                            wallet: BluesnapWallet {
+                                apple_pay: None,
+                                google_pay: Some(requests::BluesnapGooglePayWallet {
+                                    encoded_payment_token,
+                                }),
+                                wallet_type: WALLET_TYPE_GOOGLE_PAY.to_string(),
+                            },
+                        }
                     }
+                    _ => Err(errors::ConnectorError::NotImplemented(
+                        "Selected wallet type is not supported".to_string(),
+                    ))?,
+                };
+
+                let transaction_meta_data =
+                    router_data
+                        .request
+                        .metadata
+                        .as_ref()
+                        .map(|metadata| BluesnapMetadata {
+                            meta_data: convert_metadata_to_request_metadata(
+                                metadata.clone().expose(),
+                            ),
+                        });
+
+                let amount = super::BluesnapAmountConvertor::convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )?;
+
+                Ok(Self::Card(BluesnapPaymentsRequest {
+                    amount,
+                    currency: router_data.request.currency.to_string(),
+                    card_transaction_type,
+                    payment_method_details,
+                    card_holder_info,
+                    transaction_fraud_info: Some(TransactionFraudInfo {
+                        fraud_session_id: router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    }),
+                    merchant_transaction_id: Some(
+                        router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    ),
+                    transaction_meta_data,
+                }))
+            }
+            PaymentMethodData::BankDebit(bank_debit_data) => match bank_debit_data {
+                BankDebitData::AchBankDebit {
+                    account_number,
+                    routing_number,
+                    bank_type,
+                    bank_holder_type,
+                    ..
+                } => {
+                    // Get payer info from billing address (required for ACH)
+                    let address_details = billing_address
+                        .and_then(|addr| addr.address.as_ref())
+                        .ok_or_else(|| {
+                            error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                                field_name: "billing_address"
+                            })
+                        })?;
+
+                    let payer_info = get_payer_info(address_details)?;
+
+                    // Map to BlueSnap ECP account type format
+                    let account_type = map_ecp_account_type(*bank_type, *bank_holder_type);
+
+                    let amount = super::BluesnapAmountConvertor::convert(
+                        router_data.request.minor_amount,
+                        router_data.request.currency,
+                    )?;
+
+                    let transaction_fraud_info = Some(TransactionFraudInfo {
+                        fraud_session_id: router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    });
+
+                    Ok(Self::Ach(BluesnapAchAuthorizeRequest {
+                        ecp_transaction: BluesnapEcpTransaction {
+                            routing_number: routing_number.clone(),
+                            account_number: account_number.clone(),
+                            account_type,
+                        },
+                        amount,
+                        currency: router_data.request.currency.to_string(),
+                        authorized_by_shopper: true,
+                        payer_info,
+                        merchant_transaction_id: router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        soft_descriptor: None,
+                        transaction_fraud_info,
+                    }))
                 }
                 _ => Err(errors::ConnectorError::NotImplemented(
-                    "Selected wallet type is not supported".to_string(),
+                    "Only ACH Bank Debit is supported".to_string(),
                 ))?,
             },
             _ => Err(errors::ConnectorError::NotImplemented(
                 "Selected payment method is not supported".to_string(),
             ))?,
-        };
-
-        let transaction_meta_data =
-            router_data
-                .request
-                .metadata
-                .as_ref()
-                .map(|metadata| BluesnapMetadata {
-                    meta_data: convert_metadata_to_request_metadata(metadata.clone().expose()),
-                });
-
-        let amount = super::BluesnapAmountConvertor::convert(
-            router_data.request.minor_amount,
-            router_data.request.currency,
-        )?;
-
-        Ok(Self {
-            amount,
-            currency: router_data.request.currency.to_string(),
-            card_transaction_type,
-            payment_method_details,
-            card_holder_info,
-            transaction_fraud_info: Some(TransactionFraudInfo {
-                fraud_session_id: router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            }),
-            merchant_transaction_id: Some(
-                router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
-            transaction_meta_data,
-        })
+        }
     }
 }
 
