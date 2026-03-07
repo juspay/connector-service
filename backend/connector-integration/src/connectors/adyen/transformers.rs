@@ -3325,6 +3325,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::Upi(_)
                 | PaymentMethodData::OpenBanking(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+                | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
                 | PaymentMethodData::CardToken(_) => Err(errors::ConnectorError::NotImplemented(
@@ -5542,6 +5543,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::Upi(_)
                 | PaymentMethodData::OpenBanking(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+                | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
                 | PaymentMethodData::CardToken(_) => Err(errors::ConnectorError::NotImplemented(
