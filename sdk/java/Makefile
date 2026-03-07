@@ -5,6 +5,9 @@
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
 
+# Connectors to test (comma-separated, default: stripe)
+CONNECTORS ?= stripe
+
 # Include common SDK build configuration
 include $(SDK_ROOT)/../common.mk
 
@@ -132,7 +135,7 @@ test-package: generate-all install
 	else \
 		echo "  Note: creds.json not found, test will use placeholder credentials"; \
 	fi
-	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors stripe"
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors $(CONNECTORS)"
 	@echo "Package test passed."
 
 # ---------------------------------------------------------------------------

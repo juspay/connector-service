@@ -21,8 +21,9 @@ const {
   AuthenticationType,
   Connector,
   ConnectorConfig,
-  Environment
+  Environment,
 } = types;
+
 
 // Test card configurations
 const TEST_CARDS: Record<string, any> = {
@@ -89,46 +90,6 @@ function hasValidCredentials(authConfig: AuthConfig): boolean {
   return false;
 }
 
-function buildMetadata(connectorName: string, authConfig: AuthConfig): Record<string, string> {
-  const authFields: Record<string, any> = {};
-  for (const [key, value] of Object.entries(authConfig)) {
-    if (key !== "metadata") {
-      authFields[key] = value;
-    }
-  }
-
-  const authTypeKey = connectorName.charAt(0).toUpperCase() + connectorName.slice(1);
-
-  const metadata: Record<string, string> = {
-    connector: authTypeKey,
-    connector_auth_type: JSON.stringify({ [authTypeKey]: authFields }),
-    "x-connector": authTypeKey,
-    "x-merchant-id": `test_merchant_${connectorName}`,
-    "x-request-id": `smoke-test-${connectorName}-${Date.now()}`,
-    "x-tenant-id": "public",
-  };
-
-  if (authFields.api_key) {
-    metadata["x-api-key"] = authFields.api_key;
-  }
-  if (authFields.key1) {
-    metadata["x-key1"] = authFields.key1;
-  }
-
-  // Determine auth type
-  if (authFields.key2) {
-    metadata["x-auth"] = "multi-auth-key";
-  } else if (authFields.api_secret) {
-    metadata["x-auth"] = "signature-key";
-  } else if (authFields.key1) {
-    metadata["x-auth"] = "body-key";
-  } else {
-    metadata["x-auth"] = "header-key";
-  }
-
-  return metadata;
-}
-
 function buildAuthorizeRequest(cardType: string = "visa"): any {
   const card = TEST_CARDS[cardType] || TEST_CARDS.visa;
 
@@ -176,7 +137,6 @@ async function testConnector(
 
   try {
     const req = buildAuthorizeRequest();
-    const metadata = buildMetadata(connectorKey, authConfig);
 
     // Get the correct connector enum value
     const connectorEnum = Connector[connectorKey.toUpperCase() as keyof typeof Connector];
@@ -222,6 +182,7 @@ async function testConnector(
         error: e.message || String(e),
       };
       result.status = "passed_with_error";
+      result.error = e.message || String(e);
     }
   } catch (e: any) {
     result.status = "failed";
@@ -327,7 +288,7 @@ async function runTests(
         if (result.status === "passed") {
           console.log(`  ✓ PASSED`);
         } else if (result.status === "passed_with_error") {
-          console.log(`  ✓ PASSED (with connector error)`);
+          console.log(`  ✓ PASSED (with connector error ${result.error})`);
         } else if (result.status === "dry_run") {
           console.log(`  ✓ DRY RUN`);
         } else {
@@ -352,7 +313,7 @@ async function runTests(
       if (result.status === "passed") {
         console.log(`  ✓ PASSED`);
       } else if (result.status === "passed_with_error") {
-        console.log(`  ✓ PASSED (with connector error)`);
+        console.log(`  ✓ PASSED (with connector error ${result.error})`);
       } else if (result.status === "dry_run") {
         console.log(`  ✓ DRY RUN`);
       } else {

@@ -24,16 +24,17 @@ import payments.Connector
 import payments.Environment
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import payments.PaymentClient
 import uniffi.connector_service_ffi.UniffiException
 import uniffi.connector_service_ffi.authorizeReqTransformer
-import ucs.v2.Payment.PaymentServiceAuthorizeRequest
-import ucs.v2.Payment.PaymentAddress
-import ucs.v2.Payment.Currency
-import ucs.v2.Payment.CaptureMethod
-import ucs.v2.Payment.AuthenticationType
-import ucs.v2.SdkOptions.FfiConnectorHttpRequest
-import ucs.v2.SdkOptions.FfiOptions
-import ucs.v2.SdkOptions.EnvOptions
+import payments.PaymentServiceAuthorizeRequest
+import payments.PaymentAddress
+import payments.Currency
+import payments.CaptureMethod
+import payments.AuthenticationType
+import payments.FfiConnectorHttpRequest
+import payments.FfiOptions
+import payments.EnvOptions
 import java.io.File
 
 // Test card configurations
@@ -171,18 +172,22 @@ fun buildAuthorizeRequest(cardType: String = "visa"): PaymentServiceAuthorizeReq
 }
 
 fun testConnector(
-    connectorName: String,
+    instanceName: String,
     authConfig: AuthConfig,
-    dryRun: Boolean = false
+    dryRun: Boolean = false,
+    baseConnectorName: String? = null
 ): TestResult {
+    // Use base name for metadata (without index), instance name for display
+    val connectorKey = baseConnectorName ?: instanceName
+    
     val result = TestResult(
-        connector = connectorName,
+        connector = instanceName,
         status = "pending"
     )
     
     return try {
         val req = buildAuthorizeRequest()
-        val metadata = buildMetadata(connectorName, authConfig)
+        val metadata = buildMetadata(connectorKey, authConfig)
         
         if (dryRun) {
             return result.copy(
@@ -202,7 +207,7 @@ fun testConnector(
             )
         }
         
-        val client = ConnectorClient()
+        val client = PaymentClient()
         val ffiOptions = FfiOptions.newBuilder()
             .setEnv(EnvOptions.newBuilder().setTestMode(true).build())
             .build()
@@ -341,7 +346,7 @@ fun runTests(
                         continue
                     }
                     
-                    val result = testConnector(instanceName, authConfig, dryRun)
+                    val result = testConnector(instanceName, authConfig, dryRun, connectorName)
                     results.add(result)
                     
                     when (result.status) {

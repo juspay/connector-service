@@ -26,9 +26,10 @@ from typing import Dict, List, Any, Optional
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 try:
-    from payments import ConnectorClient
-    from payments.generated.connector_service_ffi import authorize_req_transformer
-    from payments.generated.payment_pb2 import (
+    from payments import (
+        authorize_req_transformer,
+        FfiConnectorHttpRequest,
+        PaymentClient,
         PaymentServiceAuthorizeRequest,
         PaymentAddress,
         USD,
@@ -36,7 +37,6 @@ try:
         NO_THREE_DS,
         PaymentServiceAuthorizeResponse,
     )
-    from payments.generated.sdk_options_pb2 import FfiConnectorHttpRequest
 except ImportError as e:
     print(f"Error importing payments package: {e}")
     print("Make sure the wheel is installed: pip install dist/hyperswitch_payments-*.whl")
@@ -167,13 +167,17 @@ def build_authorize_request(
 
 
 def test_connector_ffi(
-    connector_name: str,
+    instance_name: str,
     auth_config: Dict[str, Any],
-    dry_run: bool = False
+    dry_run: bool = False,
+    base_connector_name: Optional[str] = None
 ) -> Dict[str, Any]:
     """Test connector using low-level FFI (authorize_req_transformer)."""
+    # Use base name for metadata (without index), instance name for display
+    connector_key = base_connector_name or instance_name
+    
     result = {
-        "connector": connector_name,
+        "connector": instance_name,
         "status": "pending",
         "ffi_test": None,
         "round_trip_test": None,
@@ -183,7 +187,7 @@ def test_connector_ffi(
     try:
         # Build request and metadata
         req = build_authorize_request()
-        metadata = build_metadata(connector_name, auth_config)
+        metadata = build_metadata(connector_key, auth_config)
         
         # Test 1: Low-level FFI
         options_bytes = b""
@@ -210,7 +214,7 @@ def test_connector_ffi(
             result["round_trip_test"] = {"skipped": True, "reason": "placeholder_credentials"}
             return result
         
-        client = ConnectorClient()
+        client = PaymentClient()
         try:
             response = client.authorize(req, metadata)
             result["round_trip_test"] = {
@@ -271,7 +275,7 @@ def run_tests(
                     })
                     continue
                 
-                result = test_connector_ffi(instance_name, instance_auth, dry_run)
+                result = test_connector_ffi(instance_name, instance_auth, dry_run, connector_name)
                 results.append(result)
                 
                 if result["status"] == "passed":
