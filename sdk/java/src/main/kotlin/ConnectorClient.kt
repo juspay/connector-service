@@ -17,7 +17,7 @@ import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 
-class ConnectorClient(
+open class ConnectorClient(
     val identity: ClientIdentity,
     val defaults: ConfigOptions = ConfigOptions.getDefaultInstance(),
     libPath: String? = null
@@ -127,6 +127,39 @@ class ConnectorClient(
             optionsBytes,
         )
 
+        return responseParser.parseFrom(resultBytes)
+    }
+
+    /**
+     * Execute a single-step flow directly via FFI (no HTTP round-trip).
+     * Used for inbound flows like webhook processing where the connector sends data to us.
+     *
+     * @param flow Flow name matching the FFI transformer (e.g. "handle").
+     * @param requestBytes Serialized protobuf request bytes.
+     * @param responseParser Protobuf parser for the expected response type.
+     * @param metadata Map with connector routing and auth info.
+     * @param options Optional ConfigOptions for FFI context. Merged with client defaults.
+     * @return Parsed protobuf response.
+     */
+    fun <T : MessageLite> executeDirect(
+        flow: String,
+        requestBytes: ByteArray,
+        responseParser: Parser<T>,
+        metadata: Map<String, String>,
+        options: ConfigOptions? = null,
+    ): T = executeDirect(flow, requestBytes, responseParser, metadata, resolveFfiOptions(options).toByteArray())
+
+    private fun <T : MessageLite> executeDirect(
+        flow: String,
+        requestBytes: ByteArray,
+        responseParser: Parser<T>,
+        metadata: Map<String, String>,
+        optionsBytes: ByteArray,
+    ): T {
+        val transformer = FlowRegistry.directTransformers[flow]
+            ?: error("Unknown single-step flow: '$flow'. Register it via a {flow}_transformer in services/payments.rs and run `make generate`.")
+
+        val resultBytes = transformer(requestBytes, metadata, optionsBytes)
         return responseParser.parseFrom(resultBytes)
     }
 }

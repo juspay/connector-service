@@ -1,12 +1,12 @@
 # Hyperswitch Payments SDK
 #
 # Export structure:
-#   - ConnectorClient (flat - high-level API)
+#   - PaymentClient, MerchantAuthenticationClient (per-service high-level API)
 #   - payments (namespace - request/response types, enums)
 #   - payment_methods (namespace - payment method types)
 #   - configs (namespace - configuration types)
 
-from payments.connector_client import ConnectorClient
+from payments._generated_service_clients import PaymentClient, MerchantAuthenticationClient
 
 # Import from generated proto files
 from payments.generated.payment_pb2 import (

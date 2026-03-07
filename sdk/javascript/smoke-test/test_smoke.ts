@@ -11,7 +11,7 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { ConnectorClient, payments, configs } from "hyperswitch-payments";
+import { PaymentClient,MerchantAuthenticationClient, payments, configs } from "hyperswitch-payments";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -30,11 +30,10 @@ const {
 const { ClientIdentity, ConfigOptions, Environment } = configs;
 
 const PAYPAL_CREDS = {
-  client_id:
-    "client_id",
-  client_secret:
-    "client_secret",
+  client_id: "PAYPAL_CLIENT_ID_PLACEHOLDER",
+  client_secret: "PAYPAL_CLIENT_SECRET_PLACEHOLDER",
 };
+
 
 const metadata: Record<string, string> = {
   connector: "Paypal",
@@ -77,7 +76,8 @@ const options = ConfigOptions.create({
 async function testAccessTokenFlow(): Promise<void> {
   console.log("\n=== Test: PayPal Access Token Flow ===");
 
-  const client = new ConnectorClient(identity, options);
+  const authClient = new MerchantAuthenticationClient(identity, options);
+  const paymentClient = new PaymentClient(identity, options);
 
   // Step 1: Create Access Token Request
   console.log("\n--- Step 1: Create Access Token ---");
@@ -88,13 +88,13 @@ async function testAccessTokenFlow(): Promise<void> {
       testMode: true,
     });
 
-  // Make the request via ConnectorClient
+  // Make the request via MerchantAuthenticationClient
   let accessTokenResponse: payments.MerchantAuthenticationServiceCreateAccessTokenResponse;
   let accessTokenValue: string | null = null;
   let tokenTypeValue: string | null = null;
 
   try {
-    accessTokenResponse = await client.createAccessToken(
+    accessTokenResponse = await authClient.createAccessToken(
       accessTokenRequest,
       metadata
     );
@@ -178,7 +178,7 @@ async function testAccessTokenFlow(): Promise<void> {
 
   try {
     const authorizeResponse: payments.PaymentServiceAuthorizeResponse =
-      await client.authorize(authorizeRequest, metadata);
+      await paymentClient.authorize(authorizeRequest, metadata);
     console.log(`  Response type: ${typeof authorizeResponse}`);
     console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);
     console.log(`  Payment status: ${authorizeResponse.status}`);

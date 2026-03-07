@@ -7,7 +7,18 @@
  * Exits non-zero on any assertion failure.
  */
 
-import payments.*
+import payments.PaymentClient
+import payments.PaymentServiceAuthorizeRequest
+import payments.PaymentAddress
+import payments.Currency
+import payments.CaptureMethod
+import payments.AuthenticationType
+import payments.FfiConnectorHttpRequest
+import payments.FfiOptions
+import payments.ClientIdentity
+import payments.ConfigOptions
+import payments.Connector
+import payments.Environment
 import uniffi.connector_service_ffi.UniffiException
 import uniffi.connector_service_ffi.authorizeReqTransformer
 
@@ -49,12 +60,17 @@ fun buildMetadata(): Map<String, String> {
     )
 }
 
-fun buildConfig(): ClientConfig {
+fun buildIdentity(): ClientIdentity {
     val apiKey = System.getenv("STRIPE_API_KEY") ?: "sk_test_placeholder"
-    return ClientConfig.newBuilder().apply {
+    return ClientIdentity.newBuilder().apply {
         connector = Connector.STRIPE
-        environment = Environment.SANDBOX
         authBuilder.stripeBuilder.apiKeyBuilder.value = apiKey
+    }.build()
+}
+
+fun buildDefaults(): ConfigOptions {
+    return ConfigOptions.newBuilder().apply {
+        environment = Environment.SANDBOX
     }.build()
 }
 
@@ -75,7 +91,7 @@ fun testLowLevelFfi() {
     val ffiOptions = FfiOptions.newBuilder().apply {
         connector = Connector.STRIPE
         environment = Environment.SANDBOX
-        auth = buildConfig().auth
+        auth = buildIdentity().auth
     }.build()
     val optionsBytes = ffiOptions.toByteArray()
 
@@ -101,7 +117,7 @@ fun testLowLevelFfi() {
 }
 
 fun testFullRoundTrip() {
-    println("\n=== Test 2: Full round-trip (ConnectorClient) ===")
+    println("\n=== Test 2: Full round-trip (PaymentClient) ===")
 
     val apiKey = System.getenv("STRIPE_API_KEY") ?: ""
     if (apiKey.isEmpty() || apiKey == "sk_test_placeholder") {
@@ -109,8 +125,9 @@ fun testFullRoundTrip() {
         return
     }
 
-    val config = buildConfig()
-    val client = ConnectorClient(config)
+    val identity = buildIdentity()
+    val defaults = buildDefaults()
+    val client = PaymentClient(identity, defaults)
     try {
         val response = client.authorize(buildRequest(), buildMetadata(), null)
         println("  Response status: ${response.status}")

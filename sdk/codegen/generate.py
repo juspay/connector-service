@@ -136,13 +136,29 @@ def parse_service_flows(service_file: Path) -> set[str]:
     }
 
 
-def discover_flows() -> list[dict]:
+def parse_single_flows(service_file: Path) -> set[str]:
+    """
+    Scan services/payments.rs for hand-written single-step transformers.
+    These are `pub fn {flow}_transformer` functions that are NOT req/res macros —
+    they take the request directly and return the response without an HTTP round-trip
+    (e.g. webhook processing via `handle_transformer`).
+    """
+    text = service_file.read_text()
+    return {
+        m.group(1)
+        for m in re.finditer(r"^pub fn (\w+)_transformer\b", text, re.MULTILINE)
+    }
+
+
+def discover_flows() -> tuple[list[dict], list[dict]]:
     """
     Cross-reference proto RPCs with implemented service transformers.
-    Only flows present in BOTH sources are returned, sorted by name.
+    Returns (standard_flows, single_flows) — both sorted by name.
+    Standard flows use req+HTTP+res; single flows call the transformer directly.
     """
     proto_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
     service_flows = parse_service_flows(FFI_SERVICES)
+    single_flow_names = parse_single_flows(FFI_SERVICES)
 
     flows = []
     for flow in sorted(service_flows):
@@ -154,11 +170,22 @@ def discover_flows() -> list[dict]:
             continue
         flows.append({"name": flow, **proto_rpcs[flow]})
 
-    unimplemented = sorted(set(proto_rpcs) - service_flows)
+    single_flows = []
+    for flow in sorted(single_flow_names):
+        if flow not in proto_rpcs:
+            print(
+                f"  WARNING: '{flow}_transformer' exists in services/payments.rs but has no matching RPC in services.proto",
+                file=sys.stderr,
+            )
+            continue
+        single_flows.append({"name": flow, **proto_rpcs[flow]})
+
+    implemented = service_flows | single_flow_names
+    unimplemented = sorted(set(proto_rpcs) - implemented)
     if unimplemented:
         print(f"  Proto RPCs not yet implemented (skipped): {unimplemented}")
 
-    return flows
+    return flows, single_flows
 
 
 # ── Generators ───────────────────────────────────────────────────────────────
@@ -178,27 +205,88 @@ def flow_comment(f: dict, prefix: str) -> str:
     return f"{prefix} {f['name']}: {f['service']}.{f['rpc']} — {desc}"
 
 
-def gen_python(flows: list[dict]) -> None:
+def gen_python(flows: list[dict], single_flows: list[dict]) -> None:
+    groups = group_by_service(flows)
     lines = [
         "# AUTO-GENERATED — do not edit by hand.",
         "# Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate",
-        "FLOW_RESPONSES = {",
+        "SERVICE_FLOWS = {",
     ]
-    for f in flows:
-        lines.append(flow_comment(f, "    #"))
-        lines.append(f'    "{f["name"]}": "{f["response"]}",')
+    for service, sflows in groups.items():
+        client_name = service_to_client_name(service)
+        lines.append(f'    "{client_name}": {{')
+        for f in sflows:
+            lines.append(flow_comment(f, "        #"))
+            lines.append(f'        "{f["name"]}": "{f["response"]}",')
+        lines.append("    },")
     lines.append("}")
+    if single_flows:
+        lines.append("")
+        lines.append("# Single-step flows: no HTTP round-trip (e.g. webhook processing).")
+        lines.append("SINGLE_SERVICE_FLOWS = {")
+        for service, sflows in group_by_service(single_flows).items():
+            client_name = service_to_client_name(service)
+            lines.append(f'    "{client_name}": {{')
+            for f in sflows:
+                lines.append(flow_comment(f, "        #"))
+                lines.append(f'        "{f["name"]}": "{f["response"]}",')
+            lines.append("    },")
+        lines.append("}")
     write(
         SDK_ROOT / "python/src/payments/_generated_flows.py",
         "\n".join(lines) + "\n",
     )
 
 
-def gen_python_stub(flows: list[dict]) -> None:
-    """Generate connector_client.pyi so IDEs can resolve flow methods and offer completions."""
+def gen_python_clients(flows: list[dict], single_flows: list[dict]) -> None:
+    """Generate _generated_service_clients.py — per-service client classes."""
+    groups = group_by_service(flows)
+    single_groups = group_by_service(single_flows)
+    all_groups = {**groups}
+    for service, sflows in single_groups.items():
+        all_groups.setdefault(service, [])
+
+    lines = [
+        "# AUTO-GENERATED — do not edit by hand.",
+        "# Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate",
+        "",
+        "from payments.connector_client import _ConnectorClientBase",
+        "import payments.generated.payment_pb2 as _pb2",
+        "",
+    ]
+
+    for service in sorted(all_groups):
+        client_name = service_to_client_name(service)
+        lines.append(f"class {client_name}(_ConnectorClientBase):")
+        lines.append(f'    """{service} flows"""')
+        for f in groups.get(service, []):
+            n, res = f["name"], f["response"]
+            lines.append("")
+            lines.append(f"    def {n}(self, request, metadata: dict, options=None):")
+            lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
+            lines.append(f'        return self._execute_flow("{n}", request, metadata, _pb2.{res}, options)')
+        for f in single_groups.get(service, []):
+            n, res = f["name"], f["response"]
+            lines.append("")
+            lines.append(f"    def {n}(self, request, metadata: dict, options=None):")
+            lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
+            lines.append(f'        return self._execute_direct("{n}", request, metadata, _pb2.{res}, options)')
+        lines.append("")
+
+    write(
+        SDK_ROOT / "python/src/payments/_generated_service_clients.py",
+        "\n".join(lines) + "\n",
+    )
+
+
+def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
+    """Generate connector_client.pyi — per-service client stubs for IDE completions."""
+    groups = group_by_service(flows)
+    single_groups = group_by_service(single_flows)
+
     # Collect all proto types that need importing
     types: set[str] = set()
-    for f in flows:
+    for f in flows + single_flows:
         types.add(f["request"])
         types.add(f["response"])
 
@@ -208,7 +296,7 @@ def gen_python_stub(flows: list[dict]) -> None:
         "# AUTO-GENERATED — do not edit by hand.",
         "# Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate",
         "#",
-        "# This stub exposes dynamically-attached flow methods to static analysers",
+        "# This stub exposes per-service client classes to static analysers",
         "# (Pylance, pyright, mypy) so IDEs offer completions and type checking.",
         "from payments.generated.sdk_config_pb2 import ClientIdentity, ConfigOptions",
         "from payments.generated.payment_pb2 import (",
@@ -218,18 +306,31 @@ def gen_python_stub(flows: list[dict]) -> None:
     lines += [
         ")",
         "",
-        "class ConnectorClient:",
-        "    def __init__(self, identity: ClientIdentity, defaults: ConfigOptions | None = ...) -> None: ...",
+        "class _ConnectorClientBase:",
+        "    def __init__(self, identity: ClientIdentity, defaults: ConfigOptions | None = ..., lib_path: str | None = ...) -> None: ...",
         "",
     ]
 
-    for f in flows:
-        n, req, res = f["name"], f["request"], f["response"]
-        lines.append(
-            f"    def {n}(self, request: {req}, metadata: dict, options: ConfigOptions | None = ...) -> {res}:"
-        )
-        lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
-        lines.append(f"        ...")
+    all_services = sorted(set(groups) | set(single_groups))
+    for service in all_services:
+        client_name = service_to_client_name(service)
+        lines.append(f"class {client_name}(_ConnectorClientBase):")
+        for f in groups.get(service, []):
+            n, req, res = f["name"], f["request"], f["response"]
+            lines.append(
+                f"    def {n}(self, request: {req}, metadata: dict, options: ConfigOptions | None = ...) -> {res}:"
+            )
+            lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
+            lines.append(f"        ...")
+            lines.append("")
+        for f in single_groups.get(service, []):
+            n, req, res = f["name"], f["request"], f["response"]
+            lines.append(
+                f"    def {n}(self, request: {req}, metadata: dict, options: ConfigOptions | None = ...) -> {res}:"
+            )
+            lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
+            lines.append(f"        ...")
+            lines.append("")
         lines.append("")
 
     write(
@@ -238,17 +339,31 @@ def gen_python_stub(flows: list[dict]) -> None:
     )
 
 
+def service_to_client_name(service: str) -> str:
+    """'PaymentService' -> 'PaymentClient', 'MerchantAuthenticationService' -> 'MerchantAuthenticationClient'"""
+    return service[:-7] + "Client" if service.endswith("Service") else service + "Client"
+
+
+def group_by_service(flows: list[dict]) -> dict[str, list[dict]]:
+    """Group flows by their proto service name. Returns {service_name: [flow, ...]}."""
+    groups: dict[str, list[dict]] = {}
+    for f in flows:
+        groups.setdefault(f["service"], []).append(f)
+    return groups
+
+
 def to_camel(snake: str) -> str:
     """'create_access_token' -> 'createAccessToken'"""
     return re.sub(r"_([a-z])", lambda m: m.group(1).upper(), snake)
 
-def gen_javascript(flows: list[dict]) -> None:
-    gen_flows_js(flows)
-    gen_connector_client_ts(flows)
-    gen_uniffi_client_ts(flows)
+
+def gen_javascript(flows: list[dict], single_flows: list[dict]) -> None:
+    gen_flows_js(flows, single_flows)
+    gen_connector_client_ts(flows, single_flows)
+    gen_uniffi_client_ts(flows, single_flows)
 
 
-def gen_flows_js(flows: list[dict]) -> None:
+def gen_flows_js(flows: list[dict], single_flows: list[dict]) -> None:
     """Generate _generated_flows.js — flow metadata used by UniffiClient for FFI symbol dispatch."""
     max_len = max((len(f["name"]) for f in flows), default=0)
     lines = [
@@ -263,12 +378,28 @@ def gen_flows_js(flows: list[dict]) -> None:
         padding = " " * (max_len - len(f["name"]) + 1)
         lines.append(f'  {f["name"]}{padding}: {{ request: "{f["request"]}", response: "{f["response"]}" }},')
         lines.append("")
-    lines += ["};", "", "module.exports = { FLOWS };", ""]
+    lines += ["};", ""]
+    if single_flows:
+        max_len_s = max((len(f["name"]) for f in single_flows), default=0)
+        lines += ["// Single-step flows: no HTTP round-trip.", "const SINGLE_FLOWS = {"]
+        for f in single_flows:
+            lines.append(f"  {flow_comment(f, '//')}")
+            padding = " " * (max_len_s - len(f["name"]) + 1)
+            lines.append(f'  {f["name"]}{padding}: {{ request: "{f["request"]}", response: "{f["response"]}" }},')
+            lines.append("")
+        lines += ["};", ""]
+        lines += ["module.exports = { FLOWS, SINGLE_FLOWS };", ""]
+    else:
+        lines += ["module.exports = { FLOWS };", ""]
     write(SDK_ROOT / "javascript/src/payments/_generated_flows.js", "\n".join(lines))
 
 
-def gen_connector_client_ts(flows: list[dict]) -> None:
-    """Generate _generated_connector_client_flows.ts — ConnectorClient subclass with typed flow methods."""
+def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None:
+    """Generate _generated_connector_client_flows.ts — per-service client classes."""
+    groups = group_by_service(flows)
+    single_groups = group_by_service(single_flows)
+    all_services = sorted(set(groups) | set(single_groups))
+
     lines = [
         "// AUTO-GENERATED — do not edit by hand.",
         "// Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate",
@@ -277,28 +408,43 @@ def gen_connector_client_ts(flows: list[dict]) -> None:
         '// @ts-ignore - protobuf generated files might not have types yet',
         'import { ucs } from "./generated/proto";',
         "",
-        "export class ConnectorClient extends _ConnectorClientBase {",
     ]
-    for f in flows:
-        n, req, res = f["name"], f["request"], f["response"]
-        camel = to_camel(n)
-        lines.append(f"  /** {f['service']}.{f['rpc']} — {f['description']} */")
-        lines.append(f"  async {camel}(")
-        lines.append(f"    requestMsg: ucs.v2.I{req},")
-        lines.append(f"    metadata: Record<string, string>,")
-        lines.append(f"    options?: ucs.v2.IConfigOptions | null")
-        lines.append(f"  ): Promise<ucs.v2.{res}> {{")
-        lines.append(f"    return this._executeFlow('{n}', requestMsg, metadata, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
-        lines.append(f"  }}")
-        lines.append("")
-    lines += ["}", ""]
+    for service in all_services:
+        client_name = service_to_client_name(service)
+        lines.append(f"export class {client_name} extends _ConnectorClientBase {{")
+        for f in groups.get(service, []):
+            n, req, res = f["name"], f["request"], f["response"]
+            camel = to_camel(n)
+            lines.append(f"  /** {f['service']}.{f['rpc']} — {f['description']} */")
+            lines.append(f"  async {camel}(")
+            lines.append(f"    requestMsg: ucs.v2.I{req},")
+            lines.append(f"    metadata: Record<string, string>,")
+            lines.append(f"    options?: ucs.v2.IConfigOptions | null")
+            lines.append(f"  ): Promise<ucs.v2.{res}> {{")
+            lines.append(f"    return this._executeFlow('{n}', requestMsg, metadata, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
+            lines.append(f"  }}")
+            lines.append("")
+        for f in single_groups.get(service, []):
+            n, req, res = f["name"], f["request"], f["response"]
+            camel = to_camel(n)
+            lines.append(f"  /** {f['service']}.{f['rpc']} — {f['description']} */")
+            lines.append(f"  async {camel}(")
+            lines.append(f"    requestMsg: ucs.v2.I{req},")
+            lines.append(f"    metadata: Record<string, string>,")
+            lines.append(f"    options?: ucs.v2.IConfigOptions | null")
+            lines.append(f"  ): Promise<ucs.v2.{res}> {{")
+            lines.append(f"    return this._executeDirect('{n}', requestMsg, metadata, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
+            lines.append(f"  }}")
+            lines.append("")
+        lines += ["}", ""]
+
     write(
         SDK_ROOT / "javascript/src/payments/_generated_connector_client_flows.ts",
         "\n".join(lines),
     )
 
 
-def gen_uniffi_client_ts(flows: list[dict]) -> None:
+def gen_uniffi_client_ts(flows: list[dict], single_flows: list[dict]) -> None:
     """Generate _generated_uniffi_client_flows.ts — UniffiClient subclass with typed flow methods."""
     lines = [
         "// AUTO-GENERATED — do not edit by hand.",
@@ -330,6 +476,18 @@ def gen_uniffi_client_ts(flows: list[dict]) -> None:
         lines.append(f"    return this.callRes('{n}', responseBytes, requestBytes, metadata, optionsBytes);")
         lines.append(f"  }}")
         lines.append("")
+    for f in single_flows:
+        n = f["name"]
+        camel = to_camel(n)
+        lines.append(f"  /** Direct single-step transform for {n} (no HTTP round-trip). */")
+        lines.append(f"  {camel}Direct(")
+        lines.append(f"    requestBytes: Buffer | Uint8Array,")
+        lines.append(f"    metadata: Record<string, string>,")
+        lines.append(f"    optionsBytes: Buffer | Uint8Array")
+        lines.append(f"  ): Buffer {{")
+        lines.append(f"    return this.callDirect('{n}', requestBytes, metadata, optionsBytes);")
+        lines.append(f"  }}")
+        lines.append("")
     lines += ["}", ""]
     write(
         SDK_ROOT / "javascript/src/payments/_generated_uniffi_client_flows.ts",
@@ -337,12 +495,17 @@ def gen_uniffi_client_ts(flows: list[dict]) -> None:
     )
 
 
-def gen_kotlin(flows: list[dict]) -> None:
+def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
     lines = [
         "// AUTO-GENERATED — do not edit by hand.",
         "// Source: services.proto ∩ services/payments.rs  |  Regenerate: make generate",
         "",
         "package payments",
+        "",
+        # All flow request/response types are generated from payment.proto into this class.
+        # This wildcard import makes GeneratedFlows.kt self-contained: no manual typealias
+        # additions needed in Payments.kt when new flows are added.
+        "import ucs.v2.Payment.*",
         "",
     ]
 
@@ -353,13 +516,12 @@ def gen_kotlin(flows: list[dict]) -> None:
             f"import uniffi.connector_service_ffi.{camel}ReqTransformer",
             f"import uniffi.connector_service_ffi.{camel}ResTransformer",
         ]
+    for f in single_flows:
+        camel = to_camel(f["name"])
+        lines.append(f"import uniffi.connector_service_ffi.{camel}Transformer")
     lines.append("")
-    # Proto types and FfiOptions are available via type aliases in package payments
-    # (Payments.kt / Configs.kt) — no ucs.v2.* imports needed.
 
     # FlowRegistry object
-    # reqTransformers: returns ByteArray (protobuf FfiConnectorHttpRequest bytes)
-    # resTransformers: 4-param (responseBytes, requestBytes, metadata, optionsBytes)
     lines += [
         "object FlowRegistry {",
         "    val reqTransformers: Map<String, (ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(",
@@ -375,19 +537,48 @@ def gen_kotlin(flows: list[dict]) -> None:
     for f in flows:
         camel = to_camel(f["name"])
         lines.append(f'        "{f["name"]}" to ::{camel}ResTransformer,')
-    lines += ["    )", "}", ""]
+    lines += ["    )", ""]
+    if single_flows:
+        lines += [
+            "    // Single-step flows: direct transformer, no HTTP round-trip.",
+            "    val directTransformers: Map<String, (ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(",
+        ]
+        for f in single_flows:
+            camel = to_camel(f["name"])
+            lines.append(f'        "{f["name"]}" to ::{camel}Transformer,')
+        lines += ["    )", ""]
+    lines += ["}", ""]
 
-    # Extension functions with doc-comments
-    lines.append("// Extension functions — typed with concrete proto request/response types.")
+    # Per-service classes extending ConnectorClient
+    groups = group_by_service(flows)
+    single_groups = group_by_service(single_flows)
+    all_services = sorted(set(groups) | set(single_groups))
+    lines.append("// Per-service client classes — typed with concrete proto request/response types.")
     lines.append("")
-    for f in flows:
-        n, req, res = f["name"], f["request"], f["response"]
-        lines.append(flow_comment(f, "//"))
-        lines.append(
-            f"fun ConnectorClient.{n}(request: {req}, metadata: Map<String, String>, options: ConfigOptions? = null): {res} ="
-        )
-        lines.append(f'    executeFlow("{n}", request.toByteArray(), {res}.parser(), metadata, options)')
-        lines.append("")
+    for service in all_services:
+        client_name = service_to_client_name(service)
+        lines.append(f"class {client_name}(")
+        lines.append(f"    identity: ClientIdentity,")
+        lines.append(f"    defaults: ConfigOptions = ConfigOptions.getDefaultInstance(),")
+        lines.append(f"    libPath: String? = null")
+        lines.append(f") : ConnectorClient(identity, defaults, libPath) {{")
+        for f in groups.get(service, []):
+            n, req, res = f["name"], f["request"], f["response"]
+            lines.append(flow_comment(f, "    //"))
+            lines.append(
+                f"    fun {n}(request: {req}, metadata: Map<String, String>, options: ConfigOptions? = null): {res} ="
+            )
+            lines.append(f'        executeFlow("{n}", request.toByteArray(), {res}.parser(), metadata, options)')
+            lines.append("")
+        for f in single_groups.get(service, []):
+            n, req, res = f["name"], f["request"], f["response"]
+            lines.append(flow_comment(f, "    //"))
+            lines.append(
+                f"    fun {n}(request: {req}, metadata: Map<String, String>, options: ConfigOptions? = null): {res} ="
+            )
+            lines.append(f'        executeDirect("{n}", request.toByteArray(), {res}.parser(), metadata, options)')
+            lines.append("")
+        lines += ["}", ""]
 
     write(
         SDK_ROOT / "java/src/main/kotlin/GeneratedFlows.kt",
@@ -469,9 +660,11 @@ def main() -> None:
     print(f"Parsing: {FFI_SERVICES.relative_to(REPO_ROOT)}")
     print()
 
-    flows = discover_flows()
+    flows, single_flows = discover_flows()
 
     print(f"Discovered {len(flows)} flows: {[f['name'] for f in flows]}")
+    if single_flows:
+        print(f"Discovered {len(single_flows)} single-step flows: {[f['name'] for f in single_flows]}")
     print()
 
     if args.lang in ("rust", "all"):
@@ -481,16 +674,17 @@ def main() -> None:
 
     if args.lang in ("python", "all"):
         print("Generating Python SDK...")
-        gen_python(flows)
-        gen_python_stub(flows)
+        gen_python(flows, single_flows)
+        gen_python_stub(flows, single_flows)
+        gen_python_clients(flows, single_flows)
 
     if args.lang in ("javascript", "all"):
         print("Generating JavaScript SDK...")
-        gen_javascript(flows)
+        gen_javascript(flows, single_flows)
 
     if args.lang in ("kotlin", "all"):
         print("Generating Kotlin SDK...")
-        gen_kotlin(flows)
+        gen_kotlin(flows, single_flows)
 
     print("\nDone.")
 

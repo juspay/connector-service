@@ -69,3 +69,24 @@ macro_rules! impl_flow_handlers {
 // services/payments.rs, then run `make generate` to regenerate this file.
 
 include!("_generated_flow_registrations.rs");
+
+// ── Hand-written handlers (not auto-generated) ───────────────────────────────
+
+/// handle_event handler — single-function webhook processing.
+///
+/// Unlike all other handlers there is no req/res split: the caller provides
+/// the raw webhook payload and receives a fully-structured response directly.
+/// No outgoing HTTP request is built or sent.
+pub fn handle_event_handler(
+    request: FfiRequestData<grpc_api_types::payments::EventServiceHandleRequest>,
+    environment: Option<Environment>,
+) -> Result<grpc_api_types::payments::EventServiceHandleResponse, FfiPaymentError> {
+    let config = get_config(environment)?;
+    crate::services::payments::handle_event_transformer(
+        request.payload,
+        &config,
+        request.extracted_metadata.connector,
+        request.extracted_metadata.connector_auth_type,
+        &request.masked_metadata.unwrap_or_default(),
+    )
+}

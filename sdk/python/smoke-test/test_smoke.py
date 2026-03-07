@@ -6,12 +6,11 @@ directory, copies this script there, and runs it in-place so imports
 resolve against the installed package.
 """
 
-import json
 import os
 import asyncio
 
 from payments import (
-    ConnectorClient,
+    PaymentClient,
     authorize_req_transformer,
     PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse,
@@ -20,16 +19,16 @@ from payments import (
     USD,
     AUTOMATIC,
     NO_THREE_DS,
-    # New Blueprint Configuration Types
     Connector,
     Environment,
     ClientIdentity,
     ConfigOptions,
 )
 
+
 async def run_test():
     print(f"Loaded payments package from: {__file__}")
-    print(f"  ConnectorClient: {ConnectorClient}")
+    print(f"  PaymentClient: {PaymentClient}")
     print(f"  authorize_req_transformer: {authorize_req_transformer}")
 
     api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
@@ -44,18 +43,13 @@ async def run_test():
         "x-api-key": api_key,
     }
 
-    # 1. Initialize Client with new "Blueprint" pattern
-    identity = ClientIdentity(
-        connector=Connector.STRIPE
-    )
-    # Set Stripe API key surgically via the typed auth oneof
+    # 1. Initialize Client with ClientIdentity + ConfigOptions
+    identity = ClientIdentity(connector=Connector.STRIPE)
     identity.auth.stripe.api_key.value = api_key
 
-    defaults = ConfigOptions(
-        environment=Environment.SANDBOX
-    )
+    defaults = ConfigOptions(environment=Environment.SANDBOX)
 
-    client = ConnectorClient(identity, defaults)
+    client = PaymentClient(identity, defaults)
 
     # Build a protobuf request
     req = PaymentServiceAuthorizeRequest()
@@ -77,18 +71,21 @@ async def run_test():
     req.address.CopyFrom(PaymentAddress())
     req.test_mode = True
 
-    # Create options bytes for the new FFI signature
+    # Create options bytes for the low-level FFI signature
     from payments.generated.sdk_config_pb2 import FfiOptions
+
     ffi_opts = FfiOptions(
         environment=Environment.SANDBOX,
         connector=Connector.STRIPE,
-        auth=identity.auth
+        auth=identity.auth,
     )
     options_bytes = ffi_opts.SerializeToString()
 
     # --- Test 1: Low-level FFI ---
     print("\n=== Test 1: Low-level FFI (authorize_req_transformer) ===")
-    result_bytes = authorize_req_transformer(req.SerializeToString(), metadata, options_bytes)
+    result_bytes = authorize_req_transformer(
+        req.SerializeToString(), metadata, options_bytes
+    )
     result = FfiConnectorHttpRequest.FromString(result_bytes)
     print(f"  URL:    {result.url}")
     print(f"  Method: {result.method}")
@@ -98,8 +95,8 @@ async def run_test():
         raise Exception("Unexpected method")
     print("  PASSED")
 
-    # --- Test 2: Full round-trip via ConnectorClient ---
-    print("\n=== Test 2: Full round-trip (ConnectorClient.authorize) ===")
+    # --- Test 2: Full round-trip via PaymentClient ---
+    print("\n=== Test 2: Full round-trip (PaymentClient.authorize) ===")
     if api_key == "sk_test_placeholder":
         print("  SKIPPED (set STRIPE_API_KEY to enable)")
     else:
@@ -114,6 +111,7 @@ async def run_test():
 
     await client.close()
     print("\nAll checks passed.")
+
 
 if __name__ == "__main__":
     asyncio.run(run_test())
