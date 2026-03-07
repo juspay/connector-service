@@ -248,6 +248,11 @@ impl<T: PaymentMethodDataTypes> PaymentMethodData<T> {
             _ => None,
         }
     }
+
+    /// Returns true if the payment method is a Card
+    pub fn is_card(&self) -> bool {
+        matches!(self, Self::Card(_))
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]

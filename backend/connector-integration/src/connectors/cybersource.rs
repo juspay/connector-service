@@ -1123,6 +1123,51 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Cybersource<T>
 {
 }
-// SourceVerification implementations for all flows
 
-// Authentication flow SourceVerification implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    domain_types::connector_types::ConnectorSpecifications for Cybersource<T>
+{
+    /// 3DS setup (DDC) required for all 3DS flows
+    /// Only required when mandate payment is not being used (no connector_mandate_id or network_transaction_id)
+    fn is_pre_authentication_flow_required(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method_data: &Option<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>,
+        mandate_ids: &Option<domain_types::connector_types::MandateIds>,
+    ) -> bool {
+        auth_type.is_three_ds()
+            && payment_method_data.as_ref().is_some_and(|pmd| pmd.is_card())
+            && !mandate_ids.as_ref().is_some_and(|m| m.has_mandate_reference())
+    }
+
+    /// After DDC redirect, need to run enrollment check
+    fn is_authentication_flow_required(
+        &self,
+        _auth_type: common_enums::AuthenticationType,
+        redirect_response: &Option<domain_types::connector_types::ContinueRedirectionResponse>,
+    ) -> bool {
+        let redirection_params = redirect_response
+            .as_ref()
+            .and_then(|redirect| redirect.params.as_ref());
+
+        match redirection_params {
+            Some(param) if !param.peek().is_empty() => true,
+            Some(_) | None => false,
+        }
+    }
+
+    /// After OTP/challenge redirect, need to validate before authorize
+    fn is_post_authentication_flow_required(
+        &self,
+        redirect_response: &Option<domain_types::connector_types::ContinueRedirectionResponse>,
+    ) -> bool {
+       let redirection_params = redirect_response
+            .as_ref()
+            .and_then(|redirect| redirect.params.as_ref());
+
+        match redirection_params {
+            Some(param) if !param.peek().is_empty() => true,
+            Some(_) | None => false,
+        }
+    }
+}
