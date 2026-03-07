@@ -3121,6 +3121,12 @@ message CoingateAuth {
   SecretString api_key = 1;
 }
 
+message PaypalAuth {
+  SecretString client_id = 1;
+  SecretString client_secret = 2;
+  optional SecretString payer_id = 3;
+}
+
 // ConnectorAuth message with oneof containing all 70 auth types
 // Ordered to match Connector enum order
 message ConnectorAuth {
@@ -3340,5 +3346,8 @@ message ConnectorAuth {
 
     // AUTHORIZEDOTNET = 5
     AuthorizedotnetAuth authorizedotnet = 72;
+
+    // PAYPAL = 62
+    PaypalAuth paypal = 110;
   }
 }

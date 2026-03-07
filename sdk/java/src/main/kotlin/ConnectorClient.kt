@@ -18,14 +18,56 @@ import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 
 open class ConnectorClient(
-    libPath: String? = null,
-    private val options: Options = Options.getDefaultInstance()
+    val identity: ClientIdentity,
+    val defaults: ConfigOptions = ConfigOptions.getDefaultInstance(),
+    libPath: String? = null
 ) {
     private val httpClient: okhttp3.OkHttpClient
 
     init {
-        // Instance-level connection pool (OkHttpClient)
-        this.httpClient = HttpClient.createClient(options.http)
+        // Instance-level cache: create the primary connection pool at startup
+        // Infrastructure (Proxy, Certs) fixed at client level.
+        val httpConfig = if (defaults.hasHttp()) defaults.http else null
+        this.httpClient = HttpClient.createClient(httpConfig)
+    }
+
+    /**
+     * Merges request-level options with client defaults to build the 
+     * final context for the Rust transformation engine.
+     */
+    private fun resolveFfiOptions(overrides: ConfigOptions?): FfiOptions {
+        // Resolve Environment: Request Override > Client Default > Sandbox (0)
+        // Note: Java Protobuf enums don't have hasField() methods.
+        val environment = when {
+            overrides != null && overrides.environment != Environment.ENVIRONMENT_UNSPECIFIED -> overrides.environment
+            defaults.environment != Environment.ENVIRONMENT_UNSPECIFIED -> defaults.environment
+            else -> Environment.SANDBOX
+        }
+
+        return FfiOptions.newBuilder()
+            .setEnvironment(environment)
+            .setConnector(identity.connector)
+            .setAuth(identity.auth)
+            .build()
+    }
+
+    /**
+     * Merges request-level HTTP overrides with client defaults.
+     */
+    private fun resolveHttpConfig(overrides: ConfigOptions?): HttpConfig? {
+        val clientHttp = if (defaults.hasHttp()) defaults.http else null
+        val overrideHttp = if (overrides != null && overrides.hasHttp()) overrides.http else null
+
+        if (overrideHttp == null) return clientHttp
+        
+        // Merge: Field-level override > Client default
+        val builder = HttpConfig.newBuilder()
+        if (clientHttp != null) {
+            builder.mergeFrom(clientHttp)
+        }
+        builder.mergeFrom(overrideHttp)
+        
+        return builder.build()
     }
 
     /**
@@ -35,7 +77,7 @@ open class ConnectorClient(
      * @param requestBytes Serialized protobuf request bytes.
      * @param responseParser Protobuf parser for the expected response type.
      * @param metadata Map with connector routing and auth info.
-     * @param optionsBytes Optional FfiOptions serialized to bytes. Pass null for default.
+     * @param options Optional ConfigOptions message.
      * @return Parsed protobuf response.
      */
     fun <T : MessageLite> executeFlow(
@@ -43,17 +85,20 @@ open class ConnectorClient(
         requestBytes: ByteArray,
         responseParser: Parser<T>,
         metadata: Map<String, String>,
-        optionsBytes: ByteArray? = null,
+        options: ConfigOptions? = null,
     ): T {
         val reqTransformer = FlowRegistry.reqTransformers[flow]
-            ?: error("Unknown flow: '$flow'. Add it to sdk/flows.yaml and run `make codegen`.")
+            ?: error("Unknown flow: '$flow'")
         val resTransformer = FlowRegistry.resTransformers[flow]
-            ?: error("Unknown flow: '$flow'. Add it to sdk/flows.yaml and run `make codegen`.")
+            ?: error("Unknown flow: '$flow'")
 
-        val opts = optionsBytes ?: ByteArray(0)
+        // 1. Resolve final configuration (Pattern-based merging)
+        val ffiOptions = resolveFfiOptions(options)
+        val optionsBytes = ffiOptions.toByteArray()
+        val httpConfig = resolveHttpConfig(options)
 
-        // 1. Build connector HTTP request via FFI (returns FfiConnectorHttpRequest protobuf bytes)
-        val connectorRequestBytes = reqTransformer(requestBytes, metadata, opts)
+        // 2. Build connector HTTP request via FFI
+        val connectorRequestBytes = reqTransformer(requestBytes, metadata, optionsBytes)
         val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
 
         val httpRequest = HttpRequest(
@@ -63,10 +108,10 @@ open class ConnectorClient(
             body = if (connectorRequest.hasBody()) connectorRequest.body.toByteArray() else null
         )
 
-        // 2. Execute HTTP request via standardized HttpClient
-        val response = HttpClient.execute(httpRequest, options.http, this.httpClient)
+        // 3. Execute HTTP request via standardized HttpClient using the connection pool
+        val response = HttpClient.execute(httpRequest, httpConfig, this.httpClient)
 
-        // 3. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
+        // 4. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
         val ffiResponseBytes = FfiConnectorHttpResponse.newBuilder()
             .setStatusCode(response.statusCode)
             .putAllHeaders(response.headers)
@@ -74,12 +119,12 @@ open class ConnectorClient(
             .build()
             .toByteArray()
 
-        // 4. Parse connector response via FFI
+        // 5. Parse connector response via FFI
         val resultBytes = resTransformer(
             ffiResponseBytes,
             requestBytes,
             metadata,
-            opts,
+            optionsBytes,
         )
 
         return responseParser.parseFrom(resultBytes)
@@ -93,7 +138,7 @@ open class ConnectorClient(
      * @param requestBytes Serialized protobuf request bytes.
      * @param responseParser Protobuf parser for the expected response type.
      * @param metadata Map with connector routing and auth info.
-     * @param optionsBytes Optional FfiOptions serialized to bytes. Pass null for default.
+     * @param options Optional ConfigOptions for FFI context. Merged with client defaults.
      * @return Parsed protobuf response.
      */
     fun <T : MessageLite> executeDirect(
@@ -101,13 +146,20 @@ open class ConnectorClient(
         requestBytes: ByteArray,
         responseParser: Parser<T>,
         metadata: Map<String, String>,
-        optionsBytes: ByteArray? = null,
+        options: ConfigOptions? = null,
+    ): T = executeDirect(flow, requestBytes, responseParser, metadata, resolveFfiOptions(options).toByteArray())
+
+    private fun <T : MessageLite> executeDirect(
+        flow: String,
+        requestBytes: ByteArray,
+        responseParser: Parser<T>,
+        metadata: Map<String, String>,
+        optionsBytes: ByteArray,
     ): T {
         val transformer = FlowRegistry.directTransformers[flow]
             ?: error("Unknown single-step flow: '$flow'. Register it via a {flow}_transformer in services/payments.rs and run `make generate`.")
 
-        val opts = optionsBytes ?: ByteArray(0)
-        val resultBytes = transformer(requestBytes, metadata, opts)
+        val resultBytes = transformer(requestBytes, metadata, optionsBytes)
         return responseParser.parseFrom(resultBytes)
     }
 }

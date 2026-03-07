@@ -298,7 +298,7 @@ def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
         "#",
         "# This stub exposes per-service client classes to static analysers",
         "# (Pylance, pyright, mypy) so IDEs offer completions and type checking.",
-        "from payments.generated.sdk_options_pb2 import FfiOptions",
+        "from payments.generated.sdk_config_pb2 import ClientIdentity, ConfigOptions",
         "from payments.generated.payment_pb2 import (",
     ]
     for t in imports:
@@ -307,7 +307,7 @@ def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
         ")",
         "",
         "class _ConnectorClientBase:",
-        "    def __init__(self, lib_path: str | None = ..., options=...) -> None: ...",
+        "    def __init__(self, identity: ClientIdentity, defaults: ConfigOptions | None = ..., lib_path: str | None = ...) -> None: ...",
         "",
     ]
 
@@ -318,7 +318,7 @@ def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
         for f in groups.get(service, []):
             n, req, res = f["name"], f["request"], f["response"]
             lines.append(
-                f"    def {n}(self, request: {req}, metadata: dict, options: FfiOptions | None = ...) -> {res}:"
+                f"    def {n}(self, request: {req}, metadata: dict, options: ConfigOptions | None = ...) -> {res}:"
             )
             lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
             lines.append(f"        ...")
@@ -326,7 +326,7 @@ def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
         for f in single_groups.get(service, []):
             n, req, res = f["name"], f["request"], f["response"]
             lines.append(
-                f"    def {n}(self, request: {req}, metadata: dict, options: FfiOptions | None = ...) -> {res}:"
+                f"    def {n}(self, request: {req}, metadata: dict, options: ConfigOptions | None = ...) -> {res}:"
             )
             lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
             lines.append(f"        ...")
@@ -409,7 +409,6 @@ def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None
         'import { ucs } from "./generated/proto";',
         "",
     ]
-
     for service in all_services:
         client_name = service_to_client_name(service)
         lines.append(f"export class {client_name} extends _ConnectorClientBase {{")
@@ -420,9 +419,9 @@ def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None
             lines.append(f"  async {camel}(")
             lines.append(f"    requestMsg: ucs.v2.I{req},")
             lines.append(f"    metadata: Record<string, string>,")
-            lines.append(f"    ffiOptions?: ucs.v2.IFfiOptions | null")
+            lines.append(f"    options?: ucs.v2.IConfigOptions | null")
             lines.append(f"  ): Promise<ucs.v2.{res}> {{")
-            lines.append(f"    return this._executeFlow('{n}', requestMsg, metadata, ffiOptions, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
+            lines.append(f"    return this._executeFlow('{n}', requestMsg, metadata, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
             lines.append(f"  }}")
             lines.append("")
         for f in single_groups.get(service, []):
@@ -432,9 +431,9 @@ def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None
             lines.append(f"  async {camel}(")
             lines.append(f"    requestMsg: ucs.v2.I{req},")
             lines.append(f"    metadata: Record<string, string>,")
-            lines.append(f"    ffiOptions?: ucs.v2.IFfiOptions | null")
+            lines.append(f"    options?: ucs.v2.IConfigOptions | null")
             lines.append(f"  ): Promise<ucs.v2.{res}> {{")
-            lines.append(f"    return this._executeDirect('{n}', requestMsg, metadata, ffiOptions, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
+            lines.append(f"    return this._executeDirect('{n}', requestMsg, metadata, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
             lines.append(f"  }}")
             lines.append("")
         lines += ["}", ""]
@@ -551,29 +550,33 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
     lines += ["}", ""]
 
     # Per-service classes extending ConnectorClient
-    lines.append("// Per-service client classes — typed with concrete proto request/response types.")
-    lines.append("")
     groups = group_by_service(flows)
     single_groups = group_by_service(single_flows)
     all_services = sorted(set(groups) | set(single_groups))
+    lines.append("// Per-service client classes — typed with concrete proto request/response types.")
+    lines.append("")
     for service in all_services:
         client_name = service_to_client_name(service)
-        lines.append(f"class {client_name}(libPath: String? = null, options: Options = Options.getDefaultInstance()) : ConnectorClient(libPath, options) {{")
+        lines.append(f"class {client_name}(")
+        lines.append(f"    identity: ClientIdentity,")
+        lines.append(f"    defaults: ConfigOptions = ConfigOptions.getDefaultInstance(),")
+        lines.append(f"    libPath: String? = null")
+        lines.append(f") : ConnectorClient(identity, defaults, libPath) {{")
         for f in groups.get(service, []):
             n, req, res = f["name"], f["request"], f["response"]
             lines.append(flow_comment(f, "    //"))
             lines.append(
-                f"    fun {n}(request: {req}, metadata: Map<String, String>, options: FfiOptions? = null): {res} ="
+                f"    fun {n}(request: {req}, metadata: Map<String, String>, options: ConfigOptions? = null): {res} ="
             )
-            lines.append(f'        executeFlow("{n}", request.toByteArray(), {res}.parser(), metadata, options?.toByteArray())')
+            lines.append(f'        executeFlow("{n}", request.toByteArray(), {res}.parser(), metadata, options)')
             lines.append("")
         for f in single_groups.get(service, []):
             n, req, res = f["name"], f["request"], f["response"]
             lines.append(flow_comment(f, "    //"))
             lines.append(
-                f"    fun {n}(request: {req}, metadata: Map<String, String>, options: FfiOptions? = null): {res} ="
+                f"    fun {n}(request: {req}, metadata: Map<String, String>, options: ConfigOptions? = null): {res} ="
             )
-            lines.append(f'        executeDirect("{n}", request.toByteArray(), {res}.parser(), metadata, options?.toByteArray())')
+            lines.append(f'        executeDirect("{n}", request.toByteArray(), {res}.parser(), metadata, options)')
             lines.append("")
         lines += ["}", ""]
 

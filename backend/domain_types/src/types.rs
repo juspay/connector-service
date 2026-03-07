@@ -7657,7 +7657,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                         |form| {
                             match *form {
                                 router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
-                                    Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
+                                    Ok::<grpc_api_types::payments::RedirectForm, Box<ApplicationErrorResponse>>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
                                                 endpoint,
@@ -7682,16 +7682,16 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                                         ))
                                     })
                                 },
-                                _ => Err(
+                                _ => Err(Box::new(
                                     ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_RESPONSE".to_owned(),
                                         error_identifier: 400,
                                         error_message: "Invalid response from connector".to_owned(),
                                         error_object: None,
-                                    }))?,
+                                    }))),
                             }
                         }
-                    ).transpose()?,
+                    ).transpose().map_err(|e| *e)?,
                     network_transaction_id: network_txn_id,
                     merchant_recurring_payment_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),

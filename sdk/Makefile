@@ -134,7 +134,7 @@ generate-descriptor:
 		$(REPO_ROOT)/backend/grpc-api-types/proto/services.proto \
 		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
 		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_options.proto
+		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_config.proto
 	@echo "Descriptor written to sdk/codegen/services.desc"
 
 # ---------------------------------------------------------------------------
@@ -173,7 +173,7 @@ generate: install-deps generate-descriptor generate-rust generate-python generat
 		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
 		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
 		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_options.proto
+		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_config.proto
 	@echo "All SDK clients regenerated successfully!"
 
 # ---------------------------------------------------------------------------

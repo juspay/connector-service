@@ -3,7 +3,7 @@
  *
  * Usage:
  *   import payments.FfiOptions
- *   import payments.EnvOptions
+ *   import payments.ClientConfig
  *   import payments.FfiConnectorHttpRequest
  *
  * Mirrors the JavaScript `configs` namespace and Python `ConfigsNamespace`.
@@ -12,10 +12,15 @@
 
 package payments
 
-typealias EnvOptions = ucs.v2.SdkOptions.EnvOptions
-typealias FfiOptions = ucs.v2.SdkOptions.FfiOptions
-typealias Options = ucs.v2.SdkOptions.Options
-typealias HttpOptions = ucs.v2.SdkOptions.HttpOptions
-typealias ProxyOptions = ucs.v2.SdkOptions.ProxyOptions
-typealias FfiConnectorHttpRequest = ucs.v2.SdkOptions.FfiConnectorHttpRequest
-typealias FfiConnectorHttpResponse = ucs.v2.SdkOptions.FfiConnectorHttpResponse
+import ucs.v2.SdkConfig
+
+typealias Environment = SdkConfig.Environment
+typealias ClientIdentity = SdkConfig.ClientIdentity
+typealias ConfigOptions = SdkConfig.ConfigOptions
+typealias HttpConfig = SdkConfig.HttpConfig
+typealias CaCert = SdkConfig.CaCert
+typealias ProxyOptions = SdkConfig.ProxyOptions
+typealias FfiOptions = SdkConfig.FfiOptions
+typealias FfiConnectorHttpRequest = SdkConfig.FfiConnectorHttpRequest
+typealias FfiConnectorHttpResponse = SdkConfig.FfiConnectorHttpResponse
+typealias HttpDefault = SdkConfig.HttpDefault
