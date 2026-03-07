@@ -12,9 +12,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { ConnectorClient } from "hyperswitch-payments";
+import { PaymentClient, payments, configs } from "hyperswitch-payments";
 // @ts-ignore - protobuf generated files might not have types yet
-import { ucs } from "hyperswitch-payments/dist/src/payments/generated/proto";
 
 const {
   PaymentServiceAuthorizeRequest,
@@ -23,10 +22,10 @@ const {
   CaptureMethod,
   AuthenticationType,
   Connector,
-  FfiOptions,
-  EnvOptions,
   PaymentAddress,
-} = ucs.v2;
+} = payments;
+
+const { FfiOptions, EnvOptions } = configs;
 
 // Test card configurations
 const TEST_CARDS: Record<string, any> = {
@@ -165,22 +164,26 @@ function buildAuthorizeRequest(cardType: string = "visa"): any {
 }
 
 async function testConnector(
-  connectorName: string,
+  instanceName: string,
   authConfig: AuthConfig,
-  dryRun: boolean = false
+  dryRun: boolean = false,
+  baseConnectorName?: string
 ): Promise<TestResult> {
+  // Use base name for metadata (without index), instance name for display
+  const connectorKey = baseConnectorName || instanceName;
+  
   const result: TestResult = {
-    connector: connectorName,
+    connector: instanceName,
     status: "pending" as any,
   };
 
   try {
     const req = buildAuthorizeRequest();
-    const metadata = buildMetadata(connectorName, authConfig);
+    const metadata = buildMetadata(connectorKey, authConfig);
 
-    // Test 1: Low-level FFI via ConnectorClient internals
+    // Test 1: Low-level FFI via PaymentClient internals
     // We use the client to build the request
-    const client = new ConnectorClient();
+    const client = new PaymentClient();
     const ffiOptions = FfiOptions.create({ env: EnvOptions.create({ testMode: true }) });
 
     // For now, we'll just verify the request building works
@@ -212,6 +215,7 @@ async function testConnector(
         error: e.message || String(e),
       };
       result.status = "passed_with_error";
+      result.error = e.message || String(e);
     }
   } catch (e: any) {
     result.status = "failed";
@@ -311,13 +315,13 @@ async function runTests(
           continue;
         }
 
-        const result = await testConnector(instanceName, authConfig[i], dryRun);
+        const result = await testConnector(instanceName, authConfig[i], dryRun, connectorName);
         results.push(result);
 
         if (result.status === "passed") {
           console.log(`  ✓ PASSED`);
         } else if (result.status === "passed_with_error") {
-          console.log(`  ✓ PASSED (with connector error)`);
+          console.log(`  ✓ PASSED (with connector error ${result.error})`);
         } else if (result.status === "dry_run") {
           console.log(`  ✓ DRY RUN`);
         } else {
@@ -342,7 +346,7 @@ async function runTests(
       if (result.status === "passed") {
         console.log(`  ✓ PASSED`);
       } else if (result.status === "passed_with_error") {
-        console.log(`  ✓ PASSED (with connector error)`);
+        console.log(`  ✓ PASSED (with connector error ${result.error})`);
       } else if (result.status === "dry_run") {
         console.log(`  ✓ DRY RUN`);
       } else {

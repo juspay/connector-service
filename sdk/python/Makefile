@@ -5,6 +5,9 @@
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
 
+# Connectors to test (comma-separated, default: stripe)
+CONNECTORS ?= stripe
+
 # Include common SDK build configuration
 include $(SDK_ROOT)/../common.mk
 
@@ -139,7 +142,7 @@ test-package: generate-all pack-archive
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
 		--no-deps --force-reinstall
-	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors stripe 
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS) 
 	@rm -rf /tmp/test-hyperswitch-py
 	@echo "Package test passed."
 

@@ -5,6 +5,9 @@
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
 
+# Connectors to test (comma-separated, default: stripe)
+CONNECTORS ?= stripe
+
 # Include common SDK build configuration
 include $(SDK_ROOT)/../common.mk
 
@@ -139,7 +142,7 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 	else \
 		echo "  Note: creds.json not found, test will use placeholder credentials"; \
 	fi
-	@cd /tmp/test-hyperswitch-js && npx tsc && node test_smoke.js --connectors stripe
+	@cd /tmp/test-hyperswitch-js && npx tsc && node test_smoke.js --connectors $(CONNECTORS)
 	@rm -rf /tmp/test-hyperswitch-js
 	@echo "Package test passed."
 
