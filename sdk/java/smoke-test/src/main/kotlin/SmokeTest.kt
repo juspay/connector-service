@@ -7,8 +7,7 @@
  * Exits non-zero on any assertion failure.
  */
 
-import payments.ConnectorClient
-import payments.authorize
+import payments.PaymentClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentAddress
 import payments.Currency
@@ -101,7 +100,7 @@ fun testLowLevelFfi() {
 }
 
 fun testFullRoundTrip(ffiOptions: FfiOptions) {
-    println("\n=== Test 2: Full round-trip (ConnectorClient) ===")
+    println("\n=== Test 2: Full round-trip (PaymentClient) ===")
 
     val apiKey = System.getenv("STRIPE_API_KEY") ?: ""
     if (apiKey.isEmpty() || apiKey == "sk_test_placeholder") {
@@ -109,7 +108,7 @@ fun testFullRoundTrip(ffiOptions: FfiOptions) {
         return
     }
 
-    val client = ConnectorClient()
+    val client = PaymentClient()
     try {
         val response = client.authorize(buildRequest(), buildMetadata(), ffiOptions)
         println("  Response status: ${response.status}")
