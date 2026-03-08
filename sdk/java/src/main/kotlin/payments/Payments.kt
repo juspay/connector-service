@@ -55,6 +55,14 @@ typealias PaymentMethodAuthenticationServiceAuthenticateResponse = ucs.v2.Paymen
 typealias PaymentMethodServiceTokenizeRequest = ucs.v2.Payment.PaymentMethodServiceTokenizeRequest
 typealias PaymentMethodServiceTokenizeResponse = ucs.v2.Payment.PaymentMethodServiceTokenizeResponse
 
+// Recurring payments
+typealias RecurringPaymentServiceChargeRequest = ucs.v2.Payment.RecurringPaymentServiceChargeRequest
+typealias RecurringPaymentServiceChargeResponse = ucs.v2.Payment.RecurringPaymentServiceChargeResponse
+
+// Customer service
+typealias CustomerServiceCreateRequest = ucs.v2.Payment.CustomerServiceCreateRequest
+typealias CustomerServiceCreateResponse = ucs.v2.Payment.CustomerServiceCreateResponse
+
 // ---------------------------------------------------------------------------
 // Data types
 // ---------------------------------------------------------------------------

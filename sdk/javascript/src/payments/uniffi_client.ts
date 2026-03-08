@@ -12,13 +12,14 @@
 import koffi from "koffi";
 import path from "path";
 // @ts-ignore - generated CommonJS module
-import { FLOWS } from "./_generated_flows.js";
+import { FLOWS, SINGLE_FLOWS } from "./_generated_flows.js";
 
 // Standard Node.js __dirname
 declare const __dirname: string;
 const _dirname = __dirname;
 
 const FLOW_NAMES: string[] = Object.keys(FLOWS as Record<string, unknown>);
+const SINGLE_FLOW_NAMES: string[] = Object.keys((SINGLE_FLOWS || {}) as Record<string, unknown>);
 
 // ── RustBuffer struct layout ────────────────────────────────────────────────
 // UniFFI uses RustBuffer { capacity: u64, len: u64, data: *u8 } for all
@@ -86,6 +87,15 @@ function loadLib(libPath?: string): FfiFunctions {
       `uniffi_connector_service_ffi_fn_func_${flow}_res_transformer`,
       RustBufferStruct,
       [RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+    );
+  }
+
+  // Load single-step transformer symbols (no HTTP round-trip, e.g. webhook processing).
+  for (const flow of SINGLE_FLOW_NAMES) {
+    fns[`${flow}_direct`] = lib.func(
+      `uniffi_connector_service_ffi_fn_func_${flow}_transformer`,
+      RustBufferStruct,
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     );
   }
 
@@ -271,6 +281,35 @@ export class UniffiClient {
     const status = makeCallStatus();
 
     const result = fn(rbRes, rbReq, rbMeta, rbOpts, status);
+
+    try {
+      checkCallStatus(this._ffi, status);
+      return liftBytes(result);
+    } finally {
+      freeRustBuffer(this._ffi, result);
+    }
+  }
+
+  /**
+   * Execute a single-step transformer directly (no HTTP round-trip).
+   * Used for inbound flows like webhook processing.
+   * Returns protobuf-encoded response bytes.
+   */
+  callDirect(
+    flow: string,
+    requestBytes: Buffer | Uint8Array,
+    metadata: Record<string, string>,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    const fn = this._ffi[`${flow}_direct`];
+    if (!fn) throw new Error(`Unknown single-step flow: '${flow}'. Supported: ${SINGLE_FLOW_NAMES.join(", ")}`);
+
+    const rbReq = lowerBytes(this._ffi, requestBytes);
+    const rbMeta = lowerMap(this._ffi, metadata);
+    const rbOpts = lowerBytes(this._ffi, optionsBytes);
+    const status = makeCallStatus();
+
+    const result = fn(rbReq, rbMeta, rbOpts, status);
 
     try {
       checkCallStatus(this._ffi, status);
