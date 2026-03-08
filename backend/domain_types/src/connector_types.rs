@@ -3526,6 +3526,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for Conn
             AuthType::Novalnet(_) => Ok(Self::Novalnet),
             AuthType::Nuvei(_) => Ok(Self::Nuvei),
             AuthType::Paybox(_) => Ok(Self::Paybox),
+            AuthType::Paypal(_) => Ok(Self::Paypal),
             AuthType::Payme(_) => Ok(Self::Payme),
             AuthType::Payu(_) => Ok(Self::Payu),
             AuthType::Powertranz(_) => Ok(Self::Powertranz),

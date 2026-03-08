@@ -74,7 +74,7 @@ generate-proto:
 	@protoc \
 		-I $(PROTO_DIR) \
 		--java_out=$(GENERATED_JAVA) \
-		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto $(PROTO_DIR)/sdk_options.proto
+		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto $(PROTO_DIR)/sdk_config.proto
 	@echo "Proto stubs generated in $(GENERATED_JAVA)/"
 
 # ---------------------------------------------------------------------------
@@ -126,7 +126,7 @@ install: pack-archive
 # ---------------------------------------------------------------------------
 test-package: generate-all install
 	@echo "Running smoke test..."
-	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --stacktrace --debug
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --info
 	@echo "Package test passed."
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { PaymentClient,MerchantAuthenticationClient, payments, configs } from "hyperswitch-payments";
+import { PaymentClient, MerchantAuthenticationClient, types } from "hyperswitch-payments";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -25,16 +25,15 @@ const {
   SecretString,
   AccessToken,
   ConnectorState,
-} = payments;
+} = types;
 
-const { FfiOptions, EnvOptions } = configs;
+const { ClientIdentity, ConfigOptions, Environment } = types;
 
 const PAYPAL_CREDS = {
-  client_id:
-    "client_id",
-  client_secret:
-    "client_secret",
+  client_id: "ASKAGh2WXgqfQ5TzjpZzLsfhVGlFbjq5VrV5IOX8KXDD2N_XqkGeYNDkWyr_UXnfhXpEkABdmP284b_2",
+  client_secret: "EOpaRHxEgaMJ9OHfsn3ngHy7DoXArNjPgCwsrzaJreO3gXPSJP_r4iOp1UUEn140CsEjaYxtm0g61VFU",
 };
+
 
 const metadata: Record<string, string> = {
   connector: "Paypal",
@@ -46,9 +45,20 @@ const metadata: Record<string, string> = {
   }),
 };
 
-// Create FfiOptions with testMode
-const ffiOptions: configs.IFfiOptions = FfiOptions.create({
-  env: EnvOptions.create({ testMode: true }),
+// 1. Mandatory Identity
+const identity = ClientIdentity.create({
+  connector: Connector.PAYPAL,
+  auth: {
+    paypal: {
+      clientId: { value: PAYPAL_CREDS.client_id },
+      clientSecret: { value: PAYPAL_CREDS.client_secret },
+    }
+  }
+});
+
+// 2. Overridable Options
+const options = ConfigOptions.create({
+  environment: Environment.SANDBOX,
 });
 
 /**
@@ -59,12 +69,12 @@ const ffiOptions: configs.IFfiOptions = FfiOptions.create({
 async function testAccessTokenFlow(): Promise<void> {
   console.log("\n=== Test: PayPal Access Token Flow ===");
 
-  const authClient = new MerchantAuthenticationClient();
-  const paymentClient = new PaymentClient();
+  const authClient = new MerchantAuthenticationClient(identity, options);
+  const paymentClient = new PaymentClient(identity, options);
 
   // Step 1: Create Access Token Request
   console.log("\n--- Step 1: Create Access Token ---");
-  const accessTokenRequest: payments.IMerchantAuthenticationServiceCreateAccessTokenRequest =
+  const accessTokenRequest: types.IMerchantAuthenticationServiceCreateAccessTokenRequest =
     MerchantAuthenticationServiceCreateAccessTokenRequest.create({
       merchantAccessTokenId: { id: "access_token_test_" + Date.now() },
       connector: Connector.PAYPAL,
@@ -72,16 +82,12 @@ async function testAccessTokenFlow(): Promise<void> {
     });
 
   // Make the request via MerchantAuthenticationClient
-  let accessTokenResponse: payments.MerchantAuthenticationServiceCreateAccessTokenResponse;
+  let accessTokenResponse: types.MerchantAuthenticationServiceCreateAccessTokenResponse;
   let accessTokenValue: string | null = null;
   let tokenTypeValue: string | null = null;
 
   try {
-    accessTokenResponse = await authClient.createAccessToken(
-      accessTokenRequest,
-      metadata,
-      ffiOptions
-    );
+    accessTokenResponse = await authClient.createAccessToken(accessTokenRequest);
     console.log(`  Response type: ${typeof accessTokenResponse}`);
     console.log(`  Response keys: ${Object.keys(accessTokenResponse)}`);
 
@@ -123,7 +129,7 @@ async function testAccessTokenFlow(): Promise<void> {
 
   // Step 2: Use Access Token in Authorize Request
   console.log("\n--- Step 2: Authorize with Access Token ---");
-  const authorizeRequest: payments.IPaymentServiceAuthorizeRequest =
+  const authorizeRequest: types.IPaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.create({
       merchantTransactionId: {
         id: "authorize_with_token_" + Date.now(),
@@ -161,8 +167,8 @@ async function testAccessTokenFlow(): Promise<void> {
     });
 
   try {
-    const authorizeResponse: payments.PaymentServiceAuthorizeResponse =
-      await paymentClient.authorize(authorizeRequest, metadata, ffiOptions);
+    const authorizeResponse: types.PaymentServiceAuthorizeResponse =
+      await paymentClient.authorize(authorizeRequest);
     console.log(`  Response type: ${typeof authorizeResponse}`);
     console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);
     console.log(`  Payment status: ${authorizeResponse.status}`);

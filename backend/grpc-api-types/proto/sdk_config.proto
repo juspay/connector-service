@@ -1,0 +1,162 @@
+// Copyright (c) Juspay Technologies. All rights reserved.
+//
+// Package: types
+// File: sdk_config.proto
+//
+// Overview:
+//   Configuration options for the Connector SDK.
+//   - ClientIdentity: Non-overridable identity (Connector + Auth).
+//   - ConfigOptions: Overridable parameters (Environment, HttpConfig, Vault).
+//   - FfiOptions: Internal context for UniFFI transformation engine.
+
+syntax = "proto3";
+
+package types;
+
+import "payment.proto";
+
+option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
+
+// ============================================================
+// ENUMERATIONS
+// ============================================================
+
+// Deployment environment for the SDK.
+enum Environment {
+  // Sandbox/Testing environment (Default)
+  SANDBOX = 0;
+  
+  // Production environment
+  PRODUCTION = 1;
+}
+
+// ============================================================
+// SDK Configuration (User-facing)
+// ============================================================
+
+// Non-overridable identity parameters for the ConnectorClient.
+// Passed as the FIRST parameter during client creation.
+message ClientIdentity {
+  // The connector to use for all requests (Immutable)
+  Connector connector = 1;
+
+  // Mandatory authentication for the connector (Immutable)
+  ConnectorAuth auth = 2;
+}
+
+// Overridable parameters for the SDK behavior.
+// Used as the SECOND parameter in initialization (defaults)
+// and as the parameter for request-level overrides.
+message ConfigOptions {
+  // Deployment environment
+  optional Environment environment = 1;
+
+  // HTTP and transport configuration
+  optional HttpConfig http = 2;
+
+  // Vault configuration options (Placeholder)
+  optional VaultOptions vault = 3;
+}
+
+// HTTP transport configuration.
+// Flattened for cleaner access and merging logic across SDKs.
+message HttpConfig {
+  // Total timeout for entire request lifecycle (milliseconds)
+  optional uint32 total_timeout_ms = 1;
+
+  // Connection timeout (milliseconds)
+  optional uint32 connect_timeout_ms = 2;
+
+  // Response/Read timeout (milliseconds)
+  optional uint32 response_timeout_ms = 3;
+
+  // Keep-alive timeout for pooled connections (milliseconds)
+  optional uint32 keep_alive_timeout_ms = 4;
+
+  // Proxy configuration
+  optional ProxyOptions proxy = 5;
+
+  // CA certificate for pinning.
+  optional CaCert ca_cert = 6;
+}
+
+// ============================================================
+// Transport Configuration (SDK-side)
+// ============================================================
+
+// CA certificate message wrapper
+message CaCert {
+  oneof format {
+    // Binary DER-encoded certificate data
+    bytes der = 1;
+    // Text-based PEM-encoded certificate string (starts with -----BEGIN CERTIFICATE-----)
+    string pem = 2;
+  }
+}
+
+// Proxy configuration
+message ProxyOptions {
+  // HTTP proxy URL
+  optional string http_url = 1;
+
+  // HTTPS proxy URL
+  optional string https_url = 2;
+
+  // URLs/Hostnames that should bypass the proxy
+  repeated string bypass_urls = 3;
+}
+
+// Vault configuration (Placeholder)
+message VaultOptions {
+  // Reserved for future vault/secrets integration
+}
+
+// ============================================================
+// FFI Options (Internal Boundary)
+// ============================================================
+
+// Internal context passed across the FFI boundary to the UCS core.
+message FfiOptions {
+  // Environment context for config lookup
+  Environment environment = 1;
+
+  // Connector context for logic selection
+  Connector connector = 2;
+
+  // Credentials needed to build auth headers/payloads
+  ConnectorAuth auth = 3;
+}
+
+// ============================================================
+// Constants
+// ============================================================
+
+// Global defaults for the SDK transport layer
+enum HttpDefault {
+  HTTP_DEFAULT_UNSPECIFIED = 0;
+  
+  // Timeouts in milliseconds
+  TOTAL_TIMEOUT_MS = 45000;
+  CONNECT_TIMEOUT_MS = 10000;
+  RESPONSE_TIMEOUT_MS = 30000;
+  KEEP_ALIVE_TIMEOUT_MS = 60000;
+}
+
+// ============================================================
+// Internal FFI Records (UniFFI Bridge)
+// ============================================================
+
+// Binary-safe structure for passing HTTP requests from Rust to SDKs
+message FfiConnectorHttpRequest {
+  string url = 1;
+  string method = 2;
+  map<string, string> headers = 3;
+  optional bytes body = 4;
+}
+
+// Binary-safe structure for passing HTTP responses from SDKs back to Rust
+message FfiConnectorHttpResponse {
+  uint32 status_code = 1;
+  map<string, string> headers = 2;
+  bytes body = 3;
+}
