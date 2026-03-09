@@ -93,7 +93,7 @@ pub trait ValidationTrait: ConnectorCommon {
         false
     }
 
-    fn should_do_access_token(&self, _payment_method: PaymentMethod) -> bool {
+    fn should_do_access_token(&self, _payment_method: Option<PaymentMethod>) -> bool {
         false
     }
 
