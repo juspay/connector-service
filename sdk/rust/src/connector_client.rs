@@ -11,7 +11,7 @@ use domain_types::router_data::ConnectorSpecificAuth;
 use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
 use grpc_api_types::payments::{
-    ClientIdentity, ConfigOptions, FfiOptions, PaymentServiceAuthorizeRequest,
+    ConnectorConfig, RequestConfig, FfiOptions, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse,
 };
 
@@ -25,19 +25,19 @@ use grpc_api_types::payments::{
 /// This client owns its primary connection pool (http_client).
 pub struct ConnectorClient {
     http_client: HttpClient,
-    identity: ClientIdentity,
-    defaults: ConfigOptions,
+    config: ConnectorConfig,
+    defaults: RequestConfig,
 }
 
 impl ConnectorClient {
     /// Initialize a new ConnectorClient.
     ///
     /// # Arguments
-    /// * `identity` - The ClientIdentity protobuf message defining the connector and auth.
-    /// * `options` - Optional ConfigOptions for default behavioral settings.
+    /// * `config` - The ConnectorConfig (connector, auth, environment).
+    /// * `options` - Optional RequestConfig for default http/vault settings.
     pub fn new(
-        identity: ClientIdentity,
-        options: Option<ConfigOptions>,
+        config: ConnectorConfig,
+        options: Option<RequestConfig>,
     ) -> Result<Self, HttpClientError> {
         let defaults = options.unwrap_or_default();
 
@@ -51,26 +51,18 @@ impl ConnectorClient {
 
         Ok(Self {
             http_client,
-            identity,
+            config,
             defaults,
         })
     }
 
-    /// Merges request-level overrides with client defaults to build the
-    /// final context for the Rust transformation engine.
-    fn resolve_ffi_options(&self, options: &Option<ConfigOptions>) -> FfiOptions {
-        // Identity (Connector, Auth) is immutable from client instance.
-        // Environment is overridable: Request > Client Default > Sandbox (0)
-        let environment = options
-            .as_ref()
-            .and_then(|o| o.environment)
-            .or(self.defaults.environment)
-            .unwrap_or(grpc_api_types::payments::Environment::Sandbox.into());
-
+    /// Builds FfiOptions from config. Environment comes from ConnectorConfig (immutable).
+    fn resolve_ffi_options(&self, _options: &Option<RequestConfig>) -> FfiOptions {
+        let environment = self.config.environment;
         FfiOptions {
             environment,
-            connector: self.identity.connector,
-            auth: self.identity.auth.clone(),
+            connector: self.config.connector,
+            auth: self.config.auth.clone(),
         }
     }
 
@@ -79,12 +71,12 @@ impl ConnectorClient {
     /// # Arguments
     /// * `request` - The PaymentServiceAuthorizeRequest protobuf message.
     /// * `metadata` - Metadata map containing x-* headers for MaskedMetadata.
-    /// * `options` - Optional ConfigOptions for per-call overrides.
+    /// * `options` - Optional RequestConfig for per-call overrides (http, vault).
     pub async fn authorize(
         &self,
         request: PaymentServiceAuthorizeRequest,
         metadata: &HashMap<String, String>,
-        options: Option<ConfigOptions>,
+        options: Option<RequestConfig>,
     ) -> Result<PaymentServiceAuthorizeResponse, Box<dyn Error>> {
         // 1. Resolve final configuration
         let ffi_options = self.resolve_ffi_options(&options);

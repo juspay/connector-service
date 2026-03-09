@@ -1,12 +1,10 @@
-// Copyright (c) Juspay Technologies. All rights reserved.
-//
 // Package: ucs.v2
 // File: sdk_config.proto
 //
 // Overview:
 //   Configuration options for the Connector SDK.
-//   - ClientIdentity: Non-overridable identity (Connector + Auth).
-//   - ConfigOptions: Overridable parameters (Environment, HttpConfig, Vault).
+//   - ConnectorConfig: Mandatory identity and environment setup.
+//   - RequestConfig: Per-request overridable parameters.
 //   - FfiOptions: Internal context for UniFFI transformation engine.
 
 syntax = "proto3";
@@ -34,32 +32,29 @@ enum Environment {
 // SDK Configuration (User-facing)
 // ============================================================
 
-// Non-overridable identity parameters for the ConnectorClient.
+// Immutable parameters for the ConnectorClient.
 // Passed as the FIRST parameter during client creation.
-message ClientIdentity {
+message ConnectorConfig {
   // The connector to use for all requests (Immutable)
   Connector connector = 1;
 
   // Mandatory authentication for the connector (Immutable)
   ConnectorAuth auth = 2;
+
+  // Primary deployment environment (Immutable)
+  Environment environment = 3;
 }
 
-// Overridable parameters for the SDK behavior.
-// Used as the SECOND parameter in initialization (defaults)
-// and as the parameter for request-level overrides.
-message ConfigOptions {
-  // Deployment environment
-  optional Environment environment = 1;
-
+// Overridable parameters for individual SDK calls.
+message RequestConfig {
   // HTTP and transport configuration
-  optional HttpConfig http = 2;
+  optional HttpConfig http = 1;
 
   // Vault configuration options (Placeholder)
-  optional VaultOptions vault = 3;
+  optional VaultOptions vault = 2;
 }
 
 // HTTP transport configuration.
-// Flattened for cleaner access and merging logic across SDKs.
 message HttpConfig {
   // Total timeout for entire request lifecycle (milliseconds)
   optional uint32 total_timeout_ms = 1;
@@ -117,10 +112,10 @@ message VaultOptions {
 
 // Internal context passed across the FFI boundary to the UCS core.
 message FfiOptions {
-  // Environment context for config lookup
+  // Resolved environment context
   Environment environment = 1;
 
-  // Connector context for logic selection
+  // Resolved connector context
   Connector connector = 2;
 
   // Credentials needed to build auth headers/payloads

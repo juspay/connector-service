@@ -10,7 +10,7 @@ export class CustomerClient extends _ConnectorClientBase {
   async create(
     requestMsg: ucs.v2.ICustomerServiceCreateRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.CustomerServiceCreateResponse> {
     return this._executeFlow('create', requestMsg, metadata, options, 'CustomerServiceCreateRequest', 'CustomerServiceCreateResponse') as Promise<ucs.v2.CustomerServiceCreateResponse>;
   }
@@ -22,7 +22,7 @@ export class EventClient extends _ConnectorClientBase {
   async handleEvent(
     requestMsg: ucs.v2.IEventServiceHandleRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.EventServiceHandleResponse> {
     return this._executeDirect('handle_event', requestMsg, metadata, options, 'EventServiceHandleRequest', 'EventServiceHandleResponse') as Promise<ucs.v2.EventServiceHandleResponse>;
   }
@@ -34,7 +34,7 @@ export class MerchantAuthenticationClient extends _ConnectorClientBase {
   async createAccessToken(
     requestMsg: ucs.v2.IMerchantAuthenticationServiceCreateAccessTokenRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.MerchantAuthenticationServiceCreateAccessTokenResponse> {
     return this._executeFlow('create_access_token', requestMsg, metadata, options, 'MerchantAuthenticationServiceCreateAccessTokenRequest', 'MerchantAuthenticationServiceCreateAccessTokenResponse') as Promise<ucs.v2.MerchantAuthenticationServiceCreateAccessTokenResponse>;
   }
@@ -43,7 +43,7 @@ export class MerchantAuthenticationClient extends _ConnectorClientBase {
   async createSessionToken(
     requestMsg: ucs.v2.IMerchantAuthenticationServiceCreateSessionTokenRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.MerchantAuthenticationServiceCreateSessionTokenResponse> {
     return this._executeFlow('create_session_token', requestMsg, metadata, options, 'MerchantAuthenticationServiceCreateSessionTokenRequest', 'MerchantAuthenticationServiceCreateSessionTokenResponse') as Promise<ucs.v2.MerchantAuthenticationServiceCreateSessionTokenResponse>;
   }
@@ -55,7 +55,7 @@ export class PaymentMethodAuthenticationClient extends _ConnectorClientBase {
   async authenticate(
     requestMsg: ucs.v2.IPaymentMethodAuthenticationServiceAuthenticateRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentMethodAuthenticationServiceAuthenticateResponse> {
     return this._executeFlow('authenticate', requestMsg, metadata, options, 'PaymentMethodAuthenticationServiceAuthenticateRequest', 'PaymentMethodAuthenticationServiceAuthenticateResponse') as Promise<ucs.v2.PaymentMethodAuthenticationServiceAuthenticateResponse>;
   }
@@ -64,7 +64,7 @@ export class PaymentMethodAuthenticationClient extends _ConnectorClientBase {
   async postAuthenticate(
     requestMsg: ucs.v2.IPaymentMethodAuthenticationServicePostAuthenticateRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentMethodAuthenticationServicePostAuthenticateResponse> {
     return this._executeFlow('post_authenticate', requestMsg, metadata, options, 'PaymentMethodAuthenticationServicePostAuthenticateRequest', 'PaymentMethodAuthenticationServicePostAuthenticateResponse') as Promise<ucs.v2.PaymentMethodAuthenticationServicePostAuthenticateResponse>;
   }
@@ -73,7 +73,7 @@ export class PaymentMethodAuthenticationClient extends _ConnectorClientBase {
   async preAuthenticate(
     requestMsg: ucs.v2.IPaymentMethodAuthenticationServicePreAuthenticateRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentMethodAuthenticationServicePreAuthenticateResponse> {
     return this._executeFlow('pre_authenticate', requestMsg, metadata, options, 'PaymentMethodAuthenticationServicePreAuthenticateRequest', 'PaymentMethodAuthenticationServicePreAuthenticateResponse') as Promise<ucs.v2.PaymentMethodAuthenticationServicePreAuthenticateResponse>;
   }
@@ -85,7 +85,7 @@ export class PaymentMethodClient extends _ConnectorClientBase {
   async tokenize(
     requestMsg: ucs.v2.IPaymentMethodServiceTokenizeRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentMethodServiceTokenizeResponse> {
     return this._executeFlow('tokenize', requestMsg, metadata, options, 'PaymentMethodServiceTokenizeRequest', 'PaymentMethodServiceTokenizeResponse') as Promise<ucs.v2.PaymentMethodServiceTokenizeResponse>;
   }
@@ -97,7 +97,7 @@ export class PaymentClient extends _ConnectorClientBase {
   async authorize(
     requestMsg: ucs.v2.IPaymentServiceAuthorizeRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentServiceAuthorizeResponse> {
     return this._executeFlow('authorize', requestMsg, metadata, options, 'PaymentServiceAuthorizeRequest', 'PaymentServiceAuthorizeResponse') as Promise<ucs.v2.PaymentServiceAuthorizeResponse>;
   }
@@ -106,7 +106,7 @@ export class PaymentClient extends _ConnectorClientBase {
   async capture(
     requestMsg: ucs.v2.IPaymentServiceCaptureRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentServiceCaptureResponse> {
     return this._executeFlow('capture', requestMsg, metadata, options, 'PaymentServiceCaptureRequest', 'PaymentServiceCaptureResponse') as Promise<ucs.v2.PaymentServiceCaptureResponse>;
   }
@@ -115,7 +115,7 @@ export class PaymentClient extends _ConnectorClientBase {
   async createOrder(
     requestMsg: ucs.v2.IPaymentServiceCreateOrderRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentServiceCreateOrderResponse> {
     return this._executeFlow('create_order', requestMsg, metadata, options, 'PaymentServiceCreateOrderRequest', 'PaymentServiceCreateOrderResponse') as Promise<ucs.v2.PaymentServiceCreateOrderResponse>;
   }
@@ -124,7 +124,7 @@ export class PaymentClient extends _ConnectorClientBase {
   async get(
     requestMsg: ucs.v2.IPaymentServiceGetRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentServiceGetResponse> {
     return this._executeFlow('get', requestMsg, metadata, options, 'PaymentServiceGetRequest', 'PaymentServiceGetResponse') as Promise<ucs.v2.PaymentServiceGetResponse>;
   }
@@ -133,7 +133,7 @@ export class PaymentClient extends _ConnectorClientBase {
   async refund(
     requestMsg: ucs.v2.IPaymentServiceRefundRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.RefundResponse> {
     return this._executeFlow('refund', requestMsg, metadata, options, 'PaymentServiceRefundRequest', 'RefundResponse') as Promise<ucs.v2.RefundResponse>;
   }
@@ -142,7 +142,7 @@ export class PaymentClient extends _ConnectorClientBase {
   async reverse(
     requestMsg: ucs.v2.IPaymentServiceReverseRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentServiceReverseResponse> {
     return this._executeFlow('reverse', requestMsg, metadata, options, 'PaymentServiceReverseRequest', 'PaymentServiceReverseResponse') as Promise<ucs.v2.PaymentServiceReverseResponse>;
   }
@@ -151,7 +151,7 @@ export class PaymentClient extends _ConnectorClientBase {
   async setupRecurring(
     requestMsg: ucs.v2.IPaymentServiceSetupRecurringRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentServiceSetupRecurringResponse> {
     return this._executeFlow('setup_recurring', requestMsg, metadata, options, 'PaymentServiceSetupRecurringRequest', 'PaymentServiceSetupRecurringResponse') as Promise<ucs.v2.PaymentServiceSetupRecurringResponse>;
   }
@@ -160,7 +160,7 @@ export class PaymentClient extends _ConnectorClientBase {
   async void(
     requestMsg: ucs.v2.IPaymentServiceVoidRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.PaymentServiceVoidResponse> {
     return this._executeFlow('void', requestMsg, metadata, options, 'PaymentServiceVoidRequest', 'PaymentServiceVoidResponse') as Promise<ucs.v2.PaymentServiceVoidResponse>;
   }
@@ -172,7 +172,7 @@ export class RecurringPaymentClient extends _ConnectorClientBase {
   async charge(
     requestMsg: ucs.v2.IRecurringPaymentServiceChargeRequest,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null
+    options?: ucs.v2.IRequestConfig | null
   ): Promise<ucs.v2.RecurringPaymentServiceChargeResponse> {
     return this._executeFlow('charge', requestMsg, metadata, options, 'RecurringPaymentServiceChargeRequest', 'RecurringPaymentServiceChargeResponse') as Promise<ucs.v2.RecurringPaymentServiceChargeResponse>;
   }

@@ -22,29 +22,29 @@ const v2 = ucs.v2;
 
 export class ConnectorClient {
   private uniffi: UniffiClient;
-  private identity: ucs.v2.ClientIdentity;
-  private defaults: ucs.v2.IConfigOptions;
+  private config: ucs.v2.ConnectorConfig;
+  private defaults: ucs.v2.IRequestConfig;
   private dispatcher: Dispatcher;
 
   /**
-   * Initialize the client with mandatory identity and overridable defaults.
+   * Initialize the client with mandatory config and optional request defaults.
    *
-   * @param identity - Non-overridable (Connector, Auth).
-   * @param defaults - Overridable behavioral settings (Environment, Http).
+   * @param config - Immutable connector identity and environment (Connector, Auth, Environment).
+   * @param defaults - Optional per-request defaults (Http, Vault).
    * @param libPath - optional path to the UniFFI shared library.
    */
   constructor(
-    identity: ucs.v2.IClientIdentity,
-    defaults: ucs.v2.IConfigOptions = {},
+    config: ucs.v2.IConnectorConfig,
+    defaults: ucs.v2.IRequestConfig = {},
     libPath?: string
   ) {
     this.uniffi = new UniffiClient(libPath);
-    this.identity = ucs.v2.ClientIdentity.create(identity);
+    this.config = ucs.v2.ConnectorConfig.create(config);
     this.defaults = defaults;
 
-    if (identity.connector === undefined) {
+    if (config.connector === undefined) {
       throw new ConnectorError(
-        "Connector is required in ClientIdentity",
+        "Connector is required in ConnectorConfig",
         400,
         "CLIENT_INITIALIZATION"
       );
@@ -55,15 +55,13 @@ export class ConnectorClient {
   }
 
   /**
-   * Merges request-level options with client defaults.
+   * Merges request-level options with client defaults. Environment comes from config (immutable).
    */
-  private _resolveConfig(overrides?: ucs.v2.IConfigOptions | null): {
+  private _resolveConfig(overrides?: ucs.v2.IRequestConfig | null): {
     ffi: ucs.v2.FfiOptions;
     http: ucs.v2.IHttpConfig;
   } {
     const opt = overrides || {};
-    
-    const environment = opt.environment ?? this.defaults.environment ?? ucs.v2.Environment.SANDBOX;
     const clientHttp = this.defaults.http || {};
     const overrideHttp = opt.http || {};
 
@@ -77,9 +75,9 @@ export class ConnectorClient {
     };
 
     const ffi = ucs.v2.FfiOptions.create({
-      environment,
-      connector: this.identity.connector,
-      auth: this.identity.auth,
+      environment: this.config.environment ?? ucs.v2.Environment.SANDBOX,
+      connector: this.config.connector,
+      auth: this.config.auth,
     });
 
     return { ffi, http };
@@ -91,13 +89,13 @@ export class ConnectorClient {
    * @param flow - Flow name matching the FFI transformer prefix (e.g. "authorize").
    * @param requestMsg - Protobuf request message object.
    * @param metadata - Dict with connector routing and auth info.
-   * @param options - Optional ConfigOptions override (Environment, Http).
+   * @param options - Optional RequestConfig override (Http, Vault).
    */
   async _executeFlow(
     flow: string,
     requestMsg: object,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null,
+    options?: ucs.v2.IRequestConfig | null,
     reqTypeName?: string,
     resTypeName?: string
   ): Promise<unknown> {
@@ -154,7 +152,7 @@ export class ConnectorClient {
     flow: string,
     requestMsg: object,
     metadata: Record<string, string>,
-    options?: ucs.v2.IConfigOptions | null,
+    options?: ucs.v2.IRequestConfig | null,
     reqTypeName?: string,
     resTypeName?: string
   ): Promise<unknown> {

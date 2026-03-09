@@ -16,63 +16,56 @@ from typing import Dict, Optional, Any
 
 from .generated import connector_service_ffi as _ffi
 from .generated import payment_pb2 as _pb2
-from ._generated_flows import FLOW_RESPONSES
+from ._generated_flows import SERVICE_FLOWS
 from .http_client import execute, HttpRequest, create_client
 from .generated.sdk_config_pb2 import (
-    ClientIdentity, 
-    ConfigOptions, 
-    FfiOptions, 
-    FfiConnectorHttpRequest, 
+    ConnectorConfig,
+    RequestConfig,
+    FfiOptions,
+    FfiConnectorHttpRequest,
     FfiConnectorHttpResponse,
     HttpConfig,
-    Environment
+    Environment,
 )
 
 
 class _ConnectorClientBase:
     """Base class for per-service connector clients. Do not instantiate directly."""
 
-    def __init__(self, identity: ClientIdentity, defaults: Optional[ConfigOptions] = None, lib_path: Optional[str] = None):
+    def __init__(self, config: ConnectorConfig, defaults: Optional[RequestConfig] = None, lib_path: Optional[str] = None):
         """
         Initialize the client.
 
         Args:
-            identity: Non-overridable identity parameters (connector, auth).
-            defaults: Optional overridable defaults (environment, http settings).
+            config: Immutable connector identity and environment (connector, auth, environment).
+            defaults: Optional per-request defaults (http, vault).
             lib_path: Optional path to the shared library.
         """
-        self.identity = identity
-        self.defaults = defaults or ConfigOptions()
+        self.config = config
+        self.defaults = defaults or RequestConfig()
         # Instance-level cache: create the primary asynchronous connection pool at startup
         self.client = create_client(self.defaults.http if self.defaults.HasField('http') else None)
 
-    def _resolve_config(self, options: Optional[ConfigOptions] = None) -> tuple[FfiOptions, Optional[HttpConfig]]:
+    def _resolve_config(self, options: Optional[RequestConfig] = None) -> tuple[FfiOptions, Optional[HttpConfig]]:
         """
         Merges request-level options with client defaults.
-        Enforces the "Identity Rule": Identity is fixed, others are merged request > client.
+        Environment comes from ConnectorConfig (immutable). HTTP/vault from defaults + request override.
         """
-        # 1. Environment: Request-level override > Client-level default > SANDBOX
-        # We explicitly check for presence to ensure overrides are intentional.
-        if options and options.HasField('environment'):
-            environment = options.environment
-        elif self.defaults.HasField('environment'):
-            environment = self.defaults.environment
-        else:
-            environment = Environment.SANDBOX
+        environment = self.config.environment
 
-        # 2. HTTP Overrides: Request-level override > Client-level default
+        # 2. HTTP: request override > client defaults
         http_config = options.http if (options and options.HasField('http')) else (self.defaults.http if self.defaults.HasField('http') else None)
 
-        # 3. Resolve FFI Context (Identity is strictly immutable)
+        # 3. Resolve FFI Context
         ffi = FfiOptions(
             environment=environment,
-            connector=self.identity.connector,
-            auth=self.identity.auth
+            connector=self.config.connector,
+            auth=self.config.auth,
         )
 
         return ffi, http_config
 
-    async def _execute_flow(self, flow: str, request: Any, metadata: dict, response_cls, options: Optional[ConfigOptions] = None):
+    async def _execute_flow(self, flow: str, request: Any, metadata: dict, response_cls, options: Optional[RequestConfig] = None):
         """
         Execute a full payment flow round-trip asynchronously.
         
@@ -129,7 +122,7 @@ class _ConnectorClientBase:
         # 6. Deserialize final domain response
         return response_cls.FromString(result_bytes_res)
 
-    def _execute_direct(self, flow: str, request, metadata: dict, response_cls, options: Optional[ConfigOptions] = None):
+    def _execute_direct(self, flow: str, request, metadata: dict, response_cls, options: Optional[RequestConfig] = None):
         """
         Execute a single-step flow: FFI transformer called directly, no HTTP round-trip.
         """

@@ -1,5 +1,3 @@
-// Copyright (c) Juspay Technologies. All rights reserved.
-//
 // Package: ffi.bindings
 // File: uniffi.rs
 //

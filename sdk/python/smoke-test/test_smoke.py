@@ -21,8 +21,8 @@ from payments import (
     NO_THREE_DS,
     Connector,
     Environment,
-    ClientIdentity,
-    ConfigOptions,
+    ConnectorConfig,
+    RequestConfig,
 )
 
 
@@ -43,13 +43,13 @@ async def run_test():
         "x-api-key": api_key,
     }
 
-    # 1. Initialize Client with ClientIdentity + ConfigOptions
-    identity = ClientIdentity(connector=Connector.STRIPE)
-    identity.auth.stripe.api_key.value = api_key
+    # 1. Initialize Client with ConnectorConfig + optional RequestConfig defaults
+    config = ConnectorConfig(connector=Connector.STRIPE, environment=Environment.SANDBOX)
+    config.auth.stripe.api_key.value = api_key
 
-    defaults = ConfigOptions(environment=Environment.SANDBOX)
+    defaults = RequestConfig()
 
-    client = PaymentClient(identity, defaults)
+    client = PaymentClient(config, defaults)
 
     # Build a protobuf request
     req = PaymentServiceAuthorizeRequest()

@@ -27,7 +27,7 @@ const {
   ConnectorState,
 } = payments;
 
-const { ClientIdentity, ConfigOptions, Environment } = configs;
+const { ConnectorConfig, RequestConfig, Environment } = configs;
 
 const PAYPAL_CREDS = {
   client_id: "PAYPAL_CLIENT_ID_PLACEHOLDER",
@@ -52,21 +52,20 @@ const metadata: Record<string, string> = {
   "x-key1": PAYPAL_CREDS.client_id,
 };
 
-// 1. Mandatory Identity
-const identity = ClientIdentity.create({
+// 1. ConnectorConfig (connector, auth, environment)
+const config = ConnectorConfig.create({
   connector: Connector.PAYPAL,
   auth: {
     paypal: {
       clientId: { value: PAYPAL_CREDS.client_id },
       clientSecret: { value: PAYPAL_CREDS.client_secret },
     }
-  }
-});
-
-// 2. Overridable Options
-const options = ConfigOptions.create({
+  },
   environment: Environment.SANDBOX,
 });
+
+// 2. Optional RequestConfig defaults (http, vault)
+const defaults = RequestConfig.create({});
 
 /**
  * Test the access token flow:
@@ -76,8 +75,8 @@ const options = ConfigOptions.create({
 async function testAccessTokenFlow(): Promise<void> {
   console.log("\n=== Test: PayPal Access Token Flow ===");
 
-  const authClient = new MerchantAuthenticationClient(identity, options);
-  const paymentClient = new PaymentClient(identity, options);
+  const authClient = new MerchantAuthenticationClient(config, defaults);
+  const paymentClient = new PaymentClient(config, defaults);
 
   // Step 1: Create Access Token Request
   console.log("\n--- Step 1: Create Access Token ---");
