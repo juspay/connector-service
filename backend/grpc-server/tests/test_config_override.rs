@@ -8,9 +8,9 @@
 
 use cards::CardNumber;
 use grpc_api_types::payments::{
-    identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
-    AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, Currency, Identifier,
-    PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
+    payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+    BrowserInformation, CaptureMethod, CardDetails, Currency, PaymentAddress, PaymentMethod,
+    PaymentServiceAuthorizeRequest,
 };
 use grpc_server::app;
 use hyperswitch_masking::Secret;
@@ -70,9 +70,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
                 java_enabled: Some(false),
                 ..Default::default()
             }),
-            merchant_transaction_id: Some(Identifier {
-                id_type: Some(IdType::Id("payment_9089".to_string())),
-            }),
+            merchant_transaction_id: Some("payment_9089".to_string()),
             return_url: Some("www.google.com".to_string()),
             ..Default::default()
         });

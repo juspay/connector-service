@@ -3796,11 +3796,7 @@ pub fn generate_mandate_revoke_response(
             status_code: e.status_code.into(),
             response_headers,
             network_transaction_id: None,
-            merchant_revoke_id: e.connector_transaction_id.map(|id| {
-                grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                }
-            }),
+            merchant_revoke_id: e.connector_transaction_id,
             raw_connector_response,
             raw_connector_request,
         }),

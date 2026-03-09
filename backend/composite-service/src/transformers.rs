@@ -15,7 +15,7 @@ impl ForeignFrom<(&CompositeAuthorizeRequest, &ConnectorEnum)>
 {
     fn foreign_from((item, connector): (&CompositeAuthorizeRequest, &ConnectorEnum)) -> Self {
         Self {
-            merchant_access_token_id: item.merchant_transaction_id.clone(),
+            merchant_access_token_id: Some(item.merchant_transaction_id.clone()),
             connector: grpc_connector_from_connector_enum(connector),
             metadata: item.metadata.clone(),
             connector_feature_data: item.connector_feature_data.clone(),
@@ -28,11 +28,7 @@ impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
     fn foreign_from(item: &CompositeAuthorizeRequest) -> Self {
         let customer = item.customer.as_ref();
         Self {
-            merchant_customer_id: customer.and_then(|c| c.id.clone()).map(|id| {
-                grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id.clone())),
-                }
-            }),
+            merchant_customer_id: customer.and_then(|c| c.id.clone()),
             customer_name: customer.and_then(|c| c.name.clone()),
             email: customer.and_then(|c| c.email.clone()),
             phone_number: customer.and_then(|c| c.phone_number.clone()),

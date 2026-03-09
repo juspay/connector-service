@@ -21,11 +21,7 @@ async fn main() {
 fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
         // Identification
-        merchant_transaction_id: Some(payments::Identifier {
-            id_type: Some(payments::identifier::IdType::Id(
-                "test_payment_123456".to_string(),
-            )),
-        }),
+        merchant_transaction_id: Some("test_payment_123456".to_string()),
 
         // Payment details
         amount: Some(grpc_api_types::payments::Money {

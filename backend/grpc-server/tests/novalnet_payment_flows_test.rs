@@ -16,9 +16,9 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
-        AuthenticationType, CaptureMethod, CardDetails, Currency, Identifier, PaymentAddress,
-        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentStatus,
+        payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+        CaptureMethod, CardDetails, Currency, PaymentAddress, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -138,9 +138,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         }),
         address: Some(address),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        merchant_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("novalnet_test"))),
-        }),
+        merchant_transaction_id: Some(generate_unique_id("novalnet_test")),
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),

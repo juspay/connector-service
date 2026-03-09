@@ -17,12 +17,12 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, mandate_reference::MandateIdType, payment_method,
+        mandate_reference::MandateIdType, payment_method,
         payment_service_client::PaymentServiceClient,
         recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
         AuthenticationType, CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
-        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        Currency, CustomerAcceptance, FutureUsage, MandateReference, PaymentAddress, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest, PaymentStatus,
         RecurringPaymentServiceChargeRequest, RefundStatus,
@@ -152,9 +152,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         }),
         address: Some(address),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        merchant_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("payload_test"))),
-        }),
+        merchant_transaction_id: Some(generate_unique_id("payload_test")),
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
@@ -164,9 +162,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
 
 fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         encoded_data: None,
         capture_method: None,
         handle_response: None,
@@ -190,9 +186,7 @@ fn create_payment_capture_request(
     amount: i64,
 ) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         amount_to_capture: Some(grpc_api_types::payments::Money {
             minor_amount: amount,
             currency: i32::from(Currency::Usd),
@@ -205,13 +199,9 @@ fn create_payment_capture_request(
 
 fn create_payment_void_request(transaction_id: &str, amount: i64) -> PaymentServiceVoidRequest {
     PaymentServiceVoidRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         cancellation_reason: None,
-        merchant_void_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("payload_void"))),
-        }),
+        merchant_void_id: Some(generate_unique_id("payload_void")),
         all_keys_required: None,
         browser_info: None,
         amount: Some(grpc_api_types::payments::Money {
@@ -224,12 +214,8 @@ fn create_payment_void_request(transaction_id: &str, amount: i64) -> PaymentServ
 
 fn create_refund_request(transaction_id: &str, amount: i64) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        merchant_refund_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("refund"))),
-        }),
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        merchant_refund_id: generate_unique_id("refund"),
+        connector_transaction_id: transaction_id.to_string(),
         payment_amount: amount,
         refund_amount: Some(grpc_api_types::payments::Money {
             minor_amount: amount,
@@ -243,12 +229,8 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
     response
         .connector_transaction_id
         .as_ref()
-        .and_then(|id| id.id_type.as_ref())
-        .and_then(|id_type| match id_type {
-            IdType::Id(connector_txn_id) => Some(connector_txn_id.clone()),
-            _ => None,
-        })
         .expect("Failed to extract connector transaction ID from response")
+        .clone()
 }
 
 #[allow(clippy::field_reassign_with_default)]
@@ -277,9 +259,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
     let metadata_json = serde_json::to_string(&metadata_map).unwrap();
 
     RecurringPaymentServiceChargeRequest {
-        merchant_charge_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("repeat"))),
-        }),
+        merchant_charge_id: Some(generate_unique_id("repeat")),
         mandate_reference_id: Some(mandate_reference),
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: unique_amount,
@@ -517,9 +497,7 @@ async fn test_authorize_capture_refund_rsync() {
 
         // Step 4: RSync (Refund Sync)
         let rsync_request = PaymentServiceGetRequest {
-            connector_transaction_id: Some(Identifier {
-                id_type: Some(IdType::Id(refund_id)),
-            }),
+            connector_transaction_id: refund_id,
             encoded_data: None,
             capture_method: None,
             handle_response: None,
