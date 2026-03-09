@@ -173,9 +173,14 @@ impl
 
         let access_token = get_access_token(access_token_from_req, access_token_response);
 
+        let connector_customer_id = item
+            .state
+            .as_ref()
+            .and_then(|state| state.connector_customer_id.clone());
+
         let resolved_state = Some(ConnectorState {
             access_token,
-            connector_customer_id: None,
+            connector_customer_id,
         });
 
         Self {

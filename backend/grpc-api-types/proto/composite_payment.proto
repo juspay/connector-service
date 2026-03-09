@@ -117,7 +117,7 @@ message CompositeGetRequest {
   optional bytes handle_response = 3;
 
   // Amount Information
-  optional Money amount = 4; // The amount for the payment
+  optional Money amount = 4; // The amount for the payment in minor currency units
 
   // Payment Experience
   optional PaymentExperience payment_experience = 5; // Preferred payment experience

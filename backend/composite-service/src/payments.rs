@@ -150,7 +150,13 @@ where
         let connector_customer_id = payload
             .state
             .as_ref()
-            .and_then(|state| state.connector_customer_id.as_ref());
+            .and_then(|state| state.connector_customer_id.as_ref())
+            .or_else(|| {
+                payload
+                    .customer
+                    .as_ref()
+                    .and_then(|c| c.connector_customer_id.as_ref())
+            });
         let should_create_connector_customer =
             connector_data.connector.should_create_connector_customer()
                 && connector_customer_id.is_none();
