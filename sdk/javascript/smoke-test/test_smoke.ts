@@ -35,15 +35,6 @@ const PAYPAL_CREDS = {
 };
 
 
-const metadata: Record<string, string> = {
-  connector: "Paypal",
-  connector_auth_type: JSON.stringify({
-    Paypal: {
-      client_id: PAYPAL_CREDS.client_id,
-      client_secret: PAYPAL_CREDS.client_secret,
-    },
-  }),
-};
 
 // 1. ConnectorConfig (connector, auth, environment)
 const config = ConnectorConfig.create({

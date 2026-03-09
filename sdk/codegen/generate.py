@@ -406,7 +406,7 @@ def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None
         "",
         'import { ConnectorClient as _ConnectorClientBase } from "./connector_client";',
         '// @ts-ignore - protobuf generated files might not have types yet',
-        'import { ucs } from "./generated/proto";',
+        'import { types } from "./generated/proto";',
         "",
     ]
     for service in all_services:
@@ -417,10 +417,10 @@ def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None
             camel = to_camel(n)
             lines.append(f"  /** {f['service']}.{f['rpc']} — {f['description']} */")
             lines.append(f"  async {camel}(")
-            lines.append(f"    requestMsg: ucs.v2.I{req},")
-            lines.append(f"    options?: ucs.v2.IRequestConfig | null")
-            lines.append(f"  ): Promise<ucs.v2.{res}> {{")
-            lines.append(f"    return this._executeFlow('{n}', requestMsg, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
+            lines.append(f"    requestMsg: types.I{req},")
+            lines.append(f"    options?: types.IRequestConfig | null")
+            lines.append(f"  ): Promise<types.{res}> {{")
+            lines.append(f"    return this._executeFlow('{n}', requestMsg, options, '{req}', '{res}') as Promise<types.{res}>;")
             lines.append(f"  }}")
             lines.append("")
         for f in single_groups.get(service, []):
@@ -428,10 +428,10 @@ def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None
             camel = to_camel(n)
             lines.append(f"  /** {f['service']}.{f['rpc']} — {f['description']} */")
             lines.append(f"  async {camel}(")
-            lines.append(f"    requestMsg: ucs.v2.I{req},")
-            lines.append(f"    options?: ucs.v2.IRequestConfig | null")
-            lines.append(f"  ): Promise<ucs.v2.{res}> {{")
-            lines.append(f"    return this._executeDirect('{n}', requestMsg, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
+            lines.append(f"    requestMsg: types.I{req},")
+            lines.append(f"    options?: types.IRequestConfig | null")
+            lines.append(f"  ): Promise<types.{res}> {{")
+            lines.append(f"    return this._executeDirect('{n}', requestMsg, options, '{req}', '{res}') as Promise<types.{res}>;")
             lines.append(f"  }}")
             lines.append("")
         lines += ["}", ""]
@@ -500,7 +500,7 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
         # All flow request/response types are generated from payment.proto into this class.
         # This wildcard import makes GeneratedFlows.kt self-contained: no manual typealias
         # additions needed in Payments.kt when new flows are added.
-        "import ucs.v2.Payment.*",
+        "import types.Payment.*",
         "",
     ]
 
