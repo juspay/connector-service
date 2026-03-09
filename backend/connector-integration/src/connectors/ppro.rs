@@ -495,32 +495,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
 
         match event.r#type {
-            transformers::PproWebhookType::PaymentChargeCaptureSucceeded => {
+            PproWebhookType::PaymentChargeCaptureSucceeded => {
                 Ok(EventType::PaymentIntentCaptureSuccess)
             }
-            transformers::PproWebhookType::PaymentChargeFailed
-            | transformers::PproWebhookType::PaymentChargeAuthorizationFailed
-            | transformers::PproWebhookType::PaymentChargeDiscarded => {
+            PproWebhookType::PaymentChargeFailed
+            | PproWebhookType::PaymentChargeAuthorizationFailed
+            | PproWebhookType::PaymentChargeDiscarded => {
                 Ok(EventType::PaymentIntentFailure)
             }
-            transformers::PproWebhookType::PaymentChargeAuthorizationSucceeded
-            | transformers::PproWebhookType::PaymentChargeSuccess => {
+            PproWebhookType::PaymentChargeAuthorizationSucceeded
+            | PproWebhookType::PaymentChargeSuccess => {
                 Ok(EventType::PaymentIntentAuthorizationSuccess)
             }
-            transformers::PproWebhookType::PaymentChargeRefundSucceeded => {
+            PproWebhookType::PaymentChargeRefundSucceeded => {
                 Ok(EventType::RefundSuccess)
             }
-            transformers::PproWebhookType::PaymentChargeRefundFailed => {
+            PproWebhookType::PaymentChargeRefundFailed => {
                 Ok(EventType::RefundFailure)
             }
-            transformers::PproWebhookType::PaymentChargeVoidSucceeded
-            | transformers::PproWebhookType::PaymentChargeVoidFailed
-            | transformers::PproWebhookType::PaymentChargeCaptureFailed
-            | transformers::PproWebhookType::PaymentAgreementActive
-            | transformers::PproWebhookType::PaymentAgreementFailed
-            | transformers::PproWebhookType::PaymentAgreementRevokedByConsumer
-            | transformers::PproWebhookType::PaymentAgreementRevokedByMerchant
-            | transformers::PproWebhookType::PaymentAgreementRevokedByProvider => {
+            PproWebhookType::PaymentChargeVoidSucceeded
+            | PproWebhookType::PaymentChargeVoidFailed
+            | PproWebhookType::PaymentChargeCaptureFailed
+            | PproWebhookType::PaymentAgreementActive
+            | PproWebhookType::PaymentAgreementFailed
+            | PproWebhookType::PaymentAgreementRevokedByConsumer
+            | PproWebhookType::PaymentAgreementRevokedByMerchant
+            | PproWebhookType::PaymentAgreementRevokedByProvider => {
                 Ok(EventType::IncomingWebhookEventUnspecified)
             }
         }
@@ -545,26 +545,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let status = match charge.status {
-            transformers::PproPaymentStatus::AuthorizationProcessing
-            | transformers::PproPaymentStatus::CaptureProcessing => {
+            PproPaymentStatus::AuthorizationProcessing
+            | PproPaymentStatus::CaptureProcessing => {
                 common_enums::AttemptStatus::Pending
             }
-            transformers::PproPaymentStatus::AuthenticationPending => {
+            PproPaymentStatus::AuthenticationPending => {
                 common_enums::AttemptStatus::AuthenticationPending
             }
-            transformers::PproPaymentStatus::AuthorizationAsync
-            | transformers::PproPaymentStatus::CapturePending => {
+            PproPaymentStatus::AuthorizationAsync
+            | PproPaymentStatus::CapturePending => {
                 common_enums::AttemptStatus::Authorized
             }
-            transformers::PproPaymentStatus::Captured
-            | transformers::PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
-            transformers::PproPaymentStatus::Failed
-            | transformers::PproPaymentStatus::Discarded
-            | transformers::PproPaymentStatus::Rejected
-            | transformers::PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
-            transformers::PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
-            transformers::PproPaymentStatus::RefundSettled
-            | transformers::PproPaymentStatus::Refunded => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::Captured
+            | PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Failed
+            | PproPaymentStatus::Discarded
+            | PproPaymentStatus::Rejected
+            | PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            PproPaymentStatus::RefundSettled
+            | PproPaymentStatus::Refunded => common_enums::AttemptStatus::Pending,
         };
 
         let (error_code, error_message, error_reason) = match charge.failure.as_ref() {
@@ -620,20 +620,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let status = match charge.status {
-            transformers::PproPaymentStatus::Captured
-            | transformers::PproPaymentStatus::RefundSettled
-            | transformers::PproPaymentStatus::Success
-            | transformers::PproPaymentStatus::Refunded => common_enums::RefundStatus::Success,
-            transformers::PproPaymentStatus::Failed
-            | transformers::PproPaymentStatus::Rejected
-            | transformers::PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
-            transformers::PproPaymentStatus::AuthorizationProcessing
-            | transformers::PproPaymentStatus::CaptureProcessing
-            | transformers::PproPaymentStatus::AuthenticationPending
-            | transformers::PproPaymentStatus::AuthorizationAsync
-            | transformers::PproPaymentStatus::CapturePending
-            | transformers::PproPaymentStatus::Discarded
-            | transformers::PproPaymentStatus::Voided => common_enums::RefundStatus::Pending,
+            PproPaymentStatus::Captured
+            | PproPaymentStatus::RefundSettled
+            | PproPaymentStatus::Success
+            | PproPaymentStatus::Refunded => common_enums::RefundStatus::Success,
+            PproPaymentStatus::Failed
+            | PproPaymentStatus::Rejected
+            | PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+            PproPaymentStatus::AuthorizationProcessing
+            | PproPaymentStatus::CaptureProcessing
+            | PproPaymentStatus::AuthenticationPending
+            | PproPaymentStatus::AuthorizationAsync
+            | PproPaymentStatus::CapturePending
+            | PproPaymentStatus::Discarded
+            | PproPaymentStatus::Voided => common_enums::RefundStatus::Pending,
         };
 
         let (error_code, error_message) = match charge.failure.as_ref() {
@@ -1266,40 +1266,40 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
         match event.r#type {
-            transformers::PproWebhookType::PaymentChargeAuthorizationSucceeded
-            | transformers::PproWebhookType::PaymentChargeSuccess => {
+            PproWebhookType::PaymentChargeAuthorizationSucceeded
+            | PproWebhookType::PaymentChargeSuccess => {
                 Ok(IncomingWebhookEvent::PaymentIntentSuccess)
             }
-            transformers::PproWebhookType::PaymentChargeAuthorizationFailed
-            | transformers::PproWebhookType::PaymentChargeFailed
-            | transformers::PproWebhookType::PaymentChargeDiscarded => {
+            PproWebhookType::PaymentChargeAuthorizationFailed
+            | PproWebhookType::PaymentChargeFailed
+            | PproWebhookType::PaymentChargeDiscarded => {
                 Ok(IncomingWebhookEvent::PaymentIntentFailure)
             }
-            transformers::PproWebhookType::PaymentChargeCaptureSucceeded => {
+            PproWebhookType::PaymentChargeCaptureSucceeded => {
                 Ok(IncomingWebhookEvent::PaymentIntentCaptureSuccess)
             }
-            transformers::PproWebhookType::PaymentChargeCaptureFailed => {
+            PproWebhookType::PaymentChargeCaptureFailed => {
                 Ok(IncomingWebhookEvent::PaymentIntentCaptureFailure)
             }
-            transformers::PproWebhookType::PaymentChargeVoidSucceeded => {
+            PproWebhookType::PaymentChargeVoidSucceeded => {
                 Ok(IncomingWebhookEvent::PaymentIntentCancelled)
             }
-            transformers::PproWebhookType::PaymentChargeVoidFailed => {
+            PproWebhookType::PaymentChargeVoidFailed => {
                 Ok(IncomingWebhookEvent::PaymentIntentCancelFailure)
             }
-            transformers::PproWebhookType::PaymentChargeRefundSucceeded => {
+            PproWebhookType::PaymentChargeRefundSucceeded => {
                 Ok(IncomingWebhookEvent::RefundSuccess)
             }
-            transformers::PproWebhookType::PaymentChargeRefundFailed => {
+            PproWebhookType::PaymentChargeRefundFailed => {
                 Ok(IncomingWebhookEvent::RefundFailure)
             }
-            transformers::PproWebhookType::PaymentAgreementActive => {
+            PproWebhookType::PaymentAgreementActive => {
                 Ok(IncomingWebhookEvent::MandateActive)
             }
-            transformers::PproWebhookType::PaymentAgreementFailed
-            | transformers::PproWebhookType::PaymentAgreementRevokedByConsumer
-            | transformers::PproWebhookType::PaymentAgreementRevokedByMerchant
-            | transformers::PproWebhookType::PaymentAgreementRevokedByProvider => {
+            PproWebhookType::PaymentAgreementFailed
+            | PproWebhookType::PaymentAgreementRevokedByConsumer
+            | PproWebhookType::PaymentAgreementRevokedByMerchant
+            | PproWebhookType::PaymentAgreementRevokedByProvider => {
                 Ok(IncomingWebhookEvent::MandateRevoked)
             }
         }
