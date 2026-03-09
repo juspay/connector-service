@@ -228,9 +228,9 @@ pub struct FinixCreatePaymentInstrumentRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security_code: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expiration_month: Option<i8>,
+    pub expiration_month: Option<Secret<i8>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expiration_year: Option<i32>,
+    pub expiration_year: Option<Secret<i32>>,
     pub identity: String,
     pub tags: Option<FinixTags>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -964,8 +964,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 name: card.card_holder_name.clone(),
                 number: Some(Secret::new(card.card_number.peek().to_string())),
                 security_code: Some(card.card_cvc.clone()),
-                expiration_month: Some(card.card_exp_month.peek().parse::<i8>().unwrap_or(0)),
-                expiration_year: Some(card.card_exp_year.peek().parse::<i32>().unwrap_or(0)),
+                expiration_month: Some(Secret::new(
+                    card.card_exp_month.peek().parse::<i8>().unwrap_or(0),
+                )),
+                expiration_year: Some(Secret::new(
+                    card.card_exp_year.peek().parse::<i32>().unwrap_or(0),
+                )),
                 identity: customer_id,
                 tags: None,
                 address: None,
