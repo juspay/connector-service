@@ -3298,6 +3298,7 @@ dependencies = [
  "http 0.2.12",
  "masking",
  "reqwest 0.11.27",
+ "serde",
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
