@@ -1,10 +1,11 @@
 //! Superposition configuration wrapper for connector-service
 //!
-//! This module provides a thin wrapper around `superposition_core::SuperpositionToml`
+//! This module provides a thin wrapper around `superposition_core::Config`
 //! for loading and resolving configuration based on dimensions (connector, environment).
 
+use serde_json::{Map, Value};
 use std::collections::HashMap;
-use serde_json::Value;
+use superposition_core::{eval_config, parse_toml_config, Config, MergeStrategy};
 
 /// Error type for superposition configuration operations
 #[derive(Debug, thiserror::Error)]
@@ -26,7 +27,7 @@ pub enum SuperpositionConfigError {
 /// Parsed and cached representation of superposition.toml
 #[derive(Debug, Clone)]
 pub struct SuperpositionConfig {
-    toml: superposition_core::SuperpositionToml,
+    config: Config,
 }
 
 impl SuperpositionConfig {
@@ -43,17 +44,16 @@ impl SuperpositionConfig {
     /// let config = SuperpositionConfig::from_file("config/superposition.toml")?;
     /// ```
     pub fn from_file(path: &str) -> Result<Self, SuperpositionConfigError> {
-        let contents = std::fs::read_to_string(path).map_err(|e| {
-            SuperpositionConfigError::FileReadError {
+        let contents =
+            std::fs::read_to_string(path).map_err(|e| SuperpositionConfigError::FileReadError {
                 path: path.to_string(),
                 source: e,
-            }
-        })?;
+            })?;
 
-        let toml = superposition_core::SuperpositionToml::try_from_str(&contents)
-            .map_err(SuperpositionConfigError::ParseError)?;
+        let config = parse_toml_config(&contents)
+            .map_err(|e| SuperpositionConfigError::ParseError(e.to_string()))?;
 
-        Ok(Self { toml })
+        Ok(Self { config })
     }
 
     /// Resolve the flat key-value map for given dimensions.
@@ -76,15 +76,28 @@ impl SuperpositionConfig {
         connector: &str,
         environment: Option<&str>,
     ) -> Result<HashMap<String, Value>, SuperpositionConfigError> {
-        let mut context = HashMap::new();
-        context.insert("connector".to_string(), connector.to_string());
+        let mut dims: Map<String, Value> = Map::new();
+        dims.insert(
+            "connector".to_string(),
+            Value::String(connector.to_string()),
+        );
         if let Some(env) = environment {
-            context.insert("environment".to_string(), env.to_string());
+            dims.insert("environment".to_string(), Value::String(env.to_string()));
         }
 
-        self.toml
-            .resolve(context)
-            .map_err(SuperpositionConfigError::ResolutionError)
+        let default_configs = self.config.default_configs.clone().into_inner();
+
+        eval_config(
+            default_configs,
+            &self.config.contexts,
+            &self.config.overrides,
+            &self.config.dimensions,
+            &dims,
+            MergeStrategy::MERGE,
+            None,
+        )
+        .map(|m| m.into_iter().collect())
+        .map_err(SuperpositionConfigError::ResolutionError)
     }
 }
 
@@ -98,7 +111,10 @@ pub fn get_string(resolved: &HashMap<String, Value>, key: &str) -> String {
 }
 
 /// Helper function to extract an optional non-empty string from the resolved configuration
-pub fn get_optional_nonempty_string(resolved: &HashMap<String, Value>, key: &str) -> Option<String> {
+pub fn get_optional_nonempty_string(
+    resolved: &HashMap<String, Value>,
+    key: &str,
+) -> Option<String> {
     let value = get_string(resolved, key);
     if value.is_empty() {
         None
@@ -140,10 +156,7 @@ mod tests {
     #[test]
     fn test_get_optional_nonempty_string_returns_some_for_value() {
         let mut resolved = HashMap::new();
-        resolved.insert(
-            "key".to_string(),
-            Value::String("value".to_string()),
-        );
+        resolved.insert("key".to_string(), Value::String("value".to_string()));
         assert_eq!(
             get_optional_nonempty_string(&resolved, "key"),
             Some("value".to_string())
