@@ -88,8 +88,6 @@ async function testAccessTokenFlow(): Promise<void> {
     ) {
       accessTokenValue = accessTokenResponse.accessToken.value;
       tokenTypeValue = accessTokenResponse.tokenType ?? "Bearer";
-
-      console.log(accessTokenValue);
       console.log(
         `  Access Token received: ${accessTokenValue!.substring(0, 20)}...`
       );
