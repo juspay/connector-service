@@ -20,7 +20,7 @@ Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **inde
 | Scenario | Your Strategy | Connector Service Solves |
 |----------|---------------|--------------------------|
 | **PSP-Native Vault** | You rely on Stripe/Adyen vault for PCI scope reduction | Abstracts PSP-specific token formats; single API regardless of which PSP vault you use |
-| **Independent Third-Party Vault** | You use VGS, Basis Theory, TokenEx, or Hyperswitch Vault as a vault layer | Supports three proxy patterns (Network, Transform, Relay) with zero to minimal code changes |
+| **Independent Third-Party Vault** | You use VGS, Basis Theory, TokenEx, or Hyperswitch Vault as a vault layer | Supports two proxy patterns (Network, Application) with zero to minimal code changes |
 | **In-House Vault** | You have your own PCI-certified card vault infrastructure | PCI-Enabled Mode lets you send raw card data through while maintaining full control |
 
 Connector Service (connector-service) provides flexible PCI compliance options for merchants. Depending on your compliance requirements and infrastructure, you can operate in one of two modes:
@@ -81,13 +81,12 @@ In this mode, a third-party vault handles card data. Your application only handl
 - You want to outsource security to specialists
 
 ### Requirement
-**You must subscribe to a third-party PCI vault service.** connector-service supports three integration patterns:
+**You must subscribe to a third-party PCI vault service.** connector-service supports two integration patterns:
 
 | Proxy Pattern | What It Means | Popular Vault Providers |
 |---------------|---------------|-------------------------|
 | **[Network Proxy](./network-proxy.md)** | Zero-code integration—just change the URL. The proxy transparently intercepts and detokenizes requests at the network layer. | **VGS**: URL-based routing (`tntxxx.sandbox.verygoodproxy.com`)<br>**Evervault**: HTTP CONNECT relay with client-side encryption |
-| **[Transform Proxy](./transform-proxy.md)** | Application-layer proxy using wrapped requests with template expressions (e.g., `{{$card_number}}`) to mark where detokenization should occur. | **Hyperswitch Vault**: Transform proxy with request wrapping and `{{$variable}}` expressions |
-| **[Relay Proxy](./relay-proxy.md)** | Header-driven routing with token markers (e.g., `{token}`) to indicate detokenization points in the request body. | **TokenEx**: Format-preserving tokens with `TX-*` headers and `{ }` markers |
+| **[Application Proxy](./application-proxy.md)** | Application-layer integration where you send tokens to connector-service, and we handle vault-specific routing and detokenization. Works with any vault provider. | **Basis Theory**, **TokenEx**, **Hyperswitch Vault** |
 
 ### Flow Diagram
 
@@ -107,13 +106,14 @@ sequenceDiagram
     Vault-->>VSDK: vault_token
     VSDK-->>FE: vault_token
 
-    Note over BE,PSP: Backend: Payment Processing
+    Note over BE,PSP: Backend: Payment Processing via UCS
     FE->>BE: Send vault_token + payment request
-    BE->>connector-service: authorize(vault_token, amount)
-    connector-service->>Vault: Detokenize (via proxy)
-    Vault-->>connector-service: Card data (in memory only)
-    connector-service->>PSP: POST /payment_intents
-    PSP-->>connector-service: Authorization response
+    BE->>connector-service: authorize(vault_token, amount, connector)
+    Note right of connector-service: UCS transforms request<br/>and routes through vault proxy
+    connector-service->>Vault: Proxy request with token
+    Vault->>PSP: Forward with detokenized card data
+    PSP-->>Vault: Authorization response
+    Vault-->>connector-service: Return response
     connector-service-->>BE: Unified response
     BE-->>FE: Payment result
 ```
@@ -155,7 +155,7 @@ sequenceDiagram
 | **Early-stage startup, moving from single-PSP to multi-PSP** | PCI-Disabled | Launch quickly without 6–12 month certification delays |
 | **Expanding Multi-PSP strategy without changing your existing vault vendor** | PCI-Disabled + Independent Vault | Token portability across PSPs (e.g., TokenEx format-preserving tokens) |
 | **High-security requirements** | PCI-Enabled + In-House Vault | Full data sovereignty and audit control |
-| **Marketplace/SaaS platform supporting multi-PSP** | PCI-Disabled + Transform Proxy | Hyperswitch Vault supports multiple PSPs with request wrapping |
+| **Marketplace/SaaS platform supporting multi-PSP** | PCI-Disabled + Application Proxy | UCS handles multiple vault providers seamlessly |
 | **Enterprise with existing PCI certification** | PCI-Enabled | Leverage existing investment; maintain control |
 
 ---
@@ -165,7 +165,7 @@ sequenceDiagram
 Connector Service abstracts the complexity regardless of your PCI strategy. You integrate once with connector-service, and it handles:
 
 - **Token format translation** — PSP-specific tokens, vault tokens, or raw cards all normalize to a unified interface
-- **Proxy pattern selection** — Network, Transform, or Relay based on your vault provider
+- **Proxy pattern selection** — Network or Application based on your vault provider
 - **Connector-level flexibility** — Use PCI-Enabled for your in-house vault in one region, PCI-Disabled with a third party vault provider in another
 
 Your PCI choice is a business decision—Connector Service ensures it's never a technical blocker.
@@ -176,16 +176,15 @@ Your PCI choice is a business decision—Connector Service ensures it's never a 
 
 Choose the right proxy pattern based on your requirements:
 
-| Aspect | [Network Proxy](./network-proxy.md) | [Transform Proxy](./transform-proxy.md) | [Relay Proxy](./relay-proxy.md) |
-|--------|-------------------------------------|-----------------------------------------|---------------------------------|
-| **Providers** | VGS, Evervault | Hyperswitch Vault | Basis Theory, TokenEx |
-| **Code Changes** | **None**—just change URL | Required—use template expressions | Minimal—add headers + `{ }` markers |
-| **Integration Layer** | Network/Transport | Application | Application (headers + body) |
-| **Token Syntax** | Transparent (no syntax) | `{{$card_number}}` expressions | `{token}` |
-| **Routing Method** | URL-based | Wrapped request with `destination_url` | HTTP headers (`TX-URL`) |
-| **Customization** | Low | **High** (custom transforms) | Medium |
-| **Token Format** | `tok_xxx`, `ev:encrypted:xxx` | UUID `26818785-...`, `f80c5d4a-...` | Format-preserving `4242123456784242` |
-| **PSP Portability** | Vendor-specific | Vendor-specific | **Universal** (works with any PSP) |
+| Aspect | [Network Proxy](./network-proxy.md) | [Application Proxy](./application-proxy.md) |
+|--------|-------------------------------------|---------------------------------------------|
+| **Providers** | VGS, Evervault | Basis Theory, TokenEx, Hyperswitch Vault |
+| **Code Changes** | **None**—just change URL | Minimal—just send tokens to UCS |
+| **Integration Layer** | Network/Transport | Application |
+| **How it works** | Proxy intercepts at network layer | UCS handles vault-specific routing |
+| **PCI Scope** | SAQ A/A-EP ✅ | SAQ A/A-EP ✅ |
+
+**Key difference:** Network Proxy works transparently at the network level, while Application Proxy lets UCS handle all vault-specific transformations internally.
 
 ---
 
@@ -199,20 +198,12 @@ Choose the right proxy pattern based on your requirements:
 - ✅ You need the **fastest integration**
 - ✅ You already use VGS/Evervault infrastructure
 - ✅ You want **client-side encryption** (Evervault)
-- 🔧 You need to implement custom request transformations through connector service
 
-### Choose Transform Proxy (Hyperswitch Vault) if:
-- ✅ You need **explicit control** over token placement
-- ✅ You want **request wrapping** with destination URL control
+### Choose Application Proxy (Basis Theory, TokenEx, Hyperswitch Vault) if:
+- ✅ You want **unified integration** regardless of vault provider
+- ✅ You prefer UCS to handle vault-specific complexity
+- ✅ You want to switch vault providers without changing your code
 - ✅ You work with **multiple PSPs**
-- ✅ You need **{{$variable}}** expression syntax
-- ❌ You need to implement custom request transformations through connector service
-
-### Choose Relay Proxy (TokenEx) if:
-- ✅ You want **PSP portability** (one token works everywhere)
-- ✅ You prefer **format-preserving tokens** (looks like real cards)
-- ✅ You want a **middle ground** between zero-code and vendor-diversity
-- ❌ You need to implement custom request transformations through connector service
 
 </details>
 
@@ -220,10 +211,10 @@ Choose the right proxy pattern based on your requirements:
 
 ## Code Example Comparison
 
-Here's how a Stripe Payment Intent call can look across all the scenarios:
+Here's how a payment call looks across all scenarios:
 
 <details>
-<summary><b>Scenario 1: Using Independent third party vault through Network Proxy pattern (example: VGS)</b></summary>
+<summary><b>Scenario 1: Using independent third-party vault through Network Proxy (example: VGS)</b></summary>
 
 ```bash
 # Change URL only—VGS handles detokenization automatically
@@ -238,40 +229,35 @@ curl "https://tntSANDBOX.sandbox.verygoodproxy.com/v1/payment_intents" \
 </details>
 
 <details>
-<summary><b>Scenario 2: Using Independent third party vault through Transform Proxy pattern (example: Hyperswitch Vault)</b></summary>
+<summary><b>Scenario 2: Using independent third-party vault through Application Proxy (example: TokenEx, Basis Theory, Hyperswitch Vault)</b></summary>
 
 ```bash
-# Use {{ }} expressions to mark detokenization points
-curl "https://api.basistheory.com/proxy" \
-  -H "BT-API-KEY: test_xxx" \
-  -H "BT-PROXY-URL: https://api.stripe.com/v1/payment_intents" \
-  -d "amount=1000" \
-  -d "currency=usd" \
-  -d "payment_method_data[card][number]={{ 26818785-547b-4b28-b0fa-531377e99f4e.number }}" \
-  -d "payment_method_data[card][exp_month]={{ 26818785-547b-4b28-b0fa-531377e99f4e.expiration_month }}" \
-  -d "confirm=true"
+# Send tokens to UCS—UCS handles vault-specific routing and transformations
+curl "https://api.connector-service.juspay.net/payments" \
+  -H "Authorization: Bearer ${UCS_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1000,
+    "currency": "USD",
+    "connector": "stripe",
+    "payment_method": {
+      "type": "card",
+      "card": {
+        "token": "4242123456784242"
+      }
+    }
+  }'
 ```
+
+**What happens behind the scenes:**
+- **TokenEx**: UCS adds `TX-URL` and `TX-Method` headers, wraps token in `{ }`
+- **Basis Theory**: UCS adds `BT-PROXY-URL` header, uses `{{ token.property }}` expressions
+- **Hyperswitch Vault**: UCS constructs wrapped request with `{{$variable}}` expressions
+
 </details>
 
 <details>
-<summary><b>4. Scenario 3: Using Independent third party vault through Relay Proxy pattern (example: TokenEx)</b></summary>
-
-```bash
-# Use TX-* headers for routing, { } markers for tokens
-curl "https://tgapi.tokenex.com" \
-  -H "TX-URL: https://api.stripe.com/v1/payment_intents" \
-  -H "TX-Method: POST" \
-  -H "Authorization: Bearer sk_test_xxx" \
-  -d "amount=1000" \
-  -d "currency=usd" \
-  -d "payment_method_data[card][number]={4242123456784242}" \
-  -d "payment_method_data[card][exp_month]=12" \
-  -d "confirm=true"
-```
-</details>
-
-<details>
-<summary><b>Scenario 4: Using inhouse card vault with self managed PCI compliance </b></summary>
+<summary><b>Scenario 3: Using in-house vault with self-managed PCI compliance</b></summary>
 
 ```bash
 # Direct to Stripe—your server sees raw card data
@@ -300,7 +286,7 @@ curl "https://api.stripe.com/v1/payment_intents" \
 
 ┌───────────────────────────────────────────────────────────────────────────────────────┐
 │                      NETWORK PROXY                                                    │
-│  Frontend → Backend (token) → connector-service (token) → Network Proxy → Stripe      │
+│  Frontend → Backend (token) → connector-service (token) → Network Proxy → PSP         │
 │                                    ↑                                                  │
 │                         VGS/Evervault: URL change only                                │
 │                                                                                       │
@@ -308,33 +294,23 @@ curl "https://api.stripe.com/v1/payment_intents" \
 └───────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌───────────────────────────────────────────────────────────────────────────────────────┐
-│                   TRANSFORM PROXY                                                     │
-│  Frontend → Backend (token) → connector-service (templates) → Transform Proxy → PSP   │
+│                   APPLICATION PROXY                                                   │
+│  Frontend → Backend (token) → connector-service (token) → Vault Proxy → PSP           │
 │                                    ↑                                                  │
-│              Hyperswitch Vault: {{$variable}} in wrapped request                      │
+│   UCS handles vault-specific routing (headers, expressions, or wrapped requests)      │
 │                                                                                       │
-│  PCI Scope: SAQ A/A-EP ✅  Control: High                                              │
+│  PCI Scope: SAQ A/A-EP ✅  Works with: Basis Theory, TokenEx, Hyperswitch Vault       │
 └───────────────────────────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────────────────────────┐
-│                      RELAY PROXY (TokenEx)                                           │
-│  Frontend → Backend (token) → connector-service ({ }) → TGAPI → Stripe (card)        │
-│                                    ↑                                                 │
-│                              TX-* headers + { } markers                              │
-│                                                                                      │
-│  PCI Scope: SAQ A/A-EP ✅  Portability: Universal                                    │
-└──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Configuration Summary
 
-| Pattern | Config Key | Primary Setting |
-|---------|------------|-----------------|
-| Network Proxy | `vault.mode` | `network_proxy` |
-| Transform Proxy | `vault.mode` | `transform_proxy` |
-| Relay Proxy | `vault.mode` | `relay_proxy` |
+| Pattern | Config Key | Primary Setting | Providers |
+|---------|------------|-----------------|-----------|
+| Network Proxy | `vault.mode` | `network_proxy` | VGS, Evervault |
+| Application Proxy | `vault.mode` | `application_proxy` | Basis Theory, TokenEx, Hyperswitch Vault |
 
 ---
 
@@ -342,7 +318,7 @@ curl "https://api.stripe.com/v1/payment_intents" \
 
 1. **Choose your mode** based on PCI requirements
 2. **If PCI-Disabled**: Select a [proxy pattern](#proxy-pattern-comparison) based on your needs
-3. **Subscribe to a vault provider** (VGS, Basis Theory, or TokenEx)
+3. **Subscribe to a vault provider** (VGS, Evervault, Basis Theory, TokenEx, or Hyperswitch Vault)
 4. **Configure connector-service** with vault credentials
 5. **Implement Vault SDK** in your frontend
 6. **Test with sandbox** credentials before going live
@@ -355,8 +331,7 @@ curl "https://api.stripe.com/v1/payment_intents" \
 |----------|-------------|
 | [README.md](./README.md) | This file—overview and comparison |
 | [network-proxy.md](./network-proxy.md) | VGS, Evervault integration (zero code changes) |
-| [transform-proxy.md](./transform-proxy.md) | Hyperswitch Vault integration (wrapped requests with expressions) |
-| [relay-proxy.md](./relay-proxy.md) | TokenEx integration (headers + markers) |
+| [application-proxy.md](./application-proxy.md) | Basis Theory, TokenEx, Hyperswitch Vault integration (UCS handles routing) |
 
 ---
 

@@ -465,8 +465,8 @@ connectors:
 | Already using VGS or Evervault | ✅ Perfect fit |
 | Need quick integration | ✅ Ideal |
 | Have infrastructure access | ✅ Required |
-| Need custom transformations | ❌ Use Transform Proxy |
-| Multiple vault providers | ❌ Use Transform Proxy |
+| Need custom transformations | ❌ Use Application Proxy |
+| Multiple vault providers | ❌ Use Application Proxy |
 
 ### Choose VGS if:
 - You want format-preserving tokens that look like real cards
@@ -521,8 +521,7 @@ connectors:
 ## Related Documentation
 
 - [Overview](./README.md) - PCI Compliance overview
-- [Transform Proxy](./transform-proxy.md) - Alternative: Expression-based transformation
-- [Relay Proxy](./relay-proxy.md) - Alternative: Header-driven relay
+- [Application Proxy](./application-proxy.md) - Alternative: UCS handles vault-specific routing (Basis Theory, TokenEx, Hyperswitch Vault)
 
 ---
 
