@@ -1389,6 +1389,8 @@ pub enum PaymentsResponseData {
     PaymentResourceUpdateResponse {
         status: common_enums::PaymentResourceUpdateStatus,
         status_code: u16,
+        connector_feature_data: Option<serde_json::Value>,
+        metadata: Option<serde_json::Value>,
     },
 }
 

@@ -3547,6 +3547,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             response: Ok(PaymentsResponseData::PaymentResourceUpdateResponse {
                 status,
                 status_code: item.http_code,
+                connector_feature_data: None,
+                metadata: None,
             }),
             ..item.router_data
         })

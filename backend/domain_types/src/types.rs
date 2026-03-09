@@ -11264,6 +11264,8 @@ pub fn generate_payment_update_metadata_response<T: PaymentMethodDataTypes>(
             PaymentsResponseData::PaymentResourceUpdateResponse {
                 status,
                 status_code,
+                metadata,
+                connector_feature_data,
             } => {
                 let grpc_status =
                     grpc_api_types::payments::UpdateMetadataStatus::foreign_from(status);
@@ -11276,8 +11278,10 @@ pub fn generate_payment_update_metadata_response<T: PaymentMethodDataTypes>(
                         .get_connector_response_headers_as_map(),
                     raw_connector_request,
                     raw_connector_response,
-                    connector_feature_data: None,
-                    metadata: None,
+                    connector_feature_data: convert_connector_metadata_to_secret_string(
+                        connector_feature_data,
+                    ),
+                    metadata: convert_connector_metadata_to_secret_string(metadata),
                     error: None,
                 })
             }
