@@ -430,13 +430,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification for Finix<T>
 {
 }
-
-
 
 macros::create_all_prerequisites!(
     connector_name: Finix,
