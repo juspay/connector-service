@@ -8,8 +8,8 @@
 
 This document outlines the protobuf message changes needed to support three vault proxy patterns:
 - **Network Proxy**: VGS, Evervault (transparent routing)
-- **Transform Proxy**: Basis Theory, Skyflow (template expressions)
-- **Relay Proxy**: TokenEx (header-driven with markers)
+- **Transform Proxy**: Hyperswitch Vault (template expressions in wrapped requests)
+- **Relay Proxy**: Basis Theory, TokenEx (header-driven with markers)
 
 ---
 
@@ -47,8 +47,7 @@ message VaultConfig {
     EvervaultConfig evervault = 2;
 
     // Transform Proxy providers (template expressions)
-    BasisTheoryConfig basis_theory = 3;
-    SkyflowConfig skyflow = 4;
+    HyperswitchVaultConfig hyperswitch_vault = 3;
 
     // Relay Proxy providers (header-driven)
     TokenExConfig tokenex = 5;
@@ -172,44 +171,52 @@ message BasisTheoryConfig {
 
 ---
 
-### SkyflowConfig
+### HyperswitchVaultConfig
 
 ```protobuf
-// Skyflow Transform Proxy configuration
-// Used for: Connection-based detokenizing proxy
-message SkyflowConfig {
-  // Skyflow Vault ID
-  // Format: UUID (e.g., "f80c5d4a-5b6c-4e4f-8c3a-3b2a1c0d9e8f")
-  // Found in Skyflow Dashboard → Vaults
-  string vault_id = 1;
+// Hyperswitch Vault Transform Proxy configuration
+// Used for: Wrapped request proxy with {{$variable}} expressions
+message HyperswitchVaultConfig {
+  // Hyperswitch API key
+  // Format: "dev_xxx" (sandbox) or "prod_xxx" (production)
+  // Get from Hyperswitch Dashboard → API Keys
+  string api_key = 1;
 
-  // Skyflow Connection URL
-  // Default: "https://connection.skyflow.com/v1/connections"
-  string connection_url = 2;
+  // Hyperswitch Profile ID
+  // Identifies your merchant profile
+  // Found in Hyperswitch Dashboard → Settings
+  string profile_id = 2;
 
-  // Bearer token for API authentication
-  // Generated via Skyflow OAuth or Service Account
-  // Short-lived (typically 1 hour), UCS handles refresh
-  string bearer_token = 3;
+  // Hyperswitch Proxy endpoint
+  // Default: "https://sandbox.hyperswitch.io/proxy" (sandbox)
+  // Production: "https://api.hyperswitch.io/proxy"
+  string proxy_url = 3;
 
-  // Default connection name
-  // If set, this connection is used for all requests
-  // If not set, UCS must look up connection per-connector
-  string connection_name = 4;
+  // Environment
+  // SANDBOX: Use for testing
+  // PRODUCTION: Use for live transactions
+  HyperswitchEnvironment environment = 4;
+}
+
+enum HyperswitchEnvironment {
+  HYPERSWITCH_ENVIRONMENT_UNSPECIFIED = 0;
+  HYPERSWITCH_ENVIRONMENT_SANDBOX = 1;
+  HYPERSWITCH_ENVIRONMENT_PRODUCTION = 2;
 }
 ```
 
 **Key Fields Explained:**
-- `vault_id`: Your Skyflow vault (isolated data store)
-- `connection_url`: Skyflow Connections API endpoint
-- `bearer_token`: OAuth token for API access (UCS manages rotation)
-- `connection_name`: Pre-configured connection to destination (e.g., Stripe)
+- `api_key`: Your Hyperswitch API key for authentication
+- `profile_id`: Your merchant profile identifier
+- `proxy_url`: The Hyperswitch proxy endpoint
+- `environment`: Sandbox for testing, Production for live
 
 **How it works:**
-1. UCS sends request to `{connection_url}/{connection_name}/{endpoint}`
-2. Request body contains token references with `skyflow_id`
-3. Skyflow Connection detokenizes and forwards to destination
-4. Response flows back through the same path
+1. UCS constructs wrapped request with `destination_url`, `headers`, `request_body`
+2. Request body contains `{{$variable}}` expressions (e.g., `{{$card_number}}`)
+3. Hyperswitch Vault evaluates expressions and injects real card data
+4. Forwarded to destination PSP with detokenized data
+5. Response flows back through the same path
 
 ---
 
@@ -307,20 +314,19 @@ message ConnectorConfig {
 
 ```protobuf
 // Additional configuration for Transform Proxy connectors
-// This is provider-agnostic and works with Basis Theory, Skyflow, etc.
+// This is provider-agnostic and works with Hyperswitch Vault, etc.
 message TransformProxyConfig {
   // Expression syntax (provider-specific)
-  // Basis Theory: "{{ }}"
-  // Skyflow: "skyflow_id"
+  // Hyperswitch Vault: "{{$variable}}"
   string expression_syntax = 1;
 
   // Token property mappings
   // Maps standard fields to provider-specific token properties
   repeated TokenPropertyMapping token_mappings = 2;
 
-  // Connection name (for Skyflow-style providers)
-  // The pre-configured connection to use
-  string connection_name = 3;
+  // Profile ID (for Hyperswitch Vault)
+  // The merchant profile to use
+  string profile_id = 3;
 }
 
 // Maps a standard field to a vault-specific property
@@ -330,8 +336,7 @@ message TokenPropertyMapping {
   string standard_field = 1;
 
   // Provider-specific property path
-  // Basis Theory: "number", "expiration_month"
-  // Skyflow: "cards.card_number", "cards.expiry_month"
+  // Hyperswitch Vault: "$card_number", "$card_exp_month"
   string vault_property = 2;
 }
 ```
@@ -349,8 +354,8 @@ message TokenPropertyMapping {
 |----------|---------------|-------------------|----------------|
 | **VGS** | Network | `tenant_id`, `environment` | URL-based proxy |
 | **Evervault** | Network | `team_id`, `app_id`, `api_key` | HTTP CONNECT relay |
-| **Basis Theory** | Transform | `api_key`, `proxy_url` | `BT-PROXY-URL` header |
-| **Skyflow** | Transform | `vault_id`, `bearer_token` | Connection endpoint |
+| **Hyperswitch Vault** | Transform | `api_key`, `profile_id` | Wrapped request with `destination_url` |
+| **Basis Theory** | Relay | `api_key`, `proxy_url` | `BT-PROXY-URL` header |
 | **TokenEx** | Relay | `api_key`, `tokenex_id` | `TX-URL` header |
 
 ---

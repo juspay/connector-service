@@ -342,8 +342,8 @@ UCS supports three vault integration patterns, each based on different tokenizat
 | Pattern | How It Works | Example Providers |
 |---------|--------------|-------------------|
 | **Network Proxy** | Route requests through vault's proxy endpoint; detokenization happens transparently | VGS, Evervault |
-| **Transform Proxy** | Use template expressions (`{{token}}`) for explicit detokenization control | Basis Theory, Skyflow |
-| **Relay Proxy** | Header-driven routing with token markers (`{token}`) | TokenEx |
+| **Transform Proxy** | Use template expressions (`{{$variable}}`) in wrapped requests for explicit detokenization control | Hyperswitch Vault |
+| **Relay Proxy** | Header-driven routing with proxy URLs in headers; use token markers in body | Basis Theory, TokenEx |
 
 ### PCI Integration Modes
 

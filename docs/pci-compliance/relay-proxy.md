@@ -1,6 +1,6 @@
-# Relay Proxy (TokenEx)
+# Relay Proxy (Basis Theory, TokenEx)
 
-> Header-driven request relay with curly-brace token markers. Route via HTTP headers, mark tokens with `{ }`, and let the relay handle the rest.
+> Header-driven request relay with token markers. Route via HTTP headers, mark tokens with expressions, and let the relay handle the rest.
 
 ---
 
@@ -50,7 +50,42 @@ sequenceDiagram
 
 ---
 
-## Example Provider: TokenEx
+## Example Providers
+
+### Basis Theory
+
+| Attribute | Value |
+|-----------|-------|
+| **Documentation** | [Basis Theory Docs](https://developers.basistheory.com) |
+| **Proxy Type** | Ephemeral or Pre-configured Proxy |
+| **Token Format** | UUID `26818785-547b-4b28-b0fa-531377e99f4e` |
+| **Marker Syntax** | `{{ token_id.property }}` double curly braces |
+| **Routing** | HTTP header (`BT-PROXY-URL`) |
+
+#### Token Format
+
+Basis Theory uses UUID tokens with clear structure:
+
+```json
+{
+  "id": "26818785-547b-4b28-b0fa-531377e99f4e",
+  "type": "card",
+  "data": {
+    "number": "4242424242424242",
+    "expiration_month": 12,
+    "expiration_year": 2025
+  }
+}
+```
+
+#### How It Works
+
+1. UCS sends request to Basis Theory proxy endpoint
+2. Request includes `BT-PROXY-URL` header specifying the destination PSP URL
+3. Request body contains `{{ token.property }}` expressions marking detokenization points
+4. Basis Theory evaluates expressions and forwards to PSP with real data
+
+### TokenEx
 
 | Attribute | Value |
 |-----------|-------|
@@ -60,7 +95,7 @@ sequenceDiagram
 | **Marker Syntax** | `{token}` curly braces |
 | **Routing** | HTTP headers (`TX-URL`, `TX-Method`) |
 
-### Token Format
+#### Token Format
 
 TokenEx uses **format-preserving tokens** that look like the original data:
 
@@ -76,7 +111,7 @@ This provides maximum compatibility with systems that validate card number forma
 
 ## UCS Integration Flow
 
-When integrating with UCS, the merchant sends tokens in the request body. UCS constructs the TGAPI request with `TX-*` headers and `{ }` token markers, then routes it through TokenEx.
+When integrating with UCS, the merchant sends tokens in the request body. UCS constructs the request with headers (like `BT-PROXY-URL` or `TX-URL`) and token markers, then routes it through the Relay Proxy.
 
 ```mermaid
 sequenceDiagram
