@@ -176,12 +176,7 @@ impl
         let connector_customer_id = item
             .state
             .as_ref()
-            .and_then(|state| state.connector_customer_id.clone())
-            .or_else(|| {
-                item.customer
-                    .as_ref()
-                    .and_then(|c| c.connector_customer_id.clone())
-            });
+            .and_then(|state| state.connector_customer_id.clone());
 
         let resolved_state = Some(ConnectorState {
             access_token,
