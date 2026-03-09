@@ -95,12 +95,9 @@ where
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<Option<MerchantAuthenticationServiceCreateAccessTokenResponse>, tonic::Status> {
-        let payment_method = payload.payment_method();
-        let connector_data = ConnectorData::<
-            domain_types::payment_method_data::DefaultPCIHolder,
-        >::get_connector_by_name(connector);
         let should_do_access_token = {
-            let payment_method = payment_method
+            let payment_method = payload
+                .payment_method()
                 .map(common_enums::PaymentMethod::foreign_try_from)
                 .transpose()
                 .map_err(|err| {
@@ -108,6 +105,9 @@ where
                         "invalid payment_method in request payload: {err}"
                     ))
                 })?;
+            let connector_data = ConnectorData::<
+                domain_types::payment_method_data::DefaultPCIHolder,
+            >::get_connector_by_name(connector);
             connector_data
                 .connector
                 .should_do_access_token(payment_method)
@@ -147,8 +147,13 @@ where
         extensions: &tonic::Extensions,
     ) -> Result<Option<CustomerServiceCreateResponse>, tonic::Status> {
         let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
+        let connector_customer_id = payload
+            .state
+            .as_ref()
+            .and_then(|state| state.connector_customer_id.as_ref());
         let should_create_connector_customer =
-            connector_data.connector.should_create_connector_customer();
+            connector_data.connector.should_create_connector_customer()
+                && connector_customer_id.is_none();
 
         let create_customer_response = match should_create_connector_customer {
             true => {

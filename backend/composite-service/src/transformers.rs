@@ -74,14 +74,9 @@ impl
         ),
     ) -> Self {
         let connector_customer_id_from_req = item
-            .customer
+            .state
             .as_ref()
-            .and_then(|c| c.connector_customer_id.clone())
-            .or_else(|| {
-                item.state
-                    .as_ref()
-                    .and_then(|state| state.connector_customer_id.clone())
-            });
+            .and_then(|state| state.connector_customer_id.clone());
 
         let connector_customer_id =
             get_connector_customer_id(connector_customer_id_from_req, create_customer_response);

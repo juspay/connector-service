@@ -13,8 +13,8 @@ const DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS: &[&str] = &["connector"];
 // Fields intentionally present only in the composite request.
 const DEFAULT_IGNORE_COMPOSITE_ONLY_FIELDS: &[&str] = &[];
 
-// Fields present only in the composite get request (not in any granular get request).
-const IGNORE_PAYMENT_METHOD_FOR_GET_COMPOSITE: &[&str] = &["payment_method"];
+// Fields present only in composite requests for flows that don't have payment_method in their granular request
+const IGNORE_COMPOSITE_ONLY_PAYMENT_METHOD: &[&str] = &["payment_method"];
 
 struct CompositeFlowSpec {
     name: &'static str,
@@ -44,7 +44,7 @@ const COMPOSITE_FLOW_SPECS: &[CompositeFlowSpec] = &[
             "PaymentServiceGetRequest",
         ],
         ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
-        ignore_composite_only_fields: IGNORE_PAYMENT_METHOD_FOR_GET_COMPOSITE,
+        ignore_composite_only_fields: IGNORE_COMPOSITE_ONLY_PAYMENT_METHOD,
     },
 ];
 
