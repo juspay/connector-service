@@ -51,12 +51,8 @@ fun buildRequest(): PaymentServiceAuthorizeRequest =
 fun buildMetadata(): Map<String, String> {
     val apiKey = System.getenv("STRIPE_API_KEY") ?: "sk_test_placeholder"
     return mapOf(
-        "x-connector" to "Stripe",
-        "x-merchant-id" to "test_merchant_123",
-        "x-request-id" to "smoke-test-001",
-        "x-tenant-id" to "public",
-        "x-auth" to "body-key",
-        "x-api-key" to apiKey,
+        "connector" to "Stripe",
+        "connector_auth_type" to """{"Stripe":{"api_key":"$apiKey"}}""",
     )
 }
 

@@ -101,16 +101,17 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
 fn build_metadata(api_key: &str) -> HashMap<String, String> {
     let mut metadata = HashMap::new();
 
-    // Required metadata headers (used by ffi_headers_to_masked_metadata)
-    metadata.insert("x-connector".to_string(), "Stripe".to_string());
-    metadata.insert("x-merchant-id".to_string(), "test_merchant_123".to_string());
-    metadata.insert("x-request-id".to_string(), "rust-smoke-001".to_string());
-    metadata.insert("x-tenant-id".to_string(), "public".to_string());
-    metadata.insert("x-auth".to_string(), "header-key".to_string());
-
-    // Optional headers
-    metadata.insert("x-api-key".to_string(), api_key.to_string());
-
+    // Connector routing (used by parse_metadata / build_ffi_request)
+    metadata.insert("connector".to_string(), "Stripe".to_string());
+    metadata.insert(
+        "connector_auth_type".to_string(),
+        serde_json::json!({
+            "Stripe": {
+                "api_key": api_key,
+            }
+        })
+        .to_string(),
+    );
     metadata
 }
 

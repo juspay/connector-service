@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.03.09.0
+
+### Bug Fixes
+
+- **clippy:** Fix clippy error ([#596](https://github.com/juspay/connector-service/pull/596)) ([`eb197f7`](https://github.com/juspay/connector-service/commit/eb197f7e187315dcbe3a0e86749660eb99a952e4))
+
+### Refactors
+
+- **client:** Per-service SDK clients from services.proto boundaries ([#595](https://github.com/juspay/connector-service/pull/595)) ([`911373a`](https://github.com/juspay/connector-service/commit/911373a896eebc787a8c2b592863c1e46be58d34))
+
+**Full Changelog:** [`2026.03.06.0...2026.03.09.0`](https://github.com/juspay/connector-service/compare/2026.03.06.0...2026.03.09.0)
+
+- - -
+
 ## 2026.03.06.0
 
 ### Features

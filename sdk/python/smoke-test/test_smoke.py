@@ -6,6 +6,7 @@ directory, copies this script there, and runs it in-place so imports
 resolve against the installed package.
 """
 
+import json
 import os
 import asyncio
 
@@ -33,14 +34,14 @@ async def run_test():
 
     api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
 
-    # Metadata now strictly contains transport/context headers
+    # Metadata: connector + typed auth (X-Connector-Auth style from main)
     metadata = {
-        "x-connector": "Stripe",
-        "x-merchant-id": "test_merchant_123",
-        "x-request-id": "test-pack-001",
-        "x-tenant-id": "public",
-        "x-auth": "body-key",
-        "x-api-key": api_key,
+        "connector": "Stripe",
+        "connector_auth_type": json.dumps({
+            "Stripe": {
+                "api_key": api_key,
+            }
+        }),
     }
 
     # 1. Initialize Client with ConnectorConfig + optional RequestConfig defaults
@@ -77,7 +78,7 @@ async def run_test():
     ffi_opts = FfiOptions(
         environment=Environment.SANDBOX,
         connector=Connector.STRIPE,
-        auth=identity.auth,
+        auth=config.auth,
     )
     options_bytes = ffi_opts.SerializeToString()
 

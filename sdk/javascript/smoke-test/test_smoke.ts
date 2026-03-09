@@ -43,13 +43,6 @@ const metadata: Record<string, string> = {
       client_secret: PAYPAL_CREDS.client_secret,
     },
   }),
-  "x-connector": "Paypal",
-  "x-merchant-id": "test_merchant_123",
-  "x-request-id": "test-pack-001",
-  "x-tenant-id": "public",
-  "x-auth": "body-key",
-  "x-api-key": PAYPAL_CREDS.client_secret,
-  "x-key1": PAYPAL_CREDS.client_id,
 };
 
 // 1. ConnectorConfig (connector, auth, environment)
