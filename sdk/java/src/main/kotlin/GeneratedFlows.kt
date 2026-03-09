@@ -3,7 +3,7 @@
 
 package payments
 
-import ucs.v2.Payment.*
+import types.Payment.*
 
 import uniffi.connector_service_ffi.authenticateReqTransformer
 import uniffi.connector_service_ffi.authenticateResTransformer

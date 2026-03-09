@@ -12,7 +12,7 @@
 
 package payments
 
-import ucs.v2.SdkConfig
+import types.SdkConfig
 
 typealias Environment = SdkConfig.Environment
 typealias ClientIdentity = SdkConfig.ClientIdentity
