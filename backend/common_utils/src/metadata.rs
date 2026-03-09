@@ -184,18 +184,6 @@ impl MaskedMetadata {
         })
     }
 
-    /// Extract merchant ID from metadata, generating a default if missing.
-    ///
-    /// Tries to get `X_MERCHANT_ID` from the metadata, falling back to
-    /// a generated ID with `"default_merchant"` prefix if the header is absent.
-    pub fn merchant_id(&self) -> String {
-        self.get_raw(crate::consts::X_MERCHANT_ID)
-            .unwrap_or_else(|| {
-                tracing::debug!("x-merchant-id header missing, generating with default prefix");
-                crate::fp_utils::generate_id_with_default_len("default_merchant")
-            })
-    }
-
     /// Get all metadata as HashMap with masking for logging
     pub fn get_all_masked(&self) -> std::collections::HashMap<String, String> {
         self.raw_metadata
@@ -219,4 +207,15 @@ impl MaskedMetadata {
             })
             .collect()
     }
+}
+
+/// Return the merchant ID if present, or generate a default.
+///
+/// Shared fallback logic used by both the gRPC path (raw `MetadataMap`)
+/// and the FFI path (`MaskedMetadata`).
+pub fn merchant_id_or_default(value: Option<&str>) -> String {
+    value.map(|s| s.to_string()).unwrap_or_else(|| {
+        tracing::warn!("x-merchant-id header missing, using default merchant ID");
+        "DefaultMerchantId".to_string()
+    })
 }

@@ -394,12 +394,14 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
 
 /// Helper function for extracting merchant ID from metadata.
 ///
-/// Delegates to `MaskedMetadata::merchant_id()` which auto-generates a default
-/// when the `x-merchant-id` header is missing, then parses it into a `MerchantId`.
+/// Uses the shared `merchant_id_or_default` fallback: if the `x-merchant-id`
+/// header is missing, a default ID is auto-generated.
 pub fn extract_merchant_id_from_metadata(
     metadata: &MaskedMetadata,
 ) -> Result<common_utils::id_type::MerchantId, ApplicationErrorResponse> {
-    let merchant_id_str = metadata.merchant_id();
+    let merchant_id_str = common_utils::metadata::merchant_id_or_default(
+        metadata.get_raw(consts::X_MERCHANT_ID).as_deref(),
+    );
     Ok(merchant_id_str
         .parse::<common_utils::id_type::MerchantId>()
         .map_err(|e| {
