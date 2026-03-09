@@ -3560,6 +3560,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for Conn
             AuthType::Loonio(_) => Ok(Self::Loonio),
             AuthType::Gigadat(_) => Ok(Self::Gigadat),
             AuthType::Hyperpg(_) => Ok(Self::Hyperpg),
+            AuthType::Peachpayments(_) => Ok(Self::Peachpayments),
             AuthType::Zift(_) => Ok(Self::Zift),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 ApplicationErrorResponse::BadRequest(ApiError {
