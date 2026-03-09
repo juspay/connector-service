@@ -12,10 +12,10 @@
 
 package payments
 
-typealias PaymentMethod = ucs.v2.PaymentMethods.PaymentMethod
-typealias CardDetails = ucs.v2.PaymentMethods.CardDetails
-typealias CardNumberType = ucs.v2.PaymentMethods.CardNumberType
-typealias NetworkTokenType = ucs.v2.PaymentMethods.NetworkTokenType
-typealias CardRedirect = ucs.v2.PaymentMethods.CardRedirect
-typealias CardNetwork = ucs.v2.PaymentMethods.CardNetwork
-typealias TokenPaymentMethodType = ucs.v2.PaymentMethods.TokenPaymentMethodType
+typealias PaymentMethod = types.PaymentMethods.PaymentMethod
+typealias CardDetails = types.PaymentMethods.CardDetails
+typealias CardNumberType = types.PaymentMethods.CardNumberType
+typealias NetworkTokenType = types.PaymentMethods.NetworkTokenType
+typealias CardRedirect = types.PaymentMethods.CardRedirect
+typealias CardNetwork = types.PaymentMethods.CardNetwork
+typealias TokenPaymentMethodType = types.PaymentMethods.TokenPaymentMethodType

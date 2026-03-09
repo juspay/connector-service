@@ -15,7 +15,10 @@ import payments.CaptureMethod
 import payments.AuthenticationType
 import payments.FfiConnectorHttpRequest
 import payments.FfiOptions
-import payments.EnvOptions
+import payments.ConnectorConfig
+import payments.RequestConfig
+import payments.Connector
+import payments.Environment
 import uniffi.connector_service_ffi.UniffiException
 import uniffi.connector_service_ffi.authorizeReqTransformer
 
@@ -50,19 +53,21 @@ fun buildMetadata(): Map<String, String> {
     return mapOf(
         "connector" to "Stripe",
         "connector_auth_type" to """{"Stripe":{"api_key":"$apiKey"}}""",
-        "x-connector" to "Stripe",
-        "x-merchant-id" to "test_merchant_123",
-        "x-request-id" to "smoke-test-001",
-        "x-tenant-id" to "public",
-        "x-auth" to "body-key",
-        "x-api-key" to apiKey,
     )
 }
 
-fun buildOptions(): FfiOptions =
-    FfiOptions.newBuilder()
-        .setEnv(EnvOptions.newBuilder().setTestMode(true).build())
-        .build()
+fun buildConfig(): ConnectorConfig {
+    val apiKey = System.getenv("STRIPE_API_KEY") ?: "sk_test_placeholder"
+    return ConnectorConfig.newBuilder().apply {
+        connector = Connector.STRIPE
+        environment = Environment.SANDBOX
+        authBuilder.stripeBuilder.apiKeyBuilder.value = apiKey
+    }.build()
+}
+
+fun buildDefaults(): RequestConfig {
+    return RequestConfig.getDefaultInstance()
+}
 
 fun assert(condition: Boolean, message: String) {
     if (!condition) {
@@ -76,7 +81,14 @@ fun testLowLevelFfi() {
 
     val requestBytes = buildRequest().toByteArray()
     val metadata = buildMetadata()
-    val optionsBytes = buildOptions().toByteArray()
+    
+    // Low-level FFI takes FfiOptions as context
+    val ffiOptions = FfiOptions.newBuilder().apply {
+        connector = Connector.STRIPE
+        environment = Environment.SANDBOX
+        auth = buildConfig().auth
+    }.build()
+    val optionsBytes = ffiOptions.toByteArray()
 
     try {
         val connectorRequestBytes = authorizeReqTransformer(requestBytes, metadata, optionsBytes)
@@ -99,7 +111,7 @@ fun testLowLevelFfi() {
     }
 }
 
-fun testFullRoundTrip(ffiOptions: FfiOptions) {
+fun testFullRoundTrip() {
     println("\n=== Test 2: Full round-trip (PaymentClient) ===")
 
     val apiKey = System.getenv("STRIPE_API_KEY") ?: ""
@@ -108,9 +120,11 @@ fun testFullRoundTrip(ffiOptions: FfiOptions) {
         return
     }
 
-    val client = PaymentClient()
+    val config = buildConfig()
+    val defaults = buildDefaults()
+    val client = PaymentClient(config, defaults)
     try {
-        val response = client.authorize(buildRequest(), buildMetadata(), ffiOptions)
+        val response = client.authorize(buildRequest(), buildMetadata(), null)
         println("  Response status: ${response.status}")
         println("  PASSED")
     } catch (e: UniffiException) {
@@ -124,8 +138,7 @@ fun testFullRoundTrip(ffiOptions: FfiOptions) {
 }
 
 fun main() {
-    val ffiOptions = buildOptions()
     testLowLevelFfi()
-    testFullRoundTrip(ffiOptions)
+    testFullRoundTrip()
     println("\nAll checks passed.")
 }
