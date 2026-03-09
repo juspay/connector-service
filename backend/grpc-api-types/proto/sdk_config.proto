@@ -9,7 +9,7 @@
 
 syntax = "proto3";
 
-package ucs.v2;
+package types;
 
 import "payment.proto";
 

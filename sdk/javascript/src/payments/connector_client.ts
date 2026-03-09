@@ -16,14 +16,14 @@ import { Dispatcher } from "undici";
 import { UniffiClient } from "./uniffi_client";
 import { execute, createDispatcher, HttpRequest, ConnectorError } from "../http_client";
 // @ts-ignore - protobuf generated files might not have types yet
-import { ucs } from "./generated/proto";
+import { types } from "./generated/proto";
 
-const v2 = ucs.v2;
+const v2 = types;
 
 export class ConnectorClient {
   private uniffi: UniffiClient;
-  private config: ucs.v2.ConnectorConfig;
-  private defaults: ucs.v2.IRequestConfig;
+  private config: types.ConnectorConfig;
+  private defaults: types.IRequestConfig;
   private dispatcher: Dispatcher;
 
   /**
@@ -34,12 +34,12 @@ export class ConnectorClient {
    * @param libPath - optional path to the UniFFI shared library.
    */
   constructor(
-    config: ucs.v2.IConnectorConfig,
-    defaults: ucs.v2.IRequestConfig = {},
+    config: types.IConnectorConfig,
+    defaults: types.IRequestConfig = {},
     libPath?: string
   ) {
     this.uniffi = new UniffiClient(libPath);
-    this.config = ucs.v2.ConnectorConfig.create(config);
+    this.config = types.ConnectorConfig.create(config);
     this.defaults = defaults;
 
     if (config.connector === undefined) {
@@ -57,15 +57,15 @@ export class ConnectorClient {
   /**
    * Merges request-level options with client defaults. Environment comes from config (immutable).
    */
-  private _resolveConfig(overrides?: ucs.v2.IRequestConfig | null): {
-    ffi: ucs.v2.FfiOptions;
-    http: ucs.v2.IHttpConfig;
+  private _resolveConfig(overrides?: types.IRequestConfig | null): {
+    ffi: types.FfiOptions;
+    http: types.IHttpConfig;
   } {
     const opt = overrides || {};
     const clientHttp = this.defaults.http || {};
     const overrideHttp = opt.http || {};
 
-    const http: ucs.v2.IHttpConfig = {
+    const http: types.IHttpConfig = {
       totalTimeoutMs: overrideHttp.totalTimeoutMs ?? clientHttp.totalTimeoutMs,
       connectTimeoutMs: overrideHttp.connectTimeoutMs ?? clientHttp.connectTimeoutMs,
       responseTimeoutMs: overrideHttp.responseTimeoutMs ?? clientHttp.responseTimeoutMs,
@@ -74,8 +74,8 @@ export class ConnectorClient {
       caCert: overrideHttp.caCert ?? clientHttp.caCert,
     };
 
-    const ffi = ucs.v2.FfiOptions.create({
-      environment: this.config.environment ?? ucs.v2.Environment.SANDBOX,
+    const ffi = types.FfiOptions.create({
+      environment: this.config.environment ?? types.Environment.SANDBOX,
       connector: this.config.connector,
       auth: this.config.auth,
     });
@@ -88,14 +88,12 @@ export class ConnectorClient {
    *
    * @param flow - Flow name matching the FFI transformer prefix (e.g. "authorize").
    * @param requestMsg - Protobuf request message object.
-   * @param metadata - Dict with connector routing and auth info.
-   * @param options - Optional RequestConfig override (Http, Vault).
+   * @param options - Optional ConfigOptions override (Environment, Http).
    */
   async _executeFlow(
     flow: string,
     requestMsg: object,
-    metadata: Record<string, string>,
-    options?: ucs.v2.IRequestConfig | null,
+    options?: types.IRequestConfig | null,
     reqTypeName?: string,
     resTypeName?: string
   ): Promise<unknown> {
@@ -114,7 +112,7 @@ export class ConnectorClient {
     const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
 
     // 3. Build connector HTTP request via FFI
-    const resultBytes = this.uniffi.callReq(flow, requestBytes, metadata, optionsBytes);
+    const resultBytes = this.uniffi.callReq(flow, requestBytes, optionsBytes);
     const connectorReq = v2.FfiConnectorHttpRequest.decode(resultBytes);
 
     const connectorRequest: HttpRequest = {
@@ -140,7 +138,7 @@ export class ConnectorClient {
     const resBytes = Buffer.from(v2.FfiConnectorHttpResponse.encode(resProto).finish());
 
     // 6. Parse connector response via FFI and decode
-    const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, metadata, optionsBytes);
+    const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, optionsBytes);
     return resType.decode(resultBytesRes);
   }
 
@@ -151,8 +149,7 @@ export class ConnectorClient {
   async _executeDirect(
     flow: string,
     requestMsg: object,
-    metadata: Record<string, string>,
-    options?: ucs.v2.IRequestConfig | null,
+    options?: types.IRequestConfig | null,
     reqTypeName?: string,
     resTypeName?: string
   ): Promise<unknown> {
@@ -171,7 +168,7 @@ export class ConnectorClient {
     const optionsBytes = Buffer.from(v2.FfiOptions.encode(ffi).finish());
 
     // 3. Call the single-step transformer directly (no HTTP)
-    const resultBytes = this.uniffi.callDirect(flow, requestBytes, metadata, optionsBytes);
+    const resultBytes = this.uniffi.callDirect(flow, requestBytes, optionsBytes);
     return resType.decode(resultBytes);
   }
 }

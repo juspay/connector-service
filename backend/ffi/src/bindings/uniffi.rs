@@ -8,7 +8,6 @@
 #[cfg(feature = "uniffi")]
 mod uniffi_bindings_inner {
     use crate::errors::UniffiError;
-    use crate::utils::ffi_headers_to_masked_metadata;
     use bytes::Bytes;
     use common_utils::request::Request;
     use domain_types::connector_types::ConnectorEnum;
@@ -20,13 +19,11 @@ mod uniffi_bindings_inner {
     };
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
-    use std::collections::HashMap;
 
     // ── Shared helpers ────────────────────────────────────────────────────────
 
-    /// Build FfiMetadataPayload from the caller's flat HashMap and FfiOptions.
+    /// Build FfiMetadataPayload from FfiOptions.
     fn parse_metadata(
-        _metadata: &HashMap<String, String>,
         options: &FfiOptions,
     ) -> Result<crate::types::FfiMetadataPayload, UniffiError> {
         // 1. Resolve Connector (Taken from FfiOptions)
@@ -132,7 +129,6 @@ mod uniffi_bindings_inner {
     /// and encode the resulting connector HTTP request as protobuf bytes.
     fn run_req_transformer<Req>(
         request_bytes: Vec<u8>,
-        metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
         handler: impl Fn(
             crate::types::FfiRequestData<Req>,
@@ -146,13 +142,12 @@ mod uniffi_bindings_inner {
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_options = parse_ffi_options(options_bytes)?;
-        let ffi_metadata = parse_metadata(&metadata, &ffi_options)?;
-        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+        let ffi_metadata = parse_metadata(&ffi_options)?;
 
         let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
-            masked_metadata: Some(masked_metadata),
+            masked_metadata: None,
         };
 
         let environment = Some(ffi_options.environment());
@@ -169,7 +164,6 @@ mod uniffi_bindings_inner {
     fn run_res_transformer<Req, Res>(
         response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
-        metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
         handler: impl Fn(
             crate::types::FfiRequestData<Req>,
@@ -187,13 +181,12 @@ mod uniffi_bindings_inner {
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_options = parse_ffi_options(options_bytes)?;
-        let ffi_metadata = parse_metadata(&metadata, &ffi_options)?;
-        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+        let ffi_metadata = parse_metadata(&ffi_options)?;
 
         let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
-            masked_metadata: Some(masked_metadata),
+            masked_metadata: None,
         };
 
         let environment = Some(ffi_options.environment());
@@ -222,12 +215,10 @@ mod uniffi_bindings_inner {
                 #[uniffi::export]
                 pub fn [<$flow _req_transformer>](
                     request_bytes: Vec<u8>,
-                    metadata: HashMap<String, String>,
                     options_bytes: Vec<u8>,
                 ) -> Result<Vec<u8>, UniffiError> {
                     run_req_transformer::<$req_type>(
                         request_bytes,
-                        metadata,
                         options_bytes,
                         $req_handler,
                     )
@@ -237,13 +228,11 @@ mod uniffi_bindings_inner {
                 pub fn [<$flow _res_transformer>](
                     response_bytes: Vec<u8>,
                     request_bytes: Vec<u8>,
-                    metadata: HashMap<String, String>,
                     options_bytes: Vec<u8>,
                 ) -> Result<Vec<u8>, UniffiError> {
                     run_res_transformer::<$req_type, _>(
                         response_bytes,
                         request_bytes,
-                        metadata,
                         options_bytes,
                         $res_handler,
                     )
@@ -268,7 +257,6 @@ mod uniffi_bindings_inner {
     #[uniffi::export]
     pub fn handle_event_transformer(
         request_bytes: Vec<u8>,
-        metadata: HashMap<String, String>,
         options_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, UniffiError> {
         use prost::Message as _;
@@ -277,13 +265,12 @@ mod uniffi_bindings_inner {
                 .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_options = parse_ffi_options(options_bytes)?;
-        let ffi_metadata = parse_metadata(&metadata, &ffi_options)?;
-        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+        let ffi_metadata = parse_metadata(&ffi_options)?;
 
         let request = crate::types::FfiRequestData {
             payload,
             extracted_metadata: ffi_metadata,
-            masked_metadata: Some(masked_metadata),
+            masked_metadata: None,
         };
 
         let environment = Some(ffi_options.environment());

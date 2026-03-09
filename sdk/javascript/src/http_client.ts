@@ -1,8 +1,8 @@
 import { ProxyAgent, Agent, Dispatcher } from "undici";
 // @ts-ignore
-import { ucs } from "./payments/generated/proto";
+import { types } from "./payments/generated/proto";
 
-const Defaults = ucs.v2.HttpDefault;
+const Defaults = types.HttpDefault;
 
 /**
  * Normalized HTTP Request structure for the Connector Service.
@@ -43,7 +43,7 @@ export class ConnectorError extends Error {
 /**
  * Resolve proxy URL, honoring bypass rules.
  */
-export function resolveProxyUrl(url: string, proxy?: ucs.v2.IProxyOptions | null): string | null {
+export function resolveProxyUrl(url: string, proxy?: types.IProxyOptions | null): string | null {
   if (!proxy) return null;
   const shouldBypass = Array.isArray(proxy.bypassUrls) && proxy.bypassUrls.includes(url);
   if (shouldBypass) return null;
@@ -54,7 +54,7 @@ export function resolveProxyUrl(url: string, proxy?: ucs.v2.IProxyOptions | null
  * Creates a high-performance dispatcher with specialized fintech timeouts.
  * (The instance-level connection pool)
  */
-export function createDispatcher(config: ucs.v2.IHttpConfig): Dispatcher {
+export function createDispatcher(config: types.IHttpConfig): Dispatcher {
   let ca: string | Uint8Array | undefined;
   if (config.caCert) {
     if (config.caCert.pem) {
@@ -93,7 +93,7 @@ export function createDispatcher(config: ucs.v2.IHttpConfig): Dispatcher {
  */
 export async function execute(
   request: HttpRequest,
-  options: ucs.v2.IHttpConfig = {},
+  options: types.IHttpConfig = {},
   dispatcher?: Dispatcher // Pass the instance-owned pool here
 ): Promise<HttpResponse> {
   const { url, method, headers, body } = request;
