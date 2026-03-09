@@ -1,5 +1,6 @@
 use crate::types::ResponseRouterData;
-use common_enums::{AttemptStatus, RefundStatus};
+use common_enums::{AttemptStatus, Currency, RefundStatus};
+use common_utils::{pii::Email, types::MinorUnit};
 use domain_types::{
     connector_flow::{
         Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void,
@@ -12,7 +13,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{self, ConnectorAuthType},
+    router_data::{self, ConnectorAuthType, ConnectorSpecificAuth},
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -46,6 +47,29 @@ impl TryFrom<&ConnectorAuthType> for FinixAuthType {
                 finix_password: api_secret.to_owned(),
                 merchant_id: key2.to_owned(),
                 merchant_identity_id: key1.to_owned(),
+            }),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
+        }
+    }
+}
+
+impl TryFrom<&ConnectorSpecificAuth> for FinixAuthType {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorSpecificAuth::Finix {
+                finix_user_name,
+                finix_password,
+                merchant_identity_id,
+                merchant_id,
+            } => Ok(Self {
+                finix_user_name: finix_user_name.clone(),
+                finix_password: finix_password.clone(),
+                merchant_id: merchant_id.clone(),
+                merchant_identity_id: merchant_identity_id.clone(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
@@ -159,7 +183,7 @@ pub struct FinixIdentityEntity {
     pub phone: Option<Secret<String>>,
     pub first_name: Option<Secret<String>>,
     pub last_name: Option<Secret<String>>,
-    pub email: Option<Secret<String>>,
+    pub email: Option<Email>,
     pub personal_address: Option<FinixAddress>,
 }
 
@@ -252,7 +276,7 @@ pub struct FinixInstrumentResponse {
     pub card_brand: Option<String>,
     pub fingerprint: Option<String>,
     pub name: Option<Secret<String>>,
-    pub currency: Option<String>,
+    pub currency: Option<Currency>,
     pub enabled: bool,
 }
 
@@ -262,8 +286,8 @@ pub struct FinixInstrumentResponse {
 
 #[derive(Debug, Serialize)]
 pub struct FinixAuthorizeRequest {
-    pub amount: i64,
-    pub currency: String,
+    pub amount: MinorUnit,
+    pub currency: Currency,
     pub source: String,
     pub merchant: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -275,8 +299,8 @@ pub struct FinixAuthorizeRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FinixAuthorizeResponse {
     pub id: String,
-    pub amount: i64,
-    pub currency: String,
+    pub amount: MinorUnit,
+    pub currency: Currency,
     pub state: FinixPaymentStatus,
     #[serde(rename = "_links")]
     pub links: Option<FinixLinks>,
@@ -376,8 +400,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         Ok(Self {
-            amount: router_data.request.amount.get_amount_as_i64(),
-            currency: router_data.request.currency.to_string(),
+            amount: router_data.request.amount,
+            currency: router_data.request.currency,
             source,
             merchant: merchant_id,
             idempotency_id: Some(
@@ -476,11 +500,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // PSync FLOW - REQUEST/RESPONSE
 // =============================================================================
 
+// Common response struct for payment operations (PSync, Capture, Void, etc.)
 #[derive(Debug, Serialize, Deserialize)]
-pub struct FinixPSyncResponse {
+pub struct FinixPaymentsResponse {
     pub id: String,
-    pub amount: i64,
-    pub currency: String,
+    pub amount: MinorUnit,
+    pub currency: Currency,
     #[serde(alias = "status")]
     pub state: FinixPaymentStatus,
     #[serde(rename = "_links")]
@@ -489,6 +514,9 @@ pub struct FinixPSyncResponse {
     pub failure_message: Option<String>,
     pub transfer: Option<String>,
 }
+
+// Aliases for backward compatibility during migration
+pub type FinixPSyncResponse = FinixPaymentsResponse;
 
 // =============================================================================
 // TRYFROM IMPLEMENTATIONS - PSync RESPONSE
@@ -548,20 +576,13 @@ impl TryFrom<ResponseRouterData<FinixPSyncResponse, Self>>
 
 #[derive(Debug, Serialize)]
 pub struct FinixCaptureRequest {
-    pub capture_amount: i64,
+    pub capture_amount: MinorUnit,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub idempotency_id: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FinixCaptureResponse {
-    pub id: String,
-    pub amount: i64,
-    pub currency: String,
-    pub state: FinixPaymentStatus,
-    #[serde(rename = "_links")]
-    pub links: Option<FinixLinks>,
-}
+// Use common response struct for capture
+pub type FinixCaptureResponse = FinixPaymentsResponse;
 
 // =============================================================================
 // TRYFROM IMPLEMENTATIONS - CAPTURE REQUEST
@@ -584,7 +605,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            capture_amount: item.router_data.request.amount_to_capture,
+            capture_amount: MinorUnit::new(item.router_data.request.amount_to_capture),
             idempotency_id: None,
         })
     }
@@ -632,15 +653,8 @@ pub struct FinixVoidRequest {
     pub void_me: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FinixVoidResponse {
-    pub id: String,
-    pub amount: i64,
-    pub currency: String,
-    pub state: FinixPaymentStatus,
-    #[serde(rename = "_links")]
-    pub links: Option<FinixLinks>,
-}
+// Use common response struct for void
+pub type FinixVoidResponse = FinixPaymentsResponse;
 
 // =============================================================================
 // REFUND FLOW - REQUEST/RESPONSE
@@ -648,35 +662,20 @@ pub struct FinixVoidResponse {
 
 #[derive(Debug, Serialize)]
 pub struct FinixRefundRequest {
-    pub refund_amount: i64,
+    pub refund_amount: MinorUnit,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub idempotency_id: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FinixRefundResponse {
-    pub id: String,
-    pub amount: i64,
-    pub currency: String,
-    pub state: FinixPaymentStatus,
-    #[serde(rename = "_links")]
-    pub links: Option<FinixLinks>,
-}
+// Use common response struct for refund
+pub type FinixRefundResponse = FinixPaymentsResponse;
 
 // =============================================================================
 // RSync FLOW - REQUEST/RESPONSE
 // =============================================================================
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FinixRSyncResponse {
-    pub id: String,
-    pub amount: i64,
-    pub currency: String,
-    #[serde(alias = "status")]
-    pub state: FinixPaymentStatus,
-    #[serde(rename = "_links")]
-    pub links: Option<FinixLinks>,
-}
+// Use common response struct for rsync
+pub type FinixRSyncResponse = FinixPaymentsResponse;
 
 // =============================================================================
 // TRYFROM IMPLEMENTATIONS - RSync RESPONSE
@@ -792,7 +791,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            refund_amount: item.router_data.request.minor_refund_amount.0,
+            refund_amount: item.router_data.request.minor_refund_amount,
             idempotency_id: None,
         })
     }
@@ -881,11 +880,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 phone: customer_data.phone.clone(),
                 first_name,
                 last_name,
-                email: customer_data.email.as_ref().map(|e| {
-                    // e is Secret<Email>, e.peek() returns &Email
-                    // Email derefs to Secret<String, EmailStrategy>, second peek() returns &String
-                    Secret::new(e.peek().peek().clone())
-                }),
+                email: customer_data.email.clone().map(|e| e.expose()),
                 personal_address: None,
             },
             tags: None,
