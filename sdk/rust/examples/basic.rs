@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use grpc_api_types::payments::{
-    self, ConnectorConfig, RequestConfig, Connector, ConnectorAuth, Environment, FfiOptions,
-    PaymentServiceAuthorizeRequest,
+    self, Connector, ConnectorAuth, ConnectorConfig, Environment, FfiOptions,
+    PaymentServiceAuthorizeRequest, RequestConfig,
 };
 use hyperswitch_masking::Secret;
 use hyperswitch_payments_client::ConnectorClient;

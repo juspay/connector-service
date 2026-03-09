@@ -11,8 +11,8 @@ use domain_types::router_data::ConnectorSpecificAuth;
 use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
 use grpc_api_types::payments::{
-    ConnectorConfig, RequestConfig, FfiOptions, PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse,
+    ConnectorConfig, FfiOptions, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+    RequestConfig,
 };
 
 /// ConnectorClient — high-level Rust wrapper for the Connector Service.
