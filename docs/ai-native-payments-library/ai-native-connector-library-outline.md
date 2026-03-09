@@ -58,10 +58,9 @@
   - Macro-based connector DSL example (`create_all_prerequisites!`)
 
 ### 7. Vault Compatibility & PCI Modes
-- Three vault integration patterns (based on tokenization flows, not compliance):
+- Two vault integration patterns (based on tokenization flows, not compliance):
   - **Network Proxy**: Transparent detokenization (VGS, Evervault)
-  - **Transform Proxy**: Template expressions `{{token}}` (Basis Theory, Skyflow)
-  - **Relay Proxy**: Header-driven with token markers (TokenEx)
+  - **Application Proxy**: UCS formats tokens for vault protocol—wrapped requests (Hyperswitch Vault), headers + `{ }` markers (TokenEx), headers + `{{ }}` expressions (Basis Theory)
 - PCI Integration Modes
   - **PCI-Disabled Mode (Tokenized)**: App never handles raw card data
   - **PCI-Enabled Mode (Raw Card Data)**: For PCI-compliant merchants

@@ -337,13 +337,14 @@ macros::create_all_prerequisites!(
 
 ## Vault Compatibility & PCI Modes
 
-UCS supports three vault integration patterns, each based on different tokenization flows and integration mechanisms:
+UCS supports two vault integration patterns, based on different tokenization flows and integration mechanisms:
 
 | Pattern | How It Works | Example Providers |
 |---------|--------------|-------------------|
 | **Network Proxy** | Route requests through vault's proxy endpoint; detokenization happens transparently | VGS, Evervault |
-| **Transform Proxy** | Use template expressions (`{{$variable}}`) in wrapped requests for explicit detokenization control | Hyperswitch Vault |
-| **Relay Proxy** | Header-driven routing with proxy URLs in headers; use token markers in body | Basis Theory, TokenEx |
+| **Application Proxy** | UCS transforms tokens into vault-specific format (headers, expressions, or wrapped requests) | Hyperswitch Vault, TokenEx, Basis Theory |
+
+**Key distinction:** Both patterns send tokens to UCS. Network Proxy simply routes to the proxy URL. Application Proxy requires UCS to format tokens for the vault protocol—wrapped requests for Hyperswitch Vault, headers and `{ }` markers for TokenEx, headers and `{{ }}` expressions for Basis Theory.
 
 ### PCI Integration Modes
 
