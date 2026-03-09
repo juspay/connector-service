@@ -155,3 +155,19 @@ message FfiConnectorHttpResponse {
   map<string, string> headers = 2;
   bytes body = 3;
 }
+
+// Error returned by req_transformer FFI calls
+message FfiRequestError {
+  PaymentStatus status = 1;
+  optional string error_message = 2;
+  optional string error_code = 3;
+  optional uint32 status_code = 4;
+}
+
+// Error returned by res_transformer FFI calls
+message FfiResponseError {
+  PaymentStatus status = 1;
+  optional string error_message = 2;
+  optional string error_code = 3;
+  optional uint32 status_code = 4;
+}

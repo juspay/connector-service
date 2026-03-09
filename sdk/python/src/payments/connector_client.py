@@ -26,13 +26,20 @@ from .generated.sdk_config_pb2 import (
     FfiConnectorHttpResponse,
     HttpConfig,
     Environment,
+    FfiRequestError,
+    FfiResponseError,
 )
 
 
 class _ConnectorClientBase:
     """Base class for per-service connector clients. Do not instantiate directly."""
 
-    def __init__(self, config: ConnectorConfig, defaults: Optional[RequestConfig] = None, lib_path: Optional[str] = None):
+    def __init__(
+        self,
+        config: ConnectorConfig,
+        defaults: Optional[RequestConfig] = None,
+        lib_path: Optional[str] = None,
+    ):
         """
         Initialize the client.
 
@@ -44,9 +51,13 @@ class _ConnectorClientBase:
         self.config = config
         self.defaults = defaults or RequestConfig()
         # Instance-level cache: create the primary asynchronous connection pool at startup
-        self.client = create_client(self.defaults.http if self.defaults.HasField('http') else None)
+        self.client = create_client(
+            self.defaults.http if self.defaults.HasField("http") else None
+        )
 
-    def _resolve_config(self, options: Optional[RequestConfig] = None) -> tuple[FfiOptions, Optional[HttpConfig]]:
+    def _resolve_config(
+        self, options: Optional[RequestConfig] = None
+    ) -> tuple[FfiOptions, Optional[HttpConfig]]:
         """
         Merges request-level options with client defaults.
         Environment comes from ConnectorConfig (immutable). HTTP/vault from defaults + request override.
@@ -54,7 +65,11 @@ class _ConnectorClientBase:
         environment = self.config.environment
 
         # 2. HTTP: request override > client defaults
-        http_config = options.http if (options and options.HasField('http')) else (self.defaults.http if self.defaults.HasField('http') else None)
+        http_config = (
+            options.http
+            if (options and options.HasField("http"))
+            else (self.defaults.http if self.defaults.HasField("http") else None)
+        )
 
         # 3. Resolve FFI Context
         ffi = FfiOptions(
@@ -65,10 +80,16 @@ class _ConnectorClientBase:
 
         return ffi, http_config
 
-    async def _execute_flow(self, flow: str, request: Any, response_cls, options: Optional[RequestConfig] = None):
+    async def _execute_flow(
+        self,
+        flow: str,
+        request: Any,
+        response_cls,
+        options: Optional[RequestConfig] = None,
+    ):
         """
         Execute a full payment flow round-trip asynchronously.
-        
+
         Args:
             flow: Flow name matching the FFI transformer prefix (e.g. "authorize").
             request: A domain protobuf request message.
@@ -80,47 +101,67 @@ class _ConnectorClientBase:
 
         # 1. Resolve final configuration (Identity is fixed, others merged)
         ffi_options, http_config = self._resolve_config(options)
-        
+
         request_bytes = request.SerializeToString()
         options_bytes = ffi_options.SerializeToString()
 
         # 2. Build connector HTTP request via FFI
         result_bytes = req_transformer(request_bytes, options_bytes)
+        # Inline FFI error check
+        try:
+            req_err = FfiRequestError()
+            req_err.ParseFromString(result_bytes)
+            if req_err.is_error:
+                e = RuntimeError(req_err.message)
+                e.ffi_error = req_err
+                raise e
+        except RuntimeError:
+            raise
+        except Exception:
+            pass  # Not an error proto — continue
         connector_req = FfiConnectorHttpRequest.FromString(result_bytes)
-        
+
         connector_request = HttpRequest(
             url=connector_req.url,
             method=connector_req.method,
             headers=dict(connector_req.headers),
-            body=connector_req.body if connector_req.HasField('body') else None
+            body=connector_req.body if connector_req.HasField("body") else None,
         )
 
         # 3. Execute the HTTP request using the instance-owned AsyncClient
         response = await execute(
-            connector_request, 
-            self.client,
-            http_config=http_config
+            connector_request, self.client, http_config=http_config
         )
 
         # 4. Encode HTTP response for FFI
         res_proto = FfiConnectorHttpResponse(
             status_code=response.status_code,
             headers=response.headers,
-            body=response.body
+            body=response.body,
         )
         res_bytes = res_proto.SerializeToString()
 
         # 5. Parse connector response via FFI
-        result_bytes_res = res_transformer(
-            res_bytes,
-            request_bytes,
-            options_bytes
-        )
+        result_bytes_res = res_transformer(res_bytes, request_bytes, options_bytes)
+        # Inline FFI error check
+        try:
+            res_err = FfiResponseError()
+            res_err.ParseFromString(result_bytes_res)
+            if res_err.is_error:
+                e = RuntimeError(res_err.message)
+                e.ffi_error = res_err
+                raise e
+        except RuntimeError:
+            raise
+        except Exception:
+            pass  # Not an error proto — continue
 
         # 6. Deserialize final domain response
         return response_cls.FromString(result_bytes_res)
 
-    def _execute_direct(self, flow: str, request, response_cls, options: Optional[RequestConfig] = None):
+    def _execute_direct(
+        self, flow: str, request, response_cls, options: Optional[RequestConfig] = None
+    ):
         """
         Execute a single-step flow: FFI transformer called directly, no HTTP round-trip.
         """
@@ -143,7 +184,9 @@ class _ConnectorClientBase:
 
 class ConnectorClient(_ConnectorClientBase):
     """Legacy flat client for backward compatibility. Flow methods attached dynamically."""
+
     pass
+
 
 # Note: In the final generated state, ConnectorClient will have methods attached by the codegen
 # or per-service clients (PaymentClient, etc.) will be used as the primary interface.

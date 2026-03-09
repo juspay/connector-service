@@ -13,6 +13,8 @@ import koffi from "koffi";
 import path from "path";
 // @ts-ignore - generated CommonJS module
 import { FLOWS, SINGLE_FLOWS } from "./_generated_flows.js";
+// @ts-ignore - generated protobuf types
+import { types } from "./generated/proto.js";
 
 // Standard Node.js __dirname
 declare const __dirname: string;
@@ -223,7 +225,19 @@ export class UniffiClient {
 
     try {
       checkCallStatus(this._ffi, status);
-      return liftBytes(result);
+      const bytes = liftBytes(result);
+      try {
+        const reqErr = types.FfiRequestError.decode(bytes);
+        if (reqErr.isError) {
+          const err = new Error(reqErr.message);
+          (err as any).ffiError = reqErr;
+          throw err;
+        }
+      } catch (e) {
+        if ((e as any).ffiError) throw e;
+        // decode failed — not an error proto, return bytes as-is
+      }
+      return bytes;
     } finally {
       freeRustBuffer(this._ffi, result);
     }
@@ -252,7 +266,19 @@ export class UniffiClient {
 
     try {
       checkCallStatus(this._ffi, status);
-      return liftBytes(result);
+      const bytes = liftBytes(result);
+      try {
+        const resErr = types.FfiResponseError.decode(bytes);
+        if (resErr.isError) {
+          const err = new Error(resErr.message);
+          (err as any).ffiError = resErr;
+          throw err;
+        }
+      } catch (e) {
+        if ((e as any).ffiError) throw e;
+        // decode failed — not an error proto, return bytes as-is
+      }
+      return bytes;
     } finally {
       freeRustBuffer(this._ffi, result);
     }

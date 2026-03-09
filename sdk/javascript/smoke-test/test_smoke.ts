@@ -27,7 +27,7 @@ const {
   ConnectorState,
 } = types;
 
-const { ConnectorConfig, RequestConfig, Environment } = types;
+const { ConnectorConfig, RequestConfig, Environment, FfiRequestError, FfiResponseError } = types;
 
 const PAYPAL_CREDS = {
   client_id: "client_id",
@@ -104,8 +104,20 @@ async function testAccessTokenFlow(): Promise<void> {
       );
     }
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.log(`  Error creating access token: ${message}`);
+    if (e instanceof Error && 'ffiError' in e) {
+      const ffiErr = (e as any).ffiError;
+      // Check the actual proto type using instanceof
+      if (ffiErr instanceof FfiRequestError) {
+        console.log(`  Request build error [${ffiErr.errorType}]: ${ffiErr.message}`);
+      } else if (ffiErr instanceof FfiResponseError) {
+        console.log(`  Response parse error [${ffiErr.errorType}]: ${ffiErr.message}`);
+      } else {
+        console.log(`  FFI error: ${e.message}`);
+      }
+    } else {
+      const message = e instanceof Error ? e.message : String(e);
+      console.log(`  Error creating access token: ${message}`);
+    }
     console.log("  This might be expected if credentials are not valid");
     return;
   }
@@ -162,7 +174,19 @@ async function testAccessTokenFlow(): Promise<void> {
     console.log(`  Payment status: ${authorizeResponse.status}`);
     console.log("  PASSED");
   } catch (e: unknown) {
-    console.log(`  Error during authorize: ${e}`);
+    if (e instanceof Error && 'ffiError' in e) {
+      const ffiErr = (e as any).ffiError;
+      // Check the actual proto type using instanceof
+      if (ffiErr instanceof FfiRequestError) {
+        console.log(`  Request build error [${ffiErr.errorType}]: ${ffiErr.message}`);
+      } else if (ffiErr instanceof FfiResponseError) {
+        console.log(`  Response parse error [${ffiErr.errorType}]: ${ffiErr.message}`);
+      } else {
+        console.log(`  FFI error: ${e.message}`);
+      }
+    } else {
+      console.log(`  Error during authorize: ${e}`);
+    }
     // This might be expected depending on PayPal API behavior
     console.log("  PASSED (round-trip completed, error is from PayPal)");
   }
