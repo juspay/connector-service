@@ -213,9 +213,11 @@ where
                     updated_router_data
                 }
             };
+            println!("{:?}", "CAME OK HERE");
             Ok(response)
         }
         Err(err) => {
+            println!("{:?}", "CAME ERROR HERE");
             tracing::Span::current().record("url", tracing::field::display(url));
             Err(err)
         }

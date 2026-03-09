@@ -113,12 +113,8 @@ function makeCallStatus(): RustCallStatus {
 function checkCallStatus(ffi: FfiFunctions, status: RustCallStatus): void {
   if (status.code === 0) return;
 
-  if (status.code === 1) {
-    const errMsg = liftError(status.error_buf);
-    freeRustBuffer(ffi, status.error_buf);
-    throw new Error(errMsg);
-  }
-
+  // Only Rust panics should reach here now (status.code === 2)
+  // Normal errors are encoded as protobuf FfiRequestError/FfiResponseError in returned bytes
   if (status.error_buf.len > 0n) {
     const msg = liftString(status.error_buf);
     freeRustBuffer(ffi, status.error_buf);
@@ -126,28 +122,6 @@ function checkCallStatus(ffi: FfiFunctions, status: RustCallStatus): void {
   }
 
   throw new Error("Unknown Rust panic");
-}
-
-function liftError(buf: RustBuffer): string {
-  if (!buf.data || buf.len === 0n) return "Unknown error";
-  const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
-  let offset = 0;
-
-  // UniFFI Error layout: [i32 variant] + [i32 len] + [bytes]
-  const variant = raw.readInt32BE(offset); offset += 4;
-  const variantNames: Record<number, string> = {
-    1: "DecodeError",
-    2: "MissingMetadata",
-    3: "MetadataParseError",
-    4: "HandlerError",
-    5: "NoConnectorRequest",
-  };
-
-  if (variant === 5) return "NoConnectorRequest";
-
-  const strLen = raw.readInt32BE(offset); offset += 4;
-  const msg = raw.subarray(offset, offset + strLen).toString("utf-8");
-  return `${variantNames[variant] || "UniffiError"}: ${msg}`;
 }
 
 /**
@@ -228,8 +202,8 @@ export class UniffiClient {
       const bytes = liftBytes(result);
       try {
         const reqErr = types.FfiRequestError.decode(bytes);
-        if (reqErr.isError) {
-          const err = new Error(reqErr.message);
+        if (reqErr.errorMessage) {
+          const err = new Error(reqErr.errorMessage);
           (err as any).ffiError = reqErr;
           throw err;
         }
@@ -269,8 +243,8 @@ export class UniffiClient {
       const bytes = liftBytes(result);
       try {
         const resErr = types.FfiResponseError.decode(bytes);
-        if (resErr.isError) {
-          const err = new Error(resErr.message);
+        if (resErr.errorMessage) {
+          const err = new Error(resErr.errorMessage);
           (err as any).ffiError = resErr;
           throw err;
         }
