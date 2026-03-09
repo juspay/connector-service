@@ -25,7 +25,9 @@ mod uniffi_bindings_inner {
     // ── Shared helpers ────────────────────────────────────────────────────────
 
     /// Build FfiMetadataPayload from FfiOptions.
-    fn parse_metadata(options: &FfiOptions) -> Result<crate::types::FfiMetadataPayload, UniffiError> {
+    fn parse_metadata(
+        options: &FfiOptions,
+    ) -> Result<crate::types::FfiMetadataPayload, UniffiError> {
         // 1. Resolve Connector (Taken from FfiOptions)
         let proto_connector = options.connector(); // Direct enum access via generated method
         let connector = ConnectorEnum::foreign_try_from(proto_connector).map_err(|e| {
