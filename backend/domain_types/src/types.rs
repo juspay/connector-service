@@ -3786,16 +3786,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                         )),
                     });
                 PaymentServiceAuthorizeResponse {
-                    connector_transaction_id: Some(
-                        resource_id.get_connector_transaction_id().change_context(
-                            ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "Missing connector transaction ID".to_owned(),
-                                error_identifier: 400,
-                                error_message: "Missing connector transaction ID".to_owned(),
-                                error_object: None,
-                            }),
-                        )?,
-                    ),
+                    connector_transaction_id: Some(String::foreign_try_from(resource_id)?),
                     redirection_data: redirection_data
                         .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
                         .transpose()?,
@@ -7472,7 +7463,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     });
 
                 PaymentServiceSetupRecurringResponse {
-                    connector_registration_id: resource_id.get_connector_transaction_id().change_context(ApplicationErrorResponse::InternalServerError(ApiError { sub_code: "CONNECTOR_TRANSACTION_ID_ERROR".to_owned(), error_identifier: 500, error_message: "Failed to get connector transaction id".to_owned(), error_object: None }))?,
+                    connector_registration_id: String::foreign_try_from(resource_id)?,
                     redirection_data: redirection_data.map(
                         |form| {
                             match *form {
