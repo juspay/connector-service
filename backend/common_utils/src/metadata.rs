@@ -220,3 +220,14 @@ impl MaskedMetadata {
             .collect()
     }
 }
+
+/// Return the merchant ID if present, or generate a default.
+///
+/// Shared fallback logic used by both the gRPC path (raw `MetadataMap`)
+/// and the FFI path (`MaskedMetadata`).
+pub fn merchant_id_or_default(value: Option<&str>) -> String {
+    value.map(|s| s.to_string()).unwrap_or_else(|| {
+        tracing::warn!("x-merchant-id header missing, using default merchant ID");
+        "DefaultMerchantId".to_string()
+    })
+}

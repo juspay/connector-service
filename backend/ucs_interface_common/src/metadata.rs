@@ -113,11 +113,11 @@ pub fn connector_from_metadata(
 pub fn merchant_id_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<String, ApplicationErrorResponse> {
-    let masked = common_utils::metadata::MaskedMetadata::new(
-        metadata.clone(),
-        common_utils::metadata::HeaderMaskingConfig::default(),
-    );
-    Ok(masked.merchant_id())
+    Ok(common_utils::metadata::merchant_id_or_default(
+        metadata
+            .get(consts::X_MERCHANT_ID)
+            .and_then(|value| value.to_str().ok()),
+    ))
 }
 
 pub fn request_id_from_metadata(
@@ -216,8 +216,7 @@ mod tests {
     fn merchant_id_defaults_when_missing() {
         let metadata = MetadataMap::new();
         let merchant_id = merchant_id_from_metadata(&metadata).expect("should not fail");
-        assert!(merchant_id.starts_with("default_merchant_"));
-        assert_eq!(merchant_id.len(), "default_merchant_".len() + 20);
+        assert_eq!(merchant_id, "DefaultMerchantId");
     }
 
     #[test]
