@@ -18,7 +18,7 @@
 //   continuity across the entire workflow.
 //
 // Handling Webhook Flows:
-//   Process inbound webhook notifications from connectors through EventService.Handle.
+//   Process inbound webhook notifications from connectors through EventService.HandleEvent.
 //   Pass the raw HTTP request details to receive verified, unified typed responses that
 //   reflect the latest payment states without polling connector APIs.
 //
@@ -70,6 +70,17 @@ option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/
 // ============================================================================
 // SERVICE DEFINITIONS
 // ============================================================================
+
+// ============================================================================
+// EVENT SERVICE — Common event handler for processing inbound connector
+//                  webhooks across all services.
+// ============================================================================
+
+service EventService {
+  // Process webhook notifications from connectors. Translates connector events
+  // into standardized responses for asynchronous payment state updates.
+  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
+}
 
 // ============================================================================
 // PAYMENT SERVICE — Core payment lifecycle operations spanning authorization,
@@ -181,17 +192,6 @@ service DisputeService {
 
   // Handle incoming webhooks from connectors.
   rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
-}
-
-// ============================================================================
-// EVENT SERVICE — Common event handler for processing inbound connector
-//                  webhooks across all services.
-// ============================================================================
-
-service EventService {
-  // Process webhook notifications from connectors. Translates connector events
-  // into standardized responses for asynchronous payment state updates.
-  rpc Handle(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
 // ============================================================================

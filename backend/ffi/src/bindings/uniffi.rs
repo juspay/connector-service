@@ -245,6 +245,43 @@ mod uniffi_bindings_inner {
     // services/payments.rs, then run `make generate` to regenerate this file.
 
     include!("_generated_ffi_flows.rs");
+
+    // ── Hand-written exports (not auto-generated) ─────────────────────────────
+
+    /// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
+    ///
+    /// Unlike req/res flows there is no split: the caller passes raw
+    /// `EventServiceHandleRequest` proto bytes and receives encoded
+    /// `EventServiceHandleResponse` bytes directly.
+    #[uniffi::export]
+    pub fn handle_event_transformer(
+        request_bytes: Vec<u8>,
+        metadata: HashMap<String, String>,
+        options_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, UniffiError> {
+        use prost::Message as _;
+        let payload =
+            grpc_api_types::payments::EventServiceHandleRequest::decode(Bytes::from(request_bytes))
+                .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+
+        let ffi_metadata = parse_metadata(&metadata)?;
+        let masked_metadata = ffi_headers_to_masked_metadata(&metadata)?;
+
+        let request = crate::types::FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: Some(masked_metadata),
+        };
+
+        let test_mode = parse_ffi_options(options_bytes);
+
+        let response = crate::handlers::payments::handle_event_handler(request, test_mode)
+            .map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
+
+        Ok(response.encode_to_vec())
+    }
 }
 
 #[cfg(feature = "uniffi")]

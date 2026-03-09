@@ -10,7 +10,7 @@ import json
 import os
 
 from payments import (
-    ConnectorClient,
+    PaymentClient,
     authorize_req_transformer,
     PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse,
@@ -22,7 +22,7 @@ from payments import (
 )
 
 print(f"Loaded payments package from: {__file__}")
-print(f"  ConnectorClient: {ConnectorClient}")
+print(f"  PaymentClient: {PaymentClient}")
 print(f"  authorize_req_transformer: {authorize_req_transformer}")
 
 api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
@@ -82,7 +82,7 @@ print("\n=== Test 2: Full round-trip (ConnectorClient.authorize) ===")
 if api_key == "sk_test_placeholder":
     print("  SKIPPED (set STRIPE_API_KEY to enable)")
 else:
-    client = ConnectorClient()
+    client = PaymentClient()
     try:
         response = client.authorize(req, metadata)
         print(f"  Response status: {response.status}")

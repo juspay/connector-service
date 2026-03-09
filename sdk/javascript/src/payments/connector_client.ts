@@ -121,4 +121,35 @@ export class ConnectorClient {
     const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, metadata, optionsBytes);
     return resType.decode(resultBytesRes);
   }
+
+  /**
+   * Execute a single-step flow directly via FFI (no HTTP round-trip).
+   * Used for inbound flows like webhook processing where the connector sends data to us.
+   */
+  async _executeDirect(
+    flow: string,
+    requestMsg: object,
+    metadata: Record<string, string>,
+    ffiOptions?: ucs.v2.IFfiOptions | null,
+    reqTypeName?: string,
+    resTypeName?: string
+  ): Promise<unknown> {
+    const reqType = reqTypeName ? (v2 as any)[reqTypeName] : undefined;
+    const resType = resTypeName ? (v2 as any)[resTypeName] : undefined;
+
+    if (!reqType || !resType) {
+      throw new Error(`Unknown flow: '${flow}' or missing type names.`);
+    }
+
+    // 1. Serialize request
+    const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
+
+    // 2. Resolve FFI options
+    const ffi = ffiOptions || this.options.ffi;
+    const optionsBytes = ffi ? Buffer.from(v2.FfiOptions.encode(ffi).finish()) : Buffer.alloc(0);
+
+    // 3. Call the single-step transformer directly (no HTTP)
+    const resultBytes = this.uniffi.callDirect(flow, requestBytes, metadata, optionsBytes);
+    return resType.decode(resultBytes);
+  }
 }
