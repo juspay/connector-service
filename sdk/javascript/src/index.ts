@@ -1,16 +1,16 @@
 import { ucs } from "./payments/generated/proto";
 
 // Re-export client classes flat (high-level API)
-export { ConnectorClient } from "./payments/_generated_connector_client_flows";
+export * from "./payments/_generated_connector_client_flows";
 export { UniffiClient } from "./payments/_generated_uniffi_client_flows";
 export type { RustBuffer, RustCallStatus } from "./payments/uniffi_client";
 export * from "./http_client";
 
 // ---------------------------------------------------------------------------
 // Domain namespaces — runtime values
-// Usage: import { payments, payment_methods, configs } from 'hyperswitch-payments';
-//        const req = payments.PaymentServiceAuthorizeRequest.create({ ... });
-//        const opts: configs.IFfiOptions = configs.FfiOptions.create({ ... });
+// Usage: import { payments, payment_methods, configs } from '@juspay/connector-service-sdk';
+//        const config: configs.IConnectorConfig = { ... };
+//        const client = new ConnectorClient(identity);
 // ---------------------------------------------------------------------------
 
 export const payments = {
@@ -61,6 +61,7 @@ export const payments = {
   ErrorInfo: ucs.v2.ErrorInfo,
   // Enums
   Currency: ucs.v2.Currency,
+  Connector: ucs.v2.Connector,
   CaptureMethod: ucs.v2.CaptureMethod,
   AuthenticationType: ucs.v2.AuthenticationType,
   PaymentMethodType: ucs.v2.PaymentMethodType,
@@ -74,7 +75,6 @@ export const payments = {
   FutureUsage: ucs.v2.FutureUsage,
   PaymentExperience: ucs.v2.PaymentExperience,
   PaymentChannel: ucs.v2.PaymentChannel,
-  Connector: ucs.v2.Connector,
   ProductType: ucs.v2.ProductType,
   DisputeStage: ucs.v2.DisputeStage,
   Tokenization: ucs.v2.Tokenization,
@@ -96,7 +96,14 @@ export const payment_methods = {
 };
 
 export const configs = {
-  EnvOptions: ucs.v2.EnvOptions,
+  // Configuration types
+  ConnectorConfig: ucs.v2.ConnectorConfig,
+  RequestConfig: ucs.v2.RequestConfig,
+  HttpConfig: ucs.v2.HttpConfig,
+  CaCert: ucs.v2.CaCert,
+  HttpDefault: ucs.v2.HttpDefault,
+  Environment: ucs.v2.Environment,
+  // FFI Internal
   FfiOptions: ucs.v2.FfiOptions,
   FfiConnectorHttpRequest: ucs.v2.FfiConnectorHttpRequest,
   FfiConnectorHttpResponse: ucs.v2.FfiConnectorHttpResponse,
@@ -189,7 +196,6 @@ export namespace payments {
   export type CustomerAcceptance = ucs.v2.CustomerAcceptance;
   export type SessionToken = ucs.v2.SessionToken;
   export type ConnectorResponseData = ucs.v2.ConnectorResponseData;
-  export type CardConnectorResponse = ucs.v2.CardConnectorResponse;
   export type ErrorInfo = ucs.v2.ErrorInfo;
 }
 
@@ -205,13 +211,20 @@ export namespace payment_methods {
 }
 
 export namespace configs {
-  export type IEnvOptions = ucs.v2.IEnvOptions;
+  export type IConnectorConfig = ucs.v2.IConnectorConfig;
+  export type IRequestConfig = ucs.v2.IRequestConfig;
+  export type IHttpConfig = ucs.v2.IHttpConfig;
+  export type ICaCert = ucs.v2.ICaCert;
   export type IFfiOptions = ucs.v2.IFfiOptions;
   export type IFfiConnectorHttpRequest = ucs.v2.IFfiConnectorHttpRequest;
   export type IFfiConnectorHttpResponse = ucs.v2.IFfiConnectorHttpResponse;
 
-  export type EnvOptions = ucs.v2.EnvOptions;
+  export type ConnectorConfig = ucs.v2.ConnectorConfig;
+  export type RequestConfig = ucs.v2.RequestConfig;
+  export type HttpConfig = ucs.v2.HttpConfig;
+  export type CaCert = ucs.v2.CaCert;
   export type FfiOptions = ucs.v2.FfiOptions;
   export type FfiConnectorHttpRequest = ucs.v2.FfiConnectorHttpRequest;
   export type FfiConnectorHttpResponse = ucs.v2.FfiConnectorHttpResponse;
+  export type Environment = ucs.v2.Environment;
 }

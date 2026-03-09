@@ -816,6 +816,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
                 name: authorizedotnet.name.ok_or_else(err)?,
                 transaction_key: authorizedotnet.transaction_key.ok_or_else(err)?,
             }),
+            AuthType::Paypal(paypal) => Ok(Self::Paypal {
+                client_id: paypal.client_id.ok_or_else(err)?,
+                client_secret: paypal.client_secret.ok_or_else(err)?,
+                payer_id: paypal.payer_id,
+            }),
         }
     }
 }

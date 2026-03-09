@@ -74,12 +74,12 @@ The Connector Service supports a three layered architecture, each solving a purp
 
 ### Component Descriptions
 
-| Component               | Why It Exists                                                                                                       | Problem It Solves                                                                                  | Technologies                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| **SDK Interface**       | Developers can think in their language's patterns whicle using the unified payments grammar provided by the library | You use `client.payments.authorize()` with idiomatic types in your codebase                        | Node.js, Python, Java, .NET, Go, Haskell |
-| **FFI / Binding Layer** | Each language needs native-performance gRPC                                                                         | Seamless transport without language bridges; handles serialization, HTTP/2, streaming              | tonic, grpcio, grpc-dotnet, go-grpc      |
-| **gRPC Server**         | Single source of truth for payment logic. Also offers freedom to use connector service as a separate microservice   | One implementation of payment services serves all languages; unified errors, routing, types        | Rust, tonic, protocol buffers            |
-| **Connector Adapters**  | Each connector has unique APIs and formats                                                                          | You use one `AuthorizeRequest`; the library maps to Stripe's `PaymentIntent` or Adyen's `payments` | Rust, 100+ connector implementations     |
+| Component | Why It Exists | Problem It Solves | Technologies |
+|-----------|---------------|-------------------|--------------|
+| **SDK Interface** | Developers can think in their language's patterns whicle using the unified payments grammar provided by the library | You use `client.payments.authorize()` with idiomatic types in your codebase | Node.js, Python, Java, .NET, Go, Haskell |
+| **FFI / Binding Layer** | Each language needs native-performance gRPC | Seamless transport without language bridges; handles serialization, HTTP/2, streaming | tonic, grpcio, grpc-dotnet, go-grpc |
+| **gRPC Server** | Single source of truth for payment logic. Also offers freedom to use connector service as a separate microservice | One implementation of payment services serves all languages; unified errors, routing, types | Rust, tonic, protocol buffers |
+| **Connector Adapters** | Each connector has unique APIs and formats | You use one `AuthorizeRequest`; the library maps to Stripe's `PaymentIntent` or Adyen's `payments` | Rust, 100+ connector implementations |
 
 ## Data Flow
 
@@ -150,6 +150,6 @@ The architecture prioritizes:
 1. **Consistency**: Same types, patterns, and errors across all connectors
 2. **Extensibility**: Add connectors without SDK changes
 3. **Performance**: gRPC interface provides significant advantage over REST APIs for high volume payment processing. The lirabry could also be used as microservice with 10x smaller paylos, faster serialization/ deserialization hops, reduced bannwidth consumption and optimized for concurrent requests on a single connection
-4. **Developer Experience**: Idiomatic payments interface with multi language SDKs
+4. **Developer Experience**: Idiomatic payments interface with multi language SDKs 
 
 For developers integrating multiple payment providers, this means weeks of integration work becomes hours, and maintenance burden drops from O(N connectors) to O(1).

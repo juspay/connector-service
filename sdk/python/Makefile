@@ -69,7 +69,7 @@ generate-proto: install-deps
 	@python3 -m grpc_tools.protoc \
 		-I $(PROTO_DIR) \
 		--python_out=$(GENERATED_OUT) \
-		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto $(PROTO_DIR)/sdk_options.proto
+		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto $(PROTO_DIR)/sdk_config.proto
 	@# TODO: protoc --python_out generates bare imports (e.g. "import payment_methods_pb2")
 	@# which break under a package layout. Rewrite to relative imports until protoc
 	@# adds a --python_relative_imports flag or we switch to a package-aware plugin.
@@ -132,7 +132,7 @@ test-package: generate-all pack-archive
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
-		--no-deps --force-reinstall
+		--force-reinstall
 	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py
 	@rm -rf /tmp/test-hyperswitch-py
 	@echo "Package test passed."
