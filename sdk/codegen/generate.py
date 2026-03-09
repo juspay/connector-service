@@ -561,7 +561,7 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
         lines.append(f"    config: ConnectorConfig,")
         lines.append(f"    defaults: RequestConfig = RequestConfig.getDefaultInstance(),")
         lines.append(f"    libPath: String? = null")
-        lines.append(f") : ConnectorClient(identity, defaults, libPath) {{")
+        lines.append(f") : ConnectorClient(config, defaults, libPath) {{")
         for f in groups.get(service, []):
             n, req, res = f["name"], f["request"], f["response"]
             lines.append(flow_comment(f, "    //"))

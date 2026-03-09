@@ -26,6 +26,7 @@ use grpc_api_types::payments::{
 pub struct ConnectorClient {
     http_client: HttpClient,
     config: ConnectorConfig,
+    #[allow(dead_code)] // reserved for merging with per-request RequestConfig (e.g. http)
     defaults: RequestConfig,
 }
 
