@@ -15,7 +15,7 @@ impl ForeignFrom<(&CompositeAuthorizeRequest, &ConnectorEnum)>
 {
     fn foreign_from((item, connector): (&CompositeAuthorizeRequest, &ConnectorEnum)) -> Self {
         Self {
-            merchant_access_token_id: Some(item.merchant_transaction_id.clone()),
+            merchant_access_token_id: item.merchant_transaction_id.clone(),
             connector: grpc_connector_from_connector_enum(connector),
             metadata: item.metadata.clone(),
             connector_feature_data: item.connector_feature_data.clone(),

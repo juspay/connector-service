@@ -10,7 +10,7 @@ option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/
 // Request message for composite authorize flow.
 message CompositeAuthorizeRequest {
   // Payment Identification
-  string merchant_transaction_id = 1; // Reference ID for tracking
+  optional string merchant_transaction_id = 1; // Reference ID for tracking
 
   // Metadata
   optional SecretString metadata = 2; // Additional metadata for the connector
@@ -91,7 +91,7 @@ message CompositeAuthorizeRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 42; // Redirection Response from client browser
-  string merchant_access_token_id = 43; // Reference ID for tracking
+  optional string merchant_access_token_id = 43; // Reference ID for tracking
   optional string customer_name = 44;
   optional SecretString email = 45;
   optional string merchant_customer_id = 46;
