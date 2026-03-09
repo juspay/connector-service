@@ -389,6 +389,26 @@ impl ConnectorParams {
             third_base_url: None,
         }
     }
+
+    /// Patch this ConnectorParams with resolved URLs from superposition.
+    ///
+    /// Only non-empty resolved URLs will override the existing values.
+    /// This allows superposition to selectively override specific URLs
+    /// while keeping static config values for others.
+    pub fn patch_with_resolved_urls(
+        &self,
+        base_url: Option<String>,
+        dispute_base_url: Option<String>,
+        secondary_base_url: Option<String>,
+        third_base_url: Option<String>,
+    ) -> Self {
+        Self {
+            base_url: base_url.unwrap_or_else(|| self.base_url.clone()),
+            dispute_base_url: dispute_base_url.or(self.dispute_base_url.clone()),
+            secondary_base_url: secondary_base_url.or(self.secondary_base_url.clone()),
+            third_base_url: third_base_url.or(self.third_base_url.clone()),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, config_patch_derive::Patch)]
@@ -419,6 +439,119 @@ impl HasConnectors for RefundFlowData {
 impl HasConnectors for DisputeFlowData {
     fn connectors(&self) -> &Connectors {
         &self.connectors
+    }
+}
+
+impl Connectors {
+    /// Patch the specified connector's URL configuration with resolved URLs from superposition.
+    ///
+    /// This method creates a new `Connectors` instance with the specified connector's
+    /// `ConnectorParams` updated with the resolved URLs. All other connectors remain unchanged.
+    ///
+    /// # Arguments
+    /// * `connector_name` - The lowercase name of the connector (e.g., "stripe", "adyen")
+    /// * `urls` - The resolved URLs from superposition configuration
+    ///
+    /// # Returns
+    /// A new `Connectors` instance with the patched connector params.
+    /// If the connector name doesn't match any known connector, returns self unchanged.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let urls = ConnectorUrls {
+    ///     base_url: Some("https://api.stripe.com/".to_string()),
+    ///     ..Default::default()
+    /// };
+    /// let patched = connectors.patch_connector_urls("stripe", &urls);
+    /// ```
+    pub fn patch_connector_urls(
+        &self,
+        connector_name: &str,
+        urls: &common_utils::superposition_config::ConnectorUrls,
+    ) -> Self {
+        let mut patched = self.clone();
+        
+        // Map connector names to their respective field in the Connectors struct
+        // Note: connector_name is expected to be lowercase
+        match connector_name {
+            "stripe" => {
+                patched.stripe = self.stripe.patch_with_resolved_urls(
+                    urls.base_url.clone(),
+                    urls.dispute_base_url.clone(),
+                    urls.secondary_base_url.clone(),
+                    urls.third_base_url.clone(),
+                );
+            }
+            "adyen" => {
+                patched.adyen = self.adyen.patch_with_resolved_urls(
+                    urls.base_url.clone(),
+                    urls.dispute_base_url.clone(),
+                    urls.secondary_base_url.clone(),
+                    urls.third_base_url.clone(),
+                );
+            }
+            "paypal" => {
+                patched.paypal = self.paypal.patch_with_resolved_urls(
+                    urls.base_url.clone(),
+                    urls.dispute_base_url.clone(),
+                    urls.secondary_base_url.clone(),
+                    urls.third_base_url.clone(),
+                );
+            }
+            "braintree" => {
+                patched.braintree = self.braintree.patch_with_resolved_urls(
+                    urls.base_url.clone(),
+                    urls.dispute_base_url.clone(),
+                    urls.secondary_base_url.clone(),
+                    urls.third_base_url.clone(),
+                );
+            }
+            "checkout" => {
+                patched.checkout = self.checkout.patch_with_resolved_urls(
+                    urls.base_url.clone(),
+                    urls.dispute_base_url.clone(),
+                    urls.secondary_base_url.clone(),
+                    urls.third_base_url.clone(),
+                );
+            }
+            "cybersource" => {
+                patched.cybersource = self.cybersource.patch_with_resolved_urls(
+                    urls.base_url.clone(),
+                    urls.dispute_base_url.clone(),
+                    urls.secondary_base_url.clone(),
+                    urls.third_base_url.clone(),
+                );
+            }
+            "worldpay" => {
+                patched.worldpay = self.worldpay.patch_with_resolved_urls(
+                    urls.base_url.clone(),
+                    urls.dispute_base_url.clone(),
+                    urls.secondary_base_url.clone(),
+                    urls.third_base_url.clone(),
+                );
+            }
+            "trustpay" => {
+                // TrustPay uses ConnectorParamsWithMoreUrls which has base_url_bank_redirects
+                // We patch base_url and keep bank_redirects unchanged (no superposition support for it yet)
+                if urls.base_url.is_some() {
+                    patched.trustpay = ConnectorParamsWithMoreUrls {
+                        base_url: urls.base_url.clone().unwrap_or_else(|| self.trustpay.base_url.clone()),
+                        base_url_bank_redirects: self.trustpay.base_url_bank_redirects.clone(),
+                    };
+                }
+            }
+            // Add more connectors as needed - for now, we handle common ones
+            // Other connectors can be added similarly
+            _ => {
+                // Unknown connector - no patching, return as-is
+                tracing::debug!(
+                    connector = %connector_name,
+                    "No URL patching available for connector, using static config"
+                );
+            }
+        }
+        
+        patched
     }
 }
 

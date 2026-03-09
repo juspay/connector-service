@@ -123,6 +123,47 @@ pub fn get_optional_nonempty_string(
     }
 }
 
+/// Container for resolved connector URLs from superposition configuration
+#[derive(Debug, Clone, Default)]
+pub struct ConnectorUrls {
+    /// Primary base URL for the connector
+    pub base_url: Option<String>,
+    /// Base URL for dispute operations
+    pub dispute_base_url: Option<String>,
+    /// Secondary base URL (used by some connectors)
+    pub secondary_base_url: Option<String>,
+    /// Third base URL (used by some connectors like HiPay)
+    pub third_base_url: Option<String>,
+    /// Base URL for bank redirect operations (used by TrustPay)
+    pub base_url_bank_redirects: Option<String>,
+}
+
+/// Extract connector URLs from resolved superposition configuration
+///
+/// # Arguments
+/// * `resolved` - The resolved configuration HashMap from `SuperpositionConfig::resolve()`
+///
+/// # Returns
+/// A `ConnectorUrls` struct containing all resolved URL fields
+///
+/// # Example
+/// ```ignore
+/// let resolved = config.resolve("stripe", Some("production"))?;
+/// let urls = get_connector_urls(&resolved);
+/// ```
+pub fn get_connector_urls(resolved: &HashMap<String, Value>) -> ConnectorUrls {
+    ConnectorUrls {
+        base_url: get_optional_nonempty_string(resolved, "connector_base_url"),
+        dispute_base_url: get_optional_nonempty_string(resolved, "connector_dispute_base_url"),
+        secondary_base_url: get_optional_nonempty_string(resolved, "connector_secondary_base_url"),
+        third_base_url: get_optional_nonempty_string(resolved, "connector_third_base_url"),
+        base_url_bank_redirects: get_optional_nonempty_string(
+            resolved,
+            "connector_base_url_bank_redirects",
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
