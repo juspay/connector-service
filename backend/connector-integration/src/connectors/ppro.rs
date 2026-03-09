@@ -500,19 +500,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
             PproWebhookType::PaymentChargeFailed
             | PproWebhookType::PaymentChargeAuthorizationFailed
-            | PproWebhookType::PaymentChargeDiscarded => {
-                Ok(EventType::PaymentIntentFailure)
-            }
+            | PproWebhookType::PaymentChargeDiscarded => Ok(EventType::PaymentIntentFailure),
             PproWebhookType::PaymentChargeAuthorizationSucceeded
             | PproWebhookType::PaymentChargeSuccess => {
                 Ok(EventType::PaymentIntentAuthorizationSuccess)
             }
-            PproWebhookType::PaymentChargeRefundSucceeded => {
-                Ok(EventType::RefundSuccess)
-            }
-            PproWebhookType::PaymentChargeRefundFailed => {
-                Ok(EventType::RefundFailure)
-            }
+            PproWebhookType::PaymentChargeRefundSucceeded => Ok(EventType::RefundSuccess),
+            PproWebhookType::PaymentChargeRefundFailed => Ok(EventType::RefundFailure),
             PproWebhookType::PaymentChargeVoidSucceeded
             | PproWebhookType::PaymentChargeVoidFailed
             | PproWebhookType::PaymentChargeCaptureFailed
@@ -545,26 +539,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let status = match charge.status {
-            PproPaymentStatus::AuthorizationProcessing
-            | PproPaymentStatus::CaptureProcessing => {
+            PproPaymentStatus::AuthorizationProcessing | PproPaymentStatus::CaptureProcessing => {
                 common_enums::AttemptStatus::Pending
             }
             PproPaymentStatus::AuthenticationPending => {
                 common_enums::AttemptStatus::AuthenticationPending
             }
-            PproPaymentStatus::AuthorizationAsync
-            | PproPaymentStatus::CapturePending => {
+            PproPaymentStatus::AuthorizationAsync | PproPaymentStatus::CapturePending => {
                 common_enums::AttemptStatus::Authorized
             }
-            PproPaymentStatus::Captured
-            | PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Captured | PproPaymentStatus::Success => {
+                common_enums::AttemptStatus::Charged
+            }
             PproPaymentStatus::Failed
             | PproPaymentStatus::Discarded
             | PproPaymentStatus::Rejected
             | PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
             PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
-            PproPaymentStatus::RefundSettled
-            | PproPaymentStatus::Refunded => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::RefundSettled | PproPaymentStatus::Refunded => {
+                common_enums::AttemptStatus::Pending
+            }
         };
 
         let (error_code, error_message, error_reason) = match charge.failure.as_ref() {
@@ -1290,12 +1284,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
             PproWebhookType::PaymentChargeRefundSucceeded => {
                 Ok(IncomingWebhookEvent::RefundSuccess)
             }
-            PproWebhookType::PaymentChargeRefundFailed => {
-                Ok(IncomingWebhookEvent::RefundFailure)
-            }
-            PproWebhookType::PaymentAgreementActive => {
-                Ok(IncomingWebhookEvent::MandateActive)
-            }
+            PproWebhookType::PaymentChargeRefundFailed => Ok(IncomingWebhookEvent::RefundFailure),
+            PproWebhookType::PaymentAgreementActive => Ok(IncomingWebhookEvent::MandateActive),
             PproWebhookType::PaymentAgreementFailed
             | PproWebhookType::PaymentAgreementRevokedByConsumer
             | PproWebhookType::PaymentAgreementRevokedByMerchant
