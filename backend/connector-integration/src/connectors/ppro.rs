@@ -545,15 +545,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let status = match charge.status {
-            transformers::PproPaymentStatus::AuthorizationProcessing | transformers::PproPaymentStatus::CaptureProcessing => {
+            transformers::PproPaymentStatus::AuthorizationProcessing
+            | transformers::PproPaymentStatus::CaptureProcessing => {
                 common_enums::AttemptStatus::Pending
             }
-            transformers::PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
-            transformers::PproPaymentStatus::AuthorizationAsync | transformers::PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Authorized,
-            transformers::PproPaymentStatus::Captured | transformers::PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
-            transformers::PproPaymentStatus::Failed | transformers::PproPaymentStatus::Discarded | transformers::PproPaymentStatus::Rejected | transformers::PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            transformers::PproPaymentStatus::AuthenticationPending => {
+                common_enums::AttemptStatus::AuthenticationPending
+            }
+            transformers::PproPaymentStatus::AuthorizationAsync
+            | transformers::PproPaymentStatus::CapturePending => {
+                common_enums::AttemptStatus::Authorized
+            }
+            transformers::PproPaymentStatus::Captured
+            | transformers::PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            transformers::PproPaymentStatus::Failed
+            | transformers::PproPaymentStatus::Discarded
+            | transformers::PproPaymentStatus::Rejected
+            | transformers::PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
             transformers::PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
-            transformers::PproPaymentStatus::RefundSettled | transformers::PproPaymentStatus::Refunded => common_enums::AttemptStatus::Pending,
+            transformers::PproPaymentStatus::RefundSettled
+            | transformers::PproPaymentStatus::Refunded => common_enums::AttemptStatus::Pending,
         };
 
         let (error_code, error_message, error_reason) = match charge.failure.as_ref() {
@@ -609,10 +620,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let status = match charge.status {
-            transformers::PproPaymentStatus::Captured | transformers::PproPaymentStatus::RefundSettled | transformers::PproPaymentStatus::Success | transformers::PproPaymentStatus::Refunded => {
-                common_enums::RefundStatus::Success
-            }
-            transformers::PproPaymentStatus::Failed | transformers::PproPaymentStatus::Rejected | transformers::PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+            transformers::PproPaymentStatus::Captured
+            | transformers::PproPaymentStatus::RefundSettled
+            | transformers::PproPaymentStatus::Success
+            | transformers::PproPaymentStatus::Refunded => common_enums::RefundStatus::Success,
+            transformers::PproPaymentStatus::Failed
+            | transformers::PproPaymentStatus::Rejected
+            | transformers::PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
             transformers::PproPaymentStatus::AuthorizationProcessing
             | transformers::PproPaymentStatus::CaptureProcessing
             | transformers::PproPaymentStatus::AuthenticationPending

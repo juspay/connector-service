@@ -7290,7 +7290,7 @@ impl<
         Ok(Self {
             currency: amount.currency,
             payment_method_data: PaymentMethodData::<T>::foreign_try_from(
-                value.payment_method.ok_or_else(|| {
+                value.payment_method.clone().ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
                         error_identifier: 400,
@@ -8653,7 +8653,7 @@ impl<
             amount: money.amount,
             currency,
             payment_method_data: PaymentMethodData::<T>::foreign_try_from(
-                value.payment_method.ok_or_else(|| {
+                value.payment_method.clone().ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
                         error_identifier: 400,

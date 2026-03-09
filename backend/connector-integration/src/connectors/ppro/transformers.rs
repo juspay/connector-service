@@ -119,7 +119,7 @@ where
         let router_data = item.router_data;
         let payment_method = match router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::BancontactCard) => "BANCONTACT".to_string(),
-            Some(common_enums::PaymentMethodType::UpiCollect) 
+            Some(common_enums::PaymentMethodType::UpiCollect)
             | Some(common_enums::PaymentMethodType::UpiIntent) => "UPI".to_string(),
             Some(common_enums::PaymentMethodType::AliPay) => "ALIPAY".to_string(),
             Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
@@ -460,12 +460,23 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
             PproPaymentStatus::AuthorizationProcessing | PproPaymentStatus::CaptureProcessing => {
                 common_enums::AttemptStatus::Pending
             }
-            PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
-            PproPaymentStatus::AuthorizationAsync | PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Authorized,
-            PproPaymentStatus::Captured | PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
-            PproPaymentStatus::Failed | PproPaymentStatus::Discarded | PproPaymentStatus::Rejected | PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::AuthenticationPending => {
+                common_enums::AttemptStatus::AuthenticationPending
+            }
+            PproPaymentStatus::AuthorizationAsync | PproPaymentStatus::CapturePending => {
+                common_enums::AttemptStatus::Authorized
+            }
+            PproPaymentStatus::Captured | PproPaymentStatus::Success => {
+                common_enums::AttemptStatus::Charged
+            }
+            PproPaymentStatus::Failed
+            | PproPaymentStatus::Discarded
+            | PproPaymentStatus::Rejected
+            | PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
             PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
-            PproPaymentStatus::RefundSettled | PproPaymentStatus::Refunded => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::RefundSettled | PproPaymentStatus::Refunded => {
+                common_enums::AttemptStatus::Pending
+            }
         };
 
         let mut error_response = None;
@@ -555,7 +566,9 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                                 PproAuthenticationType::Redirect => {
                                     if let Some(url) = &details.request_url {
                                         // Use Uri for UPI payment methods, Form for others
-                                        let is_upi = item.router_data.resource_common_data.payment_method == common_enums::PaymentMethod::Upi;
+                                        let is_upi =
+                                            item.router_data.resource_common_data.payment_method
+                                                == common_enums::PaymentMethod::Upi;
                                         redirection_data = if is_upi {
                                             Some(domain_types::router_response_types::RedirectForm::Uri {
                                                 uri: url.to_string(),
@@ -574,7 +587,8 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                                         break;
                                     }
                                 }
-                                PproAuthenticationType::AppNotification | PproAuthenticationType::MultiFactor => {
+                                PproAuthenticationType::AppNotification
+                                | PproAuthenticationType::MultiFactor => {
                                     break;
                                 }
                             }
@@ -626,10 +640,13 @@ impl<F, Req, T> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: ResponseRouterData<PproPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = match item.response.status {
-            PproPaymentStatus::Captured | PproPaymentStatus::RefundSettled | PproPaymentStatus::Success | PproPaymentStatus::Refunded => {
-                common_enums::RefundStatus::Success
-            }
-            PproPaymentStatus::Failed | PproPaymentStatus::Rejected | PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+            PproPaymentStatus::Captured
+            | PproPaymentStatus::RefundSettled
+            | PproPaymentStatus::Success
+            | PproPaymentStatus::Refunded => common_enums::RefundStatus::Success,
+            PproPaymentStatus::Failed
+            | PproPaymentStatus::Rejected
+            | PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
             PproPaymentStatus::AuthorizationProcessing
             | PproPaymentStatus::CaptureProcessing
             | PproPaymentStatus::AuthenticationPending
@@ -658,7 +675,8 @@ impl<F, Req, T> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                 .map(|f| f.failure_type.clone())
                 .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
 
-            let failure_code_str = failure_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
+            let failure_code_str =
+                failure_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
             Err(ErrorResponse {
                 code: failure_code_str.clone(),
                 message: failure_message,
@@ -1020,7 +1038,9 @@ impl<F, Req> TryFrom<ResponseRouterData<PproAgreementResponse, Self>>
             PproAgreementStatus::AuthenticationPending | PproAgreementStatus::Initializing => {
                 common_enums::AttemptStatus::AuthenticationPending
             }
-            PproAgreementStatus::Failed | PproAgreementStatus::Revoked => common_enums::AttemptStatus::Failure,
+            PproAgreementStatus::Failed | PproAgreementStatus::Revoked => {
+                common_enums::AttemptStatus::Failure
+            }
         };
 
         let mut error_response = None;
@@ -1200,7 +1220,9 @@ where
         let router_data = item.router_data;
         let amount = Amount {
             currency: router_data.request.currency.to_string(),
-            value: common_utils::MinorUnit::new(router_data.request.minor_amount.get_amount_as_i64()),
+            value: common_utils::MinorUnit::new(
+                router_data.request.minor_amount.get_amount_as_i64(),
+            ),
         };
 
         let initiator = if router_data.request.off_session.unwrap_or(true) {
