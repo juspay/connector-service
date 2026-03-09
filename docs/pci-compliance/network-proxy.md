@@ -42,7 +42,7 @@ sequenceDiagram
     FE->>BE: Send token + payment request
     BE->>UCS: authorize(token, amount)
     UCS->>VGS: POST tenant.vgs.example.com/v1/payment_intents
-    Note right of UCS: Same payload structure,<br/>just different URL
+    Note over UCS: Same payload structure,<br/>just different URL
     VGS->>VGS: Auto-detokenize in transit
     VGS->>PSP: POST api.stripe.com/v1/payment_intents<br/>(with real card data)
     PSP-->>VGS: Authorization response
@@ -127,15 +127,15 @@ sequenceDiagram
     Note over FE,PSP: Network Proxy Flow via UCS
 
     FE->>BE: Send vault_token + payment data
-    Note right of FE: Token from VGS Collect.js
+    Note over FE: Token from VGS Collect.js
 
     BE->>UCS: POST /payments<br/>{ token, amount, currency, connector }
-    Note right of BE: Merchant calls UCS,<br/>not Stripe directly
+    Note over BE: Merchant calls UCS,<br/>not Stripe directly
 
     UCS->>UCS: Lookup connector config<br/>base_url = VGS proxy URL
 
     UCS->>VGS: POST tnt.vgs.com/v1/payment_intents<br/>(with token in payload)
-    Note right of UCS: UCS routes to VGS proxy<br/>instead of api.stripe.com
+    Note over UCS: UCS routes to VGS proxy<br/>instead of api.stripe.com
 
     VGS->>VGS: Auto-detokenize token<br/>in transit
 
