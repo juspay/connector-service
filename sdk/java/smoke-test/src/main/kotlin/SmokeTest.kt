@@ -15,8 +15,8 @@ import payments.CaptureMethod
 import payments.AuthenticationType
 import payments.FfiConnectorHttpRequest
 import payments.FfiOptions
-import payments.ClientIdentity
-import payments.ConfigOptions
+import payments.ConnectorConfig
+import payments.RequestConfig
 import payments.Connector
 import payments.Environment
 import uniffi.connector_service_ffi.UniffiException
@@ -56,18 +56,17 @@ fun buildMetadata(): Map<String, String> {
     )
 }
 
-fun buildIdentity(): ClientIdentity {
+fun buildConfig(): ConnectorConfig {
     val apiKey = System.getenv("STRIPE_API_KEY") ?: "sk_test_placeholder"
-    return ClientIdentity.newBuilder().apply {
+    return ConnectorConfig.newBuilder().apply {
         connector = Connector.STRIPE
+        environment = Environment.SANDBOX
         authBuilder.stripeBuilder.apiKeyBuilder.value = apiKey
     }.build()
 }
 
-fun buildDefaults(): ConfigOptions {
-    return ConfigOptions.newBuilder().apply {
-        environment = Environment.SANDBOX
-    }.build()
+fun buildDefaults(): RequestConfig {
+    return RequestConfig.getDefaultInstance()
 }
 
 fun assert(condition: Boolean, message: String) {
@@ -87,7 +86,7 @@ fun testLowLevelFfi() {
     val ffiOptions = FfiOptions.newBuilder().apply {
         connector = Connector.STRIPE
         environment = Environment.SANDBOX
-        auth = buildIdentity().auth
+        auth = buildConfig().auth
     }.build()
     val optionsBytes = ffiOptions.toByteArray()
 
@@ -121,9 +120,9 @@ fun testFullRoundTrip() {
         return
     }
 
-    val identity = buildIdentity()
+    val config = buildConfig()
     val defaults = buildDefaults()
-    val client = PaymentClient(identity, defaults)
+    val client = PaymentClient(config, defaults)
     try {
         val response = client.authorize(buildRequest(), buildMetadata(), null)
         println("  Response status: ${response.status}")

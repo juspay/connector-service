@@ -22,29 +22,29 @@ const v2 = types;
 
 export class ConnectorClient {
   private uniffi: UniffiClient;
-  private identity: types.ClientIdentity;
-  private defaults: types.IConfigOptions;
+  private config: types.ConnectorConfig;
+  private defaults: types.IRequestConfig;
   private dispatcher: Dispatcher;
 
   /**
-   * Initialize the client with mandatory identity and overridable defaults.
+   * Initialize the client with mandatory config and optional request defaults.
    *
-   * @param identity - Non-overridable (Connector, Auth).
-   * @param defaults - Overridable behavioral settings (Environment, Http).
+   * @param config - Immutable connector identity and environment (Connector, Auth, Environment).
+   * @param defaults - Optional per-request defaults (Http, Vault).
    * @param libPath - optional path to the UniFFI shared library.
    */
   constructor(
-    identity: types.IClientIdentity,
-    defaults: types.IConfigOptions = {},
+    config: types.IConnectorConfig,
+    defaults: types.IRequestConfig = {},
     libPath?: string
   ) {
     this.uniffi = new UniffiClient(libPath);
-    this.identity = types.ClientIdentity.create(identity);
+    this.config = types.ConnectorConfig.create(config);
     this.defaults = defaults;
 
-    if (identity.connector === undefined) {
+    if (config.connector === undefined) {
       throw new ConnectorError(
-        "Connector is required in ClientIdentity",
+        "Connector is required in ConnectorConfig",
         400,
         "CLIENT_INITIALIZATION"
       );
@@ -55,15 +55,13 @@ export class ConnectorClient {
   }
 
   /**
-   * Merges request-level options with client defaults.
+   * Merges request-level options with client defaults. Environment comes from config (immutable).
    */
-  private _resolveConfig(overrides?: types.IConfigOptions | null): {
+  private _resolveConfig(overrides?: types.IRequestConfig | null): {
     ffi: types.FfiOptions;
     http: types.IHttpConfig;
   } {
     const opt = overrides || {};
-
-    const environment = opt.environment ?? this.defaults.environment ?? types.Environment.SANDBOX;
     const clientHttp = this.defaults.http || {};
     const overrideHttp = opt.http || {};
 
@@ -77,9 +75,9 @@ export class ConnectorClient {
     };
 
     const ffi = types.FfiOptions.create({
-      environment,
-      connector: this.identity.connector,
-      auth: this.identity.auth,
+      environment: this.config.environment ?? types.Environment.SANDBOX,
+      connector: this.config.connector,
+      auth: this.config.auth,
     });
 
     return { ffi, http };
@@ -95,7 +93,7 @@ export class ConnectorClient {
   async _executeFlow(
     flow: string,
     requestMsg: object,
-    options?: types.IConfigOptions | null,
+    options?: types.IRequestConfig | null,
     reqTypeName?: string,
     resTypeName?: string
   ): Promise<unknown> {
@@ -151,7 +149,7 @@ export class ConnectorClient {
   async _executeDirect(
     flow: string,
     requestMsg: object,
-    options?: types.IConfigOptions | null,
+    options?: types.IRequestConfig | null,
     reqTypeName?: string,
     resTypeName?: string
   ): Promise<unknown> {

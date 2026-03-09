@@ -298,7 +298,7 @@ def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
         "#",
         "# This stub exposes per-service client classes to static analysers",
         "# (Pylance, pyright, mypy) so IDEs offer completions and type checking.",
-        "from payments.generated.sdk_config_pb2 import ClientIdentity, ConfigOptions",
+        "from payments.generated.sdk_config_pb2 import ConnectorConfig, RequestConfig",
         "from payments.generated.payment_pb2 import (",
     ]
     for t in imports:
@@ -307,7 +307,7 @@ def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
         ")",
         "",
         "class _ConnectorClientBase:",
-        "    def __init__(self, identity: ClientIdentity, defaults: ConfigOptions | None = ..., lib_path: str | None = ...) -> None: ...",
+        "    def __init__(self, config: ConnectorConfig, defaults: RequestConfig | None = ..., lib_path: str | None = ...) -> None: ...",
         "",
     ]
 
@@ -318,7 +318,7 @@ def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
         for f in groups.get(service, []):
             n, req, res = f["name"], f["request"], f["response"]
             lines.append(
-                f"    def {n}(self, request: {req}, options: ConfigOptions | None = ...) -> {res}:"
+                f"    def {n}(self, request: {req}, options: RequestConfig | None = ...) -> {res}:"
             )
             lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
             lines.append(f"        ...")
@@ -326,7 +326,7 @@ def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
         for f in single_groups.get(service, []):
             n, req, res = f["name"], f["request"], f["response"]
             lines.append(
-                f"    def {n}(self, request: {req}, options: ConfigOptions | None = ...) -> {res}:"
+                f"    def {n}(self, request: {req}, options: RequestConfig | None = ...) -> {res}:"
             )
             lines.append(f'        """{f["service"]}.{f["rpc"]} — {f["description"]}"""')
             lines.append(f"        ...")
@@ -418,7 +418,7 @@ def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None
             lines.append(f"  /** {f['service']}.{f['rpc']} — {f['description']} */")
             lines.append(f"  async {camel}(")
             lines.append(f"    requestMsg: ucs.v2.I{req},")
-            lines.append(f"    options?: ucs.v2.IConfigOptions | null")
+            lines.append(f"    options?: ucs.v2.IRequestConfig | null")
             lines.append(f"  ): Promise<ucs.v2.{res}> {{")
             lines.append(f"    return this._executeFlow('{n}', requestMsg, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
             lines.append(f"  }}")
@@ -429,7 +429,7 @@ def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None
             lines.append(f"  /** {f['service']}.{f['rpc']} — {f['description']} */")
             lines.append(f"  async {camel}(")
             lines.append(f"    requestMsg: ucs.v2.I{req},")
-            lines.append(f"    options?: ucs.v2.IConfigOptions | null")
+            lines.append(f"    options?: ucs.v2.IRequestConfig | null")
             lines.append(f"  ): Promise<ucs.v2.{res}> {{")
             lines.append(f"    return this._executeDirect('{n}', requestMsg, options, '{req}', '{res}') as Promise<ucs.v2.{res}>;")
             lines.append(f"  }}")
@@ -553,15 +553,15 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
     for service in all_services:
         client_name = service_to_client_name(service)
         lines.append(f"class {client_name}(")
-        lines.append(f"    identity: ClientIdentity,")
-        lines.append(f"    defaults: ConfigOptions = ConfigOptions.getDefaultInstance(),")
+        lines.append(f"    config: ConnectorConfig,")
+        lines.append(f"    defaults: RequestConfig = RequestConfig.getDefaultInstance(),")
         lines.append(f"    libPath: String? = null")
-        lines.append(f") : ConnectorClient(identity, defaults, libPath) {{")
+        lines.append(f") : ConnectorClient(config, defaults, libPath) {{")
         for f in groups.get(service, []):
             n, req, res = f["name"], f["request"], f["response"]
             lines.append(flow_comment(f, "    //"))
             lines.append(
-                f"    fun {n}(request: {req}, options: ConfigOptions? = null): {res} ="
+                f"    fun {n}(request: {req}, options: RequestConfig? = null): {res} ="
             )
             lines.append(f'        executeFlow("{n}", request.toByteArray(), {res}.parser(), options)')
             lines.append("")
@@ -569,7 +569,7 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
             n, req, res = f["name"], f["request"], f["response"]
             lines.append(flow_comment(f, "    //"))
             lines.append(
-                f"    fun {n}(request: {req}, options: ConfigOptions? = null): {res} ="
+                f"    fun {n}(request: {req}, options: RequestConfig? = null): {res} ="
             )
             lines.append(f'        executeDirect("{n}", request.toByteArray(), {res}.parser(), options)')
             lines.append("")

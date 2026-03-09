@@ -50,8 +50,8 @@ from payments.generated.payment_methods_pb2 import (
 )
 
 from payments.generated.sdk_config_pb2 import (
-    ClientIdentity,
-    ConfigOptions,
+    ConnectorConfig,
+    RequestConfig,
     Environment,
     FfiOptions,
     FfiConnectorHttpRequest,
@@ -175,8 +175,8 @@ class PaymentMethodsNamespace:
 class ConfigsNamespace:
     """Namespace for configuration types."""
 
-    ClientIdentity = ClientIdentity
-    ConfigOptions = ConfigOptions
+    ConnectorConfig = ConnectorConfig
+    RequestConfig = RequestConfig
     Environment = Environment
     FfiOptions = FfiOptions
     FfiConnectorHttpRequest = FfiConnectorHttpRequest

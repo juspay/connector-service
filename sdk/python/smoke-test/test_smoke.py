@@ -6,6 +6,7 @@ directory, copies this script there, and runs it in-place so imports
 resolve against the installed package.
 """
 
+import json
 import os
 import asyncio
 
@@ -21,11 +22,12 @@ from payments import (
     NO_THREE_DS,
     Connector,
     Environment,
-    ClientIdentity,
-    ConfigOptions,
+    ConnectorConfig,
+    RequestConfig,
 )
 
 
+<<<<<<< HEAD
 api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
 metadata = {
     "connector": "Stripe",
@@ -37,10 +39,32 @@ async def run_test():
     # 1. Initialize Client with ClientIdentity + ConfigOptions
     identity = ClientIdentity(connector=Connector.STRIPE)
     identity.auth.stripe.api_key.value = api_key
+=======
+async def run_test():
+    print(f"Loaded payments package from: {__file__}")
+    print(f"  PaymentClient: {PaymentClient}")
+    print(f"  authorize_req_transformer: {authorize_req_transformer}")
 
-    defaults = ConfigOptions(environment=Environment.SANDBOX)
+    api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
 
-    client = PaymentClient(identity, defaults)
+    # Metadata: connector + typed auth (X-Connector-Auth style from main)
+    metadata = {
+        "connector": "Stripe",
+        "connector_auth_type": json.dumps({
+            "Stripe": {
+                "api_key": api_key,
+            }
+        }),
+    }
+
+    # 1. Initialize Client with ConnectorConfig + optional RequestConfig defaults
+    config = ConnectorConfig(connector=Connector.STRIPE, environment=Environment.SANDBOX)
+    config.auth.stripe.api_key.value = api_key
+>>>>>>> 3a4909a0eac8a664572a48ab4ba374b64e8e3432
+
+    defaults = RequestConfig()
+
+    client = PaymentClient(config, defaults)
 
     # Build a protobuf request
     req = PaymentServiceAuthorizeRequest()
@@ -68,7 +92,7 @@ async def run_test():
     ffi_opts = FfiOptions(
         environment=Environment.SANDBOX,
         connector=Connector.STRIPE,
-        auth=identity.auth,
+        auth=config.auth,
     )
     options_bytes = ffi_opts.SerializeToString()
 

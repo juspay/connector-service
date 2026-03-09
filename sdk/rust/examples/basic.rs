@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use grpc_api_types::payments::{
-    self, ClientIdentity, ConfigOptions, Connector, ConnectorAuth, Environment, FfiOptions,
-    PaymentServiceAuthorizeRequest,
+    self, Connector, ConnectorAuth, ConnectorConfig, Environment, FfiOptions,
+    PaymentServiceAuthorizeRequest, RequestConfig,
 };
 use hyperswitch_masking::Secret;
 use hyperswitch_payments_client::ConnectorClient;
@@ -195,20 +195,18 @@ async fn demo_full_round_trip(
     eprintln!("Connector: Stripe");
     eprintln!("Sending authorize request...\n");
 
-    // 1. Mandatory Identity
-    let identity = ClientIdentity {
+    // 1. ConnectorConfig (connector, auth, environment)
+    let config = ConnectorConfig {
         connector: ffi_options.connector,
         auth: ffi_options.auth.clone(),
+        environment: ffi_options.environment,
     };
 
-    // 2. Overridable Options
-    let options = ConfigOptions {
-        environment: Some(ffi_options.environment),
-        ..Default::default()
-    };
+    // 2. Optional RequestConfig defaults (http, vault)
+    let defaults = RequestConfig::default();
 
     let client =
-        ConnectorClient::new(identity, Some(options)).expect("Failed to create ConnectorClient");
+        ConnectorClient::new(config, Some(defaults)).expect("Failed to create ConnectorClient");
 
     // 3. Call authorize
     match client.authorize(request, metadata, None).await {

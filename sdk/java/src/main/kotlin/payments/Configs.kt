@@ -15,8 +15,8 @@ package payments
 import types.SdkConfig
 
 typealias Environment = SdkConfig.Environment
-typealias ClientIdentity = SdkConfig.ClientIdentity
-typealias ConfigOptions = SdkConfig.ConfigOptions
+typealias ConnectorConfig = SdkConfig.ConnectorConfig
+typealias RequestConfig = SdkConfig.RequestConfig
 typealias HttpConfig = SdkConfig.HttpConfig
 typealias CaCert = SdkConfig.CaCert
 typealias ProxyOptions = SdkConfig.ProxyOptions
