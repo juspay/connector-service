@@ -8,6 +8,8 @@
 
 Every developer has experienced this: you're building a feature, everything's going smoothly, and then you need to integrate payments. Suddenly you're drowning in API documentation, webhook signatures, idempotency keys, and connector-specific quirks. The cognitive load explodes.
 
+Now multiply this problem across every AI-assisted coding session. As developers increasingly rely on LLMs to write code, traditional payment APIs become a bottleneck. They're inconsistently documented, use different patterns for each provider, and require deep domain knowledge to use correctly. AI assistants hallucinate field names, guess at error handling, and can't reason about connector-specific quirks.
+
 What if payment integrations felt like using PostgreSQL?
 
 ```python
@@ -22,6 +24,8 @@ payments.authorize(PaymentRequest(amount=1000, currency="USD", connector="stripe
 ```
 
 **UCS (Unified Connector Service)** is built on a simple premise: payments are infrastructure, not integration. By treating connectors as first-class libraries with strongly-typed interfaces, we make payment integrations predictable, type-safe, and—most importantly—AI-friendly.
+
+In an era where AI writes more code than ever, UCS provides the structured, protocol-first foundation that LLMs need to generate correct payment code on the first try.
 
 ---
 
@@ -73,6 +77,19 @@ This consistency means an AI assistant trained on one connector can help with an
 ---
 
 ## The Developer Experience
+
+### Two Personas, One Library
+
+UCS is designed for two distinct personas:
+
+| Persona | Goal | How UCS Helps |
+|---------|------|---------------|
+| **Architect** | Assess capabilities & customize integrations | Deep control over connectors, routing logic, and transformations |
+| **Developer** | Integrate with minimal code | No-code/low-code options with smart defaults |
+
+**For Architects:** UCS provides the building blocks to design payment infrastructure—custom routing rules, multiple connector fallbacks, vault integrations, and granular control over every request.
+
+**For Developers:** UCS feels like any other library import. Add a dependency, initialize the client, and you're processing payments in minutes—not days.
 
 ### Five Lines to Production
 
@@ -136,6 +153,19 @@ async fn process_payment(order: &Order) -> Result<bool, ucs::Error> {
 - IDE autocomplete knows all available fields
 - No hand-rolled HTTP clients or JSON parsing
 
+### Priority Language Support
+
+UCS SDKs are built with framework-native integration in mind:
+
+| Language | Frameworks | Package |
+|----------|------------|---------|
+| **Rust** | Actix, Axum, Tokio | `cargo add ucs-sdk` |
+| **Node.js** | Express, NestJS, Fastify | `npm install @juspay/ucs` |
+| **Python** | FastAPI, Django, Flask | `pip install ucs-sdk` |
+| **Java** | Spring Boot, Quarkus | Maven: `com.juspay:ucs-java` |
+
+These SDK patterns power **33+ connectors** including Stripe, Adyen, Worldpay, Checkout, and Cybersource.
+
 ---
 
 ## Proto Interface Design Philosophy
@@ -185,30 +215,6 @@ message Payment {
 }
 ```
 
-### Clear Request/Response Flows
-
-```protobuf
-// Request includes everything needed for the operation
-message CaptureRequest {
-  // What to capture
-  string payment_id = 1;
-
-  // Optional partial capture
-  Money amount = 2;  // If unset, captures full authorized amount
-
-  // Connector-specific overrides
-  map<string, string> connector_metadata = 3;
-}
-
-// Response tells you what happened
-message CaptureResponse {
-  string capture_id = 1;              // New transaction reference
-  PaymentStatus status = 2;           // CAPTURED or FAILED
-  Money amount_captured = 3;          // Actual amount moved
-  google.protobuf.Timestamp captured_at = 4;
-}
-```
-
 ---
 
 ## Language SDKs & Integration
@@ -218,11 +224,10 @@ message CaptureResponse {
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   payment.proto │────▶│  protoc + plugins │────▶│  Language SDKs  │
-│   (source of    │     │  - prost (Rust)   │     │  - Go           │
-│    truth)       │     │  - tonic (gRPC)   │     │  - Python       │
-└─────────────────┘     │  - grpclib (Py)   │     │  - Rust         │
+│   (source of    │     │  - prost (Rust)   │     │  - Rust         │
+│    truth)       │     │  - tonic (gRPC)   │     │  - Node.js      │
+└─────────────────┘     │  - grpclib (Py)   │     │  - Python       │
                         └─────────────────┘     │  - Java         │
-                                                │  - Node.js      │
                                                 └─────────────────┘
 ```
 
@@ -249,15 +254,6 @@ class CardPayment:
     last_four: str  # Exactly 4 characters
 ```
 
-```go
-// Go: struct with tags
-type CardPayment struct {
-    Token    string `protobuf:"bytes,1,opt,name=token" validate:"min=10"`
-    Network  string `protobuf:"bytes,2,opt,name=network"`
-    LastFour string `protobuf:"bytes,3,opt,name=last_four" validate:"len=4"`
-}
-```
-
 ```rust
 // Rust: struct with builders
 pub struct CardPayment {
@@ -265,6 +261,15 @@ pub struct CardPayment {
     pub network: String,
     pub last_four: String,  // Exactly 4 chars
 }
+```
+
+```java
+// Java: immutable value objects
+public record CardPayment(
+    @MinLength(10) String token,
+    String network,
+    @Length(4) String lastFour
+) {}
 ```
 
 ### Error Handling That's Consistent
@@ -278,31 +283,196 @@ message Error {
 }
 ```
 
-Every SDK exposes the same error structure:
+Every SDK exposes the same error structure—catch `ConnectorError` and handle by code, regardless of which PSP or language you're using.
 
-```python
-try:
-    response = client.payments.authorize(request)
-except ucs.ConnectorError as e:
-    if e.code == "card_declined":
-        return {"error": "Please try a different card"}
-    raise
-```
+---
 
-```go
-resp, err := client.Payments.Authorize(ctx, req)
-if err != nil {
-    if ucsErr, ok := err.(*ucs.ConnectorError); ok {
-        if ucsErr.Code == "card_declined" {
-            return map[string]string{"error": "Please try a different card"}
-        }
-    }
-}
+## AI-Native Architectural Frameworks
+
+UCS adopts several proven frameworks to deliver an AI-native developer experience:
+
+### 1. Protocol-First API Design
+
+By defining APIs in Protocol Buffers before writing any implementation code, UCS ensures:
+- **Single source of truth** across all languages
+- **Self-documenting contracts** that AI can parse
+- **Type safety by default** without runtime validation overhead
+- **Version compatibility** through field number reservations
+
+### 2. Resource-Oriented Architecture
+
+Following RESTful principles at the proto level:
+- Resources have consistent CRUD operations
+- Actions use standard HTTP verbs (`authorize`, `capture`, `refund`)
+- Relationships are explicit (`Payment` → `Refund`)
+- State transitions are well-defined and documented
+
+### 3. Documentation as Interface
+
+In UCS, documentation is not an afterthought—it's part of the code:
+- Proto comments generate SDK documentation
+- Field descriptions become IDE tooltips
+- Examples are embedded in the schema itself
+- AI assistants read the same docs developers do
+
+### 4. Generated Code over Handwritten SDKs
+
+Traditional SDKs drift from the API over time. UCS generates SDKs from protos:
+- Zero drift between API and SDK
+- Consistent patterns across all languages
+- Updates are automatic when protos change
+- AI-generated code stays correct
+
+**Connector implementations use declarative macros** that generate structs, traits, and type bridges from a single definition:
+
+```rust
+macros::create_all_prerequisites!(
+    connector_name: Adyen,
+    api: [
+        (flow: Authorize, request_body: AdyenPaymentRequest, ...),
+        (flow: Capture, request_body: AdyenCaptureRequest, ...),
+    ],
+);
 ```
 
 ---
 
+## Vault Compatibility & PCI Modes
+
+UCS supports three vault integration patterns, each based on different tokenization flows and integration mechanisms:
+
+| Pattern | How It Works | Example Providers |
+|---------|--------------|-------------------|
+| **Network Proxy** | Route requests through vault's proxy endpoint; detokenization happens transparently | VGS, Evervault |
+| **Transform Proxy** | Use template expressions (`{{token}}`) for explicit detokenization control | Basis Theory, Skyflow |
+| **Relay Proxy** | Header-driven routing with token markers (`{token}`) | TokenEx |
+
+### PCI Integration Modes
+
+**PCI-Disabled Mode (Tokenized)**
+Your application never handles raw card data. Tokens from your vault provider flow through UCS to the PSP.
+
+```python
+# Send vault tokens—UCS routes through your configured proxy
+response = client.payments.authorize(
+    PaymentRequest(
+        amount=Money(minor_units=1000, currency="USD"),
+        connector="stripe",
+        payment_method=PaymentMethod(
+            card=CardPayment(token="tok_sandbox_4242xxxx")
+        )
+    )
+)
+```
+
+**PCI-Enabled Mode (Raw Card Data)**
+For PCI-compliant merchants who handle raw card data, UCS accepts card numbers directly and routes to the PSP without vault intermediaries.
+
+---
+
+## Configurability at Every Layer
+
+UCS provides extensive configuration options for production deployments:
+
+### Environment & Endpoint Configuration
+
+```yaml
+# UCS supports environment-specific configs
+environments:
+  sandbox:
+    base_url: https://sandbox.api.ucs.io
+    timeout_ms: 30000
+  production:
+    base_url: https://api.ucs.io
+    timeout_ms: 10000
+    retry_policy: exponential_backoff
+```
+
+### Credential Management
+
+| Credential Type | How UCS Handles It |
+|-----------------|-------------------|
+| **PSP API Keys** | Accepts standard processor API keys |
+| **Standard API Key** | Single UCS API key authenticates all requests |
+| **Vault Credentials** | Encrypted at rest, injected at runtime |
+
+### Operational Controls
+
+- **Timeout Management**: Per-connector timeouts with automatic retries
+- **Proxy Configuration**: Route through corporate proxies or vault proxies
+- **Circuit Breakers**: Fail fast when PSPs are degraded
+- **Request Tracing**: Full observability across the payment flow
+
+---
+
+## Build, Release & Testing
+
+### Multi-Architecture Binaries
+
+UCS provides pre-built binaries for common platforms:
+
+| Platform | Architecture | Binary |
+|----------|--------------|--------|
+| Linux | x86_64, ARM64 | `ucs-server-linux-{arch}` |
+| macOS | x86_64, Apple Silicon | `ucs-server-darwin-{arch}` |
+| Windows | x86_64 | `ucs-server-windows-x64.exe` |
+
+Docker images are available for all major container platforms:
+```bash
+docker pull juspay/ucs-server:latest
+docker pull juspay/ucs-server:1.2.3-alpine
+```
+
+### Test Artifact Publishing
+
+Every UCS release includes:
+- **Unit Test Reports**: JUnit XML for CI integration
+- **Coverage Reports**: Codecov-compatible coverage data
+- **Performance Benchmarks**: Latency percentiles by connector
+- **Compatibility Matrices**: Tested PSP versions
+
+### Regression Testing Suite
+
+UCS maintains a comprehensive test suite:
+
+| Test Type | Coverage |
+|-----------|----------|
+| **Unit Tests** | Core logic, transformers, validators |
+| **Integration Tests** | Real PSP sandboxes (Stripe, Adyen, etc.) |
+| **Contract Tests** | Proto compatibility verification |
+| **Performance Tests** | Load testing at 1000+ TPS |
+| **Security Tests** | Credential handling, PCI compliance |
+
+All tests run on every commit. Releases are blocked if any test fails.
+
+---
+
 ## AI-Assisted Development
+
+### Smart Code Generation
+
+UCS is designed for an AI-assisted development workflow. Our code generation pipeline goes beyond simple stubs:
+
+| Feature | What You Get |
+|---------|--------------|
+| **IDE Integration** | Auto-complete, inline docs, type hints |
+| **AI Context** | Proto definitions as context for LLMs |
+| **Smart Defaults** | Sensible configurations out of the box |
+| **Pattern Recognition** | Common payment flows as reusable templates |
+
+**From natural language to working code:**
+
+```
+Developer: "Create a checkout endpoint that authorizes on Stripe
+           and captures after 24 hours"
+
+AI generates:
+1. Route handler in your language/framework
+2. UCS client initialization with proper config
+3. Orchestrated payment flow (authorize → schedule capture)
+4. Webhook handler for async events
+5. Error handling for common failure modes
+```
 
 ### LLMs Understand Proto Definitions
 
@@ -332,33 +502,6 @@ Because UCS uses Protocol Buffers, AI assistants can:
    > "Why did this payment fail?"
 
    The AI can parse the structured error response and suggest fixes based on the `code` and `details` fields.
-
-### Documentation That Makes Sense
-
-```protobuf
-// A payment represents a monetary transaction between a customer
-// and a merchant. Payments go through a lifecycle: created →
-// authorized → captured (or voided/refunded).
-message Payment {
-  // Unique identifier for this payment (UCS-generated)
-  string payment_id = 1;
-
-  // The amount the customer authorized. This may differ from
-  // the capture amount in partial capture scenarios.
-  Money amount_authorized = 2;
-
-  // Current status in the payment lifecycle
-  PaymentStatus status = 3;
-
-  // The connector (PSP) that processed this payment
-  string connector = 4;
-}
-```
-
-Proto comments become:
-- IDE tooltips
-- Generated documentation
-- AI context for code generation
 
 ---
 
@@ -458,60 +601,6 @@ The difference: UCS abstracts the connector complexity while maintaining full co
 
 ---
 
-## The Future: Infrastructure as Code
-
-### Terraform-Style Configuration
-
-```hcl
-# connectors.tf
-resource "ucs_connector" "stripe" {
-  name = "stripe"
-  base_url = "https://api.stripe.com"
-  api_key = var.stripe_api_key
-}
-
-resource "ucs_connector" "adyen" {
-  name = "adyen"
-  base_url = "https://api.adyen.com"
-  api_key = var.adyen_api_key
-  merchant_account = var.adyen_merchant
-}
-
-# Enable VGS vault for PCI compliance
-resource "ucs_vault" "vgs" {
-  provider = "vgs"
-  tenant_id = var.vgs_tenant
-  environment = "production"
-}
-```
-
-### Declarative Payment Flows
-
-```yaml
-# payment-flow.yaml
-apiVersion: ucs.io/v1
-kind: PaymentFlow
-metadata:
-  name: checkout-flow
-spec:
-  steps:
-    - name: authorize
-      action: authorize
-      connector: stripe
-      amount: "${order.total}"
-
-    - name: fraud-check
-      action: webhook
-      url: https://api.example.com/fraud-check
-      condition: "amount > 10000"
-
-    - name: capture
-      action: capture
-      delay: 24h  # Capture after fulfillment
-```
-
----
-
 ## Conclusion
 
 UCS brings payment integrations into the modern developer experience:
@@ -520,16 +609,26 @@ UCS brings payment integrations into the modern developer experience:
 2. **Multi-language SDKs** generated from a single source of truth
 3. **Industry-standard terminology** instead of vendor-specific jargon
 4. **Infrastructure-as-code** support for DevOps workflows
+5. **Framework-native integrations** that feel idiomatic in your stack
 
 The result? Payment integrations that feel like using any other infrastructure service—predictable, type-safe, and delightful.
 
 ---
 
 **Get Started:**
+
+Choose your stack and get started in minutes:
+
+| Language | Quick Start |
+|----------|-------------|
+| Rust (Actix/Axum) | `cargo add ucs-sdk` |
+| Node.js (Express/NestJS) | `npm install @juspay/ucs` |
+| Python (FastAPI/Django) | `pip install ucs-sdk` |
+| Java (Spring) | `mvn com.juspay:ucs-java` |
+
 - GitHub: [github.com/juspay/connector-service](https://github.com/juspay/connector-service)
 - Documentation: [docs.ucs.io](https://docs.ucs.io)
-- SDKs: `pip install ucs`, `go get github.com/juspay/ucs-go`, `cargo add ucs`
 
 ---
 
-_Think of UCS as the "PostgreSQL of payments"—a reliable, well-documented, type-safe interface that just works, regardless of what language you're using or which PSP you're connecting to._
+_Think of UCS as the **ORM for payment processors**—one interface, any PSP._
