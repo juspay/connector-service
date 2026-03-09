@@ -337,7 +337,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 }
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type],
+    connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Imerchant,
     curl_request: Json(ImerchantPaymentsRequestData),
     curl_response: ImerchantPaymentsResponseData,
@@ -363,19 +363,11 @@ macros::macro_connector_implementation!(
             let base_url = self.connector_base_url_payments(req);
             Ok(format!("{base_url}/payments"))
         }
-
-        fn get_error_response_v2(
-            &self,
-            res: Response,
-            event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-            self.build_error_response(res, event_builder)
-        }
     }
 );
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type],
+    connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Imerchant,
     curl_response: ImerchantPSyncResponseData,
     flow_name: PSync,
@@ -404,19 +396,75 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             Ok(format!("{base_url}/payments/capture?paymentId={connector_payment_id}"))
         }
+    }
+);
 
-        fn get_error_response_v2(
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Imerchant,
+    curl_request: Json(ImerchantVoidRequestData),
+    curl_response: ImerchantVoidResponseData,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
             &self,
-            res: Response,
-            event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-            self.build_error_response(res, event_builder)
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}/payments/cancel",
+                self.connector_base_url_payments(req),
+            ))
         }
     }
 );
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type],
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Imerchant,
+    curl_request: Json(ImerchantCaptureRequestData),
+    curl_response: ImerchantCaptureResponseData,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}/payments/capture",
+                self.connector_base_url_payments(req),
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Imerchant,
     curl_request: Json(ImerchantRefundRequest),
     curl_response: ImerchantRefundResponse,
@@ -444,19 +492,11 @@ macros::macro_connector_implementation!(
                 "{base_url}/refunds",
             ))
         }
-
-        fn get_error_response_v2(
-            &self,
-            res: Response,
-            event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-            self.build_error_response(res, event_builder)
-        }
     }
 );
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type],
+    connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Imerchant,
     curl_response: ImerchantRsyncResponse,
     flow_name: RSync,
@@ -490,30 +530,10 @@ macros::macro_connector_implementation!(
                 "{base_url}/refunds?paymentId={transaction_id}",
             ))
         }
-
-        fn get_error_response_v2(
-            &self,
-            res: Response,
-            event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-            self.build_error_response(res, event_builder)
-        }
     }
 );
 
 // Stub implementations for unsupported flows (required by macro system)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Imerchant<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Imerchant<T>
-{
-}
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,

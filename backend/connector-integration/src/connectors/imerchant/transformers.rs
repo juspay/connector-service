@@ -500,15 +500,24 @@ pub struct ImerchantCaptureRequestData {
     currency: Currency,
 }
 
-impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
-    for ImerchantCaptureRequestData
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        ImerchantRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for ImerchantCaptureRequestData
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        item: ImerchantRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let payment_id = item
+            .router_data
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
@@ -517,8 +526,8 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         Ok(Self {
             payment_id,
             // psp_reference:
-            amount: item.request.minor_amount_to_capture,
-            currency: item.request.currency,
+            amount: item.router_data.request.minor_amount_to_capture,
+            currency: item.router_data.request.currency,
         })
     }
 }
