@@ -17,7 +17,9 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow},
+    router_data::{
+        ConnectorSpecificAuth, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
+    },
     router_data_v2::RouterDataV2,
 };
 
@@ -243,16 +245,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .into());
         };
-        let source = match item
+        let PaymentMethodTokenFlow::Token(source) = item
             .router_data
             .resource_common_data
-            .get_payment_method_token()?
-        {
-            PaymentMethodTokenFlow::Token(pm_token) => Ok(pm_token),
-            _ => Err(ConnectorError::MissingRequiredField {
-                field_name: "payment_method_token",
-            }),
-        }?;
+            .get_payment_method_token()?;
         Ok(Self {
             handle: item
                 .router_data
@@ -384,13 +380,16 @@ impl From<BillwerkPaymentState> for common_enums::AttemptStatus {
     }
 }
 
-impl TryFrom<&ConnectorAuthType> for BillwerkAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for BillwerkAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
+            ConnectorSpecificAuth::Billwerk {
+                api_key,
+                public_api_key,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
-                public_api_key: key1.to_owned(),
+                public_api_key: public_api_key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }

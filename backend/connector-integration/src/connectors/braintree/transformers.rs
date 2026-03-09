@@ -1,7 +1,4 @@
-use crate::{
-    connectors::braintree::BraintreeRouterData, types::ResponseRouterData,
-    unimplemented_payment_method, utils,
-};
+use crate::{connectors::braintree::BraintreeRouterData, types::ResponseRouterData, utils};
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -25,9 +22,9 @@ use domain_types::{
         RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SdkNextAction,
         SecretInfoToInitiateSdk, SessionToken, ThirdPartySdkSessionResponse,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
-    router_data::{ConnectorAuthType, PaymentMethodToken as PaymentMethodTokenFlow},
+    router_data::{ConnectorSpecificAuth, PaymentMethodToken as PaymentMethodTokenFlow},
     router_data_v2::RouterDataV2,
     router_request_types,
     router_response_types::RedirectForm,
@@ -178,19 +175,18 @@ pub struct BraintreeAuthType {
     pub(super) private_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for BraintreeAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for BraintreeAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::SignatureKey {
-            api_key,
-            api_secret,
-            key1: _merchant_id,
+    fn try_from(item: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Braintree {
+            public_key,
+            private_key,
         } = item
         {
             Ok(Self {
-                public_key: api_key.to_owned(),
-                private_key: api_secret.to_owned(),
+                public_key: public_key.to_owned(),
+                private_key: private_key.to_owned(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?
@@ -2371,15 +2367,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .get_payment_method_token()?
                     {
                         PaymentMethodTokenFlow::Token(token) => token,
-                        PaymentMethodTokenFlow::ApplePayDecrypt(_) => Err(
-                            unimplemented_payment_method!("Apple Pay", "Simplified", "Braintree"),
-                        )?,
-                        PaymentMethodTokenFlow::PazeDecrypt(_) => {
-                            Err(unimplemented_payment_method!("Paze", "Braintree"))?
-                        }
-                        PaymentMethodTokenFlow::GooglePayDecrypt(_) => {
-                            Err(unimplemented_payment_method!("Google Pay", "Braintree"))?
-                        }
                     },
                     transaction: transaction_body,
                     options,
@@ -2405,17 +2392,6 @@ fn get_braintree_redirect_form<
             .expose(),
         card_token: match payment_method_token {
             PaymentMethodTokenFlow::Token(token) => token.expose(),
-            PaymentMethodTokenFlow::ApplePayDecrypt(_) => Err(unimplemented_payment_method!(
-                "Apple Pay",
-                "Simplified",
-                "Braintree"
-            ))?,
-            PaymentMethodTokenFlow::PazeDecrypt(_) => {
-                Err(unimplemented_payment_method!("Paze", "Braintree"))?
-            }
-            PaymentMethodTokenFlow::GooglePayDecrypt(_) => {
-                Err(unimplemented_payment_method!("Google Pay", "Braintree"))?
-            }
         },
         bin: match card_details {
             PaymentMethodData::Card(_) => get_card_isin_from_payment_method_data(&card_details)?,

@@ -1,4 +1,9 @@
 use crate::utils::{self, get_config_from_request};
+use crate::{
+    implement_connector_operation,
+    request::RequestData,
+    utils::{grpc_logging_wrapper, MetadataPayload},
+};
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
@@ -9,7 +14,7 @@ use domain_types::{
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
         generate_accept_dispute_response, generate_defend_dispute_response,
@@ -19,28 +24,22 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, AcceptDisputeRequest, AcceptDisputeResponse,
-    DisputeDefendRequest, DisputeDefendResponse, DisputeResponse, DisputeServiceGetRequest,
-    DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,
-    DisputeServiceTransformRequest, DisputeServiceTransformResponse, WebhookEventType,
-    WebhookResponseContent,
+    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
+    DisputeServiceSubmitEvidenceResponse, EventResponse, EventServiceHandleRequest,
+    EventServiceHandleResponse, WebhookEventType,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
-
-use crate::{
-    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    implement_connector_operation,
-    request::RequestData,
-    utils::{grpc_logging_wrapper, MetadataPayload},
-};
+use ucs_env::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
 
 // Helper trait for dispute operations
 trait DisputeOperationsInternal {
     async fn internal_defend(
         &self,
-        request: RequestData<DisputeDefendRequest>,
-    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
+        request: RequestData<DisputeServiceDefendRequest>,
+    ) -> Result<tonic::Response<DisputeServiceDefendResponse>, tonic::Status>;
 }
 
 #[derive(Clone)]
@@ -50,8 +49,8 @@ impl DisputeOperationsInternal for Disputes {
     implement_connector_operation!(
         fn_name: internal_defend,
         log_prefix: "DEFEND_DISPUTE",
-        request_type: DisputeDefendRequest,
-        response_type: DisputeDefendResponse,
+        request_type: DisputeServiceDefendRequest,
+        response_type: DisputeServiceDefendResponse,
         flow_marker: DefendDispute,
         resource_common_data_type: DisputeFlowData,
         request_data_type: DisputeDefendData,
@@ -260,8 +259,8 @@ impl DisputeService for Disputes {
     )]
     async fn defend(
         &self,
-        request: tonic::Request<DisputeDefendRequest>,
-    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
+        request: tonic::Request<DisputeServiceDefendRequest>,
+    ) -> Result<tonic::Response<DisputeServiceDefendResponse>, tonic::Status> {
         let service_name = request
             .extensions()
             .get::<String>()
@@ -301,8 +300,8 @@ impl DisputeService for Disputes {
     )]
     async fn accept(
         &self,
-        request: tonic::Request<AcceptDisputeRequest>,
-    ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
+        request: tonic::Request<DisputeServiceAcceptRequest>,
+    ) -> Result<tonic::Response<DisputeServiceAcceptResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
         let config = get_config_from_request(&request)?;
         let service_name = request
@@ -424,10 +423,10 @@ impl DisputeService for Disputes {
         )
         skip(self, request)
     )]
-    async fn transform(
+    async fn handle_event(
         &self,
-        request: tonic::Request<DisputeServiceTransformRequest>,
-    ) -> Result<tonic::Response<DisputeServiceTransformResponse>, tonic::Status> {
+        request: tonic::Request<EventServiceHandleRequest>,
+    ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
         let config = get_config_from_request(&request)?;
         let service_name = request
             .extensions()
@@ -442,24 +441,27 @@ impl DisputeService for Disputes {
             |request_data| {
                 async move {
                     let connector = request_data.extracted_metadata.connector;
-                    let connector_auth_details = request_data.extracted_metadata.connector_auth_type;
+                    let connector_auth_details =
+                        request_data.extracted_metadata.connector_auth_type;
                     let payload = request_data.payload;
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)
                         .ok_or_else(|| {
-                            tonic::Status::invalid_argument("missing request_details in the payload")
+                            tonic::Status::invalid_argument(
+                                "missing request_details in the payload",
+                            )
                         })?
                         .map_err(|e| e.into_grpc_status())?;
                     let webhook_secrets = payload
-                        .webhook_secrets
-                        .map(|details| {
-                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                                details,
-                            )
-                            .map_err(|e| e.into_grpc_status())
-                        })
-                        .transpose()?;
+                    .webhook_secrets
+                    .map(|details| {
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                            details,
+                        )
+                        .map_err(|e| e.into_grpc_status())
+                    })
+                    .transpose()?;
                     // Get connector data
                     let connector_data = ConnectorData::get_connector_by_name(&connector);
                     let source_verified = connector_data
@@ -480,11 +482,12 @@ impl DisputeService for Disputes {
                     )
                     .await
                     .map_err(|e| e.into_grpc_status())?;
-                    let response = DisputeServiceTransformResponse {
+                    let response = EventServiceHandleResponse {
                         event_type: WebhookEventType::WebhookDisputeOpened.into(),
-                        content: Some(content),
+                        event_response: Some(content),
                         source_verified,
-                        response_ref_id: None,
+                        merchant_event_id: None,
+                        event_status: grpc_api_types::payments::WebhookEventStatus::Complete.into(),
                     };
                     Ok(tonic::Response::new(response))
                 }
@@ -498,8 +501,8 @@ async fn get_disputes_webhook_content(
     connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
-) -> CustomResult<WebhookResponseContent, ApplicationErrorResponse> {
+    connector_auth_details: Option<ConnectorSpecificAuth>,
+) -> CustomResult<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
         .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
@@ -515,9 +518,9 @@ async fn get_disputes_webhook_content(
         }),
     )?;
 
-    Ok(WebhookResponseContent {
+    Ok(EventResponse {
         content: Some(
-            grpc_api_types::payments::webhook_response_content::Content::DisputesResponse(response),
+            grpc_api_types::payments::event_response::Content::DisputesResponse(response),
         ),
     })
 }

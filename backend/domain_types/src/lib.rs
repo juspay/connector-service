@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 pub mod api;
 pub mod connector_flow;
 pub mod connector_types;

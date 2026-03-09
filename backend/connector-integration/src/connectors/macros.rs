@@ -39,7 +39,7 @@ impl<F, FCD, Req, Resp> FlowTypes for &RouterDataV2<F, FCD, Req, Resp> {
 }
 
 pub trait GetFormData {
-    fn get_form_data(&self) -> reqwest::multipart::Form;
+    fn get_form_data(&self) -> common_utils::request::MultipartData;
 }
 
 /// Trait for converting request structures into SOAP XML format

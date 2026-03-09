@@ -10,6 +10,7 @@ use crate::utils::ForeignFrom;
 use grpc_api_types::payments;
 
 use crate::{
+    connector_types::ConnectorWebhookSecrets,
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     utils,
@@ -158,7 +159,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             ds_transaction_id,
             trans_status,
             acs_transaction_id,
-            transaction_id,
+            connector_transaction_id,
             ucaf_collection_indicator,
             exemption_indicator,
             network_params,
@@ -211,7 +212,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             message_version,
             ds_trans_id: ds_transaction_id,
             acs_transaction_id,
-            transaction_id,
+            transaction_id: connector_transaction_id,
             network_params: network_params.map(NetworkParams::try_from).transpose()?,
             exemption_indicator: exemption_indicator
                 .map(payments::ExemptionIndicator::try_from)
@@ -279,7 +280,7 @@ impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
                 .map(payments::TransactionStatus::foreign_from)
                 .map(i32::from),
             acs_transaction_id: value.acs_transaction_id,
-            transaction_id: value.transaction_id,
+            connector_transaction_id: value.transaction_id,
             exemption_indicator: value
                 .exemption_indicator
                 .map(payments::ExemptionIndicator::foreign_from)
@@ -465,4 +466,16 @@ pub struct IncrementalAuthorizationIntegrityObject {}
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MandateRevokeIntegrityObject {
     pub mandate_id: Secret<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct VerifyWebhookSourceRequestData {
+    pub webhook_headers: std::collections::HashMap<String, String>,
+    pub webhook_body: Vec<u8>,
+    pub merchant_secret: ConnectorWebhookSecrets,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VerifyWebhookSourceIntegrityObject {
+    pub webhook_id: String,
 }

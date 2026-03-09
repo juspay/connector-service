@@ -15,7 +15,7 @@ use domain_types::{
         DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder, WalletData,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
@@ -137,8 +137,8 @@ fn get_random_string() -> String {
 }
 
 /// Returns invoice number if length <= MAX_ID_LENGTH, otherwise random string
-fn get_invoice_number_or_random(merchant_order_reference_id: Option<String>) -> String {
-    match merchant_order_reference_id {
+fn get_invoice_number_or_random(merchant_order_id: Option<String>) -> String {
+    match merchant_order_id {
         Some(num) if num.len() <= MAX_ID_LENGTH => num,
         None | Some(_) => get_random_string(),
     }
@@ -257,19 +257,21 @@ pub struct MerchantAuthentication {
     transaction_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for MerchantAuthentication {
+impl TryFrom<&ConnectorSpecificAuth> for MerchantAuthentication {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                name: api_key.clone(),
-                transaction_key: key1.clone(),
+            ConnectorSpecificAuth::Authorizedotnet {
+                name,
+                transaction_key,
+            } => Ok(Self {
+                name: name.clone(),
+                transaction_key: transaction_key.clone(),
             }),
             _ => Err(error_stack::report!(ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
-
 impl ForeignTryFrom<serde_json::Value> for Vec<UserField> {
     type Error = Error;
     fn foreign_try_from(metadata: serde_json::Value) -> Result<Self, Self::Error> {
@@ -638,7 +640,7 @@ fn create_regular_transaction_request<
 
     // Get invoice number (random string if > MAX_ID_LENGTH or None)
     let invoice_number =
-        get_invoice_number_or_random(item.router_data.request.merchant_order_reference_id.clone());
+        get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
 
     let order = Order {
         invoice_number,
@@ -877,9 +879,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Get invoice number (random string if > MAX_ID_LENGTH or None)
-        let invoice_number = get_invoice_number_or_random(
-            item.router_data.request.merchant_order_reference_id.clone(),
-        );
+        let invoice_number =
+            get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
 
         let order = Order {
             invoice_number,
@@ -1193,21 +1194,24 @@ pub struct AuthorizedotnetAuthType {
     transaction_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for AuthorizedotnetAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for AuthorizedotnetAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::BodyKey { api_key, key1 } = auth_type {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificAuth::Authorizedotnet {
+            name,
+            transaction_key,
+        } = auth_type
+        {
             Ok(Self {
-                name: api_key.to_owned(),
-                transaction_key: key1.to_owned(),
+                name: name.to_owned(),
+                transaction_key: transaction_key.to_owned(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?
         }
     }
 }
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthorizedotnetRouterData<
