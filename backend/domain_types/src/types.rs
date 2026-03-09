@@ -7192,6 +7192,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
