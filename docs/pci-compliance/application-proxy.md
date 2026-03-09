@@ -6,13 +6,16 @@
 
 ## Overview
 
-**Application Proxy** provides a unified integration pattern for vault providers that require application-layer transformations. You send tokens to UCS, and UCS handles all vault-specific complexity—whether that's adding headers, constructing wrapped requests, or applying expression syntax.
+**Application Proxy** provides a unified integration pattern for vault providers that require application-layer transformations.
+
+**The key distinction:** Like Network Proxy, you send tokens to UCS. Unlike Network Proxy, UCS must transform those tokens into vault-specific formats—adding headers, wrapping in expressions, or constructing special request bodies.
 
 | Aspect | Description |
 |--------|-------------|
 | **Integration Level** | Application layer |
-| **Code Changes** | Minimal—just send tokens to UCS |
-| **Token Handling** | UCS handles vault-specific formatting |
+| **You send to UCS** | Token (same as Network Proxy) |
+| **UCS transforms** | ✅ Yes—into vault-specific format (headers, `{ }`, `{{ }}`, or wrapped requests) |
+| **Token Handling** | UCS formats tokens for vault protocol |
 | **Request Flow** | Your App → UCS → Vault Proxy → PSP |
 
 ---
@@ -46,6 +49,16 @@ sequenceDiagram
 ```
 
 **One-line Summary:** Send tokens to UCS. UCS handles all vault-specific routing and transformation.
+
+---
+
+## Network Proxy vs Application Proxy
+
+| | Network Proxy | Application Proxy |
+|---|---|---|
+| **What you send to UCS** | Token | Token |
+| **UCS transformation** | ❌ No—just routes to proxy URL | ✅ Yes—formats token for vault protocol |
+| **Example** | Send `tok_xxx` → UCS routes to `tnt.vgs.com` | Send `4242123456784242` → UCS adds `TX-URL` header + `{ }` markers |
 
 ---
 

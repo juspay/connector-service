@@ -83,10 +83,10 @@ In this mode, a third-party vault handles card data. Your application only handl
 ### Requirement
 **You must subscribe to a third-party PCI vault service.** connector-service supports two integration patterns:
 
-| Proxy Pattern | What It Means | Popular Vault Providers |
-|---------------|---------------|-------------------------|
-| **[Network Proxy](./network-proxy.md)** | Zero-code integration—just change the URL. The proxy transparently intercepts and detokenizes requests at the network layer. | **VGS**: URL-based routing (`tntxxx.sandbox.verygoodproxy.com`)<br>**Evervault**: HTTP CONNECT relay with client-side encryption |
-| **[Application Proxy](./application-proxy.md)** | Application-layer integration where you send tokens to connector-service, and we handle vault-specific routing and detokenization. Works with any vault provider. | **Basis Theory**, **TokenEx**, **Hyperswitch Vault** |
+| Proxy Pattern | You Send | UCS Handles | Popular Vault Providers |
+|---------------|----------|-------------|-------------------------|
+| **[Network Proxy](./network-proxy.md)** | Token to UCS | Routes to proxy URL; proxy detokenizes transparently | **VGS**: URL-based routing (`tntxxx.sandbox.verygoodproxy.com`)<br>**Evervault**: HTTP CONNECT relay with client-side encryption |
+| **[Application Proxy](./application-proxy.md)** | Token to UCS | Transforms token into vault-specific format (headers, expressions, or wrapped requests) | **Basis Theory**, **TokenEx**, **Hyperswitch Vault** |
 
 ### Flow Diagram
 
@@ -109,7 +109,7 @@ sequenceDiagram
     Note over BE,PSP: Backend: Payment Processing via UCS
     FE->>BE: Send vault_token + payment request
     BE->>connector-service: authorize(vault_token, amount, connector)
-    Note right of connector-service: UCS transforms request<br/>and routes through vault proxy
+    Note right of connector-service: UCS either routes to proxy URL<br/>(Network) or transforms to vault format (Application)
     connector-service->>Vault: Proxy request with token
     Vault->>PSP: Forward with detokenized card data
     PSP-->>Vault: Authorization response
@@ -179,12 +179,13 @@ Choose the right proxy pattern based on your requirements:
 | Aspect | [Network Proxy](./network-proxy.md) | [Application Proxy](./application-proxy.md) |
 |--------|-------------------------------------|---------------------------------------------|
 | **Providers** | VGS, Evervault | Basis Theory, TokenEx, Hyperswitch Vault |
-| **Code Changes** | **None**—just change URL | Minimal—just send tokens to UCS |
-| **Integration Layer** | Network/Transport | Application |
-| **How it works** | Proxy intercepts at network layer | UCS handles vault-specific routing |
+| **You send to UCS** | Token | Token |
+| **UCS transforms** | ❌ No—routes to proxy URL only | ✅ Yes—formats token for vault-specific protocol |
+| **Vault receives** | Token (transparent detokenization) | Token in vault format (headers/`{ }`/`{{ }}`/`{{$}}`) |
+| **Code Changes** | **None** | Minimal |
 | **PCI Scope** | SAQ A/A-EP ✅ | SAQ A/A-EP ✅ |
 
-**Key difference:** Network Proxy works transparently at the network level, while Application Proxy lets UCS handle all vault-specific transformations internally.
+**Key difference:** Both patterns send tokens to UCS. Network Proxy simply routes to the vault's proxy URL (the vault handles detokenization transparently). Application Proxy requires UCS to transform tokens into vault-specific formats—headers for TokenEx/Basis Theory, wrapped requests for Hyperswitch Vault.
 
 ---
 
@@ -193,17 +194,23 @@ Choose the right proxy pattern based on your requirements:
 <details>
 <summary><b>Which Proxy Pattern Should I Use?</b></summary>
 
+Both patterns require you to **send tokens to UCS**. The difference is what UCS does with them:
+
 ### Choose Network Proxy (VGS, Evervault) if:
-- ✅ You want **zero code changes**
+- ✅ You want **zero code changes**—UCS just routes to the proxy URL
 - ✅ You need the **fastest integration**
 - ✅ You already use VGS/Evervault infrastructure
 - ✅ You want **client-side encryption** (Evervault)
 
+**How it works:** You send `tok_sandbox_xxx` → UCS routes to `tntxxx.verygoodproxy.com` → VGS detokenizes transparently → PSP receives raw card data.
+
 ### Choose Application Proxy (Basis Theory, TokenEx, Hyperswitch Vault) if:
 - ✅ You want **unified integration** regardless of vault provider
-- ✅ You prefer UCS to handle vault-specific complexity
+- ✅ You prefer UCS to handle vault-specific token formatting
 - ✅ You want to switch vault providers without changing your code
 - ✅ You work with **multiple PSPs**
+
+**How it works:** You send `4242123456784242` → UCS transforms to vault format (adds `TX-URL` header + `{ }` markers for TokenEx) → Vault detokenizes → PSP receives raw card data.
 
 </details>
 
@@ -286,18 +293,22 @@ curl "https://api.stripe.com/v1/payment_intents" \
 
 ┌───────────────────────────────────────────────────────────────────────────────────────┐
 │                      NETWORK PROXY                                                    │
-│  Frontend → Backend (token) → connector-service (token) → Network Proxy → PSP         │
+│  Frontend → Backend (token) → UCS → Network Proxy → PSP                               │
 │                                    ↑                                                  │
-│                         VGS/Evervault: URL change only                                │
+│              UCS routes to proxy URL only (no token transformation)                   │
+│              VGS/Evervault detokenizes transparently                                  │
 │                                                                                       │
 │  PCI Scope: SAQ A/A-EP ✅  Code Changes: None                                         │
 └───────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌───────────────────────────────────────────────────────────────────────────────────────┐
 │                   APPLICATION PROXY                                                   │
-│  Frontend → Backend (token) → connector-service (token) → Vault Proxy → PSP           │
+│  Frontend → Backend (token) → UCS → Vault Proxy → PSP                                 │
 │                                    ↑                                                  │
-│   UCS handles vault-specific routing (headers, expressions, or wrapped requests)      │
+│              UCS transforms token → vault-specific format:                            │
+│              • TokenEx: `{token}` markers + TX-* headers                              │
+│              • Basis Theory: `{{token.property}}` + BT-PROXY-URL header               │
+│              • Hyperswitch: `{{$variable}}` in wrapped request body                   │
 │                                                                                       │
 │  PCI Scope: SAQ A/A-EP ✅  Works with: Basis Theory, TokenEx, Hyperswitch Vault       │
 └───────────────────────────────────────────────────────────────────────────────────────┘

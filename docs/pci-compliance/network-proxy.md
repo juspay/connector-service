@@ -6,14 +6,17 @@
 
 ## Overview
 
-**Network Proxy** is the simplest vault integration approach. You change the destination URL from your Payment Service Provider (PSP) to the vault's proxy URL. The vault transparently intercepts requests, detokenizes tokens, and forwards real card data to the PSP.
+**Network Proxy** is the simplest vault integration approach. You send tokens to UCS, and UCS routes requests to the vault's proxy URL. The vault transparently intercepts requests, detokenizes tokens, and forwards real card data to the PSP.
 
 | Aspect | Description |
 |--------|-------------|
 | **Integration Level** | Network/Transport layer |
-| **Code Changes** | **None**—just change the URL |
-| **Token Handling** | Automatic—happens transparently |
-| **Request Flow** | Your App → VGS Proxy → PSP |
+| **You send to UCS** | Token |
+| **UCS transforms** | ❌ No—simply routes to proxy URL |
+| **Token Handling** | Proxy detokenizes transparently (no formatting needed) |
+| **Request Flow** | Your App → UCS → VGS Proxy → PSP |
+
+**Key distinction from Application Proxy:** In both patterns, you send tokens to UCS. With Network Proxy, UCS does **not** transform the token—it just routes to the proxy URL. The proxy handles detokenization transparently without special formatting.
 
 ---
 
@@ -47,6 +50,16 @@ sequenceDiagram
     UCS-->>BE: Unified response
     BE-->>FE: Payment result
 ```
+
+---
+
+## Network Proxy vs Application Proxy
+
+| | Network Proxy | Application Proxy |
+|---|---|---|
+| **What you send to UCS** | Token | Token |
+| **UCS transformation** | ❌ No—just routes to proxy URL | ✅ Yes—formats token for vault protocol |
+| **Example** | Send `tok_xxx` → UCS routes to `tnt.vgs.com` → VGS detokenizes | Send `4242123456784242` → UCS adds headers + expressions → Vault detokenizes |
 
 ---
 
