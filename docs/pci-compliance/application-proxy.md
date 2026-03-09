@@ -38,10 +38,10 @@ sequenceDiagram
     Note over BE,PSP: Step 2: Payment via Application Proxy
     FE->>BE: Send token + payment request
     BE->>UCS: authorize(token, amount, connector)
-    Note right of UCS: UCS transforms request<br/>based on vault type
+    Note right of UCS: UCS constructs vault request<br/>(PSP payload + token in vault format)
     UCS->>Vault: Proxy request (vault-specific format)
-    Vault->>Vault: Detokenize and construct PSP request
-    Vault->>PSP: Forward with real card data
+    Note right of Vault: Vault substitutes token<br/>with raw card data
+    Vault->>PSP: Forward PSP request (with real card data)
     PSP-->>Vault: Authorization response
     Vault-->>UCS: Return response
     UCS-->>BE: Unified response
@@ -66,117 +66,9 @@ sequenceDiagram
 
 | Provider | Routing Mechanism | Token Marker Syntax |
 |----------|-------------------|---------------------|
-| **Basis Theory** | Header (`BT-PROXY-URL`) | `{{ token.property }}` |
-| **TokenEx** | Headers (`TX-URL`, `TX-Method`) | `{token}` |
 | **Hyperswitch Vault** | Wrapped request body | `{{$variable}}` |
-
----
-
-## Basis Theory
-
-### Overview
-
-Basis Theory uses header-driven routing with the `BT-PROXY-URL` header. Tokens are referenced in the body using `{{ token.property }}` expressions.
-
-| Attribute | Value |
-|-----------|-------|
-| **Documentation** | [Basis Theory Docs](https://developers.basistheory.com) |
-| **Proxy Type** | Ephemeral Proxy |
-| **Token Format** | UUID `26818785-547b-4b28-b0fa-531377e99f4e` |
-| **Expression Syntax** | `{{ token_id.property }}` double curly braces |
-| **Routing** | HTTP header (`BT-PROXY-URL`) |
-
-### Token Format
-
-```json
-{
-  "id": "26818785-547b-4b28-b0fa-531377e99f4e",
-  "type": "card",
-  "data": {
-    "number": "4242424242424242",
-    "expiration_month": 12,
-    "expiration_year": 2025
-  }
-}
-```
-
-### UCS Integration
-
-When you send a Basis Theory token to UCS:
-
-1. UCS identifies the vault provider from your configuration
-2. UCS constructs the proxy request:
-   - Adds `BT-PROXY-URL` header with the destination PSP URL
-   - Replaces token references with `{{ token.property }}` expressions
-3. Basis Theory evaluates expressions and forwards to the PSP
-
-### Example: Direct Basis Theory Call (Without UCS)
-
-```bash
-# This is what UCS constructs internally
-
-curl "https://api.basistheory.com/proxy" \
-  -H "BT-API-KEY: test_xxx" \
-  -H "BT-PROXY-URL: https://api.stripe.com/v1/payment_intents" \
-  -d "amount=1000" \
-  -d "currency=usd" \
-  -d "payment_method_data[card][number]={{ 26818785-547b-4b28-b0fa-531377e99f4e.number }}" \
-  -d "payment_method_data[card][exp_month]={{ 26818785-547b-4b28-b0fa-531377e99f4e.expiration_month }}" \
-  -d "confirm=true"
-```
-
----
-
-## TokenEx
-
-### Overview
-
-TokenEx uses header-driven routing with `TX-URL` and `TX-Method` headers. Tokens are wrapped in curly braces `{token}` in the request body.
-
-| Attribute | Value |
-|-----------|-------|
-| **Documentation** | [TokenEx Docs](https://documentation.ixopay.com/docs/tokenex) |
-| **Proxy Type** | Transparent Gateway API (TGAPI) |
-| **Token Format** | Format-preserving `4242123456784242` |
-| **Marker Syntax** | `{token}` curly braces |
-| **Routing** | HTTP headers (`TX-URL`, `TX-Method`) |
-
-### Token Format
-
-TokenEx uses **format-preserving tokens** that look like the original data:
-
-```
-Real Card:     4242424242424242
-TokenEx Token: 4242123456784242
-               └─ looks identical, different value
-```
-
-### UCS Integration
-
-When you send a TokenEx token to UCS:
-
-1. UCS identifies the vault provider from your configuration
-2. UCS constructs the TGAPI request:
-   - URL: `https://tgapi.tokenex.com`
-   - Headers: `TX-URL`, `TX-Method`
-   - Body: Token wrapped in `{ }` markers
-3. TokenEx detokenizes and forwards to the PSP
-
-### Example: Direct TokenEx Call (Without UCS)
-
-```bash
-# This is what UCS constructs internally
-
-curl "https://tgapi.tokenex.com" \
-  -H "TX-URL: https://api.stripe.com/v1/payment_intents" \
-  -H "TX-Method: POST" \
-  -H "Authorization: Bearer sk_test_xxx" \
-  -d "amount=1000" \
-  -d "currency=usd" \
-  -d "payment_method_data[card][number]={4242123456784242}" \
-  -d "payment_method_data[card][exp_month]=12" \
-  -d "confirm=true"
-```
+| **TokenEx** | Headers (`TX-URL`, `TX-Method`) | `{token}` |
+| **Basis Theory** | Header (`BT-PROXY-URL`) | `{{ token.property }}` |
 
 ---
 
@@ -249,6 +141,114 @@ curl "https://sandbox.hyperswitch.io/proxy" \
 
 ---
 
+## TokenEx
+
+### Overview
+
+TokenEx uses header-driven routing with `TX-URL` and `TX-Method` headers. Tokens are wrapped in curly braces `{token}` in the request body.
+
+| Attribute | Value |
+|-----------|-------|
+| **Documentation** | [TokenEx Docs](https://documentation.ixopay.com/docs/tokenex) |
+| **Proxy Type** | Transparent Gateway API (TGAPI) |
+| **Token Format** | Format-preserving `4242123456784242` |
+| **Marker Syntax** | `{token}` curly braces |
+| **Routing** | HTTP headers (`TX-URL`, `TX-Method`) |
+
+### Token Format
+
+TokenEx uses **format-preserving tokens** that look like the original data:
+
+```
+Real Card:     4242424242424242
+TokenEx Token: 4242123456784242
+               └─ looks identical, different value
+```
+
+### UCS Integration
+
+When you send a TokenEx token to UCS:
+
+1. UCS identifies the vault provider from your configuration
+2. UCS constructs the TGAPI request:
+   - URL: `https://tgapi.tokenex.com`
+   - Headers: `TX-URL`, `TX-Method`
+   - Body: Token wrapped in `{ }` markers
+3. TokenEx detokenizes and forwards to the PSP
+
+### Example: Direct TokenEx Call (Without UCS)
+
+```bash
+# This is what UCS constructs internally
+
+curl "https://tgapi.tokenex.com" \
+  -H "TX-URL: https://api.stripe.com/v1/payment_intents" \
+  -H "TX-Method: POST" \
+  -H "Authorization: Bearer sk_test_xxx" \
+  -d "amount=1000" \
+  -d "currency=usd" \
+  -d "payment_method_data[card][number]={4242123456784242}" \
+  -d "payment_method_data[card][exp_month]=12" \
+  -d "confirm=true"
+```
+
+---
+
+## Basis Theory
+
+### Overview
+
+Basis Theory uses header-driven routing with the `BT-PROXY-URL` header. Tokens are referenced in the body using `{{ token.property }}` expressions.
+
+| Attribute | Value |
+|-----------|-------|
+| **Documentation** | [Basis Theory Docs](https://developers.basistheory.com) |
+| **Proxy Type** | Ephemeral Proxy |
+| **Token Format** | UUID `26818785-547b-4b28-b0fa-531377e99f4e` |
+| **Expression Syntax** | `{{ token_id.property }}` double curly braces |
+| **Routing** | HTTP header (`BT-PROXY-URL`) |
+
+### Token Format
+
+```json
+{
+  "id": "26818785-547b-4b28-b0fa-531377e99f4e",
+  "type": "card",
+  "data": {
+    "number": "4242424242424242",
+    "expiration_month": 12,
+    "expiration_year": 2025
+  }
+}
+```
+
+### UCS Integration
+
+When you send a Basis Theory token to UCS:
+
+1. UCS identifies the vault provider from your configuration
+2. UCS constructs the proxy request:
+   - Adds `BT-PROXY-URL` header with the destination PSP URL
+   - Replaces token references with `{{ token.property }}` expressions
+3. Basis Theory evaluates expressions and forwards to the PSP
+
+### Example: Direct Basis Theory Call (Without UCS)
+
+```bash
+# This is what UCS constructs internally
+
+curl "https://api.basistheory.com/proxy" \
+  -H "BT-API-KEY: test_xxx" \
+  -H "BT-PROXY-URL: https://api.stripe.com/v1/payment_intents" \
+  -d "amount=1000" \
+  -d "currency=usd" \
+  -d "payment_method_data[card][number]={{ 26818785-547b-4b28-b0fa-531377e99f4e.number }}" \
+  -d "payment_method_data[card][exp_month]={{ 26818785-547b-4b28-b0fa-531377e99f4e.expiration_month }}" \
+  -d "confirm=true"
+```
+
+---
+
 ## Unified UCS Integration
 
 ### Recommended: Payment via UCS + Application Proxy
@@ -279,9 +279,9 @@ curl "https://api.connector-service.juspay.net/payments" \
 
 | Provider | UCS Action |
 |----------|------------|
-| Basis Theory | Adds `BT-PROXY-URL` header, formats `{{ token.property }}` expressions |
-| TokenEx | Adds `TX-URL`/`TX-Method` headers, wraps token in `{ }` |
 | Hyperswitch Vault | Constructs wrapped request with `{{$variable}}` expressions |
+| TokenEx | Adds `TX-URL`/`TX-Method` headers, wraps token in `{ }` |
+| Basis Theory | Adds `BT-PROXY-URL` header, formats `{{ token.property }}` expressions |
 
 ---
 
@@ -339,12 +339,12 @@ connectors:
 
 ## Provider Comparison
 
-| Aspect | Basis Theory | TokenEx | Hyperswitch Vault |
-|--------|--------------|---------|-------------------|
-| **Token Format** | UUID | Format-preserving | `pm_xxx` |
-| **Routing** | `BT-PROXY-URL` header | `TX-URL`/`TX-Method` headers | Wrapped request body |
-| **Token Syntax** | `{{ token.property }}` | `{token}` | `{{$variable}}` |
-| **Best For** | Flexible proxying | Universal PSP portability | Wrapped request control |
+| Aspect | Hyperswitch Vault | TokenEx | Basis Theory |
+|--------|-------------------|---------|--------------|
+| **Token Format** | `pm_xxx` | Format-preserving | UUID |
+| **Routing** | Wrapped request body | `TX-URL`/`TX-Method` headers | `BT-PROXY-URL` header |
+| **Token Syntax** | `{{$variable}}` | `{token}` | `{{ token.property }}` |
+| **Best For** | Wrapped request control | Universal PSP portability | Flexible proxying |
 
 ---
 

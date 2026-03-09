@@ -86,7 +86,7 @@ In this mode, a third-party vault handles card data. Your application only handl
 | Proxy Pattern | You Send | UCS Handles | Popular Vault Providers |
 |---------------|----------|-------------|-------------------------|
 | **[Network Proxy](./network-proxy.md)** | Token to UCS | Routes to proxy URL; proxy detokenizes transparently | **VGS**: URL-based routing (`tntxxx.sandbox.verygoodproxy.com`)<br>**Evervault**: HTTP CONNECT relay with client-side encryption |
-| **[Application Proxy](./application-proxy.md)** | Token to UCS | Transforms token into vault-specific format (headers, expressions, or wrapped requests) | **Basis Theory**, **TokenEx**, **Hyperswitch Vault** |
+| **[Application Proxy](./application-proxy.md)** | Token to UCS | Transforms token into vault-specific format (headers, expressions, or wrapped requests) | **Hyperswitch Vault**, **TokenEx**, **Basis Theory** |
 
 ### Flow Diagram
 
@@ -236,7 +236,7 @@ curl "https://tntSANDBOX.sandbox.verygoodproxy.com/v1/payment_intents" \
 </details>
 
 <details>
-<summary><b>Scenario 2: Using independent third-party vault through Application Proxy (example: TokenEx, Basis Theory, Hyperswitch Vault)</b></summary>
+<summary><b>Scenario 2: Using independent third-party vault through Application Proxy (example: Hyperswitch Vault, TokenEx, Basis Theory)</b></summary>
 
 ```bash
 # Send tokens to UCS—UCS handles vault-specific routing and transformations
@@ -250,16 +250,16 @@ curl "https://api.connector-service.juspay.net/payments" \
     "payment_method": {
       "type": "card",
       "card": {
-        "token": "4242123456784242"
+        "token": "pm_0196f252baa1736190bf0fc81b9651ea"
       }
     }
   }'
 ```
 
 **What happens behind the scenes:**
+- **Hyperswitch Vault**: UCS constructs wrapped request with `{{$variable}}` expressions
 - **TokenEx**: UCS adds `TX-URL` and `TX-Method` headers, wraps token in `{ }`
 - **Basis Theory**: UCS adds `BT-PROXY-URL` header, uses `{{ token.property }}` expressions
-- **Hyperswitch Vault**: UCS constructs wrapped request with `{{$variable}}` expressions
 
 </details>
 
