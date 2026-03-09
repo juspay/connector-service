@@ -6,10 +6,9 @@
 
 ## Overview
 
-This document outlines the protobuf message changes needed to support three vault proxy patterns:
-- **Network Proxy**: VGS, Evervault (transparent routing)
-- **Transform Proxy**: Hyperswitch Vault (template expressions in wrapped requests)
-- **Relay Proxy**: Basis Theory, TokenEx (header-driven with markers)
+This document outlines the protobuf message changes needed to support two vault proxy patterns:
+- **Network Proxy**: VGS, Evervault (transparent routing—UCS routes to proxy URL only)
+- **Application Proxy**: Hyperswitch Vault, TokenEx, Basis Theory (UCS formats tokens for vault protocol)
 
 ---
 
@@ -46,10 +45,8 @@ message VaultConfig {
     VgsConfig vgs = 1;
     EvervaultConfig evervault = 2;
 
-    // Transform Proxy providers (template expressions)
+    // Application Proxy providers (UCS formats tokens for vault protocol)
     HyperswitchVaultConfig hyperswitch_vault = 3;
-
-    // Relay Proxy providers (header-driven)
     TokenExConfig tokenex = 5;
   }
 }
@@ -133,43 +130,7 @@ message EvervaultConfig {
 
 ---
 
-## Transform Proxy Configurations
-
-### BasisTheoryConfig
-
-```protobuf
-// Basis Theory Transform Proxy configuration
-// Used for: Template-based detokenization with {{ }} expressions
-message BasisTheoryConfig {
-  // Basis Theory API key
-  // Get from: Basis Theory Dashboard → Applications
-  // Permissions needed: token:read, proxy:read
-  string api_key = 1;
-
-  // Proxy endpoint URL
-  // Default: "https://api.basistheory.com/proxy"
-  // Can be overridden for private deployments
-  string proxy_url = 2;
-
-  // Optional: Default proxy ID
-  // If set, this proxy configuration is used for all requests
-  // If not set, UCS creates ephemeral proxies
-  string proxy_id = 3;
-}
-```
-
-**Key Fields Explained:**
-- `api_key`: Authenticates with Basis Theory API
-- `proxy_url`: The proxy endpoint ( Basis Theory Cloud or private instance)
-- `proxy_id`: Pre-configured proxy (optional, enables reuse and caching)
-
-**How it works:**
-1. UCS sends request to `proxy_url` with `BT-PROXY-URL` header
-2. Request body contains `{{ token.property }}` expressions
-3. Basis Theory evaluates expressions and injects real values
-4. Forwarded to destination with detokenized data
-
----
+## Application Proxy Configurations
 
 ### HyperswitchVaultConfig
 
@@ -218,14 +179,10 @@ enum HyperswitchEnvironment {
 4. Forwarded to destination PSP with detokenized data
 5. Response flows back through the same path
 
----
-
-## Relay Proxy Configurations
-
 ### TokenExConfig
 
 ```protobuf
-// TokenEx Relay Proxy configuration
+// TokenEx Application Proxy configuration
 // Used for: Header-driven routing with {token} markers
 message TokenExConfig {
   // TokenEx API key
@@ -275,6 +232,42 @@ enum TokenExTokenScheme {
 
 ---
 
+### BasisTheoryConfig
+
+```protobuf
+// Basis Theory Application Proxy configuration
+// Used for: Header-driven routing with {{ }} expressions
+message BasisTheoryConfig {
+  // Basis Theory API key
+  // Get from: Basis Theory Dashboard → Applications
+  // Permissions needed: token:read, proxy:read
+  string api_key = 1;
+
+  // Proxy endpoint URL
+  // Default: "https://api.basistheory.com/proxy"
+  // Can be overridden for private deployments
+  string proxy_url = 2;
+
+  // Optional: Default proxy ID
+  // If set, this proxy configuration is used for all requests
+  // If not set, UCS creates ephemeral proxies
+  string proxy_id = 3;
+}
+```
+
+**Key Fields Explained:**
+- `api_key`: Authenticates with Basis Theory API
+- `proxy_url`: The proxy endpoint (Basis Theory Cloud or private instance)
+- `proxy_id`: Pre-configured proxy (optional, enables reuse and caching)
+
+**How it works:**
+1. UCS sends request to `proxy_url` with `BT-PROXY-URL` header
+2. Request body contains `{{ token.property }}` expressions
+3. Basis Theory evaluates expressions and injects real values
+4. Forwarded to destination with detokenized data
+
+---
+
 ## Connector-Level Configuration
 
 ### ConnectorConfig Updates
@@ -295,9 +288,9 @@ message ConnectorConfig {
   // If not set, uses global vault config (if present)
   VaultConfig vault_override = 21;
 
-  // Transform-specific configuration
-  // Only used when vault mode is TRANSFORM_PROXY
-  TransformProxyConfig transform_config = 22;
+  // Application Proxy-specific configuration
+  // Used for vault providers requiring token transformation
+  ApplicationProxyConfig application_proxy_config = 22;
 }
 ```
 
@@ -308,16 +301,18 @@ message ConnectorConfig {
 
 ---
 
-## Transform-Specific Configuration
+## Application Proxy-Specific Configuration
 
-### TransformProxyConfig
+### ApplicationProxyConfig
 
 ```protobuf
-// Additional configuration for Transform Proxy connectors
-// This is provider-agnostic and works with Hyperswitch Vault, etc.
-message TransformProxyConfig {
+// Additional configuration for Application Proxy connectors
+// This is provider-agnostic and works with Hyperswitch Vault, TokenEx, etc.
+message ApplicationProxyConfig {
   // Expression syntax (provider-specific)
   // Hyperswitch Vault: "{{$variable}}"
+  // TokenEx: "{token}" (no expressions, just markers)
+  // Basis Theory: "{{token.property}}"
   string expression_syntax = 1;
 
   // Token property mappings
@@ -341,8 +336,8 @@ message TokenPropertyMapping {
 }
 ```
 
-**Why separate transform config?**
-- Different providers use different property names
+**Why separate Application Proxy config?**
+- Different providers use different property names and syntax
 - Allows mapping UCS standard fields to provider-specific fields
 - Enables multiple connectors with different token mappings
 
@@ -352,11 +347,11 @@ message TokenPropertyMapping {
 
 | Provider | Proxy Pattern | Key Config Fields | Routing Method |
 |----------|---------------|-------------------|----------------|
-| **VGS** | Network | `tenant_id`, `environment` | URL-based proxy |
-| **Evervault** | Network | `team_id`, `app_id`, `api_key` | HTTP CONNECT relay |
-| **Hyperswitch Vault** | Transform | `api_key`, `profile_id` | Wrapped request with `destination_url` |
-| **Basis Theory** | Relay | `api_key`, `proxy_url` | `BT-PROXY-URL` header |
-| **TokenEx** | Relay | `api_key`, `tokenex_id` | `TX-URL` header |
+| **VGS** | Network | `tenant_id`, `environment` | URL-based proxy (UCS routes only) |
+| **Evervault** | Network | `team_id`, `app_id`, `api_key` | HTTP CONNECT relay (UCS routes only) |
+| **Hyperswitch Vault** | Application | `api_key`, `profile_id` | Wrapped request with `{{$variable}}` |
+| **TokenEx** | Application | `api_key`, `tokenex_id` | Headers + `{token}` markers |
+| **Basis Theory** | Application | `api_key`, `proxy_url` | `BT-PROXY-URL` header + `{{}}` expressions |
 
 ---
 
