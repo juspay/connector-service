@@ -1,5 +1,5 @@
 /**
- * Smoke test for the published payments-client JAR.
+ * Smoke test for the published payments-client JAR. 
  *
  * Tests from the consumer perspective — depends on com.hyperswitch:payments-client
  * via mavenLocal(), the same way an end-user would.
@@ -91,7 +91,7 @@ fun testLowLevelFfi() {
     val optionsBytes = ffiOptions.toByteArray()
 
     try {
-        val connectorRequestBytes = authorizeReqTransformer(requestBytes, metadata, optionsBytes)
+        val connectorRequestBytes = authorizeReqTransformer(requestBytes, optionsBytes)
         val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
         val url = connectorRequest.url
         val method = connectorRequest.method
@@ -124,7 +124,7 @@ fun testFullRoundTrip() {
     val defaults = buildDefaults()
     val client = PaymentClient(config, defaults)
     try {
-        val response = client.authorize(buildRequest(), buildMetadata(), null)
+        val response = client.authorize(buildRequest(), null)
         println("  Response status: ${response.status}")
         println("  PASSED")
     } catch (e: UniffiException) {
