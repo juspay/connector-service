@@ -5,7 +5,7 @@ use axum::{
 };
 use grpc_api_types::payments::{
     composite_payment_service_server::CompositePaymentService, CompositeAuthorizeRequest,
-    CompositeAuthorizeResponse,
+    CompositeAuthorizeResponse, CompositeGetRequest, CompositeGetResponse,
 };
 use std::sync::Arc;
 
@@ -21,5 +21,13 @@ http_handler!(
     CompositeAuthorizeRequest,
     CompositeAuthorizeResponse,
     composite_authorize,
+    composite_payments_service
+);
+
+http_handler!(
+    get,
+    CompositeGetRequest,
+    CompositeGetResponse,
+    composite_get,
     composite_payments_service
 );

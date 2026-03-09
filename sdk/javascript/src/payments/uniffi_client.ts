@@ -12,13 +12,14 @@
 import koffi from "koffi";
 import path from "path";
 // @ts-ignore - generated CommonJS module
-import { FLOWS } from "./_generated_flows.js";
+import { FLOWS, SINGLE_FLOWS } from "./_generated_flows.js";
 
 // Standard Node.js __dirname
 declare const __dirname: string;
 const _dirname = __dirname;
 
 const FLOW_NAMES: string[] = Object.keys(FLOWS as Record<string, unknown>);
+const SINGLE_FLOW_NAMES: string[] = Object.keys((SINGLE_FLOWS || {}) as Record<string, unknown>);
 
 // ── RustBuffer struct layout ────────────────────────────────────────────────
 // UniFFI uses RustBuffer { capacity: u64, len: u64, data: *u8 } for all
@@ -80,12 +81,21 @@ function loadLib(libPath?: string): FfiFunctions {
     fns[`${flow}_req`] = lib.func(
       `uniffi_connector_service_ffi_fn_func_${flow}_req_transformer`,
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     );
     fns[`${flow}_res`] = lib.func(
       `uniffi_connector_service_ffi_fn_func_${flow}_res_transformer`,
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+    );
+  }
+
+  // Load single-step transformer symbols (no HTTP round-trip, e.g. webhook processing).
+  for (const flow of SINGLE_FLOW_NAMES) {
+    fns[`${flow}_direct`] = lib.func(
+      `uniffi_connector_service_ffi_fn_func_${flow}_transformer`,
+      RustBufferStruct,
+      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     );
   }
 
@@ -186,34 +196,6 @@ function lowerBytes(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuffer {
   return allocRustBuffer(ffi, buf);
 }
 
-/**
- * Lowers a Map into a UniFFI-compliant serialized buffer.
- * Protocol: [i32 count] + [ [i32 key_len]+[key_bytes] + [i32 val_len]+[val_bytes] ] * count
- */
-function lowerMap(ffi: FfiFunctions, map: Record<string, string>): RustBuffer {
-  const entries = Object.entries(map);
-  let totalSize = 4; // count
-  const encoded = entries.map(([k, v]) => {
-    const kBuf = Buffer.from(k, "utf-8");
-    const vBuf = Buffer.from(v, "utf-8");
-    totalSize += 4 + kBuf.length + 4 + vBuf.length;
-    return { kBuf, vBuf };
-  });
-
-  const buf = Buffer.alloc(totalSize);
-  let offset = 0;
-  buf.writeInt32BE(entries.length, offset); offset += 4;
-
-  for (const { kBuf, vBuf } of encoded) {
-    buf.writeInt32BE(kBuf.length, offset); offset += 4;
-    kBuf.copy(buf, offset); offset += kBuf.length;
-    buf.writeInt32BE(vBuf.length, offset); offset += 4;
-    vBuf.copy(buf, offset); offset += vBuf.length;
-  }
-
-  return allocRustBuffer(ffi, buf);
-}
-
 export class UniffiClient {
   private _ffi: FfiFunctions;
 
@@ -228,18 +210,16 @@ export class UniffiClient {
   callReq(
     flow: string,
     requestBytes: Buffer | Uint8Array,
-    metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     const fn = this._ffi[`${flow}_req`];
     if (!fn) throw new Error(`Unknown flow: '${flow}'. Supported: ${FLOW_NAMES.join(", ")}`);
 
     const rbReq = lowerBytes(this._ffi, requestBytes);
-    const rbMeta = lowerMap(this._ffi, metadata);
     const rbOpts = lowerBytes(this._ffi, optionsBytes);
     const status = makeCallStatus();
 
-    const result = fn(rbReq, rbMeta, rbOpts, status);
+    const result = fn(rbReq, rbOpts, status);
 
     try {
       checkCallStatus(this._ffi, status);
@@ -258,7 +238,6 @@ export class UniffiClient {
     flow: string,
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
-    metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     const fn = this._ffi[`${flow}_res`];
@@ -266,11 +245,37 @@ export class UniffiClient {
 
     const rbRes = lowerBytes(this._ffi, responseBytes);
     const rbReq = lowerBytes(this._ffi, requestBytes);
-    const rbMeta = lowerMap(this._ffi, metadata);
     const rbOpts = lowerBytes(this._ffi, optionsBytes);
     const status = makeCallStatus();
 
-    const result = fn(rbRes, rbReq, rbMeta, rbOpts, status);
+    const result = fn(rbRes, rbReq, rbOpts, status);
+
+    try {
+      checkCallStatus(this._ffi, status);
+      return liftBytes(result);
+    } finally {
+      freeRustBuffer(this._ffi, result);
+    }
+  }
+
+  /**
+   * Execute a single-step transformer directly (no HTTP round-trip).
+   * Used for inbound flows like webhook processing.
+   * Returns protobuf-encoded response bytes.
+   */
+  callDirect(
+    flow: string,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    const fn = this._ffi[`${flow}_direct`];
+    if (!fn) throw new Error(`Unknown single-step flow: '${flow}'. Supported: ${SINGLE_FLOW_NAMES.join(", ")}`);
+
+    const rbReq = lowerBytes(this._ffi, requestBytes);
+    const rbOpts = lowerBytes(this._ffi, optionsBytes);
+    const status = makeCallStatus();
+
+    const result = fn(rbReq, rbOpts, status);
 
     try {
       checkCallStatus(this._ffi, status);

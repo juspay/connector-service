@@ -1,12 +1,12 @@
 # Hyperswitch Payments SDK
 #
 # Export structure:
-#   - ConnectorClient (flat - high-level API)
+#   - PaymentClient, MerchantAuthenticationClient (per-service high-level API)
 #   - payments (namespace - request/response types, enums)
 #   - payment_methods (namespace - payment method types)
 #   - configs (namespace - configuration types)
 
-from payments.connector_client import ConnectorClient
+from payments._generated_service_clients import PaymentClient, MerchantAuthenticationClient
 
 # Import from generated proto files
 from payments.generated.payment_pb2 import (
@@ -49,8 +49,10 @@ from payments.generated.payment_methods_pb2 import (
     CardDetails,
 )
 
-from payments.generated.sdk_options_pb2 import (
-    EnvOptions,
+from payments.generated.sdk_config_pb2 import (
+    ConnectorConfig,
+    RequestConfig,
+    Environment,
     FfiOptions,
     FfiConnectorHttpRequest,
     FfiConnectorHttpResponse,
@@ -173,7 +175,9 @@ class PaymentMethodsNamespace:
 class ConfigsNamespace:
     """Namespace for configuration types."""
 
-    EnvOptions = EnvOptions
+    ConnectorConfig = ConnectorConfig
+    RequestConfig = RequestConfig
+    Environment = Environment
     FfiOptions = FfiOptions
     FfiConnectorHttpRequest = FfiConnectorHttpRequest
     FfiConnectorHttpResponse = FfiConnectorHttpResponse
@@ -186,4 +190,5 @@ configs = ConfigsNamespace()
 
 # Legacy exports (to be deprecated)
 from payments.generated.payment_pb2 import *
-from payments.generated.sdk_options_pb2 import *
+from payments.generated.sdk_config_pb2 import *
+from payments.generated.connector_service_ffi import *

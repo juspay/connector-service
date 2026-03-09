@@ -9,71 +9,147 @@
  *   5. Deserialize protobuf response from bytes
  *
  * Flow methods (authorize, capture, void, refund, …) are in _generated_connector_client_flows.ts.
- * To add a new flow: implement it in the FFI crate and run `make generate`.
+ * To add a new flow: edit sdk/flows.yaml and run `make codegen`.
  */
 
 import { Dispatcher } from "undici";
 import { UniffiClient } from "./uniffi_client";
-import { execute, createDispatcher, HttpOptions, HttpRequest } from "../http_client";
+import { execute, createDispatcher, HttpRequest, ConnectorError } from "../http_client";
 // @ts-ignore - protobuf generated files might not have types yet
-import { ucs } from "./generated/proto";
+import { types } from "./generated/proto";
 
-const v2 = ucs.v2;
+const v2 = types;
 
 export class ConnectorClient {
   private uniffi: UniffiClient;
-  private options: ucs.v2.IOptions;
+  private config: types.ConnectorConfig;
+  private defaults: types.IRequestConfig;
   private dispatcher: Dispatcher;
 
   /**
-   * @param libPath - optional path to the UniFFI shared library
-   * @param options - unified SDK configuration from Protobuf (Options message)
+   * Initialize the client with mandatory config and optional request defaults.
+   *
+   * @param config - Immutable connector identity and environment (Connector, Auth, Environment).
+   * @param defaults - Optional per-request defaults (Http, Vault).
+   * @param libPath - optional path to the UniFFI shared library.
    */
-  constructor(libPath?: string, options: ucs.v2.IOptions = {}) {
+  constructor(
+    config: types.IConnectorConfig,
+    defaults: types.IRequestConfig = {},
+    libPath?: string
+  ) {
     this.uniffi = new UniffiClient(libPath);
-    this.options = options;
+    this.config = types.ConnectorConfig.create(config);
+    this.defaults = defaults;
+
+    if (config.connector === undefined) {
+      throw new ConnectorError(
+        "Connector is required in ConnectorConfig",
+        400,
+        "CLIENT_INITIALIZATION"
+      );
+    }
 
     // Instance-level cache: create the primary connection pool at startup
-    this.dispatcher = createDispatcher(this.getNativeHttpOptions(options.http));
+    this.dispatcher = createDispatcher(defaults.http || {});
   }
 
   /**
-   * Internal helper to map Protobuf HttpOptions to Native HttpClient options.
+   * Merges request-level options with client defaults. Environment comes from config (immutable).
    */
-  private getNativeHttpOptions(proto?: ucs.v2.IHttpOptions | null): HttpOptions {
-    if (!proto) return {};
+  private _resolveConfig(overrides?: types.IRequestConfig | null): {
+    ffi: types.FfiOptions;
+    http: types.IHttpConfig;
+  } {
+    const opt = overrides || {};
+    const clientHttp = this.defaults.http || {};
+    const overrideHttp = opt.http || {};
 
-    return {
-      totalTimeoutMs: proto.totalTimeoutMs ?? undefined,
-      connectTimeoutMs: proto.connectTimeoutMs ?? undefined,
-      responseTimeoutMs: proto.responseTimeoutMs ?? undefined,
-      keepAliveTimeoutMs: proto.keepAliveTimeoutMs ?? undefined,
-      proxy: proto.proxy ? {
-        httpUrl: proto.proxy.httpUrl ?? undefined,
-        httpsUrl: proto.proxy.httpsUrl ?? undefined,
-        bypassUrls: proto.proxy.bypassUrls ?? undefined,
-      } : undefined,
-      caCert: proto.caCert ?? undefined,
+    const http: types.IHttpConfig = {
+      totalTimeoutMs: overrideHttp.totalTimeoutMs ?? clientHttp.totalTimeoutMs,
+      connectTimeoutMs: overrideHttp.connectTimeoutMs ?? clientHttp.connectTimeoutMs,
+      responseTimeoutMs: overrideHttp.responseTimeoutMs ?? clientHttp.responseTimeoutMs,
+      keepAliveTimeoutMs: overrideHttp.keepAliveTimeoutMs ?? clientHttp.keepAliveTimeoutMs,
+      proxy: overrideHttp.proxy ?? clientHttp.proxy,
+      caCert: overrideHttp.caCert ?? clientHttp.caCert,
     };
+
+    const ffi = types.FfiOptions.create({
+      environment: this.config.environment ?? types.Environment.SANDBOX,
+      connector: this.config.connector,
+      auth: this.config.auth,
+    });
+
+    return { ffi, http };
   }
 
   /**
    * Execute a full round-trip for any registered payment flow.
    *
-   * Looks up the request/response protobuf type names from FLOWS, encodes the
-   * request, calls callReq → HTTP → callRes via the generic FFI dispatcher,
-   * then decodes and returns the response.
-   *
    * @param flow - Flow name matching the FFI transformer prefix (e.g. "authorize").
    * @param requestMsg - Protobuf request message object.
-   * @param metadata - Dict with connector routing and auth info.
-   * @param ffiOptions - Optional IFfiOptions override.
+   * @param options - Optional ConfigOptions override (Environment, Http).
    */
   async _executeFlow(
     flow: string,
     requestMsg: object,
-    metadata: Record<string, string>,
-    ffiOptions?: ucs.v2.IFfiOptions | null,
+    options?: types.IRequestConfig | null,
+    reqTypeName?: string,
+    resTypeName?: string
+  ): Promise<unknown> {
+    const reqType = reqTypeName ? (v2 as any)[reqTypeName] : undefined;
+    const resType = resTypeName ? (v2 as any)[resTypeName] : undefined;
+
+    if (!reqType || !resType) {
+      throw new Error(`Unknown flow: '${flow}' or missing type names.`);
+    }
+
+    // 1. Resolve final configuration
+    const { ffi, http } = this._resolveConfig(options);
+    const optionsBytes = Buffer.from(v2.FfiOptions.encode(ffi).finish());
+
+    // 2. Serialize domain request
+    const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
+
+    // 3. Build connector HTTP request via FFI
+    const resultBytes = this.uniffi.callReq(flow, requestBytes, optionsBytes);
+    const connectorReq = v2.FfiConnectorHttpRequest.decode(resultBytes);
+
+    const connectorRequest: HttpRequest = {
+      url: connectorReq.url,
+      method: connectorReq.method,
+      headers: connectorReq.headers || {},
+      body: connectorReq.body ?? undefined
+    };
+
+    // 4. Execute HTTP using the instance-owned connection pool
+    const response = await execute(
+      connectorRequest,
+      http,
+      this.dispatcher
+    );
+
+    // 5. Encode HTTP response for FFI
+    const resProto = v2.FfiConnectorHttpResponse.create({
+      statusCode: response.statusCode,
+      headers: response.headers,
+      body: response.body
+    });
+    const resBytes = Buffer.from(v2.FfiConnectorHttpResponse.encode(resProto).finish());
+
+    // 6. Parse connector response via FFI and decode
+    const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, optionsBytes);
+    return resType.decode(resultBytesRes);
+  }
+
+  /**
+   * Execute a single-step flow directly via FFI (no HTTP round-trip).
+   * Used for inbound flows like webhook processing where the connector sends data to us.
+   */
+  async _executeDirect(
+    flow: string,
+    requestMsg: object,
+    options?: types.IRequestConfig | null,
     reqTypeName?: string,
     resTypeName?: string
   ): Promise<unknown> {
@@ -87,38 +163,12 @@ export class ConnectorClient {
     // 1. Serialize request
     const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
 
-    // 2. Resolve FFI options (prefer call-specific)
-    const ffi = ffiOptions || this.options.ffi;
-    const optionsBytes = ffi ? Buffer.from(v2.FfiOptions.encode(ffi).finish()) : Buffer.alloc(0);
+    // 2. Resolve FFI options from identity + defaults + request override
+    const { ffi } = this._resolveConfig(options);
+    const optionsBytes = Buffer.from(v2.FfiOptions.encode(ffi).finish());
 
-    // 3. Build connector HTTP request via FFI (returns FfiConnectorHttpRequest protobuf bytes)
-    const resultBytes = this.uniffi.callReq(flow, requestBytes, metadata, optionsBytes);
-    const connectorReq = v2.FfiConnectorHttpRequest.decode(resultBytes);
-
-    const connectorRequest: HttpRequest = {
-      url: connectorReq.url,
-      method: connectorReq.method,
-      headers: connectorReq.headers || {},
-      body: connectorReq.body ?? undefined
-    };
-
-    // 4. Execute HTTP using the instance-owned connection pool
-    const response = await execute(
-      connectorRequest,
-      this.getNativeHttpOptions(this.options.http),
-      this.dispatcher
-    );
-
-    // 5. Encode HTTP response as FfiConnectorHttpResponse protobuf bytes
-    const resProto = v2.FfiConnectorHttpResponse.create({
-      statusCode: response.statusCode,
-      headers: response.headers,
-      body: response.body
-    });
-    const resBytes = Buffer.from(v2.FfiConnectorHttpResponse.encode(resProto).finish());
-
-    // 6. Parse connector response via FFI and decode
-    const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, metadata, optionsBytes);
-    return resType.decode(resultBytesRes);
+    // 3. Call the single-step transformer directly (no HTTP)
+    const resultBytes = this.uniffi.callDirect(flow, requestBytes, optionsBytes);
+    return resType.decode(resultBytes);
   }
 }

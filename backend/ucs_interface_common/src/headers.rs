@@ -24,17 +24,14 @@ impl HeaderSource for http::HeaderMap {
     }
 }
 
-/// Required headers that must be present in every request.
-const REQUIRED_HEADERS: &[&str] = &[
+/// All recognized headers. Validation and defaults are applied
+/// downstream in metadata extraction, not at the transport layer.
+const HEADERS: &[&str] = &[
     consts::X_CONNECTOR_NAME,
     consts::X_MERCHANT_ID,
     consts::X_REQUEST_ID,
     consts::X_TENANT_ID,
     consts::X_AUTH,
-];
-
-/// Optional headers that may or may not be present.
-const OPTIONAL_HEADERS: &[&str] = &[
     consts::X_REFERENCE_ID,
     consts::X_API_KEY,
     consts::X_API_SECRET,
@@ -54,25 +51,15 @@ fn to_metadata_value(key: &str, value: &str) -> Result<MetadataValue<Ascii>, Int
 }
 
 /// Converts headers from any `HeaderSource` into a gRPC `MetadataMap`.
-/// Validates that all required headers are present.
+/// All headers are optional at this layer; downstream metadata extraction
+/// applies context-aware defaults for any missing values.
 pub fn headers_to_metadata<H: HeaderSource>(headers: &H) -> Result<MetadataMap, InterfaceError> {
     let mut metadata = MetadataMap::new();
 
-    for header_name in REQUIRED_HEADERS {
-        let value = headers.get_header(header_name).ok_or_else(|| {
-            InterfaceError::MissingRequiredHeader {
-                key: header_name.to_string(),
-            }
-        })?;
-        let metadata_value = to_metadata_value(header_name, value)?;
-        metadata.insert(*header_name, metadata_value);
-    }
-
-    for header_name in OPTIONAL_HEADERS {
+    for header_name in HEADERS {
         if let Some(value) = headers.get_header(header_name) {
-            if let Ok(metadata_value) = to_metadata_value(header_name, value) {
-                metadata.insert(*header_name, metadata_value);
-            }
+            let metadata_value = to_metadata_value(header_name, value)?;
+            metadata.insert(*header_name, metadata_value);
         }
     }
 

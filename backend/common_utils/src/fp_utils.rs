@@ -49,3 +49,8 @@ pub fn generate_id_with_default_len(prefix: &str) -> String {
 pub fn generate_id(length: usize, prefix: &str) -> String {
     format!("{}_{}", prefix, nanoid::nanoid!(length, &ALPHABETS))
 }
+
+#[inline]
+pub fn generate_uuid_v7() -> String {
+    uuid::Uuid::now_v7().to_string()
+}

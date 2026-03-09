@@ -1,29 +1,47 @@
 use std::collections::HashMap;
 
-use grpc_api_types::payments::{self, PaymentServiceAuthorizeRequest};
+use grpc_api_types::payments::{
+    self, Connector, ConnectorAuth, ConnectorConfig, Environment, FfiOptions,
+    PaymentServiceAuthorizeRequest, RequestConfig,
+};
+use hyperswitch_masking::Secret;
 use hyperswitch_payments_client::ConnectorClient;
 
 #[tokio::main]
 async fn main() {
     let request = build_authorize_request();
-    let metadata = build_metadata();
+    let api_key =
+        std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_placeholder".to_string());
 
-    // Demo 1: Low-level - call authorize_req_handler directly, print connector request JSON
-    demo_low_level(&request, &metadata);
+    // Define the final configuration context
+    let ffi_options = FfiOptions {
+        environment: Environment::Sandbox.into(),
+        connector: Connector::Stripe.into(),
+        auth: Some(ConnectorAuth {
+            auth_type: Some(payments::connector_auth::AuthType::Stripe(
+                payments::StripeAuth {
+                    api_key: Some(Secret::new(api_key.to_string())),
+                },
+            )),
+        }),
+    };
+
+    let metadata = build_metadata(&api_key);
+
+    // Demo 1: Low-level - call authorize_req_handler directly
+    demo_low_level(&request, &metadata, &ffi_options);
 
     // Demo 2: Full round-trip - use ConnectorClient to make actual HTTP call
-    demo_full_round_trip(request, &metadata).await;
+    demo_full_round_trip(request, &metadata, ffi_options).await;
 }
 
 /// Build a sample PaymentServiceAuthorizeRequest (Stripe card payment).
-///
-/// Field structure mirrors sdk/python/main.py build_authorize_request_msg().
 fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
         // Identification
         merchant_transaction_id: Some(payments::Identifier {
             id_type: Some(payments::identifier::IdType::Id(
-                "test_payment_123456".to_string(),
+                "test_rust_stripe_123".to_string(),
             )),
         }),
 
@@ -39,17 +57,15 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
             payment_method: Some(payments::payment_method::PaymentMethod::Card(
                 payments::CardDetails {
                     card_number: Some(
-                        "4111111111111111"
+                        "4242424242424242"
                             .to_string()
                             .try_into()
                             .expect("valid card number"),
                     ),
-                    card_exp_month: Some(hyperswitch_masking::Secret::new("12".to_string())),
-                    card_exp_year: Some(hyperswitch_masking::Secret::new("2050".to_string())),
-                    card_cvc: Some(hyperswitch_masking::Secret::new("123".to_string())),
-                    card_holder_name: Some(hyperswitch_masking::Secret::new(
-                        "Test User".to_string(),
-                    )),
+                    card_exp_month: Some(Secret::new("12".to_string())),
+                    card_exp_year: Some(Secret::new("2050".to_string())),
+                    card_cvc: Some(Secret::new("123".to_string())),
+                    card_holder_name: Some(Secret::new("Rust Test User".to_string())),
                     ..Default::default()
                 },
             )),
@@ -57,14 +73,9 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
 
         // Customer info
         customer: Some(payments::Customer {
-            email: Some(hyperswitch_masking::Secret::new(
-                "customer@example.com".to_string(),
-            )),
+            email: Some(Secret::new("customer@example.com".to_string())),
             name: Some("Test Customer".to_string()),
-            id: None,
-            connector_customer_id: None,
-            phone_number: None,
-            phone_country_code: None,
+            ..Default::default()
         }),
 
         // Auth / 3DS
@@ -87,14 +98,7 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
 }
 
 /// Build metadata for Stripe with HeaderKey auth.
-///
-/// Two purposes:
-///   1. `"connector"` and `"connector_auth_type"` are used to build FfiMetadataPayload
-///   2. `x-*` headers are used by ffi_headers_to_masked_metadata for MaskedMetadata
-fn build_metadata() -> HashMap<String, String> {
-    let api_key =
-        std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_placeholder".to_string());
-
+fn build_metadata(api_key: &str) -> HashMap<String, String> {
     let mut metadata = HashMap::new();
 
     // Connector routing (used by parse_metadata / build_ffi_request)
@@ -108,37 +112,36 @@ fn build_metadata() -> HashMap<String, String> {
         })
         .to_string(),
     );
-
-    // Required metadata headers (used by ffi_headers_to_masked_metadata)
-    metadata.insert("x-connector".to_string(), "Stripe".to_string());
-    metadata.insert("x-merchant-id".to_string(), "test_merchant_123".to_string());
-    metadata.insert("x-request-id".to_string(), "test-request-001".to_string());
-    metadata.insert("x-tenant-id".to_string(), "public".to_string());
-    metadata.insert("x-auth".to_string(), "header-key".to_string());
-
-    // Optional headers
-    metadata.insert("x-api-key".to_string(), api_key);
-
     metadata
 }
 
 /// Demo 1: Low-level handler call.
-///
-/// Calls `authorize_req_handler` directly to get the connector HTTP request JSON.
-/// No actual HTTP call is made — useful for inspecting what would be sent.
-fn demo_low_level(request: &PaymentServiceAuthorizeRequest, metadata: &HashMap<String, String>) {
+fn demo_low_level(
+    request: &PaymentServiceAuthorizeRequest,
+    metadata: &HashMap<String, String>,
+    ffi_options: &FfiOptions,
+) {
     eprintln!("=== Demo 1: Low-Level Handler Call ===\n");
 
-    let ffi_request =
-        match hyperswitch_payments_client::build_ffi_request(request.clone(), metadata) {
-            Ok(req) => req,
-            Err(e) => {
-                eprintln!("Failed to build FFI request: {}", e);
-                return;
-            }
-        };
+    let ffi_request = match hyperswitch_payments_client::build_ffi_request(
+        request.clone(),
+        metadata,
+        ffi_options,
+    ) {
+        Ok(req) => req,
+        Err(e) => {
+            eprintln!("Failed to build FFI request: {}", e);
+            return;
+        }
+    };
 
-    match connector_service_ffi::handlers::payments::authorize_req_handler(ffi_request, None) {
+    let environment = Some(
+        grpc_api_types::payments::Environment::try_from(ffi_options.environment)
+            .unwrap_or_default(),
+    );
+
+    match connector_service_ffi::handlers::payments::authorize_req_handler(ffi_request, environment)
+    {
         Ok(Some(connector_request)) => {
             let url = connector_request.url.clone();
             let method = connector_request.method;
@@ -175,12 +178,10 @@ fn demo_low_level(request: &PaymentServiceAuthorizeRequest, metadata: &HashMap<S
 }
 
 /// Demo 2: Full round-trip.
-///
-/// Uses ConnectorClient to make an actual HTTP call to the connector.
-/// Requires a valid STRIPE_API_KEY environment variable.
 async fn demo_full_round_trip(
     request: PaymentServiceAuthorizeRequest,
     metadata: &HashMap<String, String>,
+    ffi_options: FfiOptions,
 ) {
     eprintln!("\n=== Demo 2: Full Round-Trip (ConnectorClient) ===\n");
 
@@ -194,21 +195,20 @@ async fn demo_full_round_trip(
     eprintln!("Connector: Stripe");
     eprintln!("Sending authorize request...\n");
 
-    // Initialize with Unified Options structure
-    let client_options = grpc_api_types::payments::Options {
-        http: Some(grpc_api_types::payments::HttpOptions {
-            total_timeout_ms: Some(15000),
-            ..Default::default()
-        }),
-        ffi: Some(grpc_api_types::payments::FfiOptions {
-            env: Some(grpc_api_types::payments::EnvOptions { test_mode: true }),
-            ..Default::default()
-        }),
+    // 1. ConnectorConfig (connector, auth, environment)
+    let config = ConnectorConfig {
+        connector: ffi_options.connector,
+        auth: ffi_options.auth.clone(),
+        environment: ffi_options.environment,
     };
 
-    let client = ConnectorClient::new(client_options).expect("Failed to create ConnectorClient");
+    // 2. Optional RequestConfig defaults (http, vault)
+    let defaults = RequestConfig::default();
 
-    // Call authorize with None for ffi_options override
+    let client =
+        ConnectorClient::new(config, Some(defaults)).expect("Failed to create ConnectorClient");
+
+    // 3. Call authorize
     match client.authorize(request, metadata, None).await {
         Ok(response) => {
             eprintln!("Authorize response received:");
