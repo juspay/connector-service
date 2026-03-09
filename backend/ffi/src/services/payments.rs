@@ -408,26 +408,25 @@ pub fn handle_event_transformer(
     connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
     _metadata: &common_utils::metadata::MaskedMetadata,
 ) -> Result<EventServiceHandleResponse, FfiResponseError> {
-    use crate::errors::FfiError;
+    use domain_types::errors::ConnectorError;
     use domain_types::utils::ForeignTryFrom as _;
 
     let map_app_err = |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-        FfiResponseError::from(FfiError::IntegrationError {
-            message: e.to_string(),
-        })
+        FfiResponseError::from(e.current_context())
     };
 
     let request_details = payload
         .request_details
         .ok_or_else(|| {
-            FfiResponseError::from(FfiError::IntegrationError {
-                message: "missing request_details in payload".to_string(),
+            FfiResponseError::from(ConnectorError::MissingRequiredField {
+                field_name: "request_details",
             })
         })
         .and_then(|rd| {
             RequestDetails::foreign_try_from(rd).map_err(|e| {
-                FfiResponseError::from(FfiError::IntegrationError {
-                    message: e.to_string(),
+                FfiResponseError::from(ConnectorError::GenericError {
+                    error_message: e.to_string(),
+                    error_object: serde_json::Value::Null,
                 })
             })
         })?;
@@ -436,8 +435,9 @@ pub fn handle_event_transformer(
         .webhook_secrets
         .map(|ws| {
             ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| {
-                FfiResponseError::from(FfiError::IntegrationError {
-                    message: e.to_string(),
+                FfiResponseError::from(ConnectorError::GenericError {
+                    error_message: e.to_string(),
+                    error_object: serde_json::Value::Null,
                 })
             })
         })

@@ -7,10 +7,10 @@
 
 #[cfg(feature = "uniffi")]
 mod uniffi_bindings_inner {
-    use crate::errors::FfiError;
     use bytes::Bytes;
     use common_utils::request::Request;
     use domain_types::connector_types::ConnectorEnum;
+    use domain_types::errors::ConnectorError;
     use domain_types::router_data::ConnectorSpecificAuth;
     use domain_types::router_response_types::Response;
     use domain_types::utils::ForeignTryFrom;
@@ -24,12 +24,13 @@ mod uniffi_bindings_inner {
     // ── Shared helpers ────────────────────────────────────────────────────────
 
     /// Build FfiMetadataPayload from FfiOptions.
-    fn parse_metadata(options: &FfiOptions) -> Result<crate::types::FfiMetadataPayload, FfiError> {
+    fn parse_metadata(options: &FfiOptions) -> Result<crate::types::FfiMetadataPayload, ConnectorError> {
         // 1. Resolve Connector (Taken from FfiOptions)
         let proto_connector = options.connector(); // Direct enum access via generated method
         let connector = ConnectorEnum::foreign_try_from(proto_connector).map_err(|e| {
-            FfiError::MetadataParseError {
-                msg: format!("Connector mapping failed: {e}"),
+            ConnectorError::GenericError {
+                error_message: format!("Connector mapping failed: {e}"),
+                error_object: serde_json::Value::Null,
             }
         })?;
 
@@ -37,13 +38,14 @@ mod uniffi_bindings_inner {
         let proto_auth = options
             .auth
             .as_ref()
-            .ok_or_else(|| FfiError::MissingMetadata {
-                key: "auth".to_string(),
+            .ok_or_else(|| ConnectorError::MissingRequiredField {
+                field_name: "auth",
             })?;
 
         let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(proto_auth.clone())
-            .map_err(|e| FfiError::MetadataParseError {
-                msg: format!("Typed auth mapping failed: {e}"),
+            .map_err(|e| ConnectorError::GenericError {
+                error_message: format!("Typed auth mapping failed: {e}"),
+                error_object: serde_json::Value::Null,
             })?;
 
         Ok(crate::types::FfiMetadataPayload {
@@ -53,14 +55,17 @@ mod uniffi_bindings_inner {
     }
 
     /// Helper to convert internal Request to Protobuf FfiConnectorHttpRequest bytes.
-    fn build_ffi_request_bytes(request: &Request) -> Result<Vec<u8>, FfiError> {
+    fn build_ffi_request_bytes(request: &Request) -> Result<Vec<u8>, ConnectorError> {
         let mut headers = request.get_headers_map();
         let (body, boundary) = request
             .body
             .as_ref()
             .map(|b| b.get_body_bytes())
             .transpose()
-            .map_err(|e| FfiError::HandlerError { msg: e.to_string() })?
+            .map_err(|e| ConnectorError::GenericError {
+                error_message: e.to_string(),
+                error_object: serde_json::Value::Null,
+            })?
             .unwrap_or((None, None));
 
         if let Some(boundary) = boundary {
@@ -81,9 +86,9 @@ mod uniffi_bindings_inner {
     }
 
     /// Helper to convert Protobuf FfiConnectorHttpResponse bytes to internal Response.
-    fn build_domain_response(response_bytes: Vec<u8>) -> Result<Response, FfiError> {
+    fn build_domain_response(response_bytes: Vec<u8>) -> Result<Response, ConnectorError> {
         let response = FfiConnectorHttpResponse::decode(Bytes::from(response_bytes))
-            .map_err(|e| FfiError::DecodeError { msg: e.to_string() })?;
+            .map_err(|e| ConnectorError::DecodingFailed(Some(format!("FfiConnectorHttpResponse decode failed: {}", e))))?;
         let mut header_map = HeaderMap::new();
         for (key, value) in &response.headers {
             if let (Ok(name), Ok(val)) = (
@@ -104,21 +109,20 @@ mod uniffi_bindings_inner {
             status_code: response
                 .status_code
                 .try_into()
-                .map_err(|e| FfiError::DecodeError {
-                    msg: format!("Invalid HTTP status code: {e}"),
+                .map_err(|e| ConnectorError::GenericError {
+                    error_message: format!("Invalid HTTP status code: {e}"),
+                    error_object: serde_json::Value::Null,
                 })?,
         })
     }
 
     /// Parse FfiOptions from optional bytes.
-    fn parse_ffi_options(options_bytes: Vec<u8>) -> Result<FfiOptions, FfiError> {
+    fn parse_ffi_options(options_bytes: Vec<u8>) -> Result<FfiOptions, ConnectorError> {
         if options_bytes.is_empty() {
-            return Err(FfiError::DecodeError {
-                msg: "FfiOptions bytes are empty".to_string(),
-            });
+            return Err(ConnectorError::DecodingFailed(Some("Empty options bytes".to_string())));
         }
         FfiOptions::decode(Bytes::from(options_bytes))
-            .map_err(|e| FfiError::DecodeError { msg: e.to_string() })
+            .map_err(|e| ConnectorError::DecodingFailed(Some(format!("FfiOptions decode failed: {}", e))))
     }
 
     // ── Generic transformer runners ───────────────────────────────────────────
@@ -140,8 +144,11 @@ mod uniffi_bindings_inner {
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
-                return FfiRequestError::from(FfiError::DecodeError { msg: e.to_string() })
-                    .encode_to_vec()
+                return FfiRequestError::from(ConnectorError::DecodingFailed(Some(format!(
+                    "Request payload decode failed: {}",
+                    e
+                ))))
+                .encode_to_vec()
             }
         };
 
@@ -169,7 +176,7 @@ mod uniffi_bindings_inner {
 
         let connector_request = match result {
             Some(r) => r,
-            None => return FfiRequestError::from(FfiError::NoConnectorRequest).encode_to_vec(),
+            None => return FfiRequestError::from(ConnectorError::RequestEncodingFailed).encode_to_vec(),
         };
 
         match build_ffi_request_bytes(&connector_request) {
@@ -203,8 +210,11 @@ mod uniffi_bindings_inner {
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
-                return FfiResponseError::from(FfiError::DecodeError { msg: e.to_string() })
-                    .encode_to_vec()
+                return FfiResponseError::from(ConnectorError::DecodingFailed(Some(format!(
+                    "Request payload decode failed: {}",
+                    e
+                ))))
+                .encode_to_vec()
             }
         };
 
@@ -295,8 +305,11 @@ mod uniffi_bindings_inner {
         ) {
             Ok(p) => p,
             Err(e) => {
-                return FfiResponseError::from(FfiError::DecodeError { msg: e.to_string() })
-                    .encode_to_vec()
+                return FfiResponseError::from(ConnectorError::DecodingFailed(Some(format!(
+                    "EventServiceHandleRequest decode failed: {}",
+                    e
+                ))))
+                .encode_to_vec()
             }
         };
 

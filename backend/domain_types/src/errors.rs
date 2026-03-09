@@ -874,8 +874,8 @@ pub enum ConnectorError {
     FailedToObtainCertificateKey,
     #[error("Failed to verify source of the response")]
     SourceVerificationFailed,
-    #[error("Failed to decode message")]
-    DecodingFailed,
+    #[error("Failed to decode message: {0:?}")]
+    DecodingFailed(Option<String>),
     #[error("This step has not been implemented for: {0}")]
     NotImplemented(String),
     #[error("{message} is not supported by {connector}")]
@@ -1063,6 +1063,82 @@ impl ErrorSwitch<ApiClientError> for HttpClientError {
             Self::ServiceUnavailableReceived => ApiClientError::ServiceUnavailableReceived,
             Self::GatewayTimeoutReceived => ApiClientError::GatewayTimeoutReceived,
             Self::UnexpectedServerResponse => ApiClientError::UnexpectedServerResponse,
+        }
+    }
+}
+
+// =============================================================================
+// Conversions: ConnectorError → gRPC FFI error types
+// =============================================================================
+
+impl From<ConnectorError> for grpc_api_types::payments::FfiRequestError {
+    fn from(e: ConnectorError) -> Self {
+        grpc_api_types::payments::FfiRequestError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(e.to_string()),
+            error_code: None,
+            status_code: Some(500),
+        }
+    }
+}
+
+impl From<&ConnectorError> for grpc_api_types::payments::FfiRequestError {
+    fn from(e: &ConnectorError) -> Self {
+        grpc_api_types::payments::FfiRequestError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(e.to_string()),
+            error_code: None,
+            status_code: Some(500),
+        }
+    }
+}
+
+impl From<ConnectorError> for grpc_api_types::payments::FfiResponseError {
+    fn from(e: ConnectorError) -> Self {
+        grpc_api_types::payments::FfiResponseError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(e.to_string()),
+            error_code: None,
+            status_code: Some(500),
+        }
+    }
+}
+
+impl From<&ConnectorError> for grpc_api_types::payments::FfiResponseError {
+    fn from(e: &ConnectorError) -> Self {
+        grpc_api_types::payments::FfiResponseError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(e.to_string()),
+            error_code: None,
+            status_code: Some(500),
+        }
+    }
+}
+
+// =============================================================================
+// Conversions: ApplicationErrorResponse → gRPC FFI error types
+// =============================================================================
+
+impl From<ApplicationErrorResponse> for grpc_api_types::payments::FfiResponseError {
+    fn from(e: ApplicationErrorResponse) -> Self {
+        let api_error = e.get_api_error();
+        grpc_api_types::payments::FfiResponseError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(api_error.error_message.clone()),
+            error_code: Some(format!("{}_{}", api_error.sub_code, api_error.error_identifier)),
+            status_code: Some(api_error.error_identifier as u32),
+        }
+    }
+}
+
+impl From<&ApplicationErrorResponse> for grpc_api_types::payments::FfiResponseError {
+    fn from(e: &ApplicationErrorResponse) -> Self {
+        let api_error = e.get_api_error();
+        grpc_api_types::payments::FfiResponseError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(api_error.error_message.clone()),
+            error_code: Some(format!("{}_{}", api_error.sub_code, api_error.error_identifier)),
+            status_code: Some(api_error.error_identifier as u32),
         }
     }
 }

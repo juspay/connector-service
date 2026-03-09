@@ -1,18 +1,18 @@
 pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/development.toml");
 pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/production.toml");
 
-use crate::errors::FfiError;
 use crate::types::FfiRequestData;
+use domain_types::errors::ConnectorError;
 use domain_types::payment_method_data::DefaultPCIHolder;
 use grpc_api_types::payments::{Environment, FfiRequestError, FfiResponseError};
 
-fn get_config(environment: Option<Environment>) -> Result<std::sync::Arc<ucs_env::configs::Config>, FfiError> {
+fn get_config(environment: Option<Environment>) -> Result<std::sync::Arc<ucs_env::configs::Config>, ConnectorError> {
     let config_str = if environment == Some(Environment::Production) {
         EMBEDDED_PROD_CONFIG
     } else {
         EMBEDDED_DEVELOPMENT_CONFIG
     };
-    Ok(crate::utils::load_config(config_str)?)
+    crate::utils::load_config(config_str)
 }
 
 /// Generates a `{flow}_req_handler` and `{flow}_res_handler` function pair.

@@ -110,6 +110,7 @@ async function testAccessTokenFlow(): Promise<void> {
       if (ffiErr instanceof FfiRequestError) {
         console.log(`  Request build error [${ffiErr.status}]: ${ffiErr.errorMessage}`);
       } else if (ffiErr instanceof FfiResponseError) {
+        console.log(ffiErr)
         console.log(`  Response parse error [${ffiErr.status}]: ${ffiErr.errorMessage}`);
       } else {
         console.log(`  FFI error: ${e.message}`);
