@@ -13,7 +13,21 @@ use common_utils::{
     errors::CustomResult,
     events::{Event, EventStage, FlowName, MaskedSerdeValue},
     lineage::LineageIds,
+    superposition_config::{get_connector_urls, ConnectorUrls, SuperpositionConfig},
 };
+use domain_types::{
+    connector_flow::{
+        Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
+        IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
+    },
+    connector_types,
+    errors::{ApiError, ApplicationErrorResponse},
+    router_data::ConnectorSpecificAuth,
+    utils::ForeignTryFrom,
+};
+use error_stack::{Report, ResultExt};
 use http::request::Request;
 use hyperswitch_masking;
 use serde_json::Value;
@@ -243,6 +257,61 @@ pub fn environment_from_metadata(metadata: &metadata::MetadataMap) -> Option<Str
         .ok()
         .flatten()
         .map(|s| s.to_string())
+}
+
+/// Resolve connector URLs from superposition configuration.
+///
+/// This function attempts to resolve connector URLs dynamically based on the
+/// connector name and environment dimensions. If superposition config is not
+/// available or resolution fails, it returns `None` (falling back to static config).
+///
+/// # Arguments
+/// * `superposition_config` - Optional reference to the loaded superposition configuration
+/// * `connector` - The connector name (e.g., "stripe", "adyen")
+/// * `environment` - Optional environment dimension (e.g., "production", "sandbox")
+///
+/// # Returns
+/// * `Some(ConnectorUrls)` - Successfully resolved URLs from superposition
+/// * `None` - Superposition not configured or resolution failed
+///
+/// # Example
+/// ```ignore
+/// let urls = resolve_connector_urls(
+///     config.superposition_config.as_ref(),
+///     &metadata_payload.connector,
+///     metadata_payload.environment.as_deref(),
+/// );
+/// ```
+pub fn resolve_connector_urls(
+    superposition_config: Option<&SuperpositionConfig>,
+    connector: &connector_types::ConnectorEnum,
+    environment: Option<&str>,
+) -> Option<ConnectorUrls> {
+    let config = superposition_config?;
+
+    let connector_str = connector.to_string().to_lowercase();
+
+    match config.resolve(&connector_str, environment) {
+        Ok(resolved) => {
+            let urls = get_connector_urls(&resolved);
+            tracing::info!(
+                connector = %connector_str,
+                environment = ?environment,
+                base_url = ?urls.base_url,
+                "Resolved connector URLs from superposition"
+            );
+            Some(urls)
+        }
+        Err(e) => {
+            tracing::warn!(
+                connector = %connector_str,
+                environment = ?environment,
+                error = %e,
+                "Failed to resolve connector URLs from superposition, falling back to static config"
+            );
+            None
+        }
+    }
 }
 
 /// Extracts connector-specific auth from metadata headers.
@@ -709,11 +778,20 @@ macro_rules! implement_connector_operation {
             let specific_request_data = $request_data_constructor(payload.clone())
                 .into_grpc_status()?;
 
-            let connectors = $crate::utils::connectors_with_connector_config_overrides(
-                &connector_config,
-                &config,
-            )
-            .into_grpc_status()?;
+
+            // Resolve connector URLs from superposition config if available
+            let connectors = if let Some(urls) = $crate::utils::resolve_connector_urls(
+                config.superposition_config.as_ref().map(|arc| arc.as_ref()),
+                &metadata_payload.connector,
+                metadata_payload.environment.as_deref(),
+            ) {
+                config.connectors.patch_connector_urls(
+                    &metadata_payload.connector.to_string().to_lowercase(),
+                    &urls,
+                )
+            } else {
+                config.connectors.clone()
+            };
 
             // Create common request data
             let common_flow_data = $common_flow_data_constructor((payload.clone(), connectors, &masked_metadata))
