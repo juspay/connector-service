@@ -3546,6 +3546,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for Conn
             AuthType::Paytm(_) => Ok(Self::Paytm),
             AuthType::Calida(_) => Ok(Self::Calida),
             AuthType::Payload(_) => Ok(Self::Payload),
+            AuthType::Paypal(_) => Ok(Self::Paypal),
             AuthType::Authipay(_) => Ok(Self::Authipay),
             AuthType::Silverflow(_) => Ok(Self::Silverflow),
             AuthType::Celero(_) => Ok(Self::Celero),

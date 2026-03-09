@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "proto/composite_service.proto",
             "proto/composite_payment.proto",
             "proto/payment_methods.proto",
-            "proto/sdk_options.proto",
+            "proto/sdk_config.proto",
         ],
         &["proto"],
     )?;
