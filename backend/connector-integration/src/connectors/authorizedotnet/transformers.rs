@@ -618,23 +618,7 @@ fn create_regular_transaction_request<
                         .or_else(|| {
                             item.router_data
                                 .resource_common_data
-                                .get_optional_billing()
-                                .and_then(|billing| {
-                                    billing.address.as_ref().and_then(|addr| {
-                                        let first =
-                                            addr.first_name.as_ref().map(|f| f.peek().clone());
-                                        let last =
-                                            addr.last_name.as_ref().map(|l| l.peek().clone());
-                                        match (first, last) {
-                                            (Some(f), Some(l)) => {
-                                                Some(Secret::new(format!("{f} {l}")))
-                                            }
-                                            (Some(f), None) => Some(Secret::new(f)),
-                                            (None, Some(l)) => Some(Secret::new(l)),
-                                            (None, None) => None,
-                                        }
-                                    })
-                                })
+                                .get_optional_billing_full_name()
                         })
                         .ok_or_else(|| {
                             error_stack::report!(ConnectorError::MissingRequiredField {
