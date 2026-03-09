@@ -1,4 +1,5 @@
 use common_enums;
+use common_utils::consts;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
@@ -32,8 +33,8 @@ impl From<Option<common_enums::PaymentChannel>> for PproPaymentMedium {
             Some(common_enums::PaymentChannel::Ecommerce) => Self::Ecommerce,
             Some(common_enums::PaymentChannel::MailOrder)
             | Some(common_enums::PaymentChannel::TelephoneOrder) => Self::Moto,
-            // Fallback to Ecommerce if unspecified or others
-            _ => Self::Ecommerce,
+            // Fallback to Ecommerce if unspecified
+            None => Self::Ecommerce,
         }
     }
 }
@@ -52,10 +53,20 @@ pub struct PproPaymentsRequest {
     pub authentication_settings: Option<Vec<PproAuthenticationSettings>>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PproAuthenticationType {
+    ScanCode,
+    MultiFactor,
+    AppNotification,
+    AppIntent,
+    Redirect,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PproAuthenticationSettings {
-    pub r#type: String,
+    pub r#type: PproAuthenticationType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settings: Option<PproAuthSettingsDetails>,
 }
@@ -85,7 +96,7 @@ pub struct PproConsumer {
 #[derive(Debug, Serialize)]
 pub struct Amount {
     pub currency: String,
-    pub value: i64,
+    pub value: common_utils::MinorUnit,
 }
 
 impl<F, T>
@@ -107,25 +118,30 @@ where
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let payment_method = match router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
             Some(common_enums::PaymentMethodType::BancontactCard) => "BANCONTACT".to_string(),
-            Some(common_enums::PaymentMethodType::UpiCollect) => "UPI".to_string(),
+            Some(common_enums::PaymentMethodType::UpiCollect) 
+            | Some(common_enums::PaymentMethodType::UpiIntent) => "UPI".to_string(),
+            Some(common_enums::PaymentMethodType::AliPay) => "ALIPAY".to_string(),
+            Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
             Some(common_enums::PaymentMethodType::MbWay) => "MBWAY".to_string(),
-            Some(common_enums::PaymentMethodType::Satispay) => "SATISPAY".to_string(),
-            Some(common_enums::PaymentMethodType::Wero) => "WERO".to_string(),
             Some(ref pm) => pm.to_string().to_uppercase(),
-            None => "".to_string(),
+            None => {
+                return Err(errors::ConnectorError::MissingRequiredField {
+                    field_name: "payment_method_type",
+                }
+                .into())
+            }
         };
 
         let amount = Amount {
             currency: router_data.request.currency.to_string(),
-            value: router_data.request.amount.get_amount_as_i64(),
+            value: common_utils::MinorUnit::new(router_data.request.amount.get_amount_as_i64()),
         };
 
         let mut authentication_settings = vec![];
         if let Some(return_url) = &router_data.request.router_return_url {
             authentication_settings.push(PproAuthenticationSettings {
-                r#type: "REDIRECT".to_string(),
+                r#type: PproAuthenticationType::Redirect,
                 settings: Some(PproAuthSettingsDetails {
                     return_url: Some(return_url.to_string()),
                     scan_by: None,
@@ -136,27 +152,23 @@ where
 
         authentication_settings.extend(vec![
             PproAuthenticationSettings {
-                r#type: "SCAN_CODE".to_string(),
-                settings: Some(PproAuthSettingsDetails {
-                    return_url: None,
-                    scan_by: None,
-                    mobile_intent_uri: None,
-                }),
-            },
-            PproAuthenticationSettings {
-                r#type: "MULTI_FACTOR".to_string(),
+                r#type: PproAuthenticationType::ScanCode,
                 settings: None,
             },
             PproAuthenticationSettings {
-                r#type: "APP_NOTIFICATION".to_string(),
+                r#type: PproAuthenticationType::MultiFactor,
                 settings: None,
             },
             PproAuthenticationSettings {
-                r#type: "APP_INTENT".to_string(),
+                r#type: PproAuthenticationType::AppNotification,
+                settings: None,
+            },
+            PproAuthenticationSettings {
+                r#type: PproAuthenticationType::AppIntent,
                 settings: Some(PproAuthSettingsDetails {
                     return_url: None,
                     scan_by: None,
-                    mobile_intent_uri: Some("hyperswitch://paymentresponse".to_string()),
+                    mobile_intent_uri: router_data.request.router_return_url.clone(),
                 }),
             },
         ]);
@@ -165,26 +177,10 @@ where
             .resource_common_data
             .get_billing_address()
             .ok()
-            .map(|billing| {
-                let mut name_parts = Vec::new();
-                if let Some(first_name) = billing.first_name.as_ref() {
-                    name_parts.push(first_name.clone().expose());
-                }
-                if let Some(last_name) = billing.last_name.as_ref() {
-                    name_parts.push(last_name.clone().expose());
-                }
-
-                let name = if !name_parts.is_empty() {
-                    Some(Secret::new(name_parts.join(" ")))
-                } else {
-                    None
-                };
-
-                PproConsumer {
-                    name,
-                    email: router_data.resource_common_data.get_billing_email().ok(),
-                    country: billing.country.map(|c| c.to_string()),
-                }
+            .map(|billing| PproConsumer {
+                name: billing.get_full_name().ok(),
+                email: router_data.resource_common_data.get_billing_email().ok(),
+                country: billing.country.map(|c| c.to_string()),
             });
 
         Ok(Self {
@@ -197,21 +193,46 @@ where
             payment_descriptor: router_data.resource_common_data.description.clone(),
             amount,
             consumer,
-            authentication_settings: if authentication_settings.is_empty() {
-                None
-            } else {
-                Some(authentication_settings)
-            },
+            authentication_settings: Some(authentication_settings),
         })
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PproPaymentStatus {
+    AuthorizationProcessing,
+    CaptureProcessing,
+    AuthenticationPending,
+    AuthorizationAsync,
+    CapturePending,
+    Captured,
+    Failed,
+    Discarded,
+    Voided,
+    RefundSettled,
+    Success,
+    Refunded,
+    Rejected,
+    Declined,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PproAgreementStatus {
+    Active,
+    AuthenticationPending,
+    Initializing,
+    Failed,
+    Revoked,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PproPaymentsResponse {
     pub id: String,
-    pub status: String,
-    pub amount: Option<i64>,
+    pub status: PproPaymentStatus,
+    pub amount: Option<common_utils::MinorUnit>,
     /// The instrument ID returned by PPRO after a successful authorization.
     /// This is stored as the mandate reference for recurring payments.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -228,7 +249,7 @@ pub struct PproPaymentsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct PproAgreementResponse {
     pub id: String,
-    pub status: String,
+    pub status: PproAgreementStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instrument_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -247,7 +268,7 @@ pub type PproRefundResponse = PproPaymentsResponse;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PproAuthenticationResponse {
-    pub r#type: String,
+    pub r#type: PproAuthenticationType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<PproAuthDetailsResponse>,
 }
@@ -276,7 +297,7 @@ pub struct PproAuthDetailsResponse {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PproCaptureRequest {
-    pub amount: Amount,
+    pub amount: common_utils::MinorUnit,
 }
 
 impl<T>
@@ -297,10 +318,7 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: Amount {
-                currency: item.router_data.request.currency.to_string(),
-                value: item.router_data.request.amount_to_capture,
-            },
+            amount: item.router_data.request.minor_amount_to_capture,
         })
     }
 }
@@ -308,7 +326,7 @@ where
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PproVoidRequest {
-    pub amount: i64,
+    pub amount: common_utils::MinorUnit,
 }
 
 impl<T>
@@ -332,14 +350,12 @@ where
             .router_data
             .request
             .amount
-            .map(|a| a.get_amount_as_i64())
             .or(item
                 .router_data
                 .resource_common_data
-                .minor_amount_authorized
-                .map(|a| a.get_amount_as_i64()))
+                .minor_amount_authorized)
             .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "amount",
+                field_name: "amount or minor_amount_authorized",
             })?;
 
         Ok(Self { amount })
@@ -349,7 +365,7 @@ where
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PproRefundRequest {
-    pub amount: Amount,
+    pub amount: common_utils::MinorUnit,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refund_reason: Option<PproRefundReason>,
 }
@@ -369,10 +385,7 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: Amount {
-                currency: item.router_data.request.currency.to_string(),
-                value: item.router_data.request.refund_amount,
-            },
+            amount: item.router_data.request.minor_refund_amount,
             refund_reason: item
                 .router_data
                 .request
@@ -400,10 +413,31 @@ pub struct PproErrorResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PproWebhookType {
+    PaymentChargeAuthorizationSucceeded,
+    PaymentChargeSuccess,
+    PaymentChargeAuthorizationFailed,
+    PaymentChargeFailed,
+    PaymentChargeDiscarded,
+    PaymentChargeCaptureSucceeded,
+    PaymentChargeCaptureFailed,
+    PaymentChargeVoidSucceeded,
+    PaymentChargeVoidFailed,
+    PaymentChargeRefundSucceeded,
+    PaymentChargeRefundFailed,
+    PaymentAgreementActive,
+    PaymentAgreementFailed,
+    PaymentAgreementRevokedByConsumer,
+    PaymentAgreementRevokedByMerchant,
+    PaymentAgreementRevokedByProvider,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PproWebhookEvent {
     pub specversion: String,
-    pub r#type: String,
+    pub r#type: PproWebhookType,
     pub source: String,
     pub id: String,
     pub time: String,
@@ -422,16 +456,16 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: ResponseRouterData<PproPaymentsResponse, Self>) -> Result<Self, Self::Error> {
-        let status = match item.response.status.as_str() {
-            "AUTHORIZATION_PROCESSING" | "CAPTURE_PROCESSING" => {
+        let status = match item.response.status {
+            PproPaymentStatus::AuthorizationProcessing | PproPaymentStatus::CaptureProcessing => {
                 common_enums::AttemptStatus::Pending
             }
-            "AUTHENTICATION_PENDING" => common_enums::AttemptStatus::AuthenticationPending,
-            "AUTHORIZATION_ASYNC" | "CAPTURE_PENDING" => common_enums::AttemptStatus::Authorized,
-            "CAPTURED" => common_enums::AttemptStatus::Charged,
-            "FAILED" | "DISCARDED" => common_enums::AttemptStatus::Failure,
-            "VOIDED" => common_enums::AttemptStatus::Voided,
-            _ => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
+            PproPaymentStatus::AuthorizationAsync | PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Authorized,
+            PproPaymentStatus::Captured | PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Failed | PproPaymentStatus::Discarded | PproPaymentStatus::Rejected | PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            PproPaymentStatus::RefundSettled | PproPaymentStatus::Refunded => common_enums::AttemptStatus::Pending,
         };
 
         let mut error_response = None;
@@ -440,7 +474,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                 let fallback_msg = failure
                     .failure_code
                     .clone()
-                    .unwrap_or_else(|| "UNKNOWN".to_string());
+                    .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
                 let message = if failure.failure_message.is_empty() {
                     fallback_msg.clone()
                 } else {
@@ -452,7 +486,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                     code: failure
                         .failure_code
                         .clone()
-                        .unwrap_or_else(|| "UNKNOWN".to_string()),
+                        .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                     message,
                     reason: Some(format!("{}: {}", failure.failure_type, fallback_msg)),
                     attempt_status: None,
@@ -481,28 +515,28 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                     }
                 }
 
-                let priorities = if is_sdk_flow {
+                let priorities: Vec<PproAuthenticationType> = if is_sdk_flow {
                     vec![
-                        "APP_INTENT",
-                        "SCAN_CODE",
-                        "APP_NOTIFICATION",
-                        "REDIRECT",
-                        "MULTI_FACTOR",
+                        PproAuthenticationType::AppIntent,
+                        PproAuthenticationType::ScanCode,
+                        PproAuthenticationType::AppNotification,
+                        PproAuthenticationType::Redirect,
+                        PproAuthenticationType::MultiFactor,
                     ]
                 } else {
                     vec![
-                        "REDIRECT",
-                        "APP_NOTIFICATION",
-                        "MULTI_FACTOR",
-                        "SCAN_CODE",
-                        "APP_INTENT",
+                        PproAuthenticationType::Redirect,
+                        PproAuthenticationType::AppNotification,
+                        PproAuthenticationType::MultiFactor,
+                        PproAuthenticationType::ScanCode,
+                        PproAuthenticationType::AppIntent,
                     ]
                 };
                 for priority in priorities {
                     if let Some(matched) = methods_array.iter().find(|m| m.r#type == priority) {
                         if let Some(details) = &matched.details {
                             match priority {
-                                "SCAN_CODE" => {
+                                PproAuthenticationType::ScanCode => {
                                     if let Some(payload) = &details.code_payload {
                                         redirection_data = Some(domain_types::router_response_types::RedirectForm::Uri {
                                               uri: payload.to_string(),
@@ -510,7 +544,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                                         break;
                                     }
                                 }
-                                "APP_INTENT" => {
+                                PproAuthenticationType::AppIntent => {
                                     if let Some(intent_uri) = &details.mobile_intent_uri {
                                         redirection_data = Some(domain_types::router_response_types::RedirectForm::Uri {
                                               uri: intent_uri.to_string(),
@@ -518,24 +552,31 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                                         break;
                                     }
                                 }
-                                "REDIRECT" => {
+                                PproAuthenticationType::Redirect => {
                                     if let Some(url) = &details.request_url {
-                                        let method = match details.request_method.as_deref() {
-                                            Some("POST") => common_utils::request::Method::Post,
-                                            _ => common_utils::request::Method::Get,
+                                        // Use Uri for UPI payment methods, Form for others
+                                        let is_upi = item.router_data.resource_common_data.payment_method == common_enums::PaymentMethod::Upi;
+                                        redirection_data = if is_upi {
+                                            Some(domain_types::router_response_types::RedirectForm::Uri {
+                                                uri: url.to_string(),
+                                            })
+                                        } else {
+                                            let method = match details.request_method.as_deref() {
+                                                Some("POST") => common_utils::request::Method::Post,
+                                                _ => common_utils::request::Method::Get,
+                                            };
+                                            Some(domain_types::router_response_types::RedirectForm::Form {
+                                                endpoint: url.to_string(),
+                                                method,
+                                                form_fields: std::collections::HashMap::new(),
+                                            })
                                         };
-                                        redirection_data = Some(domain_types::router_response_types::RedirectForm::Form {
-                                              endpoint: url.to_string(),
-                                              method,
-                                              form_fields: std::collections::HashMap::new(),
-                                          });
                                         break;
                                     }
                                 }
-                                "APP_NOTIFICATION" | "MULTI_FACTOR" => {
+                                PproAuthenticationType::AppNotification | PproAuthenticationType::MultiFactor => {
                                     break;
                                 }
-                                _ => {}
                             }
                         }
                     }
@@ -584,12 +625,18 @@ impl<F, Req, T> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: ResponseRouterData<PproPaymentsResponse, Self>) -> Result<Self, Self::Error> {
-        let refund_status = match item.response.status.as_str() {
-            "CAPTURED" | "REFUND_SETTLED" | "SUCCESS" | "REFUNDED" => {
+        let refund_status = match item.response.status {
+            PproPaymentStatus::Captured | PproPaymentStatus::RefundSettled | PproPaymentStatus::Success | PproPaymentStatus::Refunded => {
                 common_enums::RefundStatus::Success
             }
-            "FAILED" | "REJECTED" | "DECLINED" => common_enums::RefundStatus::Failure,
-            _ => common_enums::RefundStatus::Pending,
+            PproPaymentStatus::Failed | PproPaymentStatus::Rejected | PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+            PproPaymentStatus::AuthorizationProcessing
+            | PproPaymentStatus::CaptureProcessing
+            | PproPaymentStatus::AuthenticationPending
+            | PproPaymentStatus::AuthorizationAsync
+            | PproPaymentStatus::CapturePending
+            | PproPaymentStatus::Discarded
+            | PproPaymentStatus::Voided => common_enums::RefundStatus::Pending,
         };
 
         let response = if refund_status == common_enums::RefundStatus::Failure {
@@ -602,24 +649,20 @@ impl<F, Req, T> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                 .response
                 .failure
                 .as_ref()
-                .map_or("".to_string(), |f| f.failure_message.clone());
+                .map(|f| f.failure_message.clone())
+                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
             let failure_type = item
                 .response
                 .failure
                 .as_ref()
-                .map_or("".to_string(), |f| f.failure_type.clone());
+                .map(|f| f.failure_type.clone())
+                .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
 
-            let fallback_msg = get_error_message(failure_code.as_deref());
-            let message = if failure_message.is_empty() {
-                fallback_msg.clone()
-            } else {
-                failure_message
-            };
-
+            let failure_code_str = failure_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
             Err(ErrorResponse {
-                code: failure_code.unwrap_or_else(|| "UNKNOWN".to_string()),
-                message,
-                reason: Some(format!("{}: {}", failure_type, fallback_msg)),
+                code: failure_code_str.clone(),
+                message: failure_message,
+                reason: Some(format!("{}: {}", failure_type, failure_code_str)),
                 status_code: item.http_code,
                 attempt_status: None,
                 connector_transaction_id: Some(item.response.id.clone()),
@@ -639,134 +682,6 @@ impl<F, Req, T> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
             response,
             ..item.router_data
         })
-    }
-}
-
-pub fn get_error_message(failure_code: Option<&str>) -> String {
-    match failure_code {
-        Some("ACCOUNT_NOT_SUPPORTED") => {
-            "The consumer's account or card not supported.".to_string()
-        }
-        Some("AMOUNT_NOT_SUPPORTED") => {
-            "Amount value is invalid or outside supported range.".to_string()
-        }
-        Some("AUTHENTICATION_FAILED") => "The consumer failed authentication.".to_string(),
-        Some("CANCELED_BY_CONSUMER") => {
-            "The consumer intentionally abandoned the authentication flow.".to_string()
-        }
-        Some("COUNTRY_NOT_SUPPORTED") => {
-            "The country value is not supported by the provider.".to_string()
-        }
-        Some("DUPLICATE_DETECTED") => {
-            "Provider detected a very similar request recently with the same details and amount."
-                .to_string()
-        }
-        Some("EXPIRED_CARD") => "The card has expired.".to_string(),
-        Some("INCORRECT_BILLING_ADDRESS") => "The billing address entered was wrong.".to_string(),
-        Some("INCORRECT_CVV") => "The CVC/CVV was wrong.".to_string(),
-        Some("INCORRECT_HOLDER_NAME") => {
-            "The card or account holderName could not be validated by the issuer.".to_string()
-        }
-        Some("INCORRECT_ISSUER") => {
-            "The card number/issuer is not within a card number range supported by the provider."
-                .to_string()
-        }
-        Some("INCORRECT_NUMBER") => {
-            "The card or account number cannot be validated by the issuer.".to_string()
-        }
-        Some("INSUFFICIENT_FUNDS") => "Insufficient funds in the account.".to_string(),
-        Some("IS_EXCEEDING_ACCOUNT_LIMIT") => {
-            "The amount value exceeds the limit on the consumer's account.".to_string()
-        }
-        Some("IS_GENERIC_DECLINE") => "Generic decline by the issuer.".to_string(),
-        Some("IS_HIGH_VELOCITY") => {
-            "The consumer has exceeded the number of attempts allowed by the issuer.".to_string()
-        }
-        Some("IS_NOT_PERMITTED") => "Not permitted by the issuer.".to_string(),
-        Some("SUS_FRAUD") => {
-            "The payment was declined because the issuer or provider suspects it was fraudulent."
-                .to_string()
-        }
-        Some("SUS_LOST") => {
-            "The payment was declined because the consumer's card was reported lost.".to_string()
-        }
-        Some("SUS_STOLEN") => {
-            "The payment was declined because the consumer's card was reported stolen.".to_string()
-        }
-        Some("AGREEMENT_INACTIVE") => {
-            "Payment Agreement not yet active or failed during setup.".to_string()
-        }
-        Some("AGREEMENT_REVOKED") => {
-            "Payment Agreement revoked by the consumer or merchant.".to_string()
-        }
-        Some("BLOCKED_ACCOUNT") => {
-            "Account or card blocked by PPRO due to suspected fraud or abuse.".to_string()
-        }
-        Some("BLOCKED_BIN") => {
-            "BIN (first 6–8 digits) blocked by PPRO due to high risk or chargebacks.".to_string()
-        }
-        Some("BLOCKED_EMAIL") => {
-            "Consumer email blocked by PPRO due to suspected fraud or abuse.".to_string()
-        }
-        Some("BLOCKED_IP") => {
-            "Consumer IP blocked by PPRO due to suspected fraud or abuse.".to_string()
-        }
-        Some("EXCEEDS_AUTHORIZED_AMOUNT") => {
-            "Capture or void amount exceeds the remaining authorized amount.".to_string()
-        }
-        Some("EXCEEDS_CAPTURED_AMOUNT") => "Refund amount exceeds the captured funds.".to_string(),
-        Some("EXCEEDS_REFUND_LIMIT") => {
-            "Refund would reduce the account balance below minimum.".to_string()
-        }
-        Some("EXCEEDS_REFUNDABLE_AMOUNT") => {
-            "Refund attempted before capture or after full refund.".to_string()
-        }
-        Some("HIGH_ACCOUNT_VELOCITY") => {
-            "Too many attempts from the same account or card.".to_string()
-        }
-        Some("HIGH_BIN_VELOCITY") => "Too many attempts from the same BIN range.".to_string(),
-        Some("HIGH_EMAIL_VELOCITY") => {
-            "Too many attempts using the same email address.".to_string()
-        }
-        Some("HIGH_IP_VELOCITY") => "Too many attempts from the same IP address.".to_string(),
-        Some("INSTRUMENT_NOT_FOUND") => "Specified `instrumentId` not found.".to_string(),
-        Some("INVALID_ACCOUNT") => "Account or card format not supported.".to_string(),
-        Some("INVALID_AUTHENTICATION_SETTINGS") => {
-            "Invalid or missing `authenticationSettings` for the payment method.".to_string()
-        }
-        Some("INVALID_COUNTRY") => {
-            "Unsupported or invalid country for this payment method.".to_string()
-        }
-        Some("INVALID_CURRENCY") => {
-            "Unsupported or invalid currency for this payment method.".to_string()
-        }
-        Some("INVALID_IP") => "Consumer IP invalid or not supported by the provider.".to_string(),
-        Some("INVALID_PAYMENT_METHOD") => "Unrecognized `paymentMethod` value.".to_string(),
-        Some("INVALID_TAX_ID") => {
-            "Invalid `consumer.taxIdentification` for this payment method".to_string()
-        }
-        Some("NO_AUTHORIZED_AMOUNT") => {
-            "No successful Authorization found; capture/void not possible.".to_string()
-        }
-        Some("PAYMENT_METHOD_TIMEOUT") => {
-            "Authorization not completed within timeout limit set by PPRO.".to_string()
-        }
-        Some("UNRESPONSIVE_ISSUER") => "The issuer cannot be contacted/is unavailable.".to_string(),
-        Some("UNRESPONSIVE_PROVIDER") => {
-            "The provider cannot be contacted/is unavailable.".to_string()
-        }
-        Some("PROVIDER_PROCESSING_ERROR") => {
-            "The provider could not process the request we sent to them.".to_string()
-        }
-        Some("INTERNAL_SERVICE_UNAVAILABLE") => {
-            "A PPRO internal service is temporarily down during request processing.".to_string()
-        }
-        Some("INTERNAL_PROCESSING_ERROR") => {
-            "A PPRO internal service encountered an unexpected error while handling the request."
-                .to_string()
-        }
-        Some(code) => format!("Unknown error code: {}", code),
-        None => "Unknown error".to_string(),
     }
 }
 
@@ -877,29 +792,27 @@ where
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let payment_method = match router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
             Some(common_enums::PaymentMethodType::BancontactCard) => "BANCONTACT".to_string(),
             Some(common_enums::PaymentMethodType::UpiCollect) => "UPI".to_string(),
-            Some(common_enums::PaymentMethodType::MbWay) => "MBWAY".to_string(),
-            Some(common_enums::PaymentMethodType::Satispay) => "SATISPAY".to_string(),
-            Some(common_enums::PaymentMethodType::Wero) => "WERO".to_string(),
             Some(ref pm) => pm.to_string().to_uppercase(),
             None => "".to_string(),
         };
 
         let amount = Amount {
             currency: router_data.request.currency.to_string(),
-            value: router_data
-                .request
-                .minor_amount
-                .map(|a| a.get_amount_as_i64())
-                .unwrap_or(0),
+            value: common_utils::MinorUnit::new(
+                router_data
+                    .request
+                    .minor_amount
+                    .map(|a| a.get_amount_as_i64())
+                    .unwrap_or(0),
+            ),
         };
 
         let mut authentication_settings = vec![];
         if let Some(return_url) = &router_data.request.router_return_url {
             authentication_settings.push(PproAuthenticationSettings {
-                r#type: "REDIRECT".to_string(),
+                r#type: PproAuthenticationType::Redirect,
                 settings: Some(PproAuthSettingsDetails {
                     return_url: Some(return_url.clone()),
                     scan_by: None,
@@ -910,19 +823,15 @@ where
 
         authentication_settings.extend(vec![
             PproAuthenticationSettings {
-                r#type: "SCAN_CODE".to_string(),
-                settings: Some(PproAuthSettingsDetails {
-                    return_url: None,
-                    scan_by: None,
-                    mobile_intent_uri: None,
-                }),
-            },
-            PproAuthenticationSettings {
-                r#type: "MULTI_FACTOR".to_string(),
+                r#type: PproAuthenticationType::ScanCode,
                 settings: None,
             },
             PproAuthenticationSettings {
-                r#type: "APP_NOTIFICATION".to_string(),
+                r#type: PproAuthenticationType::MultiFactor,
+                settings: None,
+            },
+            PproAuthenticationSettings {
+                r#type: PproAuthenticationType::AppNotification,
                 settings: None,
             },
         ]);
@@ -951,7 +860,7 @@ where
             .and_then(|t| match t {
                 domain_types::mandates::MandateDataType::SingleUse(a) => a.start_date,
                 domain_types::mandates::MandateDataType::MultiUse(Some(a)) => a.start_date,
-                _ => None,
+                domain_types::mandates::MandateDataType::MultiUse(None) => None,
             })
             .map(|dt| format!("{}Z", dt.to_string().replace(" ", "T")));
 
@@ -963,7 +872,7 @@ where
             .and_then(|t| match t {
                 domain_types::mandates::MandateDataType::SingleUse(a) => a.end_date,
                 domain_types::mandates::MandateDataType::MultiUse(Some(a)) => a.end_date,
-                _ => None,
+                domain_types::mandates::MandateDataType::MultiUse(None) => None,
             })
             .map(|dt| format!("{}Z", dt.to_string().replace(" ", "T")));
 
@@ -1031,19 +940,6 @@ where
     }
 }
 
-/// Builds instrument details for payment agreement requests.
-///
-/// Most payment methods don't require instrument details upfront - PPRO creates the instrument
-/// during consumer authentication. However, some payment methods have specific requirements:
-///
-/// - iDEAL: Requires `debitMandateId` in instrument details for recurring agreements
-/// - BLIK: May require specific fields (TBD based on PPRO documentation)
-/// - Bancontact: May require specific fields (TBD based on PPRO documentation)
-///
-/// To add support for a new payment method:
-/// 1. Add a new match arm below
-/// 2. Extract required fields from payment_method_data
-/// 3. Return the appropriate PproInstrument
 fn build_agreement_instrument<T>(
     router_data: &RouterDataV2<
         SetupMandate,
@@ -1119,13 +1015,12 @@ impl<F, Req> TryFrom<ResponseRouterData<PproAgreementResponse, Self>>
     fn try_from(
         item: ResponseRouterData<PproAgreementResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.status.as_str() {
-            "ACTIVE" => common_enums::AttemptStatus::Charged,
-            "AUTHENTICATION_PENDING" | "INITIALIZING" => {
+        let status = match item.response.status {
+            PproAgreementStatus::Active => common_enums::AttemptStatus::Charged,
+            PproAgreementStatus::AuthenticationPending | PproAgreementStatus::Initializing => {
                 common_enums::AttemptStatus::AuthenticationPending
             }
-            "FAILED" | "REVOKED" => common_enums::AttemptStatus::Failure,
-            _ => common_enums::AttemptStatus::Pending,
+            PproAgreementStatus::Failed | PproAgreementStatus::Revoked => common_enums::AttemptStatus::Failure,
         };
 
         let mut error_response = None;
@@ -1136,7 +1031,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PproAgreementResponse, Self>>
                     code: failure
                         .failure_code
                         .clone()
-                        .unwrap_or_else(|| "UNKNOWN".to_string()),
+                        .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                     message: failure.failure_message.clone(),
                     reason: Some(format!(
                         "{}: {}",
@@ -1156,7 +1051,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PproAgreementResponse, Self>>
         if status == common_enums::AttemptStatus::AuthenticationPending {
             if let Some(auth_methods) = item.response.authentication_methods.as_ref() {
                 for method in auth_methods {
-                    if method.r#type == "REDIRECT" {
+                    if method.r#type == PproAuthenticationType::Redirect {
                         if let Some(details) = &method.details {
                             if let Some(url) = &details.request_url {
                                 let http_method = match details.request_method.as_deref() {
@@ -1305,7 +1200,7 @@ where
         let router_data = item.router_data;
         let amount = Amount {
             currency: router_data.request.currency.to_string(),
-            value: router_data.request.minor_amount.get_amount_as_i64(),
+            value: common_utils::MinorUnit::new(router_data.request.minor_amount.get_amount_as_i64()),
         };
 
         let initiator = if router_data.request.off_session.unwrap_or(true) {

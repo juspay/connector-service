@@ -62,22 +62,6 @@ pub(crate) mod headers {
     pub(crate) const REQUEST_IDEMPOTENCY_KEY: &str = "Request-Idempotency-Key";
 }
 
-pub trait PproFlowCommonData {
-    fn get_connector_request_reference_id(&self) -> String;
-}
-
-impl PproFlowCommonData for PaymentFlowData {
-    fn get_connector_request_reference_id(&self) -> String {
-        self.connector_request_reference_id.clone()
-    }
-}
-
-impl PproFlowCommonData for RefundFlowData {
-    fn get_connector_request_reference_id(&self) -> String {
-        self.connector_request_reference_id.clone()
-    }
-}
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Ppro<T>
 {
@@ -310,125 +294,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Ppro<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
-    {
-        let mut header = self.get_auth_header(&req.connector_auth_type)?;
-        header.push((
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        ));
-        Ok(header)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}/v1/payment-agreements",
-            self.base_url(&req.resource_common_data.connectors)
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
-        let ppro_req = PproAgreementRequest::try_from(PproRouterData {
-            connector: self.to_owned(),
-            router_data: req.clone(),
-        })?;
-        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
-            ppro_req,
-        ))))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-        let request = common_utils::request::RequestBuilder::new()
-            .method(common_utils::request::Method::Post)
-            .url(&self.get_url(req)?)
-            .attach_default_headers()
-            .headers(self.get_headers(req)?)
-            .set_optional_body(self.get_request_body(req)?)
-            .build();
-        Ok(Some(request))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-        errors::ConnectorError,
-    > {
-        let response: PproAgreementResponse = res
-            .response
-            .parse_struct("PproAgreementResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        with_error_response_body!(event_builder, response);
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         RepeatPayment,
         PaymentFlowData,
         RepeatPaymentData<T>,
@@ -629,15 +494,35 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("PproWebhookEvent")
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
 
-        match event.r#type.as_str() {
-            "payment-charges.captured" => Ok(EventType::PaymentIntentCaptureSuccess),
-            "payment-charges.failed" => Ok(EventType::PaymentIntentFailure),
-            "payment-charges.authorization-async" => {
+        match event.r#type {
+            transformers::PproWebhookType::PaymentChargeCaptureSucceeded => {
+                Ok(EventType::PaymentIntentCaptureSuccess)
+            }
+            transformers::PproWebhookType::PaymentChargeFailed
+            | transformers::PproWebhookType::PaymentChargeAuthorizationFailed
+            | transformers::PproWebhookType::PaymentChargeDiscarded => {
+                Ok(EventType::PaymentIntentFailure)
+            }
+            transformers::PproWebhookType::PaymentChargeAuthorizationSucceeded
+            | transformers::PproWebhookType::PaymentChargeSuccess => {
                 Ok(EventType::PaymentIntentAuthorizationSuccess)
             }
-            "payment-charges.refunded" => Ok(EventType::RefundSuccess),
-            "payment-charges.refund-failed" => Ok(EventType::RefundFailure),
-            _ => Ok(EventType::IncomingWebhookEventUnspecified),
+            transformers::PproWebhookType::PaymentChargeRefundSucceeded => {
+                Ok(EventType::RefundSuccess)
+            }
+            transformers::PproWebhookType::PaymentChargeRefundFailed => {
+                Ok(EventType::RefundFailure)
+            }
+            transformers::PproWebhookType::PaymentChargeVoidSucceeded
+            | transformers::PproWebhookType::PaymentChargeVoidFailed
+            | transformers::PproWebhookType::PaymentChargeCaptureFailed
+            | transformers::PproWebhookType::PaymentAgreementActive
+            | transformers::PproWebhookType::PaymentAgreementFailed
+            | transformers::PproWebhookType::PaymentAgreementRevokedByConsumer
+            | transformers::PproWebhookType::PaymentAgreementRevokedByMerchant
+            | transformers::PproWebhookType::PaymentAgreementRevokedByProvider => {
+                Ok(EventType::IncomingWebhookEventUnspecified)
+            }
         }
     }
 
@@ -654,23 +539,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
-            _ => return Err(errors::ConnectorError::WebhookBodyDecodingFailed.into()),
+            PproWebhookData::Agreement { .. } => {
+                return Err(errors::ConnectorError::WebhookBodyDecodingFailed.into())
+            }
         };
 
-        let status = match charge.status.as_str() {
-            "AUTHORIZATION_PROCESSING" | "CAPTURE_PROCESSING" => {
+        let status = match charge.status {
+            transformers::PproPaymentStatus::AuthorizationProcessing | transformers::PproPaymentStatus::CaptureProcessing => {
                 common_enums::AttemptStatus::Pending
             }
-            "AUTHENTICATION_PENDING" => common_enums::AttemptStatus::AuthenticationPending,
-            "AUTHORIZATION_ASYNC" | "CAPTURE_PENDING" => common_enums::AttemptStatus::Authorized,
-            "CAPTURED" => common_enums::AttemptStatus::Charged,
-            "FAILED" | "DISCARDED" => common_enums::AttemptStatus::Failure,
-            "VOIDED" => common_enums::AttemptStatus::Voided,
-            _ => common_enums::AttemptStatus::Pending,
+            transformers::PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::PproPaymentStatus::AuthorizationAsync | transformers::PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Authorized,
+            transformers::PproPaymentStatus::Captured | transformers::PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            transformers::PproPaymentStatus::Failed | transformers::PproPaymentStatus::Discarded | transformers::PproPaymentStatus::Rejected | transformers::PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            transformers::PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::PproPaymentStatus::RefundSettled | transformers::PproPaymentStatus::Refunded => common_enums::AttemptStatus::Pending,
         };
 
-        let (error_code, error_message, error_reason) = if let Some(failure) = &charge.failure {
-            (
+        let (error_code, error_message, error_reason) = match charge.failure.as_ref() {
+            Some(failure) => (
                 failure.failure_code.clone(),
                 Some(failure.failure_message.clone()),
                 Some(format!(
@@ -678,9 +565,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     failure.failure_type,
                     failure.failure_code.as_deref().unwrap_or("UNKNOWN")
                 )),
-            )
-        } else {
-            (None, None, None)
+            ),
+            None => (None, None, None),
         };
 
         Ok(WebhookDetailsResponse {
@@ -717,24 +603,31 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
-            _ => return Err(errors::ConnectorError::WebhookBodyDecodingFailed.into()),
+            PproWebhookData::Agreement { .. } => {
+                return Err(errors::ConnectorError::WebhookBodyDecodingFailed.into())
+            }
         };
 
-        let status = match charge.status.as_str() {
-            "CAPTURED" | "REFUND_SETTLED" | "SUCCESS" | "REFUNDED" => {
+        let status = match charge.status {
+            transformers::PproPaymentStatus::Captured | transformers::PproPaymentStatus::RefundSettled | transformers::PproPaymentStatus::Success | transformers::PproPaymentStatus::Refunded => {
                 common_enums::RefundStatus::Success
             }
-            "FAILED" | "REJECTED" | "DECLINED" => common_enums::RefundStatus::Failure,
-            _ => common_enums::RefundStatus::Pending,
+            transformers::PproPaymentStatus::Failed | transformers::PproPaymentStatus::Rejected | transformers::PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+            transformers::PproPaymentStatus::AuthorizationProcessing
+            | transformers::PproPaymentStatus::CaptureProcessing
+            | transformers::PproPaymentStatus::AuthenticationPending
+            | transformers::PproPaymentStatus::AuthorizationAsync
+            | transformers::PproPaymentStatus::CapturePending
+            | transformers::PproPaymentStatus::Discarded
+            | transformers::PproPaymentStatus::Voided => common_enums::RefundStatus::Pending,
         };
 
-        let (error_code, error_message) = if let Some(failure) = &charge.failure {
-            (
+        let (error_code, error_message) = match charge.failure.as_ref() {
+            Some(failure) => (
                 failure.failure_code.clone(),
                 Some(failure.failure_message.clone()),
-            )
-        } else {
-            (None, None)
+            ),
+            None => (None, None),
         };
 
         Ok(
@@ -912,6 +805,17 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
         },
     );
 
+    ppro_supported_payment_methods.add(
+        common_enums::PaymentMethod::Upi,
+        common_enums::PaymentMethodType::UpiIntent,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::NotSupported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: ppro_bridge_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
+
     let bank_redirect_methods = vec![
         (
             common_enums::PaymentMethodType::Ideal,
@@ -1020,39 +924,7 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [],
-    member_functions: {
-        fn build_headers<F, FCD, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
-            _connectors: &domain_types::types::Connectors,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
-        where
-            FCD: PproFlowCommonData,
-            F: 'static,
-        {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )];
-
-            // PPRO only allows idempotency keys on POST/PATCH requests (Authorize, Capture, Refund, etc.)
-            // It rejects them on GET requests (Sync).
-            if std::any::TypeId::of::<F>() != std::any::TypeId::of::<PSync>()
-                && std::any::TypeId::of::<F>() != std::any::TypeId::of::<RSync>()
-            {
-                header.push((
-                    headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
-                    req.resource_common_data
-                        .get_connector_request_reference_id()
-                        .into(),
-                ));
-            }
-
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut api_key);
-            Ok(header)
-        }
-    }
+    member_functions: {}
 );
 
 macros::macro_connector_implementation!(
@@ -1072,7 +944,17 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req, &req.resource_common_data.connectors)
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+            header.push((
+                headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
+                req.resource_common_data.connector_request_reference_id.clone().into(),
+            ));
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
         }
         fn get_url(
             &self,
@@ -1099,13 +981,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req, &req.resource_common_data.connectors)
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let id = req.request.connector_transaction_id.get_connector_transaction_id().change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            let id = req.request.get_connector_transaction_id().change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             Ok(format!("{}/v1/payment-charges/{}", self.base_url(&req.resource_common_data.connectors), id))
         }
     }
@@ -1128,7 +1016,17 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req, &req.resource_common_data.connectors)
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+            header.push((
+                headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
+                req.resource_common_data.connector_request_reference_id.clone().into(),
+            ));
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
         }
         fn get_url(
             &self,
@@ -1157,7 +1055,17 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req, &req.resource_common_data.connectors)
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+            header.push((
+                headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
+                req.resource_common_data.connector_request_reference_id.clone().into(),
+            ));
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
         }
         fn get_url(
             &self,
@@ -1186,7 +1094,17 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req, &req.resource_common_data.connectors)
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+            header.push((
+                headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
+                req.resource_common_data.connector_request_reference_id.clone().into(),
+            ));
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
         }
         fn get_url(
             &self,
@@ -1214,7 +1132,13 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req, &req.resource_common_data.connectors)
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
         }
         fn get_url(
             &self,
@@ -1222,6 +1146,39 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let refund_id = req.request.connector_refund_id.clone();
             Ok(format!("{}/v1/payment-charges/{}", self.base_url(&req.resource_common_data.connectors), refund_id))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Ppro,
+    curl_request: Json(PproAgreementRequest),
+    curl_response: PproAgreementResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
+            let mut header = self.get_auth_header(&req.connector_auth_type)?;
+            header.push((
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            ));
+            Ok(header)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/v1/payment-agreements", self.base_url(&req.resource_common_data.connectors)))
         }
     }
 );
@@ -1294,30 +1251,43 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
             .parse_struct("PproWebhookEvent")
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
-        match event.r#type.as_str() {
-            "PAYMENT_CHARGE_AUTHORIZATION_SUCCEEDED" | "PAYMENT_CHARGE_SUCCESS" => {
+        match event.r#type {
+            transformers::PproWebhookType::PaymentChargeAuthorizationSucceeded
+            | transformers::PproWebhookType::PaymentChargeSuccess => {
                 Ok(IncomingWebhookEvent::PaymentIntentSuccess)
             }
-            "PAYMENT_CHARGE_AUTHORIZATION_FAILED" | "PAYMENT_CHARGE_FAILED" => {
+            transformers::PproWebhookType::PaymentChargeAuthorizationFailed
+            | transformers::PproWebhookType::PaymentChargeFailed
+            | transformers::PproWebhookType::PaymentChargeDiscarded => {
                 Ok(IncomingWebhookEvent::PaymentIntentFailure)
             }
-            "PAYMENT_CHARGE_DISCARDED" => Ok(IncomingWebhookEvent::PaymentIntentFailure),
-            "PAYMENT_CHARGE_CAPTURE_SUCCEEDED" => {
+            transformers::PproWebhookType::PaymentChargeCaptureSucceeded => {
                 Ok(IncomingWebhookEvent::PaymentIntentCaptureSuccess)
             }
-            "PAYMENT_CHARGE_CAPTURE_FAILED" => {
+            transformers::PproWebhookType::PaymentChargeCaptureFailed => {
                 Ok(IncomingWebhookEvent::PaymentIntentCaptureFailure)
             }
-            "PAYMENT_CHARGE_VOID_SUCCEEDED" => Ok(IncomingWebhookEvent::PaymentIntentCancelled),
-            "PAYMENT_CHARGE_VOID_FAILED" => Ok(IncomingWebhookEvent::PaymentIntentCancelFailure),
-            "PAYMENT_CHARGE_REFUND_SUCCEEDED" => Ok(IncomingWebhookEvent::RefundSuccess),
-            "PAYMENT_CHARGE_REFUND_FAILED" => Ok(IncomingWebhookEvent::RefundFailure),
-            "PAYMENT_AGREEMENT_ACTIVE" => Ok(IncomingWebhookEvent::MandateActive),
-            "PAYMENT_AGREEMENT_FAILED"
-            | "PAYMENT_AGREEMENT_REVOKED_BY_CONSUMER"
-            | "PAYMENT_AGREEMENT_REVOKED_BY_MERCHANT"
-            | "PAYMENT_AGREEMENT_REVOKED_BY_PROVIDER" => Ok(IncomingWebhookEvent::MandateRevoked),
-            _ => Ok(IncomingWebhookEvent::EventNotSupported),
+            transformers::PproWebhookType::PaymentChargeVoidSucceeded => {
+                Ok(IncomingWebhookEvent::PaymentIntentCancelled)
+            }
+            transformers::PproWebhookType::PaymentChargeVoidFailed => {
+                Ok(IncomingWebhookEvent::PaymentIntentCancelFailure)
+            }
+            transformers::PproWebhookType::PaymentChargeRefundSucceeded => {
+                Ok(IncomingWebhookEvent::RefundSuccess)
+            }
+            transformers::PproWebhookType::PaymentChargeRefundFailed => {
+                Ok(IncomingWebhookEvent::RefundFailure)
+            }
+            transformers::PproWebhookType::PaymentAgreementActive => {
+                Ok(IncomingWebhookEvent::MandateActive)
+            }
+            transformers::PproWebhookType::PaymentAgreementFailed
+            | transformers::PproWebhookType::PaymentAgreementRevokedByConsumer
+            | transformers::PproWebhookType::PaymentAgreementRevokedByMerchant
+            | transformers::PproWebhookType::PaymentAgreementRevokedByProvider => {
+                Ok(IncomingWebhookEvent::MandateRevoked)
+            }
         }
     }
 
