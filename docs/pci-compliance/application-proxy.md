@@ -38,9 +38,9 @@ sequenceDiagram
     Note over BE,PSP: Step 2: Payment via Application Proxy
     FE->>BE: Send token + payment request
     BE->>UCS: authorize(token, amount, connector)
-    Note right of UCS: UCS constructs vault request<br/>(PSP payload + token in vault format)
+    Note over UCS,Vault: UCS constructs PSP request<br/>with token in vault format
     UCS->>Vault: Proxy request (vault-specific format)
-    Note right of Vault: Vault substitutes token<br/>with raw card data
+    Note over Vault: Vault substitutes token with raw card data
     Vault->>PSP: Forward PSP request (with real card data)
     PSP-->>Vault: Authorization response
     Vault-->>UCS: Return response

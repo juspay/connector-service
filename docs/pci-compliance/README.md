@@ -109,7 +109,7 @@ sequenceDiagram
     Note over BE,PSP: Backend: Payment Processing via UCS
     FE->>BE: Send vault_token + payment request
     BE->>connector-service: authorize(vault_token, amount, connector)
-    Note right of connector-service: UCS either routes to proxy URL<br/>(Network) or transforms to vault format (Application)
+    Note over connector-service,Vault: UCS routes to proxy URL (Network)<br/>or transforms to vault format (Application)
     connector-service->>Vault: Proxy request with token
     Vault->>PSP: Forward with detokenized card data
     PSP-->>Vault: Authorization response
