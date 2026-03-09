@@ -46,13 +46,13 @@ macro_rules! build_router_data {
                 $metadata,
             ))
             .map_err(|err| FfiError::IntegrationError {
-                message: err.to_string(),
+                    message: err.to_string(),
             })?;
 
         let payment_request_data: $request_data_type =
             domain_types::utils::ForeignTryFrom::foreign_try_from($payload.clone())
                 .map_err(|err| FfiError::IntegrationError {
-                    message: err.to_string(),
+                        message: err.to_string(),
                 })?;
 
         let router_data = domain_types::router_data_v2::RouterDataV2 {

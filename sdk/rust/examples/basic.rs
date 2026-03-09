@@ -103,17 +103,6 @@ fn build_metadata() -> HashMap<String, String> {
         })
         .to_string(),
     );
-
-    // Required metadata headers (used by ffi_headers_to_masked_metadata)
-    metadata.insert("x-connector".to_string(), "Stripe".to_string());
-    metadata.insert("x-merchant-id".to_string(), "test_merchant_123".to_string());
-    metadata.insert("x-request-id".to_string(), "test-request-001".to_string());
-    metadata.insert("x-tenant-id".to_string(), "public".to_string());
-    metadata.insert("x-auth".to_string(), "header-key".to_string());
-
-    // Optional headers
-    metadata.insert("x-api-key".to_string(), api_key);
-
     metadata
 }
 

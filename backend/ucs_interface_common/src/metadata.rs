@@ -1,6 +1,7 @@
 use common_utils::{
     consts::{self, X_SHADOW_MODE},
     errors::CustomResult,
+    fp_utils,
     lineage::LineageIds,
 };
 use domain_types::{
@@ -13,7 +14,7 @@ use std::{str::FromStr, sync::Arc};
 use tonic::metadata;
 use ucs_env::configs;
 
-use crate::auth::resolve_connector_auth;
+use crate::auth::connector_and_auth_from_metadata;
 
 /// Struct to hold extracted metadata payload.
 ///
@@ -38,15 +39,18 @@ pub fn get_metadata_payload(
     metadata: &metadata::MetadataMap,
     server_config: Arc<configs::Config>,
 ) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
-    let connector = connector_from_metadata(metadata)?;
+    // Resolve connector and auth: try x-connector-auth header first,
+    // fall back to x-connector and x-auth legacy headers.
+    let (connector, connector_auth_type) = connector_and_auth_from_metadata(metadata)?;
+
     let merchant_id = merchant_id_from_metadata(metadata)?;
     let tenant_id = tenant_id_from_metadata(metadata)?;
     let request_id = request_id_from_metadata(metadata)?;
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
-    let connector_auth_type = resolve_connector_auth(metadata, &connector)?;
     let reference_id = reference_id_from_metadata(metadata)?;
     let resource_id = resource_id_from_metadata(metadata)?;
     let shadow_mode = shadow_mode_from_metadata(metadata);
+
     Ok(MetadataPayload {
         tenant_id,
         request_id,
@@ -109,16 +113,11 @@ pub fn connector_from_metadata(
 pub fn merchant_id_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<String, ApplicationErrorResponse> {
-    parse_metadata(metadata, consts::X_MERCHANT_ID)
-        .map(|inner| inner.to_string())
-        .map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_MERCHANT_ID".to_string(),
-                error_identifier: 400,
-                error_message: format!("Missing merchant ID in request metadata: {e}"),
-                error_object: None,
-            }))
-        })
+    Ok(common_utils::metadata::merchant_id_or_default(
+        metadata
+            .get(consts::X_MERCHANT_ID)
+            .and_then(|value| value.to_str().ok()),
+    ))
 }
 
 pub fn request_id_from_metadata(
@@ -126,13 +125,13 @@ pub fn request_id_from_metadata(
 ) -> CustomResult<String, ApplicationErrorResponse> {
     parse_metadata(metadata, consts::X_REQUEST_ID)
         .map(|inner| inner.to_string())
-        .map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_REQUEST_ID".to_string(),
-                error_identifier: 400,
-                error_message: format!("Missing request ID in request metadata: {e}"),
-                error_object: None,
-            }))
+        .or_else(|_| {
+            let generated_id = fp_utils::generate_uuid_v7();
+            tracing::debug!(
+                request_id = %generated_id,
+                "x-request-id header missing, auto-generated request ID"
+            );
+            Ok(generated_id)
         })
 }
 
@@ -206,4 +205,59 @@ pub fn parse_optional_metadata<'a>(
                 error_object: None,
             }))
         })
+}
+#[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use tonic::metadata::MetadataMap;
+
+    #[test]
+    fn merchant_id_defaults_when_missing() {
+        let metadata = MetadataMap::new();
+        let merchant_id = merchant_id_from_metadata(&metadata).expect("should not fail");
+        assert_eq!(merchant_id, "DefaultMerchantId");
+    }
+
+    #[test]
+    fn merchant_id_resolves_when_present() {
+        let mut metadata = MetadataMap::new();
+        metadata.insert(consts::X_MERCHANT_ID, "test-merchant".parse().unwrap());
+        let merchant_id = merchant_id_from_metadata(&metadata).expect("should resolve");
+        assert_eq!(merchant_id, "test-merchant");
+    }
+
+    #[test]
+    fn request_id_generates_uuid_v7_when_missing() {
+        let metadata = MetadataMap::new();
+        let request_id = request_id_from_metadata(&metadata).expect("should not fail");
+        // UUID v7 is 36 characters long
+        assert_eq!(request_id.len(), 36);
+        // Simple check for UUID format (hyphens at specific positions)
+        assert_eq!(request_id.chars().nth(8), Some('-'));
+        assert_eq!(request_id.chars().nth(13), Some('-'));
+    }
+
+    #[test]
+    fn request_id_resolves_when_present() {
+        let mut metadata = MetadataMap::new();
+        metadata.insert(consts::X_REQUEST_ID, "specific-request-id".parse().unwrap());
+        let request_id = request_id_from_metadata(&metadata).expect("should resolve");
+        assert_eq!(request_id, "specific-request-id");
+    }
+
+    #[test]
+    fn tenant_id_defaults_when_missing() {
+        let metadata = MetadataMap::new();
+        let tenant_id = tenant_id_from_metadata(&metadata).expect("should not fail");
+        assert_eq!(tenant_id, "DefaultTenantId");
+    }
+
+    #[test]
+    fn connector_resolves_from_metadata() {
+        let mut metadata = MetadataMap::new();
+        metadata.insert(consts::X_CONNECTOR_NAME, "stripe".parse().unwrap());
+        let connector = connector_from_metadata(&metadata).expect("should resolve");
+        assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
+    }
 }
