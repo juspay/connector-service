@@ -20,10 +20,6 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-// =============================================================================
-// AUTHENTICATION TYPE
-// =============================================================================
-
 #[derive(Debug, Clone)]
 pub struct FinixAuthType {
     pub finix_user_name: Secret<String>,
@@ -89,20 +85,12 @@ impl FinixAuthType {
     }
 }
 
-// =============================================================================
-// ERROR RESPONSE
-// =============================================================================
-
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FinixErrorResponse {
     pub total: Option<i64>,
     #[serde(rename = "_embedded")]
     pub embedded: Option<FinixErrorEmbedded>,
 }
-
-// =============================================================================
-// FINIX ID TYPE - For parsing AU* (Auth) and TR* (Transfer) IDs
-// =============================================================================
 
 #[derive(Debug, Clone)]
 pub enum FinixId {
@@ -166,10 +154,6 @@ impl FinixErrorResponse {
     }
 }
 
-// =============================================================================
-// CREATE CONNECTOR CUSTOMER FLOW - REQUEST/RESPONSE (POST /identities)
-// =============================================================================
-
 #[derive(Debug, Serialize)]
 pub struct FinixCreateIdentityRequest {
     pub entity: FinixIdentityEntity,
@@ -213,10 +197,6 @@ pub struct FinixIdentityResponse {
 }
 
 pub type FinixTags = HashMap<String, String>;
-
-// =============================================================================
-// PAYMENT METHOD TOKEN FLOW - REQUEST/RESPONSE (POST /payment_instruments)
-// =============================================================================
 
 #[derive(Debug, Serialize)]
 pub struct FinixCreatePaymentInstrumentRequest {
@@ -280,9 +260,7 @@ pub struct FinixInstrumentResponse {
     pub enabled: bool,
 }
 
-// =============================================================================
 // AUTHORIZE FLOW - REQUEST/RESPONSE
-// =============================================================================
 
 #[derive(Debug, Serialize)]
 pub struct FinixAuthorizeRequest {
@@ -344,9 +322,7 @@ impl From<&FinixPaymentStatus> for AttemptStatus {
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - AUTHORIZE REQUEST
-// =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -415,10 +391,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// =============================================================================
-// TRYFROM IMPLEMENTATIONS - AUTHORIZE RESPONSE
-// =============================================================================
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<FinixAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
@@ -430,9 +402,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
-        // Handle error responses
-        if let Some(ref _failure_message) = response.failure_message {
-            return Ok(Self {
+        // Handle error vs success responses
+        match &response.failure_message {
+            Some(_failure_message) => Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                     redirection_data: None,
@@ -448,57 +420,56 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ..item.router_data.resource_common_data.clone()
                 },
                 ..item.router_data
-            });
-        }
-
-        // Determine status based on ID type (following Hyperswitch pattern):
-        // - Transfer (TR*): Succeeded -> Charged
-        // - Authorization (AU*): Succeeded -> Authorized
-        let finix_id = FinixId::from(response.id.clone());
-        let status = match (&finix_id, &response.state) {
-            (FinixId::Transfer(_), FinixPaymentStatus::Succeeded) => AttemptStatus::Charged,
-            (FinixId::Transfer(_), FinixPaymentStatus::Pending) => AttemptStatus::Pending,
-            (FinixId::Auth(_), FinixPaymentStatus::Succeeded) => AttemptStatus::Authorized,
-            (FinixId::Auth(_), FinixPaymentStatus::Pending) => AttemptStatus::AuthenticationPending,
-            (_, FinixPaymentStatus::Failed) => AttemptStatus::Failure,
-            (_, FinixPaymentStatus::Canceled) => AttemptStatus::Voided,
-            (_, FinixPaymentStatus::Unknown) => AttemptStatus::Pending,
-        };
-
-        // Determine connector_transaction_id:
-        // - Transfer (TR*): Use the response ID directly (it's already a transfer ID)
-        // - Authorization (AU*): Use transfer field if present (for refunds), else use ID
-        let connector_transaction_id = match finix_id {
-            FinixId::Transfer(_) => response.id.clone(),
-            FinixId::Auth(_) => response
-                .transfer
-                .clone()
-                .unwrap_or_else(|| response.id.clone()),
-        };
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: Some(response.id.clone()),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
             }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data.clone()
-            },
-            ..item.router_data
-        })
+            None => {
+                // Determine status based on ID type (following Hyperswitch pattern):
+                // - Transfer (TR*): Succeeded -> Charged
+                // - Authorization (AU*): Succeeded -> Authorized
+                let finix_id = FinixId::from(response.id.clone());
+                let status = match (&finix_id, &response.state) {
+                    (FinixId::Transfer(_), FinixPaymentStatus::Succeeded) => AttemptStatus::Charged,
+                    (FinixId::Transfer(_), FinixPaymentStatus::Pending) => AttemptStatus::Pending,
+                    (FinixId::Auth(_), FinixPaymentStatus::Succeeded) => AttemptStatus::Authorized,
+                    (FinixId::Auth(_), FinixPaymentStatus::Pending) => {
+                        AttemptStatus::AuthenticationPending
+                    }
+                    (_, FinixPaymentStatus::Failed) => AttemptStatus::Failure,
+                    (_, FinixPaymentStatus::Canceled) => AttemptStatus::Voided,
+                    (_, FinixPaymentStatus::Unknown) => AttemptStatus::Pending,
+                };
+
+                // Determine connector_transaction_id:
+                // - Transfer (TR*): Use the response ID directly (it's already a transfer ID)
+                // - Authorization (AU*): Use transfer field if present (for refunds), else use ID
+                let connector_transaction_id = match &finix_id {
+                    FinixId::Transfer(_) => response.id.clone(),
+                    FinixId::Auth(_) => response
+                        .transfer
+                        .clone()
+                        .unwrap_or_else(|| response.id.clone()),
+                };
+
+                Ok(Self {
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: Some(response.id.clone()),
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    }),
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data.clone()
+                    },
+                    ..item.router_data
+                })
+            }
+        }
     }
 }
-
-// =============================================================================
-// PSync FLOW - REQUEST/RESPONSE
-// =============================================================================
 
 // Common response struct for payment operations (PSync, Capture, Void, etc.)
 #[derive(Debug, Serialize, Deserialize)]
@@ -517,10 +488,6 @@ pub struct FinixPaymentsResponse {
 
 // Aliases for backward compatibility during migration
 pub type FinixPSyncResponse = FinixPaymentsResponse;
-
-// =============================================================================
-// TRYFROM IMPLEMENTATIONS - PSync RESPONSE
-// =============================================================================
 
 impl TryFrom<ResponseRouterData<FinixPSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
@@ -570,9 +537,7 @@ impl TryFrom<ResponseRouterData<FinixPSyncResponse, Self>>
     }
 }
 
-// =============================================================================
 // CAPTURE FLOW - REQUEST/RESPONSE
-// =============================================================================
 
 #[derive(Debug, Serialize)]
 pub struct FinixCaptureRequest {
@@ -584,9 +549,7 @@ pub struct FinixCaptureRequest {
 // Use common response struct for capture
 pub type FinixCaptureResponse = FinixPaymentsResponse;
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - CAPTURE REQUEST
-// =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -611,9 +574,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - CAPTURE RESPONSE
-// =============================================================================
 
 impl TryFrom<ResponseRouterData<FinixCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
@@ -644,9 +605,7 @@ impl TryFrom<ResponseRouterData<FinixCaptureResponse, Self>>
     }
 }
 
-// =============================================================================
 // VOID FLOW - REQUEST/RESPONSE
-// =============================================================================
 
 #[derive(Debug, Serialize)]
 pub struct FinixVoidRequest {
@@ -656,9 +615,7 @@ pub struct FinixVoidRequest {
 // Use common response struct for void
 pub type FinixVoidResponse = FinixPaymentsResponse;
 
-// =============================================================================
 // REFUND FLOW - REQUEST/RESPONSE
-// =============================================================================
 
 #[derive(Debug, Serialize)]
 pub struct FinixRefundRequest {
@@ -670,16 +627,12 @@ pub struct FinixRefundRequest {
 // Use common response struct for refund
 pub type FinixRefundResponse = FinixPaymentsResponse;
 
-// =============================================================================
 // RSync FLOW - REQUEST/RESPONSE
-// =============================================================================
 
 // Use common response struct for rsync
 pub type FinixRSyncResponse = FinixPaymentsResponse;
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - RSync RESPONSE
-// =============================================================================
 
 impl TryFrom<ResponseRouterData<FinixRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
@@ -706,9 +659,7 @@ impl TryFrom<ResponseRouterData<FinixRSyncResponse, Self>>
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - VOID REQUEST
-// =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -730,9 +681,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - VOID RESPONSE
-// =============================================================================
 
 impl TryFrom<ResponseRouterData<FinixVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
@@ -770,9 +719,7 @@ impl TryFrom<ResponseRouterData<FinixVoidResponse, Self>>
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - REFUND REQUEST
-// =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -797,9 +744,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - REFUND RESPONSE
-// =============================================================================
 
 impl TryFrom<ResponseRouterData<FinixRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
@@ -827,9 +772,7 @@ impl TryFrom<ResponseRouterData<FinixRefundResponse, Self>>
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - CREATE CONNECTOR CUSTOMER REQUEST
-// =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -889,9 +832,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - CREATE CONNECTOR CUSTOMER RESPONSE
-// =============================================================================
 
 impl TryFrom<ResponseRouterData<FinixIdentityResponse, Self>>
     for RouterDataV2<
@@ -916,9 +857,7 @@ impl TryFrom<ResponseRouterData<FinixIdentityResponse, Self>>
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - PAYMENT METHOD TOKEN REQUEST
-// =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -1035,9 +974,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// =============================================================================
 // TRYFROM IMPLEMENTATIONS - PAYMENT METHOD TOKEN RESPONSE
-// =============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<FinixInstrumentResponse, Self>>
