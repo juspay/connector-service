@@ -43,3 +43,29 @@ Universal Connector Service (UCS) for payment connector integrations using macro
 - Follow macro-based implementation patterns
 - Run `cargo build` and `cargo clippy` before submission
 - All connector code in `backend/connector-integration/src/connectors/`
+
+## Documentation Patterns
+
+### Connectors Overview
+
+The connectors overview documentation (`docs/connectors/README.md`) maintains a matrix of all connectors and their integration status across different services:
+
+**Status Definitions:**
+- ![Integrated](https://img.shields.io/badge/-integrated-blue) - Code and transformers are available in `/connectors` folder
+- ![Tested](https://img.shields.io/badge/-tested-green) - Code is integrated AND tests are available in `/tests` folder
+- ![Not Integrated](https://img.shields.io/badge/-not%20integrated-lightgrey) - No code or mapping available
+
+**Matrix Structure:**
+- **PaymentService**: Core payment operations (Authorize, Capture, Void, PSync, SetupMandate, CreateOrder, CreateCustomer, PaymentToken, IncrementalAuth)
+- **RefundService**: Refund operations (Refund, RSync)
+- **DisputeService**: Dispute management (AcceptDispute, DefendDispute, SubmitEvidence)
+
+**When adding a new connector:**
+1. Add the connector row to each relevant service table
+2. Mark operations as integrated using: `![Integrated](https://img.shields.io/badge/-integrated-blue)`
+3. When tests are added, update to: `![Tested](https://img.shields.io/badge/-tested-green)`
+4. Add connector details section at the bottom
+
+**When adding a new operation:**
+1. Add the operation column to the relevant service table
+2. Mark the status for each connector that implements it

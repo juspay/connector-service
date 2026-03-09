@@ -1,12 +1,29 @@
 # PCI Compliance with Connector Service
 
-> How connector-service (UCS) handles PCI compliance through multiple integration patterns
+> How connector-service handles PCI compliance through multiple integration patterns
 
 ---
 
 ## Overview
 
-Connector Service (UCS) provides flexible PCI compliance options for merchants. Depending on your compliance requirements and infrastructure, you can operate in one of two modes:
+PCI DSS (Payment Card Industry Data Security Standard) compliance is not just a configuration option—it's a **business-critical architectural decision** that affects:
+
+1. **Security liability** — Handling raw card data makes you responsible for breaches
+2. **Compliance cost** — Full SAQ D certification costs $50K–$500K+ annually in audits, infrastructure, and security tools
+3. **Time to market** — Achieving PCI certification can take 6–12 months
+4. **Operational overhead** — Ongoing security patches, monitoring, and audits
+
+The choice you make here determines your risk profile, operational burden, and agility.
+
+Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **independent third-party vault** (VGS, Basis Theory, TokenEx, Skyflow), or **self-managed PCI compliance** with your own card vault—**Connector Service has you covered**.
+
+| Scenario | Your Strategy | Connector Service Solves |
+|----------|---------------|--------------------------|
+| **PSP-Native Vault** | You rely on Stripe/Adyen vault for PCI scope reduction | Abstracts PSP-specific token formats; single API regardless of which PSP vault you use |
+| **Independent Third-Party Vault** | You use VGS, Basis Theory, TokenEx, or Skyflow as a vault layer | Supports three proxy patterns (Network, Transform, Relay) with zero to minimal code changes |
+| **In-House Vault** | You have your own PCI-certified card vault infrastructure | PCI-Enabled Mode lets you send raw card data through while maintaining full control |
+
+Connector Service (connector-service) provides flexible PCI compliance options for merchants. Depending on your compliance requirements and infrastructure, you can operate in one of two modes:
 
 | Mode | PCI Scope | Description |
 |------|-----------|-------------|
@@ -31,18 +48,18 @@ sequenceDiagram
     autonumber
     participant FE as Merchant Frontend
     participant BE as Merchant Backend
-    participant UCS as Connector Service
+    participant connector-service as Connector Service
     participant PSP as Payment Provider
 
     Note over FE,PSP: PCI-Enabled Mode - Merchant handles card data
 
     FE->>FE: Collect card details
     FE->>BE: Send card data + payment request
-    BE->>UCS: authorize(card_number, exp, cvc, amount)
-    UCS->>UCS: Transform to PSP format
-    UCS->>PSP: POST /payment_intents (PSP-specific payload)
-    PSP-->>UCS: Authorization response
-    UCS-->>BE: Unified response
+    BE->>connector-service: authorize(card_number, exp, cvc, amount)
+    connector-service->>connector-service: Transform to PSP format
+    connector-service->>PSP: POST /payment_intents (PSP-specific payload)
+    PSP-->>connector-service: Authorization response
+    connector-service-->>BE: Unified response
     BE-->>FE: Payment result
 ```
 
@@ -56,7 +73,7 @@ sequenceDiagram
 
 ## Mode 2: PCI-Disabled Mode (Vault Integration)
 
-In this mode, a third-party vault handles card data. Your application only sees tokens, significantly reducing PCI scope.
+In this mode, a third-party vault handles card data. Your application only handles tokens, significantly reducing PCI scope.
 
 ### When to Use
 - You want to minimize PCI compliance burden
@@ -64,15 +81,13 @@ In this mode, a third-party vault handles card data. Your application only sees 
 - You want to outsource security to specialists
 
 ### Requirement
-**You must subscribe to a third-party PCI vault service.** UCS supports three integration patterns:
+**You must subscribe to a third-party PCI vault service.** connector-service supports three integration patterns:
 
-| Vault Provider | Proxy Pattern | Documentation |
-|----------------|---------------|---------------|
-| **VGS (Very Good Security)** | [Network Proxy](./network-proxy.md) | Zero-code, URL-based routing |
-| **Evervault** | [Network Proxy](./network-proxy.md) | HTTP CONNECT relay, client-side encryption |
-| **Basis Theory** | [Transform Proxy](./transform-proxy.md) | Expression-based `{{ }}` detokenization |
-| **Skyflow** | [Transform Proxy](./transform-proxy.md) | Connection-based detokenizing proxy |
-| **TokenEx** | [Relay Proxy](./relay-proxy.md) | Header-driven with `{ }` token markers |
+| Proxy Pattern | What It Means | Popular Vault Providers |
+|---------------|---------------|-------------------------|
+| **[Network Proxy](./network-proxy.md)** | Zero-code integration—just change the URL. The proxy transparently intercepts and detokenizes requests at the network layer. | **VGS**: URL-based routing (`tntxxx.sandbox.verygoodproxy.com`)<br>**Evervault**: HTTP CONNECT relay with client-side encryption |
+| **[Transform Proxy](./transform-proxy.md)** | Application-layer proxy using template expressions (e.g., `{{ token.property }}`) to explicitly mark where detokenization should occur. | **Basis Theory**: Expression-based `{{ }}` detokenization<br>**Skyflow**: Connection-based detokenizing proxy with data residency controls |
+| **[Relay Proxy](./relay-proxy.md)** | Header-driven routing with token markers (e.g., `{token}`) to indicate detokenization points in the request body. | **TokenEx**: Format-preserving tokens with `TX-*` headers and `{ }` markers |
 
 ### Flow Diagram
 
@@ -83,7 +98,7 @@ sequenceDiagram
     participant VSDK as Vault SDK
     participant Vault as PCI Vault
     participant BE as Merchant Backend
-    participant UCS as Connector Service
+    participant connector-service as Connector Service
     participant PSP as Payment Provider
 
     Note over FE,Vault: Frontend: Card Collection (Zero PCI Scope)
@@ -94,12 +109,12 @@ sequenceDiagram
 
     Note over BE,PSP: Backend: Payment Processing
     FE->>BE: Send vault_token + payment request
-    BE->>UCS: authorize(vault_token, amount)
-    UCS->>Vault: Detokenize (via proxy)
-    Vault-->>UCS: Card data (in memory only)
-    UCS->>PSP: POST /payment_intents
-    PSP-->>UCS: Authorization response
-    UCS-->>BE: Unified response
+    BE->>connector-service: authorize(vault_token, amount)
+    connector-service->>Vault: Detokenize (via proxy)
+    Vault-->>connector-service: Card data (in memory only)
+    connector-service->>PSP: POST /payment_intents
+    PSP-->>connector-service: Authorization response
+    connector-service-->>BE: Unified response
     BE-->>FE: Payment result
 ```
 
@@ -108,6 +123,52 @@ sequenceDiagram
 - Reduced PCI scope (SAQ A or A-EP)
 - Vault provider manages security
 - Subscription to vault service required
+
+---
+
+## PCI Modes Explained
+
+### PCI-Enabled Mode (Full SAQ D)
+
+| Aspect | Details |
+|--------|---------|
+| **What happens** | Your application receives and transmits raw card data (PAN, CVV, expiry) |
+| **PCI Scope** | Full SAQ D — your entire infrastructure is in scope |
+| **When to use** | • You already have PCI DSS certification<br>• You operate your own card vault<br>• You need direct control over card data for compliance/regulatory reasons<br>• You want to minimize third-party dependencies |
+| **Trade-off** | Higher compliance burden, but maximum flexibility and control |
+
+### PCI-Disabled Mode (Reduced SAQ A/A-EP)
+
+| Aspect | Details |
+|--------|---------|
+| **What happens** | A third-party vault tokenizes card data; you only handle tokens |
+| **PCI Scope** | Reduced SAQ A or A-EP — card data never touches your servers |
+| **When to use** | • You want to minimize PCI compliance burden<br>• You prefer outsourcing security to specialists<br>• You need faster time-to-market without certification delays<br>• You use a PSP vault or independent vault provider |
+| **Trade-off** | Subscription cost for vault service, but drastically reduced compliance overhead |
+
+---
+
+## Mapping Recommended PCI Modes to Use Cases
+
+| Use Case | Recommended Mode | Rationale |
+|----------|------------------|-----------|
+| **Early-stage startup, moving from single-PSP to multi-PSP** | PCI-Disabled | Launch quickly without 6–12 month certification delays |
+| **Expanding Multi-PSP strategy without changing your existing vault vendor** | PCI-Disabled + Independent Vault | Token portability across PSPs (e.g., TokenEx format-preserving tokens) |
+| **High-security requirements** | PCI-Enabled + In-House Vault | Full data sovereignty and audit control |
+| **Marketplace/SaaS platform supporting multi-PSP across multi-merchant setup** | PCI-Disabled + Transform Proxy | Basis Theory/Skyflow support tenant isolation and complex token transformations |
+| **Enterprise with existing PCI certification** | PCI-Enabled | Leverage existing investment; maintain control |
+
+---
+
+## The Confidence Factor
+
+Connector Service abstracts the complexity regardless of your PCI strategy. You integrate once with connector-service, and it handles:
+
+- **Token format translation** — PSP-specific tokens, vault tokens, or raw cards all normalize to a unified interface
+- **Proxy pattern selection** — Network, Transform, or Relay based on your vault provider
+- **Connector-level flexibility** — Use PCI-Enabled for your in-house vault in one region, PCI-Disabled with a third party vault provider in another
+
+Your PCI choice is a business decision—Connector Service ensures it's never a technical blocker.
 
 ---
 
@@ -138,21 +199,21 @@ Choose the right proxy pattern based on your requirements:
 - ✅ You need the **fastest integration**
 - ✅ You already use VGS/Evervault infrastructure
 - ✅ You want **client-side encryption** (Evervault)
-- ❌ You need custom request transformations
+- 🔧 You need to implement custom request transformations through connector service
 
 ### Choose Transform Proxy (Basis Theory, Skyflow) if:
 - ✅ You need **explicit control** over token placement
 - ✅ You want **custom transformations** (Liquid/Node.js)
 - ✅ You work with **multiple vault providers**
-- ✅ You need **data residency** controls (Skyflow)
-- ✅ You want **vault-per-tenant** isolation (Skyflow)
-- ❌ You want zero code changes
+- ✅ You need **data residency** controls (offered by Skyflow)
+- ✅ You want **vault-per-tenant** isolation (offered by Skyflow)
+- ❌ You need to implement custom request transformations through connector service
 
 ### Choose Relay Proxy (TokenEx) if:
 - ✅ You want **PSP portability** (one token works everywhere)
 - ✅ You prefer **format-preserving tokens** (looks like real cards)
-- ✅ You want a **middle ground** between zero-code and full-control
-- ❌ You need complex request transformations
+- ✅ You want a **middle ground** between zero-code and vendor-diversity
+- ❌ You need to implement custom request transformations through connector service
 
 </details>
 
@@ -160,25 +221,10 @@ Choose the right proxy pattern based on your requirements:
 
 ## Code Example Comparison
 
-Here's how a Stripe Payment Intent call looks across all three patterns:
+Here's how a Stripe Payment Intent call can look across all the scenarios:
 
 <details>
-<summary><b>1. Without Vault (Raw Card Data)</b></summary>
-
-```bash
-# Direct to Stripe—your server sees raw card data
-curl "https://api.stripe.com/v1/payment_intents" \
-  -H "Authorization: Bearer sk_test_xxx" \
-  -d "amount=1000" \
-  -d "currency=usd" \
-  -d "payment_method_data[card][number]=4242424242424242" \
-  -d "payment_method_data[card][exp_month]=12" \
-  -d "confirm=true"
-```
-</details>
-
-<details>
-<summary><b>2. Network Proxy (VGS)</b></summary>
+<summary><b>Scenario 1: Using Independent third party vault through Network Proxy pattern (example: VGS)</b></summary>
 
 ```bash
 # Change URL only—VGS handles detokenization automatically
@@ -193,7 +239,7 @@ curl "https://tntSANDBOX.sandbox.verygoodproxy.com/v1/payment_intents" \
 </details>
 
 <details>
-<summary><b>3. Transform Proxy (Basis Theory)</b></summary>
+<summary><b>Scenario 2: Using Independent third party vault through Transform Proxy pattern (example: Juspay, Basis Theory)</b></summary>
 
 ```bash
 # Use {{ }} expressions to mark detokenization points
@@ -209,7 +255,7 @@ curl "https://api.basistheory.com/proxy" \
 </details>
 
 <details>
-<summary><b>4. Relay Proxy (TokenEx)</b></summary>
+<summary><b>4. Scenario 3: Using Independent third party vault through Relay Proxy pattern (example: TokenEx)</b></summary>
 
 ```bash
 # Use TX-* headers for routing, { } markers for tokens
@@ -225,44 +271,60 @@ curl "https://tgapi.tokenex.com" \
 ```
 </details>
 
+<details>
+<summary><b>Scenario 4: Using inhouse card vault with self managed PCI compliance </b></summary>
+
+```bash
+# Direct to Stripe—your server sees raw card data
+curl "https://api.stripe.com/v1/payment_intents" \
+  -H "Authorization: Bearer sk_test_xxx" \
+  -d "amount=1000" \
+  -d "currency=usd" \
+  -d "payment_method_data[card][number]=4242424242424242" \
+  -d "payment_method_data[card][exp_month]=12" \
+  -d "confirm=true"
+```
+</details>
+
+
 ---
 
 ## Data Flow Comparison
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         WITHOUT VAULT                                   │
-│  Frontend → Backend (raw card) → UCS (raw card) → Stripe (raw card)    │
-│                                                                         │
-│  PCI Scope: SAQ D (Full) ❌                                             │
-└─────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                         INHOUSE CARD VAULT                                       │
+│  Frontend → Backend (raw card) → connector-service (raw card) → Stripe (raw card)│
+│                                                                                  │
+│  PCI Scope: SAQ D (Full) ❌                                                      │
+└──────────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      NETWORK PROXY                                      │
-│  Frontend → Backend (token) → UCS (token) → Network Proxy → Stripe     │
-│                                    ↑                                    │
-│                         VGS/Evervault: URL change only                  │
-│                                                                         │
-│  PCI Scope: SAQ A/A-EP ✅  Code Changes: None                           │
-└─────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│                      NETWORK PROXY                                                    │
+│  Frontend → Backend (token) → connector-service (token) → Network Proxy → Stripe      │
+│                                    ↑                                                  │
+│                         VGS/Evervault: URL change only                                │
+│                                                                                       │
+│  PCI Scope: SAQ A/A-EP ✅  Code Changes: None                                         │
+└───────────────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│                   TRANSFORM PROXY                                       │
-│  Frontend → Backend (token) → UCS (templates) → Transform Proxy → PSP  │
-│                                    ↑                                    │
-│                    Basis Theory: {{ }} / Skyflow: JSON paths            │
-│                                                                         │
-│  PCI Scope: SAQ A/A-EP ✅  Control: High                                │
-└─────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│                   TRANSFORM PROXY                                                     │
+│  Frontend → Backend (token) → connector-service (templates) → Transform Proxy → PSP   │
+│                                    ↑                                                  │
+│                    Basis Theory: {{ }} / Skyflow: JSON paths                          │
+│                                                                                       │
+│  PCI Scope: SAQ A/A-EP ✅  Control: High                                              │
+└───────────────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      RELAY PROXY (TokenEx)                              │
-│  Frontend → Backend (token) → UCS ({ }) → TGAPI → Stripe (card)        │
-│                                    ↑                                    │
-│                              TX-* headers + { } markers                 │
-│                                                                         │
-│  PCI Scope: SAQ A/A-EP ✅  Portability: Universal                       │
-└─────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                      RELAY PROXY (TokenEx)                                           │
+│  Frontend → Backend (token) → connector-service ({ }) → TGAPI → Stripe (card)        │
+│                                    ↑                                                 │
+│                              TX-* headers + { } markers                              │
+│                                                                                      │
+│  PCI Scope: SAQ A/A-EP ✅  Portability: Universal                                    │
+└──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -282,7 +344,7 @@ curl "https://tgapi.tokenex.com" \
 1. **Choose your mode** based on PCI requirements
 2. **If PCI-Disabled**: Select a [proxy pattern](#proxy-pattern-comparison) based on your needs
 3. **Subscribe to a vault provider** (VGS, Basis Theory, or TokenEx)
-4. **Configure UCS** with vault credentials
+4. **Configure connector-service** with vault credentials
 5. **Implement Vault SDK** in your frontend
 6. **Test with sandbox** credentials before going live
 
@@ -299,4 +361,3 @@ curl "https://tgapi.tokenex.com" \
 
 ---
 
-_Need help? Join our [Discord](https://discord.gg/hyperswitch) or open a [GitHub Discussion](https://github.com/juspay/connector-service/discussions)._
