@@ -100,6 +100,7 @@ pub enum ConnectorEnum {
     Globalpay,
     Nuvei,
     Iatapay,
+    Imerchant,
     Nmi,
     Shift4,
     Paybox,
@@ -203,6 +204,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
             grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
+            grpc_api_types::payments::Connector::Imerchant => Ok(Self::Imerchant),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),

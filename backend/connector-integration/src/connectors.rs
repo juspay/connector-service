@@ -220,3 +220,6 @@ pub use self::revolv3::Revolv3;
 
 pub mod truelayer;
 pub use self::truelayer::Truelayer;
+
+pub mod imerchant;
+pub use self::imerchant::Imerchant;

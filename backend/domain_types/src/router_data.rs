@@ -179,6 +179,9 @@ pub enum ConnectorSpecificAuth {
     Xendit {
         api_key: Secret<String>,
     },
+    Imerchant {
+        api_key: Secret<String>,
+    },
     Bambora {
         merchant_id: Secret<String>,
         api_key: Secret<String>,
@@ -922,6 +925,12 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::RazorpayV2 {
                     api_key: api_key.clone(),
                     api_secret: Some(key1.clone()),
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Imerchant => match auth {
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Imerchant {
+                    api_key: api_key.clone(),
                 }),
                 _ => Err(err().into()),
             },
