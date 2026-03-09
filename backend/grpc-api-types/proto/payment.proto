@@ -39,7 +39,7 @@
 
 syntax = "proto3";
 
-package ucs.v2;
+package types;
 
 import "google/protobuf/empty.proto";
 import "payment_methods.proto";
@@ -3127,6 +3127,12 @@ message PeachpaymentsAuth {
   SecretString tenant_id = 2;
 }
 
+message PaypalAuth {
+  SecretString client_id = 1;
+  SecretString client_secret = 2;
+  optional SecretString payer_id = 3;
+}
+
 message ConnectorAuth {
   oneof auth_type {
     // ADYEN = 3
@@ -3347,5 +3353,8 @@ message ConnectorAuth {
 
     // PEACHPAYMENTS = 111
     PeachpaymentsAuth peachpayments = 73;
+
+    // PAYPAL = 62
+    PaypalAuth paypal = 110;
   }
 }

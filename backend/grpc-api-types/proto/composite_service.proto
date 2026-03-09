@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ucs.v2;
+package types;
 
 import "composite_payment.proto";
 
@@ -10,4 +10,7 @@ option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/
 service CompositePaymentService {
   // Runs composite authorize flow.
   rpc CompositeAuthorize(CompositeAuthorizeRequest) returns (CompositeAuthorizeResponse);
+
+  // Runs composite get flow.
+  rpc CompositeGet(CompositeGetRequest) returns (CompositeGetResponse);
 }

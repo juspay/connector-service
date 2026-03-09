@@ -5,7 +5,7 @@ use common_utils::{
 use domain_types::{
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
-    router_data::ConnectorSpecificAuth,
+    router_data::{ConnectorAuthType, ConnectorSpecificAuth},
     utils::ForeignTryFrom,
 };
 use error_stack::{Report, ResultExt};
@@ -13,72 +13,69 @@ use std::collections::HashMap;
 use tonic::metadata;
 use ucs_env::logger;
 
-use crate::metadata::parse_metadata;
+use crate::metadata::{connector_from_metadata, parse_metadata};
 
-/// Extracts typed `ConnectorAuth` from the `X-Connector-Auth` header (JSON).
-///
-/// Returns `Ok(Some(...))` if header is present and valid,
-/// `Ok(None)` if header is absent (legitimate fallback case),
-/// `Err(...)` if header is present but malformed.
-fn extract_connector_auth_from_header(
+/// Resolves connector and auth by trying the typed `X-Connector-Auth` header first,
+/// parsing both the connector enum and the specific auth type in one go.
+/// If not present, falls back to legacy `x-connector` and `x-auth` (+ keys) headers.
+pub fn connector_and_auth_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<Option<grpc_api_types::payments::ConnectorAuth>, ApplicationErrorResponse> {
-    metadata
-        .get(X_CONNECTOR_AUTH)
-        .map(|value| {
-            value
-                .to_str()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CONNECTOR_AUTH_HEADER".to_string(),
-                    error_identifier: 400,
-                    error_message: "X-Connector-Auth header contains non-ASCII characters"
-                        .to_string(),
-                    error_object: None,
-                }))
-                .and_then(|header_str| {
-                    serde_json::from_str(header_str).change_context(
-                        ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "INVALID_CONNECTOR_AUTH_JSON".to_string(),
-                            error_identifier: 400,
-                            error_message: "Failed to parse X-Connector-Auth header as JSON"
-                                .to_string(),
-                            error_object: None,
-                        }),
-                    )
-                })
-        })
-        .transpose()
-}
+) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificAuth), ApplicationErrorResponse>
+{
+    if let Some(header_value) = metadata.get(X_CONNECTOR_AUTH) {
+        let typed_auth: grpc_api_types::payments::ConnectorAuth = header_value
+            .to_str()
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CONNECTOR_AUTH_HEADER".to_string(),
+                error_identifier: 400,
+                error_message: "X-Connector-Auth header contains non-ASCII characters".to_string(),
+                error_object: None,
+            }))
+            .and_then(|header_str| {
+                serde_json::from_str(header_str).change_context(
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_CONNECTOR_AUTH_JSON".to_string(),
+                        error_identifier: 400,
+                        error_message: "Failed to parse X-Connector-Auth JSON into ConnectorAuth"
+                            .to_string(),
+                        error_object: None,
+                    }),
+                )
+            })?;
 
-/// Resolves connector auth by trying the typed `X-Connector-Auth` header first,
-/// then falling back to legacy `x-auth` / `x-api-key` / `x-key1` headers.
-pub fn resolve_connector_auth(
-    metadata: &metadata::MetadataMap,
-    connector: &connector_types::ConnectorEnum,
-) -> CustomResult<ConnectorSpecificAuth, ApplicationErrorResponse> {
-    extract_connector_auth_from_header(metadata)?.map_or_else(
-        || {
-            logger::debug!(
-                "X-Connector-Auth header not found, falling back to legacy headers for connector: {}",
-                connector
-            );
-            auth_from_metadata(metadata, connector)
-        },
-        |typed_auth| {
-            logger::debug!(
-                "Connector specific auth found in X-Connector-Auth header for connector: {}",
-                connector
-            );
-            ConnectorSpecificAuth::foreign_try_from(typed_auth).map_err(|_| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "AUTH_CONVERSION_FAILED".to_string(),
-                    error_identifier: 400,
-                    error_message: "Failed to convert auth from X-Connector-Auth header".to_string(),
-                    error_object: None,
-                }))
-            })
-        },
-    )
+        let auth_type = typed_auth.auth_type.as_ref().ok_or_else(|| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CONNECTOR_AUTH_FORMAT".to_string(),
+                error_identifier: 400,
+                error_message: "X-Connector-Auth header missing auth_type".to_string(),
+                error_object: None,
+            }))
+        })?;
+
+        let connector = connector_types::ConnectorEnum::foreign_try_from(auth_type.clone())?;
+
+        let auth = ConnectorSpecificAuth::foreign_try_from(typed_auth).change_context(
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "AUTH_CONVERSION_FAILED".to_string(),
+                error_identifier: 400,
+                error_message: "Failed to convert auth from X-Connector-Auth header".to_string(),
+                error_object: None,
+            }),
+        )?;
+
+        logger::debug!(
+            "Connector and auth successfully resolved from X-Connector-Auth header for connector: {}",
+            connector
+        );
+        Ok((connector, auth))
+    } else {
+        logger::debug!("X-Connector-Auth header not found, falling back to legacy headers");
+
+        let connector = connector_from_metadata(metadata)?;
+        let auth = auth_from_metadata(metadata, &connector)?;
+
+        Ok((connector, auth))
+    }
 }
 
 /// Extracts connector-specific auth from metadata headers.
@@ -102,9 +99,7 @@ pub fn auth_from_metadata(
 /// This is the legacy format that uses key1, key2, etc.
 pub fn generic_auth_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<domain_types::router_data::ConnectorAuthType, ApplicationErrorResponse> {
-    use domain_types::router_data::ConnectorAuthType;
-
+) -> CustomResult<ConnectorAuthType, ApplicationErrorResponse> {
     let auth = parse_metadata(metadata, X_AUTH)?;
 
     #[allow(clippy::wildcard_in_or_patterns)]
@@ -158,7 +153,7 @@ pub fn generic_auth_from_metadata(
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
 mod tests {
-    use super::resolve_connector_auth;
+    use super::connector_and_auth_from_metadata;
     use common_utils::consts;
     use domain_types::{connector_types, router_data::ConnectorSpecificAuth};
     use hyperswitch_masking::ExposeInterface;
@@ -183,7 +178,7 @@ mod tests {
         metadata
     }
 
-    /// Build a MetadataMap with legacy `x-auth` / `x-api-key` headers.
+    /// Build a MetadataMap with legacy `x-auth` / `x-api-key` headers and `x-connector` header.
     fn metadata_with_legacy_auth(api_key: &str) -> MetadataMap {
         let mut metadata = MetadataMap::new();
         metadata.insert(
@@ -194,6 +189,10 @@ mod tests {
             consts::X_API_KEY,
             api_key.parse().expect("valid x-api-key header"),
         );
+        metadata.insert(
+            consts::X_CONNECTOR_NAME,
+            "stripe".parse().expect("valid x-connector header"),
+        );
         metadata
     }
 
@@ -201,9 +200,10 @@ mod tests {
     fn connector_auth_resolves_from_typed_header() {
         let metadata = metadata_with_typed_auth("typed-key-value");
 
-        let auth = resolve_connector_auth(&metadata, &connector_types::ConnectorEnum::Stripe)
-            .expect("typed header auth should resolve");
+        let (connector, auth) =
+            connector_and_auth_from_metadata(&metadata).expect("typed header auth should resolve");
 
+        assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
         match auth {
             ConnectorSpecificAuth::Stripe { api_key } => {
                 assert_eq!(api_key.expose(), "typed-key-value");
@@ -216,9 +216,10 @@ mod tests {
     fn connector_auth_falls_back_to_legacy_headers() {
         let metadata = metadata_with_legacy_auth("legacy-key-value");
 
-        let auth = resolve_connector_auth(&metadata, &connector_types::ConnectorEnum::Stripe)
-            .expect("legacy header auth should resolve");
+        let (connector, auth) =
+            connector_and_auth_from_metadata(&metadata).expect("legacy header auth should resolve");
 
+        assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
         match auth {
             ConnectorSpecificAuth::Stripe { api_key } => {
                 assert_eq!(api_key.expose(), "legacy-key-value");
@@ -236,9 +237,10 @@ mod tests {
             json.parse().expect("valid x-connector-auth header"),
         );
 
-        let auth = resolve_connector_auth(&metadata, &connector_types::ConnectorEnum::Stripe)
+        let (connector, auth) = connector_and_auth_from_metadata(&metadata)
             .expect("typed header should take precedence");
 
+        assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
         match auth {
             ConnectorSpecificAuth::Stripe { api_key } => {
                 assert_eq!(api_key.expose(), "typed-key-value");
@@ -251,7 +253,7 @@ mod tests {
     fn connector_auth_fails_when_no_auth_present() {
         let metadata = MetadataMap::new();
 
-        let result = resolve_connector_auth(&metadata, &connector_types::ConnectorEnum::Stripe);
+        let result = connector_and_auth_from_metadata(&metadata);
 
         assert!(result.is_err());
     }

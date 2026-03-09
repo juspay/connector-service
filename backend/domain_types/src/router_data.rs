@@ -820,6 +820,12 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
                 api_key: peachpayments.api_key.ok_or_else(err)?,
                 tenant_id: peachpayments.tenant_id.ok_or_else(err)?,
             }),
+            AuthType::Paypal(paypal) => Ok(Self::Paypal {
+                client_id: paypal.client_id.ok_or_else(err)?,
+                client_secret: paypal.client_secret.ok_or_else(err)?,
+                payer_id: paypal.payer_id,
+            }),
+            }),
         }
     }
 }
