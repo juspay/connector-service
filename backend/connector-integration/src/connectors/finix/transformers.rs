@@ -106,6 +106,7 @@ impl From<String> for FinixId {
             Self::Transfer(id)
         } else {
             // Default to Auth if prefix doesn't match
+            tracing::warn!("Unrecognized Finix ID prefix: {}", id);
             Self::Auth(id)
         }
     }
@@ -904,10 +905,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 number: Some(Secret::new(card.card_number.peek().to_string())),
                 security_code: Some(card.card_cvc.clone()),
                 expiration_month: Some(Secret::new(
-                    card.card_exp_month.peek().parse::<i8>().unwrap_or(0),
+                    card.card_exp_month.peek().parse::<i8>().map_err(|_| {
+                        errors::ConnectorError::InvalidDataFormat {
+                            field_name: "card_exp_month",
+                        }
+                    })?,
                 )),
                 expiration_year: Some(Secret::new(
-                    card.card_exp_year.peek().parse::<i32>().unwrap_or(0),
+                    card.card_exp_year.peek().parse::<i32>().map_err(|_| {
+                        errors::ConnectorError::InvalidDataFormat {
+                            field_name: "card_exp_year",
+                        }
+                    })?,
                 )),
                 identity: customer_id,
                 tags: None,
