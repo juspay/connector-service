@@ -222,13 +222,13 @@ message Payment {
 ### The Code Generation Pipeline
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   payment.proto │────▶│  protoc + plugins │────▶│  Language SDKs  │
-│   (source of    │     │  - prost (Rust)   │     │  - Rust         │
-│    truth)       │     │  - tonic (gRPC)   │     │  - Node.js      │
-└─────────────────┘     │  - grpclib (Py)   │     │  - Python       │
-                        └─────────────────┘     │  - Java         │
-                                                └─────────────────┘
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  payment.proto  │────▶│  protoc + plugins │────▶│  Language SDKs  │
+│  (source of     │     │   - prost (Rust)  │     │   - Rust        │
+│   truth)        │     │   - tonic (gRPC)  │     │   - Node.js     │
+└─────────────────┘     │   - grpclib (Py)  │     │   - Python      │
+                        └──────────────────┘     │   - Java        │
+                                                 └─────────────────┘
 ```
 
 ### Type Safety Across Languages
