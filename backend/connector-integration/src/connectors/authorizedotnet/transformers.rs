@@ -605,12 +605,16 @@ fn create_regular_transaction_request<
                     account_number,
                     routing_number,
                     bank_account_holder_name,
+                    card_holder_name,
                     bank_type,
+                    bank_holder_type,
                     ..
                 } => {
-                    // Get account holder name from bank_account_holder_name or billing address
+                    // Get account holder name from bank_account_holder_name, card_holder_name,
+                    // or billing address
                     let name_on_account = bank_account_holder_name
                         .clone()
+                        .or_else(|| card_holder_name.clone())
                         .or_else(|| {
                             item.router_data
                                 .resource_common_data
@@ -638,9 +642,13 @@ fn create_regular_transaction_request<
                             })
                         })?;
 
-                    // Map bank_type to AccountType (default to Checking if not provided)
-                    let account_type = match bank_type {
-                        Some(common_enums::BankType::Savings) => AccountType::Savings,
+                    // Map bank_type and bank_holder_type to AccountType
+                    // Business accounts with checking should use BusinessChecking
+                    let account_type = match (bank_type, bank_holder_type) {
+                        (Some(common_enums::BankType::Savings), _) => AccountType::Savings,
+                        (_, Some(common_enums::BankHolderType::Business)) => {
+                            AccountType::BusinessChecking
+                        }
                         _ => AccountType::Checking,
                     };
 
