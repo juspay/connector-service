@@ -24,10 +24,6 @@ use hyperswitch_masking::{PeekInterface, Secret};
 use serde::Serialize;
 use std::fmt::Debug;
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
 fn get_error_code(response_code: Option<&responses::PeachpaymentsResponseCode>) -> String {
     match response_code {
         Some(responses::PeachpaymentsResponseCode::Text(code)) => code.clone(),

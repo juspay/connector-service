@@ -7,10 +7,6 @@ pub struct PeachpaymentsErrorResponse {
     pub message: String,
 }
 
-// ============================================================================
-// PAYMENT STATUS - EXHAUSTIVE ENUM
-// ============================================================================
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum PeachpaymentsPaymentStatus {
@@ -45,10 +41,6 @@ impl From<PeachpaymentsPaymentStatus> for AttemptStatus {
     }
 }
 
-// ============================================================================
-// REFUND STATUS - EXHAUSTIVE ENUM
-// ============================================================================
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum PeachpaymentsRefundStatus {
@@ -67,10 +59,6 @@ impl From<PeachpaymentsRefundStatus> for RefundStatus {
         }
     }
 }
-
-// ============================================================================
-// RESPONSE STRUCTS
-// ============================================================================
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
@@ -188,10 +176,6 @@ pub struct PeachpaymentsAmountResponse {
     #[serde(rename = "currencyCode")]
     pub currency_code: String,
 }
-
-// ============================================================================
-// WEBHOOK STRUCTS
-// ============================================================================
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PeachpaymentsIncomingWebhook {

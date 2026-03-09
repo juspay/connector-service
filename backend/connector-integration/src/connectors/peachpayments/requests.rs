@@ -34,10 +34,6 @@ pub struct PeachpaymentsRefundTransactionData {
     pub amount: PeachpaymentsAmount,
 }
 
-// ============================================================================
-// AUTHORIZE REQUEST - With all payment methods support
-// ============================================================================
-
 #[derive(Debug, Serialize)]
 pub struct PeachpaymentsAuthorizeRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "chargeMethod")]
