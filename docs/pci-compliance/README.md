@@ -15,12 +15,12 @@ PCI DSS (Payment Card Industry Data Security Standard) compliance is not just a 
 
 The choice you make here determines your risk profile, operational burden, and agility.
 
-Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **independent third-party vault** (VGS, Basis Theory, TokenEx, Skyflow), or **self-managed PCI compliance** with your own card vault—**Connector Service has you covered**.
+Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **independent third-party vault** (VGS, Basis Theory, TokenEx, Hyperswitch Vault), or **self-managed PCI compliance** with your own card vault—**Connector Service has you covered**.
 
 | Scenario | Your Strategy | Connector Service Solves |
 |----------|---------------|--------------------------|
 | **PSP-Native Vault** | You rely on Stripe/Adyen vault for PCI scope reduction | Abstracts PSP-specific token formats; single API regardless of which PSP vault you use |
-| **Independent Third-Party Vault** | You use VGS, Basis Theory, TokenEx, or Skyflow as a vault layer | Supports three proxy patterns (Network, Transform, Relay) with zero to minimal code changes |
+| **Independent Third-Party Vault** | You use VGS, Basis Theory, TokenEx, or Hyperswitch Vault as a vault layer | Supports three proxy patterns (Network, Transform, Relay) with zero to minimal code changes |
 | **In-House Vault** | You have your own PCI-certified card vault infrastructure | PCI-Enabled Mode lets you send raw card data through while maintaining full control |
 
 Connector Service (connector-service) provides flexible PCI compliance options for merchants. Depending on your compliance requirements and infrastructure, you can operate in one of two modes:
@@ -86,7 +86,7 @@ In this mode, a third-party vault handles card data. Your application only handl
 | Proxy Pattern | What It Means | Popular Vault Providers |
 |---------------|---------------|-------------------------|
 | **[Network Proxy](./network-proxy.md)** | Zero-code integration—just change the URL. The proxy transparently intercepts and detokenizes requests at the network layer. | **VGS**: URL-based routing (`tntxxx.sandbox.verygoodproxy.com`)<br>**Evervault**: HTTP CONNECT relay with client-side encryption |
-| **[Transform Proxy](./transform-proxy.md)** | Application-layer proxy using template expressions (e.g., `{{ token.property }}`) to explicitly mark where detokenization should occur. | **Basis Theory**: Expression-based `{{ }}` detokenization<br>**Skyflow**: Connection-based detokenizing proxy with data residency controls |
+| **[Transform Proxy](./transform-proxy.md)** | Application-layer proxy using wrapped requests with template expressions (e.g., `{{$card_number}}`) to mark where detokenization should occur. | **Hyperswitch Vault**: Transform proxy with request wrapping and `{{$variable}}` expressions |
 | **[Relay Proxy](./relay-proxy.md)** | Header-driven routing with token markers (e.g., `{token}`) to indicate detokenization points in the request body. | **TokenEx**: Format-preserving tokens with `TX-*` headers and `{ }` markers |
 
 ### Flow Diagram
@@ -155,7 +155,7 @@ sequenceDiagram
 | **Early-stage startup, moving from single-PSP to multi-PSP** | PCI-Disabled | Launch quickly without 6–12 month certification delays |
 | **Expanding Multi-PSP strategy without changing your existing vault vendor** | PCI-Disabled + Independent Vault | Token portability across PSPs (e.g., TokenEx format-preserving tokens) |
 | **High-security requirements** | PCI-Enabled + In-House Vault | Full data sovereignty and audit control |
-| **Marketplace/SaaS platform supporting multi-PSP across multi-merchant setup** | PCI-Disabled + Transform Proxy | Basis Theory/Skyflow support tenant isolation and complex token transformations |
+| **Marketplace/SaaS platform supporting multi-PSP** | PCI-Disabled + Transform Proxy | Hyperswitch Vault supports multiple PSPs with request wrapping |
 | **Enterprise with existing PCI certification** | PCI-Enabled | Leverage existing investment; maintain control |
 
 ---
@@ -178,11 +178,11 @@ Choose the right proxy pattern based on your requirements:
 
 | Aspect | [Network Proxy](./network-proxy.md) | [Transform Proxy](./transform-proxy.md) | [Relay Proxy](./relay-proxy.md) |
 |--------|-------------------------------------|-----------------------------------------|---------------------------------|
-| **Providers** | VGS, Evervault | Basis Theory, Skyflow | TokenEx |
+| **Providers** | VGS, Evervault | Hyperswitch Vault | Basis Theory, TokenEx |
 | **Code Changes** | **None**—just change URL | Required—use template expressions | Minimal—add headers + `{ }` markers |
 | **Integration Layer** | Network/Transport | Application | Application (headers + body) |
-| **Token Syntax** | Transparent (no syntax) | `{{ token.property }}` or JSON paths | `{token}` |
-| **Routing Method** | URL-based | Proxy endpoint + expressions | HTTP headers (`TX-URL`) |
+| **Token Syntax** | Transparent (no syntax) | `{{$card_number}}` expressions | `{token}` |
+| **Routing Method** | URL-based | Wrapped request with `destination_url` | HTTP headers (`TX-URL`) |
 | **Customization** | Low | **High** (custom transforms) | Medium |
 | **Token Format** | `tok_xxx`, `ev:encrypted:xxx` | UUID `26818785-...`, `f80c5d4a-...` | Format-preserving `4242123456784242` |
 | **PSP Portability** | Vendor-specific | Vendor-specific | **Universal** (works with any PSP) |
@@ -201,12 +201,11 @@ Choose the right proxy pattern based on your requirements:
 - ✅ You want **client-side encryption** (Evervault)
 - 🔧 You need to implement custom request transformations through connector service
 
-### Choose Transform Proxy (Basis Theory, Skyflow) if:
+### Choose Transform Proxy (Hyperswitch Vault) if:
 - ✅ You need **explicit control** over token placement
-- ✅ You want **custom transformations** (Liquid/Node.js)
-- ✅ You work with **multiple vault providers**
-- ✅ You need **data residency** controls (offered by Skyflow)
-- ✅ You want **vault-per-tenant** isolation (offered by Skyflow)
+- ✅ You want **request wrapping** with destination URL control
+- ✅ You work with **multiple PSPs**
+- ✅ You need **{{$variable}}** expression syntax
 - ❌ You need to implement custom request transformations through connector service
 
 ### Choose Relay Proxy (TokenEx) if:
@@ -239,7 +238,7 @@ curl "https://tntSANDBOX.sandbox.verygoodproxy.com/v1/payment_intents" \
 </details>
 
 <details>
-<summary><b>Scenario 2: Using Independent third party vault through Transform Proxy pattern (example: Juspay, Basis Theory)</b></summary>
+<summary><b>Scenario 2: Using Independent third party vault through Transform Proxy pattern (example: Hyperswitch Vault)</b></summary>
 
 ```bash
 # Use {{ }} expressions to mark detokenization points
@@ -312,7 +311,7 @@ curl "https://api.stripe.com/v1/payment_intents" \
 │                   TRANSFORM PROXY                                                     │
 │  Frontend → Backend (token) → connector-service (templates) → Transform Proxy → PSP   │
 │                                    ↑                                                  │
-│                    Basis Theory: {{ }} / Skyflow: JSON paths                          │
+│              Hyperswitch Vault: {{$variable}} in wrapped request                      │
 │                                                                                       │
 │  PCI Scope: SAQ A/A-EP ✅  Control: High                                              │
 └───────────────────────────────────────────────────────────────────────────────────────┘
@@ -356,7 +355,7 @@ curl "https://api.stripe.com/v1/payment_intents" \
 |----------|-------------|
 | [README.md](./README.md) | This file—overview and comparison |
 | [network-proxy.md](./network-proxy.md) | VGS, Evervault integration (zero code changes) |
-| [transform-proxy.md](./transform-proxy.md) | Basis Theory, Skyflow integration (expressions) |
+| [transform-proxy.md](./transform-proxy.md) | Hyperswitch Vault integration (wrapped requests with expressions) |
 | [relay-proxy.md](./relay-proxy.md) | TokenEx integration (headers + markers) |
 
 ---
