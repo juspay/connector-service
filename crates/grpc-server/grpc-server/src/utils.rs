@@ -7,8 +7,8 @@ pub use ucs_interface_common::metadata::*;
 use common_utils::{
     config_patch::Patch,
     consts::{
-        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_CONNECTOR_AUTH, X_KEY1, X_KEY2,
-        X_SHADOW_MODE, X_ENVIRONMENT,
+        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_CONNECTOR_AUTH, X_ENVIRONMENT,
+        X_KEY1, X_KEY2, X_SHADOW_MODE,
     },
     errors::CustomResult,
     events::{Event, EventStage, FlowName, MaskedSerdeValue},

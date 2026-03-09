@@ -11,7 +11,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     verify_other_config_files();
     #[allow(clippy::expect_used)]
     let mut config = configs::Config::new().expect("Failed while parsing config");
-    
+
     // Load superposition.toml for connector URL resolution
     let superposition_config_path = format!(
         "{}/config/superposition.toml",
@@ -19,7 +19,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     match SuperpositionConfig::from_file(&superposition_config_path) {
         Ok(sp_config) => {
-            tracing::info!("Successfully loaded superposition.toml from {}", superposition_config_path);
+            tracing::info!(
+                "Successfully loaded superposition.toml from {}",
+                superposition_config_path
+            );
             config.superposition_config = Some(Arc::new(sp_config));
         }
         Err(e) => {
@@ -30,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
     }
-    
+
     let _guard = logger::setup(
         &config.log,
         ucs_env::service_name!(),
