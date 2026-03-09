@@ -34,18 +34,26 @@ async def run_test():
 
     api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
 
-    # Metadata: connector + typed auth (X-Connector-Auth style from main)
-    metadata = {
-        "connector": "Stripe",
-        "connector_auth_type": json.dumps({
-            "Stripe": {
-                "api_key": api_key,
-            }
-        }),
-    }
+    # 1. Initialize Client with ConnectorConfig + optional RequestConfig defaults
+    config = ConnectorConfig(
+        connector=Connector.STRIPE, environment=Environment.SANDBOX
+    )
+    config.auth.stripe.api_key.value = api_key
+
+    defaults = RequestConfig()
+
+
+async def run_test():
+    print(f"Loaded payments package from: {__file__}")
+    print(f"  PaymentClient: {PaymentClient}")
+    print(f"  authorize_req_transformer: {authorize_req_transformer}")
+
+    api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
 
     # 1. Initialize Client with ConnectorConfig + optional RequestConfig defaults
-    config = ConnectorConfig(connector=Connector.STRIPE, environment=Environment.SANDBOX)
+    config = ConnectorConfig(
+        connector=Connector.STRIPE, environment=Environment.SANDBOX
+    )
     config.auth.stripe.api_key.value = api_key
 
     defaults = RequestConfig()
@@ -84,9 +92,7 @@ async def run_test():
 
     # --- Test 1: Low-level FFI ---
     print("\n=== Test 1: Low-level FFI (authorize_req_transformer) ===")
-    result_bytes = authorize_req_transformer(
-        req.SerializeToString(), metadata, options_bytes
-    )
+    result_bytes = authorize_req_transformer(req.SerializeToString(), options_bytes)
     result = FfiConnectorHttpRequest.FromString(result_bytes)
     print(f"  URL:    {result.url}")
     print(f"  Method: {result.method}")
@@ -102,7 +108,7 @@ async def run_test():
         print("  SKIPPED (set STRIPE_API_KEY to enable)")
     else:
         try:
-            response = await client.authorize(req, metadata)
+            response = await client.authorize(req)
             print(f"  Response status: {response.status}")
             print(f"  Response type:   {type(response).__name__}")
             print("  PASSED")

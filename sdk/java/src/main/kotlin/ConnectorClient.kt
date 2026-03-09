@@ -66,7 +66,6 @@ open class ConnectorClient(
      * @param flow Flow name matching the FFI transformer prefix (e.g. "authorize").
      * @param requestBytes Serialized protobuf request bytes.
      * @param responseParser Protobuf parser for the expected response type.
-     * @param metadata Map with connector routing and auth info.
      * @param options Optional RequestConfig message.
      * @return Parsed protobuf response.
      */
@@ -74,7 +73,6 @@ open class ConnectorClient(
         flow: String,
         requestBytes: ByteArray,
         responseParser: Parser<T>,
-        metadata: Map<String, String>,
         options: RequestConfig? = null,
     ): T {
         val reqTransformer = FlowRegistry.reqTransformers[flow]
@@ -88,7 +86,7 @@ open class ConnectorClient(
         val httpConfig = resolveHttpConfig(options)
 
         // 2. Build connector HTTP request via FFI
-        val connectorRequestBytes = reqTransformer(requestBytes, metadata, optionsBytes)
+        val connectorRequestBytes = reqTransformer(requestBytes, optionsBytes)
         val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
 
         val httpRequest = HttpRequest(
@@ -113,7 +111,6 @@ open class ConnectorClient(
         val resultBytes = resTransformer(
             ffiResponseBytes,
             requestBytes,
-            metadata,
             optionsBytes,
         )
 
@@ -127,7 +124,6 @@ open class ConnectorClient(
      * @param flow Flow name matching the FFI transformer (e.g. "handle").
      * @param requestBytes Serialized protobuf request bytes.
      * @param responseParser Protobuf parser for the expected response type.
-     * @param metadata Map with connector routing and auth info.
      * @param options Optional RequestConfig for FFI context. Merged with client defaults.
      * @return Parsed protobuf response.
      */
@@ -135,21 +131,15 @@ open class ConnectorClient(
         flow: String,
         requestBytes: ByteArray,
         responseParser: Parser<T>,
-        metadata: Map<String, String>,
         options: RequestConfig? = null,
-    ): T = executeDirect(flow, requestBytes, responseParser, metadata, resolveFfiOptions(options).toByteArray())
-
-    private fun <T : MessageLite> executeDirect(
-        flow: String,
-        requestBytes: ByteArray,
-        responseParser: Parser<T>,
-        metadata: Map<String, String>,
-        optionsBytes: ByteArray,
     ): T {
         val transformer = FlowRegistry.directTransformers[flow]
             ?: error("Unknown single-step flow: '$flow'. Register it via a {flow}_transformer in services/payments.rs and run `make generate`.")
 
-        val resultBytes = transformer(requestBytes, metadata, optionsBytes)
+        val ffiOptions = resolveFfiOptions(options)
+        val optionsBytes = ffiOptions.toByteArray()
+
+        val resultBytes = transformer(requestBytes, optionsBytes)
         return responseParser.parseFrom(resultBytes)
     }
 }

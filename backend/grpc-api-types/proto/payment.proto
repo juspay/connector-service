@@ -39,7 +39,7 @@
 
 syntax = "proto3";
 
-package ucs.v2;
+package types;
 
 import "google/protobuf/empty.proto";
 import "payment_methods.proto";
