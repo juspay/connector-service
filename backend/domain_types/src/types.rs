@@ -533,6 +533,64 @@ impl ForeignTryFrom<grpc_api_types::payments::Tokenization> for common_enums::To
     }
 }
 
+// Helper functions for Samsung Pay credential validation
+/// Trims a string and returns None if empty, Some(trimmed) otherwise
+fn trim_and_check_empty(value: &str) -> Option<&str> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
+
+/// Validates a 4-digit string (for card_last_four_digits and dpan_last_four_digits)
+fn validate_last_four_digits<'a>(
+    value: &'a str,
+    field_name: &str,
+) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: format!("INVALID_{}", field_name.to_uppercase()),
+            error_identifier: 400,
+            error_message: format!("Samsung Pay {} cannot be empty", field_name),
+            error_object: None,
+        })
+        .into());
+    }
+    if trimmed.len() != 4 {
+        return Err(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: format!("INVALID_{}_LENGTH", field_name.to_uppercase()),
+            error_identifier: 400,
+            error_message: format!("Samsung Pay {} must be 4 characters", field_name),
+            error_object: None,
+        })
+        .into());
+    }
+    Ok(trimmed.to_string())
+}
+
+/// Creates a validation error for missing required field
+fn missing_field_error(field_name: &str) -> ApplicationErrorResponse {
+    ApplicationErrorResponse::BadRequest(ApiError {
+        sub_code: format!("MISSING_{}", field_name.to_uppercase()),
+        error_identifier: 400,
+        error_message: format!("Samsung Pay {} is required", field_name),
+        error_object: None,
+    })
+}
+
+/// Creates a validation error for empty field
+fn empty_field_error(field_name: &str) -> ApplicationErrorResponse {
+    ApplicationErrorResponse::BadRequest(ApiError {
+        sub_code: format!("INVALID_{}", field_name.to_uppercase()),
+        error_identifier: 400,
+        error_message: format!("Samsung Pay {} cannot be empty", field_name),
+        error_object: None,
+    })
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
     for SamsungPayWalletCredentials
 {
@@ -542,95 +600,37 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
         credential: grpc_api_types::payments::samsung_wallet::PaymentCredential,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Validate card_last_four_digits
-        let last4 = credential
+        let last4_raw = credential
             .card_last_four_digits
             .as_ref()
             .map(|s| s.clone().expose())
-            .ok_or_else(|| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CARD_LAST4".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Samsung Pay card last four digits cannot be empty".to_owned(),
-                    error_object: None,
-                })
-            })?;
+            .ok_or_else(|| missing_field_error("card_last_four_digits"))?;
+        
+        let last4 = validate_last_four_digits(&last4_raw, "card_last_four_digits")?;
 
-        let last4 = last4.trim();
-
-        if last4.is_empty() {
-            return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CARD_LAST4".to_owned(),
-                error_identifier: 400,
-                error_message: "Samsung Pay card last four digits cannot be empty".to_owned(),
-                error_object: None,
-            })
-            .into());
+        // Validate DPAN last four digits if present
+        if let Some(dpan_secret) = credential.dpan_last_four_digits.as_ref() {
+            let dpan_raw = dpan_secret.clone().expose();
+            validate_last_four_digits(&dpan_raw, "dpan_last_four_digits")?;
         }
-
-        if last4.len() != 4 {
-            return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CARD_LAST4_LENGTH".to_owned(),
-                error_identifier: 400,
-                error_message: "Samsung Pay card last four digits must be 4 characters".to_owned(),
-                error_object: None,
-            })
-            .into());
-        }
-
-        // Validate DPAN last four digits
-        if let Some(dpan) = credential.dpan_last_four_digits.as_ref() {
-        let dpan = dpan.clone().expose();
-        let dpan = dpan.trim();
-
-        if dpan.len() != 4 {
-            return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_DPAN_LAST4_LENGTH".to_owned(),
-                error_identifier: 400,
-                error_message: "Samsung Pay DPAN last four digits must be 4 characters"
-                    .to_owned(),
-                error_object: None,
-            })
-            .into());
-        }
-    }
 
         // Validate token_data
-        let token_data = credential.token_data.as_ref().ok_or_else(|| {
-            ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_TOKEN_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Samsung Pay token data is required".to_owned(),
-                error_object: None,
-            })
-        })?;
+        let token_data = credential
+            .token_data
+            .as_ref()
+            .ok_or_else(|| missing_field_error("token_data"))?;
 
-        if token_data.version.trim().is_empty() {
-            return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_TOKEN_VERSION".to_owned(),
-                error_identifier: 400,
-                error_message: "Samsung Pay token version cannot be empty".to_owned(),
-                error_object: None,
-            })
-            .into());
+        if trim_and_check_empty(&token_data.version).is_none() {
+            return Err(empty_field_error("token_version").into());
         }
 
-        let raw_token = token_data.data.clone().ok_or_else(|| {
-            ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_TOKEN_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Samsung Pay token data is required".to_owned(),
-                error_object: None,
-            })
-        })?;
+        let raw_token = token_data
+            .data
+            .clone()
+            .ok_or_else(|| missing_field_error("token_data"))?;
 
-        if raw_token.peek().trim().is_empty() {
-            return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_TOKEN_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Samsung Pay token data cannot be empty".to_owned(),
-                error_object: None,
-            })
-            .into());
+        if trim_and_check_empty(raw_token.peek()).is_none() {
+            return Err(empty_field_error("token_data").into());
         }
 
         let card_brand = SamsungPayCardBrand::foreign_try_from(credential.card_brand())?;
