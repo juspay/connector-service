@@ -1,0 +1,2277 @@
+use std::collections::BTreeMap;
+
+use serde::{de::DeserializeOwned, Serialize};
+use serde_json::Value;
+use tonic::transport::Channel;
+
+use crate::harness::{
+    auto_gen::resolve_auto_generate,
+    credentials::{load_connector_auth, ConnectorAuth},
+    metadata::add_connector_metadata,
+    scenario_assert::do_assertion as do_assertion_impl,
+    scenario_loader::{
+        configured_all_connectors, get_the_assertion as get_the_assertion_impl,
+        get_the_grpc_req as get_the_grpc_req_impl, is_suite_supported_for_connector,
+        load_default_scenario_name, load_suite_scenarios, load_suite_spec,
+        load_supported_suites_for_connector,
+    },
+    scenario_types::{ContextMap, DependencyScope, FieldAssert, ScenarioError, SuiteDependency},
+};
+
+pub fn get_the_grpc_req(suite: &str, scenario: &str) -> Result<Value, ScenarioError> {
+    get_the_grpc_req_impl(suite, scenario)
+}
+
+pub fn get_the_assertion(
+    suite: &str,
+    scenario: &str,
+) -> Result<BTreeMap<String, FieldAssert>, ScenarioError> {
+    get_the_assertion_impl(suite, scenario)
+}
+
+pub fn do_assertion(
+    assertions_for_that_req: &BTreeMap<String, FieldAssert>,
+    response_json: &Value,
+    grpc_req: &Value,
+) -> Result<(), ScenarioError> {
+    do_assertion_impl(assertions_for_that_req, response_json, grpc_req)
+}
+
+pub const DEFAULT_SUITE: &str = "authorize";
+pub const DEFAULT_SCENARIO: &str = "no3ds_auto_capture_credit_card";
+pub const DEFAULT_ENDPOINT: &str = "localhost:50051";
+pub const DEFAULT_CONNECTOR: &str = "stripe";
+pub const DEFAULT_MERCHANT_ID: &str = "test_merchant";
+pub const DEFAULT_TENANT_ID: &str = "default";
+
+#[derive(Debug, Clone)]
+pub struct GrpcurlRequest {
+    pub endpoint: String,
+    pub method: String,
+    pub payload: String,
+    pub headers: Vec<String>,
+    pub plaintext: bool,
+}
+
+impl GrpcurlRequest {
+    pub fn to_command_string(&self) -> String {
+        let mut cmd = String::new();
+        cmd.push_str("grpcurl");
+        if self.plaintext {
+            cmd.push_str(" -plaintext");
+        }
+        cmd.push_str(" \\\n");
+
+        for header in &self.headers {
+            cmd.push_str(&format!("  -H \"{header}\" \\\n"));
+        }
+
+        cmd.push_str(&format!(
+            "  -d @ {} {} <<'JSON'\n",
+            self.endpoint, self.method
+        ));
+        cmd.push_str(&self.payload);
+        cmd.push_str("\nJSON");
+        cmd
+    }
+}
+
+pub fn run_test(
+    suite: Option<&str>,
+    scenario: Option<&str>,
+    connector: Option<&str>,
+) -> Result<(), ScenarioError> {
+    let suite = suite.unwrap_or(DEFAULT_SUITE);
+    let scenario = scenario.unwrap_or(DEFAULT_SCENARIO);
+    let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
+
+    let grpc_req = get_the_grpc_req(suite, scenario)?;
+    let printable_req = serde_json::to_string_pretty(&grpc_req).map_err(|error| {
+        ScenarioError::AssertionFailed {
+            field: "grpc_req".to_string(),
+            message: format!("failed to render request json: {error}"),
+        }
+    })?;
+
+    println!("[run_test] connector={connector} suite={suite} scenario={scenario}");
+    println!("[run_test] grpc_req_template (pre auto-generate/context):\n{printable_req}");
+    Ok(())
+}
+
+pub fn add_context(
+    prev_grpc_reqs: &[Value],
+    prev_grpc_res: &[Value],
+    current_grpc_req: &mut Value,
+) {
+    let mut paths = Vec::new();
+    collect_leaf_paths(current_grpc_req, String::new(), &mut paths);
+
+    for path in paths {
+        let mut selected: Option<Value> = None;
+        let source_paths = source_path_candidates(&path);
+        let max_len = prev_grpc_reqs.len().max(prev_grpc_res.len());
+        for index in 0..max_len {
+            if let Some(req) = prev_grpc_reqs.get(index) {
+                if let Some(value) = lookup_first_non_null_path(req, &source_paths) {
+                    selected = Some(value.clone());
+                }
+            }
+            if let Some(res) = prev_grpc_res.get(index) {
+                if let Some(value) = lookup_first_non_null_path(res, &source_paths) {
+                    selected = Some(value.clone());
+                }
+            }
+        }
+
+        if let Some(value) = selected {
+            let value_to_set = if path.ends_with(".value") {
+                value
+                    .get("value")
+                    .cloned()
+                    .unwrap_or_else(|| value.clone())
+            } else {
+                value
+            };
+            let _ = set_json_path_value(current_grpc_req, &path, value_to_set);
+        }
+    }
+}
+
+fn prepare_context_placeholders(suite: &str, current_grpc_req: &mut Value) {
+    // Ensure metadata target exists for flows that need dependency-carried connector metadata.
+    if matches!(suite, "capture" | "void" | "refund" | "get" | "refund_sync")
+        && lookup_json_path_with_case_fallback(current_grpc_req, "connector_feature_data.value").is_none()
+    {
+        let _ = deep_set_json_path(
+            current_grpc_req,
+            "connector_feature_data.value",
+            Value::String("auto_generate".to_string()),
+        );
+    }
+
+    for path in context_deferred_paths() {
+        if let Some(value) = lookup_json_path_with_case_fallback(current_grpc_req, path) {
+            if is_empty_context_placeholder(path, value) {
+                let _ = deep_set_json_path(
+                    current_grpc_req,
+                    path,
+                    Value::String("auto_generate".to_string()),
+                );
+            }
+        }
+    }
+}
+
+fn prune_unresolved_context_fields(current_grpc_req: &mut Value) {
+    for path in context_deferred_paths() {
+        let should_remove = lookup_json_path_with_case_fallback(current_grpc_req, path)
+            .map(|value| is_unresolved_context_value(path, value))
+            .unwrap_or(false);
+        if should_remove {
+            let _ = remove_json_path(current_grpc_req, path);
+        }
+    }
+
+    let should_remove_connector_feature = lookup_json_path_with_case_fallback(
+        current_grpc_req,
+        "connector_feature_data",
+    )
+    .map(is_unresolved_connector_feature_data)
+    .unwrap_or(false);
+    if should_remove_connector_feature {
+        let _ = remove_json_path(current_grpc_req, "connector_feature_data");
+    }
+
+    // Cleanup optional empty wrappers after field-level pruning.
+    let _ = remove_json_path_if_empty_object(current_grpc_req, "state.access_token.token");
+    let _ = remove_json_path_if_empty_object(current_grpc_req, "state.access_token");
+    let _ = remove_json_path_if_empty_object(current_grpc_req, "state");
+    let _ = remove_json_path_if_empty_object(current_grpc_req, "connector_feature_data");
+}
+
+fn context_deferred_paths() -> &'static [&'static str] {
+    &[
+        "customer.connector_customer_id",
+        "state.connector_customer_id",
+        "state.access_token.token.value",
+        "state.access_token.token_type",
+        "state.access_token.expires_in_seconds",
+        "connector_feature_data.value",
+        "connector_transaction_id.id",
+        "refund_id",
+    ]
+}
+
+fn is_empty_context_placeholder(path: &str, value: &Value) -> bool {
+    if value.is_null() {
+        return true;
+    }
+
+    if let Some(text) = value.as_str() {
+        return text.trim().is_empty();
+    }
+
+    // Historical placeholder for access token expiry.
+    if path == "state.access_token.expires_in_seconds" {
+        return value.as_i64() == Some(0);
+    }
+
+    false
+}
+
+fn is_unresolved_context_value(path: &str, value: &Value) -> bool {
+    if value.is_null() {
+        return true;
+    }
+
+    if let Some(text) = value.as_str() {
+        let normalized = text.trim().to_ascii_lowercase();
+        return normalized.is_empty() || normalized.contains("auto_generate");
+    }
+
+    if path == "state.access_token.expires_in_seconds" {
+        return value.as_i64() == Some(0);
+    }
+
+    false
+}
+
+fn is_unresolved_connector_feature_data(value: &Value) -> bool {
+    match value {
+        Value::Null => true,
+        Value::String(text) => {
+            let normalized = text.trim().to_ascii_lowercase();
+            normalized.is_empty() || normalized.contains("auto_generate")
+        }
+        Value::Object(map) => map
+            .get("value")
+            .map(|inner| is_unresolved_context_value("connector_feature_data.value", inner))
+            .unwrap_or(true),
+        _ => false,
+    }
+}
+
+/// Applies explicit context mappings from dependency results into the target request.
+///
+/// Each entry in `collected_context` is a `(context_map, dependency_req, dependency_res)` tuple
+/// from one dependency suite. The `context_map` declares exactly which fields flow where:
+///
+/// ```json
+/// { "state.access_token.token.value": "res.access_token" }
+/// ```
+///
+/// - Left side (key) = target path in `current_grpc_req`
+/// - Right side (value) = source reference prefixed with `res.` or `req.`
+///   (if no prefix, `res.` is assumed)
+///
+/// Missing intermediate objects are created automatically (deep-set).
+pub fn apply_context_map(
+    collected_context: &[(ContextMap, Value, Value)],
+    current_grpc_req: &mut Value,
+) {
+    for (context_map, dep_req, dep_res) in collected_context {
+        for (target_path, source_ref) in context_map {
+            let (source_json, source_path) = if let Some(path) = source_ref.strip_prefix("req.") {
+                (dep_req, path)
+            } else if let Some(path) = source_ref.strip_prefix("res.") {
+                (dep_res, path)
+            } else {
+                // Default to response if no prefix
+                (dep_res, source_ref.as_str())
+            };
+
+            // Try direct path, then with .id_type.id unwrapping for Identifier fields
+            let source_value = lookup_json_path_with_case_fallback(source_json, source_path)
+                .or_else(|| {
+                    // If source path ends with .id, also try .id_type.id
+                    if source_path.ends_with(".id") {
+                        let alt = format!(
+                            "{}.id_type.id",
+                            source_path.strip_suffix(".id").unwrap_or(source_path)
+                        );
+                        lookup_json_path_with_case_fallback(source_json, &alt)
+                    } else {
+                        None
+                    }
+                })
+                .or_else(|| {
+                    // Try camelCase version of source path
+                    let camel = source_path
+                        .split('.')
+                        .map(|seg| snake_to_camel_case(seg))
+                        .collect::<Vec<_>>()
+                        .join(".");
+                    lookup_json_path_with_case_fallback(source_json, &camel)
+                });
+
+            if let Some(value) = source_value {
+                if !value.is_null() {
+                    let _ = deep_set_json_path(current_grpc_req, target_path, value.clone());
+                }
+            }
+        }
+    }
+}
+
+/// Like `set_json_path_value` but creates intermediate objects if they don't exist.
+fn deep_set_json_path(root: &mut Value, path: &str, value: Value) -> bool {
+    let segments: Vec<&str> = path.split('.').collect();
+    let mut current = root;
+
+    for (i, segment) in segments.iter().enumerate() {
+        let is_last = i == segments.len() - 1;
+
+        if is_last {
+            if let Some(map) = current.as_object_mut() {
+                map.insert(segment.to_string(), value);
+                return true;
+            }
+            return false;
+        }
+
+        // Navigate or create intermediate object
+        if current.is_object() {
+            let map = current.as_object_mut().unwrap();
+            if !map.contains_key(*segment) {
+                map.insert(segment.to_string(), Value::Object(serde_json::Map::new()));
+            }
+            current = map.get_mut(*segment).unwrap();
+        } else {
+            return false;
+        }
+    }
+
+    false
+}
+
+fn lookup_first_non_null_path<'a>(value: &'a Value, paths: &[String]) -> Option<&'a Value> {
+    for path in paths {
+        if let Some(found) = lookup_json_path_with_case_fallback(value, path) {
+            if !found.is_null() {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+fn source_path_candidates(path: &str) -> Vec<String> {
+    let mut candidates = vec![path.to_string()];
+
+    if path.ends_with(".connector_customer_id") {
+        candidates.push("connector_customer_id".to_string());
+    }
+
+    if path == "state.access_token.token.value" {
+        candidates.push("access_token.value".to_string());
+        candidates.push("access_token".to_string());
+    }
+
+    if path == "state.access_token.token_type" {
+        candidates.push("token_type".to_string());
+    }
+
+    if path == "state.access_token.expires_in_seconds" {
+        candidates.push("expires_in_seconds".to_string());
+    }
+
+    if let Some(rest) = path.strip_prefix("state.") {
+        candidates.push(rest.to_string());
+    }
+
+    if path == "connector_feature_data.value" {
+        candidates.push("connector_feature_data".to_string());
+    }
+
+    if path == "refund_id" {
+        candidates.push("connector_refund_id".to_string());
+    }
+
+    if let Some(rest) = path.strip_prefix("mandate_reference_id.") {
+        candidates.push(format!("mandate_reference.{rest}"));
+    }
+
+    if let Some(prefix) = path.strip_suffix(".id") {
+        candidates.push(format!("{prefix}.id_type.id"));
+        candidates.push(format!("{prefix}.id_type.encoded_data"));
+    }
+
+    let mut deduped = Vec::new();
+    for candidate in candidates {
+        if !deduped.contains(&candidate) {
+            deduped.push(candidate);
+        }
+    }
+    deduped
+}
+
+fn collect_leaf_paths(value: &Value, current: String, paths: &mut Vec<String>) {
+    match value {
+        Value::Object(map) => {
+            for (key, child) in map {
+                let next = if current.is_empty() {
+                    key.to_string()
+                } else {
+                    format!("{current}.{key}")
+                };
+                collect_leaf_paths(child, next, paths);
+            }
+        }
+        Value::Array(items) => {
+            for (index, child) in items.iter().enumerate() {
+                let next = if current.is_empty() {
+                    index.to_string()
+                } else {
+                    format!("{current}.{index}")
+                };
+                collect_leaf_paths(child, next, paths);
+            }
+        }
+        _ => paths.push(current),
+    }
+}
+
+fn lookup_json_path_with_case_fallback<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
+    if path.is_empty() {
+        return Some(value);
+    }
+
+    let mut current = value;
+    for segment in path.split('.') {
+        if segment.is_empty() {
+            return None;
+        }
+
+        current = if let Ok(index) = segment.parse::<usize>() {
+            current.get(index)?
+        } else {
+            current
+                .get(segment)
+                .or_else(|| current.get(&snake_to_camel_case(segment)))
+                .or_else(|| current.get(&camel_to_snake_case(segment)))?
+        };
+    }
+
+    Some(current)
+}
+
+fn set_json_path_value(root: &mut Value, path: &str, value: Value) -> bool {
+    let mut segments = path.split('.').peekable();
+    let mut current = root;
+
+    while let Some(segment) = segments.next() {
+        let is_last = segments.peek().is_none();
+
+        if let Ok(index) = segment.parse::<usize>() {
+            let Some(items) = current.as_array_mut() else {
+                return false;
+            };
+            let Some(next) = items.get_mut(index) else {
+                return false;
+            };
+            if is_last {
+                *next = value;
+                return true;
+            }
+            current = next;
+            continue;
+        }
+
+        let Some(map) = current.as_object_mut() else {
+            return false;
+        };
+
+        if is_last {
+            if map.contains_key(segment) {
+                map.insert(segment.to_string(), value);
+                return true;
+            }
+            let camel = snake_to_camel_case(segment);
+            if map.contains_key(&camel) {
+                map.insert(camel, value);
+                return true;
+            }
+            let snake = camel_to_snake_case(segment);
+            if map.contains_key(&snake) {
+                map.insert(snake, value);
+                return true;
+            }
+            return false;
+        }
+
+        let next_key = if map.contains_key(segment) {
+            segment.to_string()
+        } else {
+            let camel = snake_to_camel_case(segment);
+            if map.contains_key(&camel) {
+                camel
+            } else {
+                let snake = camel_to_snake_case(segment);
+                if map.contains_key(&snake) {
+                    snake
+                } else {
+                    return false;
+                }
+            }
+        };
+
+        let Some(next) = map.get_mut(&next_key) else {
+            return false;
+        };
+        current = next;
+    }
+
+    false
+}
+
+fn remove_json_path(root: &mut Value, path: &str) -> bool {
+    let mut segments = path.split('.').peekable();
+    let mut current = root;
+
+    while let Some(segment) = segments.next() {
+        let is_last = segments.peek().is_none();
+
+        if is_last {
+            if let Ok(index) = segment.parse::<usize>() {
+                if let Some(items) = current.as_array_mut() {
+                    if index < items.len() {
+                        items[index] = Value::Null;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            if let Some(map) = current.as_object_mut() {
+                return map.remove(segment).is_some();
+            }
+            return false;
+        }
+
+        if let Ok(index) = segment.parse::<usize>() {
+            let Some(items) = current.as_array_mut() else {
+                return false;
+            };
+            let Some(next) = items.get_mut(index) else {
+                return false;
+            };
+            current = next;
+            continue;
+        }
+
+        let Some(map) = current.as_object_mut() else {
+            return false;
+        };
+        let Some(next) = map.get_mut(segment) else {
+            return false;
+        };
+        current = next;
+    }
+
+    false
+}
+
+fn remove_json_path_if_empty_object(root: &mut Value, path: &str) -> bool {
+    let should_remove = lookup_json_path_with_case_fallback(root, path)
+        .and_then(Value::as_object)
+        .map(|object| object.is_empty())
+        .unwrap_or(false);
+    if should_remove {
+        return remove_json_path(root, path);
+    }
+    false
+}
+
+fn snake_to_camel_case(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut uppercase_next = false;
+    for ch in input.chars() {
+        if ch == '_' {
+            uppercase_next = true;
+            continue;
+        }
+
+        if uppercase_next {
+            out.push(ch.to_ascii_uppercase());
+            uppercase_next = false;
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
+fn camel_to_snake_case(input: &str) -> String {
+    let mut out = String::with_capacity(input.len() + 4);
+    for (idx, ch) in input.chars().enumerate() {
+        if ch.is_ascii_uppercase() && idx > 0 {
+            out.push('_');
+        }
+        out.push(ch.to_ascii_lowercase());
+    }
+    out
+}
+
+pub fn build_grpcurl_request(
+    suite: Option<&str>,
+    scenario: Option<&str>,
+    endpoint: Option<&str>,
+    connector: Option<&str>,
+    merchant_id: Option<&str>,
+    tenant_id: Option<&str>,
+    plaintext: bool,
+    require_auth: bool,
+) -> Result<GrpcurlRequest, ScenarioError> {
+    let suite = suite.unwrap_or(DEFAULT_SUITE);
+    let scenario = scenario.unwrap_or(DEFAULT_SCENARIO);
+    let mut grpc_req = get_the_grpc_req(suite, scenario)?;
+    resolve_auto_generate(&mut grpc_req)?;
+    build_grpcurl_request_from_payload(
+        suite,
+        scenario,
+        &grpc_req,
+        endpoint,
+        connector,
+        merchant_id,
+        tenant_id,
+        plaintext,
+        require_auth,
+    )
+}
+
+pub fn build_grpcurl_request_from_payload(
+    suite: &str,
+    scenario: &str,
+    grpc_req: &Value,
+    endpoint: Option<&str>,
+    connector: Option<&str>,
+    merchant_id: Option<&str>,
+    tenant_id: Option<&str>,
+    plaintext: bool,
+    require_auth: bool,
+) -> Result<GrpcurlRequest, ScenarioError> {
+    let endpoint = endpoint.unwrap_or(DEFAULT_ENDPOINT);
+    let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
+    let merchant_id = merchant_id.unwrap_or(DEFAULT_MERCHANT_ID);
+    let tenant_id = tenant_id.unwrap_or(DEFAULT_TENANT_ID);
+
+    let payload = serde_json::to_string_pretty(grpc_req)
+        .map_err(|source| ScenarioError::JsonSerialize { source })?;
+
+    let auth = load_connector_auth(connector).map_or_else(
+        |error| {
+            if require_auth {
+                Err(ScenarioError::CredentialLoad {
+                    connector: connector.to_string(),
+                    message: error.to_string(),
+                })
+            } else {
+                Ok(None)
+            }
+        },
+        |auth| Ok(Some(auth)),
+    )?;
+
+    let request_id = format!("{suite}_{scenario}_req");
+    let connector_request_reference_id = format!("{suite}_{scenario}_ref");
+    let method = grpc_method_for_suite(suite)?;
+
+    let mut headers = vec![
+        format!("x-connector: {connector}"),
+        format!("x-merchant-id: {merchant_id}"),
+        format!("x-tenant-id: {tenant_id}"),
+        format!("x-request-id: {request_id}"),
+        format!("x-connector-request-reference-id: {connector_request_reference_id}"),
+    ];
+
+    if let Some(auth) = auth.as_ref() {
+        headers.extend(auth_headers(auth));
+    } else {
+        headers.push("x-auth: <header-key|body-key|signature-key>".to_string());
+        headers.push("x-api-key: <api_key>".to_string());
+    }
+
+    Ok(GrpcurlRequest {
+        endpoint: endpoint.to_string(),
+        method: method.to_string(),
+        payload,
+        headers,
+        plaintext,
+    })
+}
+
+pub fn build_grpcurl_command(
+    suite: Option<&str>,
+    scenario: Option<&str>,
+    endpoint: Option<&str>,
+    connector: Option<&str>,
+    merchant_id: Option<&str>,
+    tenant_id: Option<&str>,
+    plaintext: bool,
+) -> Result<String, ScenarioError> {
+    let request = build_grpcurl_request(
+        suite,
+        scenario,
+        endpoint,
+        connector,
+        merchant_id,
+        tenant_id,
+        plaintext,
+        false,
+    )?;
+    Ok(request.to_command_string())
+}
+
+pub fn execute_grpcurl_request(
+    suite: Option<&str>,
+    scenario: Option<&str>,
+    endpoint: Option<&str>,
+    connector: Option<&str>,
+    merchant_id: Option<&str>,
+    tenant_id: Option<&str>,
+    plaintext: bool,
+) -> Result<String, ScenarioError> {
+    let suite = suite.unwrap_or(DEFAULT_SUITE);
+    let scenario = scenario.unwrap_or(DEFAULT_SCENARIO);
+    let mut grpc_req = get_the_grpc_req(suite, scenario)?;
+    resolve_auto_generate(&mut grpc_req)?;
+    execute_grpcurl_request_from_payload(
+        suite,
+        scenario,
+        &grpc_req,
+        endpoint,
+        connector,
+        merchant_id,
+        tenant_id,
+        plaintext,
+    )
+}
+
+pub fn execute_grpcurl_request_from_payload(
+    suite: &str,
+    scenario: &str,
+    grpc_req: &Value,
+    endpoint: Option<&str>,
+    connector: Option<&str>,
+    merchant_id: Option<&str>,
+    tenant_id: Option<&str>,
+    plaintext: bool,
+) -> Result<String, ScenarioError> {
+    let request = build_grpcurl_request_from_payload(
+        suite,
+        scenario,
+        grpc_req,
+        endpoint,
+        connector,
+        merchant_id,
+        tenant_id,
+        plaintext,
+        true,
+    )?;
+    execute_grpcurl_from_request(request)
+}
+
+fn execute_grpcurl_from_request(request: GrpcurlRequest) -> Result<String, ScenarioError> {
+    let mut args = Vec::new();
+    if request.plaintext {
+        args.push("-plaintext".to_string());
+    }
+
+    for header in &request.headers {
+        args.push("-H".to_string());
+        args.push(header.clone());
+    }
+
+    args.push("-d".to_string());
+    args.push(request.payload.clone());
+    args.push(request.endpoint.clone());
+    args.push(request.method.clone());
+
+    let output = std::process::Command::new("grpcurl")
+        .args(&args)
+        .output()
+        .map_err(|error| ScenarioError::GrpcurlExecution {
+            message: format!("failed to spawn grpcurl: {error}"),
+        })?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        Err(ScenarioError::GrpcurlExecution {
+            message: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        })
+    }
+}
+
+pub fn execute_tonic_request(
+    suite: Option<&str>,
+    scenario: Option<&str>,
+    endpoint: Option<&str>,
+    connector: Option<&str>,
+    merchant_id: Option<&str>,
+    tenant_id: Option<&str>,
+    plaintext: bool,
+) -> Result<String, ScenarioError> {
+    let suite = suite.unwrap_or(DEFAULT_SUITE);
+    let scenario = scenario.unwrap_or(DEFAULT_SCENARIO);
+    let mut grpc_req = get_the_grpc_req(suite, scenario)?;
+    resolve_auto_generate(&mut grpc_req)?;
+    execute_tonic_request_from_payload(
+        suite,
+        scenario,
+        &grpc_req,
+        endpoint,
+        connector,
+        merchant_id,
+        tenant_id,
+        plaintext,
+    )
+}
+
+pub fn execute_tonic_request_from_payload(
+    suite: &str,
+    scenario: &str,
+    grpc_req: &Value,
+    endpoint: Option<&str>,
+    connector: Option<&str>,
+    merchant_id: Option<&str>,
+    tenant_id: Option<&str>,
+    plaintext: bool,
+) -> Result<String, ScenarioError> {
+    let connector = connector.unwrap_or(DEFAULT_CONNECTOR).to_string();
+    let merchant_id = merchant_id.unwrap_or(DEFAULT_MERCHANT_ID).to_string();
+    let tenant_id = tenant_id.unwrap_or(DEFAULT_TENANT_ID).to_string();
+    let endpoint = endpoint.unwrap_or(DEFAULT_ENDPOINT).to_string();
+    let auth = load_connector_auth(&connector).map_err(|error| ScenarioError::CredentialLoad {
+        connector: connector.clone(),
+        message: error.to_string(),
+    })?;
+
+    let request_id = format!("{suite}_{scenario}_req");
+    let connector_request_reference_id = format!("{suite}_{scenario}_ref");
+    let grpc_req = grpc_req.clone();
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|error| ScenarioError::GrpcurlExecution {
+            message: format!("failed to initialize tonic runtime: {error}"),
+        })?;
+
+    runtime.block_on(async move {
+        let channel = Channel::from_shared(to_tonic_endpoint(&endpoint, plaintext))
+            .map_err(|error| ScenarioError::GrpcurlExecution {
+                message: format!("failed to prepare tonic endpoint '{endpoint}': {error}"),
+            })?
+            .connect()
+            .await
+            .map_err(|error| ScenarioError::GrpcurlExecution {
+                message: format!("failed to connect to endpoint '{endpoint}': {error}"),
+            })?;
+
+        match suite {
+            "create_access_token" => {
+                let payload: grpc_api_types::payments::MerchantAuthenticationServiceCreateAccessTokenRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::merchant_authentication_service_client::MerchantAuthenticationServiceClient::new(channel.clone());
+                let response = client.create_access_token(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "create_customer" => {
+                let payload: grpc_api_types::payments::CustomerServiceCreateRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::customer_service_client::CustomerServiceClient::new(channel.clone());
+                let response = client.create(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "authorize" => {
+                let payload: grpc_api_types::payments::PaymentServiceAuthorizeRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.authorize(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "capture" => {
+                let payload: grpc_api_types::payments::PaymentServiceCaptureRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.capture(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "refund" => {
+                let payload: grpc_api_types::payments::PaymentServiceRefundRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.refund(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "void" => {
+                let payload: grpc_api_types::payments::PaymentServiceVoidRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.void(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "get" => {
+                let payload: grpc_api_types::payments::PaymentServiceGetRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.get(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "refund_sync" => {
+                let payload: grpc_api_types::payments::RefundServiceGetRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::refund_service_client::RefundServiceClient::new(channel.clone());
+                let response = client.get(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "setup_recurring" => {
+                let payload: grpc_api_types::payments::PaymentServiceSetupRecurringRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.setup_recurring(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "recurring_charge" => {
+                let payload: grpc_api_types::payments::RecurringPaymentServiceChargeRequest =
+                    parse_tonic_payload(suite, scenario, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &connector,
+                    &auth,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::recurring_payment_service_client::RecurringPaymentServiceClient::new(channel.clone());
+                let response = client.charge(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            _ => Err(ScenarioError::UnsupportedSuite {
+                suite: suite.to_string(),
+            }),
+        }
+    })
+}
+
+fn parse_tonic_payload<T: DeserializeOwned>(
+    suite: &str,
+    scenario: &str,
+    grpc_req: &Value,
+) -> Result<T, ScenarioError> {
+    let normalized = normalize_tonic_request_json(suite, grpc_req.clone());
+    serde_json::from_value(normalized).map_err(|error| ScenarioError::GrpcurlExecution {
+        message: format!(
+            "failed to parse request JSON into tonic payload for '{suite}/{scenario}': {error}"
+        ),
+    })
+}
+
+fn normalize_tonic_request_json(suite: &str, mut value: Value) -> Value {
+    normalize_value_wrappers(&mut value);
+
+    // Legacy scenario payloads used in grpcurl contain fields that do not map
+    // directly to current proto request shapes used by tonic serde.
+    // Drop or adjust known mismatches here so scenarios remain unchanged.
+    if let Value::Object(map) = &mut value {
+        if suite == "authorize" {
+            map.entry("order_details".to_string())
+                .or_insert_with(|| Value::Array(Vec::new()));
+        }
+
+        if matches!(suite, "authorize" | "setup_recurring") {
+            if let Some(Value::Object(customer_acceptance)) = map.get_mut("customer_acceptance") {
+                if !customer_acceptance.contains_key("accepted_at") {
+                    let accepted_at = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs() as i64)
+                        .unwrap_or(0);
+                    customer_acceptance.insert("accepted_at".to_string(), Value::from(accepted_at));
+                }
+            }
+        }
+
+        if suite == "get" {
+            if let Some(handle_response) = map.get("handle_response") {
+                if handle_response.is_boolean() {
+                    map.remove("handle_response");
+                }
+            }
+        }
+    }
+
+    value
+}
+
+fn normalize_value_wrappers(value: &mut Value) {
+    match value {
+        Value::Object(map) => {
+            for child in map.values_mut() {
+                normalize_value_wrappers(child);
+            }
+
+            if map.len() == 1 {
+                if let Some(inner) = map.get("value") {
+                    *value = inner.clone();
+                    normalize_value_wrappers(value);
+                }
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                normalize_value_wrappers(item);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn serialize_tonic_response<T: Serialize>(response: &T) -> Result<String, ScenarioError> {
+    serde_json::to_string_pretty(response).map_err(|source| ScenarioError::JsonSerialize { source })
+}
+
+fn to_tonic_endpoint(endpoint: &str, plaintext: bool) -> String {
+    if endpoint.starts_with("http://") || endpoint.starts_with("https://") {
+        return endpoint.to_string();
+    }
+
+    if plaintext {
+        format!("http://{endpoint}")
+    } else {
+        format!("https://{endpoint}")
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SuiteScenarioResult {
+    pub suite: String,
+    pub scenario: String,
+    pub is_dependency: bool,
+    pub passed: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SuiteRunSummary {
+    pub suite: String,
+    pub connector: String,
+    pub passed: usize,
+    pub failed: usize,
+    pub results: Vec<SuiteScenarioResult>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AllSuitesRunSummary {
+    pub connector: String,
+    pub passed: usize,
+    pub failed: usize,
+    pub suites: Vec<SuiteRunSummary>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AllConnectorsRunSummary {
+    pub passed: usize,
+    pub failed: usize,
+    pub connectors: Vec<AllSuitesRunSummary>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SuiteRunOptions<'a> {
+    pub endpoint: Option<&'a str>,
+    pub merchant_id: Option<&'a str>,
+    pub tenant_id: Option<&'a str>,
+    pub plaintext: bool,
+}
+
+impl Default for SuiteRunOptions<'_> {
+    fn default() -> Self {
+        Self {
+            endpoint: None,
+            merchant_id: None,
+            tenant_id: None,
+            plaintext: true,
+        }
+    }
+}
+
+pub fn run_suite_test(
+    suite: &str,
+    connector: Option<&str>,
+) -> Result<SuiteRunSummary, ScenarioError> {
+    run_suite_test_with_options(suite, connector, SuiteRunOptions::default())
+}
+
+pub fn run_all_suites(connector: Option<&str>) -> Result<AllSuitesRunSummary, ScenarioError> {
+    run_all_suites_with_options(connector, SuiteRunOptions::default())
+}
+
+pub fn run_all_suites_with_options(
+    connector: Option<&str>,
+    options: SuiteRunOptions<'_>,
+) -> Result<AllSuitesRunSummary, ScenarioError> {
+    let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
+    let supported_suites = load_supported_suites_for_connector(connector)?;
+
+    let mut suite_summaries = Vec::new();
+    let mut passed = 0usize;
+    let mut failed = 0usize;
+
+    for suite in supported_suites {
+        let summary = run_suite_test_with_options(&suite, Some(connector), options)?;
+        passed += summary.passed;
+        failed += summary.failed;
+        suite_summaries.push(summary);
+    }
+
+    Ok(AllSuitesRunSummary {
+        connector: connector.to_string(),
+        passed,
+        failed,
+        suites: suite_summaries,
+    })
+}
+
+pub fn run_all_connectors() -> Result<AllConnectorsRunSummary, ScenarioError> {
+    run_all_connectors_with_options(SuiteRunOptions::default())
+}
+
+pub fn run_all_connectors_with_options(
+    options: SuiteRunOptions<'_>,
+) -> Result<AllConnectorsRunSummary, ScenarioError> {
+    let all_connectors = configured_all_connectors();
+    let mut runnable_connectors = Vec::new();
+
+    for connector in all_connectors {
+        match load_connector_auth(&connector) {
+            Ok(_) => runnable_connectors.push(connector),
+            Err(error) => {
+                eprintln!(
+                    "[suite_run_test] skipping connector '{}' due to missing/invalid credentials: {}",
+                    connector, error
+                );
+            }
+        }
+    }
+
+    let mut connector_summaries = Vec::new();
+    let mut passed = 0usize;
+    let mut failed = 0usize;
+
+    for connector in runnable_connectors {
+        let summary = run_all_suites_with_options(Some(&connector), options)?;
+        passed += summary.passed;
+        failed += summary.failed;
+        connector_summaries.push(summary);
+    }
+
+    Ok(AllConnectorsRunSummary {
+        passed,
+        failed,
+        connectors: connector_summaries,
+    })
+}
+
+pub fn run_suite_test_with_options(
+    suite: &str,
+    connector: Option<&str>,
+    options: SuiteRunOptions<'_>,
+) -> Result<SuiteRunSummary, ScenarioError> {
+    let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
+    let target_suite_spec = load_suite_spec(suite)?;
+    let scenarios = load_suite_scenarios(suite)?;
+
+    let mut results = Vec::new();
+    let mut passed = 0usize;
+    let mut failed = 0usize;
+
+    match target_suite_spec.dependency_scope {
+        DependencyScope::Suite => {
+            let dependency_chain = execute_dependency_chain(
+                &target_suite_spec.depends_on,
+                connector,
+                options,
+                target_suite_spec.strict_dependencies,
+                &mut passed,
+                &mut failed,
+                &mut results,
+            )?;
+            let Some((dependency_reqs, dependency_res)) = dependency_chain else {
+                return Ok(SuiteRunSummary {
+                    suite: suite.to_string(),
+                    connector: connector.to_string(),
+                    passed,
+                    failed,
+                    results,
+                });
+            };
+
+            for scenario in scenarios.keys() {
+                match execute_single_scenario_with_context(
+                    suite,
+                    scenario,
+                    connector,
+                    options,
+                    &dependency_reqs,
+                    &dependency_res,
+                ) {
+                    Ok((_effective_req, _response_json)) => {
+                        passed += 1;
+                        results.push(SuiteScenarioResult {
+                            suite: suite.to_string(),
+                            scenario: scenario.to_string(),
+                            is_dependency: false,
+                            passed: true,
+                            error: None,
+                        });
+                    }
+                    Err(error) => {
+                        failed += 1;
+                        results.push(SuiteScenarioResult {
+                            suite: suite.to_string(),
+                            scenario: scenario.to_string(),
+                            is_dependency: false,
+                            passed: false,
+                            error: Some(error.to_string()),
+                        });
+                    }
+                }
+            }
+        }
+        DependencyScope::Scenario => {
+            for scenario in scenarios.keys() {
+                let dependency_chain = execute_dependency_chain(
+                    &target_suite_spec.depends_on,
+                    connector,
+                    options,
+                    target_suite_spec.strict_dependencies,
+                    &mut passed,
+                    &mut failed,
+                    &mut results,
+                )?;
+                let Some((dependency_reqs, dependency_res)) = dependency_chain else {
+                    return Ok(SuiteRunSummary {
+                        suite: suite.to_string(),
+                        connector: connector.to_string(),
+                        passed,
+                        failed,
+                        results,
+                    });
+                };
+
+                match execute_single_scenario_with_context(
+                    suite,
+                    scenario,
+                    connector,
+                    options,
+                    &dependency_reqs,
+                    &dependency_res,
+                ) {
+                    Ok((_effective_req, _response_json)) => {
+                        passed += 1;
+                        results.push(SuiteScenarioResult {
+                            suite: suite.to_string(),
+                            scenario: scenario.to_string(),
+                            is_dependency: false,
+                            passed: true,
+                            error: None,
+                        });
+                    }
+                    Err(error) => {
+                        failed += 1;
+                        results.push(SuiteScenarioResult {
+                            suite: suite.to_string(),
+                            scenario: scenario.to_string(),
+                            is_dependency: false,
+                            passed: false,
+                            error: Some(error.to_string()),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(SuiteRunSummary {
+        suite: suite.to_string(),
+        connector: connector.to_string(),
+        passed,
+        failed,
+        results,
+    })
+}
+
+fn execute_dependency_chain(
+    dependencies: &[SuiteDependency],
+    connector: &str,
+    options: SuiteRunOptions<'_>,
+    strict_dependencies: bool,
+    passed: &mut usize,
+    failed: &mut usize,
+    results: &mut Vec<SuiteScenarioResult>,
+) -> Result<Option<(Vec<Value>, Vec<Value>)>, ScenarioError> {
+    let mut dependency_reqs = Vec::new();
+    let mut dependency_res = Vec::new();
+
+    for dependency in dependencies {
+        let dependency_suite = dependency.suite();
+        let is_supported = is_suite_supported_for_connector(connector, dependency_suite)?;
+        if !is_supported {
+            continue;
+        }
+
+        let dependency_scenario = if let Some(scenario) = dependency.scenario() {
+            scenario.to_string()
+        } else {
+            load_default_scenario_name(dependency_suite)?
+        };
+
+        let dep_result = execute_single_scenario_with_context(
+            dependency_suite,
+            &dependency_scenario,
+            connector,
+            options,
+            &dependency_reqs,
+            &dependency_res,
+        );
+
+        match dep_result {
+            Ok((effective_req, response_json)) => {
+                *passed += 1;
+                dependency_reqs.push(effective_req);
+                dependency_res.push(response_json);
+                results.push(SuiteScenarioResult {
+                    suite: dependency_suite.to_string(),
+                    scenario: dependency_scenario,
+                    is_dependency: true,
+                    passed: true,
+                    error: None,
+                });
+            }
+            Err(error) => {
+                *failed += 1;
+                results.push(SuiteScenarioResult {
+                    suite: dependency_suite.to_string(),
+                    scenario: dependency_scenario,
+                    is_dependency: true,
+                    passed: false,
+                    error: Some(error.to_string()),
+                });
+
+                if strict_dependencies {
+                    return Ok(None);
+                }
+            }
+        }
+    }
+
+    Ok(Some((dependency_reqs, dependency_res)))
+}
+
+fn execute_single_scenario_with_context(
+    suite: &str,
+    scenario: &str,
+    connector: &str,
+    options: SuiteRunOptions<'_>,
+    dependency_reqs: &[Value],
+    dependency_res: &[Value],
+) -> Result<(Value, Value), ScenarioError> {
+    run_test(Some(suite), Some(scenario), Some(connector))?;
+
+    let mut effective_req = get_the_grpc_req(suite, scenario)?;
+
+    // Normalize legacy empty placeholders to auto_generate sentinels where needed.
+    prepare_context_placeholders(suite, &mut effective_req);
+
+    // Context first.
+    add_context(dependency_reqs, dependency_res, &mut effective_req);
+
+    // Fallback generation for unresolved non-context placeholders.
+    resolve_auto_generate(&mut effective_req)?;
+
+    // Drop unresolved context-only fields instead of sending invalid placeholders.
+    prune_unresolved_context_fields(&mut effective_req);
+
+    if std::env::var("UCS_DEBUG_EFFECTIVE_REQ").as_deref() == Ok("1") {
+        if let Ok(request_json) = serde_json::to_string_pretty(&effective_req) {
+            println!(
+                "[suite_run_test] effective_grpc_req suite={suite} scenario={scenario}:\n{request_json}"
+            );
+        }
+    }
+
+    let response = execute_grpcurl_request_from_payload(
+        suite,
+        scenario,
+        &effective_req,
+        options.endpoint,
+        Some(connector),
+        options.merchant_id,
+        options.tenant_id,
+        options.plaintext,
+    )?;
+
+    let response_json: Value =
+        serde_json::from_str(&response).map_err(|error| ScenarioError::GrpcurlExecution {
+            message: format!("failed to parse grpc response JSON: {error}"),
+        })?;
+
+    let assertions = get_the_assertion(suite, scenario)?;
+    do_assertion(&assertions, &response_json, &effective_req)?;
+
+    Ok((effective_req, response_json))
+}
+
+fn grpc_method_for_suite(suite: &str) -> Result<&'static str, ScenarioError> {
+    match suite {
+        "create_access_token" => Ok("ucs.v2.MerchantAuthenticationService/CreateAccessToken"),
+        "create_customer" => Ok("ucs.v2.CustomerService/Create"),
+        "authorize" => Ok("ucs.v2.PaymentService/Authorize"),
+        "capture" => Ok("ucs.v2.PaymentService/Capture"),
+        "refund" => Ok("ucs.v2.PaymentService/Refund"),
+        "void" => Ok("ucs.v2.PaymentService/Void"),
+        "get" => Ok("ucs.v2.PaymentService/Get"),
+        "refund_sync" => Ok("ucs.v2.RefundService/Get"),
+        "setup_recurring" => Ok("ucs.v2.PaymentService/SetupRecurring"),
+        "recurring_charge" => Ok("ucs.v2.RecurringPaymentService/Charge"),
+        _ => Err(ScenarioError::UnsupportedSuite {
+            suite: suite.to_string(),
+        }),
+    }
+}
+
+fn auth_headers(auth: &ConnectorAuth) -> Vec<String> {
+    match auth {
+        ConnectorAuth::HeaderKey { api_key } => vec![
+            "x-auth: header-key".to_string(),
+            format!("x-api-key: {api_key}"),
+        ],
+        ConnectorAuth::BodyKey { api_key, key1 } => vec![
+            "x-auth: body-key".to_string(),
+            format!("x-api-key: {api_key}"),
+            format!("x-key1: {key1}"),
+        ],
+        ConnectorAuth::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => vec![
+            "x-auth: signature-key".to_string(),
+            format!("x-api-key: {api_key}"),
+            format!("x-key1: {key1}"),
+            format!("x-api-secret: {api_secret}"),
+        ],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::{json, Value};
+
+    use std::collections::HashMap;
+
+    use super::{
+        add_context, apply_context_map, build_grpcurl_command, build_grpcurl_request,
+        deep_set_json_path, normalize_tonic_request_json, prepare_context_placeholders,
+        prune_unresolved_context_fields, run_test, DEFAULT_SCENARIO, DEFAULT_SUITE,
+    };
+    use crate::harness::scenario_types::ContextMap;
+
+    #[test]
+    fn run_test_accepts_explicit_suite_and_scenario() {
+        run_test(
+            Some("authorize"),
+            Some("no3ds_manual_capture_credit_card"),
+            Some("stripe"),
+        )
+        .expect("run_test should succeed for explicit inputs");
+    }
+
+    #[test]
+    fn run_test_uses_default_suite_and_scenario() {
+        assert_eq!(DEFAULT_SUITE, "authorize");
+        assert_eq!(DEFAULT_SCENARIO, "no3ds_auto_capture_credit_card");
+        run_test(None, None, None).expect("run_test should succeed with defaults");
+    }
+
+    #[test]
+    fn builds_grpcurl_command() {
+        let command = build_grpcurl_command(
+            Some("authorize"),
+            Some("no3ds_auto_capture_credit_card"),
+            Some("localhost:50051"),
+            Some("stripe"),
+            Some("test_merchant"),
+            Some("default"),
+            true,
+        )
+        .expect("grpcurl command should build");
+
+        assert!(command.contains("grpcurl -plaintext"));
+        assert!(command.contains("ucs.v2.PaymentService/Authorize"));
+        assert!(command.contains("\"x-connector: stripe\""));
+        assert!(command.contains("\"auth_type\": \"NO_THREE_DS\""));
+    }
+
+    #[test]
+    fn builds_grpcurl_request_struct() {
+        let request = build_grpcurl_request(
+            Some("authorize"),
+            Some("no3ds_auto_capture_credit_card"),
+            Some("localhost:50051"),
+            Some("stripe"),
+            Some("test_merchant"),
+            Some("default"),
+            true,
+            false,
+        )
+        .expect("grpcurl request should build");
+
+        assert_eq!(request.endpoint, "localhost:50051");
+        assert_eq!(request.method, "ucs.v2.PaymentService/Authorize");
+        assert!(request.payload.contains("\"auth_type\": \"NO_THREE_DS\""));
+        assert!(!request.headers.is_empty());
+    }
+
+    #[test]
+    fn build_grpcurl_request_resolves_auto_generate_placeholders() {
+        let request = build_grpcurl_request(
+            Some("authorize"),
+            Some("no3ds_manual_capture_credit_card"),
+            Some("localhost:50051"),
+            Some("stripe"),
+            Some("test_merchant"),
+            Some("default"),
+            true,
+            false,
+        )
+        .expect("grpcurl request should build");
+
+        assert!(
+            !request.payload.contains("auto_generate"),
+            "payload should not contain unresolved placeholders"
+        );
+        assert!(
+            !request.payload.contains("cust_global_no3ds"),
+            "payload should not contain old static customer ids"
+        );
+        assert!(
+            !request.payload.contains("+918056594427"),
+            "payload should not contain old static phone numbers"
+        );
+
+        let payload: Value =
+            serde_json::from_str(&request.payload).expect("payload should parse as json");
+        let merchant_id = payload["merchant_transaction_id"]["id"]
+            .as_str()
+            .expect("merchant_transaction_id.id should be present");
+        assert!(
+            merchant_id.starts_with("mti_"),
+            "merchant_transaction_id.id should be generated"
+        );
+
+        let customer_id = payload["customer"]["id"]
+            .as_str()
+            .expect("customer.id should be present");
+        assert!(
+            customer_id.starts_with("cust_"),
+            "customer.id should be generated"
+        );
+    }
+
+    #[test]
+    fn add_context_overrides_with_latest_index_preference() {
+        let prev_reqs = vec![
+            json!({"customer": {"id": "cust_old"}}),
+            json!({"customer": {"id": "cust_new"}}),
+        ];
+        let prev_res = vec![
+            json!({"connectorTransactionId": {"id": "txn_old"}}),
+            json!({"connectorTransactionId": {"id": "txn_new"}}),
+        ];
+        let mut current = json!({
+            "customer": {"id": "cust_default"},
+            "connector_transaction_id": {"id": "txn_default"}
+        });
+
+        add_context(&prev_reqs, &prev_res, &mut current);
+
+        assert_eq!(current["customer"]["id"], json!("cust_new"));
+        assert_eq!(current["connector_transaction_id"]["id"], json!("txn_new"));
+    }
+
+    #[test]
+    fn add_context_keeps_target_scenario_specific_values_when_context_is_dependency_only() {
+        let dependency_reqs = vec![json!({"customer": {"id": "cust_dep"}})];
+        let dependency_res = vec![json!({"accessToken": "token_dep"})];
+
+        let mut scenario_one_req = json!({
+            "capture_method": "AUTOMATIC",
+            "customer": {"id": "auto_generate"},
+            "access_token": "auto_generate"
+        });
+        add_context(&dependency_reqs, &dependency_res, &mut scenario_one_req);
+        assert_eq!(scenario_one_req["capture_method"], json!("AUTOMATIC"));
+        assert_eq!(scenario_one_req["customer"]["id"], json!("cust_dep"));
+        assert_eq!(scenario_one_req["access_token"], json!("token_dep"));
+
+        let mut scenario_two_req = json!({
+            "capture_method": "MANUAL",
+            "customer": {"id": "auto_generate"},
+            "access_token": "auto_generate"
+        });
+        add_context(&dependency_reqs, &dependency_res, &mut scenario_two_req);
+        assert_eq!(scenario_two_req["capture_method"], json!("MANUAL"));
+        assert_eq!(scenario_two_req["customer"]["id"], json!("cust_dep"));
+        assert_eq!(scenario_two_req["access_token"], json!("token_dep"));
+    }
+
+    #[test]
+    fn add_context_maps_refund_id_from_connector_refund_id() {
+        let prev_reqs = vec![];
+        let prev_res = vec![json!({"connectorRefundId": "rf_123"})];
+        let mut current = json!({
+            "refund_id": "auto_generate"
+        });
+
+        add_context(&prev_reqs, &prev_res, &mut current);
+
+        assert_eq!(current["refund_id"], json!("rf_123"));
+    }
+
+    #[test]
+    fn add_context_maps_mandate_reference_into_mandate_reference_id() {
+        let prev_reqs = vec![];
+        let prev_res = vec![json!({
+            "mandateReference": {
+                "connectorMandateId": {
+                    "connectorMandateId": "mdt_123"
+                }
+            }
+        })];
+        let mut current = json!({
+            "mandate_reference_id": {
+                "connector_mandate_id": {
+                    "connector_mandate_id": "auto_generate"
+                }
+            }
+        });
+
+        add_context(&prev_reqs, &prev_res, &mut current);
+
+        assert_eq!(
+            current["mandate_reference_id"]["connector_mandate_id"]["connector_mandate_id"],
+            json!("mdt_123")
+        );
+    }
+
+    #[test]
+    fn add_context_maps_access_token_fields_into_state_access_token() {
+        let prev_reqs = vec![];
+        let prev_res = vec![json!({
+            "access_token": "tok_123",
+            "token_type": "Bearer",
+            "expires_in_seconds": 3600
+        })];
+        let mut current = json!({
+            "state": {
+                "access_token": {
+                    "token": {
+                        "value": ""
+                    },
+                    "token_type": "",
+                    "expires_in_seconds": 0
+                }
+            }
+        });
+
+        add_context(&prev_reqs, &prev_res, &mut current);
+
+        assert_eq!(current["state"]["access_token"]["token"]["value"], json!("tok_123"));
+        assert_eq!(current["state"]["access_token"]["token_type"], json!("Bearer"));
+        assert_eq!(
+            current["state"]["access_token"]["expires_in_seconds"],
+            json!(3600)
+        );
+    }
+
+    #[test]
+    fn add_context_maps_connector_customer_id_to_nested_targets() {
+        let prev_reqs = vec![];
+        let prev_res = vec![json!({
+            "connector_customer_id": "cust_dep_123"
+        })];
+
+        let mut authorize_req = json!({
+            "customer": {
+                "connector_customer_id": ""
+            }
+        });
+        add_context(&prev_reqs, &prev_res, &mut authorize_req);
+        assert_eq!(
+            authorize_req["customer"]["connector_customer_id"],
+            json!("cust_dep_123")
+        );
+
+        let mut capture_req = json!({
+            "state": {
+                "connector_customer_id": ""
+            }
+        });
+        add_context(&prev_reqs, &prev_res, &mut capture_req);
+        assert_eq!(
+            capture_req["state"]["connector_customer_id"],
+            json!("cust_dep_123")
+        );
+    }
+
+    #[test]
+    fn add_context_maps_connector_feature_data_value() {
+        let prev_reqs = vec![];
+        let prev_res = vec![json!({
+            "connectorFeatureData": {
+                "value": "{\"authorize_id\":\"auth_123\"}"
+            }
+        })];
+        let mut current = json!({
+            "connector_feature_data": {
+                "value": "auto_generate"
+            }
+        });
+
+        add_context(&prev_reqs, &prev_res, &mut current);
+
+        assert_eq!(
+            current["connector_feature_data"]["value"],
+            json!("{\"authorize_id\":\"auth_123\"}")
+        );
+    }
+
+    #[test]
+    fn prepare_context_placeholders_converts_empty_values_to_auto_generate() {
+        let mut req = json!({
+            "customer": { "connector_customer_id": "" },
+            "state": {
+                "connector_customer_id": "",
+                "access_token": {
+                    "token": { "value": "" },
+                    "token_type": "",
+                    "expires_in_seconds": 0
+                }
+            }
+        });
+
+        prepare_context_placeholders("capture", &mut req);
+
+        assert_eq!(req["customer"]["connector_customer_id"], json!("auto_generate"));
+        assert_eq!(req["state"]["connector_customer_id"], json!("auto_generate"));
+        assert_eq!(
+            req["state"]["access_token"]["token"]["value"],
+            json!("auto_generate")
+        );
+        assert_eq!(
+            req["state"]["access_token"]["token_type"],
+            json!("auto_generate")
+        );
+        assert_eq!(
+            req["state"]["access_token"]["expires_in_seconds"],
+            json!("auto_generate")
+        );
+        assert_eq!(
+            req["connector_feature_data"]["value"],
+            json!("auto_generate")
+        );
+    }
+
+    #[test]
+    fn prune_unresolved_context_fields_drops_unresolved_values() {
+        let mut req = json!({
+            "customer": { "connector_customer_id": "auto_generate" },
+            "state": {
+                "connector_customer_id": "auto_generate",
+                "access_token": {
+                    "token": { "value": "auto_generate" },
+                    "token_type": "auto_generate",
+                    "expires_in_seconds": "auto_generate"
+                }
+            },
+            "connector_feature_data": { "value": "auto_generate" },
+            "connector_transaction_id": { "id": "auto_generate" },
+            "refund_id": "auto_generate",
+            "merchant_transaction_id": { "id": "mti_real" }
+        });
+
+        prune_unresolved_context_fields(&mut req);
+
+        assert!(req["customer"].get("connector_customer_id").is_none());
+        assert!(req["connector_feature_data"].is_null());
+        assert!(req["connector_transaction_id"].get("id").is_none());
+        assert!(req.get("refund_id").is_none());
+        assert_eq!(req["merchant_transaction_id"]["id"], json!("mti_real"));
+    }
+
+    #[test]
+    fn prune_unresolved_context_fields_keeps_resolved_values() {
+        let mut req = json!({
+            "customer": { "connector_customer_id": "cust_123" },
+            "state": {
+                "connector_customer_id": "cust_state_123",
+                "access_token": {
+                    "token": { "value": "tok_123" },
+                    "token_type": "Bearer",
+                    "expires_in_seconds": 3600
+                }
+            },
+            "connector_feature_data": { "value": "{\"authorize_id\":\"auth_123\"}" },
+            "connector_transaction_id": { "id": "pi_123" },
+            "refund_id": "re_123"
+        });
+
+        prune_unresolved_context_fields(&mut req);
+
+        assert_eq!(req["customer"]["connector_customer_id"], json!("cust_123"));
+        assert_eq!(req["state"]["access_token"]["token"]["value"], json!("tok_123"));
+        assert_eq!(
+            req["connector_feature_data"]["value"],
+            json!("{\"authorize_id\":\"auth_123\"}")
+        );
+        assert_eq!(req["connector_transaction_id"]["id"], json!("pi_123"));
+        assert_eq!(req["refund_id"], json!("re_123"));
+    }
+
+    #[test]
+    fn normalizer_unwraps_value_wrappers() {
+        let original = json!({
+            "payment_method": {
+                "card": {
+                    "card_number": { "value": "4111111111111111" },
+                    "card_holder_name": { "value": "John Doe" }
+                }
+            },
+            "customer": {
+                "email": { "value": "john@example.com" }
+            }
+        });
+
+        let normalized = normalize_tonic_request_json("authorize", original);
+
+        assert_eq!(
+            normalized["payment_method"]["card"]["card_number"],
+            json!("4111111111111111")
+        );
+        assert_eq!(
+            normalized["payment_method"]["card"]["card_holder_name"],
+            json!("John Doe")
+        );
+        assert_eq!(normalized["customer"]["email"], json!("john@example.com"));
+    }
+
+    #[test]
+    fn normalizer_drops_legacy_get_handle_response_bool() {
+        let original = json!({
+            "connector_transaction_id": {"id": "txn_123"},
+            "handle_response": true
+        });
+
+        let normalized = normalize_tonic_request_json("get", original);
+        assert!(normalized.get("handle_response").is_none());
+        assert_eq!(
+            normalized["connector_transaction_id"]["id"],
+            json!("txn_123")
+        );
+    }
+
+    #[test]
+    fn normalizer_adds_authorize_order_details_default() {
+        let original = json!({
+            "merchant_transaction_id": {"id": "m_123"},
+            "amount": {"minor_amount": 1000, "currency": "USD"}
+        });
+
+        let normalized = normalize_tonic_request_json("authorize", original);
+        assert_eq!(normalized["order_details"], json!([]));
+    }
+
+    #[test]
+    fn normalizer_adds_customer_acceptance_accepted_at_default() {
+        let original = json!({
+            "customer_acceptance": {
+                "acceptance_type": "OFFLINE"
+            }
+        });
+
+        let normalized = normalize_tonic_request_json("setup_recurring", original);
+        let accepted_at = normalized["customer_acceptance"]["accepted_at"]
+            .as_i64()
+            .expect("accepted_at should be injected as i64");
+        assert!(accepted_at >= 0);
+    }
+
+    // ─── deep_set_json_path tests ───
+
+    #[test]
+    fn deep_set_creates_intermediate_objects() {
+        let mut root = json!({});
+        let ok = deep_set_json_path(&mut root, "state.access_token.token.value", json!("tok_abc"));
+        assert!(ok);
+        assert_eq!(
+            root["state"]["access_token"]["token"]["value"],
+            json!("tok_abc")
+        );
+    }
+
+    #[test]
+    fn deep_set_overwrites_existing_leaf() {
+        let mut root = json!({"state": {"access_token": {"token": {"value": "old"}}}});
+        let ok = deep_set_json_path(&mut root, "state.access_token.token.value", json!("new"));
+        assert!(ok);
+        assert_eq!(
+            root["state"]["access_token"]["token"]["value"],
+            json!("new")
+        );
+    }
+
+    #[test]
+    fn deep_set_single_segment() {
+        let mut root = json!({"foo": "bar"});
+        let ok = deep_set_json_path(&mut root, "baz", json!(42));
+        assert!(ok);
+        assert_eq!(root["baz"], json!(42));
+        // original field untouched
+        assert_eq!(root["foo"], json!("bar"));
+    }
+
+    #[test]
+    fn deep_set_partial_existing_path() {
+        let mut root = json!({"state": {"existing": true}});
+        let ok = deep_set_json_path(&mut root, "state.access_token.token.value", json!("tok_xyz"));
+        assert!(ok);
+        assert_eq!(
+            root["state"]["access_token"]["token"]["value"],
+            json!("tok_xyz")
+        );
+        // existing sibling untouched
+        assert_eq!(root["state"]["existing"], json!(true));
+    }
+
+    // ─── apply_context_map tests ───
+
+    #[test]
+    fn apply_context_map_maps_response_field_to_deep_target() {
+        let mut context_map: ContextMap = HashMap::new();
+        context_map.insert(
+            "state.access_token.token.value".to_string(),
+            "res.access_token".to_string(),
+        );
+
+        let dep_req = json!({});
+        let dep_res = json!({"access_token": "paypal_tok_123"});
+        let collected = vec![(context_map, dep_req, dep_res)];
+
+        let mut req = json!({"amount": {"minor_amount": 1000}});
+        apply_context_map(&collected, &mut req);
+
+        assert_eq!(
+            req["state"]["access_token"]["token"]["value"],
+            json!("paypal_tok_123")
+        );
+        // original field untouched
+        assert_eq!(req["amount"]["minor_amount"], json!(1000));
+    }
+
+    #[test]
+    fn apply_context_map_maps_request_field_with_req_prefix() {
+        let mut context_map: ContextMap = HashMap::new();
+        context_map.insert("customer.id".to_string(), "req.customer.id".to_string());
+
+        let dep_req = json!({"customer": {"id": "cust_from_dep"}});
+        let dep_res = json!({});
+        let collected = vec![(context_map, dep_req, dep_res)];
+
+        let mut req = json!({"customer": {"id": "placeholder"}});
+        apply_context_map(&collected, &mut req);
+
+        assert_eq!(req["customer"]["id"], json!("cust_from_dep"));
+    }
+
+    #[test]
+    fn apply_context_map_defaults_to_response_when_no_prefix() {
+        let mut context_map: ContextMap = HashMap::new();
+        // No "res." prefix — should default to response
+        context_map.insert(
+            "connector_transaction_id.id".to_string(),
+            "connectorTransactionId.id".to_string(),
+        );
+
+        let dep_req = json!({});
+        let dep_res = json!({"connectorTransactionId": {"id": "txn_abc"}});
+        let collected = vec![(context_map, dep_req, dep_res)];
+
+        let mut req = json!({"connector_transaction_id": {"id": "placeholder"}});
+        apply_context_map(&collected, &mut req);
+
+        assert_eq!(req["connector_transaction_id"]["id"], json!("txn_abc"));
+    }
+
+    #[test]
+    fn apply_context_map_skips_null_source_values() {
+        let mut context_map: ContextMap = HashMap::new();
+        context_map.insert("field_a".to_string(), "res.missing_field".to_string());
+
+        let dep_req = json!({});
+        let dep_res = json!({"other_field": "val"});
+        let collected = vec![(context_map, dep_req, dep_res)];
+
+        let mut req = json!({"field_a": "original"});
+        apply_context_map(&collected, &mut req);
+
+        // Should remain unchanged since source doesn't exist
+        assert_eq!(req["field_a"], json!("original"));
+    }
+
+    #[test]
+    fn apply_context_map_multiple_dependencies() {
+        let mut map1: ContextMap = HashMap::new();
+        map1.insert(
+            "state.access_token.token.value".to_string(),
+            "res.access_token".to_string(),
+        );
+
+        let mut map2: ContextMap = HashMap::new();
+        map2.insert("customer.id".to_string(), "res.customer_id".to_string());
+
+        let collected = vec![
+            (
+                map1,
+                json!({}),
+                json!({"access_token": "tok_paypal"}),
+            ),
+            (
+                map2,
+                json!({}),
+                json!({"customer_id": "cust_stripe_123"}),
+            ),
+        ];
+
+        let mut req = json!({"amount": {"minor_amount": 500}});
+        apply_context_map(&collected, &mut req);
+
+        assert_eq!(
+            req["state"]["access_token"]["token"]["value"],
+            json!("tok_paypal")
+        );
+        assert_eq!(req["customer"]["id"], json!("cust_stripe_123"));
+        assert_eq!(req["amount"]["minor_amount"], json!(500));
+    }
+
+    #[test]
+    fn apply_context_map_camel_case_response_lookup() {
+        let mut context_map: ContextMap = HashMap::new();
+        context_map.insert(
+            "state.access_token.token_type".to_string(),
+            "res.token_type".to_string(),
+        );
+
+        let dep_req = json!({});
+        // Response uses camelCase (as grpcurl returns proto-JSON)
+        let dep_res = json!({"tokenType": "Bearer"});
+        let collected = vec![(context_map, dep_req, dep_res)];
+
+        let mut req = json!({});
+        apply_context_map(&collected, &mut req);
+
+        assert_eq!(req["state"]["access_token"]["token_type"], json!("Bearer"));
+    }
+
+    #[test]
+    fn apply_context_map_empty_map_is_noop() {
+        let context_map: ContextMap = HashMap::new();
+        let collected = vec![(
+            context_map,
+            json!({"some": "req"}),
+            json!({"some": "res"}),
+        )];
+
+        let mut req = json!({"field": "original"});
+        apply_context_map(&collected, &mut req);
+
+        assert_eq!(req["field"], json!("original"));
+    }
+
+    #[test]
+    fn apply_context_map_id_type_id_unwrapping() {
+        let mut context_map: ContextMap = HashMap::new();
+        context_map.insert(
+            "connector_transaction_id.id".to_string(),
+            "res.connector_transaction_id.id".to_string(),
+        );
+
+        let dep_req = json!({});
+        // Response has the id wrapped in id_type.id (proto Identifier pattern)
+        let dep_res = json!({
+            "connectorTransactionId": {
+                "idType": {
+                    "id": "pi_3ABC"
+                }
+            }
+        });
+        let collected = vec![(context_map, dep_req, dep_res)];
+
+        let mut req = json!({"connector_transaction_id": {"id": "placeholder"}});
+        apply_context_map(&collected, &mut req);
+
+        assert_eq!(req["connector_transaction_id"]["id"], json!("pi_3ABC"));
+    }
+}

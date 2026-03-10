@@ -1,0 +1,11 @@
+{
+  "connector": "stripe",
+  "supported_suites": [
+    "authorize",
+    "capture",
+    "void",
+    "refund",
+    "get",
+    "refund_sync"
+  ]
+}

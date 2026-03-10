@@ -1,0 +1,12 @@
+{
+  "connector": "paypal",
+  "supported_suites": [
+    "create_access_token",
+    "authorize",
+    "capture",
+    "void",
+    "refund",
+    "get",
+    "refund_sync"
+  ]
+}

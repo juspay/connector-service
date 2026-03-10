@@ -1,0 +1,15 @@
+{
+  "suite": "refund_sync",
+  "suite_type": "dependent",
+  "depends_on": [
+    "create_access_token",
+    "create_customer",
+    {
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card"
+    },
+    "refund"
+  ],
+  "dependency_scope": "scenario",
+  "strict_dependencies": false
+}

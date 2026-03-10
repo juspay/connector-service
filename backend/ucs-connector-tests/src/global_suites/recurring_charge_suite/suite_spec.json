@@ -1,0 +1,10 @@
+{
+  "suite": "recurring_charge",
+  "suite_type": "dependent",
+  "depends_on": [
+    "create_access_token",
+    "create_customer",
+    "setup_recurring"
+  ],
+  "strict_dependencies": false
+}
