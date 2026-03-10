@@ -284,6 +284,8 @@ pub enum AdyenPaymentMethod<
     Vipps,
     #[serde(rename = "swish")]
     Swish,
+    #[serde(rename = "paypal")]
+    AdyenPaypal,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -308,6 +310,7 @@ pub struct MomoData {}
 pub struct TouchNGoData {}
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MbwayData {
     telephone_number: Secret<String>,
 }
@@ -1447,8 +1450,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             WalletData::TwintRedirect { .. } => Ok(Self::Twint),
             WalletData::VippsRedirect { .. } => Ok(Self::Vipps),
             WalletData::SwishQr(_) => Ok(Self::Swish),
-            WalletData::PaypalRedirect(_)
-            | WalletData::AmazonPayRedirect(_)
+            WalletData::PaypalRedirect(_) => Ok(Self::AdyenPaypal),
+            WalletData::AmazonPayRedirect(_)
             | WalletData::Paze(_)
             | WalletData::RevolutPay(_)
             | WalletData::MobilePayRedirect(_)

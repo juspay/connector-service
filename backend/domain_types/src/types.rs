@@ -765,6 +765,22 @@ impl<
                         payment_method_data::MomoRedirection {},
                     )),
                 ),
+                grpc_api_types::payments::payment_method::PaymentMethod::TouchNGoRedirect(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::TouchNGoRedirect(
+                        Box::new(payment_method_data::TouchNGoRedirection {}),
+                    )),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::TwintRedirect(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::TwintRedirect {}),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::VippsRedirect(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::VippsRedirect {}),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::SwishQr(_) => Ok(
+                    Self::Wallet(payment_method_data::WalletData::SwishQr(
+                        payment_method_data::SwishQrData {},
+                    )),
+                ),
                 grpc_api_types::payments::payment_method::PaymentMethod::AmazonPayRedirect(_) => {
                     Ok(Self::Wallet(
                         payment_method_data::WalletData::AmazonPayRedirect(Box::new(
@@ -4441,6 +4457,22 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::MomoRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::TouchNGoRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::TwintRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::VippsRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SwishQr(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
