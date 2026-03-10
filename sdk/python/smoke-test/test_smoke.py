@@ -25,7 +25,7 @@ from payments import (
     ConnectorConfig,
     RequestConfig,
 )
-from payments.generated.sdk_config_pb2 import FfiRequestError, FfiResponseError
+from payments.generated.sdk_config_pb2 import RequestError, ResponseError
 
 
 async def run_test():
@@ -114,12 +114,16 @@ async def run_test():
             print(f"  Response type:   {type(response).__name__}")
             print("  PASSED")
         except Exception as e:
-            if hasattr(e, 'ffi_error'):
+            if hasattr(e, "ffi_error"):
                 ffi_err = e.ffi_error
-                if isinstance(ffi_err, FfiRequestError):
-                    print(f"  Request build error [{ffi_err.error_type}]: {ffi_err.message}")
-                elif isinstance(ffi_err, FfiResponseError):
-                    print(f"  Response parse error [{ffi_err.error_type}]: {ffi_err.message}")
+                if isinstance(ffi_err, RequestError):
+                    print(
+                        f"  Request build error [{ffi_err.error_type}]: {ffi_err.message}"
+                    )
+                elif isinstance(ffi_err, ResponseError):
+                    print(
+                        f"  Response parse error [{ffi_err.error_type}]: {ffi_err.message}"
+                    )
                 else:
                     print(f"  FFI error: {e}")
             else:

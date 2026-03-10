@@ -40,7 +40,7 @@ macro_rules! req_transformer {
             connector: domain_types::connector_types::ConnectorEnum,
             connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
             metadata: &common_utils::metadata::MaskedMetadata,
-        ) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::FfiRequestError> {
+        ) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::RequestError> {
 
                 let connector_data: connector_integration::types::ConnectorData<T> =
             connector_integration::types::ConnectorData::get_connector_by_name(&connector);
@@ -60,13 +60,13 @@ macro_rules! req_transformer {
                 metadata,
             ))
             .map_err(|err: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                grpc_api_types::payments::FfiRequestError::from(err.current_context())
+                grpc_api_types::payments::RequestError::from(err.current_context())
             })?;
 
         let payment_request_data: $request_data_type =
             domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
             .map_err(|err: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                grpc_api_types::payments::FfiRequestError::from(err.current_context())
+                grpc_api_types::payments::RequestError::from(err.current_context())
             })?;
 
         let router_data = domain_types::router_data_v2::RouterDataV2 {
@@ -80,7 +80,7 @@ macro_rules! req_transformer {
             let connector_request = connector_integration
                 .build_request_v2(&router_data)
                 .map_err(|err| {
-                    grpc_api_types::payments::FfiRequestError::from(err.current_context())
+                    grpc_api_types::payments::RequestError::from(err.current_context())
                 })?;
 
             Ok(connector_request)
@@ -130,7 +130,7 @@ macro_rules! res_transformer {
             connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
             metadata: &common_utils::metadata::MaskedMetadata,
             response: domain_types::router_response_types::Response,
-        ) -> Result<$response_type, grpc_api_types::payments::FfiResponseError> {
+        ) -> Result<$response_type, grpc_api_types::payments::ResponseError> {
                      let connector_data: connector_integration::types::ConnectorData<T> =
             connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
@@ -149,13 +149,13 @@ macro_rules! res_transformer {
                 metadata,
             ))
             .map_err(|err: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                grpc_api_types::payments::FfiResponseError::from(err.current_context())
+                grpc_api_types::payments::ResponseError::from(err.current_context())
             })?;
 
         let payment_request_data: $request_data_type =
             domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
             .map_err(|err: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                grpc_api_types::payments::FfiResponseError::from(err.current_context())
+                grpc_api_types::payments::ResponseError::from(err.current_context())
             })?;
 
         let router_data = domain_types::router_data_v2::RouterDataV2 {
@@ -183,11 +183,11 @@ macro_rules! res_transformer {
                 None,
             )
             .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                grpc_api_types::payments::FfiResponseError::from(e.current_context())
+                grpc_api_types::payments::ResponseError::from(e.current_context())
             })?;
 
             domain_types::types::$generate_response_fn(response)
-                .map_err(|e| grpc_api_types::payments::FfiResponseError::from(e.current_context()))
+                .map_err(|e| grpc_api_types::payments::ResponseError::from(e.current_context()))
         }
     };
 }

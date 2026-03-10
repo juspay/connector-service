@@ -114,7 +114,7 @@ function checkCallStatus(ffi: FfiFunctions, status: RustCallStatus): void {
   if (status.code === 0) return;
 
   // Only Rust panics should reach here now (status.code === 2)
-  // Normal errors are encoded as protobuf FfiRequestError/FfiResponseError in returned bytes
+  // Normal errors are encoded as protobuf RequestError/ResponseError in returned bytes
   if (status.error_buf.len > 0n) {
     const msg = liftString(status.error_buf);
     freeRustBuffer(ffi, status.error_buf);
@@ -201,7 +201,7 @@ export class UniffiClient {
       checkCallStatus(this._ffi, status);
       const bytes = liftBytes(result);
       try {
-        const reqErr = types.FfiRequestError.decode(bytes);
+        const reqErr = types.RequestError.decode(bytes);
         if (reqErr.errorMessage) {
           const err = new Error(reqErr.errorMessage);
           (err as any).ffiError = reqErr;
@@ -242,7 +242,7 @@ export class UniffiClient {
       checkCallStatus(this._ffi, status);
       const bytes = liftBytes(result);
       try {
-        const resErr = types.FfiResponseError.decode(bytes);
+        const resErr = types.ResponseError.decode(bytes);
         if (resErr.errorMessage) {
           const err = new Error(resErr.errorMessage);
           (err as any).ffiError = resErr;

@@ -15,8 +15,8 @@ mod uniffi_bindings_inner {
     use domain_types::router_response_types::Response;
     use domain_types::utils::ForeignTryFrom;
     use grpc_api_types::payments::{
-        Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions,
-        FfiRequestError, FfiResponseError,
+        Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, RequestError,
+        ResponseError,
     };
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
@@ -136,14 +136,14 @@ mod uniffi_bindings_inner {
 
     /// Decode `request_bytes` as `Req`, build `FfiRequestData`, call `handler`,
     /// and encode the resulting connector HTTP request as protobuf bytes.
-    /// If the handler returns an error, encode the FfiRequestError to bytes.
+    /// If the handler returns an error, encode the RequestError to bytes.
     fn run_req_transformer<Req>(
         request_bytes: Vec<u8>,
         options_bytes: Vec<u8>,
         handler: impl Fn(
             crate::types::FfiRequestData<Req>,
             Option<Environment>,
-        ) -> Result<Option<Request>, FfiRequestError>,
+        ) -> Result<Option<Request>, RequestError>,
     ) -> Vec<u8>
     where
         Req: Message + Default,
@@ -151,7 +151,7 @@ mod uniffi_bindings_inner {
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
-                return FfiRequestError::from(ConnectorError::DecodingFailed(Some(format!(
+                return RequestError::from(ConnectorError::DecodingFailed(Some(format!(
                     "Request payload decode failed: {}",
                     e
                 ))))
@@ -161,11 +161,11 @@ mod uniffi_bindings_inner {
 
         let ffi_options = match parse_ffi_options(options_bytes) {
             Ok(o) => o,
-            Err(e) => return FfiRequestError::from(e).encode_to_vec(),
+            Err(e) => return RequestError::from(e).encode_to_vec(),
         };
         let ffi_metadata = match parse_metadata(&ffi_options) {
             Ok(m) => m,
-            Err(e) => return FfiRequestError::from(e).encode_to_vec(),
+            Err(e) => return RequestError::from(e).encode_to_vec(),
         };
 
         let request = crate::types::FfiRequestData {
@@ -184,19 +184,19 @@ mod uniffi_bindings_inner {
         let connector_request = match result {
             Some(r) => r,
             None => {
-                return FfiRequestError::from(ConnectorError::RequestEncodingFailed).encode_to_vec()
+                return RequestError::from(ConnectorError::RequestEncodingFailed).encode_to_vec()
             }
         };
 
         match build_ffi_request_bytes(&connector_request) {
             Ok(bytes) => bytes,
-            Err(e) => FfiRequestError::from(e).encode_to_vec(),
+            Err(e) => RequestError::from(e).encode_to_vec(),
         }
     }
 
     /// Decode `response_bytes` as the domain `Response` and `request_bytes` as `Req`,
     /// call `handler`, and encode the result as protobuf bytes.
-    /// If the handler returns an error, encode the FfiResponseError to bytes.
+    /// If the handler returns an error, encode the ResponseError to bytes.
     fn run_res_transformer<Req, Res>(
         response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
@@ -205,7 +205,7 @@ mod uniffi_bindings_inner {
             crate::types::FfiRequestData<Req>,
             Response,
             Option<Environment>,
-        ) -> Result<Res, FfiResponseError>,
+        ) -> Result<Res, ResponseError>,
     ) -> Vec<u8>
     where
         Req: Message + Default,
@@ -213,13 +213,13 @@ mod uniffi_bindings_inner {
     {
         let domain_response = match build_domain_response(response_bytes) {
             Ok(r) => r,
-            Err(e) => return FfiResponseError::from(e).encode_to_vec(),
+            Err(e) => return ResponseError::from(e).encode_to_vec(),
         };
 
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
-                return FfiResponseError::from(ConnectorError::DecodingFailed(Some(format!(
+                return ResponseError::from(ConnectorError::DecodingFailed(Some(format!(
                     "Request payload decode failed: {}",
                     e
                 ))))
@@ -229,11 +229,11 @@ mod uniffi_bindings_inner {
 
         let ffi_options = match parse_ffi_options(options_bytes) {
             Ok(o) => o,
-            Err(e) => return FfiResponseError::from(e).encode_to_vec(),
+            Err(e) => return ResponseError::from(e).encode_to_vec(),
         };
         let ffi_metadata = match parse_metadata(&ffi_options) {
             Ok(m) => m,
-            Err(e) => return FfiResponseError::from(e).encode_to_vec(),
+            Err(e) => return ResponseError::from(e).encode_to_vec(),
         };
 
         let request = crate::types::FfiRequestData {
@@ -258,8 +258,8 @@ mod uniffi_bindings_inner {
     /// # Arguments
     /// - `$flow`        — snake_case flow name (used as identifier prefix)
     /// - `$req_type`    — protobuf request type to decode from bytes
-    /// - `$req_handler` — handler fn: `(FfiRequestData<Req>, Option<Environment>) -> Result<Option<Request>, FfiRequestError>`
-    /// - `$res_handler` — handler fn: `(FfiRequestData<Req>, Response, Option<Environment>) -> Result<Res, FfiResponseError>`
+    /// - `$req_handler` — handler fn: `(FfiRequestData<Req>, Option<Environment>) -> Result<Option<Request>, RequestError>`
+    /// - `$res_handler` — handler fn: `(FfiRequestData<Req>, Response, Option<Environment>) -> Result<Res, ResponseError>`
     macro_rules! define_ffi_flow {
         ($flow:ident, $req_type:ty, $req_handler:path, $res_handler:path) => {
             paste::paste! {
@@ -314,7 +314,7 @@ mod uniffi_bindings_inner {
         ) {
             Ok(p) => p,
             Err(e) => {
-                return FfiResponseError::from(ConnectorError::DecodingFailed(Some(format!(
+                return ResponseError::from(ConnectorError::DecodingFailed(Some(format!(
                     "EventServiceHandleRequest decode failed: {}",
                     e
                 ))))
@@ -324,11 +324,11 @@ mod uniffi_bindings_inner {
 
         let ffi_options = match parse_ffi_options(options_bytes) {
             Ok(o) => o,
-            Err(e) => return FfiResponseError::from(e).encode_to_vec(),
+            Err(e) => return ResponseError::from(e).encode_to_vec(),
         };
         let ffi_metadata = match parse_metadata(&ffi_options) {
             Ok(m) => m,
-            Err(e) => return FfiResponseError::from(e).encode_to_vec(),
+            Err(e) => return ResponseError::from(e).encode_to_vec(),
         };
 
         let request = crate::types::FfiRequestData {

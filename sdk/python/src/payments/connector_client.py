@@ -26,8 +26,8 @@ from .generated.sdk_config_pb2 import (
     FfiConnectorHttpResponse,
     HttpConfig,
     Environment,
-    FfiRequestError,
-    FfiResponseError,
+    RequestError,
+    ResponseError,
 )
 
 
@@ -109,7 +109,7 @@ class _ConnectorClientBase:
         result_bytes = req_transformer(request_bytes, options_bytes)
         # Inline FFI error check
         try:
-            req_err = FfiRequestError()
+            req_err = RequestError()
             req_err.ParseFromString(result_bytes)
             if req_err.is_error:
                 e = RuntimeError(req_err.message)
@@ -145,7 +145,7 @@ class _ConnectorClientBase:
         result_bytes_res = res_transformer(res_bytes, request_bytes, options_bytes)
         # Inline FFI error check
         try:
-            res_err = FfiResponseError()
+            res_err = ResponseError()
             res_err.ParseFromString(result_bytes_res)
             if res_err.is_error:
                 e = RuntimeError(res_err.message)

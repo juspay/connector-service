@@ -27,7 +27,7 @@ const {
   ConnectorState,
 } = types;
 
-const { ConnectorConfig, RequestConfig, Environment, FfiRequestError, FfiResponseError } = types;
+const { ConnectorConfig, RequestConfig, Environment, RequestError, ResponseError } = types;
 
 const PAYPAL_CREDS = {
   client_id: "client_id",
@@ -107,10 +107,10 @@ async function testAccessTokenFlow(): Promise<void> {
     if (e instanceof Error && 'ffiError' in e) {
       const ffiErr = (e as any).ffiError;
       // Check the actual proto type using instanceof
-      if (ffiErr instanceof FfiRequestError) {
-        console.log(`Request build error ${ffiErr}`)
-      } else if (ffiErr instanceof FfiResponseError) {
-        console.log(`Response error ${ffiErr}`)
+      if (ffiErr instanceof RequestError) {
+        console.log(`Request error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${ffiErr.status} ${ffiErr.statusCode} `)
+      } else if (ffiErr instanceof ResponseError) {
+        console.log(`Response error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${ffiErr.status} ${ffiErr.statusCode} `)
       } else {
         console.log(`  FFI error: ${e.message}`);
       }
@@ -177,10 +177,10 @@ async function testAccessTokenFlow(): Promise<void> {
     if (e instanceof Error && 'ffiError' in e) {
       const ffiErr = (e as any).ffiError;
       // Check the actual proto type using instanceof
-      if (ffiErr instanceof FfiRequestError) {
-        console.log(`Request build error ${ffiErr}`)
-      } else if (ffiErr instanceof FfiResponseError) {
-        console.log(`Response error ${ffiErr}`)
+      if (ffiErr instanceof RequestError) {
+        console.log(`Request error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${ffiErr.status} ${ffiErr.statusCode} `)
+      } else if (ffiErr instanceof ResponseError) {
+        console.log(`Response error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${ffiErr.status} ${ffiErr.statusCode} `)
       } else {
         console.log(`  FFI error: ${e.message}`);
       }

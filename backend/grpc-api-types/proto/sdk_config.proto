@@ -157,7 +157,7 @@ message FfiConnectorHttpResponse {
 }
 
 // Error returned by req_transformer FFI calls
-message FfiRequestError {
+message RequestError {
   PaymentStatus status = 1;
   optional string error_message = 2;
   optional string error_code = 3;
@@ -165,7 +165,7 @@ message FfiRequestError {
 }
 
 // Error returned by res_transformer FFI calls
-message FfiResponseError {
+message ResponseError {
   PaymentStatus status = 1;
   optional string error_message = 2;
   optional string error_code = 3;
