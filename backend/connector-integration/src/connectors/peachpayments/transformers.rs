@@ -233,7 +233,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         currency_code: item.router_data.request.currency,
                         display_amount: None,
                     },
-                    rrn: item.router_data.request.merchant_order_reference_id.clone(),
+                    rrn: item.router_data.request.merchant_order_id.clone(),
                     pre_auth_inc_ext_capture_flow: item
                         .router_data
                         .request
@@ -281,7 +281,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             display_amount: None,
                         },
                         cof_data: requests::PeachpaymentsCofData::default(),
-                        rrn: item.router_data.request.merchant_order_reference_id.clone(),
+                        rrn: item.router_data.request.merchant_order_id.clone(),
                         pre_auth_inc_ext_capture_flow: None,
                         _phantom: std::marker::PhantomData,
                     },
