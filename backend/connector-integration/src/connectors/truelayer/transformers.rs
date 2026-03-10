@@ -25,6 +25,7 @@ use openssl::{
     ecdsa::EcdsaSig,
     hash::{hash, MessageDigest},
     nid::Nid,
+    pkey::Public,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -32,6 +33,8 @@ use std::collections::HashMap;
 use crate::{connectors::truelayer::TruelayerRouterData, types::ResponseRouterData, utils};
 const GRANT_TYPE: &str = "client_credentials";
 const SCOPE: &str = "payments";
+const SIG_BYTES_EXPECTED_LENGTH: usize = 132;
+const P521_COORDINATE_BYTE_LEN: usize = 66;
 
 pub struct TruelayerAuthType {
     pub(super) client_id: Secret<String>,
@@ -548,7 +551,7 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPSyncResponseData, Self>>
                 }
             }
             TruelayerPSyncResponseData::WebhookResponse(response) => {
-                let status = get_truelayer_payment_webhook_status(response._type);
+                let status = get_truelayer_payment_webhook_status(response._type)?;
                 if is_payment_failure(status)
                     && response.failure_reason == Some("canceled".to_string())
                 {
@@ -756,14 +759,7 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
                 })
             }
             TruelayerRsyncResponse::WebhookResponse(webhook_response) => {
-                let status = match webhook_response._type {
-                    TruelayerWebhookEventType::RefundExecuted => {
-                        common_enums::RefundStatus::Success
-                    }
-                    TruelayerWebhookEventType::RefundFailed => common_enums::RefundStatus::Failure,
-                    _ => common_enums::RefundStatus::Pending,
-                };
-
+                let status = get_truelayer_refund_webhook_status(webhook_response._type)?;
                 let response = if utils::is_refund_failure(status) {
                     Err(ErrorResponse {
                         code: webhook_response
@@ -945,15 +941,45 @@ pub fn get_webhook_event(
     }
 }
 
-pub fn get_truelayer_payment_webhook_status(event: TruelayerWebhookEventType) -> AttemptStatus {
+pub fn get_truelayer_payment_webhook_status(
+    event: TruelayerWebhookEventType,
+) -> Result<AttemptStatus, errors::ConnectorError> {
     match event {
-        TruelayerWebhookEventType::PaymentAuthorized => AttemptStatus::Authorized,
+        TruelayerWebhookEventType::PaymentAuthorized => Ok(AttemptStatus::Authorized),
         TruelayerWebhookEventType::PaymentCreditable
         | TruelayerWebhookEventType::PaymentSettlementStalled
-        | TruelayerWebhookEventType::PaymentExecuted => AttemptStatus::Pending,
-        TruelayerWebhookEventType::PaymentSettled => AttemptStatus::Charged,
-        TruelayerWebhookEventType::PaymentFailed => AttemptStatus::Failure,
-        _ => AttemptStatus::Unknown,
+        | TruelayerWebhookEventType::PaymentExecuted => Ok(AttemptStatus::Pending),
+        TruelayerWebhookEventType::PaymentSettled => Ok(AttemptStatus::Charged),
+        TruelayerWebhookEventType::PaymentFailed => Ok(AttemptStatus::Failure),
+        TruelayerWebhookEventType::PaymentDisputed
+        | TruelayerWebhookEventType::PaymentReversed
+        | TruelayerWebhookEventType::PaymentFundsReceived
+        | TruelayerWebhookEventType::Unknown
+        | TruelayerWebhookEventType::RefundExecuted
+        | TruelayerWebhookEventType::RefundFailed => {
+            Err(errors::ConnectorError::WebhookBodyDecodingFailed)?
+        }
+    }
+}
+
+pub fn get_truelayer_refund_webhook_status(
+    event: TruelayerWebhookEventType,
+) -> Result<common_enums::RefundStatus, errors::ConnectorError> {
+    match event {
+        TruelayerWebhookEventType::RefundExecuted => Ok(common_enums::RefundStatus::Success),
+        TruelayerWebhookEventType::RefundFailed => Ok(common_enums::RefundStatus::Failure),
+        TruelayerWebhookEventType::PaymentAuthorized
+        | TruelayerWebhookEventType::PaymentFailed
+        | TruelayerWebhookEventType::PaymentSettled
+        | TruelayerWebhookEventType::PaymentCreditable
+        | TruelayerWebhookEventType::PaymentDisputed
+        | TruelayerWebhookEventType::PaymentExecuted
+        | TruelayerWebhookEventType::PaymentFundsReceived
+        | TruelayerWebhookEventType::PaymentReversed
+        | TruelayerWebhookEventType::PaymentSettlementStalled
+        | TruelayerWebhookEventType::Unknown => {
+            Err(errors::ConnectorError::WebhookBodyDecodingFailed)?
+        }
     }
 }
 
@@ -993,6 +1019,75 @@ pub const ALLOWED_JKUS: &[&str] = &[
     "https://webhooks.truelayer.com/.well-known/jwks",
     "https://webhooks.truelayer-sandbox.com/.well-known/jwks",
 ];
+
+fn convert_p163_signature_to_der(
+    signature_b64: &str,
+) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+    let sig_bytes = URL_SAFE_NO_PAD
+        .decode(signature_b64)
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+    if sig_bytes.len() != SIG_BYTES_EXPECTED_LENGTH {
+        return Err(errors::ConnectorError::WebhookSourceVerificationFailed.into());
+    }
+
+    let r = BigNum::from_slice(
+        sig_bytes
+            .get(0..66)
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?,
+    )
+    .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+    let s = BigNum::from_slice(
+        sig_bytes
+            .get(66..)
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?,
+    )
+    .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+    let der_sig = EcdsaSig::from_private_components(r, s)
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?
+        .to_der()
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+    Ok(der_sig)
+}
+
+fn verify_ecdsa_signature_and_digest(
+    der_sig: Vec<u8>,
+    signing_input: &str,
+    ec_key: EcKey<Public>,
+) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
+    let digest = hash(MessageDigest::sha512(), signing_input.as_bytes())
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+    let ecdsa_sig = EcdsaSig::from_der(&der_sig)
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+    let valid = ecdsa_sig
+        .verify(&digest, &ec_key)
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+    Ok(valid)
+}
+
+fn build_uncompressed_ec1_point(
+    x: Vec<u8>,
+    y: Vec<u8>,
+) -> Result<EcKey<Public>, error_stack::Report<errors::ConnectorError>> {
+    let mut sec1 = vec![0x04u8];
+    sec1.extend(pad_to(x, P521_COORDINATE_BYTE_LEN)?);
+    sec1.extend(pad_to(y, P521_COORDINATE_BYTE_LEN)?);
+
+    let group = EcGroup::from_curve_name(Nid::SECP521R1)
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+    let mut ctx = BigNumContext::new()
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+    let point = EcPoint::from_bytes(&group, &sec1, &mut ctx)
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+    let ec_key = EcKey::from_public_key(&group, &point)
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+    ec_key
+        .check_key()
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+    Ok(ec_key)
+}
 
 impl TryFrom<ResponseRouterData<Jwks, Self>>
     for RouterDataV2<
@@ -1047,21 +1142,8 @@ impl TryFrom<ResponseRouterData<Jwks, Self>>
             )
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
-        let mut sec1 = vec![0x04u8];
-        sec1.extend(pad_to(x_raw, 66)?);
-        sec1.extend(pad_to(y_raw, 66)?);
+        let ec_key = build_uncompressed_ec1_point(x_raw, y_raw)?;
 
-        let group = EcGroup::from_curve_name(Nid::SECP521R1)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-        let mut ctx = BigNumContext::new()
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-        let point = EcPoint::from_bytes(&group, &sec1, &mut ctx)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-        let ec_key = EcKey::from_public_key(&group, &point)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-        ec_key
-            .check_key()
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
         let webhook_uri = item.router_data.request.webhook_uri.clone().ok_or(
             errors::ConnectorError::MissingRequiredField {
                 field_name: "webhook_uri",
@@ -1088,41 +1170,11 @@ impl TryFrom<ResponseRouterData<Jwks, Self>>
         // signing_input = base64url(header) + "." + base64url(payload)
         let signing_input = format!("{}.{}", header_b64, URL_SAFE_NO_PAD.encode(&payload));
 
-        // 7. Convert P1363 signature (r || s, 66 bytes each) to DER
-        let sig_bytes = URL_SAFE_NO_PAD
-            .decode(signature_b64)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-        if sig_bytes.len() != 132 {
-            return Err(errors::ConnectorError::WebhookSourceVerificationFailed.into());
-        }
+        // Convert P1363 signature (r || s, 66 bytes each) to DER
+        let der_sig = convert_p163_signature_to_der(signature_b64)?;
 
-        let r = BigNum::from_slice(
-            sig_bytes
-                .get(0..66)
-                .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?,
-        )
-        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-        let s = BigNum::from_slice(
-            sig_bytes
-                .get(66..)
-                .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?,
-        )
-        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-        let der_sig = EcdsaSig::from_private_components(r, s)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?
-            .to_der()
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-
-        // 8. SHA-512 digest + ECDSA verify
-        let digest = hash(MessageDigest::sha512(), signing_input.as_bytes())
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-
-        let ecdsa_sig = EcdsaSig::from_der(&der_sig)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-
-        let valid = ecdsa_sig
-            .verify(&digest, &ec_key)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        // SHA-512 digest + ECDSA verify
+        let valid = verify_ecdsa_signature_and_digest(der_sig, &signing_input, ec_key)?;
 
         if valid {
             Ok(Self {

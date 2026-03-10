@@ -2,6 +2,7 @@ pub mod transformers;
 
 use std::{self, fmt::Debug};
 
+use base64::Engine;
 use common_enums::{AttemptStatus, CurrencyUnit, RefundStatus};
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
@@ -21,13 +22,14 @@ use domain_types::{
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
-    router_response_types::Response,
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::{Response, VerifyWebhookSourceResponseData},
     types::Connectors,
     utils::base64_decode,
 };
@@ -48,10 +50,7 @@ use transformers::{
 };
 
 use super::macros;
-use crate::{
-    connectors::truelayer::transformers::TruelayerWebhookEventType, types::ResponseRouterData,
-    with_error_response_body,
-};
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 // Trait for types that can provide access tokens
 pub trait AccessTokenProvider {
@@ -850,10 +849,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-use base64::Engine;
-use domain_types::connector_types::VerifyWebhookSourceFlowData;
-use domain_types::router_request_types::VerifyWebhookSourceRequestData;
-use domain_types::router_response_types::VerifyWebhookSourceResponseData;
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         VerifyWebhookSource,
@@ -980,7 +975,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("TruelayerWebhookBody")
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
-        let status = truelayer::get_truelayer_payment_webhook_status(details._type);
+        let status = truelayer::get_truelayer_payment_webhook_status(details._type)?;
 
         let (error_code, error_message, error_reason) = if status == AttemptStatus::Failure {
             (
@@ -1029,11 +1024,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("TruelayerWebhookBody")
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
-        let status = match details._type {
-            TruelayerWebhookEventType::RefundExecuted => RefundStatus::Success,
-            TruelayerWebhookEventType::RefundFailed => RefundStatus::Failure,
-            _ => RefundStatus::Pending,
-        };
+        let status = truelayer::get_truelayer_refund_webhook_status(details._type)?;
 
         let (error_code, error_message) = if status == RefundStatus::Failure {
             (
