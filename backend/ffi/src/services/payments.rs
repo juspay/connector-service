@@ -393,7 +393,7 @@ res_transformer!(
     generate_response_fn: generate_payment_post_authenticate_response,
 );
 
-// / handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
+/// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
 // /
 // / The caller supplies the raw webhook body + headers received from the connector
 // / and gets back a fully-structured `EventServiceHandleResponse`.
