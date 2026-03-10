@@ -1,3 +1,5 @@
+#![allow(clippy::print_stderr, clippy::print_stdout, clippy::too_many_arguments)]
+
 use std::{fs, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -473,6 +475,7 @@ fn print_usage() {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::parse_args;
 

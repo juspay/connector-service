@@ -1,3 +1,5 @@
+#![allow(clippy::print_stderr)]
+
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
@@ -224,7 +226,9 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
 
         let should_insert = deduped
             .get(&key)
-            .map_or(true, |existing| candidate.run_at > existing.run_at);
+            // Keep latest result; if timestamps are equal (same millisecond),
+            // prefer the later entry from report order by replacing on equality.
+            .is_none_or(|existing| candidate.run_at >= existing.run_at);
 
         if should_insert {
             deduped.insert(key, candidate);
@@ -291,11 +295,7 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
         }
     }
     let total_cells = total_pass + total_fail;
-    let pass_rate = if total_cells > 0 {
-        (total_pass as f64 / total_cells as f64) * 100.0
-    } else {
-        0.0
-    };
+    let pass_rate = percent(total_pass, total_cells);
 
     // 4. Build markdown string.
     let mut md = String::with_capacity(4096);
@@ -338,11 +338,7 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
             .values()
             .filter(|result| result.as_str() == "PASS")
             .count();
-        let scenario_pass_rate = if tested_connectors > 0 {
-            (passed_connectors as f64 / tested_connectors as f64) * 100.0
-        } else {
-            0.0
-        };
+        let scenario_pass_rate = percent(passed_connectors, tested_connectors);
         md.push_str(&format!(
             "| {} | {} | {} | {} | {} | {} | {} | {} | {:.1}% |\n",
             row.scenario,
@@ -398,6 +394,17 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
     let out_path = md_path(json_path);
     fs::write(&out_path, &md)
         .map_err(|e| format!("failed to write markdown '{}': {e}", out_path.display()))
+}
+
+fn percent(numerator: usize, denominator: usize) -> f64 {
+    if denominator == 0 {
+        return 0.0;
+    }
+
+    let safe_num = u32::try_from(numerator).unwrap_or(u32::MAX);
+    let safe_den = u32::try_from(denominator).unwrap_or(u32::MAX);
+
+    (f64::from(safe_num) / f64::from(safe_den)) * 100.0
 }
 
 #[cfg(test)]

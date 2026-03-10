@@ -1,3 +1,5 @@
+#![allow(clippy::print_stderr, clippy::too_many_arguments)]
+
 use std::collections::BTreeMap;
 
 use serde::{de::DeserializeOwned, Serialize};
@@ -53,6 +55,8 @@ pub struct GrpcurlRequest {
     pub plaintext: bool,
 }
 
+type DependencyContext = (Vec<Value>, Vec<Value>);
+
 impl GrpcurlRequest {
     pub fn to_command_string(&self) -> String {
         let mut cmd = String::new();
@@ -76,6 +80,7 @@ impl GrpcurlRequest {
     }
 }
 
+#[allow(clippy::print_stdout)]
 pub fn run_test(
     suite: Option<&str>,
     scenario: Option<&str>,
@@ -125,10 +130,7 @@ pub fn add_context(
 
         if let Some(value) = selected {
             let value_to_set = if path.ends_with(".value") {
-                value
-                    .get("value")
-                    .cloned()
-                    .unwrap_or_else(|| value.clone())
+                value.get("value").cloned().unwrap_or_else(|| value.clone())
             } else {
                 value
             };
@@ -140,7 +142,8 @@ pub fn add_context(
 fn prepare_context_placeholders(suite: &str, current_grpc_req: &mut Value) {
     // Ensure metadata target exists for flows that need dependency-carried connector metadata.
     if matches!(suite, "capture" | "void" | "refund" | "get" | "refund_sync")
-        && lookup_json_path_with_case_fallback(current_grpc_req, "connector_feature_data.value").is_none()
+        && lookup_json_path_with_case_fallback(current_grpc_req, "connector_feature_data.value")
+            .is_none()
     {
         let _ = deep_set_json_path(
             current_grpc_req,
@@ -172,12 +175,10 @@ fn prune_unresolved_context_fields(current_grpc_req: &mut Value) {
         }
     }
 
-    let should_remove_connector_feature = lookup_json_path_with_case_fallback(
-        current_grpc_req,
-        "connector_feature_data",
-    )
-    .map(is_unresolved_connector_feature_data)
-    .unwrap_or(false);
+    let should_remove_connector_feature =
+        lookup_json_path_with_case_fallback(current_grpc_req, "connector_feature_data")
+            .map(is_unresolved_connector_feature_data)
+            .unwrap_or(false);
     if should_remove_connector_feature {
         let _ = remove_json_path(current_grpc_req, "connector_feature_data");
     }
@@ -298,7 +299,7 @@ pub fn apply_context_map(
                     // Try camelCase version of source path
                     let camel = source_path
                         .split('.')
-                        .map(|seg| snake_to_camel_case(seg))
+                        .map(snake_to_camel_case)
                         .collect::<Vec<_>>()
                         .join(".");
                     lookup_json_path_with_case_fallback(source_json, &camel)
@@ -331,11 +332,16 @@ fn deep_set_json_path(root: &mut Value, path: &str, value: Value) -> bool {
 
         // Navigate or create intermediate object
         if current.is_object() {
-            let map = current.as_object_mut().unwrap();
+            let Some(map) = current.as_object_mut() else {
+                return false;
+            };
             if !map.contains_key(*segment) {
                 map.insert(segment.to_string(), Value::Object(serde_json::Map::new()));
             }
-            current = map.get_mut(*segment).unwrap();
+            let Some(next) = map.get_mut(*segment) else {
+                return false;
+            };
+            current = next;
         } else {
             return false;
         }
@@ -447,8 +453,8 @@ fn lookup_json_path_with_case_fallback<'a>(value: &'a Value, path: &str) -> Opti
         } else {
             current
                 .get(segment)
-                .or_else(|| current.get(&snake_to_camel_case(segment)))
-                .or_else(|| current.get(&camel_to_snake_case(segment)))?
+                .or_else(|| current.get(snake_to_camel_case(segment)))
+                .or_else(|| current.get(camel_to_snake_case(segment)))?
         };
     }
 
@@ -534,8 +540,8 @@ fn remove_json_path(root: &mut Value, path: &str) -> bool {
         if is_last {
             if let Ok(index) = segment.parse::<usize>() {
                 if let Some(items) = current.as_array_mut() {
-                    if index < items.len() {
-                        items[index] = Value::Null;
+                    if let Some(target) = items.get_mut(index) {
+                        *target = Value::Null;
                         return true;
                     }
                 }
@@ -1137,7 +1143,7 @@ fn normalize_tonic_request_json(suite: &str, mut value: Value) -> Value {
                 if !customer_acceptance.contains_key("accepted_at") {
                     let accepted_at = std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_secs() as i64)
+                        .map(|d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
                         .unwrap_or(0);
                     customer_acceptance.insert("accepted_at".to_string(), Value::from(accepted_at));
                 }
@@ -1461,7 +1467,7 @@ fn execute_dependency_chain(
     passed: &mut usize,
     failed: &mut usize,
     results: &mut Vec<SuiteScenarioResult>,
-) -> Result<Option<(Vec<Value>, Vec<Value>)>, ScenarioError> {
+) -> Result<Option<DependencyContext>, ScenarioError> {
     let mut dependency_reqs = Vec::new();
     let mut dependency_res = Vec::new();
 
@@ -1520,6 +1526,7 @@ fn execute_dependency_chain(
     Ok(Some((dependency_reqs, dependency_res)))
 }
 
+#[allow(clippy::print_stdout)]
 fn execute_single_scenario_with_context(
     suite: &str,
     scenario: &str,
@@ -1617,6 +1624,7 @@ fn auth_headers(auth: &ConnectorAuth) -> Vec<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::indexing_slicing)]
 mod tests {
     use serde_json::{json, Value};
 
@@ -1839,8 +1847,14 @@ mod tests {
 
         add_context(&prev_reqs, &prev_res, &mut current);
 
-        assert_eq!(current["state"]["access_token"]["token"]["value"], json!("tok_123"));
-        assert_eq!(current["state"]["access_token"]["token_type"], json!("Bearer"));
+        assert_eq!(
+            current["state"]["access_token"]["token"]["value"],
+            json!("tok_123")
+        );
+        assert_eq!(
+            current["state"]["access_token"]["token_type"],
+            json!("Bearer")
+        );
         assert_eq!(
             current["state"]["access_token"]["expires_in_seconds"],
             json!(3600)
@@ -1915,8 +1929,14 @@ mod tests {
 
         prepare_context_placeholders("capture", &mut req);
 
-        assert_eq!(req["customer"]["connector_customer_id"], json!("auto_generate"));
-        assert_eq!(req["state"]["connector_customer_id"], json!("auto_generate"));
+        assert_eq!(
+            req["customer"]["connector_customer_id"],
+            json!("auto_generate")
+        );
+        assert_eq!(
+            req["state"]["connector_customer_id"],
+            json!("auto_generate")
+        );
         assert_eq!(
             req["state"]["access_token"]["token"]["value"],
             json!("auto_generate")
@@ -1982,7 +2002,10 @@ mod tests {
         prune_unresolved_context_fields(&mut req);
 
         assert_eq!(req["customer"]["connector_customer_id"], json!("cust_123"));
-        assert_eq!(req["state"]["access_token"]["token"]["value"], json!("tok_123"));
+        assert_eq!(
+            req["state"]["access_token"]["token"]["value"],
+            json!("tok_123")
+        );
         assert_eq!(
             req["connector_feature_data"]["value"],
             json!("{\"authorize_id\":\"auth_123\"}")
@@ -2064,7 +2087,11 @@ mod tests {
     #[test]
     fn deep_set_creates_intermediate_objects() {
         let mut root = json!({});
-        let ok = deep_set_json_path(&mut root, "state.access_token.token.value", json!("tok_abc"));
+        let ok = deep_set_json_path(
+            &mut root,
+            "state.access_token.token.value",
+            json!("tok_abc"),
+        );
         assert!(ok);
         assert_eq!(
             root["state"]["access_token"]["token"]["value"],
@@ -2096,7 +2123,11 @@ mod tests {
     #[test]
     fn deep_set_partial_existing_path() {
         let mut root = json!({"state": {"existing": true}});
-        let ok = deep_set_json_path(&mut root, "state.access_token.token.value", json!("tok_xyz"));
+        let ok = deep_set_json_path(
+            &mut root,
+            "state.access_token.token.value",
+            json!("tok_xyz"),
+        );
         assert!(ok);
         assert_eq!(
             root["state"]["access_token"]["token"]["value"],
@@ -2193,16 +2224,8 @@ mod tests {
         map2.insert("customer.id".to_string(), "res.customer_id".to_string());
 
         let collected = vec![
-            (
-                map1,
-                json!({}),
-                json!({"access_token": "tok_paypal"}),
-            ),
-            (
-                map2,
-                json!({}),
-                json!({"customer_id": "cust_stripe_123"}),
-            ),
+            (map1, json!({}), json!({"access_token": "tok_paypal"})),
+            (map2, json!({}), json!({"customer_id": "cust_stripe_123"})),
         ];
 
         let mut req = json!({"amount": {"minor_amount": 500}});
@@ -2238,11 +2261,7 @@ mod tests {
     #[test]
     fn apply_context_map_empty_map_is_noop() {
         let context_map: ContextMap = HashMap::new();
-        let collected = vec![(
-            context_map,
-            json!({"some": "req"}),
-            json!({"some": "res"}),
-        )];
+        let collected = vec![(context_map, json!({"some": "req"}), json!({"some": "res"}))];
 
         let mut req = json!({"field": "original"});
         apply_context_map(&collected, &mut req);

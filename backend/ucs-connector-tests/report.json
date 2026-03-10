@@ -1,7 +1,7 @@
 {
   "runs": [
     {
-      "run_at_epoch_ms": 1773145197152,
+      "run_at_epoch_ms": 1773149674306,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -14,7 +14,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197152,
+      "run_at_epoch_ms": 1773149674307,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -27,7 +27,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197153,
+      "run_at_epoch_ms": 1773149674309,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -40,7 +40,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197154,
+      "run_at_epoch_ms": 1773149674311,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_debit_card",
       "connector": "authorizedotnet",
@@ -53,7 +53,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197155,
+      "run_at_epoch_ms": 1773149674313,
       "suite": "authorize",
       "scenario": "no3ds_fail_payment",
       "connector": "authorizedotnet",
@@ -66,7 +66,7 @@
       "error": "assertion failed for field 'error': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197155,
+      "run_at_epoch_ms": 1773149674314,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -79,7 +79,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197156,
+      "run_at_epoch_ms": 1773149674315,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_debit_card",
       "connector": "authorizedotnet",
@@ -92,7 +92,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197157,
+      "run_at_epoch_ms": 1773149674316,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -105,7 +105,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197157,
+      "run_at_epoch_ms": 1773149674317,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -118,7 +118,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197158,
+      "run_at_epoch_ms": 1773149674319,
       "suite": "capture",
       "scenario": "capture_full_amount",
       "connector": "authorizedotnet",
@@ -131,7 +131,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197158,
+      "run_at_epoch_ms": 1773149674320,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -144,7 +144,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197159,
+      "run_at_epoch_ms": 1773149674323,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -157,7 +157,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197159,
+      "run_at_epoch_ms": 1773149674324,
       "suite": "capture",
       "scenario": "capture_partial_amount",
       "connector": "authorizedotnet",
@@ -170,7 +170,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197160,
+      "run_at_epoch_ms": 1773149674325,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -183,7 +183,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197161,
+      "run_at_epoch_ms": 1773149674326,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -196,7 +196,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197162,
+      "run_at_epoch_ms": 1773149674327,
       "suite": "void",
       "scenario": "void_authorized_payment",
       "connector": "authorizedotnet",
@@ -209,7 +209,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197162,
+      "run_at_epoch_ms": 1773149674328,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -222,7 +222,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197163,
+      "run_at_epoch_ms": 1773149674330,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -235,7 +235,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197164,
+      "run_at_epoch_ms": 1773149674330,
       "suite": "void",
       "scenario": "void_without_cancellation_reason",
       "connector": "authorizedotnet",
@@ -248,7 +248,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197164,
+      "run_at_epoch_ms": 1773149674331,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -261,7 +261,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197165,
+      "run_at_epoch_ms": 1773149674333,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -274,7 +274,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197166,
+      "run_at_epoch_ms": 1773149674333,
       "suite": "refund",
       "scenario": "refund_full_amount",
       "connector": "authorizedotnet",
@@ -287,7 +287,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197166,
+      "run_at_epoch_ms": 1773149674334,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -300,7 +300,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197168,
+      "run_at_epoch_ms": 1773149674336,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -313,7 +313,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197168,
+      "run_at_epoch_ms": 1773149674337,
       "suite": "refund",
       "scenario": "refund_partial_amount",
       "connector": "authorizedotnet",
@@ -326,7 +326,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197169,
+      "run_at_epoch_ms": 1773149674337,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -339,7 +339,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197170,
+      "run_at_epoch_ms": 1773149674339,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -352,7 +352,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197170,
+      "run_at_epoch_ms": 1773149674340,
       "suite": "refund",
       "scenario": "refund_with_reason",
       "connector": "authorizedotnet",
@@ -365,7 +365,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197171,
+      "run_at_epoch_ms": 1773149674340,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -378,7 +378,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197172,
+      "run_at_epoch_ms": 1773149674342,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -391,7 +391,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197173,
+      "run_at_epoch_ms": 1773149674342,
       "suite": "get",
       "scenario": "sync_payment",
       "connector": "authorizedotnet",
@@ -404,7 +404,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197173,
+      "run_at_epoch_ms": 1773149674343,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -417,7 +417,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197174,
+      "run_at_epoch_ms": 1773149674345,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -430,7 +430,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197175,
+      "run_at_epoch_ms": 1773149674345,
       "suite": "get",
       "scenario": "sync_payment_with_handle_response",
       "connector": "authorizedotnet",
@@ -443,7 +443,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197175,
+      "run_at_epoch_ms": 1773149674346,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -456,7 +456,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197177,
+      "run_at_epoch_ms": 1773149674348,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -469,7 +469,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197177,
+      "run_at_epoch_ms": 1773149674348,
       "suite": "refund",
       "scenario": "refund_full_amount",
       "connector": "authorizedotnet",
@@ -482,7 +482,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197178,
+      "run_at_epoch_ms": 1773149674349,
       "suite": "refund_sync",
       "scenario": "refund_sync",
       "connector": "authorizedotnet",
@@ -495,7 +495,7 @@
       "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_refund_id"
     },
     {
-      "run_at_epoch_ms": 1773145197179,
+      "run_at_epoch_ms": 1773149674350,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -508,7 +508,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197180,
+      "run_at_epoch_ms": 1773149674352,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -521,7 +521,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197181,
+      "run_at_epoch_ms": 1773149674352,
       "suite": "refund",
       "scenario": "refund_full_amount",
       "connector": "authorizedotnet",
@@ -534,7 +534,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197181,
+      "run_at_epoch_ms": 1773149674353,
       "suite": "refund_sync",
       "scenario": "refund_sync_with_reason",
       "connector": "authorizedotnet",
@@ -547,7 +547,7 @@
       "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_refund_id"
     },
     {
-      "run_at_epoch_ms": 1773145197182,
+      "run_at_epoch_ms": 1773149674354,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -560,7 +560,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197183,
+      "run_at_epoch_ms": 1773149674355,
       "suite": "setup_recurring",
       "scenario": "setup_recurring",
       "connector": "authorizedotnet",
@@ -573,7 +573,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197184,
+      "run_at_epoch_ms": 1773149674356,
       "suite": "setup_recurring",
       "scenario": "setup_recurring_with_webhook",
       "connector": "authorizedotnet",
@@ -586,7 +586,7 @@
       "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Address is required"
     },
     {
-      "run_at_epoch_ms": 1773145197185,
+      "run_at_epoch_ms": 1773149674357,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -599,7 +599,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197185,
+      "run_at_epoch_ms": 1773149674358,
       "suite": "setup_recurring",
       "scenario": "setup_recurring",
       "connector": "authorizedotnet",
@@ -612,7 +612,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197186,
+      "run_at_epoch_ms": 1773149674359,
       "suite": "recurring_charge",
       "scenario": "recurring_charge",
       "connector": "authorizedotnet",
@@ -622,10 +622,10 @@
       "is_dependency": false,
       "assertion_result": "FAIL",
       "response_status": null,
-      "error": "grpcurl execution failed: Error invoking method \"ucs.v2.RecurringPaymentService/Charge\": error getting request data: message type ucs.v2.RecurringPaymentServiceChargeRequest has no known field named connector_transaction_id"
+      "error": "grpcurl execution failed: Error invoking method \"types.RecurringPaymentService/Charge\": error getting request data: message type types.RecurringPaymentServiceChargeRequest has no known field named connector_transaction_id"
     },
     {
-      "run_at_epoch_ms": 1773145197187,
+      "run_at_epoch_ms": 1773149674360,
       "suite": "recurring_charge",
       "scenario": "recurring_charge_low_amount",
       "connector": "authorizedotnet",
@@ -635,7 +635,930 @@
       "is_dependency": false,
       "assertion_result": "FAIL",
       "response_status": null,
-      "error": "grpcurl execution failed: Error invoking method \"ucs.v2.RecurringPaymentService/Charge\": error getting request data: message type ucs.v2.RecurringPaymentServiceChargeRequest has no known field named connector_transaction_id"
+      "error": "grpcurl execution failed: Error invoking method \"types.RecurringPaymentService/Charge\": error getting request data: message type types.RecurringPaymentServiceChargeRequest has no known field named connector_transaction_id"
+    },
+    {
+      "run_at_epoch_ms": 1773149674361,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674362,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674364,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674365,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_debit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "debit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674367,
+      "suite": "authorize",
+      "scenario": "no3ds_fail_payment",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'error': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773149674368,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674370,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_debit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "debit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674371,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674372,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674373,
+      "suite": "capture",
+      "scenario": "capture_full_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674374,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674376,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674377,
+      "suite": "capture",
+      "scenario": "capture_partial_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674378,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674380,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674381,
+      "suite": "void",
+      "scenario": "void_authorized_payment",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674382,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674383,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674384,
+      "suite": "void",
+      "scenario": "void_without_cancellation_reason",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674385,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674387,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674388,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674389,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674391,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674392,
+      "suite": "refund",
+      "scenario": "refund_partial_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674393,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674395,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674396,
+      "suite": "refund",
+      "scenario": "refund_with_reason",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674397,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674399,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674400,
+      "suite": "get",
+      "scenario": "sync_payment",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674402,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674403,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674404,
+      "suite": "get",
+      "scenario": "sync_payment_with_handle_response",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674406,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674408,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674409,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674410,
+      "suite": "refund_sync",
+      "scenario": "refund_sync",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674412,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674414,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674415,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674417,
+      "suite": "refund_sync",
+      "scenario": "refund_sync_with_reason",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674418,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674420,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_debit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "debit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674422,
+      "suite": "authorize",
+      "scenario": "no3ds_fail_payment",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'status': expected one_of value but field is missing"
+    },
+    {
+      "run_at_epoch_ms": 1773149674424,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674426,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_debit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "debit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674428,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674429,
+      "suite": "capture",
+      "scenario": "capture_full_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674432,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674433,
+      "suite": "capture",
+      "scenario": "capture_partial_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674435,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674436,
+      "suite": "void",
+      "scenario": "void_authorized_payment",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674439,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674440,
+      "suite": "void",
+      "scenario": "void_without_cancellation_reason",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674442,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674444,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674446,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674448,
+      "suite": "refund",
+      "scenario": "refund_partial_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674450,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674451,
+      "suite": "refund",
+      "scenario": "refund_with_reason",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674454,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674455,
+      "suite": "get",
+      "scenario": "sync_payment",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674457,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674459,
+      "suite": "get",
+      "scenario": "sync_payment_with_handle_response",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674461,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674463,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674465,
+      "suite": "refund_sync",
+      "scenario": "refund_sync",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674467,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674469,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773149674470,
+      "suite": "refund_sync",
+      "scenario": "refund_sync_with_reason",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
     }
   ]
 }
