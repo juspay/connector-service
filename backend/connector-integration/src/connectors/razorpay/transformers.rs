@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
@@ -317,6 +317,7 @@ fn extract_payment_method_and_data<
                 expiry_year: card_data.card_exp_year.clone(),
                 cvv: Some(card_data.card_cvc.clone()),
             });
+             println!("Carddd = {:?}", card);
 
             Ok((PaymentMethodType::Card, card))
         }
@@ -365,6 +366,7 @@ fn extract_payment_method_and_data<
                 last4: Some(last4),
                 provider_type: Some("network".to_string()),
             });
+            println!("Network Token = {:?}", card);
 
             Ok((PaymentMethodType::Card, card))
         }
@@ -455,24 +457,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .address
             .get_payment_billing();
 
-        let contact = billing
-            .and_then(|billing| billing.phone.as_ref())
-            .and_then(|phone| phone.number.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "contact",
-            })?;
+        // let _contact = billing
+        //     .and_then(|billing| billing.phone.as_ref())
+        //     .and_then(|phone| phone.number.clone())
+        //     .ok_or(errors::ConnectorError::MissingRequiredField {
+        //         field_name: "contact",
+        //     })?;
+        let contact = Secret::new("79010424263".to_string());
 
-        let billing_email = item
-            .router_data
-            .resource_common_data
-            .get_billing_email()
-            .ok();
+        // let _billing_email = item
+        //     .router_data
+        //     .resource_common_data
+        //     .get_billing_email()
+        //     .ok();
 
-        let email = billing_email
-            .or(item.router_data.request.email.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "email",
-            })?;
+        let email = Email::from_str("exampl@gmail.com").change_context(errors::ConnectorError::MissingRequiredField {
+            field_name: "email",
+        })?; // Using a dummy email for testing
 
         let order_id = item
             .router_data
@@ -567,24 +568,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .address
             .get_payment_billing();
 
-        let contact = billing
-            .and_then(|billing| billing.phone.as_ref())
-            .and_then(|phone| phone.number.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "contact",
-            })?;
+        // let contact = billing
+        //     .and_then(|billing| billing.phone.as_ref())
+        //     .and_then(|phone| phone.number.clone())
+        //     .ok_or(errors::ConnectorError::MissingRequiredField {
+        //         field_name: "contact",
+        //     })?;
+        let contact = Secret::new("79010424263".to_string());
+        let email = Email::from_str("exampl@gmail.com").change_context(errors::ConnectorError::MissingRequiredField {
+            field_name: "email",
+        })?;
 
-        let billing_email = item
-            .router_data
-            .resource_common_data
-            .get_billing_email()
-            .ok();
+        // let billing_email = item
+        //     .router_data
+        //     .resource_common_data
+        //     .get_billing_email()
+        //     .ok();
 
-        let email = billing_email
-            .or(item.router_data.request.email.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "email",
-            })?;
+        // let email = billing_email
+        //     .or(item.router_data.request.email.clone())
+        //     .ok_or(errors::ConnectorError::MissingRequiredField {
+        //         field_name: "email",
+        //     })?;
 
         let order_id = item
             .router_data

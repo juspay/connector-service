@@ -368,6 +368,8 @@ where
                             )
                             .collect();
 
+                        println!("injectorrr call");
+
                         // Create injector request
                         let injector_request = injector::InjectorRequest::new(
                             request.url.clone(),
