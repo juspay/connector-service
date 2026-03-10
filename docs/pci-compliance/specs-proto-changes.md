@@ -413,18 +413,31 @@ vault_property = "$card_exp_month"
 
 ---
 
-## Migration Path
+## Configuration Examples
 
-### Phase 1: PCI-Enabled (Current State)
+Merchants can choose different combinations of PCI modes and vault providers based on their requirements. Below are the available options:
+
+### Option 1: PCI-Enabled Mode (Direct PSP Connection)
+
+Use this when you handle raw card data and have PCI DSS certification. No vault configuration required.
+
 ```toml
 # config/development.toml
-# No vault configuration
+# No vault configuration - UCS connects directly to PSPs
 [connectors.stripe]
 base_url = "https://api.stripe.com"
 # use_vault defaults to false
+
+[connectors.adyen]
+base_url = "https://api.adyen.com"
 ```
 
-### Phase 2: PCI-Disabled with Network Proxy (VGS)
+---
+
+### Option 2: PCI-Disabled with Network Proxy (VGS)
+
+Use VGS for zero-code transparent proxy. Point connector base_url to VGS proxy endpoint.
+
 ```toml
 # config/development.toml
 [vault]
@@ -436,9 +449,38 @@ environment = "sandbox"
 # Point to VGS proxy URL instead of Stripe directly
 base_url = "https://tntSANDBOX123.sandbox.verygoodproxy.com"
 use_vault = true
+
+[connectors.checkout]
+base_url = "https://tntSANDBOX123.sandbox.verygoodproxy.com"
+use_vault = true
 ```
 
-### Phase 3: PCI-Disabled with Application Proxy (Hyperswitch Vault)
+---
+
+### Option 3: PCI-Disabled with Network Proxy (Evervault)
+
+Use Evervault for client-side encryption with HTTP CONNECT relay.
+
+```toml
+# config/development.toml
+[vault]
+provider = "evervault"
+team_id = "team_123abc"
+app_id = "app_456def"
+api_key = "${EVERVAULT_API_KEY}"
+
+[connectors.stripe]
+# Base URL remains the PSP's direct URL
+base_url = "https://api.stripe.com"
+use_vault = true
+```
+
+---
+
+### Option 4: PCI-Disabled with Application Proxy (Hyperswitch Vault)
+
+Use Hyperswitch Vault when you want UCS to construct wrapped requests with `{{$variable}}` expressions.
+
 ```toml
 # config/development.toml
 [vault]
@@ -451,9 +493,56 @@ environment = "sandbox"
 [connectors.stripe]
 base_url = "https://api.stripe.com"
 use_vault = true
+
+[connectors.checkout]
+base_url = "https://api.checkout.com"
+use_vault = true
 ```
 
-### Phase 4: Mixed Mode (Gradual Migration)
+---
+
+### Option 5: PCI-Disabled with Application Proxy (TokenEx)
+
+Use TokenEx for header-driven routing with `{token}` markers.
+
+```toml
+# config/development.toml
+[vault]
+provider = "token_ex"
+api_key = "${TOKENEX_API_KEY}"
+tokenex_id = "your_tokenex_id"
+tgapi_url = "https://tgapi-sandbox.tokenex.com"
+default_token_scheme = "token_four"
+
+[connectors.stripe]
+base_url = "https://api.stripe.com"
+use_vault = true
+```
+
+---
+
+### Option 6: PCI-Disabled with Application Proxy (Basis Theory)
+
+Use Basis Theory for header-driven routing with `{{ token.property }}` expressions.
+
+```toml
+# config/development.toml
+[vault]
+provider = "basis_theory"
+api_key = "${BASISTHEORY_API_KEY}"
+proxy_url = "https://api.basistheory.com/proxy"
+
+[connectors.stripe]
+base_url = "https://api.stripe.com"
+use_vault = true
+```
+
+---
+
+### Option 7: Mixed Mode (Different Connectors, Different Modes)
+
+Some connectors can use vault while others connect directly. Useful for gradual adoption or specific connector requirements.
+
 ```toml
 # config/development.toml
 [vault]
@@ -461,15 +550,20 @@ provider = "vgs"
 tenant_id = "tntSANDBOX123"
 environment = "sandbox"
 
-# Stripe uses vault
+# Stripe uses VGS vault
 [connectors.stripe]
 base_url = "https://tntSANDBOX123.sandbox.verygoodproxy.com"
 use_vault = true
 
-# Adyen uses direct connection (legacy)
+# Adyen connects directly (PCI-Enabled mode for this connector)
 [connectors.adyen]
 base_url = "https://api.adyen.com"
 use_vault = false
+
+# Checkout also uses VGS vault
+[connectors.checkout]
+base_url = "https://tntSANDBOX123.sandbox.verygoodproxy.com"
+use_vault = true
 ```
 
 ---
