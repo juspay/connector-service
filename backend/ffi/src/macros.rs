@@ -169,7 +169,7 @@ macro_rules! res_transformer {
             // transform connector response type to common response type
             // Classify response based on status code: 2xx/3xx = success, 4xx/5xx = error
             let classified_response = match response.status_code {
-                200..=299 | 300..=399 => Ok(response),
+                200..=399 => Ok(response),
                 _ => Err(response),
             };
             let response = external_services::service::handle_connector_response(
