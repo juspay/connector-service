@@ -1576,16 +1576,16 @@ fn execute_single_scenario_with_context(
 
 fn grpc_method_for_suite(suite: &str) -> Result<&'static str, ScenarioError> {
     match suite {
-        "create_access_token" => Ok("ucs.v2.MerchantAuthenticationService/CreateAccessToken"),
-        "create_customer" => Ok("ucs.v2.CustomerService/Create"),
-        "authorize" => Ok("ucs.v2.PaymentService/Authorize"),
-        "capture" => Ok("ucs.v2.PaymentService/Capture"),
-        "refund" => Ok("ucs.v2.PaymentService/Refund"),
-        "void" => Ok("ucs.v2.PaymentService/Void"),
-        "get" => Ok("ucs.v2.PaymentService/Get"),
-        "refund_sync" => Ok("ucs.v2.RefundService/Get"),
-        "setup_recurring" => Ok("ucs.v2.PaymentService/SetupRecurring"),
-        "recurring_charge" => Ok("ucs.v2.RecurringPaymentService/Charge"),
+        "create_access_token" => Ok("types.MerchantAuthenticationService/CreateAccessToken"),
+        "create_customer" => Ok("types.CustomerService/Create"),
+        "authorize" => Ok("types.PaymentService/Authorize"),
+        "capture" => Ok("types.PaymentService/Capture"),
+        "refund" => Ok("types.PaymentService/Refund"),
+        "void" => Ok("types.PaymentService/Void"),
+        "get" => Ok("types.PaymentService/Get"),
+        "refund_sync" => Ok("types.RefundService/Get"),
+        "setup_recurring" => Ok("types.PaymentService/SetupRecurring"),
+        "recurring_charge" => Ok("types.RecurringPaymentService/Charge"),
         _ => Err(ScenarioError::UnsupportedSuite {
             suite: suite.to_string(),
         }),
@@ -1660,7 +1660,7 @@ mod tests {
         .expect("grpcurl command should build");
 
         assert!(command.contains("grpcurl -plaintext"));
-        assert!(command.contains("ucs.v2.PaymentService/Authorize"));
+        assert!(command.contains("types.PaymentService/Authorize"));
         assert!(command.contains("\"x-connector: stripe\""));
         assert!(command.contains("\"auth_type\": \"NO_THREE_DS\""));
     }
@@ -1680,7 +1680,7 @@ mod tests {
         .expect("grpcurl request should build");
 
         assert_eq!(request.endpoint, "localhost:50051");
-        assert_eq!(request.method, "ucs.v2.PaymentService/Authorize");
+        assert_eq!(request.method, "types.PaymentService/Authorize");
         assert!(request.payload.contains("\"auth_type\": \"NO_THREE_DS\""));
         assert!(!request.headers.is_empty());
     }

@@ -4,7 +4,9 @@ use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
     payments::{
-        composite_payment_service_server, dispute_service_server, payment_service_server,
+        composite_payment_service_server, customer_service_server, dispute_service_server,
+        merchant_authentication_service_server, payment_method_authentication_service_server,
+        payment_method_service_server, payment_service_server, recurring_payment_service_server,
         refund_service_server,
     },
 };
@@ -265,6 +267,27 @@ impl Service {
             .add_service(
                 composite_payment_service_server::CompositePaymentServiceServer::new(
                     self.composite_payments_service,
+                ),
+            )
+            .add_service(customer_service_server::CustomerServiceServer::new(
+                self.customer_service,
+            ))
+            .add_service(
+                merchant_authentication_service_server::MerchantAuthenticationServiceServer::new(
+                    self.merchant_authentication_service,
+                ),
+            )
+            .add_service(payment_method_service_server::PaymentMethodServiceServer::new(
+                self.payment_method_service,
+            ))
+            .add_service(
+                recurring_payment_service_server::RecurringPaymentServiceServer::new(
+                    self.recurring_payment_service,
+                ),
+            )
+            .add_service(
+                payment_method_authentication_service_server::PaymentMethodAuthenticationServiceServer::new(
+                    self.payment_method_authentication_service,
                 ),
             )
             .add_service(refund_service_server::RefundServiceServer::new(
