@@ -403,7 +403,7 @@ message PayoutMethodEligibilityRequest {
   // Identification
   optional string merchant_payout_id = 1;
   // Metadata
-  optional SecretString connector_meta_data = 2; // how to differentiate between matadata from connector and request metadata?
+  optional SecretString connector_meta_data = 2; // how to differentiate between metadata from connector and request metadata?
   // Connector Request Reference ID
   optional string connector_request_reference_id = 3;
   // Payout Method Data
