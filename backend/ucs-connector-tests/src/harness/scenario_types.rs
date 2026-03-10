@@ -33,17 +33,12 @@ pub struct SuiteSpec {
     pub dependency_scope: DependencyScope,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum DependencyScope {
+    #[default]
     Suite,
     Scenario,
-}
-
-impl Default for DependencyScope {
-    fn default() -> Self {
-        Self::Suite
-    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -1,7 +1,7 @@
 {
   "runs": [
     {
-      "run_at_epoch_ms": 1773145197152,
+      "run_at_epoch_ms": 1773148431977,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -9,12 +9,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": false,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197152,
+      "run_at_epoch_ms": 1773148431979,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -22,12 +22,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197153,
+      "run_at_epoch_ms": 1773148431981,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -40,7 +40,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197154,
+      "run_at_epoch_ms": 1773148431983,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_debit_card",
       "connector": "authorizedotnet",
@@ -53,7 +53,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197155,
+      "run_at_epoch_ms": 1773148431985,
       "suite": "authorize",
       "scenario": "no3ds_fail_payment",
       "connector": "authorizedotnet",
@@ -66,7 +66,7 @@
       "error": "assertion failed for field 'error': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197155,
+      "run_at_epoch_ms": 1773148431987,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -79,7 +79,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197156,
+      "run_at_epoch_ms": 1773148431989,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_debit_card",
       "connector": "authorizedotnet",
@@ -92,7 +92,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197157,
+      "run_at_epoch_ms": 1773148431989,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -100,12 +100,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197157,
+      "run_at_epoch_ms": 1773148431991,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -118,7 +118,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197158,
+      "run_at_epoch_ms": 1773148431992,
       "suite": "capture",
       "scenario": "capture_full_amount",
       "connector": "authorizedotnet",
@@ -131,7 +131,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197158,
+      "run_at_epoch_ms": 1773148431993,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -139,12 +139,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197159,
+      "run_at_epoch_ms": 1773148431995,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -157,7 +157,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197159,
+      "run_at_epoch_ms": 1773148431996,
       "suite": "capture",
       "scenario": "capture_partial_amount",
       "connector": "authorizedotnet",
@@ -170,7 +170,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197160,
+      "run_at_epoch_ms": 1773148431997,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -178,12 +178,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197161,
+      "run_at_epoch_ms": 1773148431998,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -196,7 +196,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197162,
+      "run_at_epoch_ms": 1773148431999,
       "suite": "void",
       "scenario": "void_authorized_payment",
       "connector": "authorizedotnet",
@@ -209,7 +209,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197162,
+      "run_at_epoch_ms": 1773148432000,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -217,12 +217,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197163,
+      "run_at_epoch_ms": 1773148432002,
       "suite": "authorize",
       "scenario": "no3ds_manual_capture_credit_card",
       "connector": "authorizedotnet",
@@ -235,7 +235,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197164,
+      "run_at_epoch_ms": 1773148432002,
       "suite": "void",
       "scenario": "void_without_cancellation_reason",
       "connector": "authorizedotnet",
@@ -248,7 +248,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197164,
+      "run_at_epoch_ms": 1773148432003,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -256,12 +256,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197165,
+      "run_at_epoch_ms": 1773148432005,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -274,7 +274,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197166,
+      "run_at_epoch_ms": 1773148432006,
       "suite": "refund",
       "scenario": "refund_full_amount",
       "connector": "authorizedotnet",
@@ -287,7 +287,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197166,
+      "run_at_epoch_ms": 1773148432007,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -295,12 +295,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197168,
+      "run_at_epoch_ms": 1773148432008,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -313,7 +313,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197168,
+      "run_at_epoch_ms": 1773148432009,
       "suite": "refund",
       "scenario": "refund_partial_amount",
       "connector": "authorizedotnet",
@@ -326,7 +326,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197169,
+      "run_at_epoch_ms": 1773148432010,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -334,12 +334,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197170,
+      "run_at_epoch_ms": 1773148432012,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -352,7 +352,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197170,
+      "run_at_epoch_ms": 1773148432012,
       "suite": "refund",
       "scenario": "refund_with_reason",
       "connector": "authorizedotnet",
@@ -365,7 +365,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197171,
+      "run_at_epoch_ms": 1773148432013,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -373,12 +373,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197172,
+      "run_at_epoch_ms": 1773148432015,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -391,7 +391,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197173,
+      "run_at_epoch_ms": 1773148432016,
       "suite": "get",
       "scenario": "sync_payment",
       "connector": "authorizedotnet",
@@ -404,7 +404,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197173,
+      "run_at_epoch_ms": 1773148432017,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -412,12 +412,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197174,
+      "run_at_epoch_ms": 1773148432018,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -430,7 +430,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197175,
+      "run_at_epoch_ms": 1773148432019,
       "suite": "get",
       "scenario": "sync_payment_with_handle_response",
       "connector": "authorizedotnet",
@@ -443,7 +443,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197175,
+      "run_at_epoch_ms": 1773148432020,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -451,12 +451,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197177,
+      "run_at_epoch_ms": 1773148432022,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -469,7 +469,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197177,
+      "run_at_epoch_ms": 1773148432023,
       "suite": "refund",
       "scenario": "refund_full_amount",
       "connector": "authorizedotnet",
@@ -482,7 +482,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197178,
+      "run_at_epoch_ms": 1773148432024,
       "suite": "refund_sync",
       "scenario": "refund_sync",
       "connector": "authorizedotnet",
@@ -495,7 +495,7 @@
       "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_refund_id"
     },
     {
-      "run_at_epoch_ms": 1773145197179,
+      "run_at_epoch_ms": 1773148432024,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -503,12 +503,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197180,
+      "run_at_epoch_ms": 1773148432026,
       "suite": "authorize",
       "scenario": "no3ds_auto_capture_credit_card",
       "connector": "authorizedotnet",
@@ -521,7 +521,7 @@
       "error": null
     },
     {
-      "run_at_epoch_ms": 1773145197181,
+      "run_at_epoch_ms": 1773148432027,
       "suite": "refund",
       "scenario": "refund_full_amount",
       "connector": "authorizedotnet",
@@ -534,7 +534,7 @@
       "error": "assertion failed for field 'connector_refund_id': expected field to exist"
     },
     {
-      "run_at_epoch_ms": 1773145197181,
+      "run_at_epoch_ms": 1773148432028,
       "suite": "refund_sync",
       "scenario": "refund_sync_with_reason",
       "connector": "authorizedotnet",
@@ -547,7 +547,7 @@
       "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_refund_id"
     },
     {
-      "run_at_epoch_ms": 1773145197182,
+      "run_at_epoch_ms": 1773148432029,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -555,12 +555,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197183,
+      "run_at_epoch_ms": 1773148432030,
       "suite": "setup_recurring",
       "scenario": "setup_recurring",
       "connector": "authorizedotnet",
@@ -568,12 +568,12 @@
       "pmt": "credit",
       "endpoint": "localhost:8000",
       "is_dependency": false,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_customer_id is missing"
     },
     {
-      "run_at_epoch_ms": 1773145197184,
+      "run_at_epoch_ms": 1773148432031,
       "suite": "setup_recurring",
       "scenario": "setup_recurring_with_webhook",
       "connector": "authorizedotnet",
@@ -586,7 +586,7 @@
       "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Address is required"
     },
     {
-      "run_at_epoch_ms": 1773145197185,
+      "run_at_epoch_ms": 1773148432032,
       "suite": "create_customer",
       "scenario": "create_customer",
       "connector": "authorizedotnet",
@@ -594,12 +594,12 @@
       "pmt": null,
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
     },
     {
-      "run_at_epoch_ms": 1773145197185,
+      "run_at_epoch_ms": 1773148432033,
       "suite": "setup_recurring",
       "scenario": "setup_recurring",
       "connector": "authorizedotnet",
@@ -607,12 +607,12 @@
       "pmt": "credit",
       "endpoint": "localhost:8000",
       "is_dependency": true,
-      "assertion_result": "PASS",
+      "assertion_result": "FAIL",
       "response_status": null,
-      "error": null
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_customer_id is missing"
     },
     {
-      "run_at_epoch_ms": 1773145197186,
+      "run_at_epoch_ms": 1773148432034,
       "suite": "recurring_charge",
       "scenario": "recurring_charge",
       "connector": "authorizedotnet",
@@ -622,10 +622,10 @@
       "is_dependency": false,
       "assertion_result": "FAIL",
       "response_status": null,
-      "error": "grpcurl execution failed: Error invoking method \"ucs.v2.RecurringPaymentService/Charge\": error getting request data: message type ucs.v2.RecurringPaymentServiceChargeRequest has no known field named connector_transaction_id"
+      "error": "grpcurl execution failed: Error invoking method \"types.RecurringPaymentService/Charge\": error getting request data: message type types.RecurringPaymentServiceChargeRequest has no known field named connector_transaction_id"
     },
     {
-      "run_at_epoch_ms": 1773145197187,
+      "run_at_epoch_ms": 1773148432035,
       "suite": "recurring_charge",
       "scenario": "recurring_charge_low_amount",
       "connector": "authorizedotnet",
@@ -635,7 +635,930 @@
       "is_dependency": false,
       "assertion_result": "FAIL",
       "response_status": null,
-      "error": "grpcurl execution failed: Error invoking method \"ucs.v2.RecurringPaymentService/Charge\": error getting request data: message type ucs.v2.RecurringPaymentServiceChargeRequest has no known field named connector_transaction_id"
+      "error": "grpcurl execution failed: Error invoking method \"types.RecurringPaymentService/Charge\": error getting request data: message type types.RecurringPaymentServiceChargeRequest has no known field named connector_transaction_id"
+    },
+    {
+      "run_at_epoch_ms": 1773148432036,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432037,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432039,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432040,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_debit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "debit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432042,
+      "suite": "authorize",
+      "scenario": "no3ds_fail_payment",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'error.connector_details.message': expected 'Failed to obtain authentication type' to contain 'decline'"
+    },
+    {
+      "run_at_epoch_ms": 1773148432043,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432045,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_debit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "debit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432046,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432047,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432048,
+      "suite": "capture",
+      "scenario": "capture_full_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432049,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432051,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432052,
+      "suite": "capture",
+      "scenario": "capture_partial_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432053,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432055,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432056,
+      "suite": "void",
+      "scenario": "void_authorized_payment",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432057,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432059,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432060,
+      "suite": "void",
+      "scenario": "void_without_cancellation_reason",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432061,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432063,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432064,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432065,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432067,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432068,
+      "suite": "refund",
+      "scenario": "refund_partial_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432069,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432071,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432072,
+      "suite": "refund",
+      "scenario": "refund_with_reason",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432074,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432076,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432077,
+      "suite": "get",
+      "scenario": "sync_payment",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432078,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432080,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432081,
+      "suite": "get",
+      "scenario": "sync_payment_with_handle_response",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432083,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432085,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432086,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432088,
+      "suite": "refund_sync",
+      "scenario": "refund_sync",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Internal\n  Message: Failed to obtain authentication type"
+    },
+    {
+      "run_at_epoch_ms": 1773148432089,
+      "suite": "create_access_token",
+      "scenario": "create_access_token",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Unimplemented\n  Message:"
+    },
+    {
+      "run_at_epoch_ms": 1773148432091,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "paypal",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'connector_transaction_id': expected field to exist"
+    },
+    {
+      "run_at_epoch_ms": 1773148432093,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: InvalidArgument\n  Message: Missing required field: connector_meta_data"
+    },
+    {
+      "run_at_epoch_ms": 1773148432094,
+      "suite": "refund_sync",
+      "scenario": "refund_sync_with_reason",
+      "connector": "paypal",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "grpcurl execution failed: ERROR:\n  Code: Internal\n  Message: Failed to obtain authentication type"
+    },
+    {
+      "run_at_epoch_ms": 1773148432096,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432098,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_debit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "debit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432100,
+      "suite": "authorize",
+      "scenario": "no3ds_fail_payment",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "FAIL",
+      "response_status": null,
+      "error": "assertion failed for field 'status': expected one_of value but field is missing"
+    },
+    {
+      "run_at_epoch_ms": 1773148432102,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432104,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_debit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "debit",
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432107,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432108,
+      "suite": "capture",
+      "scenario": "capture_full_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432110,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432112,
+      "suite": "capture",
+      "scenario": "capture_partial_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432114,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432116,
+      "suite": "void",
+      "scenario": "void_authorized_payment",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432118,
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432120,
+      "suite": "void",
+      "scenario": "void_without_cancellation_reason",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432122,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432124,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432126,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432128,
+      "suite": "refund",
+      "scenario": "refund_partial_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432130,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432132,
+      "suite": "refund",
+      "scenario": "refund_with_reason",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432134,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432136,
+      "suite": "get",
+      "scenario": "sync_payment",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432138,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432140,
+      "suite": "get",
+      "scenario": "sync_payment_with_handle_response",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432142,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432144,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432146,
+      "suite": "refund_sync",
+      "scenario": "refund_sync",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432148,
+      "suite": "authorize",
+      "scenario": "no3ds_auto_capture_credit_card",
+      "connector": "stripe",
+      "pm": "card",
+      "pmt": "credit",
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432150,
+      "suite": "refund",
+      "scenario": "refund_full_amount",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": true,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
+    },
+    {
+      "run_at_epoch_ms": 1773148432152,
+      "suite": "refund_sync",
+      "scenario": "refund_sync_with_reason",
+      "connector": "stripe",
+      "pm": null,
+      "pmt": null,
+      "endpoint": "localhost:8000",
+      "is_dependency": false,
+      "assertion_result": "PASS",
+      "response_status": null,
+      "error": null
     }
   ]
 }

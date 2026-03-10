@@ -331,6 +331,7 @@ fn set_json_path_value(root: &mut Value, path: &str, value: Value) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::indexing_slicing)]
 mod tests {
     use serde_json::json;
 
