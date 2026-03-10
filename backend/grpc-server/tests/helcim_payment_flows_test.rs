@@ -246,6 +246,7 @@ fn create_payment_authorize_request_with_amount(
             id: None,
             connector_customer_id: None,
             phone_number: None,
+            phone_country_code: None,
         }),
         address: Some(create_test_billing_address()),
         browser_info: Some(create_test_browser_info()),

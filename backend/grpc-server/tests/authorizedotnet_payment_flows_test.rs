@@ -334,6 +334,7 @@ fn create_payment_authorize_request(
         id: Some("TEST_CONNECTOR".to_string()),
         connector_customer_id: Some("TEST_CONNECTOR".to_string()),
         phone_number: None,
+        phone_country_code: None,
     });
     // Generate random names for billing to prevent duplicate transaction errors
     let billing_first_name = random_name();
@@ -589,6 +590,7 @@ fn create_register_request() -> PaymentServiceSetupRecurringRequest {
         id: None,
         connector_customer_id: Some("TEST_CONNECTOR_CUSTOMER_ID".to_string()),
         phone_number: None,
+        phone_country_code: None,
     });
 
     // Add customer acceptance as required by the server (matching your JSON: "acceptance_type": "OFFLINE")
