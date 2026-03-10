@@ -149,6 +149,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
             connector_customer_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
             phone_number: None,
+            phone_country_code: None,
         }),
         // browser_info: TODO - BrowserInfo type not available in grpc_api_types
         capture_method: Some(i32::from(capture_method)),
