@@ -1,4 +1,5 @@
 use common_enums::{AttemptStatus, RefundStatus};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,7 +74,15 @@ pub struct PeachpaymentsPaymentsData {
     pub transaction_id: String,
     pub response_code: Option<PeachpaymentsResponseCode>,
     pub transaction_result: PeachpaymentsPaymentStatus,
+    pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
     pub ecommerce_card_payment_only_transaction_data: Option<PeachpaymentsCardResponseData>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsMerchantInformationResponse {
+    pub merchant_id: Option<String>,
+    pub merchant_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -84,6 +93,7 @@ pub struct PeachpaymentsAuthorizeResponse {
     pub transaction_result: PeachpaymentsPaymentStatus,
     #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
+    pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
     #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
     pub card_data: Option<PeachpaymentsCardResponseData>,
 }
@@ -96,6 +106,7 @@ pub struct PeachpaymentsCaptureResponse {
     pub transaction_result: PeachpaymentsPaymentStatus,
     #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
+    pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
     #[serde(rename = "authorizationCode")]
     pub authorization_code: Option<String>,
 }
@@ -108,6 +119,7 @@ pub struct PeachpaymentsVoidResponse {
     pub transaction_result: PeachpaymentsPaymentStatus,
     #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
+    pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -127,9 +139,19 @@ pub struct PeachpaymentsRefundResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct PeachpaymentsRefundHistory {
+    #[serde(rename = "transactionId")]
+    pub transaction_id: String,
+    #[serde(rename = "referenceId")]
+    pub reference_id: String,
+    pub amount: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct PeachpaymentsRefundBalance {
     pub amount: String,
-    pub currency: String,
+    pub balance: String,
+    pub refund_history: Vec<PeachpaymentsRefundHistory>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -142,11 +164,20 @@ pub struct PeachpaymentsRefundSyncResponse {
     pub response_code: Option<PeachpaymentsResponseCode>,
 }
 
+pub type PeachpaymentsRsyncResponse = PeachpaymentsRefundSyncResponse;
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum PeachpaymentsResponseCode {
     Text(String),
-    Structured { value: String, description: String },
+    Structured {
+        value: String,
+        description: String,
+        #[serde(rename = "terminalOutcomeString")]
+        terminal_outcome_string: Option<String>,
+        #[serde(rename = "receiptString")]
+        receipt_string: Option<String>,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -157,6 +188,7 @@ pub struct PeachpaymentsSyncResponse {
     pub transaction_result: PeachpaymentsPaymentStatus,
     #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
+    pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
     #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
     pub card_data: Option<PeachpaymentsCardResponseData>,
 }
@@ -167,7 +199,9 @@ pub struct PeachpaymentsCardResponseData {
     pub stan: Option<String>,
     pub rrn: Option<String>,
     pub approval_code: Option<String>,
+    pub merchant_advice_code: Option<String>,
     pub description: Option<String>,
+    pub trace_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -204,16 +238,58 @@ pub struct PeachpaymentsWebhookTransaction {
     pub transaction_type: Option<PeachpaymentsTransactionType>,
     #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
+    pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
     #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
     pub card_data: Option<PeachpaymentsCardResponseData>,
     #[serde(rename = "refundBalanceData")]
     pub refund_balance_data: Option<PeachpaymentsRefundBalance>,
     #[serde(rename = "paymentMethod")]
-    pub payment_method: Option<String>,
+    pub payment_method: Secret<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PeachpaymentsTransactionType {
     pub value: i32,
     pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum FailureReason {
+    UnableToSend,
+    Timeout,
+    SecurityError,
+    IssuerUnavailable,
+    TooLateResponse,
+    Malfunction,
+    UnableToComplete,
+    OnlineDeclined,
+    SuspectedFraud,
+    CardDeclined,
+    Partial,
+    OfflineDeclined,
+    CustomerCancel,
+}
+
+impl std::str::FromStr for FailureReason {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value.to_lowercase().as_str() {
+            "unable_to_send" => Ok(Self::UnableToSend),
+            "timeout" => Ok(Self::Timeout),
+            "security_error" => Ok(Self::SecurityError),
+            "issuer_unavailable" => Ok(Self::IssuerUnavailable),
+            "too_late_response" => Ok(Self::TooLateResponse),
+            "malfunction" => Ok(Self::Malfunction),
+            "unable_to_complete" => Ok(Self::UnableToComplete),
+            "online_declined" => Ok(Self::OnlineDeclined),
+            "suspected_fraud" => Ok(Self::SuspectedFraud),
+            "card_declined" => Ok(Self::CardDeclined),
+            "partial" => Ok(Self::Partial),
+            "offline_declined" => Ok(Self::OfflineDeclined),
+            "customer_cancel" => Ok(Self::CustomerCancel),
+            _ => Ok(Self::Timeout),
+        }
+    }
 }

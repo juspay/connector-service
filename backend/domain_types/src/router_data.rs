@@ -825,7 +825,6 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
                 client_secret: paypal.client_secret.ok_or_else(err)?,
                 payer_id: paypal.payer_id,
             }),
-            }),
         }
     }
 }

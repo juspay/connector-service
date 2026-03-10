@@ -5,7 +5,11 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{
+    errors::CustomResult,
+    events,
+    ext_traits::{ByteSliceExt, StringExt},
+};
 use domain_types::{
     connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::*,
@@ -38,7 +42,6 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
 // =============================================================================
@@ -132,7 +135,17 @@ macros::macro_connector_implementation!(
             self.build_headers(req)
         }
         fn get_url(&self, req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/transactions/authorization", self.connector_base_url_payments(req)))
+            match req.request.capture_method {
+                Some(common_enums::CaptureMethod::Automatic) => Ok(format!(
+                    "{}/transactions/create-and-confirm",
+                    self.connector_base_url_payments(req)
+                )),
+                Some(common_enums::CaptureMethod::Manual) => Ok(format!(
+                    "{}/transactions/authorization",
+                    self.connector_base_url_payments(req)
+                )),
+                _ => Err(errors::ConnectorError::CaptureMethodNotSupported.into()),
+            }
         }
     }
 );
@@ -280,10 +293,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = transformers::PeachpaymentsAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
-            headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.expose()).into(),
-        )])
+        Ok(vec![
+            ("x-api-key".to_string(), auth.api_key.expose().into()),
+            ("x-tenant-id".to_string(), auth.tenant_id.expose().into()),
+            ("x-exi-auth-ver".to_string(), "v1".to_string().into()),
+        ])
     }
 
     fn build_error_response(
@@ -351,11 +365,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::DisputeDefend for Peachpayments<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Peachpayments<T>
 {
 }
 
@@ -659,4 +668,195 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification for Peachpayments<T>
 {
+}
+
+const REFUND: &str = "Refund";
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Peachpayments<T>
+{
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
+    ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
+        let body = String::from_utf8(request.body.clone())
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
+            .parse_struct("PeachpaymentsIncomingWebhook")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let description = webhook_body
+            .transaction
+            .as_ref()
+            .and_then(|txn| txn.transaction_type.as_ref())
+            .map(|txn| txn.description.clone());
+
+        match webhook_body.webhook_type.as_str() {
+            "transaction" => {
+                if let Some(transaction) = webhook_body.transaction {
+                    match transaction.transaction_result {
+                        responses::PeachpaymentsPaymentStatus::Successful => {
+                            Ok(EventType::PaymentIntentSuccess)
+                        }
+                        responses::PeachpaymentsPaymentStatus::ApprovedConfirmed => {
+                            if description == Some(REFUND.to_string()) {
+                                Ok(EventType::RefundSuccess)
+                            } else {
+                                Ok(EventType::PaymentIntentSuccess)
+                            }
+                        }
+                        responses::PeachpaymentsPaymentStatus::Authorized
+                        | responses::PeachpaymentsPaymentStatus::Approved => {
+                            Ok(EventType::PaymentIntentAuthorizationSuccess)
+                        }
+                        responses::PeachpaymentsPaymentStatus::Pending => {
+                            Ok(EventType::PaymentIntentProcessing)
+                        }
+                        responses::PeachpaymentsPaymentStatus::Declined
+                        | responses::PeachpaymentsPaymentStatus::Failed => {
+                            if description == Some(REFUND.to_string()) {
+                                Ok(EventType::RefundFailure)
+                            } else {
+                                Ok(EventType::PaymentIntentFailure)
+                            }
+                        }
+                        responses::PeachpaymentsPaymentStatus::Voided
+                        | responses::PeachpaymentsPaymentStatus::Reversed => {
+                            Ok(EventType::PaymentIntentCancelled)
+                        }
+                        responses::PeachpaymentsPaymentStatus::ThreedsRequired => {
+                            Ok(EventType::PaymentActionRequired)
+                        }
+                    }
+                } else {
+                    Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
+                }
+            }
+            _ => Err(errors::ConnectorError::WebhookEventTypeNotFound.into()),
+        }
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+        let body = String::from_utf8(request.body.clone())
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
+            .parse_struct("PeachpaymentsIncomingWebhook")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let transaction = webhook_body
+            .transaction
+            .ok_or(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+
+        let status: common_enums::AttemptStatus = transaction.transaction_result.clone().into();
+
+        let (error_code, error_message, error_reason) =
+            if status == common_enums::AttemptStatus::Failure {
+                (
+                    Some(transformers::get_error_code(
+                        transaction.response_code.as_ref(),
+                    )),
+                    Some(transformers::get_error_message(
+                        transaction.response_code.as_ref(),
+                    )),
+                    transaction.error_message.clone(),
+                )
+            } else {
+                (None, None, None)
+            };
+
+        Ok(WebhookDetailsResponse {
+            resource_id: Some(ResponseId::ConnectorTransactionId(
+                transaction.transaction_id.clone(),
+            )),
+            status,
+            connector_response_reference_id: Some(transaction.reference_id),
+            mandate_reference: None,
+            error_code,
+            error_message,
+            error_reason,
+            raw_connector_response: None,
+            status_code: 200,
+            response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            amount_captured: None,
+            minor_amount_captured: None,
+            network_txn_id: None,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+        let body = String::from_utf8(request.body.clone())
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
+            .parse_struct("PeachpaymentsIncomingWebhook")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let transaction = webhook_body
+            .transaction
+            .ok_or(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+
+        let refund_status: common_enums::RefundStatus = match transaction.transaction_result {
+            responses::PeachpaymentsPaymentStatus::ApprovedConfirmed
+            | responses::PeachpaymentsPaymentStatus::Successful => {
+                common_enums::RefundStatus::Success
+            }
+            _ => common_enums::RefundStatus::Failure,
+        };
+
+        let (error_code, error_message) = if refund_status == common_enums::RefundStatus::Failure {
+            (
+                Some(transformers::get_error_code(
+                    transaction.response_code.as_ref(),
+                )),
+                Some(transformers::get_error_message(
+                    transaction.response_code.as_ref(),
+                )),
+            )
+        } else {
+            (None, None)
+        };
+
+        Ok(RefundWebhookDetailsResponse {
+            connector_refund_id: Some(transaction.transaction_id),
+            status: refund_status,
+            connector_response_reference_id: Some(transaction.reference_id),
+            error_code,
+            error_message,
+            raw_connector_response: None,
+            status_code: 200,
+            response_headers: None,
+        })
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<errors::ConnectorError>,
+    > {
+        let body = String::from_utf8(request.body.clone())
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
+            .parse_struct("PeachpaymentsIncomingWebhook")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        Ok(Box::new(webhook_body))
+    }
 }

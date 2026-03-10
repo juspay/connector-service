@@ -5,7 +5,7 @@ use common_enums::{AttemptStatus, Currency};
 use common_utils::{
     errors::CustomResult,
     types::{MinorUnit, StringMinorUnitForConnector},
-    AmountConvertor,
+    AmountConvertor, SecretSerdeValue,
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
@@ -24,7 +24,7 @@ use hyperswitch_masking::{PeekInterface, Secret};
 use serde::Serialize;
 use std::fmt::Debug;
 
-fn get_error_code(response_code: Option<&responses::PeachpaymentsResponseCode>) -> String {
+pub fn get_error_code(response_code: Option<&responses::PeachpaymentsResponseCode>) -> String {
     match response_code {
         Some(responses::PeachpaymentsResponseCode::Text(code)) => code.clone(),
         Some(responses::PeachpaymentsResponseCode::Structured { value, .. }) => value.clone(),
@@ -32,7 +32,7 @@ fn get_error_code(response_code: Option<&responses::PeachpaymentsResponseCode>) 
     }
 }
 
-fn get_error_message(response_code: Option<&responses::PeachpaymentsResponseCode>) -> String {
+pub fn get_error_message(response_code: Option<&responses::PeachpaymentsResponseCode>) -> String {
     match response_code {
         Some(responses::PeachpaymentsResponseCode::Text(msg)) => msg.clone(),
         Some(responses::PeachpaymentsResponseCode::Structured { description, .. }) => {
@@ -92,6 +92,53 @@ pub struct PeachpaymentsAuthType {
     pub tenant_id: Secret<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct PeachpaymentsConnectorMetadataObject {
+    pub client_merchant_reference_id: Secret<String>,
+    pub merchant_payment_method_route_id: Secret<String>,
+}
+
+impl TryFrom<&Option<SecretSerdeValue>> for PeachpaymentsConnectorMetadataObject {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(meta_data: &Option<SecretSerdeValue>) -> Result<Self, Self::Error> {
+        let metadata = meta_data
+            .as_ref()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_meta_data",
+            })?;
+
+        let metadata_obj =
+            metadata
+                .peek()
+                .as_object()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_meta_data",
+                })?;
+
+        let client_merchant_reference_id = metadata_obj
+            .get("client_merchant_reference_id")
+            .and_then(|v: &serde_json::Value| v.as_str())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_meta_data.client_merchant_reference_id",
+            })?;
+
+        let merchant_payment_method_route_id = metadata_obj
+            .get("merchant_payment_method_route_id")
+            .and_then(|v: &serde_json::Value| v.as_str())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_meta_data.merchant_payment_method_route_id",
+            })?;
+
+        Ok(Self {
+            client_merchant_reference_id: Secret::new(client_merchant_reference_id.to_string()),
+            merchant_payment_method_route_id: Secret::new(
+                merchant_payment_method_route_id.to_string(),
+            ),
+        })
+    }
+}
+
 impl TryFrom<&ConnectorSpecificAuth> for PeachpaymentsAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -134,6 +181,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        if item.router_data.resource_common_data.is_three_ds() {
+            return Err(errors::ConnectorError::NotSupported {
+                message: "3DS payments are not supported by PeachPayments".to_string(),
+                connector: "peachpayments",
+            }
+            .into());
+        }
+
+        let connector_meta_data = PeachpaymentsConnectorMetadataObject::try_from(
+            &item.router_data.resource_common_data.connector_meta_data,
+        )?;
+
         let card_data = match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(card_info) => {
                 requests::PeachpaymentsCardData::Card(requests::PeachpaymentsCard {
@@ -151,9 +210,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 requests::PeachpaymentsCardData::NetworkToken(requests::PeachpaymentsNetworkToken {
                     payment_method: "ecommerce_card_payment_only".to_string(),
                     routing: requests::PeachpaymentsRoutingInfo {
-                        merchant_payment_method_route_id: Secret::new(
-                            "default_route_id".to_string(),
-                        ),
+                        merchant_payment_method_route_id: connector_meta_data
+                            .merchant_payment_method_route_id,
                     },
                     network_token: requests::PeachpaymentsNetworkTokenDetails {
                         token: Secret::new(token_data.token_number.peek().clone()),
@@ -161,15 +219,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         expiry_month: token_data.token_exp_month,
                         cryptogram: token_data.token_cryptogram,
                         eci: token_data.eci,
-                        scheme: token_data
-                            .card_network
-                            .map(|n| format!("{:?}", n).to_lowercase()),
+                        scheme: token_data.card_network.map(|n| format!("{:?}", n)),
                     },
-                    cof_data: requests::PeachpaymentsCofData {
-                        cof_type: "adhoc".to_string(),
-                        source: "cit".to_string(),
-                        mode: "initial".to_string(),
-                    },
+                    cof_data: requests::PeachpaymentsCofData::default(),
                     _phantom: std::marker::PhantomData,
                 })
             }
@@ -308,6 +360,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount: requests::PeachpaymentsAmount {
                 amount: amount.to_string(),
                 currency_code: item.router_data.request.currency,
+                display_amount: None,
             },
         })
     }
@@ -370,6 +423,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount: requests::PeachpaymentsAmount {
                 amount: amount_converted.to_string(),
                 currency_code: currency,
+                display_amount: None,
             },
         })
     }
@@ -438,8 +492,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 amount: requests::PeachpaymentsAmount {
                     amount: refund_amount.to_string(),
                     currency_code: item.router_data.request.currency,
+                    display_amount: None,
                 },
             },
+            pos_data: None,
         })
     }
 }

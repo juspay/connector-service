@@ -1,14 +1,149 @@
-use common_enums::Currency;
+use common_enums::{CardNetwork, Currency};
 use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 use std::fmt::Debug;
 
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum PaymentMethod {
+    #[serde(rename = "ecommerce_card_payment_only")]
+    EcommerceCardPaymentOnly,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum DccMode {
+    #[serde(rename = "noDcc")]
+    NoDcc,
+    #[serde(rename = "optInDcc")]
+    OptInDcc,
+    #[serde(rename = "optOutDcc")]
+    OptOutDcc,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum MerchantType {
+    Standard,
+    Sub,
+    Iso,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum CardNetworkLowercase {
+    Visa,
+    Mastercard,
+    #[serde(rename = "amex")]
+    Amex,
+    #[serde(rename = "discover")]
+    Discover,
+    #[serde(rename = "jcb")]
+    Jcb,
+    #[serde(rename = "diners")]
+    Diners,
+    #[serde(rename = "cartes_bancaires")]
+    CartesBancaires,
+    #[serde(rename = "unionpay")]
+    UnionPay,
+    #[serde(rename = "interac")]
+    Interac,
+    #[serde(rename = "rupay")]
+    RuPay,
+    #[serde(rename = "maestro")]
+    Maestro,
+    #[serde(rename = "star")]
+    Star,
+    #[serde(rename = "pulse")]
+    Pulse,
+    #[serde(rename = "accel")]
+    Accel,
+    #[serde(rename = "nyce")]
+    Nyce,
+}
+
+impl From<CardNetwork> for CardNetworkLowercase {
+    fn from(card_network: CardNetwork) -> Self {
+        match card_network {
+            CardNetwork::Visa => Self::Visa,
+            CardNetwork::Mastercard => Self::Mastercard,
+            CardNetwork::AmericanExpress => Self::Amex,
+            CardNetwork::Discover => Self::Discover,
+            CardNetwork::JCB => Self::Jcb,
+            CardNetwork::DinersClub => Self::Diners,
+            CardNetwork::CartesBancaires => Self::CartesBancaires,
+            CardNetwork::UnionPay => Self::UnionPay,
+            CardNetwork::Interac => Self::Interac,
+            CardNetwork::RuPay => Self::RuPay,
+            CardNetwork::Maestro => Self::Maestro,
+            _ => Self::Visa, // Default fallback
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreAuthIncExtCaptureFlow {
+    #[serde(rename = "dccMode")]
+    pub dcc_mode: DccMode,
+    #[serde(rename = "txnRefNr")]
+    pub txn_ref_nr: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PosData {
+    pub referral: String,
+}
+
+#[derive(Debug, Serialize, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum CofType {
+    Adhoc,
+    Recurring,
+    Instalment,
+}
+
+#[derive(Debug, Serialize, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum CofSource {
+    Cit,
+    Mit,
+}
+
+#[derive(Debug, Serialize, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum CofMode {
+    Initial,
+    Subsequent,
+}
+
+#[derive(Debug, Serialize, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CardOnFileData {
+    #[serde(rename = "type")]
+    pub _type: CofType,
+    pub source: CofSource,
+    pub mode: CofMode,
+}
+
+impl Default for CardOnFileData {
+    fn default() -> Self {
+        Self {
+            _type: CofType::Adhoc,
+            source: CofSource::Cit,
+            mode: CofMode::Initial,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsAmount {
     pub amount: String,
-    #[serde(rename = "currencyCode")]
     pub currency_code: Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_amount: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -27,6 +162,8 @@ pub struct PeachpaymentsRefundRequest {
     pub reference_id: String,
     #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
     pub card_data: PeachpaymentsRefundTransactionData,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pos_data: Option<PosData>,
 }
 
 #[derive(Debug, Serialize)]
@@ -104,12 +241,22 @@ pub struct PeachpaymentsNetworkTokenDetails {
     pub scheme: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct PeachpaymentsCofData {
     #[serde(rename = "type")]
-    pub cof_type: String,
-    pub source: String,
-    pub mode: String,
+    pub cof_type: CofType,
+    pub source: CofSource,
+    pub mode: CofMode,
+}
+
+impl Default for PeachpaymentsCofData {
+    fn default() -> Self {
+        Self {
+            cof_type: CofType::Adhoc,
+            source: CofSource::Cit,
+            mode: CofMode::Initial,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
