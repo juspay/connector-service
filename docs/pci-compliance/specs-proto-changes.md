@@ -1,14 +1,16 @@
-# Proto Changes for Vault Integration
+# Configuration Changes for Vault Integration
 
-> Summary of protobuf changes required to support PCI vault providers in UCS
+> Summary of configuration changes required to support PCI vault providers in UCS
 
 ---
 
 ## Overview
 
-This document outlines the protobuf message changes needed to support two vault proxy patterns:
+This document outlines the configuration changes needed to support two vault proxy patterns:
 - **Network Proxy**: VGS, Evervault (transparent routing—UCS routes to proxy URL only)
 - **Application Proxy**: Hyperswitch Vault, TokenEx, Basis Theory (UCS formats tokens for vault protocol)
+
+**Important**: UCS uses **file-based configuration** (TOML), not protobuf-based configuration. Connectors are configured via the `Connectors` struct in `backend/domain_types/src/types.rs`.
 
 ---
 
@@ -18,14 +20,19 @@ This document outlines the protobuf message changes needed to support two vault 
 
 Instead of configuring vault settings per-connector, we use a **global vault configuration**. This simplifies the setup since merchants typically use one vault provider for all their payment processing.
 
-```protobuf
-// Added to the main UCS configuration message
-message UcsConfig {
-  // ... existing fields ...
+```rust
+// In backend/domain_types/src/types.rs - Add to Config struct
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct Config {
+    pub common: Common,
+    pub server: Server,
+    pub connectors: Connectors,
+    // ... existing fields ...
 
-  // Global vault configuration (optional)
-  // When set, all connectors use this vault for detokenization
-  VaultConfig vault = 25;
+    /// Global vault configuration (optional)
+    /// When set, all connectors can use this vault for detokenization
+    #[serde(default)]
+    pub vault: Option<VaultConfig>,
 }
 ```
 
@@ -33,29 +40,29 @@ message UcsConfig {
 
 ## Vault Configuration Messages
 
-### VaultConfig (Oneof for Provider Selection)
+### VaultConfig (Enum for Provider Selection)
 
-```protobuf
-// Top-level vault configuration
-// Uses oneof to ensure only one provider is configured at a time
-message VaultConfig {
-  // The vault provider determines which proxy pattern to use
-  oneof provider {
-    // Network Proxy providers (zero code changes)
-    VgsConfig vgs = 1;
-    EvervaultConfig evervault = 2;
+```rust
+// In backend/domain_types/src/types.rs
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, config_patch_derive::Patch)]
+#[serde(tag = "provider", rename_all = "snake_case")]
+pub enum VaultConfig {
+    /// Network Proxy providers (zero code changes)
+    Vgs(VgsConfig),
+    Evervault(EvervaultConfig),
 
-    // Application Proxy providers (UCS formats tokens for vault protocol)
-    HyperswitchVaultConfig hyperswitch_vault = 3;
-    TokenExConfig tokenex = 5;
-  }
+    /// Application Proxy providers (UCS formats tokens for vault protocol)
+    HyperswitchVault(HyperswitchVaultConfig),
+    TokenEx(TokenExConfig),
+    BasisTheory(BasisTheoryConfig),
 }
 ```
 
-**Why oneof?**
+**Why enum with tag?**
 - Ensures only one vault provider is active at a time
 - Prevents misconfiguration (e.g., setting both VGS and TokenEx)
 - Makes the configuration explicit and self-validating
+- Serde's `tag = "provider"` creates clean TOML structure
 
 ---
 
@@ -63,31 +70,39 @@ message VaultConfig {
 
 ### VgsConfig
 
-```protobuf
-// VGS (Very Good Security) Network Proxy configuration
-// Used for: Outbound HTTP Proxy with transparent detokenization
-message VgsConfig {
-  // VGS tenant identifier
-  // Format: "tnt" + alphanumeric (e.g., "tntSANDBOX123")
-  // This identifies your VGS organization
-  string tenant_id = 1;
+```rust
+// In backend/domain_types/src/types.rs
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct VgsConfig {
+    /// VGS tenant identifier
+    /// Format: "tnt" + alphanumeric (e.g., "tntSANDBOX123")
+    pub tenant_id: String,
 
-  // VGS environment
-  // SANDBOX: Use for testing (tokens are non-production)
-  // PRODUCTION: Use for live transactions
-  VgsEnvironment environment = 2;
+    /// VGS environment
+    /// Sandbox: Use for testing (tokens are non-production)
+    /// Production: Use for live transactions
+    pub environment: VgsEnvironment,
 
-  // Optional: CA certificate for TLS verification
-  // If not provided, UCS uses the default VGS CA cert
-  // Required when using custom certificates
-  bytes ca_certificate = 3;
+    /// Optional: CA certificate for TLS verification
+    /// If not provided, UCS uses the default VGS CA cert
+    pub ca_certificate: Option<String>,
 }
 
-enum VgsEnvironment {
-  VGS_ENVIRONMENT_UNSPECIFIED = 0;
-  VGS_ENVIRONMENT_SANDBOX = 1;
-  VGS_ENVIRONMENT_PRODUCTION = 2;
+#[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum VgsEnvironment {
+    #[default]
+    Sandbox,
+    Production,
 }
+```
+
+**TOML Configuration Example:**
+```toml
+[vault]
+provider = "vgs"
+tenant_id = "tntSANDBOX123"
+environment = "sandbox"
 ```
 
 **Key Fields Explained:**
@@ -99,24 +114,31 @@ enum VgsEnvironment {
 
 ### EvervaultConfig
 
-```protobuf
-// Evervault Network Proxy configuration
-// Used for: HTTP CONNECT Relay with client-side encryption
-message EvervaultConfig {
-  // Evervault team identifier
-  // Format: "team_" + alphanumeric (e.g., "team_123abc")
-  string team_id = 1;
+```rust
+// In backend/domain_types/src/types.rs
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct EvervaultConfig {
+    /// Evervault team identifier
+    /// Format: "team_" + alphanumeric (e.g., "team_123abc")
+    pub team_id: String,
 
-  // Evervault app identifier
-  // Format: "app_" + alphanumeric (e.g., "app_456def")
-  // Each app has its own encryption keys
-  string app_id = 2;
+    /// Evervault app identifier
+    /// Format: "app_" + alphanumeric (e.g., "app_456def")
+    pub app_id: String,
 
-  // Evervault API key for Relay authentication
-  // Used to authenticate outbound proxy connections
-  // Keep this secret—treat like a password
-  string api_key = 3;
+    /// Evervault API key for Relay authentication
+    /// Keep this secret—treat like a password
+    pub api_key: Secret<String>,
 }
+```
+
+**TOML Configuration Example:**
+```toml
+[vault]
+provider = "evervault"
+team_id = "team_123abc"
+app_id = "app_456def"
+api_key = "${EVERVAULT_API_KEY}"  # Use environment variable
 ```
 
 **Key Fields Explained:**
@@ -134,43 +156,44 @@ message EvervaultConfig {
 
 ### HyperswitchVaultConfig
 
-```protobuf
-// Hyperswitch Vault Transform Proxy configuration
-// Used for: Wrapped request proxy with {{$variable}} expressions
-message HyperswitchVaultConfig {
-  // Hyperswitch API key
-  // Format: "dev_xxx" (sandbox) or "prod_xxx" (production)
-  // Get from Hyperswitch Dashboard → API Keys
-  string api_key = 1;
+```rust
+// In backend/domain_types/src/types.rs
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct HyperswitchVaultConfig {
+    /// Hyperswitch API key
+    /// Format: "dev_xxx" (sandbox) or "prod_xxx" (production)
+    pub api_key: Secret<String>,
 
-  // Hyperswitch Profile ID
-  // Identifies your merchant profile
-  // Found in Hyperswitch Dashboard → Settings
-  string profile_id = 2;
+    /// Hyperswitch Profile ID
+    /// Identifies your merchant profile
+    pub profile_id: String,
 
-  // Hyperswitch Proxy endpoint
-  // Default: "https://sandbox.hyperswitch.io/proxy" (sandbox)
-  // Production: "https://api.hyperswitch.io/proxy"
-  string proxy_url = 3;
+    /// Hyperswitch Proxy endpoint
+    /// Default: "https://sandbox.hyperswitch.io/proxy" (sandbox)
+    pub proxy_url: String,
 
-  // Environment
-  // SANDBOX: Use for testing
-  // PRODUCTION: Use for live transactions
-  HyperswitchEnvironment environment = 4;
+    /// Environment
+    pub environment: HyperswitchEnvironment,
 }
 
-enum HyperswitchEnvironment {
-  HYPERSWITCH_ENVIRONMENT_UNSPECIFIED = 0;
-  HYPERSWITCH_ENVIRONMENT_SANDBOX = 1;
-  HYPERSWITCH_ENVIRONMENT_PRODUCTION = 2;
+#[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum HyperswitchEnvironment {
+    #[default]
+    Sandbox,
+    Production,
 }
 ```
 
-**Key Fields Explained:**
-- `api_key`: Your Hyperswitch API key for authentication
-- `profile_id`: Your merchant profile identifier
-- `proxy_url`: The Hyperswitch proxy endpoint
-- `environment`: Sandbox for testing, Production for live
+**TOML Configuration Example:**
+```toml
+[vault]
+provider = "hyperswitch_vault"
+api_key = "${HYPERSWITCH_API_KEY}"
+profile_id = "pro_xxxxxxxxxx"
+proxy_url = "https://sandbox.hyperswitch.io/proxy"
+environment = "sandbox"
+```
 
 **How it works:**
 1. UCS constructs wrapped request with `destination_url`, `headers`, `request_body`
@@ -179,49 +202,49 @@ enum HyperswitchEnvironment {
 4. Forwarded to destination PSP with detokenized data
 5. Response flows back through the same path
 
+---
+
 ### TokenExConfig
 
-```protobuf
-// TokenEx Application Proxy configuration
-// Used for: Header-driven routing with {token} markers
-message TokenExConfig {
-  // TokenEx API key
-  // Used for TGAPI authentication
-  // Get from TokenEx Dashboard → API Keys
-  string api_key = 1;
+```rust
+// In backend/domain_types/src/types.rs
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct TokenExConfig {
+    /// TokenEx API key for TGAPI authentication
+    pub api_key: Secret<String>,
 
-  // TokenEx ID (organization identifier)
-  // Format: Alphanumeric string
-  // Identifies your TokenEx account
-  string tokenex_id = 2;
+    /// TokenEx ID (organization identifier)
+    pub tokenex_id: String,
 
-  // TGAPI endpoint URL
-  // Sandbox: "https://tgapi-sandbox.tokenex.com"
-  // Production: "https://tgapi.tokenex.com"
-  string tgapi_url = 3;
+    /// TGAPI endpoint URL
+    /// Sandbox: "https://tgapi-sandbox.tokenex.com"
+    /// Production: "https://tgapi.tokenex.com"
+    pub tgapi_url: String,
 
-  // Default token scheme
-  // Determines token format for new tokenizations
-  // TOKENfour: Format-preserving 16-digit (default)
-  // GUID: UUID format
-  // SIXTokenfour: 6-digit prefix preserved
-  string default_token_scheme = 4;
+    /// Default token scheme
+    #[serde(default)]
+    pub default_token_scheme: TokenExTokenScheme,
 }
 
-// Token scheme options for TokenEx
-enum TokenExTokenScheme {
-  TOKEN_EX_TOKEN_SCHEME_UNSPECIFIED = 0;
-  TOKEN_EX_TOKEN_SCHEME_TOKEN_FOUR = 1;  // 4242123456784242
-  TOKEN_EX_TOKEN_SCHEME_GUID = 2;         // UUID
-  TOKEN_EX_TOKEN_SCHEME_SIX_TOKEN_FOUR = 3; // 424212xxxxxx4242
+#[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TokenExTokenScheme {
+    #[default]
+    TokenFour,    // 4242123456784242
+    Guid,         // UUID
+    SixTokenFour, // 424212xxxxxx4242
 }
 ```
 
-**Key Fields Explained:**
-- `api_key`: Authenticates TGAPI requests
-- `tokenex_id`: Your TokenEx organization ID
-- `tgapi_url`: Transparent Gateway API endpoint (sandbox vs production)
-- `default_token_scheme`: Format for newly created tokens
+**TOML Configuration Example:**
+```toml
+[vault]
+provider = "token_ex"
+api_key = "${TOKENEX_API_KEY}"
+tokenex_id = "your_tokenex_id"
+tgapi_url = "https://tgapi-sandbox.tokenex.com"
+default_token_scheme = "token_four"
+```
 
 **How it works:**
 1. UCS sends request to `tgapi_url`
@@ -234,31 +257,32 @@ enum TokenExTokenScheme {
 
 ### BasisTheoryConfig
 
-```protobuf
-// Basis Theory Application Proxy configuration
-// Used for: Header-driven routing with {{ }} expressions
-message BasisTheoryConfig {
-  // Basis Theory API key
-  // Get from: Basis Theory Dashboard → Applications
-  // Permissions needed: token:read, proxy:read
-  string api_key = 1;
+```rust
+// In backend/domain_types/src/types.rs
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct BasisTheoryConfig {
+    /// Basis Theory API key
+    /// Permissions needed: token:read, proxy:read
+    pub api_key: Secret<String>,
 
-  // Proxy endpoint URL
-  // Default: "https://api.basistheory.com/proxy"
-  // Can be overridden for private deployments
-  string proxy_url = 2;
+    /// Proxy endpoint URL
+    /// Default: "https://api.basistheory.com/proxy"
+    pub proxy_url: String,
 
-  // Optional: Default proxy ID
-  // If set, this proxy configuration is used for all requests
-  // If not set, UCS creates ephemeral proxies
-  string proxy_id = 3;
+    /// Optional: Default proxy ID
+    /// If set, this proxy configuration is used for all requests
+    pub proxy_id: Option<String>,
 }
 ```
 
-**Key Fields Explained:**
-- `api_key`: Authenticates with Basis Theory API
-- `proxy_url`: The proxy endpoint (Basis Theory Cloud or private instance)
-- `proxy_id`: Pre-configured proxy (optional, enables reuse and caching)
+**TOML Configuration Example:**
+```toml
+[vault]
+provider = "basis_theory"
+api_key = "${BASISTHEORY_API_KEY}"
+proxy_url = "https://api.basistheory.com/proxy"
+# proxy_id = "optional_proxy_id"
+```
 
 **How it works:**
 1. UCS sends request to `proxy_url` with `BT-PROXY-URL` header
@@ -270,34 +294,54 @@ message BasisTheoryConfig {
 
 ## Connector-Level Configuration
 
-### ConnectorConfig Updates
+### ConnectorParams Updates
 
-```protobuf
-// Added to existing ConnectorConfig message
-message ConnectorConfig {
-  // ... existing fields (base_url, api_key, etc.) ...
+```rust
+// In backend/domain_types/src/types.rs - Update ConnectorParams struct
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct ConnectorParams {
+    /// Base URL for the connector
+    #[serde(default)]
+    pub base_url: String,
 
-  // Use vault for this connector
-  // If true, UCS routes requests through the configured vault proxy
-  // If false (or unset), UCS sends tokens directly to the PSP
-  // (Useful for gradual migration: enable per-connector as you test)
-  bool use_vault = 20;
+    #[serde(default)]
+    pub dispute_base_url: Option<String>,
 
-  // Optional: Override vault configuration for this connector
-  // If set, this overrides the global vault config
-  // If not set, uses global vault config (if present)
-  VaultConfig vault_override = 21;
+    #[serde(default)]
+    pub secondary_base_url: Option<String>,
 
-  // Application Proxy-specific configuration
-  // Used for vault providers requiring token transformation
-  ApplicationProxyConfig application_proxy_config = 22;
+    #[serde(default)]
+    pub third_base_url: Option<String>,
+
+    /// Use vault for this connector
+    /// If true, UCS routes requests through the configured vault proxy
+    /// If false (or unset), UCS sends tokens directly to the PSP
+    #[serde(default)]
+    pub use_vault: bool,
+
+    /// Optional: Override vault configuration for this connector
+    /// If set, this overrides the global vault config
+    #[serde(default)]
+    pub vault_override: Option<VaultConfig>,
 }
 ```
 
 **Why `use_vault`?**
 - Allows gradual migration: some connectors use vault, others don't
-- Backward compatible: existing configs work without changes
+- Backward compatible: existing configs work without changes (defaults to false)
 - Explicit opt-in: merchant must consciously enable vault usage
+
+**TOML Configuration Example:**
+```toml
+[connectors.stripe]
+base_url = "https://api.stripe.com"
+use_vault = true  # Enable vault for this connector
+
+# Or with VGS Network Proxy, point base_url to VGS proxy:
+[connectors.stripe]
+base_url = "https://tntSANDBOX123.sandbox.verygoodproxy.com"
+use_vault = true
+```
 
 ---
 
@@ -305,35 +349,49 @@ message ConnectorConfig {
 
 ### ApplicationProxyConfig
 
-```protobuf
-// Additional configuration for Application Proxy connectors
-// This is provider-agnostic and works with Hyperswitch Vault, TokenEx, etc.
-message ApplicationProxyConfig {
-  // Expression syntax (provider-specific)
-  // Hyperswitch Vault: "{{$variable}}"
-  // TokenEx: "{token}" (no expressions, just markers)
-  // Basis Theory: "{{token.property}}"
-  string expression_syntax = 1;
+For Application Proxy providers, additional configuration may be needed to map token fields:
 
-  // Token property mappings
-  // Maps standard fields to provider-specific token properties
-  repeated TokenPropertyMapping token_mappings = 2;
+```rust
+// In backend/domain_types/src/types.rs
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct ApplicationProxyConfig {
+    /// Token property mappings
+    /// Maps standard fields to provider-specific token properties
+    #[serde(default)]
+    pub token_mappings: Vec<TokenPropertyMapping>,
 
-  // Profile ID (for Hyperswitch Vault)
-  // The merchant profile to use
-  string profile_id = 3;
+    /// Profile ID (for Hyperswitch Vault)
+    pub profile_id: Option<String>,
 }
 
-// Maps a standard field to a vault-specific property
-message TokenPropertyMapping {
-  // Standard field name (used by UCS internally)
-  // e.g., "card_number", "exp_month", "exp_year", "cvv"
-  string standard_field = 1;
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, config_patch_derive::Patch)]
+pub struct TokenPropertyMapping {
+    /// Standard field name (used by UCS internally)
+    /// e.g., "card_number", "exp_month", "exp_year", "cvv"
+    pub standard_field: String,
 
-  // Provider-specific property path
-  // Hyperswitch Vault: "$card_number", "$card_exp_month"
-  string vault_property = 2;
+    /// Provider-specific property path
+    /// Hyperswitch Vault: "$card_number", "$card_exp_month"
+    pub vault_property: String,
 }
+```
+
+**TOML Configuration Example:**
+```toml
+[connectors.checkout]
+base_url = "https://api.checkout.com"
+use_vault = true
+
+[connectors.checkout.application_proxy_config]
+profile_id = "pro_xxxxxxxxxx"
+
+[[connectors.checkout.application_proxy_config.token_mappings]]
+standard_field = "card_number"
+vault_property = "$card_number"
+
+[[connectors.checkout.application_proxy_config.token_mappings]]
+standard_field = "exp_month"
+vault_property = "$card_exp_month"
 ```
 
 **Why separate Application Proxy config?**
@@ -358,54 +416,60 @@ message TokenPropertyMapping {
 ## Migration Path
 
 ### Phase 1: PCI-Enabled (Current State)
-```protobuf
-// No vault configuration
-UcsConfig {
-  // vault not set
-  connectors: [{
-    name: "stripe"
-    base_url: "https://api.stripe.com"
-    api_key: "sk_..."
-    // use_vault defaults to false
-  }]
-}
+```toml
+# config/development.toml
+# No vault configuration
+[connectors.stripe]
+base_url = "https://api.stripe.com"
+# use_vault defaults to false
 ```
 
-### Phase 2: PCI-Disabled with Vault
-```protobuf
-// Global vault enabled
-UcsConfig {
-  vault: {
-    vgs: {
-      tenant_id: "tntSANDBOX123"
-      environment: SANDBOX
-    }
-  }
-  connectors: [{
-    name: "stripe"
-    base_url: "https://tntSANDBOX123.sandbox.verygoodproxy.com"
-    api_key: "sk_..."
-    use_vault: true  // Enable vault usage
-  }]
-}
+### Phase 2: PCI-Disabled with Network Proxy (VGS)
+```toml
+# config/development.toml
+[vault]
+provider = "vgs"
+tenant_id = "tntSANDBOX123"
+environment = "sandbox"
+
+[connectors.stripe]
+# Point to VGS proxy URL instead of Stripe directly
+base_url = "https://tntSANDBOX123.sandbox.verygoodproxy.com"
+use_vault = true
 ```
 
-### Phase 3: Mixed Mode (Gradual Migration)
-```protobuf
-// Some connectors use vault, others don't
-UcsConfig {
-  vault: { /* global config */ }
-  connectors: [
-    {
-      name: "stripe"
-      use_vault: true   // Uses vault
-    },
-    {
-      name: "adyen"
-      use_vault: false  // Direct connection (legacy)
-    }
-  ]
-}
+### Phase 3: PCI-Disabled with Application Proxy (Hyperswitch Vault)
+```toml
+# config/development.toml
+[vault]
+provider = "hyperswitch_vault"
+api_key = "${HYPERSWITCH_API_KEY}"
+profile_id = "pro_xxxxxxxxxx"
+proxy_url = "https://sandbox.hyperswitch.io/proxy"
+environment = "sandbox"
+
+[connectors.stripe]
+base_url = "https://api.stripe.com"
+use_vault = true
+```
+
+### Phase 4: Mixed Mode (Gradual Migration)
+```toml
+# config/development.toml
+[vault]
+provider = "vgs"
+tenant_id = "tntSANDBOX123"
+environment = "sandbox"
+
+# Stripe uses vault
+[connectors.stripe]
+base_url = "https://tntSANDBOX123.sandbox.verygoodproxy.com"
+use_vault = true
+
+# Adyen uses direct connection (legacy)
+[connectors.adyen]
+base_url = "https://api.adyen.com"
+use_vault = false
 ```
 
 ---
@@ -414,52 +478,63 @@ UcsConfig {
 
 ### Sensitive Fields
 
-All API keys and tokens are marked as sensitive:
+All API keys and tokens use `Secret<String>` for masking:
 
-```protobuf
-message VgsConfig {
-  // Not sensitive - identifies the tenant
-  string tenant_id = 1;
+```rust
+// In backend/domain_types/src/types.rs
+use hyperswitch_masking::Secret;
 
-  // Not sensitive - environment selector
-  VgsEnvironment environment = 2;
+pub struct BasisTheoryConfig {
+    /// Sensitive - authentication credential
+    pub api_key: Secret<String>,
 
-  // Sensitive - certificate data
-  bytes ca_certificate = 3 [(google.api.field_behavior) = SENSITIVE];
-}
-
-message BasisTheoryConfig {
-  // Sensitive - authentication credential
-  string api_key = 1 [(google.api.field_behavior) = SENSITIVE];
-
-  // Not sensitive - public URL
-  string proxy_url = 2;
+    /// Not sensitive - public URL
+    pub proxy_url: String,
 }
 ```
 
-### Validation Rules
+### Environment Variables
 
-```protobuf
-// Example validation annotations
-message EvervaultConfig {
-  // Must match pattern: team_[a-zA-Z0-9]+
-  string team_id = 1 [(validate.rules).string.pattern = "^team_[a-zA-Z0-9]+$"];
+Sensitive values should use environment variable substitution:
 
-  // Must match pattern: app_[a-zA-Z0-9]+
-  string app_id = 2 [(validate.rules).string.pattern = "^app_[a-zA-Z0-9]+$"];
+```toml
+[vault]
+provider = "hyperswitch_vault"
+api_key = "${HYPERSWITCH_API_KEY}"  # Loaded from env var
+profile_id = "pro_xxxxxxxxxx"
+```
 
-  // Required, minimum 32 characters
-  string api_key = 3 [(validate.rules).string.min_len = 32, (validate.rules).string.sensitive = true];
-}
+The UCS configuration loader (in `ucs_env/src/configs.rs`) supports environment variables with the `CS__` prefix:
+
+```bash
+# Environment variable format (case-insensitive)
+export CS__VAULT__PROVIDER="vgs"
+export CS__VAULT__TENANT_ID="tntSANDBOX123"
+export CS__VAULT__ENVIRONMENT="sandbox"
+export CS__CONNECTORS__STRIPE__USE_VAULT="true"
 ```
 
 ---
 
-## Example Proto Definitions
+## Implementation Checklist
 
-See the full proto definitions in:
-- `/backend/grpc-api-types/proto/vault.proto` (new file)
-- `/backend/grpc-api-types/proto/payment.proto` (updates to existing)
+- [ ] Add `VaultConfig` enum to `backend/domain_types/src/types.rs`
+- [ ] Add vault provider configs (VgsConfig, EvervaultConfig, etc.)
+- [ ] Update `ConnectorParams` with `use_vault` and `vault_override`
+- [ ] Add `ApplicationProxyConfig` for token field mappings
+- [ ] Update `Config` struct to include `vault: Option<VaultConfig>`
+- [ ] Implement vault header extraction in request handling
+- [ ] Add validation for vault configuration
+
+---
+
+## Related Files
+
+- `backend/domain_types/src/types.rs` - Configuration structs
+- `backend/ucs_env/src/configs.rs` - Configuration loading
+- `backend/domain_types/src/connector_types.rs` - Connector-related types
+- `docs/pci-compliance/network-proxy.md` - Network Proxy documentation
+- `docs/pci-compliance/application-proxy.md` - Application Proxy documentation
 
 ---
 
