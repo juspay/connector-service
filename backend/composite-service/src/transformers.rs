@@ -1,8 +1,10 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, CompositeGetRequest, ConnectorState, CustomerServiceCreateRequest,
-    CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
-    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
+    CompositeAuthorizeRequest, CompositeGetRequest, CompositePreauthenticateRequest, ConnectorState,
+    CustomerServiceCreateRequest, CustomerServiceCreateResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentServiceAuthorizeRequest,
     PaymentServiceGetRequest,
 };
 
@@ -198,6 +200,29 @@ impl
             connector_order_reference_id: item.connector_order_reference_id.clone(),
             test_mode: item.test_mode,
             payment_experience: item.payment_experience,
+        }
+    }
+}
+
+impl ForeignFrom<&CompositePreauthenticateRequest>
+    for PaymentMethodAuthenticationServicePreAuthenticateRequest
+{
+    fn foreign_from(item: &CompositePreauthenticateRequest) -> Self {
+        Self {
+            merchant_order_id: item.merchant_order_id.clone(),
+            amount: item.amount,
+            payment_method: item.payment_method.clone(),
+            customer: item.customer.clone(),
+            address: item.address.clone(),
+            enrolled_for_3ds: item.enrolled_for_3ds,
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            return_url: item.return_url.clone(),
+            continue_redirection_url: item.continue_redirection_url.clone(),
+            browser_info: item.browser_info.clone(),
+            state: item.state.clone(),
+            capture_method: item.capture_method,
+            description: item.description.clone(),
         }
     }
 }

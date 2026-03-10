@@ -14,3 +14,11 @@ service CompositePaymentService {
   // Runs composite get flow.
   rpc CompositeGet(CompositeGetRequest) returns (CompositeGetResponse);
 }
+
+// Service for composite payment method authentication operations.
+service CompositePaymentMethodAuthenticationService {
+  // Initiate 3DS flow before payment authorization.
+  // For frictionless, performs Next step after Preauthenticate
+  // For Challenge, returns challenge-based verification
+  rpc CompositePreauthenticate(CompositePreauthenticateRequest) returns (CompositePreauthenticateResponse);
+}
