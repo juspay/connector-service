@@ -1934,11 +1934,11 @@ fn get_samsung_pay_payment_information<
 fn get_samsung_pay_fluid_data_value(
     samsung_pay_token_data: &payment_method_data::SamsungPayTokenData,
 ) -> Result<SamsungPayFluidDataValue, error_stack::Report<ConnectorError>> {
-    let samsung_pay_header = jwt::decode_header(samsung_pay_token_data.data.peek())
+    let samsung_pay_header = jwt::decode_header(samsung_pay_token_data.data.clone().peek())
         .change_context(ConnectorError::RequestEncodingFailed)
         .attach_printable("Failed to decode samsung pay header")?;
 
-    let samsung_pay_kid_optional = samsung_pay_header.claim("kid").and_then(|kid| kid.as_str());
+    let samsung_pay_kid_optional = samsung_pay_header.kid;
 
     let public_key_hash = samsung_pay_kid_optional
         .get_required_value("samsung pay public_key_hash")
