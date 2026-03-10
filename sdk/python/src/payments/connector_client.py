@@ -9,13 +9,27 @@ Handles the full round-trip for any payment flow:
 Per-service client classes (PaymentClient, MerchantAuthenticationClient, …) are
 generated in _generated_service_clients.py — no flow names are hardcoded in this file.
 To add a new flow: implement a req_transformer in services/payments.rs and run `make generate`.
+
+Error Handling:
+  FFI transformers return raw bytes that may represent either a success proto or an
+  error proto (RequestError for req_transformer, ResponseError for res_transformer).
+  On error, a RuntimeError is raised with an `ffi_error` attribute set to the decoded
+  proto (RequestError or ResponseError instance). Callers can inspect the type:
+
+      try:
+          response = await client.authorize(request)
+      except RuntimeError as e:
+          if hasattr(e, 'ffi_error'):
+              from payments.generated.sdk_config_pb2 import RequestError, ResponseError
+              if isinstance(e.ffi_error, RequestError):
+                  print(e.ffi_error.error_code, e.ffi_error.error_message)
+              elif isinstance(e.ffi_error, ResponseError):
+                  print(e.ffi_error.error_code, e.ffi_error.error_message)
 """
 
-import json
-from typing import Dict, Optional, Any
+from typing import Optional, Any
 
 from .generated import connector_service_ffi as _ffi
-from .generated import payment_pb2 as _pb2
 from ._generated_flows import SERVICE_FLOWS
 from .http_client import execute, HttpRequest, create_client
 from .generated.sdk_config_pb2 import (
@@ -25,10 +39,77 @@ from .generated.sdk_config_pb2 import (
     FfiConnectorHttpRequest,
     FfiConnectorHttpResponse,
     HttpConfig,
-    Environment,
     RequestError,
     ResponseError,
 )
+
+
+def _raise_ffi_error(error_proto: Any, stage: str) -> None:
+    """
+    Raise a RuntimeError with the decoded error proto attached as `ffi_error`.
+
+    Args:
+        error_proto: Decoded RequestError or ResponseError proto message.
+        stage: Human-readable stage label (e.g. "req_transformer", "res_transformer").
+    """
+    message = getattr(error_proto, "error_message", None) or f"FFI {stage} error"
+    e = RuntimeError(message)
+    e.ffi_error = error_proto  # type: ignore[attr-defined]
+    raise e
+
+
+def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
+    """
+    Parse FFI req_transformer bytes as either a success proto or a RequestError.
+
+    Tries the success type first; on failure parses as RequestError and raises
+    a RuntimeError with `ffi_error` set to the RequestError instance.
+
+    Args:
+        result_bytes: Raw bytes returned by the req_transformer FFI call.
+        success_cls: Protobuf message class for the expected success type.
+
+    Returns:
+        Decoded success proto on success.
+
+    Raises:
+        RuntimeError: With `.ffi_error` set to a RequestError if the bytes
+            represent a transformer error.
+    """
+    try:
+        return success_cls.FromString(result_bytes)
+    except Exception:
+        # Fall back: try parsing as RequestError
+        error = RequestError()
+        error.ParseFromString(result_bytes)
+        _raise_ffi_error(error, "req_transformer")
+
+
+def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
+    """
+    Parse FFI res_transformer bytes as either a success proto or a ResponseError.
+
+    Tries the success type first; on failure parses as ResponseError and raises
+    a RuntimeError with `ffi_error` set to the ResponseError instance.
+
+    Args:
+        result_bytes: Raw bytes returned by the res_transformer FFI call.
+        success_cls: Protobuf message class for the expected success type.
+
+    Returns:
+        Decoded success proto on success.
+
+    Raises:
+        RuntimeError: With `.ffi_error` set to a ResponseError if the bytes
+            represent a transformer error.
+    """
+    try:
+        return success_cls.FromString(result_bytes)
+    except Exception:
+        # Fall back: try parsing as ResponseError
+        error = ResponseError()
+        error.ParseFromString(result_bytes)
+        _raise_ffi_error(error, "res_transformer")
 
 
 class _ConnectorClientBase:
@@ -64,14 +145,14 @@ class _ConnectorClientBase:
         """
         environment = self.config.environment
 
-        # 2. HTTP: request override > client defaults
+        # HTTP: request override > client defaults
         http_config = (
             options.http
             if (options and options.HasField("http"))
             else (self.defaults.http if self.defaults.HasField("http") else None)
         )
 
-        # 3. Resolve FFI Context
+        # Resolve FFI Context
         ffi = FfiOptions(
             environment=environment,
             connector=self.config.connector,
@@ -84,17 +165,27 @@ class _ConnectorClientBase:
         self,
         flow: str,
         request: Any,
-        response_cls,
+        response_cls: Any,
         options: Optional[RequestConfig] = None,
-    ):
+    ) -> Any:
         """
         Execute a full payment flow round-trip asynchronously.
+
+        Errors from the FFI layer are raised as RuntimeError with an `ffi_error`
+        attribute holding the decoded RequestError or ResponseError proto.
 
         Args:
             flow: Flow name matching the FFI transformer prefix (e.g. "authorize").
             request: A domain protobuf request message.
             response_cls: Protobuf message class to deserialize the response into.
             options: Optional per-request configuration overrides.
+
+        Returns:
+            Decoded domain response proto.
+
+        Raises:
+            RuntimeError: With `.ffi_error` set to RequestError or ResponseError
+                on FFI transformer failures.
         """
         req_transformer = getattr(_ffi, f"{flow}_req_transformer")
         res_transformer = getattr(_ffi, f"{flow}_res_transformer")
@@ -106,20 +197,9 @@ class _ConnectorClientBase:
         options_bytes = ffi_options.SerializeToString()
 
         # 2. Build connector HTTP request via FFI
+        #    Parse result bytes as FfiConnectorHttpRequest; if that fails, parse as RequestError.
         result_bytes = req_transformer(request_bytes, options_bytes)
-        # Inline FFI error check
-        try:
-            req_err = RequestError()
-            req_err.ParseFromString(result_bytes)
-            if req_err.is_error:
-                e = RuntimeError(req_err.message)
-                e.ffi_error = req_err
-                raise e
-        except RuntimeError:
-            raise
-        except Exception:
-            pass  # Not an error proto — continue
-        connector_req = FfiConnectorHttpRequest.FromString(result_bytes)
+        connector_req = _check_req_error(result_bytes, FfiConnectorHttpRequest)
 
         connector_request = HttpRequest(
             url=connector_req.url,
@@ -142,28 +222,35 @@ class _ConnectorClientBase:
         res_bytes = res_proto.SerializeToString()
 
         # 5. Parse connector response via FFI
+        #    Parse result bytes as response_cls; if that fails, parse as ResponseError.
         result_bytes_res = res_transformer(res_bytes, request_bytes, options_bytes)
-        # Inline FFI error check
-        try:
-            res_err = ResponseError()
-            res_err.ParseFromString(result_bytes_res)
-            if res_err.is_error:
-                e = RuntimeError(res_err.message)
-                e.ffi_error = res_err
-                raise e
-        except RuntimeError:
-            raise
-        except Exception:
-            pass  # Not an error proto — continue
-
-        # 6. Deserialize final domain response
-        return response_cls.FromString(result_bytes_res)
+        return _check_res_error(result_bytes_res, response_cls)
 
     def _execute_direct(
-        self, flow: str, request, response_cls, options: Optional[RequestConfig] = None
-    ):
+        self,
+        flow: str,
+        request: Any,
+        response_cls: Any,
+        options: Optional[RequestConfig] = None,
+    ) -> Any:
         """
         Execute a single-step flow: FFI transformer called directly, no HTTP round-trip.
+
+        Used for inbound flows like webhook processing where the connector sends
+        data to us. Errors are raised as RuntimeError with `.ffi_error` set to
+        a ResponseError proto.
+
+        Args:
+            flow: Flow name matching the FFI transformer (e.g. "handle_event").
+            request: A domain protobuf request message.
+            response_cls: Protobuf message class to deserialize the response into.
+            options: Optional per-request configuration overrides.
+
+        Returns:
+            Decoded domain response proto.
+
+        Raises:
+            RuntimeError: With `.ffi_error` set to ResponseError on FFI failures.
         """
         transformer = getattr(_ffi, f"{flow}_transformer")
 
@@ -175,7 +262,8 @@ class _ConnectorClientBase:
 
         result_bytes = transformer(request_bytes, options_bytes)
 
-        return response_cls.FromString(result_bytes)
+        # Parse result bytes as response_cls; if that fails, parse as ResponseError.
+        return _check_res_error(result_bytes, response_cls)
 
     async def close(self):
         """Close the underlying asynchronous connection pool."""

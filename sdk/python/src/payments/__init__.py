@@ -56,6 +56,8 @@ from payments.generated.sdk_config_pb2 import (
     FfiOptions,
     FfiConnectorHttpRequest,
     FfiConnectorHttpResponse,
+    RequestError,
+    ResponseError,
 )
 
 # Import enums from payment_pb2
@@ -181,6 +183,9 @@ class ConfigsNamespace:
     FfiOptions = FfiOptions
     FfiConnectorHttpRequest = FfiConnectorHttpRequest
     FfiConnectorHttpResponse = FfiConnectorHttpResponse
+    # Error types returned via RuntimeError.ffi_error on FFI failures
+    RequestError = RequestError
+    ResponseError = ResponseError
 
 
 # Create namespace instances
