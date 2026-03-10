@@ -1,4 +1,3 @@
-use common_enums::{AttemptStatus, RefundStatus};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -23,42 +22,12 @@ pub enum PeachpaymentsPaymentStatus {
     Voided,
 }
 
-impl From<PeachpaymentsPaymentStatus> for AttemptStatus {
-    fn from(item: PeachpaymentsPaymentStatus) -> Self {
-        match item {
-            PeachpaymentsPaymentStatus::Pending
-            | PeachpaymentsPaymentStatus::Authorized
-            | PeachpaymentsPaymentStatus::Approved => Self::Authorized,
-            PeachpaymentsPaymentStatus::Declined | PeachpaymentsPaymentStatus::Failed => {
-                Self::Failure
-            }
-            PeachpaymentsPaymentStatus::Voided | PeachpaymentsPaymentStatus::Reversed => {
-                Self::Voided
-            }
-            PeachpaymentsPaymentStatus::ThreedsRequired => Self::AuthenticationPending,
-            PeachpaymentsPaymentStatus::ApprovedConfirmed
-            | PeachpaymentsPaymentStatus::Successful => Self::Charged,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum PeachpaymentsRefundStatus {
     ApprovedConfirmed,
     Declined,
     Failed,
-}
-
-impl From<PeachpaymentsRefundStatus> for RefundStatus {
-    fn from(item: PeachpaymentsRefundStatus) -> Self {
-        match item {
-            PeachpaymentsRefundStatus::ApprovedConfirmed => Self::Success,
-            PeachpaymentsRefundStatus::Failed | PeachpaymentsRefundStatus::Declined => {
-                Self::Failure
-            }
-        }
-    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -269,27 +238,4 @@ pub enum FailureReason {
     Partial,
     OfflineDeclined,
     CustomerCancel,
-}
-
-impl std::str::FromStr for FailureReason {
-    type Err = String;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value.to_lowercase().as_str() {
-            "unable_to_send" => Ok(Self::UnableToSend),
-            "timeout" => Ok(Self::Timeout),
-            "security_error" => Ok(Self::SecurityError),
-            "issuer_unavailable" => Ok(Self::IssuerUnavailable),
-            "too_late_response" => Ok(Self::TooLateResponse),
-            "malfunction" => Ok(Self::Malfunction),
-            "unable_to_complete" => Ok(Self::UnableToComplete),
-            "online_declined" => Ok(Self::OnlineDeclined),
-            "suspected_fraud" => Ok(Self::SuspectedFraud),
-            "card_declined" => Ok(Self::CardDeclined),
-            "partial" => Ok(Self::Partial),
-            "offline_declined" => Ok(Self::OfflineDeclined),
-            "customer_cancel" => Ok(Self::CustomerCancel),
-            _ => Ok(Self::Timeout),
-        }
-    }
 }

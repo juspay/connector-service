@@ -1,7 +1,7 @@
 use super::{requests, responses, PeachpaymentsRouterData};
 
 use crate::types::ResponseRouterData;
-use common_enums::{AttemptStatus, Currency};
+use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{
     errors::CustomResult,
     types::{MinorUnit, StringMinorUnitForConnector},
@@ -539,5 +539,76 @@ impl TryFrom<ResponseRouterData<responses::PeachpaymentsRefundSyncResponse, Self
             }),
             ..item.router_data
         })
+    }
+}
+
+impl From<responses::PeachpaymentsPaymentStatus> for AttemptStatus {
+    fn from(item: responses::PeachpaymentsPaymentStatus) -> Self {
+        match item {
+            responses::PeachpaymentsPaymentStatus::Pending
+            | responses::PeachpaymentsPaymentStatus::Authorized
+            | responses::PeachpaymentsPaymentStatus::Approved => Self::Authorized,
+            responses::PeachpaymentsPaymentStatus::Declined
+            | responses::PeachpaymentsPaymentStatus::Failed => Self::Failure,
+            responses::PeachpaymentsPaymentStatus::Voided
+            | responses::PeachpaymentsPaymentStatus::Reversed => Self::Voided,
+            responses::PeachpaymentsPaymentStatus::ThreedsRequired => Self::AuthenticationPending,
+            responses::PeachpaymentsPaymentStatus::ApprovedConfirmed
+            | responses::PeachpaymentsPaymentStatus::Successful => Self::Charged,
+        }
+    }
+}
+
+impl From<responses::PeachpaymentsRefundStatus> for RefundStatus {
+    fn from(item: responses::PeachpaymentsRefundStatus) -> Self {
+        match item {
+            responses::PeachpaymentsRefundStatus::ApprovedConfirmed => Self::Success,
+            responses::PeachpaymentsRefundStatus::Failed
+            | responses::PeachpaymentsRefundStatus::Declined => Self::Failure,
+        }
+    }
+}
+
+impl TryFrom<requests::CardNetworkLowercase> for common_enums::CardNetwork {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(card_network: requests::CardNetworkLowercase) -> Result<Self, Self::Error> {
+        match card_network {
+            requests::CardNetworkLowercase::Visa => Ok(Self::Visa),
+            requests::CardNetworkLowercase::Mastercard => Ok(Self::Mastercard),
+            requests::CardNetworkLowercase::Amex => Ok(Self::AmericanExpress),
+            requests::CardNetworkLowercase::Discover => Ok(Self::Discover),
+            requests::CardNetworkLowercase::Jcb => Ok(Self::JCB),
+            requests::CardNetworkLowercase::Diners => Ok(Self::DinersClub),
+            requests::CardNetworkLowercase::CartesBancaires => Ok(Self::CartesBancaires),
+            requests::CardNetworkLowercase::UnionPay => Ok(Self::UnionPay),
+            requests::CardNetworkLowercase::Interac => Ok(Self::Interac),
+            requests::CardNetworkLowercase::RuPay => Ok(Self::RuPay),
+            requests::CardNetworkLowercase::Maestro => Ok(Self::Maestro),
+            requests::CardNetworkLowercase::Star => Ok(Self::Star),
+            requests::CardNetworkLowercase::Pulse => Ok(Self::Pulse),
+            requests::CardNetworkLowercase::Accel => Ok(Self::Accel),
+            requests::CardNetworkLowercase::Nyce => Ok(Self::Nyce),
+        }
+    }
+}
+
+impl Default for requests::CardOnFileData {
+    fn default() -> Self {
+        Self {
+            _type: requests::CofType::Adhoc,
+            source: requests::CofSource::Cit,
+            mode: requests::CofMode::Initial,
+        }
+    }
+}
+
+impl Default for requests::PeachpaymentsCofData {
+    fn default() -> Self {
+        Self {
+            cof_type: requests::CofType::Adhoc,
+            source: requests::CofSource::Cit,
+            mode: requests::CofMode::Initial,
+        }
     }
 }

@@ -1,4 +1,4 @@
-use common_enums::{CardNetwork, Currency};
+use common_enums::Currency;
 use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::Serialize;
@@ -63,25 +63,6 @@ pub enum CardNetworkLowercase {
     Nyce,
 }
 
-impl From<CardNetwork> for CardNetworkLowercase {
-    fn from(card_network: CardNetwork) -> Self {
-        match card_network {
-            CardNetwork::Visa => Self::Visa,
-            CardNetwork::Mastercard => Self::Mastercard,
-            CardNetwork::AmericanExpress => Self::Amex,
-            CardNetwork::Discover => Self::Discover,
-            CardNetwork::JCB => Self::Jcb,
-            CardNetwork::DinersClub => Self::Diners,
-            CardNetwork::CartesBancaires => Self::CartesBancaires,
-            CardNetwork::UnionPay => Self::UnionPay,
-            CardNetwork::Interac => Self::Interac,
-            CardNetwork::RuPay => Self::RuPay,
-            CardNetwork::Maestro => Self::Maestro,
-            _ => Self::Visa, // Default fallback
-        }
-    }
-}
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreAuthIncExtCaptureFlow {
@@ -125,16 +106,6 @@ pub struct CardOnFileData {
     pub _type: CofType,
     pub source: CofSource,
     pub mode: CofMode,
-}
-
-impl Default for CardOnFileData {
-    fn default() -> Self {
-        Self {
-            _type: CofType::Adhoc,
-            source: CofSource::Cit,
-            mode: CofMode::Initial,
-        }
-    }
 }
 
 #[derive(Debug, Serialize)]
@@ -247,16 +218,6 @@ pub struct PeachpaymentsCofData {
     pub cof_type: CofType,
     pub source: CofSource,
     pub mode: CofMode,
-}
-
-impl Default for PeachpaymentsCofData {
-    fn default() -> Self {
-        Self {
-            cof_type: CofType::Adhoc,
-            source: CofSource::Cit,
-            mode: CofMode::Initial,
-        }
-    }
 }
 
 #[derive(Debug, Serialize)]
