@@ -3,7 +3,6 @@
 use common_utils::errors::ErrorSwitch;
 // use api_models::errors::types::{ Extra};
 use strum::Display;
-
 #[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum ApiClientError {
     #[error("Header map construction failed")]
@@ -1125,7 +1124,10 @@ impl From<ApplicationErrorResponse> for grpc_api_types::payments::FfiResponseErr
         grpc_api_types::payments::FfiResponseError {
             status: grpc_api_types::payments::PaymentStatus::Pending.into(),
             error_message: Some(api_error.error_message.clone()),
-            error_code: Some(format!("{}_{}", api_error.sub_code, api_error.error_identifier)),
+            error_code: Some(format!(
+                "{}_{}",
+                api_error.sub_code, api_error.error_identifier
+            )),
             status_code: Some(api_error.error_identifier as u32),
         }
     }
@@ -1137,7 +1139,40 @@ impl From<&ApplicationErrorResponse> for grpc_api_types::payments::FfiResponseEr
         grpc_api_types::payments::FfiResponseError {
             status: grpc_api_types::payments::PaymentStatus::Pending.into(),
             error_message: Some(api_error.error_message.clone()),
-            error_code: Some(format!("{}_{}", api_error.sub_code, api_error.error_identifier)),
+            error_code: Some(format!(
+                "{}_{}",
+                api_error.sub_code, api_error.error_identifier
+            )),
+            status_code: Some(api_error.error_identifier as u32),
+        }
+    }
+}
+
+impl From<ApplicationErrorResponse> for grpc_api_types::payments::FfiRequestError {
+    fn from(e: ApplicationErrorResponse) -> Self {
+        let api_error = e.get_api_error();
+        grpc_api_types::payments::FfiRequestError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(api_error.error_message.clone()),
+            error_code: Some(format!(
+                "{}_{}",
+                api_error.sub_code, api_error.error_identifier
+            )),
+            status_code: Some(api_error.error_identifier as u32),
+        }
+    }
+}
+
+impl From<&ApplicationErrorResponse> for grpc_api_types::payments::FfiRequestError {
+    fn from(e: &ApplicationErrorResponse) -> Self {
+        let api_error = e.get_api_error();
+        grpc_api_types::payments::FfiRequestError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(api_error.error_message.clone()),
+            error_code: Some(format!(
+                "{}_{}",
+                api_error.sub_code, api_error.error_identifier
+            )),
             status_code: Some(api_error.error_identifier as u32),
         }
     }

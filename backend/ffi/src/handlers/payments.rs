@@ -6,7 +6,9 @@ use domain_types::errors::ConnectorError;
 use domain_types::payment_method_data::DefaultPCIHolder;
 use grpc_api_types::payments::{Environment, FfiRequestError, FfiResponseError};
 
-fn get_config(environment: Option<Environment>) -> Result<std::sync::Arc<ucs_env::configs::Config>, ConnectorError> {
+fn get_config(
+    environment: Option<Environment>,
+) -> Result<std::sync::Arc<ucs_env::configs::Config>, ConnectorError> {
     let config_str = if environment == Some(Environment::Production) {
         EMBEDDED_PROD_CONFIG
     } else {

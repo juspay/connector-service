@@ -871,7 +871,6 @@ macros::macro_connector_implementation!(
                 .response
                 .parse_struct("Paypal AccessTokenErrorResponse")
                 .change_context(ConnectorError::ResponseDeserializationFailed)?;
-        println!("{:?} get_error_response_v2 ",response);
 
         with_error_response_body!(event_builder, response);
 

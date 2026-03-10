@@ -38,7 +38,7 @@ use crate::handlers::payments::{
     void_req_handler, void_res_handler,
 };
 
-// authenticate: PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
+//authenticate: PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
 define_ffi_flow!(authenticate, PaymentMethodAuthenticationServiceAuthenticateRequest, authenticate_req_handler, authenticate_res_handler);
 // authorize: PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
 define_ffi_flow!(authorize, PaymentServiceAuthorizeRequest, authorize_req_handler, authorize_res_handler);

@@ -108,10 +108,9 @@ async function testAccessTokenFlow(): Promise<void> {
       const ffiErr = (e as any).ffiError;
       // Check the actual proto type using instanceof
       if (ffiErr instanceof FfiRequestError) {
-        console.log(`  Request build error [${ffiErr.status}]: ${ffiErr.errorMessage}`);
+        console.log(`Request build error ${ffiErr}`)
       } else if (ffiErr instanceof FfiResponseError) {
-        console.log(ffiErr)
-        console.log(`  Response parse error [${ffiErr.status}]: ${ffiErr.errorMessage}`);
+        console.log(`Response error ${ffiErr}`)
       } else {
         console.log(`  FFI error: ${e.message}`);
       }
@@ -179,9 +178,9 @@ async function testAccessTokenFlow(): Promise<void> {
       const ffiErr = (e as any).ffiError;
       // Check the actual proto type using instanceof
       if (ffiErr instanceof FfiRequestError) {
-        console.log(`  Request build error [${ffiErr.status}]: ${ffiErr.errorMessage}`);
+        console.log(`Request build error ${ffiErr}`)
       } else if (ffiErr instanceof FfiResponseError) {
-        console.log(`  Response parse error [${ffiErr.status}]: ${ffiErr.errorMessage}`);
+        console.log(`Response error ${ffiErr}`)
       } else {
         console.log(`  FFI error: ${e.message}`);
       }

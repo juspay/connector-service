@@ -15,7 +15,9 @@ pub fn ffi_headers_to_masked_metadata(
     )
     .map_err(|e| match e {
         ucs_interface_common::error::InterfaceError::MissingRequiredHeader { key } => {
-            ConnectorError::MissingRequiredField { field_name: key.leak() }
+            ConnectorError::MissingRequiredField {
+                field_name: key.leak(),
+            }
         }
         ucs_interface_common::error::InterfaceError::InvalidHeaderValue { key, reason } => {
             ConnectorError::GenericError {
