@@ -8,7 +8,9 @@ use grpc_api_types::payments::{
     customer_service_server::CustomerService,
     merchant_authentication_service_server::MerchantAuthenticationService,
     payment_service_server::PaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
-    CompositeGetRequest, CompositeGetResponse, ConnectorState, CustomerServiceCreateResponse,
+    CompositeGetRequest, CompositeGetResponse, CompositeHandleEventRequest,
+    CompositeHandleEventResponse, ConnectorState, CustomerServiceCreateResponse,
+    EventServiceHandleRequest, EventServiceHandleResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
@@ -287,6 +289,44 @@ where
             get_response: Some(get_response),
         }))
     }
+
+    async fn handle_event(
+        &self,
+        payload: &CompositeHandleEventRequest,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<EventServiceHandleResponse, tonic::Status> {
+        let handle_event_payload = EventServiceHandleRequest::foreign_from(payload);
+
+        let mut handle_event_request = tonic::Request::new(handle_event_payload);
+        *handle_event_request.metadata_mut() = metadata.clone();
+        *handle_event_request.extensions_mut() = extensions.clone();
+
+        let handle_event_response = self
+            .payment_service
+            .handle_event(handle_event_request)
+            .await?
+            .into_inner();
+
+        Ok(handle_event_response)
+    }
+
+    async fn process_composite_handle_event(
+        &self,
+        request: tonic::Request<CompositeHandleEventRequest>,
+    ) -> Result<tonic::Response<CompositeHandleEventResponse>, tonic::Status> {
+        let (metadata, extensions, payload) = request.into_parts();
+
+        let handle_event_response = self.handle_event(&payload, &metadata, &extensions).await?;
+
+        Ok(tonic::Response::new(CompositeHandleEventResponse {
+            event_type: handle_event_response.event_type,
+            event_response: handle_event_response.event_response,
+            source_verified: handle_event_response.source_verified,
+            merchant_event_id: handle_event_response.merchant_event_id,
+            event_status: handle_event_response.event_status,
+        }))
+    }
 }
 
 #[tonic::async_trait]
@@ -308,5 +348,12 @@ where
         request: tonic::Request<CompositeGetRequest>,
     ) -> Result<tonic::Response<CompositeGetResponse>, tonic::Status> {
         self.process_composite_get(request).await
+    }
+
+    async fn composite_handle_event(
+        &self,
+        request: tonic::Request<CompositeHandleEventRequest>,
+    ) -> Result<tonic::Response<CompositeHandleEventResponse>, tonic::Status> {
+        self.process_composite_handle_event(request).await
     }
 }

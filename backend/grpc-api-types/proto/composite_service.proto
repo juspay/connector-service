@@ -13,4 +13,7 @@ service CompositePaymentService {
 
   // Runs composite get flow.
   rpc CompositeGet(CompositeGetRequest) returns (CompositeGetResponse);
+
+  // Runs composite handle event (webhook) flow.
+  rpc CompositeHandleEvent(CompositeHandleEventRequest) returns (CompositeHandleEventResponse);
 }
