@@ -903,11 +903,11 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 [[package]]
 name = "common_enums"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?branch=bump-serde#7ced8021890dc8497b5d2b7451e602da6f870b68"
 dependencies = [
  "diesel",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0)",
- "router_derive",
+ "masking",
+ "router_derive 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
  "serde",
  "serde_json",
  "smithy",
@@ -920,7 +920,7 @@ dependencies = [
 [[package]]
 name = "common_utils"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?branch=bump-serde#7ced8021890dc8497b5d2b7451e602da6f870b68"
 dependencies = [
  "ammonia",
  "base64 0.22.1",
@@ -933,7 +933,7 @@ dependencies = [
  "globset",
  "hex",
  "http 0.2.12",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0)",
+ "masking",
  "md5",
  "nanoid",
  "nutype",
@@ -968,7 +968,7 @@ dependencies = [
  "connector-integration",
  "domain_types",
  "grpc-api-types",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
+ "masking",
  "prost",
  "prost-types",
  "tonic 0.13.1",
@@ -1039,7 +1039,7 @@ dependencies = [
  "interfaces",
  "josekit",
  "jsonwebtoken",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
+ "masking",
  "paste",
  "qrcode",
  "quick-xml 0.31.0",
@@ -1382,10 +1382,10 @@ dependencies = [
  "error-stack 0.4.1",
  "grpc-api-types",
  "http 0.2.12",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
+ "masking",
  "rand 0.8.5",
  "regex",
- "router_derive",
+ "router_derive 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0)",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -1507,7 +1507,7 @@ dependencies = [
  "injector",
  "interfaces",
  "lazy_static",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
+ "masking",
  "mime",
  "once_cell",
  "prometheus",
@@ -2665,7 +2665,7 @@ dependencies = [
  "g2h",
  "heck",
  "http 1.3.1",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
+ "masking",
  "prost",
  "prost-build",
  "prost-types",
@@ -2699,7 +2699,7 @@ dependencies = [
  "interfaces",
  "lazy_static",
  "log_utils",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
+ "masking",
  "once_cell",
  "prometheus",
  "rand 0.8.5",
@@ -3271,13 +3271,13 @@ dependencies = [
 [[package]]
 name = "injector"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?branch=bump-serde#7ced8021890dc8497b5d2b7451e602da6f870b68"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
  "common_utils",
  "error-stack 0.4.1",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0)",
+ "masking",
  "nom",
  "reqwest 0.12.23",
  "router_env",
@@ -3309,7 +3309,7 @@ dependencies = [
  "domain_types",
  "error-stack 0.4.1",
  "http 0.2.12",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
+ "masking",
  "mime",
  "reqwest 0.11.27",
  "serde",
@@ -3663,21 +3663,6 @@ dependencies = [
  "string_cache",
  "string_cache_codegen",
  "tendril",
-]
-
-[[package]]
-name = "masking"
-version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
-dependencies = [
- "diesel",
- "erased-serde",
- "serde",
- "serde_json",
- "subtle",
- "time",
- "url",
- "zeroize",
 ]
 
 [[package]]
@@ -5080,9 +5065,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "router_derive"
+version = "0.1.0"
+source = "git+https://github.com/juspay/hyperswitch?branch=bump-serde#7ced8021890dc8497b5d2b7451e602da6f870b68"
+dependencies = [
+ "indexmap 2.11.1",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "strum",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "router_env"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?branch=bump-serde#7ced8021890dc8497b5d2b7451e602da6f870b68"
 dependencies = [
  "actix-web",
  "cargo_metadata 0.18.1",
@@ -5677,7 +5675,7 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 [[package]]
 name = "smithy"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?branch=bump-serde#7ced8021890dc8497b5d2b7451e602da6f870b68"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5688,7 +5686,7 @@ dependencies = [
 [[package]]
 name = "smithy-core"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?branch=bump-serde#7ced8021890dc8497b5d2b7451e602da6f870b68"
 dependencies = [
  "proc-macro2",
  "serde",
@@ -6491,7 +6489,7 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "error-stack 0.4.1",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
+ "masking",
  "prost",
  "regex",
  "serde",
@@ -6526,7 +6524,7 @@ dependencies = [
  "futures",
  "hex",
  "http 1.3.1",
- "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=bump-serde)",
+ "masking",
  "md5",
  "nanoid",
  "once_cell",
