@@ -492,6 +492,12 @@ pub enum ConnectorSpecificAuth {
     Revolv3 {
         api_key: Secret<String>,
     },
+    Finix {
+        finix_user_name: Secret<String>,
+        finix_password: Secret<String>,
+        merchant_identity_id: Secret<String>,
+        merchant_id: Secret<String>,
+    },
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecificAuth {
@@ -811,6 +817,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
             AuthType::Authorizedotnet(authorizedotnet) => Ok(Self::Authorizedotnet {
                 name: authorizedotnet.name.ok_or_else(err)?,
                 transaction_key: authorizedotnet.transaction_key.ok_or_else(err)?,
+            }),
+            AuthType::Paypal(paypal) => Ok(Self::Paypal {
+                client_id: paypal.client_id.ok_or_else(err)?,
+                client_secret: paypal.client_secret.ok_or_else(err)?,
+                payer_id: paypal.payer_id,
             }),
         }
     }
@@ -1599,6 +1610,20 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
             ConnectorEnum::Revolv3 => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Revolv3 {
                     api_key: api_key.clone(),
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Finix => match auth {
+                ConnectorAuthType::MultiAuthKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                    key2,
+                } => Ok(Self::Finix {
+                    finix_user_name: api_key.clone(),
+                    finix_password: api_secret.clone(),
+                    merchant_identity_id: key1.clone(),
+                    merchant_id: key2.clone(),
                 }),
                 _ => Err(err().into()),
             },

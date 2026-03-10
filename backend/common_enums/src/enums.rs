@@ -2142,6 +2142,12 @@ pub enum Tokenization {
     TokenizeAtPsp,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum TaxStatus {
+    Taxable,
+    Exempt,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, strum::Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]

@@ -441,7 +441,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<UpdateMetadataIntegrityObject
     for PaymentsUpdateMetadataData<T>
 {
     fn get_response_integrity_object(&self) -> Option<UpdateMetadataIntegrityObject> {
-        None // Incremental authorization responses don't have integrity objects
+        None // Update Metadata responses don't have integrity objects
     }
 
     fn get_request_integrity_object(&self) -> UpdateMetadataIntegrityObject {

@@ -1,9 +1,9 @@
 use common_utils::request::Method;
-use grpc_api_types::payments::SdkDefault;
+use grpc_api_types::payments::{CaCert, HttpConfig, HttpDefault};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-// Native options for decoupling
+// Native options for decoupling the SDK from the Protobuf-generated transport types.
 #[derive(Clone, Debug, Default)]
 pub struct ProxyConfig {
     pub http_url: Option<String>,
@@ -18,7 +18,30 @@ pub struct HttpOptions {
     pub response_timeout_ms: Option<u32>,
     pub keep_alive_timeout_ms: Option<u32>,
     pub proxy: Option<ProxyConfig>,
-    pub ca_cert: Option<Vec<u8>>,
+    pub ca_cert: Option<CaCert>,
+}
+
+// ---------------------------------------------------------------------------
+// Converters: Map from Protobuf types to Native Transport types
+// ---------------------------------------------------------------------------
+
+impl From<&HttpConfig> for HttpOptions {
+    fn from(proto: &HttpConfig) -> Self {
+        let proxy = proto.proxy.as_ref().map(|p| ProxyConfig {
+            http_url: p.http_url.clone(),
+            https_url: p.https_url.clone(),
+            bypass_urls: p.bypass_urls.clone(),
+        });
+
+        Self {
+            total_timeout_ms: proto.total_timeout_ms,
+            connect_timeout_ms: proto.connect_timeout_ms,
+            response_timeout_ms: proto.response_timeout_ms,
+            keep_alive_timeout_ms: proto.keep_alive_timeout_ms,
+            proxy,
+            ca_cert: proto.ca_cert.clone(),
+        }
+    }
 }
 
 pub struct HttpRequest {
@@ -79,16 +102,19 @@ pub struct HttpClient {
 }
 
 impl HttpClient {
+    /// Initialize a new HttpClient with fixed infrastructure settings.
     pub fn new(options: HttpOptions) -> Result<Self, HttpClientError> {
         let connect_timeout = options
             .connect_timeout_ms
-            .unwrap_or(SdkDefault::ConnectTimeoutMs as u32);
+            .unwrap_or(HttpDefault::ConnectTimeoutMs as u32);
+
         let total_timeout = options
             .total_timeout_ms
-            .unwrap_or(SdkDefault::TotalTimeoutMs as u32);
+            .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
+
         let keep_alive_timeout = options
             .keep_alive_timeout_ms
-            .unwrap_or(SdkDefault::KeepAliveTimeoutMs as u32);
+            .unwrap_or(HttpDefault::KeepAliveTimeoutMs as u32);
 
         let mut builder = reqwest::Client::builder()
             .connect_timeout(Duration::from_millis(connect_timeout as u64))
@@ -96,10 +122,22 @@ impl HttpClient {
             .pool_idle_timeout(Duration::from_millis(keep_alive_timeout as u64))
             .redirect(reqwest::redirect::Policy::none());
 
-        if let Some(ca_cert_bytes) = &options.ca_cert {
-            let cert = reqwest::Certificate::from_pem(ca_cert_bytes).map_err(|e| {
-                HttpClientError::InvalidConfiguration(format!("Invalid CA Certificate: {}", e))
-            })?;
+        if let Some(ca) = &options.ca_cert {
+            let cert = match &ca.format {
+                Some(grpc_api_types::payments::ca_cert::Format::Pem(pem)) => {
+                    reqwest::Certificate::from_pem(pem.as_bytes()).map_err(|e| {
+                        HttpClientError::InvalidConfiguration(format!("Invalid PEM: {}", e))
+                    })
+                }
+                Some(grpc_api_types::payments::ca_cert::Format::Der(der)) => {
+                    reqwest::Certificate::from_der(der).map_err(|e| {
+                        HttpClientError::InvalidConfiguration(format!("Invalid DER: {}", e))
+                    })
+                }
+                None => Err(HttpClientError::InvalidConfiguration(
+                    "Missing cert format".to_string(),
+                )),
+            }?;
             builder = builder.add_root_certificate(cert);
         }
 
@@ -125,7 +163,12 @@ impl HttpClient {
         Ok(Self { client, options })
     }
 
-    pub async fn execute(&self, request: HttpRequest) -> Result<HttpResponse, HttpClientError> {
+    /// Execute an HTTP request, applying per-call behavioral overrides if provided.
+    pub async fn execute(
+        &self,
+        request: HttpRequest,
+        override_options: Option<HttpOptions>,
+    ) -> Result<HttpResponse, HttpClientError> {
         let start_time = Instant::now();
 
         let mut req_builder = match request.method {
@@ -136,6 +179,17 @@ impl HttpClient {
             Method::Patch => self.client.patch(&request.url),
         };
 
+        // Efficient Override: Apply total timeout directly to RequestBuilder.
+        let effective_total_timeout =
+            if let Some(total) = override_options.as_ref().and_then(|o| o.total_timeout_ms) {
+                req_builder = req_builder.timeout(Duration::from_millis(total as u64));
+                total
+            } else {
+                self.options
+                    .total_timeout_ms
+                    .unwrap_or(HttpDefault::TotalTimeoutMs as u32)
+            };
+
         for (key, value) in &request.headers {
             req_builder = req_builder.header(key, value);
         }
@@ -145,15 +199,12 @@ impl HttpClient {
         }
 
         let response = req_builder.send().await.map_err(|e| {
-            let elapsed = start_time.elapsed().as_millis() as u64;
-            let total_timeout =
-                self.options
-                    .total_timeout_ms
-                    .unwrap_or(SdkDefault::TotalTimeoutMs as u32) as u64;
+            let elapsed = start_time.elapsed().as_millis() as u32;
+
             if e.is_timeout() {
                 if e.is_connect() {
                     HttpClientError::ConnectTimeout(request.url.clone())
-                } else if elapsed >= total_timeout {
+                } else if elapsed >= effective_total_timeout {
                     HttpClientError::TotalTimeout(request.url.clone())
                 } else {
                     HttpClientError::ResponseTimeout(request.url.clone())
@@ -188,11 +239,7 @@ impl HttpClient {
     }
 }
 
-pub fn resolve_proxy_url(url: &str, proxy: &Option<ProxyConfig>) -> Option<String> {
+pub fn resolve_proxy_url(_url: &str, proxy: &Option<ProxyConfig>) -> Option<String> {
     let proxy = proxy.as_ref()?;
-    let should_bypass = proxy.bypass_urls.iter().any(|b| b == url);
-    if should_bypass {
-        return None;
-    }
     proxy.https_url.clone().or_else(|| proxy.http_url.clone())
 }

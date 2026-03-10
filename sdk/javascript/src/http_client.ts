@@ -1,8 +1,8 @@
 import { ProxyAgent, Agent, Dispatcher } from "undici";
 // @ts-ignore
-import { ucs } from "./payments/generated/proto";
+import { types } from "./payments/generated/proto";
 
-const Defaults = ucs.v2.SdkDefault;
+const Defaults = types.HttpDefault;
 
 /**
  * Normalized HTTP Request structure for the Connector Service.
@@ -11,7 +11,7 @@ export interface HttpRequest {
   url: string;
   method: string;
   headers?: Record<string, string>;
-  body?: string | Uint8Array;
+  body?: Uint8Array;
 }
 
 /**
@@ -23,15 +23,6 @@ export interface HttpResponse {
   body: Uint8Array;
   latencyMs: number; // Flat field for cross-language parity
 }
-
-/**
- * HTTP client configuration options.
- * Uses proto-generated IHttpOptions as the base, with extended caCert type
- * for better developer experience (accepts string, Buffer, or Uint8Array).
- */
-export type HttpOptions = Omit<ucs.v2.IHttpOptions, 'caCert'> & {
-  caCert?: string | Buffer | Uint8Array;
-};
 
 /**
  * Specialized error class for HTTP failures in the Connector Service.
@@ -52,7 +43,7 @@ export class ConnectorError extends Error {
 /**
  * Resolve proxy URL, honoring bypass rules.
  */
-export function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): string | null {
+export function resolveProxyUrl(url: string, proxy?: types.IProxyOptions | null): string | null {
   if (!proxy) return null;
   const shouldBypass = Array.isArray(proxy.bypassUrls) && proxy.bypassUrls.includes(url);
   if (shouldBypass) return null;
@@ -63,23 +54,20 @@ export function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): stri
  * Creates a high-performance dispatcher with specialized fintech timeouts.
  * (The instance-level connection pool)
  */
-export function createDispatcher(config: HttpOptions): Dispatcher {
-  // Convert caCert to Uint8Array if provided as string or Buffer
-  let caCert: Uint8Array | undefined;
-  if (config.caCert !== undefined) {
-    if (typeof config.caCert === 'string') {
-      caCert = new TextEncoder().encode(config.caCert);
-    } else if (Buffer.isBuffer(config.caCert)) {
-      caCert = new Uint8Array(config.caCert);
-    } else {
-      caCert = config.caCert;
+export function createDispatcher(config: types.IHttpConfig): Dispatcher {
+  let ca: string | Uint8Array | undefined;
+  if (config.caCert) {
+    if (config.caCert.pem) {
+      ca = config.caCert.pem;
+    } else if (config.caCert.der) {
+      ca = config.caCert.der;
     }
   }
 
   const dispatcherOptions: any = {
     connect: {
       timeout: config.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS,
-      ca: caCert,
+      ca,
     },
     headersTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
     bodyTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
@@ -105,7 +93,7 @@ export function createDispatcher(config: HttpOptions): Dispatcher {
  */
 export async function execute(
   request: HttpRequest,
-  options: HttpOptions = {},
+  options: types.IHttpConfig = {},
   dispatcher?: Dispatcher // Pass the instance-owned pool here
 ): Promise<HttpResponse> {
   const { url, method, headers, body } = request;
@@ -121,7 +109,7 @@ export async function execute(
     const response = await fetch(url, {
       method: method.toUpperCase(),
       headers: headers || {},
-      body: body ?? undefined,
+      body: body ? Buffer.from(body) : undefined,
       redirect: "manual",
       signal: controller.signal,
       // @ts-ignore

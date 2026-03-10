@@ -149,6 +149,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             id: None,
             connector_customer_id: None,
             phone_number: None,
+            phone_country_code: None,
         }),
         address: Some(address),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
@@ -339,6 +340,7 @@ fn create_register_request_with_prefix(_prefix: &str) -> PaymentServiceSetupRecu
             id: None,
             connector_customer_id: None,
             phone_number: None,
+            phone_country_code: None,
         }),
         customer_acceptance: Some(CustomerAcceptance {
             acceptance_type: i32::from(AcceptanceType::Offline),

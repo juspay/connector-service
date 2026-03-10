@@ -19,6 +19,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.03.10.0
+
+### Features
+
+- **payment_methods:** Add ACH (eCheck) support to Forte connector ([#576](https://github.com/juspay/connector-service/pull/576)) ([`d696886`](https://github.com/juspay/connector-service/commit/d696886a6db355c631d49069a3f0c0fbfa353d5b))
+- **proto:** Change the proto package name ([#603](https://github.com/juspay/connector-service/pull/603)) ([`19101f3`](https://github.com/juspay/connector-service/commit/19101f3bf2900dd6f1953db48cb26900051ef8ac))
+- Proto changes for sdk configs overridable vs non overridable ([#589](https://github.com/juspay/connector-service/pull/589)) ([`017e0e3`](https://github.com/juspay/connector-service/commit/017e0e3601cb68215c9a371c411486e9b21c0b5a))
+
+### Refactors
+
+- Simplify header handling by making them optional and inferring connector from `x-connector-auth` header ([#590](https://github.com/juspay/connector-service/pull/590)) ([`6fd2e37`](https://github.com/juspay/connector-service/commit/6fd2e37f51f1f6fa149270c1c667560b88c46aaa))
+
+### Miscellaneous Tasks
+
+- Added Composite Get Flow ([#575](https://github.com/juspay/connector-service/pull/575)) ([`1179bb7`](https://github.com/juspay/connector-service/commit/1179bb78718adf692df1c465cea02c9e40e01d65))
+
+**Full Changelog:** [`2026.03.09.0...2026.03.10.0`](https://github.com/juspay/connector-service/compare/2026.03.09.0...2026.03.10.0)
+
+- - -
+
 ## 2026.03.09.0
 
 ### Bug Fixes

@@ -38,6 +38,7 @@ use crate::{
     },
     utils::{missing_field_err, Error, ForeignTryFrom},
 };
+use grpc_api_types::payments::connector_auth::AuthType;
 use url::Url;
 
 // snake case for enum variants
@@ -121,6 +122,7 @@ pub enum ConnectorEnum {
     Zift,
     Revolv3,
     Truelayer,
+    Finix,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -202,6 +204,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
             grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
+            grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -429,6 +432,7 @@ pub struct PaymentFlowData {
     pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
     // stores the authorized amount in case of partial authorization
     pub minor_amount_authorized: Option<MinorUnit>,
+    pub l2_l3_data: Option<Box<L2L3Data>>,
 }
 
 impl PaymentFlowData {
@@ -1544,7 +1548,7 @@ pub struct PaymentsSdkSessionTokenData {
     pub amount: MinorUnit,
     pub currency: Currency,
     pub country: Option<common_enums::CountryAlpha2>,
-    pub order_details: Option<Vec<OrderDetailsWithAmount>>,
+    pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
     pub email: Option<Email>,
     pub customer_name: Option<Secret<String>>,
     pub order_tax_amount: Option<MinorUnit>,
@@ -3079,48 +3083,177 @@ impl RecurringMandateData for RecurringMandatePaymentData {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct OrderDetailsWithAmount {
-    /// Name of the product that is being purchased
-    pub product_name: String,
-    /// The quantity of the product to be purchased
-    pub quantity: u16,
-    /// the amount per quantity of product
-    pub amount: MinorUnit,
-    // Does the order includes shipping
-    pub requires_shipping: Option<bool>,
-    /// The image URL of the product
-    pub product_img_link: Option<String>,
-    /// ID of the product that is being purchased
-    pub product_id: Option<String>,
-    /// Category of the product that is being purchased
-    pub category: Option<String>,
-    /// Sub category of the product that is being purchased
-    pub sub_category: Option<String>,
-    /// Brand of the product that is being purchased
-    pub brand: Option<String>,
-    /// Type of the product that is being purchased
-    pub product_type: Option<common_enums::ProductType>,
-    /// The tax code for the product
-    pub product_tax_code: Option<String>,
-    /// tax rate applicable to the product
-    pub tax_rate: Option<f64>,
-    /// total tax amount applicable to the product
-    pub total_tax_amount: Option<MinorUnit>,
-    /// description of the product
-    pub description: Option<String>,
-    /// stock keeping unit of the product
-    pub sku: Option<String>,
-    /// universal product code of the product
-    pub upc: Option<String>,
-    /// commodity code of the product
-    pub commodity_code: Option<String>,
-    /// unit of measure of the product
-    pub unit_of_measure: Option<String>,
-    /// total amount of the product
-    pub total_amount: Option<MinorUnit>,
-    /// discount amount on the unit
-    pub unit_discount_amount: Option<MinorUnit>,
+#[derive(Debug, Clone, Default)]
+pub struct L2L3Data {
+    pub order_info: Option<OrderInfo>,
+    pub tax_info: Option<TaxInfo>,
+    pub customer_info: Option<CustomerInfo>,
+    pub shipping_details: Option<AddressDetails>,
+    pub billing_details: Option<AddressDetails>,
+}
+#[derive(Debug, Clone)]
+pub struct OrderInfo {
+    pub order_date: Option<time::PrimitiveDateTime>,
+    pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
+    pub merchant_order_reference_id: Option<String>,
+    pub discount_amount: Option<MinorUnit>,
+    pub shipping_cost: Option<MinorUnit>,
+    pub duty_amount: Option<MinorUnit>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TaxInfo {
+    pub tax_status: Option<common_enums::TaxStatus>,
+    pub customer_tax_registration_id: Option<Secret<String>>,
+    pub merchant_tax_registration_id: Option<Secret<String>>,
+    pub shipping_amount_tax: Option<MinorUnit>,
+    pub order_tax_amount: Option<MinorUnit>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CustomerInfo {
+    pub customer_id: Option<CustomerId>,
+    pub customer_email: Option<common_utils::pii::Email>,
+    pub customer_name: Option<Secret<String>>,
+    pub customer_phone_number: Option<Secret<String>>,
+    pub customer_phone_country_code: Option<String>,
+}
+
+impl L2L3Data {
+    pub fn get_shipping_country(&self) -> Option<common_enums::enums::CountryAlpha2> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.country)
+    }
+
+    pub fn get_shipping_city(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.city.clone())
+    }
+
+    pub fn get_shipping_state(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.state.clone())
+    }
+
+    pub fn get_shipping_origin_zip(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.origin_zip.clone())
+    }
+
+    pub fn get_shipping_zip(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.zip.clone())
+    }
+
+    pub fn get_shipping_address_line1(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.line1.clone())
+    }
+
+    pub fn get_shipping_address_line2(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.line2.clone())
+    }
+
+    pub fn get_order_date(&self) -> Option<time::PrimitiveDateTime> {
+        self.order_info.as_ref().and_then(|order| order.order_date)
+    }
+
+    pub fn get_order_details(&self) -> Option<Vec<payment_address::OrderDetailsWithAmount>> {
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.order_details.clone())
+    }
+
+    pub fn get_merchant_order_reference_id(&self) -> Option<String> {
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.merchant_order_reference_id.clone())
+    }
+
+    pub fn get_discount_amount(&self) -> Option<MinorUnit> {
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.discount_amount)
+    }
+
+    pub fn get_shipping_cost(&self) -> Option<MinorUnit> {
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.shipping_cost)
+    }
+
+    pub fn get_duty_amount(&self) -> Option<MinorUnit> {
+        self.order_info.as_ref().and_then(|order| order.duty_amount)
+    }
+
+    pub fn get_tax_status(&self) -> Option<common_enums::TaxStatus> {
+        self.tax_info.as_ref().and_then(|tax| tax.tax_status)
+    }
+
+    pub fn get_customer_tax_registration_id(&self) -> Option<Secret<String>> {
+        self.tax_info
+            .as_ref()
+            .and_then(|tax| tax.customer_tax_registration_id.clone())
+    }
+
+    pub fn get_merchant_tax_registration_id(&self) -> Option<Secret<String>> {
+        self.tax_info
+            .as_ref()
+            .and_then(|tax| tax.merchant_tax_registration_id.clone())
+    }
+
+    pub fn get_shipping_amount_tax(&self) -> Option<MinorUnit> {
+        self.tax_info
+            .as_ref()
+            .and_then(|tax| tax.shipping_amount_tax)
+    }
+
+    pub fn get_order_tax_amount(&self) -> Option<MinorUnit> {
+        self.tax_info.as_ref().and_then(|tax| tax.order_tax_amount)
+    }
+
+    pub fn get_customer_id(&self) -> Option<CustomerId> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_id.clone())
+    }
+
+    pub fn get_customer_email(&self) -> Option<common_utils::pii::Email> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_email.clone())
+    }
+
+    pub fn get_customer_name(&self) -> Option<Secret<String>> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_name.clone())
+    }
+
+    pub fn get_customer_phone_number(&self) -> Option<Secret<String>> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_phone_number.clone())
+    }
+
+    pub fn get_customer_phone_country_code(&self) -> Option<String> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_phone_country_code.clone())
+    }
+    pub fn get_billing_city(&self) -> Option<Secret<String>> {
+        self.billing_details
+            .as_ref()
+            .and_then(|billing| billing.city.clone())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3501,4 +3634,121 @@ pub struct BillingDescriptor {
     pub statement_descriptor_suffix: Option<String>,
     /// A reference to be shown on billing description
     pub reference: Option<String>,
+}
+impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for ConnectorEnum {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        auth_type: grpc_api_types::payments::connector_auth::AuthType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match auth_type {
+            AuthType::Adyen(_) => Ok(Self::Adyen),
+            AuthType::Airwallex(_) => Ok(Self::Airwallex),
+            AuthType::Bambora(_) => Ok(Self::Bambora),
+            AuthType::Bankofamerica(_) => Ok(Self::Bankofamerica),
+            AuthType::Billwerk(_) => Ok(Self::Billwerk),
+            AuthType::Bluesnap(_) => Ok(Self::Bluesnap),
+            AuthType::Braintree(_) => Ok(Self::Braintree),
+            AuthType::Cashtocode(_) => Ok(Self::Cashtocode),
+            AuthType::Cryptopay(_) => Ok(Self::Cryptopay),
+            AuthType::Cybersource(_) => Ok(Self::Cybersource),
+            AuthType::Datatrans(_) => Ok(Self::Datatrans),
+            AuthType::Dlocal(_) => Ok(Self::Dlocal),
+            AuthType::Elavon(_) => Ok(Self::Elavon),
+            AuthType::Fiserv(_) => Ok(Self::Fiserv),
+            AuthType::Fiservemea(_) => Ok(Self::Fiservemea),
+            AuthType::Forte(_) => Ok(Self::Forte),
+            AuthType::Getnet(_) => Ok(Self::Getnet),
+            AuthType::Globalpay(_) => Ok(Self::Globalpay),
+            AuthType::Hipay(_) => Ok(Self::Hipay),
+            AuthType::Helcim(_) => Ok(Self::Helcim),
+            AuthType::Iatapay(_) => Ok(Self::Iatapay),
+            AuthType::Jpmorgan(_) => Ok(Self::Jpmorgan),
+            AuthType::Mifinity(_) => Ok(Self::Mifinity),
+            AuthType::Mollie(_) => Ok(Self::Mollie),
+            AuthType::Multisafepay(_) => Ok(Self::Multisafepay),
+            AuthType::Nexinets(_) => Ok(Self::Nexinets),
+            AuthType::Nexixpay(_) => Ok(Self::Nexixpay),
+            AuthType::Nmi(_) => Ok(Self::Nmi),
+            AuthType::Noon(_) => Ok(Self::Noon),
+            AuthType::Novalnet(_) => Ok(Self::Novalnet),
+            AuthType::Nuvei(_) => Ok(Self::Nuvei),
+            AuthType::Paybox(_) => Ok(Self::Paybox),
+            AuthType::Payme(_) => Ok(Self::Payme),
+            AuthType::Payu(_) => Ok(Self::Payu),
+            AuthType::Powertranz(_) => Ok(Self::Powertranz),
+            AuthType::Rapyd(_) => Ok(Self::Rapyd),
+            AuthType::Redsys(_) => Ok(Self::Redsys),
+            AuthType::Shift4(_) => Ok(Self::Shift4),
+            AuthType::Stax(_) => Ok(Self::Stax),
+            AuthType::Stripe(_) => Ok(Self::Stripe),
+            AuthType::Trustpay(_) => Ok(Self::Trustpay),
+            AuthType::Tsys(_) => Ok(Self::Tsys),
+            AuthType::Volt(_) => Ok(Self::Volt),
+            AuthType::Wellsfargo(_) => Ok(Self::Wellsfargo),
+            AuthType::Worldpay(_) => Ok(Self::Worldpay),
+            AuthType::Worldpayvantiv(_) => Ok(Self::Worldpayvantiv),
+            AuthType::Xendit(_) => Ok(Self::Xendit),
+            AuthType::Phonepe(_) => Ok(Self::Phonepe),
+            AuthType::Cashfree(_) => Ok(Self::Cashfree),
+            AuthType::Paytm(_) => Ok(Self::Paytm),
+            AuthType::Calida(_) => Ok(Self::Calida),
+            AuthType::Payload(_) => Ok(Self::Payload),
+            AuthType::Paypal(_) => Ok(Self::Paypal),
+            AuthType::Authipay(_) => Ok(Self::Authipay),
+            AuthType::Silverflow(_) => Ok(Self::Silverflow),
+            AuthType::Celero(_) => Ok(Self::Celero),
+            AuthType::Trustpayments(_) => Ok(Self::Trustpayments),
+            AuthType::Paysafe(_) => Ok(Self::Paysafe),
+            AuthType::Barclaycard(_) => Ok(Self::Barclaycard),
+            AuthType::Worldpayxml(_) => Ok(Self::Worldpayxml),
+            AuthType::Revolut(_) => Ok(Self::Revolut),
+            AuthType::Loonio(_) => Ok(Self::Loonio),
+            AuthType::Gigadat(_) => Ok(Self::Gigadat),
+            AuthType::Hyperpg(_) => Ok(Self::Hyperpg),
+            AuthType::Zift(_) => Ok(Self::Zift),
+            AuthType::Screenstream(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Ebanx(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Fiuu(_) => Ok(Self::Fiuu),
+            AuthType::Globepay(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Coinbase(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Coingate(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Revolv3(_) => Ok(Self::Revolv3),
+            AuthType::Authorizedotnet(_) => Ok(Self::Authorizedotnet),
+        }
+    }
 }

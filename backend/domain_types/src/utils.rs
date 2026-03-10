@@ -7,7 +7,6 @@ use base64::Engine;
 use common_enums::{CurrencyUnit, PaymentMethodType};
 use common_utils::{consts, metadata::MaskedMetadata, AmountConvertor, CustomResult, MinorUnit};
 use error_stack::{report, Result, ResultExt};
-use hyperswitch_masking::ExposeInterface;
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
@@ -393,21 +392,16 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
         map
     });
 
-/// Helper function for extracting merchant ID from metadata
+/// Helper function for extracting merchant ID from metadata.
+///
+/// Uses the shared `merchant_id_or_default` fallback: if the `x-merchant-id`
+/// header is missing, a default ID is auto-generated.
 pub fn extract_merchant_id_from_metadata(
     metadata: &MaskedMetadata,
 ) -> Result<common_utils::id_type::MerchantId, ApplicationErrorResponse> {
-    let merchant_id_secret = metadata.get(consts::X_MERCHANT_ID).ok_or_else(|| {
-        ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "MISSING_MERCHANT_ID".to_owned(),
-            error_identifier: 400,
-            error_message: "Missing merchant ID in request metadata".to_owned(),
-            error_object: None,
-        })
-    })?;
-
-    let merchant_id_str = merchant_id_secret.expose();
-
+    let merchant_id_str = common_utils::metadata::merchant_id_or_default(
+        metadata.get_raw(consts::X_MERCHANT_ID).as_deref(),
+    );
     Ok(merchant_id_str
         .parse::<common_utils::id_type::MerchantId>()
         .map_err(|e| {
