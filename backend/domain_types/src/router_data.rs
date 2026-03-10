@@ -1625,6 +1625,9 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Peachpayments {
                     api_key: api_key.clone(),
                     tenant_id: key1.clone(),
+                }),
+                _ => Err(err().into()),
+            },
             ConnectorEnum::Finix => match auth {
                 ConnectorAuthType::MultiAuthKey {
                     api_key,
