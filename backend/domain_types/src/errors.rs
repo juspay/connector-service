@@ -1087,6 +1087,14 @@ macro_rules! impl_error_conversion {
     };
 }
 
+// TODO: Match on specific ConnectorError variants to return appropriate status codes.
+// Currently all variants default to 500, but many should return 4xx codes:
+// - MissingRequiredField, InvalidDataFormat, MismatchedPaymentData → 400
+// - SourceVerificationFailed, FailedToObtainAuthType → 401
+// - RequestTimeoutReceived → 504
+// - NotImplemented → 501
+// See detailed mapping plan for full variant-to-status-code mapping.
+
 // ConnectorError conversions
 impl_error_conversion!(ConnectorError => grpc_api_types::payments::RequestError, |e: &ConnectorError| {
     grpc_api_types::payments::RequestError {
