@@ -64,6 +64,7 @@ syntax = "proto3";
 package types;
 
 import "payment.proto";
+import "payouts.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
@@ -202,6 +203,9 @@ service PaymentMethodService {
 
   // // Retrieves payment method details from the payment processor or vault.
   // rpc Get(PaymentMethodServiceGetRequest) returns (PaymentMethodServiceGetResponse);
+
+  // Check if the payout method is eligible for the transaction
+  rpc Eligibility(PayoutMethodEligibilityRequest) returns (PayoutMethodEligibilityResponse);
 }
 
 // ============================================================================
@@ -260,4 +264,27 @@ service PaymentMethodAuthenticationService {
   // Validate authentication results with the issuing bank. Processes bank's
   // authentication decision to determine if payment can proceed.
   rpc PostAuthenticate(PaymentMethodAuthenticationServicePostAuthenticateRequest) returns (PaymentMethodAuthenticationServicePostAuthenticateResponse);
+}
+
+service PayoutService {
+  // Creates a payout.
+  rpc Create(PayoutCreateRequest) returns (PayoutCreateResponse);
+
+  // Creates a payout fund transfer.
+  rpc Transfer(PayoutTransferRequest) returns (PayoutTransferResponse);
+
+  // Create payout quote.
+  rpc Quote(PayoutQuoteRequest) returns (PayoutQuoteResponse);
+
+  // Retrieve payout details.
+  rpc Get(PayoutGetRequest) returns (PayoutGetResponse);
+
+  // Void a payout.
+  rpc Void(PayoutVoidRequest) returns (PayoutVoidResponse);
+
+  // Create payout recipient.
+  rpc CreateRecipient(PayoutCreateRecipientRequest) returns (PayoutCreateRecipientResponse);
+
+  // Enroll disburse account.
+  rpc EnrollDisburseAccount(PayoutEnrollDisburseAccountRequest) returns (PayoutEnrollDisburseAccountResponse);
 }

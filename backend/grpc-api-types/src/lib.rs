@@ -11,3 +11,7 @@ pub mod payments {
 pub mod health_check {
     tonic::include_proto!("grpc.health.v1");
 }
+
+pub mod payouts {
+    tonic::include_proto!("types");
+}
