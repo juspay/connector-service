@@ -1,3 +1,4 @@
+use common_utils::types::MinorUnit;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -41,9 +42,9 @@ pub enum PeachpaymentsPaymentsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsPaymentsData {
     pub transaction_id: String,
+    pub reference_id: String,
     pub response_code: Option<PeachpaymentsResponseCode>,
     pub transaction_result: PeachpaymentsPaymentStatus,
-    pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
     pub ecommerce_card_payment_only_transaction_data: Option<PeachpaymentsCardResponseData>,
 }
 
@@ -108,18 +109,18 @@ pub struct PeachpaymentsRefundResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsRefundHistory {
-    #[serde(rename = "transactionId")]
     pub transaction_id: String,
-    #[serde(rename = "referenceId")]
     pub reference_id: String,
-    pub amount: String,
+    pub amount: PeachpaymentsAmountDetails,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsRefundBalance {
-    pub amount: String,
-    pub balance: String,
+    pub amount: PeachpaymentsAmountDetails,
+    pub balance: PeachpaymentsAmountDetails,
     pub refund_history: Vec<PeachpaymentsRefundHistory>,
 }
 
@@ -164,8 +165,8 @@ pub struct PeachpaymentsSyncResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PeachpaymentsCardResponseData {
-    pub amount: Option<PeachpaymentsAmountResponse>,
-    pub stan: Option<String>,
+    pub amount: Option<PeachpaymentsAmountDetails>,
+    pub stan: Option<Secret<String>>,
     pub rrn: Option<String>,
     pub approval_code: Option<String>,
     pub merchant_advice_code: Option<String>,
@@ -174,10 +175,12 @@ pub struct PeachpaymentsCardResponseData {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct PeachpaymentsAmountResponse {
-    pub amount: String,
+pub struct PeachpaymentsAmountDetails {
+    pub amount: MinorUnit,
     #[serde(rename = "currencyCode")]
     pub currency_code: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_amount: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

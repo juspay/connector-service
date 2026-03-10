@@ -23,6 +23,8 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::Serialize;
 use std::fmt::Debug;
+use time::format_description::well_known::Iso8601;
+use time::OffsetDateTime;
 
 pub fn get_error_code(response_code: Option<&responses::PeachpaymentsResponseCode>) -> String {
     match response_code {
@@ -193,37 +195,97 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             &item.router_data.resource_common_data.connector_meta_data,
         )?;
 
-        let card_data = match item.router_data.request.payment_method_data.clone() {
+        let amount = StringMinorUnitForConnector
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::ParsingFailed)?;
+
+        let transaction_data = match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(card_info) => {
-                requests::PeachpaymentsCardData::Card(requests::PeachpaymentsCard {
-                    card: requests::PeachpaymentsCardDetails {
-                        pan: card_info.card_number,
-                        cvv: card_info.card_cvc,
-                        cardholder_name: card_info.card_holder_name,
-                        expiry_year: Some(card_info.card_exp_year),
-                        expiry_month: Some(card_info.card_exp_month),
-                        eci: None,
+                requests::PeachpaymentsTransactionData::Card(requests::PeachpaymentsCardData {
+                    merchant_information: requests::PeachpaymentsMerchantInformation {
+                        client_merchant_reference_id: connector_meta_data
+                            .client_merchant_reference_id,
                     },
-                })
-            }
-            PaymentMethodData::NetworkToken(token_data) => {
-                requests::PeachpaymentsCardData::NetworkToken(requests::PeachpaymentsNetworkToken {
-                    payment_method: "ecommerce_card_payment_only".to_string(),
-                    routing: requests::PeachpaymentsRoutingInfo {
+                    routing_reference: requests::PeachpaymentsRoutingReference {
                         merchant_payment_method_route_id: connector_meta_data
                             .merchant_payment_method_route_id,
                     },
-                    network_token: requests::PeachpaymentsNetworkTokenDetails {
-                        token: Secret::new(token_data.token_number.peek().clone()),
-                        expiry_year: token_data.token_exp_year,
-                        expiry_month: token_data.token_exp_month,
-                        cryptogram: token_data.token_cryptogram,
-                        eci: token_data.eci,
-                        scheme: token_data.card_network.map(|n| format!("{:?}", n)),
+                    card: requests::PeachpaymentsCardDetails {
+                        pan: card_info.card_number,
+                        cardholder_name: card_info.card_holder_name,
+                        expiry_year: Some({
+                            let year_str = card_info.card_exp_year.peek();
+                            if year_str.len() == 4 {
+                                Secret::new(year_str[2..].to_string())
+                            } else {
+                                Secret::new(year_str.to_string())
+                            }
+                        }),
+                        expiry_month: Some(card_info.card_exp_month),
+                        cvv: Some(card_info.card_cvc),
+                        eci: None,
                     },
-                    cof_data: requests::PeachpaymentsCofData::default(),
-                    _phantom: std::marker::PhantomData,
+                    amount: requests::PeachpaymentsAmount {
+                        amount: amount.to_string(),
+                        currency_code: item.router_data.request.currency,
+                        display_amount: None,
+                    },
+                    rrn: item.router_data.request.merchant_order_reference_id.clone(),
+                    pre_auth_inc_ext_capture_flow: item
+                        .router_data
+                        .request
+                        .capture_method
+                        .map(|cm| {
+                            if cm == common_enums::CaptureMethod::Manual {
+                                Some(requests::PeachpaymentsPreAuthFlow {
+                                    dcc_mode: requests::DccMode::NoDcc,
+                                    txn_ref_nr: item
+                                        .router_data
+                                        .resource_common_data
+                                        .connector_request_reference_id
+                                        .clone(),
+                                })
+                            } else {
+                                None
+                            }
+                        })
+                        .flatten(),
+                    cof_data: None,
                 })
+            }
+            PaymentMethodData::NetworkToken(token_data) => {
+                requests::PeachpaymentsTransactionData::NetworkToken(
+                    requests::PeachpaymentsNetworkTokenData {
+                        merchant_information: requests::PeachpaymentsMerchantInformation {
+                            client_merchant_reference_id: connector_meta_data
+                                .client_merchant_reference_id,
+                        },
+                        routing_reference: requests::PeachpaymentsRoutingReference {
+                            merchant_payment_method_route_id: connector_meta_data
+                                .merchant_payment_method_route_id,
+                        },
+                        network_token: requests::PeachpaymentsNetworkTokenDetails {
+                            token: Secret::new(token_data.token_number.peek().clone()),
+                            expiry_year: token_data.token_exp_year,
+                            expiry_month: token_data.token_exp_month,
+                            cryptogram: token_data.token_cryptogram,
+                            eci: token_data.eci,
+                            scheme: token_data.card_network.map(|n| format!("{:?}", n)),
+                        },
+                        amount: requests::PeachpaymentsAmount {
+                            amount: amount.to_string(),
+                            currency_code: item.router_data.request.currency,
+                            display_amount: None,
+                        },
+                        cof_data: requests::PeachpaymentsCofData::default(),
+                        rrn: item.router_data.request.merchant_order_reference_id.clone(),
+                        pre_auth_inc_ext_capture_flow: None,
+                        _phantom: std::marker::PhantomData,
+                    },
+                )
             }
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
@@ -241,9 +303,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            card_data,
+            transaction_data,
             pos_data: None,
-            send_date_time: common_utils::date_time::now().to_string(),
+            send_date_time: OffsetDateTime::now_utc()
+                .format(&Iso8601::DEFAULT)
+                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?,
             _phantom: std::marker::PhantomData,
         })
     }

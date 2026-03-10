@@ -12,13 +12,10 @@ pub enum PaymentMethod {
 }
 
 #[derive(Debug, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "snake_case")]
 pub enum DccMode {
-    #[serde(rename = "noDcc")]
     NoDcc,
-    #[serde(rename = "optInDcc")]
     OptInDcc,
-    #[serde(rename = "optOutDcc")]
     OptOutDcc,
 }
 
@@ -149,7 +146,7 @@ pub struct PeachpaymentsAuthorizeRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "referenceId")]
     pub reference_id: String,
     #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
-    pub card_data: PeachpaymentsCardData<T>,
+    pub transaction_data: PeachpaymentsTransactionData<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pos_data: Option<serde_json::Value>,
     #[serde(rename = "sendDateTime")]
@@ -160,23 +157,72 @@ pub struct PeachpaymentsAuthorizeRequest<T: PaymentMethodDataTypes> {
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum PeachpaymentsCardData<T: PaymentMethodDataTypes> {
-    Card(PeachpaymentsCard<T>),
-    NetworkToken(PeachpaymentsNetworkToken<T>),
+pub enum PeachpaymentsTransactionData<T: PaymentMethodDataTypes> {
+    Card(PeachpaymentsCardData<T>),
+    NetworkToken(PeachpaymentsNetworkTokenData<T>),
 }
 
 #[derive(Debug, Serialize)]
-pub struct PeachpaymentsCard<T: PaymentMethodDataTypes> {
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsCardData<T: PaymentMethodDataTypes> {
+    #[serde(rename = "merchantInformation")]
+    pub merchant_information: PeachpaymentsMerchantInformation,
+    #[serde(rename = "routingReference")]
+    pub routing_reference: PeachpaymentsRoutingReference,
     pub card: PeachpaymentsCardDetails<T>,
+    pub amount: PeachpaymentsAmount,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rrn: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pre_auth_inc_ext_capture_flow: Option<PeachpaymentsPreAuthFlow>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cof_data: Option<PeachpaymentsCofData>,
 }
 
 #[derive(Debug, Serialize)]
+pub struct PeachpaymentsNetworkTokenData<T: PaymentMethodDataTypes> {
+    #[serde(rename = "merchantInformation")]
+    pub merchant_information: PeachpaymentsMerchantInformation,
+    #[serde(rename = "routingReference")]
+    pub routing_reference: PeachpaymentsRoutingReference,
+    #[serde(rename = "networkToken")]
+    pub network_token: PeachpaymentsNetworkTokenDetails,
+    pub amount: PeachpaymentsAmount,
+    pub cof_data: PeachpaymentsCofData,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rrn: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pre_auth_inc_ext_capture_flow: Option<PeachpaymentsPreAuthFlow>,
+    #[serde(skip)]
+    pub(crate) _phantom: std::marker::PhantomData<T>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PeachpaymentsRoutingReference {
+    #[serde(rename = "merchantPaymentMethodRouteId")]
+    pub merchant_payment_method_route_id: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PeachpaymentsPreAuthFlow {
+    #[serde(rename = "dccMode")]
+    pub dcc_mode: DccMode,
+    #[serde(rename = "txnRefNr")]
+    pub txn_ref_nr: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsCardDetails<T: PaymentMethodDataTypes> {
     pub pan: RawCardNumber<T>,
-    pub cvv: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cardholder_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub expiry_year: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub expiry_month: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cvv: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub eci: Option<String>,
 }
