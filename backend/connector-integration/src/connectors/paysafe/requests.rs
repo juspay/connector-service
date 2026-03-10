@@ -78,7 +78,9 @@ pub struct PaysafeSetupMandateRequest<T: PaymentMethodDataTypes> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_links: Option<Vec<ReturnLink>>,
     pub account_id: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub three_ds: Option<ThreeDs>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub profile: Option<PaysafeProfile>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub billing_details: Option<PaysafeBillingDetails>,
@@ -89,6 +91,7 @@ pub struct PaysafeSetupMandateRequest<T: PaymentMethodDataTypes> {
 #[serde(untagged)]
 pub enum PaysafePaymentMethod<T: PaymentMethodDataTypes> {
     Card { card: PaysafeCard<T> },
+    Ach { ach: PaysafeAch },
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
@@ -102,6 +105,15 @@ pub struct PaysafeCard<T: PaymentMethodDataTypes> {
     pub holder_name: Option<Secret<String>>,
 }
 
+#[derive(Debug, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PaysafeAch {
+    pub account_holder_name: Secret<String>,
+    pub account_number: Secret<String>,
+    pub routing_number: Secret<String>,
+    pub account_type: PaysafeAchAccountType,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PaysafeCardExpiry {
     pub month: Secret<String>,
@@ -112,6 +124,15 @@ pub struct PaysafeCardExpiry {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PaysafePaymentType {
     Card,
+    Ach,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum PaysafeAchAccountType {
+    Checking,
+    Savings,
+    Loan,
 }
 
 #[derive(Debug, Serialize)]

@@ -8,7 +8,7 @@ use common_utils::{
     errors,
     ext_traits::{OptionExt, ValueExt},
     pii::IpAddress,
-    types::{MinorUnit, StringMajorUnit, StringMinorUnit},
+    types::{MinorUnit, Money, StringMajorUnit, StringMinorUnit},
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
@@ -38,10 +38,13 @@ use crate::{
     },
     utils::{missing_field_err, Error, ForeignTryFrom},
 };
+use grpc_api_types::payments::connector_auth::AuthType;
 use url::Url;
 
 // snake case for enum variants
-#[derive(Clone, Copy, Debug, Display, EnumString, Eq, Hash, PartialEq, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -118,6 +121,7 @@ pub enum ConnectorEnum {
     Hyperpg,
     Zift,
     Revolv3,
+    Truelayer,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -198,6 +202,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Hyperpg => Ok(Self::Hyperpg),
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
             grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
+            grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -311,9 +316,9 @@ pub struct NetworkTokenWithNTIRef {
 
 #[derive(Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub enum MandateReferenceId {
-    ConnectorMandateId(ConnectorMandateReferenceId), // mandate_id send by connector
-    NetworkMandateId(String), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with card data
-    NetworkTokenWithNTI(NetworkTokenWithNTIRef), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with network token data
+    ConnectorMandateId(ConnectorMandateReferenceId), // mandate_id sent by connector
+    NetworkMandateId(String), // network_txns_id sent by Issuer to connector, Used for PG agnostic mandate txns along with card data
+    NetworkTokenWithNTI(NetworkTokenWithNTIRef), // network_txns_id sent by Issuer to connector, Used for PG agnostic mandate txns along with network token data
 }
 
 #[derive(Default, Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
@@ -977,7 +982,7 @@ pub struct PaymentVoidData {
     pub currency: Option<Currency>,
     pub connector_metadata: Option<SecretSerdeValue>,
     pub metadata: Option<SecretSerdeValue>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
 }
 
 impl PaymentVoidData {
@@ -1084,7 +1089,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     /// Merchant's identifier for the payment/invoice. This will be sent to the connector
     /// if the connector provides support to accept multiple reference ids.
     /// In case the connector supports only one reference id, Hyperswitch's Payment ID will be sent as reference.
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
     pub integrity_object: Option<AuthoriseIntegrityObject>,
@@ -1536,8 +1541,6 @@ pub struct PaymentsSdkSessionTokenData {
     pub country: Option<common_enums::CountryAlpha2>,
     pub order_details: Option<Vec<OrderDetailsWithAmount>>,
     pub email: Option<Email>,
-    // Minor Unit amount for amount frame work
-    pub minor_amount: MinorUnit,
     pub customer_name: Option<Secret<String>>,
     pub order_tax_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
@@ -1738,8 +1741,7 @@ impl RefundFlowData {
 pub struct RedirectDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: Option<AttemptStatus>,
-    pub response_minor_amount: Option<MinorUnit>,
-    pub response_currency: Option<Currency>,
+    pub response_amount: Option<Money>,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
@@ -2087,7 +2089,7 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::RecoveryInvoiceCancel => {
                 Ok(Self::RecoveryInvoiceCancel)
             }
-            grpc_api_types::payments::WebhookEventType::IncomingWebhookEventUnspecified => {
+            grpc_api_types::payments::WebhookEventType::Unspecified => {
                 Ok(Self::IncomingWebhookEventUnspecified)
             }
         }
@@ -2143,7 +2145,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::RecoveryPaymentSuccess => Ok(Self::RecoveryPaymentSuccess),
             EventType::RecoveryPaymentPending => Ok(Self::RecoveryPaymentPending),
             EventType::RecoveryInvoiceCancel => Ok(Self::RecoveryInvoiceCancel),
-            EventType::IncomingWebhookEventUnspecified => Ok(Self::IncomingWebhookEventUnspecified),
+            EventType::IncomingWebhookEventUnspecified => Ok(Self::Unspecified),
 
             // Legacy broad categories (for backward compatibility)
             EventType::Payment => Ok(Self::PaymentIntentSuccess), // Map broad Payment to PaymentIntentSuccess
@@ -2295,7 +2297,7 @@ pub struct PaymentsCaptureData {
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub metadata: Option<SecretSerdeValue>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
 }
 
 impl PaymentsCaptureData {
@@ -2354,12 +2356,11 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub metadata: Option<SecretSerdeValue>,
     pub complete_authorize_url: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<CustomerId>,
     pub integrity_object: Option<SetupMandateIntegrityObject>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
     pub locale: Option<String>,
@@ -2417,7 +2418,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub amount: i64,
     pub minor_amount: MinorUnit,
     pub currency: Currency,
-    pub merchant_order_reference_id: Option<String>,
+    pub merchant_order_id: Option<String>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<RepeatPaymentIntegrityObject>,
@@ -3486,4 +3487,121 @@ pub struct BillingDescriptor {
     pub statement_descriptor_suffix: Option<String>,
     /// A reference to be shown on billing description
     pub reference: Option<String>,
+}
+impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for ConnectorEnum {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        auth_type: grpc_api_types::payments::connector_auth::AuthType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match auth_type {
+            AuthType::Adyen(_) => Ok(Self::Adyen),
+            AuthType::Airwallex(_) => Ok(Self::Airwallex),
+            AuthType::Bambora(_) => Ok(Self::Bambora),
+            AuthType::Bankofamerica(_) => Ok(Self::Bankofamerica),
+            AuthType::Billwerk(_) => Ok(Self::Billwerk),
+            AuthType::Bluesnap(_) => Ok(Self::Bluesnap),
+            AuthType::Braintree(_) => Ok(Self::Braintree),
+            AuthType::Cashtocode(_) => Ok(Self::Cashtocode),
+            AuthType::Cryptopay(_) => Ok(Self::Cryptopay),
+            AuthType::Cybersource(_) => Ok(Self::Cybersource),
+            AuthType::Datatrans(_) => Ok(Self::Datatrans),
+            AuthType::Dlocal(_) => Ok(Self::Dlocal),
+            AuthType::Elavon(_) => Ok(Self::Elavon),
+            AuthType::Fiserv(_) => Ok(Self::Fiserv),
+            AuthType::Fiservemea(_) => Ok(Self::Fiservemea),
+            AuthType::Forte(_) => Ok(Self::Forte),
+            AuthType::Getnet(_) => Ok(Self::Getnet),
+            AuthType::Globalpay(_) => Ok(Self::Globalpay),
+            AuthType::Hipay(_) => Ok(Self::Hipay),
+            AuthType::Helcim(_) => Ok(Self::Helcim),
+            AuthType::Iatapay(_) => Ok(Self::Iatapay),
+            AuthType::Jpmorgan(_) => Ok(Self::Jpmorgan),
+            AuthType::Mifinity(_) => Ok(Self::Mifinity),
+            AuthType::Mollie(_) => Ok(Self::Mollie),
+            AuthType::Multisafepay(_) => Ok(Self::Multisafepay),
+            AuthType::Nexinets(_) => Ok(Self::Nexinets),
+            AuthType::Nexixpay(_) => Ok(Self::Nexixpay),
+            AuthType::Nmi(_) => Ok(Self::Nmi),
+            AuthType::Noon(_) => Ok(Self::Noon),
+            AuthType::Novalnet(_) => Ok(Self::Novalnet),
+            AuthType::Nuvei(_) => Ok(Self::Nuvei),
+            AuthType::Paybox(_) => Ok(Self::Paybox),
+            AuthType::Payme(_) => Ok(Self::Payme),
+            AuthType::Payu(_) => Ok(Self::Payu),
+            AuthType::Powertranz(_) => Ok(Self::Powertranz),
+            AuthType::Rapyd(_) => Ok(Self::Rapyd),
+            AuthType::Redsys(_) => Ok(Self::Redsys),
+            AuthType::Shift4(_) => Ok(Self::Shift4),
+            AuthType::Stax(_) => Ok(Self::Stax),
+            AuthType::Stripe(_) => Ok(Self::Stripe),
+            AuthType::Trustpay(_) => Ok(Self::Trustpay),
+            AuthType::Tsys(_) => Ok(Self::Tsys),
+            AuthType::Volt(_) => Ok(Self::Volt),
+            AuthType::Wellsfargo(_) => Ok(Self::Wellsfargo),
+            AuthType::Worldpay(_) => Ok(Self::Worldpay),
+            AuthType::Worldpayvantiv(_) => Ok(Self::Worldpayvantiv),
+            AuthType::Xendit(_) => Ok(Self::Xendit),
+            AuthType::Phonepe(_) => Ok(Self::Phonepe),
+            AuthType::Cashfree(_) => Ok(Self::Cashfree),
+            AuthType::Paytm(_) => Ok(Self::Paytm),
+            AuthType::Calida(_) => Ok(Self::Calida),
+            AuthType::Payload(_) => Ok(Self::Payload),
+            AuthType::Paypal(_) => Ok(Self::Paypal),
+            AuthType::Authipay(_) => Ok(Self::Authipay),
+            AuthType::Silverflow(_) => Ok(Self::Silverflow),
+            AuthType::Celero(_) => Ok(Self::Celero),
+            AuthType::Trustpayments(_) => Ok(Self::Trustpayments),
+            AuthType::Paysafe(_) => Ok(Self::Paysafe),
+            AuthType::Barclaycard(_) => Ok(Self::Barclaycard),
+            AuthType::Worldpayxml(_) => Ok(Self::Worldpayxml),
+            AuthType::Revolut(_) => Ok(Self::Revolut),
+            AuthType::Loonio(_) => Ok(Self::Loonio),
+            AuthType::Gigadat(_) => Ok(Self::Gigadat),
+            AuthType::Hyperpg(_) => Ok(Self::Hyperpg),
+            AuthType::Zift(_) => Ok(Self::Zift),
+            AuthType::Screenstream(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Ebanx(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Fiuu(_) => Ok(Self::Fiuu),
+            AuthType::Globepay(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Coinbase(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Coingate(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Revolv3(_) => Ok(Self::Revolv3),
+            AuthType::Authorizedotnet(_) => Ok(Self::Authorizedotnet),
+        }
+    }
 }

@@ -5,12 +5,12 @@ edition = "2021"
 description = "A generic Kafka tracing subscriber that reuses log_utils formatting"
 
 [dependencies]
-tracing = "0.1"
+tracing = { workspace = true }
 tracing-subscriber = "0.3"
 rdkafka = "0.36"
-serde_json = "1.0"
+serde_json = { workspace = true }
 tokio = "1.0"
-thiserror = "1.0"
+thiserror = { workspace = true }
 log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "log_utils", features = ["tracing"] }
 
 # Optional dependencies for metrics

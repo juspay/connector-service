@@ -1,0 +1,28 @@
+{
+  "name": "connector-service-node-ffi",
+  "version": "0.1.0",
+  "description": "Node.js FFI bindings for connector-service using Rust native library",
+  "main": "index.js",
+  "engines": {
+    "node": ">= 10"
+  },
+  "keywords": [
+    "connector-service",
+    "ffi",
+    "napi",
+    "payments",
+    "native"
+  ],
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "build": "sh build.sh",
+    "test": "node tests/test_node.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
