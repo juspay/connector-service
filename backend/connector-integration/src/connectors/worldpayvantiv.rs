@@ -57,7 +57,7 @@ use serde::Serialize;
 
 use self::transformers::{
     CnpOnlineResponse, VantivSyncResponse, WorldpayvantivAuthType, WorldpayvantivPaymentsRequest,
-    BASE64_ENGINE,
+    WorldpayvantivSetupMandateRequest, BASE64_ENGINE,
 };
 
 use super::macros;
@@ -881,6 +881,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+// SetupMandate (Zero-Dollar Authorization) implementation
+// Worldpay Vantiv uses a standard authorization with amount=0 for setup mandate
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         SetupMandate,
@@ -889,6 +891,94 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentsResponseData,
     > for Worldpayvantiv<T>
 {
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        self.build_headers(req)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<String, ConnectorError> {
+        Ok(self.connector_base_url_payments(req).to_string())
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
+        let request = WorldpayvantivSetupMandateRequest::try_from(WorldpayvantivRouterData {
+            router_data: req.clone(),
+            connector: self.clone(),
+        })?;
+        Ok(Some(RequestContent::Xml(Box::new(request))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+        ConnectorError,
+    > {
+        let xml_str = unwrap_json_wrapped_xml(&res.response)?;
+
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        if let Some(i) = event_builder {
+            i.set_connector_response(&response)
+        }
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_http_method(&self) -> common_utils::request::Method {
+        common_utils::request::Method::Post
+    }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
