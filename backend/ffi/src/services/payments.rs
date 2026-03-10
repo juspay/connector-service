@@ -394,13 +394,13 @@ res_transformer!(
 );
 
 /// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
-// /
-// / The caller supplies the raw webhook body + headers received from the connector
-// / and gets back a fully-structured `EventServiceHandleResponse`.
-// /
-// / External source verification (async HTTP used by PayPal / Stripe) is **not**
-// / performed here; only local synchronous signature verification is done.
-// / The gRPC server performs external verification before calling its equivalent path.
+///
+/// The caller supplies the raw webhook body + headers received from the connector
+/// and gets back a fully-structured `EventServiceHandleResponse`.
+///
+/// External source verification (async HTTP used by PayPal / Stripe) is **not**
+/// performed here; only local synchronous signature verification is done.
+/// The gRPC server performs external verification before calling its equivalent path.
 pub fn handle_event_transformer(
     payload: EventServiceHandleRequest,
     _config: &std::sync::Arc<ucs_env::configs::Config>,
