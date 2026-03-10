@@ -108,9 +108,9 @@ async function testAccessTokenFlow(): Promise<void> {
       const ffiErr = (e as any).ffiError;
       // Check the actual proto type using instanceof
       if (ffiErr instanceof RequestError) {
-        console.log(`Request error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${ffiErr.status} ${ffiErr.statusCode} `)
+        console.log(`Request error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${types.PaymentStatus[ffiErr.status]} ${ffiErr.statusCode} `)
       } else if (ffiErr instanceof ResponseError) {
-        console.log(`Response error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${ffiErr.status} ${ffiErr.statusCode} `)
+        console.log(`Response error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${types.PaymentStatus[ffiErr.status]} ${ffiErr.statusCode} `)
       } else {
         console.log(`  FFI error: ${e.message}`);
       }
@@ -178,9 +178,9 @@ async function testAccessTokenFlow(): Promise<void> {
       const ffiErr = (e as any).ffiError;
       // Check the actual proto type using instanceof
       if (ffiErr instanceof RequestError) {
-        console.log(`Request error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${ffiErr.status} ${ffiErr.statusCode} `)
+        console.log(`Request error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${types.PaymentStatus[ffiErr.status]} ${ffiErr.statusCode} `)
       } else if (ffiErr instanceof ResponseError) {
-        console.log(`Response error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${ffiErr.status} ${ffiErr.statusCode} `)
+        console.log(`Response error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${types.PaymentStatus[ffiErr.status]} ${ffiErr.statusCode} `)
       } else {
         console.log(`  FFI error: ${e.message}`);
       }

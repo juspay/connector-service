@@ -1124,10 +1124,7 @@ impl From<ApplicationErrorResponse> for grpc_api_types::payments::ResponseError 
         grpc_api_types::payments::ResponseError {
             status: grpc_api_types::payments::PaymentStatus::Pending.into(),
             error_message: Some(api_error.error_message.clone()),
-            error_code: Some(format!(
-                "{}_{}",
-                api_error.sub_code, api_error.error_identifier
-            )),
+            error_code: Some(api_error.sub_code.clone()),
             status_code: Some(api_error.error_identifier as u32),
         }
     }
@@ -1139,10 +1136,7 @@ impl From<&ApplicationErrorResponse> for grpc_api_types::payments::ResponseError
         grpc_api_types::payments::ResponseError {
             status: grpc_api_types::payments::PaymentStatus::Pending.into(),
             error_message: Some(api_error.error_message.clone()),
-            error_code: Some(format!(
-                "{}_{}",
-                api_error.sub_code, api_error.error_identifier
-            )),
+            error_code: Some(api_error.sub_code.clone()),
             status_code: Some(api_error.error_identifier as u32),
         }
     }
@@ -1154,10 +1148,7 @@ impl From<ApplicationErrorResponse> for grpc_api_types::payments::RequestError {
         grpc_api_types::payments::RequestError {
             status: grpc_api_types::payments::PaymentStatus::Pending.into(),
             error_message: Some(api_error.error_message.clone()),
-            error_code: Some(format!(
-                "{}_{}",
-                api_error.sub_code, api_error.error_identifier
-            )),
+            error_code: Some(api_error.sub_code.clone()),
             status_code: Some(api_error.error_identifier as u32),
         }
     }
@@ -1169,10 +1160,7 @@ impl From<&ApplicationErrorResponse> for grpc_api_types::payments::RequestError 
         grpc_api_types::payments::RequestError {
             status: grpc_api_types::payments::PaymentStatus::Pending.into(),
             error_message: Some(api_error.error_message.clone()),
-            error_code: Some(format!(
-                "{}_{}",
-                api_error.sub_code, api_error.error_identifier
-            )),
+            error_code: Some(api_error.sub_code.clone()),
             status_code: Some(api_error.error_identifier as u32),
         }
     }
